@@ -1,80 +1,80 @@
 -- Zentra RLS policies (O1) — row-level confidentiality tiering.
--- Applied in Supabase after prisma migrate. Confidential tables:
---   anecdotal_records, health_records, home_visitation_records, adm_learner_profiles
--- Principal sees rows but APP hides confidential fields (backend strips them).
+-- Applied in Supabase after prisma migrate. Confidential tables (PascalCase, matching schema):
+--   "AnecdotalRecord", "HealthRecord", "HomeVisitationRecord", "AdmLearnerProfile"
+-- Principal sees rows but the APP hides confidential fields (backend strips them).
 -- Students/parents are excluded entirely (read risk_level only via dedicated endpoints).
 
--- Helper: current user role from JWT
-create or replace function current_role() returns text as $$
+-- Helper functions (renamed to avoid clashing with Postgres reserved current_role)
+create or replace function zentra_role() returns text as $$
   select coalesce((auth.jwt() ->> 'role'), 'anon');
 $$ language sql stable;
 
-create or replace function current_uid() returns uuid as $$
-  select coalesce((auth.jwt() ->> 'sub')::uuid, '00000000-0000-0000-0000-000000000000');
+create or replace function zentra_uid() returns text as $$
+  select coalesce((auth.jwt() ->> 'sub'), '00000000-0000-0000-0000-000000000000');
 $$ language sql stable;
 
--- anecdotal_records
-alter table anecdotal_records enable row level security;
+-- "AnecdotalRecord"
+alter table "AnecdotalRecord" enable row level security;
 
-create policy anecdotal_visible on anecdotal_records
+create policy anecdotal_visible on "AnecdotalRecord"
   for select to authenticated
   using (
-    observer_id = current_uid()
-    or exists (select 1 from referrals r where r.anecdotal_record_id = anecdotal_records.id and r.referred_to_role::text = current_role())
-    or current_role() = 'principal'
+    "observerId" = zentra_uid()
+    or exists (select 1 from "Referral" r where r."anecdotalRecordId" = "AnecdotalRecord"."id" and r."referredToRole"::text = zentra_role())
+    or zentra_role() = 'principal'
   );
 
-create policy anecdotal_write on anecdotal_records
+create policy anecdotal_write on "AnecdotalRecord"
   for insert to authenticated
-  with check (observer_id = current_uid());
+  with check ("observerId" = zentra_uid());
 
-create policy anecdotal_update on anecdotal_records
+create policy anecdotal_update on "AnecdotalRecord"
   for update to authenticated
-  using (observer_id = current_uid());
+  using ("observerId" = zentra_uid());
 
--- health_records
-alter table health_records enable row level security;
+-- "HealthRecord"
+alter table "HealthRecord" enable row level security;
 
-create policy health_visible on health_records
+create policy health_visible on "HealthRecord"
   for select to authenticated
   using (
-    recorded_by = current_uid()
-    or exists (select 1 from referrals r where r.id = health_records.referral_id and r.referred_to_role::text = current_role())
-    or current_role() = 'principal'
+    "recordedBy" = zentra_uid()
+    or exists (select 1 from "Referral" r where r."id" = "HealthRecord"."referralId" and r."referredToRole"::text = zentra_role())
+    or zentra_role() = 'principal'
   );
 
-create policy health_write on health_records
+create policy health_write on "HealthRecord"
   for all to authenticated
-  using (recorded_by = current_uid())
-  with check (recorded_by = current_uid());
+  using ("recordedBy" = zentra_uid())
+  with check ("recordedBy" = zentra_uid());
 
--- home_visitation_records
-alter table home_visitation_records enable row level security;
+-- "HomeVisitationRecord"
+alter table "HomeVisitationRecord" enable row level security;
 
-create policy home_visitation_visible on home_visitation_records
+create policy home_visitation_visible on "HomeVisitationRecord"
   for select to authenticated
   using (
-    certification_by = current_uid()
-    or exists (select 1 from referrals r where r.id = home_visitation_records.referral_id and r.referred_to_role::text = current_role())
-    or current_role() = 'principal'
+    "certificationBy" = zentra_uid()
+    or exists (select 1 from "Referral" r where r."id" = "HomeVisitationRecord"."referralId" and r."referredToRole"::text = zentra_role())
+    or zentra_role() = 'principal'
   );
 
-create policy home_visitation_write on home_visitation_records
+create policy home_visitation_write on "HomeVisitationRecord"
   for all to authenticated
-  using (certification_by = current_uid())
-  with check (certification_by = current_uid());
+  using ("certificationBy" = zentra_uid())
+  with check ("certificationBy" = zentra_uid());
 
--- adm_learner_profiles
-alter table adm_learner_profiles enable row level security;
+-- "AdmLearnerProfile"
+alter table "AdmLearnerProfile" enable row level security;
 
-create policy adm_visible on adm_learner_profiles
+create policy adm_visible on "AdmLearnerProfile"
   for select to authenticated
   using (
-    prepared_by = current_uid()
-    or current_role() = 'principal'
+    "preparedBy" = zentra_uid()
+    or zentra_role() = 'principal'
   );
 
-create policy adm_write on adm_learner_profiles
+create policy adm_write on "AdmLearnerProfile"
   for all to authenticated
-  using (prepared_by = current_uid())
-  with check (prepared_by = current_uid());
+  using ("preparedBy" = zentra_uid())
+  with check ("preparedBy" = zentra_uid());
