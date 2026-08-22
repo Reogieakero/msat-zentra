@@ -201,18 +201,19 @@ carries `term_id` for everything downstream.
 - **Principal:** manage years/terms, final-sign ADM referrals, school-wide
   dashboards/reports, **status-only** view into confidential cases, audit log.
 
-### 4.3 Confidentiality tiering (RLS) — OPEN ITEM #1 (High)
+### 4.3 Confidentiality tiering (RLS) — RESOLVED (row-level)
 `confidentiality_level` exists on `anecdotal_records`, `health_records`,
-`home_visitation_records`, `adm_learner_profiles` but is currently a column, NOT an
-enforcement guarantee. Must be enforced via Supabase Row-Level Security, NOT UI:
-- These tables visible only to the owning role + referred roles.
-- Principal policy: `SELECT` limited to status/progress columns for ADM/Nurse/
-  Guidance cases — diagnosis/treatment/intervention-detail columns excluded via
-  column-level policy (status-only view per Objective 6).
-- Students/parents: `risk_level` + behavioral category flag only; the confidential
-  `write_up`/diagnosis columns denied via RLS.
-- **This must be written and tested before any confidential data goes live — it is
-  the single biggest gap between design and enforceability.**
+`home_visitation_records`, `adm_learner_profiles`. Enforced via Supabase
+**row-level** RLS (NOT column-level). Principal sees the rows but the app hides
+confidential fields client-side — no column policies.
+- **Owning + referred roles** see confidential rows:
+  - `anecdotal_records` → observer (Adviser) + referred role (Guidance/Nurse/LRPC) + Principal (status-only via app).
+  - `health_records` → Nurse + referred + Principal (status-only via app).
+  - `home_visitation_records` → Guidance + referred + Principal (status-only via app).
+  - `adm_learner_profiles` → ADM Coordinator + Principal (status-only via app).
+- **Students/parents:** `risk_level` + behavioral category flag only; the confidential
+  write-up/diagnosis columns are never sent to the client (app-layer hide).
+- RLS policies must still be written and tested before any confidential data goes live.
 
 ---
 
@@ -343,7 +344,7 @@ Reporting (S9 proposal) targeted for S6 or post-launch maintenance.
 ## 11. Open Items & Risks Register
 | # | Item | Severity | Owner | Status |
 |---|---|---|---|---|
-| O1 | RLS policies for confidentiality tiering | 🔴 High (privacy) | S2 | OPEN — must implement+test before live data |
+| O1 | RLS policies for confidentiality tiering (row-level, app hides fields) | 🔴 Resolved (design) | S2 | RESOLVED — implement+test before live data |
 | O2 | Audit trail (`audit_logs`) now exists | 🔴 Addressed | S2/S8 | Grounded |
 | O3 | SF10/OCR (`sf10_records`, `sf10_record_versions`) now exist | 🟠 Addressed | S3/S7 | Grounded |
 | O4 | Risk-history snapshots (`risk_snapshots`) | 🟠 Medium | S5/S6 | OPEN — propose new table |
