@@ -1,0 +1,639 @@
+// Zentra backend — Prisma schema (30 tables, grounded from PLAN.md §3)
+// RLS policies live in ./migrations SQL, not here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  parent
+  subject_teacher
+  adviser
+  nurse
+  adm_coordinator
+  guidance_counselor
+  record_keeper
+  registrar
+  principal
+}
+
+enum UserStatus {
+  pending
+  active
+  suspended
+}
+
+enum GradeLevel {
+  G7
+  G8
+  G9
+  G10
+  G11
+  G12
+}
+
+enum RiskLevel {
+  Low
+  Moderate
+  High
+}
+
+enum Confidentiality {
+  restricted
+  confidential
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+enum Session {
+  AM
+  PM
+}
+
+enum ComponentType {
+  WRITTEN_WORK
+  PERFORMANCE_TASK
+  QUARTERLY_EXAM
+}
+
+enum LockStatus {
+  unlocked
+  locked
+}
+
+enum Remarks {
+  Passed
+  Failed
+}
+
+enum ReferralTarget {
+  nurse
+  guidance_counselor
+  adm_coordinator
+  principal
+}
+
+enum ReferralStatus {
+  pending
+  in_progress
+  resolved
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+  modified
+}
+
+enum OutcomeStatus {
+  ongoing
+  resolved
+  unresolved
+}
+
+enum AdmEligibility {
+  pending
+  eligible
+  ineligible
+}
+
+enum Sf10Source {
+  auto_populated
+  ocr_upload
+  manual
+}
+
+enum ActionType {
+  sf10_update
+  grade_lock
+  grade_unlock
+  anecdotal_edit
+  health_record_edit
+  home_visitation_edit
+  adm_edit
+  referral_status_change
+  intervention_approval
+  account_approval
+  role_change
+}
+
+enum NotifChannel {
+  web
+  mobile
+  email
+}
+
+// ---------------------------------------------------------------------------
+// 3.1 Identity & accounts
+// ---------------------------------------------------------------------------
+model User {
+  id             String      @id @default(uuid())
+  email          String      @unique
+  passwordHash   String
+  role           Role
+  fullName       String
+  contactNumber  String?
+  status         UserStatus  @default(pending)
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+
+  studentProfile      StudentProfile?
+  parentProfile       ParentProfile?
+  staffProfile        StaffProfile?
+  anecdotalRecords    AnecdotalRecord[]      @relation("ObserverAnecdotals")
+  anecdotalFollowups  AnecdotalRecordFollowup[]
+  referralsMade       Referral[]             @relation("ReferredBy")
+  interventions       Intervention[]         @relation("InterventionReviewer")
+  healthRecords       HealthRecord[]
+  homeVisitations     HomeVisitationRecord[]
+  admProfilesPrepared AdmLearnerProfile[]    @relation("AdmPreparedBy")
+  admProfilesApproved AdmLearnerProfile[]    @relation("AdmApprovedBy")
+  admMeetings         AdmParentMeeting[]
+  admModules          AdmModule[]
+  admDevicesIssued    AdmDevice[]            @relation("DeviceIssuedBy")
+  sf10Records         Sf10Record[]           @relation("Sf10VerifiedBy")
+  sf10Validated       Sf10Record[]           @relation("Sf10ValidatedBy")
+  sf10Versions        Sf10RecordVersion[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  refreshTokens       RefreshToken[]
+  sectionsAdvised     Section[]              @relation("AdviserSection")
+  teacherAssignments  TeacherSubjectAssignment[]
+}
+
+model StudentProfile {
+  userId       String     @id
+  lrn          String     @unique
+  gradeLevel   GradeLevel
+  sectionId    String?
+  birthdate    DateTime?
+  address      String?
+  photoUrl     String?
+  riskCount    Int        @default(0)
+  riskLevel    RiskLevel  @default(Low)
+  createdAt    DateTime   @default(now())
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section           Section?           @relation(fields: [sectionId], references: [id])
+  attendanceRecords AttendanceRecord[]
+  studentGrades     StudentGrade[]
+  finalGrades       FinalGrade[]
+  anecdotalRecords  AnecdotalRecord[]
+  referrals         Referral[]         @relation("StudentReferrals")
+  interventions     Intervention[]
+  healthRecords     HealthRecord[]
+  homeVisitations   HomeVisitationRecord[]
+  admProfiles       AdmLearnerProfile[]
+  parentLinks       ParentStudentLink[] @relation("PSL_student")
+  riskSnapshots     RiskSnapshot[]
+  sf10Records       Sf10Record[]
+}
+
+model ParentProfile {
+  userId     String   @id
+  address    String?
+  occupation String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  childLinks ParentStudentLink[] @relation("PSL_parent")
+}
+
+model ParentStudentLink {
+  id            String   @id @default(uuid())
+  parentId      String
+  studentId     String
+  relationship  String
+  approvedBy    String?
+  createdAt     DateTime @default(now())
+  parent        ParentProfile  @relation("PSL_parent", fields: [parentId], references: [userId], onDelete: Cascade)
+  student       StudentProfile @relation("PSL_student", fields: [studentId], references: [userId], onDelete: Cascade)
+  @@unique([parentId, studentId])
+}
+
+model StaffProfile {
+  userId       String  @id
+  employeeId   String  @unique
+  department   String?
+  isAdviser    Boolean @default(false)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// 3.2 Academic structure
+// ---------------------------------------------------------------------------
+model SchoolYear {
+  id         String   @id @default(uuid())
+  name       String
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean  @default(false)
+  createdBy  String
+  createdAt  DateTime @default(now())
+  terms      Term[]
+  sections   Section[]
+}
+
+model Term {
+  id            String      @id @default(uuid())
+  schoolYearId String
+  termNumber    Int // 1,2,3
+  startDate     DateTime?
+  endDate       DateTime?
+  schoolYear    SchoolYear  @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  gradeComponents GradeComponent[]
+  finalGrades   FinalGrade[]
+  attendanceRecords AttendanceRecord[]
+  anecdotalRecords AnecdotalRecord[]
+  referrals     Referral[]
+  healthRecords HealthRecord[]
+  homeVisitations HomeVisitationRecord[]
+  admProfiles   AdmLearnerProfile[]
+  riskSnapshots RiskSnapshot[]
+  reportSnapshots ReportSnapshot[]
+  teacherAssignments TeacherSubjectAssignment[]
+  @@unique([schoolYearId, termNumber])
+}
+
+model Section {
+  id           String     @id @default(uuid())
+  name         String
+  gradeLevel   GradeLevel
+  schoolYearId String
+  adviserId    String?
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  adviser      User?      @relation("AdviserSection", fields: [adviserId], references: [id])
+  students     StudentProfile[]
+  attendanceRecords AttendanceRecord[]
+  anecdotalRecords AnecdotalRecord[]
+  teacherAssignments TeacherSubjectAssignment[]
+}
+
+model Subject {
+  id         String      @id @default(uuid())
+  name       String
+  code       String      @unique
+  gradeLevel GradeLevel
+  gradeComponents GradeComponent[]
+  finalGrades FinalGrade[]
+  assignments TeacherSubjectAssignment[]
+}
+
+model TeacherSubjectAssignment {
+  id         String   @id @default(uuid())
+  teacherId  String
+  subjectId  String
+  sectionId  String
+  termId     String
+  teacher    User     @relation(fields: [teacherId], references: [id])
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  section    Section  @relation(fields: [sectionId], references: [id])
+  term       Term     @relation(fields: [termId], references: [id])
+  @@unique([teacherId, subjectId, sectionId, termId])
+}
+
+// ---------------------------------------------------------------------------
+// 3.3 Grading
+// ---------------------------------------------------------------------------
+model GradeComponent {
+  id               String        @id @default(uuid())
+  subjectId        String
+  termId           String
+  componentType    ComponentType
+  weightPercentage Int
+  subject          Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  term             Term          @relation(fields: [termId], references: [id], onDelete: Cascade)
+  assessments      Assessment[]
+  @@unique([subjectId, termId, componentType])
+}
+
+model Assessment {
+  id              String          @id @default(uuid())
+  gradeComponentId String
+  title           String
+  maxScore        Float
+  dateGiven       DateTime
+  createdBy       String
+  gradeComponent  GradeComponent  @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)
+  studentGrades   StudentGrade[]
+}
+
+model StudentGrade {
+  id               String     @id @default(uuid())
+  assessmentId     String
+  studentId        String
+  rawScore         Float
+  percentageScore  Float // computed
+  assessment       Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student          StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  @@unique([assessmentId, studentId])
+}
+
+model FinalGrade {
+  id                String       @id @default(uuid())
+  studentId         String
+  subjectId         String
+  termId            String
+  computedAverage   Float?
+  transmutedGrade   Float?
+  remarks           Remarks?
+  lockStatus        LockStatus   @default(unlocked)
+  lockedBy          String?
+  lockedAt          DateTime?
+  finalizedBy       String?
+  finalizedAt       DateTime?
+  student           StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  subject           Subject        @relation(fields: [subjectId], references: [id])
+  term              Term           @relation(fields: [termId], references: [id])
+  @@unique([studentId, subjectId, termId])
+}
+
+// ---------------------------------------------------------------------------
+// 3.4 Attendance
+// ---------------------------------------------------------------------------
+model AttendanceRecord {
+  id         String           @id @default(uuid())
+  studentId  String
+  sectionId  String
+  date       DateTime
+  session    Session
+  status     AttendanceStatus
+  recordedBy String
+  termId     String
+  student    StudentProfile   @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  section    Section          @relation(fields: [sectionId], references: [id])
+  term       Term             @relation(fields: [termId], references: [id])
+  @@unique([studentId, date, session])
+}
+
+// ---------------------------------------------------------------------------
+// 3.5 Behavioral & intervention
+// ---------------------------------------------------------------------------
+model AnecdotalRecord {
+  id                     String          @id @default(uuid())
+  studentId              String
+  observerId             String
+  sectionId              String
+  observationDatetime    DateTime
+  descriptionOfIncident  String
+  descriptionOfLocation  String?
+  notesRecommendationsActions String?
+  classPerformance       String?
+  attendanceSummary      String?
+  attachmentUrl          String?
+  termId                 String
+  confidentialityLevel   Confidentiality  @default(restricted)
+  student                StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  observer               User            @relation("ObserverAnecdotals", fields: [observerId], references: [id])
+  section                Section         @relation(fields: [sectionId], references: [id])
+  term                   Term            @relation(fields: [termId], references: [id])
+  followups              AnecdotalRecordFollowup[]
+  referrals              Referral[]      @relation("AnecdotalReferral")
+}
+
+model AnecdotalRecordFollowup {
+  id                String          @id @default(uuid())
+  anecdotalRecordId String
+  followupBy        String
+  followupDate      DateTime
+  notes             String
+  anecdotalRecord   AnecdotalRecord @relation(fields: [anecdotalRecordId], references: [id], onDelete: Cascade)
+  followupUser      User            @relation(fields: [followupBy], references: [id])
+}
+
+model Referral {
+  id                String          @id @default(uuid())
+  anecdotalRecordId String
+  referredToRole    ReferralTarget
+  referredBy        String
+  reason            String
+  status            ReferralStatus  @default(pending)
+  studentId         String
+  termId            String
+  anecdotalRecord   AnecdotalRecord @relation("AnecdotalReferral", fields: [anecdotalRecordId], references: [id], onDelete: Cascade)
+  referredByUser    User            @relation("ReferredBy", fields: [referredBy], references: [id])
+  student           StudentProfile  @relation("StudentReferrals", fields: [studentId], references: [userId], onDelete: Cascade)
+  term              Term            @relation(fields: [termId], references: [id])
+  healthRecords     HealthRecord[]
+  homeVisitations   HomeVisitationRecord[]
+  admProfiles       AdmLearnerProfile[]
+  interventions     Intervention[]
+}
+
+model Intervention {
+  id                String          @id @default(uuid())
+  studentId         String
+  referralId        String?
+  riskLevelAtFlag   RiskLevel
+  recommendedAction String
+  reviewedBy        String
+  approvalStatus    ApprovalStatus  @default(pending)
+  approvedAction    String?
+  outcomeStatus     OutcomeStatus   @default(ongoing)
+  outcomeNotes      String?
+  referral          Referral?       @relation(fields: [referralId], references: [id])
+  student           StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  reviewer          User            @relation("InterventionReviewer", fields: [reviewedBy], references: [id])
+}
+// ---------------------------------------------------------------------------
+// 3.6 Specialist modules
+// ---------------------------------------------------------------------------
+model HealthRecord {
+  id                String          @id @default(uuid())
+  studentId         String
+  referralId        String?
+  visitDatetime     DateTime
+  complaint          String
+  diagnosis          String
+  treatmentGiven     String
+  recordedBy         String
+  termId             String
+  confidentialityLevel Confidentiality @default(restricted)
+  student            StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  referral           Referral?       @relation(fields: [referralId], references: [id])
+  recorder           User            @relation(fields: [recordedBy], references: [id])
+  term               Term            @relation(fields: [termId], references: [id])
+}
+
+model HomeVisitationRecord {
+  id                String          @id @default(uuid())
+  studentId         String
+  referralId        String?
+  personVisited     String
+  homeCondition     String
+  familyCondition   String
+  agreements        String
+  parentSignature   String?
+  studentSignature  String?
+  certificationBy   String
+  termId            String
+  confidentialityLevel Confidentiality @default(restricted)
+  student           StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  referral          Referral?       @relation(fields: [referralId], references: [id])
+  certifier         User            @relation(fields: [certificationBy], references: [id])
+  term              Term            @relation(fields: [termId], references: [id])
+}
+
+model AdmLearnerProfile {
+  id                  String          @id @default(uuid())
+  studentId           String
+  referralId          String
+  eligibilityStatus   AdmEligibility  @default(pending)
+  preparedBy          String
+  approvedBy          String?
+  approvedAt          DateTime?
+  certificationDetails Json?
+  termId              String
+  confidentialityLevel Confidentiality @default(restricted)
+  student             StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  referral            Referral        @relation(fields: [referralId], references: [id])
+  preparedByUser      User            @relation("AdmPreparedBy", fields: [preparedBy], references: [id])
+  approvedByUser      User?           @relation("AdmApprovedBy", fields: [approvedBy], references: [id])
+  term                Term            @relation(fields: [termId], references: [id])
+  parentMeetings      AdmParentMeeting[]
+  modules             AdmModule[]
+  devices             AdmDevice[]
+}
+
+model AdmParentMeeting {
+  id                    String             @id @default(uuid())
+  admLearnerProfileId   String
+  recordedBy            String
+  meetingDatetime       DateTime
+  attended              Boolean
+  parentConfirmedAt     DateTime?
+  minutesOfMeeting      String?
+  attendanceLogbookRef  String?
+  admLearnerProfile     AdmLearnerProfile  @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
+  recorder              User               @relation(fields: [recordedBy], references: [id])
+}
+
+model AdmModule {
+  id                  String           @id @default(uuid())
+  admLearnerProfileId String
+  moduleName          String
+  releaseDate         DateTime?
+  dueDate             DateTime?
+  submitted           Boolean          @default(false)
+  submissionDate      DateTime?
+  recordedBy          String
+  admLearnerProfile   AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
+  recorder            User             @relation(fields: [recordedBy], references: [id])
+}
+
+model AdmDevice {
+  id                  String           @id @default(uuid())
+  admLearnerProfileId String
+  deviceType          String
+  deviceSerial        String
+  issuedBy            String
+  issuedDate          DateTime
+  returnedDate        DateTime?
+  conditionNotes      String?
+  admLearnerProfile   AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
+  issuer              User             @relation("DeviceIssuedBy", fields: [issuedBy], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// 3.7 Records & compliance
+// ---------------------------------------------------------------------------
+model Sf10Record {
+  id                String      @id @default(uuid())
+  studentId         String      @unique
+  source            Sf10Source
+  uploadedFileUrl   String?
+  ocrExtractedData  Json?
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  validatedBy       String?
+  validatedAt       DateTime?
+  currentVersion    Int         @default(1)
+  student           StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  verifiedByUser    User?          @relation("Sf10VerifiedBy", fields: [verifiedBy], references: [id])
+  validatedByUser   User?          @relation("Sf10ValidatedBy", fields: [validatedBy], references: [id])
+  versions          Sf10RecordVersion[]
+}
+
+model Sf10RecordVersion {
+  id              String    @id @default(uuid())
+  sf10RecordId    String
+  versionNumber   Int
+  dataSnapshot    Json
+  changedBy       String
+  changeReason    String
+  changedAt       DateTime  @default(now())
+  sf10Record      Sf10Record @relation(fields: [sf10RecordId], references: [id], onDelete: Cascade)
+  changer         User      @relation(fields: [changedBy], references: [id])
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  userId      String
+  actionType  ActionType
+  sourceTable String
+  sourceId    String
+  reason      String?
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model RiskSnapshot {
+  id          String    @id @default(uuid())
+  studentId   String
+  riskLevel   RiskLevel
+  riskCount   Int
+  snapshotDate DateTime @default(now())
+  termId      String
+  student     StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  term        Term          @relation(fields: [termId], references: [id])
+}
+
+model ReportSnapshot {
+  id           String    @id @default(uuid())
+  reportType   String // trends | intervention_success | heat_map | honor_roll
+  scope        String // school | grade | section
+  scopeId      String?
+  termId       String
+  payload      Json
+  generatedAt  DateTime  @default(now())
+  term         Term      @relation(fields: [termId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// 3.8 System
+// ---------------------------------------------------------------------------
+model Notification {
+  id          String        @id @default(uuid())
+  userId      String
+  type        String // generated by service layer (O7)
+  sourceTable String?
+  sourceId    String?
+  channel     NotifChannel[]
+  message     String
+  isRead      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Operational (not part of the 30 domain tables): refresh token store
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
