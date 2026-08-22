@@ -1,0 +1,47 @@
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--background);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Centered container, mirrors DeepSeek ds-container */
+.container {
+  width: min(100% - 48px, 1140px);
+  margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+  .container {
+    width: min(100% - 144px, 1140px);
+  }
+}
+
+@media (min-width: 1560px) {
+  .container {
+    width: min(100% - 160px, 1280px);
+  }
+}
+
+/* Hero enter: opacity + rise + de-blur, mirrors ds-hero-enter */
+@keyframes heroEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}

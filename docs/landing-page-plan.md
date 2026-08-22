@@ -94,9 +94,20 @@ Four cards (2×2 desktop, 1-col mobile), each: title + 1–2 line description.
 
 ### 2.4 How It Works / Pipeline (`HowItWorks`) — mirrors DeepSeek "harness" flow
 Heading: "From classroom signal to early action"
-Three-step horizontal flow (stacks on mobile), each step = number + title + text:
-1. **Capture** — Teachers log grades and AM/PM attendance; advisers file
-   anecdotal records.
+Sticky right-panel browser mock swaps screens per active step via scroll-sync (see 2.4 detail below). On the left, content reveals on scroll:
+
+- **Capture** is shown as a centered, non-card block (no card chrome) with the
+  section copy rendered as bullet points — it is the anchor the user must fully
+  scroll past before **Detect** and **Intervene** become visible.
+- **Detect** and **Intervene** stay hidden (scroll-gated) until the user has
+  scrolled through the full Capture section; they appear as the next reveal once
+  Capture's bottom edge passes the viewport threshold.
+
+1. **Capture** (centered, bullet form, not a card):
+   - Teachers log grades and AM/PM attendance; advisers file anecdotal records.
+   - Every entry lands in one system of record the moment it is made — timestamped, attributed, and never waiting on a batch export.
+   - That live capture is what makes early detection possible: a risk flag is only early if the signal arrives early.
+   - Grade components, session headcounts, and confidential notes all converge into the same ledger as they happen, so nothing hides in a spreadsheet until it is too late.
 2. **Detect** — The risk engine flags Low / Moderate / High across academic,
    attendance, and behavioral signals in real time.
 3. **Intervene** — Referrals route to guidance, nurse, or ADM; interventions are
@@ -192,7 +203,12 @@ All copy below is final; components should use these verbatim.
 4. `Confidential by Design` — `Tiered anecdotal, health, and ADM records with strict RBAC.`
 
 **How It Works** (heading `From classroom signal to early action`)
-1. `Capture` — `Teachers log grades and AM/PM attendance; advisers file anecdotal records.`
+- Right panel is a sticky browser mock with a macOS-style 3-dot window header (red/amber/green) and a mock address bar; it stays in view and swaps its screen per active step via scroll-sync.
+1. `Capture` (centered, bullet form, NOT a card; scroll-gated reveal for steps 2–3):
+   - `Teachers log grades and AM/PM attendance; advisers file anecdotal records.`
+   - `Every entry lands in one system of record the moment it is made — timestamped, attributed, and never waiting on a batch export.`
+   - `That live capture is what makes early detection possible: a risk flag is only early if the signal arrives early.`
+   - `Grade components, session headcounts, and confidential notes all converge into the same ledger as they happen, so nothing hides in a spreadsheet until it is too late.`
 2. `Detect` — `The risk engine flags Low / Moderate / High across academic, attendance, and behavioral signals in real time.`
 3. `Intervene` — `Referrals route to guidance, nurse, or ADM; interventions are reviewed, approved, and tracked to outcome.`
 

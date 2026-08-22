@@ -1,0 +1,325 @@
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  scroll-margin-top: 80px;
+}
+
+/* Sticky stage: stays in view while the tall section scrolls past */
+.sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 5rem 1.5rem;
+}
+
+.inner {
+  width: min(100% - 48px, 1140px);
+  margin-inline: auto;
+}
+
+.head {
+  margin-bottom: 2rem;
+}
+
+.heading {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin: 0 0 0.85rem;
+}
+
+.subhead {
+  max-width: 640px;
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr 0.85fr;
+    gap: 3.5rem;
+  }
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: 1rem;
+  padding: 1.5rem 1.25rem;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  scroll-margin-top: 160px;
+  transition: border-color 0.18s ease-out, transform 0.18s ease-out;
+}
+
+.stepActive {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+/* Tab bar (built on shadcn Tabs) */
+.tabsRoot {
+  width: 100%;
+}
+
+.tabsList {
+  margin-bottom: 2rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tabTrigger {
+  gap: 0.5rem;
+  flex: none;
+}
+
+.tabNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tabContent {
+  margin: 0;
+}
+
+/* Step detail (left side) */
+.stepDetail {
+  min-width: 0;
+}
+
+.stepIconInline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--primary);
+  margin-right: 0.55rem;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transition: none;
+  }
+}
+
+.captureBullets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.captureBullets li {
+  position: relative;
+  padding-left: 1.4rem;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+
+.captureBullets li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.stepTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0.1rem 0 0.5rem;
+}
+
+/* Browser chrome stays put; only the inner content morphs on step change */
+.panelContent {
+  animation: panelMorph 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes panelMorph {
+  from {
+    opacity: 0.35;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Right panel sits beside the step detail inside the sticky stage */
+.panel {
+  position: static;
+  align-self: center;
+  z-index: 2;
+}
+
+@media (max-width: 899px) {
+  .panel {
+    order: -1;
+    margin-bottom: 1.5rem;
+  }
+}
+
+.panelCard {
+  background-color: var(--card);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 0 8px 30px -18px color-mix(in oklch, var(--primary), transparent 40%);
+}
+
+.panelChrome {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: -0.25rem -0.25rem 1rem;
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--border);
+}
+
+.dot[data-tone="red"] {
+  background: oklch(0.62 0.2 25);
+}
+
+.dot[data-tone="amber"] {
+  background: oklch(0.78 0.16 75);
+}
+
+.dot[data-tone="green"] {
+  background: oklch(0.7 0.16 145);
+}
+
+.panelAddress {
+  margin-left: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  background: var(--accent);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0.25rem 0.55rem;
+}
+
+.panelLabel {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.panelRows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.panelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.panelRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.panelKey {
+  font-size: 0.92rem;
+  color: var(--muted-foreground);
+}
+
+.panelVal {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.tone_high {
+  color: oklch(0.5 0.18 25);
+}
+
+.tone_mod {
+  color: oklch(0.6 0.14 70);
+}
+
+.tone_low {
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transition: none;
+  }
+  .stepActive {
+    transform: none;
+  }
+  .panelMorph {
+    animation: none;
+  }
+}

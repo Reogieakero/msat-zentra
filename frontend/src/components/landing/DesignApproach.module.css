@@ -1,0 +1,209 @@
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 5rem 1.5rem;
+  scroll-margin-top: 80px;
+}
+
+.inner {
+  width: min(100% - 48px, 1140px);
+  margin-inline: auto;
+}
+
+.head {
+  max-width: 720px;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+
+.heading {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin: 0 0 1rem;
+}
+
+.subhead {
+  max-width: 640px;
+  margin: 0 auto;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 4.5rem;
+}
+
+.block {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .block {
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 4rem;
+  }
+  .block:nth-child(even) .text {
+    order: 2;
+  }
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--primary);
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin: 0 0 0.4rem;
+}
+
+.lead {
+  font-size: 1.02rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin: 0 0 1.1rem;
+}
+
+.para {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  margin: 0 0 0.85rem;
+}
+
+.para:last-child {
+  margin-bottom: 0;
+}
+
+/* Visual panels — not cards, just quiet framed surfaces */
+.visual {
+  position: relative;
+}
+
+.panel {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.panelCaption {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin-bottom: 1.1rem;
+}
+
+.moduleList,
+.logList,
+.modeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.moduleItem,
+.logRow,
+.modeRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.moduleItem:last-child,
+.logRow:last-child,
+.modeRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.moduleName,
+.logEvent,
+.modeName {
+  font-size: 0.92rem;
+  color: var(--foreground);
+}
+
+.modeName {
+  font-weight: 600;
+}
+
+.moduleStatus {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+.statusActive {
+  background: var(--accent);
+  color: var(--primary);
+}
+
+.statusConfig {
+  background: color-mix(in oklch, var(--muted-foreground), transparent 88%);
+  color: var(--muted-foreground);
+}
+
+.logTime {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+
+.logEvent {
+  margin-left: 0.5rem;
+}
+
+.logDot {
+  margin-left: auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.dotOk {
+  background: var(--primary);
+}
+
+.dotWarn {
+  background: oklch(0.6 0.14 70);
+}
+
+.modeRow {
+  justify-content: space-between;
+}
+
+.modeDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+}
