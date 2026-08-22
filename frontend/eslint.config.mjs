@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // shadcn-generated hook uses an effect to read viewport width; relax the
+  // set-state-in-effect rule there so lint stays clean without editing the lib.
+  {
+    files: ["src/hooks/use-mobile.ts"],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
