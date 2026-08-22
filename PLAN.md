@@ -315,9 +315,10 @@ ADM requires `referral_id NOT NULL`; health & home visitation allow walk-ins.
 - **Risk-history snapshots (RESOLVED #4):** `risk_snapshots` table added (see §3.7)
   — written on each live recompute / term boundary. Live `risk_level` remains the
   real-time source of truth; `risk_snapshots` serves Objective 6 trends only.
-- **Honor-roll threshold (OPEN #7, Low):** no cutoff defined. Propose computing
-  on the fly from `final_grades` once the school confirms the actual cutoff
-  (e.g. transmuted avg ≥ X, no failing grade). Confirm before building.
+- **Honor-roll threshold (RESOLVED #7):** DepEd style — candidate if term
+  `transmuted_grade` average across subjects ≥ 90 AND no subject below 75
+  (no failing grade). Computed on the fly from `final_grades` per term; no new
+  table needed.
 - **Reporting storage (OPEN #8, Low):** likely computed views/queries over
   existing tables rather than new tables; confirm whether `report_snapshots`
   caching is needed for performance at scale, or always computed live.
@@ -350,7 +351,7 @@ Reporting (S9 proposal) targeted for S6 or post-launch maintenance.
 | O2 | Audit trail (`audit_logs`) now exists | 🔴 Addressed | S2/S8 | Grounded |
 | O3 | SF10/OCR (`sf10_records`, `sf10_record_versions`) now exist | 🟠 Addressed | S3/S7 | Grounded |
 | O4 | Risk-history snapshots (`risk_snapshots`) | 🟠 Resolved (design) | S5/S6 | RESOLVED — table added |
-| O5 | Honor-roll threshold undefined | 🟡 Low | S6 | OPEN — confirm school cutoff |
+| O5 | Honor-roll threshold (DepEd: avg ≥ 90, no grade < 75) | 🟡 Resolved (design) | S6 | RESOLVED |
 | O6 | Reporting storage: live vs `report_snapshots` cache | 🟡 Low | S6 | OPEN — design decision |
 | O7 | `notifications.type`/`channel` ENUM drift | 🟡 Low | All | Keep ENUM centralized in code |
 | O8 | `anecdotal_records.attachment_url` single vs multiple | 🟢 Info | S4 | Ok; split to table if multi-attach expected |
