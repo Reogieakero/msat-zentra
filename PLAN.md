@@ -153,6 +153,10 @@ carries `term_id` for everything downstream.
   home_visitation_edit, adm_edit, referral_status_change, intervention_approval,
   account_approval, role_change, …), `source_table`, `source_id`, `reason`,
   `old_value` (jsonb), `new_value` (jsonb).
+- **risk_snapshots** (confirmed — O4) — `student_id`, `risk_level`
+  (High/Moderate/Low), `risk_count` (0–3), `snapshot_date`, `term_id`. Written on
+  each live recompute and/or term boundary so Objective 6 trends ("Low→High over
+  time") and intervention success rates can be read without replaying raw history.
 
 ### 3.8 System
 - **notifications** — `user_id`, `type` (open ENUM, fires per module),
@@ -308,11 +312,9 @@ ADM requires `referral_id NOT NULL`; health & home visitation allow walk-ins.
 ---
 
 ## 9. Reporting & Visualization (OPEN ITEM — design decision)
-- **Risk-history snapshots (OPEN #4, Medium):** risk is computed live and
-  overwritten. Objective 6 "performance trends" / "intervention success rates"
-  need backward-looking data. Propose `risk_snapshots` (student_id, risk_level,
-  risk_count, snapshot_date) written on each recompute or periodically — do NOT
-  assume replay-from-raw is sufficient at scale.
+- **Risk-history snapshots (RESOLVED #4):** `risk_snapshots` table added (see §3.7)
+  — written on each live recompute / term boundary. Live `risk_level` remains the
+  real-time source of truth; `risk_snapshots` serves Objective 6 trends only.
 - **Honor-roll threshold (OPEN #7, Low):** no cutoff defined. Propose computing
   on the fly from `final_grades` once the school confirms the actual cutoff
   (e.g. transmuted avg ≥ X, no failing grade). Confirm before building.
@@ -347,7 +349,7 @@ Reporting (S9 proposal) targeted for S6 or post-launch maintenance.
 | O1 | RLS policies for confidentiality tiering (row-level, app hides fields) | 🔴 Resolved (design) | S2 | RESOLVED — implement+test before live data |
 | O2 | Audit trail (`audit_logs`) now exists | 🔴 Addressed | S2/S8 | Grounded |
 | O3 | SF10/OCR (`sf10_records`, `sf10_record_versions`) now exist | 🟠 Addressed | S3/S7 | Grounded |
-| O4 | Risk-history snapshots (`risk_snapshots`) | 🟠 Medium | S5/S6 | OPEN — propose new table |
+| O4 | Risk-history snapshots (`risk_snapshots`) | 🟠 Resolved (design) | S5/S6 | RESOLVED — table added |
 | O5 | Honor-roll threshold undefined | 🟡 Low | S6 | OPEN — confirm school cutoff |
 | O6 | Reporting storage: live vs `report_snapshots` cache | 🟡 Low | S6 | OPEN — design decision |
 | O7 | `notifications.type`/`channel` ENUM drift | 🟡 Low | All | Keep ENUM centralized in code |
