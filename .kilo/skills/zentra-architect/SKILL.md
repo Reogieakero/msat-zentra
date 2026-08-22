@@ -20,9 +20,9 @@ It is the single source of truth for scope, RBAC, and design language.
    notification type; O9 offline LWW sync).
 2. `docs/role-modules/README.md` then the specific role file (e.g. `principal.md`)
    for what each role sees and can do per module page.
-3. `docs/frontend-design-direction.md` — Tailwind + shadcn/ui with anti-generic
-   design tokens (off-white bg, one accent, rounded-md, border-over-shadow,
-   role-aware density, no AI tells).
+3. `zentra-design` skill (`frontend-design-direction.md`) — Tailwind + shadcn/ui
+   with anti-generic design tokens (off-white bg, one accent, rounded-md,
+   border-over-shadow, role-aware density, no AI tells).
 
 ## Hard constraints to enforce
 - RBAC is never user-selectable; roles map to the PLAN.md §4 matrix.
