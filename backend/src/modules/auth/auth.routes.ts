@@ -1,5 +1,5 @@
 import { Router } from "express";
-import bcrypt from "bcryptjs";
+import argon2 from "argon2";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
@@ -29,7 +29,7 @@ router.post("/register/:kind", validate("body", registerSchema), async (req, res
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new AppError(409, "EMAIL_EXISTS", "Email already registered");
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await argon2.hash(password);
     const user = await prisma.user.create({
       data: { email, passwordHash, fullName, role, contactNumber, status: "pending" },
     });
@@ -47,7 +47,7 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || user.status !== "active") throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
 
     const band = user.role === "record_keeper" ? "7-10" : user.role === "registrar" ? "11-12" : null;
