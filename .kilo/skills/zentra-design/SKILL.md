@@ -15,7 +15,9 @@ looks high-end and human-crafted, never template/AI-generated.
    shadcn component stack, and the anti-generic checklist.
 
 ## Hard constraints (enforce on every UI task)
-- Stack is **Tailwind + shadcn/ui** (CSS Modules was dropped — see PLAN.md §2).
+- Stack is **Tailwind + shadcn/ui**, but Tailwind is scoped to shadcn UI component
+  styles ONLY — it is NOT a project-wide styling migration (see PLAN.md §2). The
+  rest of the app keeps its existing styling approach.
 - NEVER produce: centered gradient-blob hero, gradient text, rainbow/multi-color
   sidebar, over-rounded pills, decorative blobs, "✨ powered by AI" badges, generic
   robot SVGs, default Unsplash heros, pure-white #FFFFFF backgrounds.

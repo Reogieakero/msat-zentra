@@ -40,7 +40,7 @@ silently assumed.
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Web | Next.js 16, React 19, TypeScript, **Tailwind CSS + shadcn/ui**, React Hook Form, Zod, TanStack Query, Axios | App Router; shadcn components (tables, forms, dialogs, command palette) mapped to role-module specs. **CSS Modules dropped in favor of Tailwind** (shadcn requires Tailwind). |
+| Web | Next.js 16, React 19, TypeScript, **Tailwind CSS (UI components only) + shadcn/ui**, React Hook Form, Zod, TanStack Query, Axios | App Router. **Tailwind is scoped to shadcn UI components only** (shadcn requires Tailwind for its component styles). The broader app layout/pages keep their existing styling approach; Tailwind is NOT a project-wide migration. |
 | Mobile | Flutter + Dart, Hive (offline-first) | Local cache of own-data; sync queue on reconnect. |
 | Backend | Node.js, Express, TypeScript, Prisma, Supabase Postgres + Storage | Single API consumed by web + mobile. |
 | Auth | JWT (access + refresh), bcrypt password hashing | Role claim embedded in JWT; RLS enforced server-side. |
@@ -57,9 +57,11 @@ silently assumed.
   than a silent overwrite. Low-risk for this domain; version-counter escalation
   added only if edit collisions appear in testing.
 
-**Web design language (anti-generic, shadcn + Tailwind)**
+**Web design language (anti-generic, shadcn + Tailwind — Tailwind scoped to UI components)**
 shadcn/ui provides component bones; the design tokens below override its defaults so
-the UI reads as crafted, not template/AI-generated. Full spec in `docs/frontend-design-direction.md`.
+the UI reads as crafted, not template/AI-generated. Tailwind is used ONLY for shadcn
+UI component styles — not applied project-wide. Full spec in the `zentra-design` skill
+(`frontend-design-direction.md`).
 - **Type:** display face (Geist / Space Grotesk) for headings + neutral body (Inter / IBM Plex Sans). Not Inter-everywhere.
 - **Color:** one neutral scale (stone/zinc) on soft off-white (#FAFAF9, not pure #FFF) + ONE brand accent (school deep green/maroon/navy). No multi-color gradients, no gradient text.
 - **Shape:** `rounded-md` (not `rounded-xl`/`rounded-2xl`); 1px borders (#E7E5E4) over heavy shadows; low-opacity shadow only on modals.
