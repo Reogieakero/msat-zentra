@@ -26,9 +26,13 @@ rule-based detection.
 - Third-party SIS integrations beyond the in-house Grading Portal.
 - Native desktop clients.
 
-**Scope note:** The audit-trail tables, SF10/OCR ingestion pipeline, and
-reporting schema are project objectives but are **not yet formalized**. They
-appear below as **[DESIGN PROPOSAL]** sections.
+**Scope note:** A data dictionary pass has now formalized the schema to **28 tables**
+(previously 24). The 5 tables that were open proposals — `interventions`,
+`sf10_records`, `sf10_record_versions`, `audit_logs`, `adm_devices` — are now
+**confirmed/grounded** via the data dictionary. Remaining open items: RLS
+enforcement (#1), risk-history snapshots (#4), and the honor-roll threshold (#7)
+— these remain flagged below and are treated as design decisions to confirm, not
+silently assumed.
 
 ---
 
@@ -53,85 +57,118 @@ appear below as **[DESIGN PROPOSAL]** sections.
 
 ---
 
-## 3. Database Schema Design
+## 3. Database Schema Design (28 tables — grounded in data dictionary)
 
-Grouped per the approved data model. Relations inferred from business rules.
+Full column-level dictionary is the source of truth; what follows is the
+structural map. Key relations: `users` is the single identity root; role-specific
+profiles hang 1:1 off it; `parent_student_links` is the M:N bridge. The academic
+spine `school_years → terms → sections/subjects → teacher_subject_assignments`
+carries `term_id` for everything downstream.
 
 ### 3.1 Identity & accounts
-- **users** — `id`, `email`, `password_hash`, `role` (enum), `account_type`
-  (self_registered | hardcoded), `is_approved`, `created_at`.
-  Role is **never** user-selectable; set by registration page + approval flow.
-- **student_profiles** — `user_id`, `lrn`, `name`, `grade_level`, `section_id`,
-  `school_year_id`, `overall_average` (cached), `risk_level` (cached).
-- **parent_profiles** — `user_id`, `name`, `contact`.
-- **parent_student_links** — `parent_id`, `student_id`, `approval_status`
-  (pending/approved). Parent self-registers, linked to child, approval required.
-- **staff_profiles** — `user_id`, `name`, `position`, `assigned_grade_band`
-  (7–10 | 11–12) for Record Keeper/Registrar.
+- **users** — `id`, `email` (UNIQUE), `password_hash` (bcrypt), `role` (ENUM,
+  never user-selectable), `full_name`, `contact_number`, `status`
+  (pending/active/suspended), `approved_by` (FK→users, grade-banded), `approved_at`.
+  Roles: student, parent, subject_teacher, adviser, nurse, adm_coordinator,
+  guidance_counselor, record_keeper, registrar, principal.
+- **student_profiles** — `user_id` (1:1), `lrn` (UNIQUE), `grade_level`
+  (7–12 ENUM), `section_id`, `birthdate`, `address`, `photo_url`, `risk_count`
+  (computed 0–3), `risk_level` (computed High/Moderate/Low, visible to student+parent).
+- **parent_profiles** — `user_id` (1:1), `address`, `occupation`.
+- **parent_student_links** — `parent_id`, `student_id`, `relationship`,
+  `approved_by`, UNIQUE(parent_id, student_id).
+- **staff_profiles** — `user_id` (1:1), `employee_id`, `department`,
+  `is_adviser` (bool).
 
 ### 3.2 Academic structure
-- **school_years** — `id`, `name`, `start_date`, `end_date`, `is_active`.
-- **terms** — `id`, `school_year_id`, `term_no` (1–3), `start_date`, `end_date`.
-- **sections** — `id`, `grade_level`, `name`, `school_year_id`, `adviser_id`.
-- **subjects** — `id`, `code`, `name`, `grade_level`.
-- **teacher_subject_assignments** — `id`, `teacher_id`, `subject_id`,
-  `section_id`, `school_year_id`, `term_id`.
+- **school_years** — `name`, `start_date`, `end_date`, `is_active`, `created_by` (Principal).
+- **terms** — `school_year_id`, `term_number` (1/2/3), UNIQUE(school_year_id, term_number).
+- **sections** — `name`, `grade_level`, `school_year_id`, `adviser_id`.
+- **subjects** — `name`, `code` (UNIQUE), `grade_level`.
+- **teacher_subject_assignments** — `teacher_id`, `subject_id`, `section_id`,
+  `term_id`, UNIQUE(teacher_id, subject_id, section_id, term_id).
 
 ### 3.3 Grading
-- **grade_components** — `id`, `subject_id`, `term_id`, `type`
-  (written_work | performance_task | quarterly_exam), `weight` (%).
-- **assessments** — `id`, `component_id`, `title`, `max_score`.
-- **student_grades** — `id`, `assessment_id`, `student_id`, `score`, `percentage`.
-- **final_grades** — `id`, `student_id`, `subject_id`, `term_id`,
-  `computed_grade`, `transmuted_grade` (DepEd), `is_locked`, `locked_by`,
-  `locked_at`, `registrar_approved`.
+- **grade_components** — `subject_id`, `term_id`, `component_type`
+  (Written Work/Performance Task/Quarterly Exam), `weight_percentage`.
+- **assessments** — `grade_component_id`, `title`, `max_score`, `date_given`, `created_by`.
+- **student_grades** — `assessment_id`, `student_id`, `raw_score`, `percentage_score`
+  (computed), UNIQUE(assessment_id, student_id).
+- **final_grades** — `student_id`, `subject_id`, `term_id`, `computed_average`,
+  `transmuted_grade` (DepEd), `remarks` (Passed/Failed), `lock_status`
+  (unlocked/locked), `locked_by`, `locked_at`, `finalized_by`, `finalized_at`,
+  UNIQUE(student_id, subject_id, term_id).
 
 ### 3.4 Attendance
-- **attendance_records** — `id`, `student_id`, `date`, `session` (AM | PM),
-  `status` (present | absent | late | excused). Tracked per half-day, not per period.
+- **attendance_records** — `student_id`, `section_id`, `date`, `session` (AM/PM),
+  `status` (present/absent/late/excused), `recorded_by`, `term_id`,
+  UNIQUE(student_id, date, session). Per half-day, not per subject.
 
 ### 3.5 Behavioral & intervention
-- **anecdotal_records** — `id`, `student_id`, `reporter_id`, `category`
-  (behavioral | academic | emotional), `visibility_tier`, `write_up` (confidential),
-  `created_at`, `is_flagged`.
-- **anecdotal_record_followups** — `id`, `anecdotal_id`, `action`, `by_staff_id`,
-  `timestamp`, `outcome`.
-- **referrals** — `id`, `source_anecdotal_id`, `referred_to_role`
-  (guidance | nurse | lrpc | adm_coordinator), `status`, `created_at`.
-  ADM cases require `referral_id NOT NULL`.
+- **anecdotal_records** (matches GCForm-01) — `student_id`, `observer_id`,
+  `section_id`, `observation_datetime`, `description_of_incident`,
+  `description_of_location`, `notes_recommendations_actions`, `class_performance`,
+  `attendance_summary`, `attachment_url` (nullable), `term_id`, `confidentiality_level`.
+- **anecdotal_record_followups** — `anecdotal_record_id`, `followup_by`,
+  `followup_date`, `notes` (fires `new_followup` notification).
+- **referrals** — `anecdotal_record_id` (source), `referred_to_role`
+  (nurse/guidance_counselor/adm_coordinator/principal), `referred_by`, `reason`,
+  `status` (pending/in_progress/resolved).
+- **interventions** (confirmed — closes Obj 4.4–4.5) — `student_id`,
+  `referral_id` (nullable), `risk_level_at_flag` (snapshot), `recommended_action`,
+  `reviewed_by`, `approval_status` (pending/approved/rejected/modified),
+  `approved_action`, `outcome_status` (ongoing/resolved/unresolved), `outcome_notes`.
 
 ### 3.6 Specialist modules
-- **health_records** — `id`, `student_id`, `walk_in` (bool), `notes`
-  (confidential), `seen_by_nurse_id`, `timestamp`. Walk-ins allowed.
-- **home_visitation_records** — `id`, `student_id`, `referred_from`, `date`,
-  `findings` (confidential), `by_counselor_id`. Walk-ins/self-initiation allowed.
-- **adm_learner_profiles** — `id`, `student_id`, `referral_id`, `status`,
-  `eligibility`, `enrolled`.
-- **adm_parent_meetings** — `id`, `adm_profile_id`, `attended` (bool),
-  `minutes`, `logbook_ref`.
-- **adm_modules** — `id`, `adm_profile_id`, `module_no`, `distributed`,
-  `submitted`, `completed`.
-- **[DESIGN PROPOSAL] adm_device_distribution** — `id`, `adm_profile_id`,
-  `device_type` (tablet), `issued_at`, `returned_at`, `status`.
+- **health_records** — `student_id`, `referral_id` (**nullable** — walk-ins allowed),
+  `visit_datetime`, `complaint`/`diagnosis`/`treatment_given`, `recorded_by` (Nurse),
+  `term_id`, `confidentiality_level`.
+- **home_visitation_records** (matches GCForm-12) — `student_id`, `referral_id`
+  (**nullable** — GC self-initiation), full GCForm-12 fields (person visited,
+  home/family condition, agreements, signatures), `certification_by`, `term_id`,
+  `confidentiality_level`.
+- **adm_learner_profiles** (matches ADM Learner's Profile) — `student_id`,
+  `referral_id` (**NOT NULL** — no walk-ins), profile fields, `eligibility_status`
+  (pending/eligible/ineligible), `prepared_by` (ADM Coordinator), `approved_by`
+  (Principal), `certification_details`, `term_id`, `confidentiality_level`.
+- **adm_parent_meetings** — `adm_learner_profile_id`, `meeting_datetime`,
+  `attended` (bool, branches flow), `parent_confirmed_at`, `minutes_of_meeting`,
+  `attendance_logbook_ref`.
+- **adm_modules** — `adm_learner_profile_id`, `module_name`, `release_date`,
+  `due_date`, `submitted`, `submission_date`, `recorded_by`.
+- **adm_devices** (confirmed — tablet issue/return) — `adm_learner_profile_id`,
+  `device_type`, `device_serial`, `issued_by`, `issued_date`, `returned_date`,
+  `condition_notes`.
 
-### 3.7 System
-- **notifications** — `id`, `user_id`, `module`, `event`, `payload`, `channel`
-  (web | mobile | email), `read_at`.
+### 3.7 Records & compliance
+- **sf10_records** (confirmed — Obj 1) — `student_id` (1:1 permanent record),
+  `source` (auto_populated/ocr_upload/manual), `uploaded_file_url`,
+  `ocr_extracted_data` (jsonb), `verified_by` (teacher), `verified_at`,
+  `validated_by` (Record Keeper 7–10 / Registrar 11–12), `validated_at`,
+  `current_version`.
+- **sf10_record_versions** (confirmed — Obj 1.3) — `sf10_record_id`,
+  `version_number`, `data_snapshot` (jsonb, append-only), `changed_by`, `change_reason`.
+- **audit_logs** (confirmed — Obj 5) — `user_id`, `action_type` (open ENUM:
+  sf10_update, grade_lock, grade_unlock, anecdotal_edit, health_record_edit,
+  home_visitation_edit, adm_edit, referral_status_change, intervention_approval,
+  account_approval, role_change, …), `source_table`, `source_id`, `reason`,
+  `old_value` (jsonb), `new_value` (jsonb).
 
-### 3.8 [DESIGN PROPOSAL] — Audit trail
-- **audit_log** — `id`, `actor_id`, `action_type`, `entity_type`, `entity_id`,
-  `reason`, `before_json`, `after_json`, `timestamp`.
-- Captured events: SF10 updates, grade locking/unlocking, anecdotal edits,
-  role/account approvals, ADM certification issuance.
+### 3.8 System
+- **notifications** — `user_id`, `type` (open ENUM, fires per module),
+  `source_table`, `source_id`, `channel` (web/mobile/email), `message`, `is_read`.
 
-### 3.9 [DESIGN PROPOSAL] — SF10 / OCR ingestion
-- **sf10_records** — `id`, `student_id`, `school_year_id`, `version`,
-  `source` (auto_grade | ocr_upload), `status` (draft | verified | validated),
-  `ocr_raw_json`, `created_by`, `validated_by`.
-- **sf10_versions** — `id`, `sf10_record_id`, `snapshot_json`, `changed_by`,
-  `reason`, `timestamp` (version history).
-- **ocr_jobs** — `id`, `upload_id`, `storage_path`, `status`
-  (pending | processed | failed), `confidence`, `extracted_json`.
+### 3.9 Link map
+- Referral spine: `anecdotal_records` → `referrals` →
+  (`health_records` | `home_visitation_records` [nullable referral]) and
+  `adm_learner_profiles` [NOT NULL referral] → `adm_parent_meetings` /
+  `adm_modules` / `adm_devices`.
+- Risk read-through: `student_profiles.risk_count/risk_level` computed live from
+  `final_grades` + `attendance_records` + `anecdotal_records` (no stored risk table).
+- SF10 fed from `final_grades`/`attendance_records` (auto) or OCR; edits append to
+  `sf10_record_versions`.
+- `audit_logs` + `notifications` are cross-cutting — written by every sensitive
+  write path across all modules.
 
 ---
 
@@ -164,15 +201,18 @@ Grouped per the approved data model. Relations inferred from business rules.
 - **Principal:** manage years/terms, final-sign ADM referrals, school-wide
   dashboards/reports, **status-only** view into confidential cases, audit log.
 
-### 4.3 Confidentiality tiering (RLS) [DESIGN PROPOSAL]
-Enforced via Supabase Row-Level Security, NOT UI:
-- `anecdotal_records`, `health_records`, `home_visitation_records` visible only to
-  the owning role + referred roles.
-- Principal policy: `SELECT` limited to non-confidential columns
-  (`status`, `progress_flag`) for ADM/Nurse/Guidance cases — diagnosis/treatment
-  columns excluded via column-level policy.
-- Students/parents: `risk_level` + category-only behavioral flag; never the
-  `write_up` column (RLS denies `write_up` select for those roles).
+### 4.3 Confidentiality tiering (RLS) — OPEN ITEM #1 (High)
+`confidentiality_level` exists on `anecdotal_records`, `health_records`,
+`home_visitation_records`, `adm_learner_profiles` but is currently a column, NOT an
+enforcement guarantee. Must be enforced via Supabase Row-Level Security, NOT UI:
+- These tables visible only to the owning role + referred roles.
+- Principal policy: `SELECT` limited to status/progress columns for ADM/Nurse/
+  Guidance cases — diagnosis/treatment/intervention-detail columns excluded via
+  column-level policy (status-only view per Objective 6).
+- Students/parents: `risk_level` + behavioral category flag only; the confidential
+  `write_up`/diagnosis columns denied via RLS.
+- **This must be written and tested before any confidential data goes live — it is
+  the single biggest gap between design and enforceability.**
 
 ---
 
@@ -242,33 +282,45 @@ ADM requires `referral_id NOT NULL`; health & home visitation allow walk-ins.
 
 ---
 
-## 7. [DESIGN PROPOSAL] SF10 / OCR Ingestion Pipeline
+## 7. SF10 / OCR Ingestion Pipeline (grounded)
 1. Adviser uploads SF10 PDF/image (Multer → Supabase Storage).
-2. `ocr_jobs` created; background worker extracts fields → `extracted_json`
-   (LRN, name, subjects, grades, attendance).
-3. Teacher reviews/verifies OCR result before save (`sf10_records.status=draft→verified`).
-4. Record Keeper/Registrar validates (`status=validated`); SF10 auto-populated
-   from grading system where overlapping.
-5. Every change written to `sf10_versions` for history; audit_log entry required.
+2. Create `sf10_records` row (`source=ocr_upload`); OCR worker extracts fields →
+   `ocr_extracted_data` (jsonb).
+3. Teacher reviews/verifies (`verified_by`, `verified_at`) before save.
+4. Record Keeper (7–10) / Registrar (11–12) validates (`validated_by`,
+   `validated_at`); SF10 auto-populated from `final_grades`/`attendance_records`
+   where overlapping.
+5. Every edit appends a `sf10_record_versions` row (append-only history);
+   `audit_logs` entry required (`action_type=sf10_update`).
 
 ---
 
-## 8. [DESIGN PROPOSAL] Audit Trail
-- Central `audit_log` capturing actor, action_type, entity, before/after JSON,
-  reason, timestamp.
-- Triggered by: SF10 updates, grade lock/unlock, anecdotal edits, account
-  approvals, ADM certification. Principal has read access to the log
-  (school-wide).
+## 8. Audit Trail (grounded — `audit_logs`)
+- Generic, open `action_type` ENUM (Objective 5 says "such as" — non-exhaustive):
+  sf10_update, grade_lock, grade_unlock, anecdotal_edit, health_record_edit,
+  home_visitation_edit, adm_edit, referral_status_change, intervention_approval,
+  account_approval, role_change.
+- Every sensitive write path across confidential tables writes a row with
+  user_id / source_table / source_id / reason / old_value / new_value.
+- Principal has school-wide read access to the log.
 
 ---
 
-## 9. [DESIGN PROPOSAL] Reporting & Visualization
-- **Tables:** `report_cache` (materialized aggregates), `honor_roll`
-  (computed per term: transmuted avg ≥ threshold, no behavioral flag).
+## 9. Reporting & Visualization (OPEN ITEM — design decision)
+- **Risk-history snapshots (OPEN #4, Medium):** risk is computed live and
+  overwritten. Objective 6 "performance trends" / "intervention success rates"
+  need backward-looking data. Propose `risk_snapshots` (student_id, risk_level,
+  risk_count, snapshot_date) written on each recompute or periodically — do NOT
+  assume replay-from-raw is sufficient at scale.
+- **Honor-roll threshold (OPEN #7, Low):** no cutoff defined. Propose computing
+  on the fly from `final_grades` once the school confirms the actual cutoff
+  (e.g. transmuted avg ≥ X, no failing grade). Confirm before building.
+- **Reporting storage (OPEN #8, Low):** likely computed views/queries over
+  existing tables rather than new tables; confirm whether `report_snapshots`
+  caching is needed for performance at scale, or always computed live.
 - **Aggregations:** performance trends (term-over-term averages), intervention
-  success rate (outcome/referred), heat maps (section × risk_factor),
-  honor roll candidates.
-- All aggregate across modules via the shared `notifications` + core tables.
+  success rate (outcome/referred), heat maps (section × risk_factor), honor-roll
+  candidates — all cross-module via core tables + `notifications`.
 
 ---
 
@@ -289,23 +341,28 @@ Reporting (S9 proposal) targeted for S6 or post-launch maintenance.
 ---
 
 ## 11. Open Items & Risks Register
-| # | Item | Risk | Proposal owner |
-|---|---|---|---|
-| O1 | RLS policies for confidentiality tiering | High (privacy) | S2 |
-| O2 | Audit trail table(s) | Med | S2/S8 |
-| O3 | SF10/OCR ingestion schema | High (data loss) | S3/S7 |
-| O4 | Reporting/visualization schema | Med | S6/S9 |
-| O5 | Offline sync conflict resolution | Med | Mobile S2 |
+| # | Item | Severity | Owner | Status |
+|---|---|---|---|---|
+| O1 | RLS policies for confidentiality tiering | 🔴 High (privacy) | S2 | OPEN — must implement+test before live data |
+| O2 | Audit trail (`audit_logs`) now exists | 🔴 Addressed | S2/S8 | Grounded |
+| O3 | SF10/OCR (`sf10_records`, `sf10_record_versions`) now exist | 🟠 Addressed | S3/S7 | Grounded |
+| O4 | Risk-history snapshots (`risk_snapshots`) | 🟠 Medium | S5/S6 | OPEN — propose new table |
+| O5 | Honor-roll threshold undefined | 🟡 Low | S6 | OPEN — confirm school cutoff |
+| O6 | Reporting storage: live vs `report_snapshots` cache | 🟡 Low | S6 | OPEN — design decision |
+| O7 | `notifications.type`/`channel` ENUM drift | 🟡 Low | All | Keep ENUM centralized in code |
+| O8 | `anecdotal_records.attachment_url` single vs multiple | 🟢 Info | S4 | Ok; split to table if multi-attach expected |
+| O9 | Offline sync conflict resolution | 🟡 Med | Mobile S2 | OPEN |
 
 ---
 
 ## 12. Definition of Done (per sprint)
-- All planned tables/migrations applied and RLS-verified.
-- Endpoints covered by Supertest; critical logic by Vitest.
+- All 28 tables/migrations applied and RLS-verified (O1 closed before confidential data).
+- Endpoints covered by Supertest; critical logic (grading, risk, ADM state machine) by Vitest.
 - Swagger/OpenAPI reflects shipped routes.
-- RBAC/RLS tested against each role matrix row.
-- No `[DESIGN PROPOSAL]` item silently shipped as fact without sign-off.
+- RBAC/RLS tested against every role matrix row.
+- `audit_logs` written on every sensitive path; `risk_snapshots` (O4) decided.
+- No open design item (O1/O4/O5/O6/O9) silently shipped as fact without sign-off.
 
 ---
 
-✅ PLAN.md complete — 12 sections, 4 open items flagged.
+✅ PLAN.md updated — 28-table schema grounded from data dictionary, 6 open items remaining (O1 RLS is the critical blocker).
