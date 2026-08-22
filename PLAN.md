@@ -157,6 +157,12 @@ carries `term_id` for everything downstream.
   (High/Moderate/Low), `risk_count` (0–3), `snapshot_date`, `term_id`. Written on
   each live recompute and/or term boundary so Objective 6 trends ("Low→High over
   time") and intervention success rates can be read without replaying raw history.
+- **report_snapshots** (confirmed — O6) — `report_type` (trends | intervention_success
+  | heat_map | honor_roll), `scope` (school | grade | section), `scope_id`,
+  `term_id`, `payload` (jsonb aggregated result), `generated_at`. Caches dashboard
+  aggregates so heavy reports don't recompute live on every view; refreshed on a
+  schedule or on key data writes. Live queries remain the fallback if a snapshot is
+  missing/stale.
 
 ### 3.8 System
 - **notifications** — `user_id`, `type` (open ENUM, fires per module),
@@ -319,9 +325,10 @@ ADM requires `referral_id NOT NULL`; health & home visitation allow walk-ins.
   `transmuted_grade` average across subjects ≥ 90 AND no subject below 75
   (no failing grade). Computed on the fly from `final_grades` per term; no new
   table needed.
-- **Reporting storage (OPEN #8, Low):** likely computed views/queries over
-  existing tables rather than new tables; confirm whether `report_snapshots`
-  caching is needed for performance at scale, or always computed live.
+- **Reporting storage (RESOLVED #8):** add `report_snapshots` cache table (see §3.7)
+  for dashboard aggregates (trends, intervention success, heat maps, honor roll).
+  Live queries remain the fallback when a snapshot is missing or stale; snapshots
+  refreshed on schedule or on key data writes.
 - **Aggregations:** performance trends (term-over-term averages), intervention
   success rate (outcome/referred), heat maps (section × risk_factor), honor-roll
   candidates — all cross-module via core tables + `notifications`.
@@ -352,7 +359,7 @@ Reporting (S9 proposal) targeted for S6 or post-launch maintenance.
 | O3 | SF10/OCR (`sf10_records`, `sf10_record_versions`) now exist | 🟠 Addressed | S3/S7 | Grounded |
 | O4 | Risk-history snapshots (`risk_snapshots`) | 🟠 Resolved (design) | S5/S6 | RESOLVED — table added |
 | O5 | Honor-roll threshold (DepEd: avg ≥ 90, no grade < 75) | 🟡 Resolved (design) | S6 | RESOLVED |
-| O6 | Reporting storage: live vs `report_snapshots` cache | 🟡 Low | S6 | OPEN — design decision |
+| O6 | Reporting storage (`report_snapshots` cache) | 🟡 Resolved (design) | S6 | RESOLVED — table added |
 | O7 | `notifications.type`/`channel` ENUM drift | 🟡 Low | All | Keep ENUM centralized in code |
 | O8 | `anecdotal_records.attachment_url` single vs multiple | 🟢 Info | S4 | Ok; split to table if multi-attach expected |
 | O9 | Offline sync conflict resolution | 🟡 Med | Mobile S2 | OPEN |
