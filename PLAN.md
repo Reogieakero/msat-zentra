@@ -40,7 +40,7 @@ silently assumed.
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Web | Next.js 16, React 19, TypeScript, CSS Modules, React Hook Form, Zod, TanStack Query, Axios | App Router; route handlers for BFF where needed. |
+| Web | Next.js 16, React 19, TypeScript, **Tailwind CSS + shadcn/ui**, React Hook Form, Zod, TanStack Query, Axios | App Router; shadcn components (tables, forms, dialogs, command palette) mapped to role-module specs. **CSS Modules dropped in favor of Tailwind** (shadcn requires Tailwind). |
 | Mobile | Flutter + Dart, Hive (offline-first) | Local cache of own-data; sync queue on reconnect. |
 | Backend | Node.js, Express, TypeScript, Prisma, Supabase Postgres + Storage | Single API consumed by web + mobile. |
 | Auth | JWT (access + refresh), bcrypt password hashing | Role claim embedded in JWT; RLS enforced server-side. |
@@ -57,9 +57,20 @@ silently assumed.
   than a silent overwrite. Low-risk for this domain; version-counter escalation
   added only if edit collisions appear in testing.
 
+**Web design language (anti-generic, shadcn + Tailwind)**
+shadcn/ui provides component bones; the design tokens below override its defaults so
+the UI reads as crafted, not template/AI-generated. Full spec in `docs/frontend-design-direction.md`.
+- **Type:** display face (Geist / Space Grotesk) for headings + neutral body (Inter / IBM Plex Sans). Not Inter-everywhere.
+- **Color:** one neutral scale (stone/zinc) on soft off-white (#FAFAF9, not pure #FFF) + ONE brand accent (school deep green/maroon/navy). No multi-color gradients, no gradient text.
+- **Shape:** `rounded-md` (not `rounded-xl`/`rounded-2xl`); 1px borders (#E7E5E4) over heavy shadows; low-opacity shadow only on modals.
+- **Density:** data-dense, role-aware. Tables sticky-header, monospaced IDs/grades, tight row hierarchy. Principal = calm overview; Adviser = task-dense workspace.
+- **Motion:** micro only — 120–180ms ease-out hover/transition. No parallax, no floating blobs, no "✨ powered by AI" badges.
+- **Craft details:** accessible focus rings, real empty/loading/error states, custom logo + favicon. Avoid symmetric decorative SVGs and default Unsplash heros.
+- **Stack add-ons:** `lucide` icons, `recharts` (shadcn charts) for heat maps/trends, `sonner` toasts, `cmdk` command palette, `next-themes` for light/dark, `@tanstack/react-table` for grids.
+
 ---
 
-## 3. Database Schema Design (28 tables — grounded in data dictionary)
+## 3. Database Schema Design (30 tables — grounded in data dictionary)
 
 Full column-level dictionary is the source of truth; what follows is the
 structural map. Key relations: `users` is the single identity root; role-specific
