@@ -1,19 +1,348 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1.25rem;
+  padding: 8rem 0.25rem 0.25rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .title {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 .lead {
   margin: 0;
   font-size: 0.9375rem;
   color: var(--muted-foreground);
+}
+
+/* Layout: two cards side by side, stack on narrow screens */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Shared card surface */
+.schoolCard,
+.riskCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  transition: border-color 160ms ease-out;
+}
+
+.schoolCard:hover,
+.riskCard:hover {
+  border-color: #d6d3d1;
+}
+
+/* --- Card 1: School + KPIs --- */
+.schoolHead {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.schoolLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.schoolName {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 16px;
+  margin: 0;
+  justify-items: start;
+  padding-left: 16px;
+}
+
+.kpi {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 260px;
+  height: 220px;
+  max-width: 260px;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.kpi::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  background: radial-gradient(
+    140px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in oklch, var(--primary), transparent 82%),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.kpi:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
+}
+
+.kpi:hover::before {
+  opacity: 1;
+}
+
+.kpi > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi {
+    transition: none;
+  }
+}
+
+.kpiIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
+}
+
+.kpiIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.kpiValue {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--foreground);
+}
+
+.kpiLabel {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--foreground);
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklch, var(--primary), transparent 85%),
+    color-mix(in oklch, var(--primary), transparent 85%)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: 0 70%;
+}
+
+.kpiDescription {
+  margin: 0;
+  padding-top: 0.375rem;
+  flex: 1;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+/* --- Card 2: At Risk --- */
+.riskHead {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.riskBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, #b91c1c 12%, transparent);
+  color: #b91c1c;
+  flex-shrink: 0;
+}
+
+.riskBadgeIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.riskTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.riskSub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.riskList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.riskRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border, #e7e5e4);
+}
+
+.riskRow:last-child {
+  border-bottom: none;
+}
+
+.riskRowIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 0.5rem;
+  background: var(--muted, #fafaf9);
+  color: var(--muted-foreground);
+}
+
+.riskIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.riskRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.riskRowLabel {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.riskRowHint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.riskRowValue {
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--foreground);
+  text-align: right;
+}
+
+.riskLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  margin-top: auto;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--accent, #166534);
+  transition: gap 160ms ease-out;
+}
+
+.riskLink:hover {
+  gap: 0.5rem;
+}
+
+.riskLinkIcon {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Error / empty state --- */
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: 0.5rem;
+  background: var(--card, #ffffff);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+}
+
+.retry {
+  border: 1px solid var(--border, #e7e5e4);
+  background: transparent;
+  color: var(--accent, #166534);
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 160ms ease-out;
+}
+
+.retry:hover {
+  border-color: #d6d3d1;
 }

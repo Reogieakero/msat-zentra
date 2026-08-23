@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { ArrowRight, LayoutDashboard, Users, ClipboardList, Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import styles from "./Hero.module.css";
@@ -27,7 +26,18 @@ function buildFluidConfig(dark: boolean): FluidConfig {
 
 export function Hero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { resolvedTheme } = useTheme();
+
+  // Track the actual `.dark` class on <html> so the fluid background switches
+  // to the black back-color reliably when dark mode is toggled.
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setIsDark(root.classList.contains("dark"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,10 +46,10 @@ export function Hero() {
 
     const stop = startFluidBackground(
       canvas,
-      buildFluidConfig(resolvedTheme === "dark")
+      buildFluidConfig(isDark)
     );
     return stop;
-  }, [resolvedTheme]);
+  }, [isDark]);
 
   return (
     <section id="overview" className={styles.hero}>

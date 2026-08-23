@@ -2,19 +2,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
   text-align: center;
-  padding: 1.25rem;
+  aspect-ratio: 1 / 1;
+  padding: 1.5rem;
   text-decoration: none;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background-color: var(--card);
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
-  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out;
 }
 
 .card:hover {
   border-color: color-mix(in oklch, var(--primary), transparent 60%);
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
+  transform: translateY(-2px);
 }
 
 .card:focus-visible {
@@ -27,7 +30,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1rem;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--primary), transparent 90%);
   color: var(--primary);
 }
 

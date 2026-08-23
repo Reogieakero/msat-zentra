@@ -4,7 +4,7 @@
   flex-direction: column;
   min-height: 100vh;
   min-height: 100svh;
-  background-color: var(--background);
+  background-color: oklch(0.984 0.003 95.5);
 }
 
 .scrim {

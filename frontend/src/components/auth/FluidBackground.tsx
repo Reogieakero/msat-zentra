@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import {
   startFluidBackground,
   defaultFluidConfig,
@@ -41,7 +40,18 @@ export function FluidBackground({
   hue?: FluidHue;
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const { resolvedTheme } = useTheme();
+
+  // Track the actual `.dark` class on <html> so the fluid background reacts to
+  // theme switches reliably (the custom theme provider toggles that class).
+  const [isDark, setIsDark] = React.useState(false);
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setIsDark(root.classList.contains("dark"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   // When no explicit hue is provided, fall back to the user's persisted choice
   // so every fluid background across the app shares the same color.
@@ -66,7 +76,7 @@ export function FluidBackground({
 
     const stop = startFluidBackground(
       canvas,
-      buildFluidConfig(resolvedTheme === "dark", activeHue),
+      buildFluidConfig(isDark, activeHue),
     );
 
     // The canvas sits behind the UI (pointer-events: none), so it never
@@ -91,7 +101,7 @@ export function FluidBackground({
       window.removeEventListener("touchmove", onTouchMove);
       stop();
     };
-  }, [resolvedTheme, activeHue]);
+  }, [isDark, activeHue]);
 
   return (
     <canvas
