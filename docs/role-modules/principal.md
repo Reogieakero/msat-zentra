@@ -63,144 +63,194 @@
 
 ## 1. Dashboard (school-wide)
 
+The landing page after login. A calm, overview-first workspace (per the design language: Principal = calm overview, not task-dense). Everything is aggregated across the **whole school**, not a single section.
+
 **What is seen**
-- 👁 School-wide KPI cards: total students, students per risk level (High/Moderate/Low), attendance average, term progress.
-- 👁 Risk heat map (section × risk_factor) — counts only; no student identities required at card level.
-- 👁 Pending items requiring Principal action: ADM referrals awaiting final signature, account approvals routed to Record Keeper/Registrar.
-- 👁 Recent notifications summary.
+
+*KPI cards (top row, each a clickable tile that drills down):*
+- 👁 **Total Students** — count of `student_profiles` enrolled in the active school year/term. Shows a small delta vs. previous term if enrollment changed.
+- 👁 **Students by Risk Level** — three sub-counts: **High** (risk_count ≥ 2), **Moderate** (risk_count = 1), **Low** (risk_count = 0). Each count links to Module 4 filtered to that level. Computed live from `student_profiles.risk_level`.
+- 👁 **Attendance Average** — school-wide mean attendance rate = Σ(present sessions) / Σ(present+absent+late+excused) over AM/PM sessions in the active term. A subtitle shows how many sections fall below the 80% risk threshold.
+- 👁 **Term Progress** — a progress bar = (days elapsed in active term) / (term length). Derived from `terms.start_date` / `end_date` of the currently active `school_year`.
+
+*Risk heat map (mid page):*
+- 👁 A **grid / color-shaded matrix** — this is **NOT** a GitHub-style contribution calendar. It is a **section × risk-factor matrix**:
+  - **Rows** = each `section` (e.g., Grade 7-A, 7-B, 8-A … 12-C) in the active term.
+  - **Columns** = the three risk factors the engine evaluates: **Academic** (overall average < 75), **Attendance** (rate < 80%), **Behavioral** (≥ 1 anecdotal record).
+  - **Cell value** = the **count** of students in that section flagged on that factor (no student names — counts only, to protect privacy at the card level).
+  - **Shading** = intensity by count (light → dark). Darker cell = more students in that section flagged for that factor.
+  - *Example:* row "Grade 9-B", column "Attendance" shaded dark = 14 of its students have attendance < 80%. Clicking the cell opens Module 4 pre-filtered to Grade 9-B + Attendance factor.
+- 👁 This is sourced from `report_snapshots` (type=`heat_map`) and falls back to a live aggregate query if the snapshot is missing/stale (O6).
+
+*Action-required panel (right rail):*
+- 👁 **ADM referrals awaiting your signature** — count + list of `adm_learner_profiles` where `approved_by` is null and `eligibility_status = eligible`. Each links to Module 5.
+- 👁 **Account approvals routed** — count of pending `users` (status=`pending`) whose grade band maps to Record Keeper (7–10) or Registrar (11–12). Read-only; links to Module 10.
+- 👁 **Recent notifications** — last 5 items from `notifications` for the Principal (type, short message, relative time). Links to Module 9.
 
 **Actions**
-- ✎ Filter KPIs by school year / term / grade level.
-- ✎ Drill down into any KPI card → navigates to the relevant module page.
-- ✎ Mark notification read.
+- ✎ **Filter the whole dashboard** by school year / term / grade level — re-computes every KPI card, the heat map, and the action panel.
+- ✎ **Drill down** — click any KPI card or heat-map cell → navigates to the matching module page with the same filter applied.
+- ✎ **Mark a notification read** directly from the recent list.
 
 ---
 
 ## 2. School Year & Term Management
 
+The academic calendar backbone. Every grade, enrollment, and downstream record hangs off a `school_year` → `terms` spine (PLAN.md §3.2). Only the Principal can create/activate years and terms.
+
 **What is seen**
-- 👁 List of `school_years` (name, start/end, is_active) with their `terms` (1–3, start/end).
-- 👁 Which year is currently active.
+- 👁 **School year list** — each `school_year` row shows: `name` (e.g., "SY 2026–2027"), `start_date`, `end_date`, and an **Active** badge on the one currently active. Years are sorted newest-first.
+- 👁 **Term tree** — under each year, its `terms` (1–3) each showing `term_number` (Term 1/2/3), `start_date`, `end_date`. A lock icon marks a term whose `school_year` is currently active (its dates are protected from edit).
+- 👁 **Enrollment indicator** — per year, a hint of whether it has locked grades or active enrollments (drives the delete restriction in Actions).
 
 **Actions**
-- ✎ Create school year (`POST /api/school-years`) — sets `created_by` = Principal.
-- ✎ Create term under a year (term_number 1–3, dates; enforces UNIQUE per year).
-- ✎ Set a school year active / inactive (only one active at a time).
-- ✎ Edit dates of a future (non-active) year/term.
-- 🔒 Delete a school year with locked grades or active enrollments — denied.
+- ✎ **Create school year** (`POST /api/school-years`) — opens a form for `name`, `start_date`, `end_date`; on save sets `created_by` = Principal and writes an `audit_logs` row.
+- ✎ **Create term under a year** — form for `term_number` (1–3, must be unique per year), `start_date`, `end_date`; enforces UNIQUE(school_year_id, term_number).
+- ✎ **Set a year active / inactive** — radio/toggle; the system enforces **exactly one active year** at a time (activating one deactivates the previous).
+- ✎ **Edit dates** of a **future (non-active)** year/term only.
+- 🔒 **Delete a school year** that has locked grades or active enrollments — **denied** (data integrity guard).
 
 ---
 
 ## 3. Academic Performance (school-wide)
 
+A read-only analytics view of grades across the school. Built from `final_grades` (computed_average, transmuted_grade, remarks) — the Principal sees aggregates and breakdowns but never edits scores.
+
 **What is seen**
-- 👁 Per grade/section: average transmuted grades, pass/fail distribution from `final_grades`.
-- 👁 Student list with `risk_level`, overall average, attendance rate (no confidential write-ups).
-- 👁 Honor-roll candidates preview (read-only; formal list in Module 6).
+- 👁 **Grade/section summary table** — one row per section (or per grade if filtered up). Columns:
+  - `Section` · `Grade Level` · **Avg Transmuted Grade** (mean of `final_grades.transmuted_grade` across students/subjects) · **Pass %** (share with `remarks = Passed`) · **Fail %** · **# At-Risk** (students with `risk_level` High/Moderate).
+- 👁 **Pass/Fail distribution** — a stacked bar or donut per grade/section showing Passed vs Failed counts from `final_grades.remarks`.
+- 👁 **Student list** (expand a section) — columns: `LRN`, `Student Name`, `risk_level` (badge), **Overall Average** (term mean of transmuted grades), **Attendance Rate %**. No anecdotal/health/SF10 write-ups appear here.
+- 👁 **Honor-roll candidate preview** — a compact read-only strip of students meeting the O5 rule (see Module 6), linking to the full Module 6 list.
 
 **Actions**
-- ✎ Filter by grade/section/term/subject.
-- ✎ View a student's grade breakdown (components → assessments → final, transmuted).
-- ✎ Export performance report (CSV/PDF) at school/section scope.
-- 🔒 Edit or lock individual grades — not a Principal permission (teacher/registrar only).
+- ✎ **Filter** by grade / section / term / subject — re-renders the summary table and distributions.
+- ✎ **Open a student's grade breakdown** — a detail drawer showing, per subject: the components (Written Work / Performance Task / Quarterly Exam with weights), the assessments under each, the computed average, the **DepEd-transmuted grade**, and `remarks`. This is view-only.
+- ✎ **Export** the performance report as CSV or PDF at school, grade, or section scope.
+- 🔒 **Edit or lock individual grades** — denied (Teacher/Adviser encode; Registrar approves locks).
 
 ---
 
 ## 4. Risk & Early Intervention (school-wide)
 
+The early-warning cockpit. Built from the live risk engine (PLAN.md §6.3) and `interventions` — but the Principal sees **status only**, never the confidential source write-ups.
+
 **What is seen**
-- 👁 `risk_level` + `risk_count` per student (live, from `student_profiles`).
-- 👁 `risk_snapshots` trend line per student (Low→Moderate→High over terms).
-- 👁 Intervention records (`interventions`) at **status level**: approval_status, outcome_status, recommended/approved action text — but 🔒 the originating `anecdotal_records.description_of_incident` / `health_records.diagnosis` are hidden (status-only view per O1).
-- 👁 Heat map (section × risk_factor) from `report_snapshots` (type=heat_map).
+- 👁 **Student risk table** — columns: `Student`, `Section`, `risk_level` (High/Moderate/Low badge), `risk_count` (0–3), and which **factors** fired (Academic / Attendance / Behavioral chips). Sourced live from `student_profiles`.
+- 👁 **Risk trend line (per student)** — when a student is opened, a small line chart of `risk_snapshots` over terms showing the Low→Moderate→High progression (or improvement). Answers "is this student getting worse or better?"
+- 👁 **Intervention board (status level only)** — rows from `interventions` showing: `Student`, `risk_level_at_flag` (snapshot), `approval_status` (pending/approved/rejected/modified), `outcome_status` (ongoing/resolved/unresolved), and the **recommended_action / approved_action text** (the *what was planned*, not the clinical why).
+  - 🔒 The **source detail is hidden**: `anecdotal_records.description_of_incident`, `health_records.diagnosis`/`treatment_given`, `home_visitation_records` findings are stripped server-side (O1). The Principal sees *that* an intervention exists and its status — not the confidential incident behind it.
+- 👁 **Risk heat map** — same **section × risk-factor** matrix described in Module 1 (Academic / Attendance / Behavioral counts per section), sourced from `report_snapshots` type=`heat_map`. This is the focused, filterable version of the dashboard heat map.
 
 **Actions**
-- ✎ Filter by risk level / grade / section / term.
-- ✎ View intervention outcome summary (counts: ongoing/resolved/unresolved).
-- ✎ Open a read-only intervention detail (action + outcome only, no confidential source).
-- 🔒 Create/modify/approve an intervention — that is Guidance Counselor / Nurse scope.
+- ✎ **Filter** by risk level / grade / section / term.
+- ✎ **View intervention outcome summary** — aggregate counts: ongoing / resolved / unresolved, shown as a stat row or small bar.
+- ✎ **Open a read-only intervention detail** — shows action + outcome text only; a banner states "Confidential source hidden — status-only view."
+- 🔒 **Create / modify / approve an intervention** — denied (Guidance Counselor / Nurse scope).
 
 ---
 
 ## 5. ADM Referrals & Approvals (status-only + final sign)
 
+ADM = Alternative Delivery Mode (DepEd). The Principal is the **final authority** who digitally signs certifications, but sees the pipeline **status-only** — never the eligibility reasoning or clinical detail.
+
 **What is seen**
-- 👁 ADM referral pipeline status board: `referrals` → `adm_learner_profiles` (eligibility_status) → `adm_parent_meetings` (attended) → `adm_modules` → `adm_devices`. **Status/progress columns only.**
-- 🔒 `adm_learner_profiles.reasons_for_adm`, `intervention_result`, `home_visitation_records` findings, `health_records` detail — hidden (O1).
-- 👁 Whether Principal signature is still pending on a certification.
+- 👁 **ADM pipeline status board** — one row per `adm_learner_profiles`, tracing the state machine (PLAN.md §6.4):
+  `referrals` (initiated) → `adm_learner_profiles.eligibility_status` (pending/eligible/ineligible) → `adm_parent_meetings.attended` (yes/no) → `adm_modules` (release/due/submitted) → `adm_devices` (issued/returned).
+  - **Visible columns:** Student, Grade/Section, current **stage**, `eligibility_status`, **meeting attended?** (✓/✗), **modules submitted** (n/total), **device issued?** (✓/✗), and **Principal Sign** state (Pending / Signed with `approval_date`).
+  - 🔒 **Hidden columns (O1):** `adm_learner_profiles.reasons_for_adm`, `intervention_result`, `home_visitation_records` findings, `health_records` detail. The Principal sees the stage and status — not the confidential justification.
+- 👁 **Signature pending flag** — rows where `approved_by` is null and `eligibility_status = eligible` are badged "Awaiting your signature."
 
 **Actions**
-- ✎ Review ADM case status board.
-- ✎ **Final-sign an ADM referral/certification** (`POST /api/adm/:id/principal-approve`) — sets `adm_learner_profiles.approved_by` = Principal, `approval_date`.
-- ✎ Reject / return for revision (status back to ADM Coordinator).
-- 🔒 Edit eligibility, issue devices, record meetings — ADM Coordinator scope.
+- ✎ **Review** the status board (filter by stage / grade / signature state).
+- ✎ **Final-sign** an ADM certification (`POST /api/adm/:id/principal-approve`) — sets `adm_learner_profiles.approved_by` = Principal + `approval_date`, writes an `audit_logs` row (`action_type=adm_edit`), and fires a `new_adm_case`/completion notification. This is the Principal's **digital signature** — the only mutating action on this page.
+- ✎ **Reject / return for revision** — sets status back to ADM Coordinator with a reason (also audited).
+- 🔒 **Edit eligibility, issue/return devices, record parent meetings** — denied (ADM Coordinator scope).
 
 ---
 
 ## 6. Honor Roll & Awards
 
+Read-only recognition list, computed live from `final_grades` using the DepEd rule (O5). The Principal reviews and can publish, but cannot alter the underlying grades.
+
 **What is seen**
-- 👁 Candidate list computed live from `final_grades`: term transmuted average ≥ 90 AND no subject < 75 (DepEd rule, O5). Shows student, average, per-subject grades.
-- 👁 Award categories placeholder (school-defined).
+- 👁 **Candidate table** — students meeting: term **transmuted average ≥ 90** AND **no subject < 75** (no failing grade). Columns: `Student`, `Section`, **Term Average** (transmuted), and a per-subject mini-grid showing each `transmuted_grade` (failing ones < 75 highlighted so you can see *why* a student is excluded).
+- 👁 **Award categories** — a placeholder section for school-defined awards (e.g., "Perfect Attendance", "Subject Toppers") — configured by the school, not computed by Zentra yet.
 
 **Actions**
-- ✎ Filter by term / grade / section.
-- ✎ Export honor-roll list (CSV/PDF).
-- ✎ Mark candidates as awarded (if school workflow requires a publish step).
-- 🔒 Modify grades to change eligibility — not permitted.
+- ✎ **Filter** by term / grade / section.
+- ✎ **Export** the honor-roll list (CSV/PDF) — useful for printing certificates.
+- ✎ **Mark as awarded** — if the school workflow has a publish step, the Principal can flag candidates as awarded (no grade change; pure status).
+- 🔒 **Modify grades to change eligibility** — denied (grades are teacher/registrar-owned; eligibility is computed).
 
 ---
 
 ## 7. Reports & Visualization
 
+The consolidated analytics library. Each report reads from `report_snapshots` (cached aggregates, O6) and falls back to a live query when a snapshot is missing/stale.
+
 **What is seen**
-- 👁 Performance trends (term-over-term averages) — `report_snapshots` type=trends.
-- 👁 Intervention success rate (outcome/referred) — type=intervention_success.
-- 👁 Heat maps — type=heat_map.
-- 👁 Honor roll — type=honor_roll.
-- 👁 Live fallback query if a snapshot is missing/stale (O6).
+- 👁 **Performance Trends** (type=`trends`) — a **line chart of term-over-term average grades**: x-axis = terms (Term 1 → 2 → 3 across years), y-axis = average transmuted grade, with one line per scope (school / grade / section). Answers "are grades trending up or down?"
+- 👁 **Intervention Success Rate** (type=`intervention_success`) — a **ratio/bar**: `outcome_status = resolved or ongoing` ÷ total `interventions` referred, optionally split by grade. Shows how many referred students are improving.
+- 👁 **Heat Maps** (type=`heat_map`) — the **section × risk-factor** matrix (Academic / Attendance / Behavioral counts) described in Modules 1 & 4, rendered at the chosen scope.
+- 👁 **Honor Roll** (type=`honor_roll`) — the O5 candidate snapshot for the selected term/scope.
+- 👁 **Live fallback banner** — if a snapshot is stale/missing, a note shows "Live data — snapshot regenerating" so the Principal knows the numbers are computed on the fly.
 
 **Actions**
-- ✎ Select report type + scope (school/grade/section) + term.
-- ✎ Refresh a snapshot on demand (regenerate).
-- ✎ Export report.
+- ✎ **Select report type + scope** (school / grade / section) **+ term**.
+- ✎ **Refresh a snapshot on demand** (`POST /reports/refresh` or in-page button) — regenerates the `report_snapshots.payload` for the current selection.
+- ✎ **Export** the current report (CSV/PDF/PNG of chart).
 
 ---
 
 ## 8. Audit Log
 
+The tamper-evident trail of every sensitive action in the system (PLAN.md §8). School-wide, read-only to the Principal.
+
 **What is seen**
-- 👁 `audit_logs` (school-wide): user, action_type, source_table, source_id, reason, timestamp. old/new value JSON visible (these are system events, not confidential clinical write-ups).
-- 👁 Covers: sf10_update, grade_lock/unlock, anecdotal_edit, health_record_edit, home_visitation_edit, adm_edit, referral_status_change, intervention_approval, account_approval, role_change.
+- 👁 **Audit table** — columns: `timestamp`, `user` (actor, from `users`), `action_type`, `source_table`, `source_id`, `reason` (free-text the actor entered), and expandable **old_value / new_value** JSON (the before/after of the change).
+  - *Example row:* `2026-08-21 09:14 · adviser.jdelacruz · grade_lock · final_grades:id=882 · reason="Term close" · old:{lock_status:unlocked} → new:{lock_status:locked, locked_by:…}`.
+- 👁 **Covered action types:** sf10_update, grade_lock, grade_unlock, anecdotal_edit, health_record_edit, home_visitation_edit, adm_edit, referral_status_change, intervention_approval, account_approval, role_change.
+  - Note: these are **system events**, not confidential clinical write-ups — so old/new JSON is visible to the Principal (unlike the hidden ADM/health columns elsewhere).
 
 **Actions**
-- ✎ Filter by action_type / user / date range / table.
-- ✎ Export audit extract.
-- 🔒 Edit or delete audit rows — immutable.
+- ✎ **Filter** by action_type / user / date range / source_table.
+- ✎ **Export** the filtered audit extract (CSV).
+- 🔒 **Edit or delete** audit rows — denied (immutable by design).
 
 ---
 
 ## 9. Notifications
 
+The Principal's personal inbox (web channel). Driven by `notifications` (PLAN.md §3.8), with `type` generated by the service layer (O7).
+
 **What is seen**
-- 👁 Principal's `notifications` (web channel): type, message, source, is_read.
-- 👁 Fires for: new_adm_case (awaiting signature), account_approval routed, intervention_approved, sf10_validated, audit_alert, etc.
+- 👁 **Notification list** — each item: `type` (icon + label), `message` (human-readable), `source` (which module/record triggered it), `timestamp`, and read/unread state.
+- 👁 **Trigger examples relevant to Principal:**
+  - `new_adm_case` — an ADM profile is ready for your signature.
+  - `account_approval` — a pending account was routed to Record Keeper/Registrar.
+  - `intervention_approved` — a Guidance/Nurse intervention was approved.
+  - `sf10_validated` — an SF10 was validated by RK/Registrar.
+  - `audit_alert` — a notable audited action occurred.
+  - `referral_status_change` · `new_followup` — pipeline movement.
 
 **Actions**
-- ✎ Mark read / mark all read.
-- ✎ Filter by type / date.
-- 🔒 Compose broadcast — not a Principal permission in current spec.
+- ✎ **Mark read / mark all read**.
+- ✎ **Filter** by type / date.
+- 🔒 **Compose broadcast** — denied (not a Principal permission in current spec).
 
 ---
 
 ## 10. Account Approvals (Record Keeper / Registrar grade-banded — visibility only)
 
+A transparency view into who is being activated. The Principal **cannot approve** — that is grade-banded to Record Keeper (7–10) and Registrar (11–12).
+
 **What is seen**
-- 👁 Read-only view of pending account approvals and who approved them.
-- 👁 Approval is grade-banded: Record Keeper → Grades 7–10, Registrar → 11–12.
+- 👁 **Pending approvals list** — `users` with `status = pending`: columns `full_name`, `role` (student/parent/teacher), **grade band** (derived from linked student grade_level: 7–10 → Record Keeper, 11–12 → Registrar), and `approved_by` / `approved_at` once acted on.
+- 👁 **Approval trail** — for already-approved accounts, who approved and when (mirrors the `account_approval` audit entries).
 
 **Actions**
-- 🔒 Approve student/parent/teacher accounts directly — **denied**; this is the Record Keeper / Registrar function. Principal has visibility only into the approval trail via `audit_logs`.
+- 🔒 **Approve accounts directly** — **denied**. The Principal has visibility only; the actual approval is `POST /api/auth/approve/:userId` by Record Keeper/Registrar with grade-band enforcement. The Principal can see the trail via this page and the Audit Log (Module 8).
 
 ---
 
