@@ -35,13 +35,29 @@ function buildFluidConfig(dark: boolean, hue: FluidHue): FluidConfig {
 
 export function FluidBackground({
   className,
-  hue = "green",
+  hue,
 }: {
   className?: string;
   hue?: FluidHue;
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const { resolvedTheme } = useTheme();
+
+  // When no explicit hue is provided, fall back to the user's persisted choice
+  // so every fluid background across the app shares the same color.
+  const [storedHue, setStoredHue] = React.useState<FluidHue>("green");
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("zentra.fluidHue") as FluidHue | null;
+      if (stored === "green" || stored === "blue" || stored === "amber") {
+        setStoredHue(stored);
+      }
+    } catch {
+      /* ignore unavailable storage */
+    }
+  }, []);
+
+  const activeHue = hue ?? storedHue;
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,7 +66,7 @@ export function FluidBackground({
 
     const stop = startFluidBackground(
       canvas,
-      buildFluidConfig(resolvedTheme === "dark", hue),
+      buildFluidConfig(resolvedTheme === "dark", activeHue),
     );
 
     // The canvas sits behind the UI (pointer-events: none), so it never
@@ -75,7 +91,7 @@ export function FluidBackground({
       window.removeEventListener("touchmove", onTouchMove);
       stop();
     };
-  }, [resolvedTheme, hue]);
+  }, [resolvedTheme, activeHue]);
 
   return (
     <canvas

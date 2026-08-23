@@ -1,14 +1,14 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FluidBackground, type FluidHue } from "@/components/auth/FluidBackground";
+import { FluidBackground } from "@/components/auth/FluidBackground";
 import { FluidColorPicker } from "@/components/auth/FluidColorPicker";
+import { useFluidHue } from "@/lib/auth/useFluidHue";
 import styles from "./login.module.css";
 
 export function LoginHeader() {
-  const [hue, setHue] = React.useState<FluidHue>("green");
+  const [hue, setHue] = useFluidHue();
 
   return (
     <>
