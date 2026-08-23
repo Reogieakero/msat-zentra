@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { GraduationCap, CalendarCheck, ShieldAlert, Lock } from "lucide-react";
+import { Reveal } from "./Reveal";
 import styles from "./Modules.module.css";
 
 const modules = [
@@ -38,29 +39,34 @@ export function Modules() {
   return (
     <section id="modules" className={styles.section}>
       <div className={styles.inner}>
-        <h2 className={styles.heading}>What Zentra unifies</h2>
-        <p className={styles.subhead}>
-          One <em className={styles.emph}>system of record</em> for grades,
-          attendance, and well-being — so the whole school reads the same truth
-          and risk shows up early.
-        </p>
+        <Reveal as="header" className={styles.head}>
+          <span className={styles.eyebrowRule} aria-hidden="true" />
+          <h2 className={styles.heading}>What Zentra unifies</h2>
+          <p className={styles.subhead}>
+            One <em className={styles.emph}>system of record</em> for grades,
+            attendance, and well-being — so the whole school reads the same truth
+            and risk shows up early.
+          </p>
+        </Reveal>
         <div className={styles.grid}>
-          {modules.map(({ icon: Icon, title, body }) => (
-            <article
+          {modules.map(({ icon: Icon, title, body }, i) => (
+            <Reveal
+              as="article"
               key={title}
               className={styles.card}
+              style={{ ["--reveal-delay" as string]: `${120 + i * 70}ms` }}
               onMouseMove={handleMove}
             >
+              <span className={styles.index}>{String(i + 1).padStart(2, "0")}</span>
               <span className={styles.icon}>
                 <Icon size={20} />
               </span>
               <h3 className={styles.cardTitle}>{title}</h3>
               <p className={styles.cardBody}>{body}</p>
-            </article>
+            </Reveal>
           ))}
         </div>
       </div>
     </section>
   );
 }
-

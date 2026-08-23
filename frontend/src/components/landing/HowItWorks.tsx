@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ClipboardList, Radar, LifeBuoy } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Reveal } from "./Reveal";
 import styles from "./HowItWorks.module.css";
 
 const steps = [
@@ -143,7 +144,7 @@ export function HowItWorks() {
     >
       <div className={styles.sticky}>
         <div className={styles.inner}>
-          <div className={styles.head}>
+          <Reveal as="div" className={styles.head}>
             <h2 className={styles.heading}>
               From classroom signal to early action
             </h2>
@@ -152,7 +153,7 @@ export function HowItWorks() {
               learning happens, detected before it drifts, acted on by the right
               role. Scroll to move through each step.
             </p>
-          </div>
+          </Reveal>
 
           <Tabs
             value={current.id}

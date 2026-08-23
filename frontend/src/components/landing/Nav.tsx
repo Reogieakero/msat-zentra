@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 import styles from "./Nav.module.css";
 
 export function Nav() {
@@ -11,11 +12,12 @@ export function Nav() {
         </Link>
 
         <div className={styles.actions}>
+          <ThemeToggle />
           <Button asChild size="sm">
             <Link href="/login">Sign in</Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href="#cta">Request access</Link>
+            <Link href="#access">Request access</Link>
           </Button>
         </div>
       </div>

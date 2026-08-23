@@ -2,36 +2,44 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, ClipboardList, Bell, Settings } from "lucide-react";
+import { useTheme } from "next-themes";
+import { ArrowRight, LayoutDashboard, Users, ClipboardList, Bell, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import styles from "./Hero.module.css";
 import { startFluidBackground, defaultFluidConfig, FluidConfig } from "@/lib/fluid/fluidBackground";
 
-const heroFluidConfig: FluidConfig = {
-  ...defaultFluidConfig,
-  TRANSPARENT: false,
-  BACK_COLOR: { r: 255, g: 255, b: 255 },
-  COLORFUL: false,
-  RANDOM_COLORS: false,
-  SPLAT_HUE: 0.42,
-  SUNRAYS: false,
-  SHADING: false,
-  DENSITY_DISSIPATION: 1.0,
-  VELOCITY_DISSIPATION: 1.2,
-  CURL: 6,
-  SPLAT_RADIUS: 0.35,
-};
+function buildFluidConfig(dark: boolean): FluidConfig {
+  return {
+    ...defaultFluidConfig,
+    TRANSPARENT: false,
+    BACK_COLOR: dark ? { r: 10, g: 10, b: 10 } : { r: 250, g: 250, b: 249 },
+    COLORFUL: false,
+    RANDOM_COLORS: false,
+    SPLAT_HUE: 0.42,
+    SUNRAYS: false,
+    SHADING: false,
+    DENSITY_DISSIPATION: 1.0,
+    VELOCITY_DISSIPATION: 1.2,
+    CURL: 6,
+    SPLAT_RADIUS: 0.35,
+  };
+}
 
 export function Hero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const stop = startFluidBackground(canvas, heroFluidConfig);
+    const stop = startFluidBackground(
+      canvas,
+      buildFluidConfig(resolvedTheme === "dark")
+    );
     return stop;
-  }, []);
+  }, [resolvedTheme]);
 
   return (
     <section id="overview" className={styles.hero}>
@@ -40,31 +48,43 @@ export function Hero() {
       <div className={styles.tint} aria-hidden />
       <div className={styles.grid}>
         <div className={styles.left}>
-          <p className={styles.eyebrow}>Mati School of Arts and Trades</p>
-          <h1 className={styles.title}>One record, every learner signal.</h1>
+          <div className={styles.eyebrowRow}>
+            <span className={styles.eyebrowRule} aria-hidden="true" />
+            <p className={styles.eyebrow}>Mati School of Arts and Trades</p>
+          </div>
+          <h1 className={styles.title}>
+            One record, <span className={styles.titleAccent}>every learner signal.</span>
+          </h1>
           <p className={styles.lede}>
             Grading, attendance, anecdotal records, and early-intervention risk —
             unified for teachers, guidance, and school leadership.
           </p>
           <div className={styles.ctaBlock}>
-            <Link href="/login" className={styles.ctaCard}>
-              <span className={styles.ctaTitle}>Sign in</span>
-              <span className={styles.ctaText}>Open your MSAT workspace</span>
-            </Link>
-            <Link href="#how" className={styles.ctaCard}>
-              <span className={styles.ctaTitle}>See how it works</span>
-              <span className={styles.ctaText}>From capture to intervention</span>
-            </Link>
+            <Button asChild size="lg">
+              <Link href="/login">Sign in</Link>
+            </Button>
+            <Button asChild variant="ghost" size="lg">
+              <Link href="#how">
+                See how it works
+                <ArrowRight size={16} />
+              </Link>
+            </Button>
           </div>
           <div className={styles.links}>
-            <Link href="#modules" className={styles.textLink}>Explore modules</Link>
-            <Link href="#roles" className={styles.textLink}>See the roles</Link>
-            <Link href="#security" className={styles.textLink}>How we keep it confidential</Link>
+            <Link href="#modules" className={styles.textLink}>
+              Explore modules
+            </Link>
+            <Link href="#roles" className={styles.textLink}>
+              See the roles
+            </Link>
+            <Link href="#security" className={styles.textLink}>
+              How we keep it confidential
+            </Link>
           </div>
         </div>
 
         <div className={styles.right}>
-          <div className={styles.browser} role="img" aria-label="MSAT system preview">
+          <div className={styles.browser}>
             <div className={styles.browserBar}>
               <span className={styles.dot} />
               <span className={styles.dot} />

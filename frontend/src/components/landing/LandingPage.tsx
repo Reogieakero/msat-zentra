@@ -2,7 +2,9 @@ import { Nav } from "./Nav";
 import { Hero } from "./Hero";
 import { Modules } from "./Modules";
 import { HowItWorks } from "./HowItWorks";
-import { DesignApproach } from "./DesignApproach";
+import { Stats } from "./Stats";
+import { FooterCta } from "./FooterCta";
+import { Footer } from "./Footer";
 import styles from "./LandingPage.module.css";
 
 export function LandingPage() {
@@ -13,7 +15,9 @@ export function LandingPage() {
         <Hero />
         <Modules />
         <HowItWorks />
-        <DesignApproach />
+        <Stats />
+        <FooterCta />
+        <Footer />
       </div>
     </main>
   );

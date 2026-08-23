@@ -1,0 +1,47 @@
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.toggle:hover {
+  background-color: var(--accent);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.icon {
+  position: absolute;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+
+.hidden {
+  opacity: 0;
+  transform: scale(0.6) rotate(-30deg);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon {
+    transition: none;
+  }
+  .hidden {
+    transform: none;
+  }
+}
