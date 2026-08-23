@@ -51,7 +51,7 @@ export function LoginForm({
           body: JSON.stringify({ email: identifier, password, role }),
         },
       );
-      let data: any = {};
+      let data: { message?: string; role?: string; accessToken?: string; refreshToken?: string } = {};
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("application/json")) {
         data = await res.json();

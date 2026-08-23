@@ -21,6 +21,31 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  // These components/hooks read persisted UI state (theme, sidebar mode, fluid
+  // hue) from localStorage on mount; calling setState in the effect is
+  // intentional hydration-style sync, not a cascading-render bug.
+  {
+    files: [
+      "src/app/principal/layout.tsx",
+      "src/components/auth/FluidBackground.tsx",
+      "src/components/landing/ThemeToggle.tsx",
+      "src/components/providers.tsx",
+      "src/lib/auth/useFluidHue.ts",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+  // Vendored WebGL fluid simulation (PavelDoGreat / tkabalin, MIT). Heavy use of
+  // `any` against the raw WebGL context and loop-scoped reassignment; leave it
+  // as-is rather than rewrite a third-party lib.
+  {
+    files: ["src/lib/fluid/fluidBackground.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "prefer-const": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
