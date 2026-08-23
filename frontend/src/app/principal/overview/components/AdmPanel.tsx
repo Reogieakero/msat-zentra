@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TabLink } from "./TabLink";
 import { type AdmDocument } from "./data";
 import { apiClient } from "@/lib/api/client";
@@ -40,11 +41,11 @@ export function AdmPanel({
       <div className={styles.admPanel}>
         <div className={styles.admSummary}>
           <div className={styles.admSummaryItem}>
-            <span className={styles.admSummaryValue}>—</span>
+            <Skeleton className={styles.summaryValueSkeleton} />
             <span className={styles.admSummaryLabel}>Pending Cases</span>
           </div>
           <div className={styles.admSummaryItem}>
-            <span className={styles.admSummaryValue}>—</span>
+            <Skeleton className={styles.summaryValueSkeleton} />
             <span className={styles.admSummaryLabel}>Signed This Term</span>
           </div>
         </div>
@@ -53,28 +54,27 @@ export function AdmPanel({
             <div key={i} className={styles.admDoc}>
               <div className={styles.admDocMain}>
                 <div className={styles.admDocTop}>
-                  <span className={styles.admDocId}>ADM-0000</span>
-                  <span className={styles.admStatus}>Pending Approval</span>
+                  <Skeleton className={styles.docIdSkeleton} />
+                  <Skeleton className={styles.docStatusSkeleton} />
                 </div>
                 <div className={styles.admDocMeta}>
-                  <span className={styles.mono}>000000000000</span>
-                  <span>Loading…</span>
+                  <Skeleton className={styles.docMetaSkeleton} />
+                  <Skeleton className={styles.docMetaSkeleton} />
                 </div>
+                <Skeleton className={styles.docEligibilitySkeleton} />
               </div>
-              <Button size="sm" className={styles.admSign} disabled>
-                Approve
-              </Button>
+              <Skeleton className={styles.docSignSkeleton} />
             </div>
           ))}
         </div>
-        <TabLink href={href} label={label} />
+        <Skeleton className={styles.tabLinkSkeleton} />
       </div>
     );
   }
 
   const pendingDocs = docs.filter((d) => d.status === "pending_signature");
   const signed = docs.length - pendingDocs.length;
-  const latestPending = pendingDocs.slice(-4).reverse();
+  const latestPending = pendingDocs.slice(-3).reverse();
 
   return (
     <div className={styles.admPanel}>
