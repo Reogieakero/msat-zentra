@@ -31,7 +31,7 @@
   display: grid;
   grid-template-columns: minmax(0, 0.6fr) 1fr;
   gap: 60px;
-  align-items: stretch;
+  align-items: start;
 }
 
 @media (max-width: 860px) {
@@ -71,7 +71,7 @@
   border: 1px solid var(--border, #e7e5e4);
   border-radius: 0.75rem;
   box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.18);
-  min-height: 420px;
+  height: 560px;
 }
 
 .browserTitleBar {
@@ -81,7 +81,7 @@
   padding: 0.625rem 0.875rem;
   background: color-mix(in oklch, var(--background), transparent 30%);
   border-bottom: 1px solid var(--border, #e7e5e4);
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .trafficLights {
@@ -167,7 +167,7 @@
   padding: 1.5rem;
   background: var(--card, #ffffff);
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .tabStatRow {
@@ -206,8 +206,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  align-self: flex-start;
+  align-self: flex-end;
   margin-top: auto;
+  margin-bottom: 12px;
+  margin-right: 12px;
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
@@ -499,7 +501,7 @@
   flex-direction: column;
   gap: 0.5rem;
   border: 1px solid var(--border, #e7e5e4);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   padding: 1rem;
   background: color-mix(in oklch, var(--background), transparent 40%);
 }
@@ -551,4 +553,114 @@
 .mono {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- Attendance panel --- */
+.attendancePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.attendanceChartCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+  background: color-mix(in oklch, var(--background), transparent 40%);
+}
+
+.chartTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.lineWrap {
+  width: 100%;
+  height: 150px;
+}
+
+.gradeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.gradeCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 88px;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: var(--radius-lg);
+  background: var(--card, #ffffff);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+}
+
+.gradeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gradeName {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.gradeDonut {
+  --color-present: var(--primary, #166534);
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+}
+
+.gradeMetric {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+
+.gradePresent {
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--foreground);
+}
+
+.gradeTotal {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.gradeBar {
+  height: 4px;
+  width: 100%;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground), transparent 90%);
+  overflow: hidden;
+}
+
+.gradeBarFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary, #166534);
+}
+
+@media (max-width: 560px) {
+  .gradeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
