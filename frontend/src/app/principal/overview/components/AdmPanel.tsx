@@ -74,6 +74,7 @@ export function AdmPanel({
 
   const pendingDocs = docs.filter((d) => d.status === "pending_signature");
   const signed = docs.length - pendingDocs.length;
+  const latestPending = pendingDocs.slice(-4).reverse();
 
   return (
     <div className={styles.admPanel}>
@@ -89,7 +90,7 @@ export function AdmPanel({
       </div>
 
       <div className={styles.admList}>
-        {pendingDocs.map((d) => (
+        {latestPending.map((d) => (
           <div key={d.id} className={styles.admDoc}>
             <div className={styles.admDocMain}>
               <div className={styles.admDocTop}>
