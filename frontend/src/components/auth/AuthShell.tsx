@@ -13,8 +13,6 @@ export function AuthShell({ icon: Icon, children }: AuthShellProps) {
   return (
     <main className={styles.shell}>
       <div className={styles.panel}>
-        <FluidBackground />
-        <div className={styles.scrim} aria-hidden />
         <header className={styles.header}>
           <Link href="/" className={styles.brand}>
             Zentra
@@ -32,10 +30,8 @@ export function AuthShell({ icon: Icon, children }: AuthShellProps) {
       </div>
 
       <aside className={styles.aside}>
-        <div className={styles.asideDecor} aria-hidden>
-          <span className={styles.decorA} />
-          <span className={styles.decorB} />
-        </div>
+        <FluidBackground />
+        <div className={styles.asideScrim} aria-hidden />
         <div className={styles.asideContent}>
           <span className={styles.asideIcon}>
             <Icon size={26} />
@@ -47,6 +43,11 @@ export function AuthShell({ icon: Icon, children }: AuthShellProps) {
             Grading, attendance, anecdotal records, and early-intervention risk —
             unified for the whole school community.
           </p>
+          <ul className={styles.asideList}>
+            <li>Encode grades and lock finals for registrar approval.</li>
+            <li>Take AM/PM attendance and write anecdotal records.</li>
+            <li>Track ADM learners and refer at-risk students.</li>
+          </ul>
         </div>
       </aside>
     </main>

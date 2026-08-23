@@ -25,12 +25,12 @@
   }
 }
 
-.scrim {
+.asideScrim {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
-  background-color: color-mix(in oklch, var(--background), transparent 60%);
+  background-color: color-mix(in oklch, var(--background), transparent 65%);
 }
 
 .header {
@@ -119,6 +119,7 @@
 
 .asideContent {
   position: relative;
+  z-index: 2;
   max-width: 28rem;
   padding: 0 2.5rem;
   text-align: center;
@@ -150,4 +151,33 @@
   font-size: 0.875rem;
   line-height: 1.6;
   color: var(--muted-foreground);
+}
+
+.asideList {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  text-align: left;
+}
+
+.asideList li {
+  position: relative;
+  padding-left: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.asideList li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background-color: var(--primary);
 }
