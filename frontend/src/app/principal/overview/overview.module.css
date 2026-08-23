@@ -13,8 +13,8 @@
   align-items: start;
 }
 
-@media (max-width: 860px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
+.error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #b91c1c;
 }
