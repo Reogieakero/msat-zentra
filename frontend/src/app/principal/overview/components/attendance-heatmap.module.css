@@ -1,0 +1,137 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 6rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklch, var(--primary), transparent 85%),
+    color-mix(in oklch, var(--primary), transparent 85%)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 70%;
+  background-position: 0 70%;
+  width: max-content;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.arrow:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.arrowIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  padding-left: 16px;
+  width: max-content;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: max-content;
+  height: 150px;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.card:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
+}
+
+.grade {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--foreground);
+  text-align: left;
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklch, var(--primary), transparent 85%),
+    color-mix(in oklch, var(--primary), transparent 85%)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 70%;
+  background-position: 0 70%;
+}
+
+.grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(20, 10px);
+  grid-auto-rows: 10px;
+  gap: 3px;
+  margin: 0;
+  width: max-content;
+}
+
+.block {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}

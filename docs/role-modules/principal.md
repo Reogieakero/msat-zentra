@@ -109,7 +109,12 @@
   - **Cell** = count of students in that section flagged on that factor (no names). **Shading** by intensity (light→dark).
   - *Example:* row "Grade 9-B", column "Attendance" dark = 14 students < 80%. Click → Module 4 pre-filtered.
   - Source: `report_snapshots` type=`heat_map`; live fallback if stale (O6).
-- **Action-Required rail (right):**
+- **Action Required (3-card section beneath the heat map):** a dedicated block under the matrix, laid out as **3 equal-width cards** (Supabase "Featured integrations" style — icon + title + count + one-line description + "Open →" link). Surfaces the actions the Principal must personally complete, highest urgency first.
+  - 🃏 **Card 1 — ADM Signatures** — `adm_learner_profiles` where `approved_by` null & `eligibility_status=eligible`. Big ⚑ count. One-liner: "Learner profiles awaiting your digital signature." → Module 5 (pending-signature filter).
+  - 🃏 **Card 2 — Account Approvals** — `users` status=`pending` mapped to RK (7–10) / Registrar (11–12). Big ⚑ count. One-liner: "New accounts routed to you for approval." → Module 10.
+  - 🃏 **Card 3 — Attendance Watch** — derived from the heat map's Attendance column (count of sections < 80%, i.e. dark cells). Big ⚑ count. One-liner: "Sections below 80% attendance need attention." → Module 4 pre-filtered to Attendance factor.
+  - *Empty state:* all three cards show "0" with a calm "✅ All caught up" and no link emphasis.
+- **Action-Required rail (right):** condensed mirror of the section above — top 3 items only.
   - 👁 **ADM awaiting signature** — count + list of `adm_learner_profiles` where `approved_by` null & `eligibility_status=eligible`. Links to Module 5.
   - 👁 **Account approvals routed** — count of `users` status=`pending` mapped to RK (7–10) / Registrar (11–12). Links to Module 10.
   - 👁 **Recent notifications** — last 5 from `notifications`. Links to Module 9.

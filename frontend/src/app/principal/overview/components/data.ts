@@ -192,6 +192,72 @@ export const SF10_STATUS_META: Record<
   attached: { label: "Attached", color: "#166534" },
 };
 
+export type SchoolDay = {
+  grade: string;
+  days: { present: number; total: number }[];
+};
+
+function buildDays(seed: number, baseRate: number): { present: number; total: number }[] {
+  const days: { present: number; total: number }[] = [];
+  let s = seed;
+  const rand = () => {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+  for (let i = 0; i < 100; i++) {
+    const total = 30 + Math.floor(rand() * 6);
+    const drift = (rand() - 0.5) * 0.12;
+    const rate = Math.min(1, Math.max(0.7, baseRate + drift));
+    days.push({ present: Math.round(total * rate), total });
+  }
+  return days;
+}
+
+export const SCHOOL_DAYS: SchoolDay[] = [
+  { grade: "Grade 7", days: buildDays(11, 0.97) },
+  { grade: "Grade 8", days: buildDays(29, 0.96) },
+  { grade: "Grade 9", days: buildDays(47, 0.95) },
+  { grade: "Grade 10", days: buildDays(63, 0.94) },
+  { grade: "Grade 11", days: buildDays(81, 0.96) },
+  { grade: "Grade 12", days: buildDays(97, 0.9) },
+];
+
+export type AccountApproval = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  routedTo: "record_keeper" | "registrar";
+  status: "pending" | "approved";
+};
+
+export const ACCOUNT_APPROVALS: AccountApproval[] = [
+  {
+    id: "ACC-441",
+    name: "Ms. P. Bautista",
+    email: "p.bautista@zentra.test",
+    role: "Adviser (Grade 7)",
+    routedTo: "record_keeper",
+    status: "pending",
+  },
+  {
+    id: "ACC-442",
+    name: "Mr. L. Mercado",
+    email: "l.mercado@zentra.test",
+    role: "Subject Teacher",
+    routedTo: "record_keeper",
+    status: "pending",
+  },
+  {
+    id: "ACC-443",
+    name: "Ms. C. Ramos",
+    email: "c.ramos@zentra.test",
+    role: "Registrar Asst.",
+    routedTo: "registrar",
+    status: "pending",
+  },
+];
+
 export const GRADE_ORDER = [
   "Grade 7",
   "Grade 8",

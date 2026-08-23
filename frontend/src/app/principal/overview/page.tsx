@@ -3,6 +3,8 @@
 import { NotebookPen, CalendarOff, FileSignature, FileBarChart } from "lucide-react";
 import { SchoolCard } from "./components/SchoolCard";
 import { BrowserWindow } from "./components/BrowserWindow";
+import { AttendanceHeatmap } from "./components/AttendanceHeatmap";
+import { ActionRequired } from "./components/ActionRequired";
 import { TABS, MOCK } from "./components/data";
 import type { TabDef } from "./components/data";
 import styles from "./overview.module.css";
@@ -28,6 +30,8 @@ export default function PrincipalOverviewPage() {
         <SchoolCard schoolName={data.schoolName} kpis={data.kpis} />
         <BrowserWindow tabs={TAB_DEFS} />
       </div>
+      <AttendanceHeatmap />
+      <ActionRequired />
     </section>
   );
 }
