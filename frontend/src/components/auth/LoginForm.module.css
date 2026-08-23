@@ -63,22 +63,51 @@
   margin-top: 0.25rem;
 }
 
-.spinner {
-  animation: spin 0.8s linear infinite;
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
 }
 
-.backLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background-color: var(--border);
+}
+
+.dividerText {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.googleBtn {
+  width: 100%;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.signup {
+  text-align: center;
   font-size: 0.875rem;
   color: var(--muted-foreground);
-  text-decoration: none;
-  transition: color 150ms ease-out;
 }
 
-.backLink:hover {
-  color: var(--foreground);
+.signupLink {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.signupLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {

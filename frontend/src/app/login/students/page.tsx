@@ -4,7 +4,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function StudentLoginPage() {
   return (
-    <AuthShell icon={GraduationCap}>
+    <AuthShell icon={GraduationCap} role="student">
       <LoginForm
         role="student"
         title="Student sign in"

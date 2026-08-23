@@ -39,7 +39,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 1.5rem;
+}
+
+.switchBtn {
+  gap: 0.25rem;
 }
 
 .brand {
@@ -89,39 +94,11 @@
   }
 }
 
-.asideDecor {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.04;
-}
-
-.decorA,
-.decorB {
-  position: absolute;
-  border: 1px solid var(--primary);
-  border-radius: 50%;
-}
-
-.decorA {
-  top: 2.5rem;
-  left: -4rem;
-  width: 16rem;
-  height: 16rem;
-}
-
-.decorB {
-  right: 2.5rem;
-  bottom: 4rem;
-  width: 10rem;
-  height: 10rem;
-}
-
 .browser {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 30rem;
+  max-width: 32rem;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -174,45 +151,26 @@
   padding: 1.75rem 1.5rem;
 }
 
-.asideContent {
-  position: relative;
-  z-index: 2;
-  max-width: 28rem;
-  margin-inline: auto;
-  padding: 0;
-  text-align: center;
-}
-
 .asideIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  margin-bottom: 1.25rem;
-  border-radius: var(--radius-md);
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+  margin-bottom: 0.75rem;
+  color: var(--primary);
 }
 
-.asideTitle {
+.browserTitle {
   font-family: var(--font-heading);
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--foreground);
-  margin: 0;
-}
-
-.asideText {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--muted-foreground);
+  margin: 0 0 1rem;
+  text-align: left;
 }
 
 .asideList {
-  margin: 1.5rem 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   display: flex;

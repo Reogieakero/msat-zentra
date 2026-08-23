@@ -4,7 +4,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function ParentLoginPage() {
   return (
-    <AuthShell icon={Users}>
+    <AuthShell icon={Users} role="parent">
       <LoginForm
         role="parent"
         title="Parent / Guardian sign in"
