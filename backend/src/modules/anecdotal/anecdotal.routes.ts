@@ -19,12 +19,13 @@ const createSchema = z.object({
   notesRecommendationsActions: z.string().optional(),
   classPerformance: z.string().optional(),
   attendanceSummary: z.string().optional(),
+  category: z.enum(["behavioral", "bullying", "academic", "attendance", "health"]).default("behavioral"),
   confidentialityLevel: z.enum(["restricted", "confidential"]).default("restricted"),
 });
 router.post(
   "/",
   requireAuth,
-  requireRole("adviser"),
+  requireRole("adviser", "subject_teacher"),
   validate("body", createSchema),
   async (req, res, next) => {
     try {

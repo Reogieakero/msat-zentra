@@ -84,6 +84,14 @@ enum ReferralTarget {
   principal
 }
 
+enum AnecdotalCategory {
+  behavioral
+  bullying
+  academic
+  attendance
+  health
+}
+
 enum ReferralStatus {
   pending
   in_progress
@@ -393,6 +401,7 @@ model AnecdotalRecord {
   attendanceSummary      String?
   attachmentUrl          String?
   termId                 String
+  category               AnecdotalCategory @default(behavioral)
   confidentialityLevel   Confidentiality  @default(restricted)
   student                StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   observer               User            @relation("ObserverAnecdotals", fields: [observerId], references: [id])

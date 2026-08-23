@@ -216,6 +216,46 @@ async function main() {
   const anecdotalRecs = await prisma.anecdotalRecord.findMany({ where: { id: { in: anecdotals.map((a) => a.id) } } });
   await prisma.anecdotalRecordFollowup.createMany({ data: anecdotalRecs.map((a) => ({ id: id("af"), anecdotalRecordId: a.id, followupBy: a.observerId, followupDate: pickDate(2025, 10, 12), notes: "Followed up with student." })), skipDuplicates: true });
 
+  // Non-adviser subject teacher: files anecdotal records by category.
+  const subjTeacherEmail = "teacher.subject@zentra.test";
+  const subjTeacher = await prisma.user.upsert({
+    where: { email: subjTeacherEmail },
+    update: { fullName: "Mr. Subject Teacher", role: "subject_teacher" as Role, passwordHash: staffHash, status: "active" },
+    create: { email: subjTeacherEmail, fullName: "Mr. Subject Teacher", role: "subject_teacher" as Role, passwordHash: staffHash, status: "active" },
+  });
+  await prisma.staffProfile.upsert({
+    where: { userId: subjTeacher.id },
+    update: { employeeId: "TCH001", isAdviser: false, department: "Academic" },
+    create: { userId: subjTeacher.id, employeeId: "TCH001", isAdviser: false, department: "Academic" },
+  });
+  // Assign the subject teacher to G7-A's Math section (they are NOT the adviser).
+  const targetSection = sections.find((s) => s.id === "sec-G7-A")!;
+  const targetSubjectId = subjectIds["G7:MATH7"];
+  await prisma.teacherSubjectAssignment.upsert({
+    where: { teacherId_subjectId_sectionId_termId: { teacherId: subjTeacher.id, subjectId: targetSubjectId, sectionId: targetSection.id, termId: term.id } },
+    update: {},
+    create: { teacherId: subjTeacher.id, subjectId: targetSubjectId, sectionId: targetSection.id, termId: term.id },
+  });
+  const subjAnecdotals: { id: string; studentId: string; observerId: string; sectionId: string; observationDatetime: Date; descriptionOfIncident: string; descriptionOfLocation: string; notesRecommendationsActions: string; category: any; confidentialityLevel: Confidentiality; termId: string }[] = [];
+  const subjSectionStudents = allStudents.filter((st) => st.sectionId === targetSection.id).slice(0, 5);
+  const subjCategories: any[] = ["academic", "behavioral", "attendance", "bullying", "health"];
+  subjSectionStudents.forEach((st, idx) => {
+    subjAnecdotals.push({
+      id: id("anecsubj"),
+      studentId: st.userId,
+      observerId: subjTeacher.id,
+      sectionId: targetSection.id,
+      observationDatetime: pickDate(2025, 10, 15),
+      descriptionOfIncident: rand(INCIDENTS),
+      descriptionOfLocation: "Classroom",
+      notesRecommendationsActions: "Coordinated with adviser.",
+      category: subjCategories[idx % subjCategories.length],
+      confidentialityLevel: "restricted" as Confidentiality,
+      termId: term.id,
+    });
+  });
+  await prisma.anecdotalRecord.createMany({ data: subjAnecdotals, skipDuplicates: true });
+
   // Referrals (>=20)
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));
   await prisma.referral.createMany({ data: referralsData, skipDuplicates: true });
