@@ -1,8 +1,12 @@
+import styles from "./overview.module.css";
+
 export default function PrincipalOverviewPage() {
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>Principal Overview</h1>
-      <p>This is a placeholder page. Principal login redirects here on success.</p>
-    </main>
+    <section className={styles.page}>
+      <h1 className={styles.title}>Principal Overview</h1>
+      <p className={styles.lead}>
+        This is a placeholder page. Principal login redirects here on success.
+      </p>
+    </section>
   );
 }
