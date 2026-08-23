@@ -17,10 +17,17 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { Button } from "@/components/ui/button";
 import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
 } from "recharts";
 import styles from "./overview.module.css";
 
@@ -88,6 +95,38 @@ const ANECDOTAL_STUDENTS: AnecdotalStudent[] = [
     dateAdded: "Aug 22, 2026",
     adviser: "Ms. Garcia",
   },
+];
+
+type AttendancePoint = {
+  day: string;
+  present: number;
+};
+
+const ATTENDANCE_TREND: AttendancePoint[] = [
+  { day: "Aug 18", present: 1204 },
+  { day: "Aug 19", present: 1187 },
+  { day: "Aug 20", present: 1211 },
+  { day: "Aug 21", present: 1198 },
+  { day: "Aug 23", present: 1226 },
+];
+
+const attendanceConfig = {
+  present: { label: "Present", color: "#166534" },
+} satisfies ChartConfig;
+
+type GradeAttendance = {
+  grade: string;
+  present: number;
+  total: number;
+};
+
+const GRADE_ATTENDANCE: GradeAttendance[] = [
+  { grade: "Grade 7", present: 214, total: 220 },
+  { grade: "Grade 8", present: 198, total: 205 },
+  { grade: "Grade 9", present: 205, total: 212 },
+  { grade: "Grade 10", present: 189, total: 196 },
+  { grade: "Grade 11", present: 210, total: 218 },
+  { grade: "Grade 12", present: 210, total: 233 },
 ];
 
 type TabId = "anecdotal" | "attendance" | "adm" | "sf10";
@@ -247,6 +286,8 @@ export default function PrincipalOverviewPage() {
             >
               {tab.id === "anecdotal" ? (
                 <AnecdotalPanel href={tab.href} label={tab.label} />
+              ) : tab.id === "attendance" ? (
+                <AttendancePanel href={tab.href} label={tab.label} />
               ) : (
                 <>
                   <div className={styles.tabStatRow}>
@@ -258,10 +299,12 @@ export default function PrincipalOverviewPage() {
                     </span>
                   </div>
                   <p className={styles.tabHint}>{tab.hint}</p>
-                  <a className={styles.tabLink} href={tab.href}>
-                    Open {tab.label}
-                    <ArrowRight className={styles.tabLinkIcon} aria-hidden />
-                  </a>
+                  <Button asChild variant="outline" size="sm" className={styles.tabLink}>
+                    <a href={tab.href}>
+                      Open {tab.label}
+                      <ArrowRight aria-hidden />
+                    </a>
+                  </Button>
                 </>
               )}
             </div>
@@ -383,10 +426,109 @@ function AnecdotalPanel({
         </div>
       </div>
 
-      <a className={styles.tabLink} href={href}>
-        Open {label}
-        <ArrowRight className={styles.tabLinkIcon} aria-hidden />
-      </a>
+      <Button asChild variant="outline" size="sm" className={styles.tabLink}>
+        <a href={href}>
+          Open {label}
+          <ArrowRight aria-hidden />
+        </a>
+      </Button>
+    </div>
+  );
+}
+
+function AttendancePanel({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  return (
+    <div className={styles.attendancePanel}>
+      <div className={styles.attendanceChartCard}>
+        <h3 className={styles.chartTitle}>Present Count · Last 5 School Days</h3>
+        <ChartContainer
+          id="attendance-trend"
+          config={attendanceConfig}
+          className={styles.lineWrap}
+        >
+          <RechartsLineChart
+            data={ATTENDANCE_TREND}
+            margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="day"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <YAxis tickLine={false} axisLine={false} fontSize={12} width={40} />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Line
+              dataKey="present"
+              type="monotone"
+              stroke="var(--color-present)"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          </RechartsLineChart>
+        </ChartContainer>
+      </div>
+
+      <div className={styles.gradeGrid}>
+        {GRADE_ATTENDANCE.map((g) => {
+          const rate = Math.round((g.present / g.total) * 100);
+          return (
+            <div key={g.grade} className={styles.gradeCard}>
+              <div className={styles.gradeHead}>
+                <span className={styles.gradeName}>{g.grade}</span>
+                <span className={styles.gradeDonut}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={[
+                          { name: "present", value: g.present },
+                          { name: "absent", value: g.total - g.present },
+                        ]}
+                        dataKey="value"
+                        innerRadius={11}
+                        outerRadius={18}
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                        isAnimationActive={false}
+                      >
+                        <Cell fill="var(--color-present)" />
+                        <Cell fill="color-mix(in oklch, var(--foreground), transparent 90%)" />
+                      </Pie>
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </span>
+              </div>
+              <div className={styles.gradeMetric}>
+                <span className={styles.gradePresent}>{g.present}</span>
+                <span className={styles.gradeTotal}>/ {g.total} present</span>
+              </div>
+              <div className={styles.gradeBar}>
+                <span
+                  className={styles.gradeBarFill}
+                  style={{ width: `${rate}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Button asChild variant="outline" size="sm" className={styles.tabLink}>
+        <a href={href}>
+          Open {label}
+          <ArrowRight aria-hidden />
+        </a>
+      </Button>
     </div>
   );
 }
