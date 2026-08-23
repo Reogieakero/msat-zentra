@@ -37,6 +37,7 @@ export type GradeAttendance = {
   grade: string;
   present: number;
   total: number;
+  days: AttendancePoint[];
 };
 
 export type AdmDocument = {
