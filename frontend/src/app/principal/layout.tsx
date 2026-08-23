@@ -25,7 +25,8 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   }, [mode]);
 
   const hovering = mode === "hover" && hovered && !open;
-  const expanded = open || (mode === "expanded" && !isMobile);
+  const expanded =
+    open || (mode === "hover" && hovered && !open) || (mode === "expanded" && !isMobile);
 
   const handleModeChange = (next: SidebarMode) => {
     setMode(next);
@@ -57,7 +58,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
       />
       <div
         className={`${styles.shell} ${
-          expanded && !isMobile ? styles.shellExpanded : ""
+          mode === "expanded" && !isMobile ? styles.shellExpanded : ""
         }`}
       >
         <main className={styles.main}>{children}</main>
