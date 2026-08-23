@@ -1,0 +1,153 @@
+.shell {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100svh;
+  background-color: var(--background);
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: color-mix(in oklch, var(--background), transparent 60%);
+}
+
+.header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+}
+
+.brand {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.body {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem 2.5rem;
+}
+
+.formWrap {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.footer {
+  position: relative;
+  z-index: 10;
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.aside {
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: color-mix(in oklch, var(--accent), transparent 60%);
+}
+
+@media (min-width: 1024px) {
+  .aside {
+    display: flex;
+  }
+}
+
+.asideDecor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+}
+
+.decorA,
+.decorB {
+  position: absolute;
+  border: 1px solid var(--primary);
+  border-radius: 50%;
+}
+
+.decorA {
+  top: 2.5rem;
+  left: -4rem;
+  width: 16rem;
+  height: 16rem;
+}
+
+.decorB {
+  right: 2.5rem;
+  bottom: 4rem;
+  width: 10rem;
+  height: 10rem;
+}
+
+.asideContent {
+  position: relative;
+  max-width: 28rem;
+  padding: 0 2.5rem;
+  text-align: center;
+}
+
+.asideIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.asideTitle {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.asideText {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
