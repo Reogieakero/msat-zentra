@@ -37,16 +37,42 @@ router.post("/register/:kind", validate("body", registerSchema), async (req, res
   } catch (e) { next(e); }
 });
 
+const STAFF_ROLES: Role[] = [
+  "subject_teacher",
+  "adviser",
+  "nurse",
+  "adm_coordinator",
+  "guidance_counselor",
+  "record_keeper",
+  "registrar",
+  "principal",
+];
+
+const KNOWN_ROLES: Role[] = [...STAFF_ROLES, "student", "parent"];
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  role: z.enum(["student", "staff", "parent"]),
 });
+
+const roleKindToRoles: Record<string, Role[]> = {
+  student: ["student"],
+  staff: STAFF_ROLES,
+  parent: ["parent"],
+};
 
 router.post("/login", validate("body", loginSchema), async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || user.status !== "active") throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
+
+    const allowedRoles = roleKindToRoles[role] ?? [];
+    if (!KNOWN_ROLES.includes(user.role) || !allowedRoles.includes(user.role)) {
+      throw new AppError(403, "ROLE_MISMATCH", "This account cannot sign in through this portal.");
+    }
+
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
 

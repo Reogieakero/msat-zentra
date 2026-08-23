@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { setAccessToken } from "@/lib/api/client";
+import { toast } from "@/components/ui/sonner";
 import styles from "./LoginForm.module.css";
 
 export interface LoginFormProps {
@@ -47,17 +48,36 @@ export function LoginForm({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier, password, role }),
+          body: JSON.stringify({ email: identifier, password, role }),
         },
       );
-      const data = await res.json();
+      let data: any = {};
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      }
       if (!res.ok) {
-        throw new Error(data?.message ?? "Sign in failed. Check your credentials.");
+        const message =
+          data?.message ??
+          (res.status === 0
+            ? "Cannot reach the server. Check your connection."
+            : `Sign in failed (${res.status}). Check your credentials.`);
+        setError(message);
+        toast.error({ title: "Sign in failed", description: message });
+        return;
       }
       if (data.accessToken) setAccessToken(data.accessToken);
-      router.push(`/${role}`);
+      toast.success({ title: "Signed in", description: "Redirecting you now." });
+      const home =
+        (data.role === "principal" && "/principal/overview") ||
+        (data.role === "registrar" && "/registrar") ||
+        (data.role === "record_keeper" && "/record-keeper") ||
+        `/${role}`;
+      router.push(home);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      const message = err instanceof Error ? err.message : "Something went wrong.";
+      setError(message);
+      toast.error({ title: "Sign in failed", description: message });
     } finally {
       setLoading(false);
     }

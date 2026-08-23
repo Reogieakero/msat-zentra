@@ -163,3 +163,15 @@
     transition: none;
   }
 }
+
+[data-sileo-viewport] [data-sileo-title] {
+  color: #000 !important;
+}
+
+[data-sileo-viewport] [data-sileo-description] {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-sileo-viewport] [data-sileo-button] {
+  color: #000 !important;
+}
