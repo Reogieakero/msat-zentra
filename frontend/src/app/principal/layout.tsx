@@ -7,13 +7,25 @@ import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { PanelLeftIcon } from "lucide-react";
 import styles from "./principal.module.css";
 
+const STORAGE_KEY = "zentra.sidebar.mode";
+
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const { open, setOpen, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   const [hovered, setHovered] = React.useState(false);
-  const [mode, setMode] = React.useState<SidebarMode>("hover");
+  const [mode, setMode] = React.useState<SidebarMode>(() => {
+    if (typeof window === "undefined") return "hover";
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    return saved === "hover" || saved === "expanded" || saved === "collapsible"
+      ? saved
+      : "hover";
+  });
 
-  const expanded = open || (mode === "hover" && hovered);
-  const hoverWidth = mode === "hover" && hovered && !open;
+  React.useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, mode);
+  }, [mode]);
+
+  const hovering = mode === "hover" && hovered && !open;
+  const expanded = open || (mode === "expanded" && !isMobile);
 
   const handleModeChange = (next: SidebarMode) => {
     setMode(next);
@@ -38,18 +50,14 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
       </header>
       <StaffSidebar
         expanded={expanded}
-        hoverWidth={hoverWidth}
+        hovering={hovering}
         onHoverChange={setHovered}
         mode={mode}
         onModeChange={handleModeChange}
       />
       <div
         className={`${styles.shell} ${
-          expanded && !isMobile
-            ? hoverWidth
-              ? styles.shellHoverWidth
-              : styles.shellExpanded
-            : ""
+          expanded && !isMobile ? styles.shellExpanded : ""
         }`}
       >
         <main className={styles.main}>{children}</main>

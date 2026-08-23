@@ -122,13 +122,13 @@ function useIsActive() {
 
 function SidebarShell({
   expanded,
-  hoverWidth,
+  hovering,
   onHoverChange,
   mode,
   onModeChange,
 }: {
   expanded: boolean;
-  hoverWidth: boolean;
+  hovering: boolean;
   onHoverChange: (hovered: boolean) => void;
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
@@ -211,7 +211,7 @@ function SidebarShell({
   const aside = (
     <aside
       className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${
-        hoverWidth ? styles.hoverWidth : ""
+        hovering ? styles.hoverElevated : ""
       }`}
       data-state={expanded ? "expanded" : "collapsed"}
       data-collapsible="icon"
@@ -281,13 +281,13 @@ function SidebarShell({
 
 export function StaffSidebar({
   expanded,
-  hoverWidth,
+  hovering,
   onHoverChange,
   mode,
   onModeChange,
 }: {
   expanded: boolean;
-  hoverWidth: boolean;
+  hovering: boolean;
   onHoverChange: (hovered: boolean) => void;
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
@@ -295,7 +295,7 @@ export function StaffSidebar({
   return (
     <SidebarShell
       expanded={expanded}
-      hoverWidth={hoverWidth}
+      hovering={hovering}
       onHoverChange={onHoverChange}
       mode={mode}
       onModeChange={onModeChange}
