@@ -44,7 +44,6 @@
 .brand {
   display: flex;
   align-items: center;
-  justify-content: center;
   text-decoration: none;
   outline: none;
 }
@@ -54,53 +53,98 @@
   border-radius: var(--radius-md);
 }
 
-.brandMark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-md);
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+.brandText {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 1rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--foreground);
 }
 
-.trigger {
+.spacer {
+  flex: 1;
+}
+
+.search {
+  width: 16rem;
+  max-width: 40vw;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.searchCommand {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+.searchCommand :global([data-slot="command-input"]) {
+  height: 2.25rem;
+}
+
+.avatarButton {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  margin-left: -0.25rem;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md);
-  color: var(--foreground);
+  border-radius: 9999px;
   cursor: pointer;
   outline: none;
-  transition: background-color 140ms ease-out;
+  transition: box-shadow 140ms ease-out;
 }
 
-.trigger:hover {
-  background-color: var(--muted);
+.avatarButton:hover {
+  box-shadow: 0 0 0 2px var(--muted);
 }
 
-.trigger:focus-visible {
+.avatarButton:focus-visible {
   box-shadow: 0 0 0 2px var(--ring);
 }
 
-.triggerIcon {
+.avatarIcon {
   width: 1.125rem;
   height: 1.125rem;
 }
 
-.title {
-  font-size: 0.875rem;
+.accountMenu {
+  min-width: 12rem;
+}
+
+.accountItem {
+  gap: 0.5rem;
+}
+
+.accountIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.accountGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.accountGroupLabel {
+  padding: 0.25rem 0.5rem 0.125rem;
+  font-size: 0.6875rem;
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.accountSubItem {
+  padding-left: 1.75rem;
+}
+
+.accountCheck {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
 }
 
 @media (prefers-reduced-motion: reduce) {
