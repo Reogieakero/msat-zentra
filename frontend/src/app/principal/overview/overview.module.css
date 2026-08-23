@@ -29,8 +29,8 @@
 /* Layout: two cards side by side, stack on narrow screens */
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 0.6fr) 1fr;
+  gap: 2rem;
   align-items: stretch;
 }
 
@@ -47,15 +47,15 @@
   flex-direction: column;
   gap: 1.25rem;
   background: var(--card, #ffffff);
-  border: 1px solid var(--border, #e7e5e4);
+  border: none;
   border-radius: 0.5rem;
   padding: 1.25rem;
-  transition: border-color 160ms ease-out;
 }
 
-.schoolCard:hover,
-.riskCard:hover {
-  border-color: #d6d3d1;
+/* Left school card: no card background */
+.schoolCard {
+  background: transparent;
+  padding: 0;
 }
 
 /* --- Card 1: School + KPIs --- */
