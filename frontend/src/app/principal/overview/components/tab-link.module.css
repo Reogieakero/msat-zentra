@@ -1,0 +1,23 @@
+.tabLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-end;
+  margin-top: auto;
+  margin-bottom: 12px;
+  margin-right: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--primary, #166534);
+  transition: gap 160ms ease-out;
+}
+
+.tabLink:hover {
+  gap: 0.5rem;
+}
+
+.tabLinkIcon {
+  width: 16px;
+  height: 16px;
+}
