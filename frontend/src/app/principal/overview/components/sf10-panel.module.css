@@ -133,3 +133,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+.donutSkeleton {
+  width: 5rem;
+  height: 5rem;
+  flex: none;
+  border-radius: 50%;
+}
+
+.summaryDotSkeleton {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.summaryTextSkeleton {
+  width: 4rem;
+  height: 1.25rem;
+}
+
+.summaryLabelSkeleton {
+  width: 5rem;
+  height: 0.75rem;
+}
+
+.gradeNameSkeleton {
+  width: 4rem;
+  height: 0.6875rem;
+}
+
+.levelStatSkeleton {
+  width: 100%;
+  height: 3rem;
+  border-radius: 0.5rem;
+}
+
+.tabLinkSkeleton {
+  width: 9rem;
+  height: 2rem;
+  margin-top: 0.25rem;
+}

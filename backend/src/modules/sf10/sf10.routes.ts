@@ -8,6 +8,51 @@ import { writeAudit } from "../../lib/audit.js";
 
 const router = Router();
 
+const GRADE_ORDER = ["G7", "G8", "G9", "G10", "G11", "G12"] as const;
+const GRADE_LABEL: Record<string, string> = {
+  G7: "Grade 7",
+  G8: "Grade 8",
+  G9: "Grade 9",
+  G10: "Grade 10",
+  G11: "Grade 11",
+  G12: "Grade 12",
+};
+
+router.get(
+  "/summary",
+  requireAuth,
+  requireRole("principal", "registrar", "record_keeper"),
+  async (req, res, next) => {
+    try {
+      const records = await prisma.sf10Record.findMany({
+        select: {
+          student: { select: { gradeLevel: true } },
+          uploadedFileUrl: true,
+          verifiedAt: true,
+          validatedAt: true,
+        },
+      });
+
+      const byGrade: Record<
+        string,
+        { attached: number; available: number; missing: number }
+      > = {};
+      for (const g of GRADE_ORDER) byGrade[g] = { attached: 0, available: 0, missing: 0 };
+
+      for (const r of records) {
+        const g = r.student.gradeLevel;
+        if (!byGrade[g]) byGrade[g] = { attached: 0, available: 0, missing: 0 };
+        if (r.validatedAt) byGrade[g].attached += 1;
+        else if (r.uploadedFileUrl || r.verifiedAt) byGrade[g].available += 1;
+        else byGrade[g].missing += 1;
+      }
+
+      const levels = GRADE_ORDER.map((g) => ({ grade: GRADE_LABEL[g], ...byGrade[g] }));
+      res.json({ levels });
+    } catch (e) { next(e); }
+  }
+);
+
 const uploadSchema = z.object({ studentId: z.string().min(1), fileUrl: z.string().url() });
 router.post(
   "/upload",
