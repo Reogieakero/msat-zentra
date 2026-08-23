@@ -32,22 +32,34 @@ export function AuthShell({ icon: Icon, children }: AuthShellProps) {
       <aside className={styles.aside}>
         <FluidBackground />
         <div className={styles.asideScrim} aria-hidden />
-        <div className={styles.asideContent}>
-          <span className={styles.asideIcon}>
-            <Icon size={26} />
-          </span>
-          <h2 className={styles.asideTitle}>
-            One record, every learner signal.
-          </h2>
-          <p className={styles.asideText}>
-            Grading, attendance, anecdotal records, and early-intervention risk —
-            unified for the whole school community.
-          </p>
-          <ul className={styles.asideList}>
-            <li>Encode grades and lock finals for registrar approval.</li>
-            <li>Take AM/PM attendance and write anecdotal records.</li>
-            <li>Track ADM learners and refer at-risk students.</li>
-          </ul>
+        <div className={styles.browser}>
+          <div className={styles.browserBar}>
+            <span className={styles.dots} aria-hidden>
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </span>
+            <span className={styles.browserUrl}>msat.edu/zentra</span>
+          </div>
+          <div className={styles.browserBody}>
+            <div className={styles.asideContent}>
+              <span className={styles.asideIcon}>
+                <Icon size={26} />
+              </span>
+              <h2 className={styles.asideTitle}>
+                One record, every learner signal.
+              </h2>
+              <p className={styles.asideText}>
+                Grading, attendance, anecdotal records, and early-intervention risk —
+                unified for the whole school community.
+              </p>
+              <ul className={styles.asideList}>
+                <li>Encode grades and lock finals for registrar approval.</li>
+                <li>Take AM/PM attendance and write anecdotal records.</li>
+                <li>Track ADM learners and refer at-risk students.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </aside>
     </main>
