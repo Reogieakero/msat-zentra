@@ -14,6 +14,7 @@ import sf10Routes from "./modules/sf10/sf10.routes.js";
 import riskRoutes from "./modules/risk/risk.routes.js";
 import notificationsRoutes from "./modules/notifications/notifications.routes.js";
 import auditRoutes from "./modules/audit/audit.routes.js";
+import overviewRoutes from "./modules/overview/overview.routes.js";
 
 export function createApp() {
   const env = getEnv();
@@ -33,6 +34,7 @@ export function createApp() {
   app.use("/api/risk", riskRoutes);
   app.use("/api/notifications", notificationsRoutes);
   app.use("/api/audit", auditRoutes);
+  app.use("/api/overview", overviewRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -316,8 +316,10 @@ type RiskFactors = {
   wellbeing: number;
 };
 
+export const SCHOOL_NAME = "Mati School of Arts and Trades";
+
 export type OverviewData = {
-  schoolName: string;
+  schoolName?: string;
   kpis: {
     enrollment: number;
     activeSections: number;
