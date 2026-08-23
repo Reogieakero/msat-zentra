@@ -93,15 +93,6 @@ export const ADM_DOCUMENTS: AdmDocument[] = [
   },
 ];
 
-export const ADM_DONUT_COLORS = [
-  "#166534",
-  "#1d4ed8",
-  "#b91c1c",
-  "#c2410c",
-  "#7c3aed",
-  "#0e7490",
-];
-
 export type Sf10Status = "missing" | "available" | "attached";
 
 export type Sf10Level = {
