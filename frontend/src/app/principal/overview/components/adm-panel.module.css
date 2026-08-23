@@ -128,3 +128,41 @@
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+.summaryValueSkeleton {
+  width: 3rem;
+  height: 1.375rem;
+}
+
+.docIdSkeleton {
+  width: 6rem;
+  height: 0.8125rem;
+}
+
+.docStatusSkeleton {
+  width: 5rem;
+  height: 0.8125rem;
+}
+
+.docMetaSkeleton {
+  width: 6rem;
+  height: 0.75rem;
+}
+
+.docEligibilitySkeleton {
+  width: 8rem;
+  height: 0.6875rem;
+}
+
+.docSignSkeleton {
+  width: 4.5rem;
+  height: 2rem;
+  flex: none;
+  border-radius: var(--radius-lg);
+}
+
+.tabLinkSkeleton {
+  width: 9rem;
+  height: 2rem;
+  margin-top: 0.25rem;
+}
