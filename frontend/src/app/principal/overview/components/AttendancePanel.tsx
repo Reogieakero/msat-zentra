@@ -79,10 +79,17 @@ export function AttendancePanel({
   const trend = summary.trend;
   const grades = summary.grades as GradeAttendance[];
 
+  const dayLabel = (idxFromEnd: number) =>
+    trend.length - 1 - idxFromEnd >= 0
+      ? trend[trend.length - 1 - idxFromEnd].day
+      : null;
+  const todayLabel = dayLabel(0);
+  const yesterdayLabel = dayLabel(1);
+
   return (
     <div className={styles.attendancePanel}>
       <div className={styles.attendanceChartCard}>
-        <h3 className={styles.chartTitle}>Present Count · Last 5 School Days</h3>
+        <h3 className={styles.chartTitle}>Total Present · Last 5 School Days</h3>
         <ChartContainer
           id="attendance-trend"
           config={chartConfig}
@@ -119,7 +126,11 @@ export function AttendancePanel({
           <p className={styles.empty}>No attendance records yet</p>
         ) : (
           grades.map((g) => {
-            const rate = Math.round((g.present / g.total) * 100);
+            const latest = g.days[g.days.length - 1];
+            const prev = g.days[g.days.length - 2];
+            const rate = latest && latest.total > 0
+              ? Math.round((latest.present / latest.total) * 100)
+              : 0;
             return (
               <div key={g.grade} className={styles.gradeCard}>
                 <div className={styles.gradeHead}>
@@ -127,15 +138,24 @@ export function AttendancePanel({
                   <span className={styles.gradeRate}>{rate}%</span>
                 </div>
                 <div className={styles.gradeMetric}>
-                  <span className={styles.gradePresent}>{g.present}</span>
-                  <span className={styles.gradeTotal}>/ {g.total} present</span>
+                  <span className={styles.gradePresent}>
+                    {latest ? latest.present : 0}
+                  </span>
+                  <span className={styles.gradeTotal}>
+                    present {todayLabel ? `· ${todayLabel}` : ""}
+                  </span>
                 </div>
-                <div className={styles.gradeBar}>
-                  <span
-                    className={styles.gradeBarFill}
-                    style={{ width: `${rate}%` }}
-                  />
-                </div>
+                {prev ? (
+                  <div className={styles.gradeDays}>
+                    <span>{yesterdayLabel}</span>
+                    <span className={styles.gradeDaysPrev}>{prev.present}</span>
+                  </div>
+                ) : (
+                  <div className={styles.gradeDays}>
+                    <span>Term</span>
+                    <span className={styles.gradeDaysPrev}>{g.present}</span>
+                  </div>
+                )}
               </div>
             );
           })

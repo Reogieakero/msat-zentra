@@ -94,23 +94,42 @@ router.get(
       const records = await prisma.attendanceRecord.findMany({
         where,
         select: {
+          date: true,
           status: true,
           student: { select: { gradeLevel: true } },
         },
       });
 
-      const gradeAgg: Record<string, { present: number; total: number }> = {};
+      const gradeDayAgg: Record<string, Map<string, { present: number; total: number }>> = {};
+      const gradeTermAgg: Record<string, { present: number; total: number }> = {};
       for (const r of records) {
         const grade = r.student.gradeLevel;
-        if (!gradeAgg[grade]) gradeAgg[grade] = { present: 0, total: 0 };
-        gradeAgg[grade].total += 1;
-        if (r.status === "present") gradeAgg[grade].present += 1;
+        const key = r.date.toISOString().slice(0, 10);
+        if (!gradeDayAgg[grade]) gradeDayAgg[grade] = new Map();
+        if (!gradeDayAgg[grade].has(key)) gradeDayAgg[grade].set(key, { present: 0, total: 0 });
+        const agg = gradeDayAgg[grade].get(key)!;
+        agg.total += 1;
+        if (r.status === "present") agg.present += 1;
+
+        if (!gradeTermAgg[grade]) gradeTermAgg[grade] = { present: 0, total: 0 };
+        gradeTermAgg[grade].total += 1;
+        if (r.status === "present") gradeTermAgg[grade].present += 1;
       }
 
-      const grades = GRADE_ORDER.filter((g) => gradeAgg[g]).map((g) => ({
+      const grades = GRADE_ORDER.filter((g) => gradeTermAgg[g]).map((g) => ({
         grade: GRADE_LABEL[g],
-        present: gradeAgg[g].present,
-        total: gradeAgg[g].total,
+        present: gradeTermAgg[g].present,
+        total: gradeTermAgg[g].total,
+        days: dayKeys.map((key) => {
+          const agg = gradeDayAgg[g]?.get(key) ?? { present: 0, total: 0 };
+          const d = new Date(key + "T00:00:00Z");
+          const day = d.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC",
+          });
+          return { day, present: agg.present, total: agg.total };
+        }),
       }));
 
       res.json({ trend, grades });
