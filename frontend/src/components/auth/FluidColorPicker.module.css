@@ -1,0 +1,29 @@
+.group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.item {
+  border-color: var(--border);
+}
+
+.swatch {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 90%);
+}
+
+.label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}

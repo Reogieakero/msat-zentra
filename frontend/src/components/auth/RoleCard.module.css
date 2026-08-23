@@ -1,0 +1,78 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.25rem;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.card:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
+}
+
+.card:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.label {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.description {
+  margin-top: 0.25rem;
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.continue:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 20%);
+}
+
+.chevron {
+  transition: transform 150ms ease-out;
+}
+
+.card:hover .chevron {
+  transform: translateX(2px);
+}
