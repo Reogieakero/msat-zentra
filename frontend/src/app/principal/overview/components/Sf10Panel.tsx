@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -6,9 +7,13 @@ import {
 } from "@/components/ui/chart";
 import { PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 import { TabLink } from "./TabLink";
-import { SF10_LEVELS, SF10_STATUS_META, GRADE_ORDER } from "./data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SF10_STATUS_META, GRADE_ORDER, type Sf10Level } from "./data";
 import type { Sf10Status } from "./data";
+import { apiClient } from "@/lib/api/client";
 import styles from "./sf10-panel.module.css";
+
+const EMPTY: Sf10Level[] = [];
 
 const SF10_STATUSES: Sf10Status[] = ["attached", "available", "missing"];
 
@@ -19,10 +24,66 @@ export function Sf10Panel({
   href: string;
   label: string;
 }) {
+  const [levels, setLevels] = React.useState<Sf10Level[]>(EMPTY);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get("/api/sf10/summary")
+      .then((res) => {
+        if (!cancelled) setLevels((res.data as { levels: Sf10Level[] }).levels);
+      })
+      .catch((err: unknown) => {
+        console.error("[/api/sf10/summary] fetch failed:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={styles.sf10Panel}>
+        <div className={styles.admTop}>
+          <Skeleton className={styles.donutSkeleton} />
+          <div className={styles.sf10DonutLegend}>
+            {SF10_STATUSES.map((s) => (
+              <div key={s} className={styles.sf10SummaryItem}>
+                <Skeleton className={styles.summaryDotSkeleton} />
+                <Skeleton className={styles.summaryTextSkeleton} />
+              </div>
+            ))}
+          </div>
+          <div className={styles.sf10SummaryTotal}>
+            <Skeleton className={styles.summaryTextSkeleton} />
+            <Skeleton className={styles.summaryLabelSkeleton} />
+          </div>
+        </div>
+        <div className={styles.sf10Grid}>
+          {GRADE_ORDER.map((grade) => (
+            <div key={grade} className={styles.sf10Grade}>
+              <Skeleton className={styles.gradeNameSkeleton} />
+              <div className={styles.sf10Levels}>
+                {SF10_STATUSES.map((s) => (
+                  <Skeleton key={s} className={styles.levelStatSkeleton} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <Skeleton className={styles.tabLinkSkeleton} />
+      </div>
+    );
+  }
+
   const counts = {
-    missing: SF10_LEVELS.reduce((s, l) => s + l.missing, 0),
-    available: SF10_LEVELS.reduce((s, l) => s + l.available, 0),
-    attached: SF10_LEVELS.reduce((s, l) => s + l.attached, 0),
+    missing: levels.reduce((s, l) => s + l.missing, 0),
+    available: levels.reduce((s, l) => s + l.available, 0),
+    attached: levels.reduce((s, l) => s + l.attached, 0),
   };
   const sf10DonutData = SF10_STATUSES.map((s) => ({
     status: s,
@@ -95,7 +156,7 @@ export function Sf10Panel({
 
       <div className={styles.sf10Grid}>
         {GRADE_ORDER.map((grade) => {
-          const level = SF10_LEVELS.find((l) => l.grade === grade);
+          const level = levels.find((l) => l.grade === grade);
           if (!level) return null;
           return (
             <div key={grade} className={styles.sf10Grade}>
