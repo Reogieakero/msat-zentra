@@ -73,7 +73,7 @@ backend/
 
 **Environment (validated by `config/env.ts`):**
 `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (server-only, bypasses RLS),
-`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_TTL` (15m), `JWT_REFRESH_TTL`
+`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_TTL (60m), `JWT_REFRESH_TTL`
 (7d), `STORAGE_BUCKET`, `OCR_WORKER_URL`, `WEB_ORIGIN`, `MOBILE_ORIGIN`.
 
 **Scripts:** `dev`, `build`, `start`, `prisma:migrate`, `prisma:generate`, `prisma:seed`,

@@ -1,4 +1,3 @@
-import type { ChartConfig } from "@/components/ui/chart";
 import type { ComponentType } from "react";
 
 export type AnecdotalCategory = {
@@ -8,7 +7,14 @@ export type AnecdotalCategory = {
   color: string;
 };
 
+export type AnecdotalSummary = {
+  categories: AnecdotalCategory[];
+  total: number;
+  students: AnecdotalStudent[];
+};
+
 export type AnecdotalStudent = {
+  id: string;
   lrn: string;
   section: string;
   year: string;
@@ -16,91 +22,22 @@ export type AnecdotalStudent = {
   adviser: string;
 };
 
-export const ANECDOTAL_CATEGORIES: AnecdotalCategory[] = [
-  { key: "behavioral", label: "Behavioral", value: 132, color: "#166534" },
-  { key: "bullying", label: "Bullying", value: 64, color: "#b91c1c" },
-  { key: "academic", label: "Academic", value: 58, color: "#1d4ed8" },
-  { key: "attendance", label: "Attendance", value: 38, color: "#c2410c" },
-  { key: "health", label: "Health", value: 20, color: "#7c3aed" },
-];
-
-export const categoryConfig = ANECDOTAL_CATEGORIES.reduce<ChartConfig>(
-  (acc, c) => {
-    acc[c.key] = { label: c.label, color: c.color };
-    return acc;
-  },
-  {}
-);
-
-export const ANECDOTAL_STUDENTS: AnecdotalStudent[] = [
-  {
-    lrn: "109876543210",
-    section: "Mabini - 7A",
-    year: "Grade 7",
-    dateAdded: "Aug 18, 2026",
-    adviser: "Ms. Reyes",
-  },
-  {
-    lrn: "109876543211",
-    section: "Rizal - 8B",
-    year: "Grade 8",
-    dateAdded: "Aug 19, 2026",
-    adviser: "Mr. Cruz",
-  },
-  {
-    lrn: "109876543212",
-    section: "Bonifacio - 9A",
-    year: "Grade 9",
-    dateAdded: "Aug 20, 2026",
-    adviser: "Ms. Santos",
-  },
-  {
-    lrn: "109876543213",
-    section: "Luna - 10C",
-    year: "Grade 10",
-    dateAdded: "Aug 21, 2026",
-    adviser: "Mr. Dela Torre",
-  },
-  {
-    lrn: "109876543214",
-    section: "Aguinaldo - 11B",
-    year: "Grade 11",
-    dateAdded: "Aug 22, 2026",
-    adviser: "Ms. Garcia",
-  },
-];
-
 export type AttendancePoint = {
   day: string;
   present: number;
+  total: number;
 };
 
-export const ATTENDANCE_TREND: AttendancePoint[] = [
-  { day: "Aug 18", present: 1204 },
-  { day: "Aug 19", present: 1187 },
-  { day: "Aug 20", present: 1211 },
-  { day: "Aug 21", present: 1198 },
-  { day: "Aug 23", present: 1226 },
-];
-
-export const attendanceConfig = {
-  present: { label: "Present", color: "#166534" },
-} satisfies ChartConfig;
+export type AttendanceSummary = {
+  trend: AttendancePoint[];
+  grades: GradeAttendance[];
+};
 
 export type GradeAttendance = {
   grade: string;
   present: number;
   total: number;
 };
-
-export const GRADE_ATTENDANCE: GradeAttendance[] = [
-  { grade: "Grade 7", present: 214, total: 220 },
-  { grade: "Grade 8", present: 198, total: 205 },
-  { grade: "Grade 9", present: 205, total: 212 },
-  { grade: "Grade 10", present: 189, total: 196 },
-  { grade: "Grade 11", present: 210, total: 218 },
-  { grade: "Grade 12", present: 210, total: 233 },
-];
 
 export type AdmDocument = {
   id: string;

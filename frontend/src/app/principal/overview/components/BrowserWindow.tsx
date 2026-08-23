@@ -7,8 +7,21 @@ import { Sf10Panel } from "./Sf10Panel";
 import type { TabDef, TabId } from "./data";
 import styles from "./browser-window.module.css";
 
+const STORAGE_KEY = "principal:overview:activeTab";
+
 export function BrowserWindow({ tabs }: { tabs: TabDef[] }) {
+  const validIds = tabs.map((t) => t.id);
   const [activeTab, setActiveTab] = React.useState<TabId>(tabs[0].id);
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY) as TabId | null;
+    if (stored && validIds.includes(stored)) setActiveTab(stored);
+  }, [validIds]);
+
+  const handleSelect = (id: TabId) => {
+    setActiveTab(id);
+    window.localStorage.setItem(STORAGE_KEY, id);
+  };
 
   return (
     <article className={styles.browserCard}>
@@ -29,7 +42,7 @@ export function BrowserWindow({ tabs }: { tabs: TabDef[] }) {
                 role="tab"
                 aria-selected={active}
                 className={`${styles.tab} ${active ? styles.tabActive : ""}`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleSelect(tab.id)}
               >
                 <Icon className={styles.tabIcon} aria-hidden />
                 {tab.label}

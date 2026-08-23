@@ -144,3 +144,53 @@
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+.chartSkeleton {
+  flex: none;
+  width: 110px;
+  height: 110px;
+  border-radius: 9999px;
+}
+
+.legendDot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.legendLabelSkeleton {
+  width: 5rem;
+  height: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.legendValueSkeleton {
+  width: 1.5rem;
+  height: 0.75rem;
+  margin-left: auto;
+}
+
+.summaryValueSkeleton {
+  width: 3.5rem;
+  height: 1.125rem;
+  margin-bottom: 0.25rem;
+}
+
+.summaryLabelSkeleton {
+  width: 6rem;
+  height: 0.625rem;
+}
+
+.cellSkeleton {
+  width: 100%;
+  max-width: 8rem;
+  height: 0.875rem;
+  margin: 0.125rem 0;
+}
+
+.tabLinkSkeleton {
+  width: 9rem;
+  height: 2rem;
+  margin-top: 0.25rem;
+}

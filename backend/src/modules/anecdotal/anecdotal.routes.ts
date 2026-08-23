@@ -79,7 +79,95 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}` });
       res.status(201).json(referral);
-    } catch (e) { next(e); }
+    }   catch (e) { next(e); }
+  }
+);
+
+const CATEGORY_KEYS = ["behavioral", "bullying", "academic", "attendance", "health"] as const;
+
+const CATEGORY_META: Record<
+  string,
+  { label: string; color: string }
+> = {
+  behavioral: { label: "Behavioral", color: "#166534" },
+  bullying: { label: "Bullying", color: "#b91c1c" },
+  academic: { label: "Academic", color: "#1d4ed8" },
+  attendance: { label: "Attendance", color: "#c2410c" },
+  health: { label: "Health", color: "#7c3aed" },
+};
+
+router.get(
+  "/summary",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const activeTerm = await prisma.term.findFirst({
+        where: { schoolYear: { isActive: true } },
+        orderBy: { termNumber: "asc" },
+        select: { id: true },
+      });
+      const termId = activeTerm?.id;
+      const where = termId ? { termId } : {};
+
+      const [counts, recent] = await Promise.all([
+        prisma.anecdotalRecord.groupBy({
+          by: ["category"],
+          where,
+          _count: { _all: true },
+        }),
+        prisma.anecdotalRecord.findMany({
+          where,
+          orderBy: { observationDatetime: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            category: true,
+            observationDatetime: true,
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                section: { select: { name: true } },
+                user: { select: { fullName: true } },
+              },
+            },
+            observer: { select: { fullName: true } },
+          },
+        }),
+      ]);
+
+      const categories = CATEGORY_KEYS.map((key) => ({
+        key,
+        label: CATEGORY_META[key]?.label ?? key,
+        color: CATEGORY_META[key]?.color ?? "#64748b",
+        value: counts.find((c) => c.category === key)?._count._all ?? 0,
+      }));
+
+      const total = categories.reduce((s, c) => s + c.value, 0);
+
+      const GRADE_LABEL: Record<string, string> = {
+        G7: "Grade 7",
+        G8: "Grade 8",
+        G9: "Grade 9",
+        G10: "Grade 10",
+        G11: "Grade 11",
+        G12: "Grade 12",
+      };
+
+      const students = recent.map((r) => ({
+        id: r.id,
+        lrn: r.student.lrn,
+        section: r.student.section?.name ?? "",
+        year: GRADE_LABEL[r.student.gradeLevel] ?? r.student.gradeLevel,
+        dateAdded: r.observationDatetime.toISOString().slice(0, 10),
+        adviser: r.observer.fullName,
+      }));
+
+      res.json({ categories, total, students });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 

@@ -31,6 +31,14 @@ const OCCUPATIONS = ["Teacher", "Engineer", "Nurse", "Vendor", "Driver", "Accoun
 function rand<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randInt(min: number, max: number): number { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function pickDate(sy: number, sm: number, em: number): Date { return new Date(sy, randInt(sm, em) - 1, randInt(1, 28), randInt(7, 16), randInt(0, 59)); }
+// Term-scoped dates: within SY 2026-2027 Term 1, but never in the future —
+// from the term start (Jun 15) up to "now" (clamped to the term end).
+function inTermDate(): Date {
+  const start = new Date(2026, 5, 20, 7, 0, 0).getTime(); // Jun 20 2026 (safely inside term start)
+  const end = Math.min(Date.now(), new Date(2026, 9, 31, 23, 59, 59).getTime()); // now, capped at Oct 31
+  const t = start + Math.random() * Math.max(0, end - start);
+  return new Date(t);
+}
 function id(prefix: string): string { return `${prefix}_${Math.random().toString(36).slice(2, 12)}`; }
 // Deterministic id derived from a stable key so re-runs reuse existing rows
 // instead of generating fresh random ids that dangle from FK constraints.
@@ -64,13 +72,13 @@ async function main() {
   const guidance = await prisma.user.findUniqueOrThrow({ where: { email: "guidance@zentra.test" } });
   const admCoord = await prisma.user.findUniqueOrThrow({ where: { email: "adm@zentra.test" } });
 
-  let schoolYear = await prisma.schoolYear.findFirst({ where: { name: "SY 2025-2026" } });
-  if (!schoolYear) schoolYear = await prisma.schoolYear.create({ data: { name: "SY 2025-2026", startDate: new Date("2025-06-01"), endDate: new Date("2026-03-31"), isActive: true, createdBy: principal.id } });
+  let schoolYear = await prisma.schoolYear.findFirst({ where: { name: "SY 2026-2027" } });
+  if (!schoolYear) schoolYear = await prisma.schoolYear.create({ data: { name: "SY 2026-2027", startDate: new Date("2026-06-15"), endDate: new Date("2027-03-31"), isActive: true, createdBy: principal.id } });
 
   const term = await prisma.term.upsert({
-    where: { schoolYearId_termNumber: { schoolYearId: schoolYear.id, termNumber: 2 } },
+    where: { schoolYearId_termNumber: { schoolYearId: schoolYear.id, termNumber: 1 } },
     update: {},
-    create: { schoolYearId: schoolYear.id, termNumber: 2, startDate: new Date("2025-10-01"), endDate: new Date("2025-12-12") },
+    create: { schoolYearId: schoolYear.id, termNumber: 1, startDate: new Date("2026-06-15"), endDate: new Date("2026-10-31") },
   });
 
   // Subjects
@@ -178,7 +186,7 @@ async function main() {
         const gcId = gcByKey[`${subjectId}:${ct}`];
         if (!gcId) continue;
         const aId = keyId("assess", `${subjectId}:${ct}`);
-        assessments.push({ id: aId, gradeComponentId: gcId, title: `${ct} ${s.code}`, maxScore: 100, dateGiven: pickDate(2025, 10, 11), createdBy: "seed" });
+        assessments.push({ id: aId, gradeComponentId: gcId, title: `${ct} ${s.code}`, maxScore: 100, dateGiven: inTermDate(), createdBy: "seed" });
         assessByKey[`${subjectId}:${ct}`] = aId;
       }
     }
@@ -219,7 +227,7 @@ async function main() {
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
     const section = sections.find((s) => s.id === st.sectionId)!;
-    attendance.push({ id: id("att"), studentId: st.userId, sectionId: st.sectionId, date: pickDate(2025, 10, 11), session: rand(["AM", "PM"] as Session[]), status: rand(["present", "absent", "late", "excused"] as AttendanceStatus[]), recordedBy: section.adviserId, termId: term.id });
+    attendance.push({ id: id("att"), studentId: st.userId, sectionId: st.sectionId, date: inTermDate(), session: rand(["AM", "PM"] as Session[]), status: rand(["present", "absent", "late", "excused"] as AttendanceStatus[]), recordedBy: section.adviserId, termId: term.id });
   }
   await prisma.attendanceRecord.createMany({ data: attendance, skipDuplicates: true });
 
@@ -228,11 +236,11 @@ async function main() {
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
     const section = sections.find((s) => s.id === st.sectionId)!;
-    anecdotals.push({ id: id("anec"), studentId: st.userId, observerId: section.adviserId, sectionId: st.sectionId, observationDatetime: pickDate(2025, 10, 11), descriptionOfIncident: rand(INCIDENTS), descriptionOfLocation: "Classroom", notesRecommendationsActions: "Monitor and counsel.", confidentialityLevel: "restricted" as Confidentiality, termId: term.id });
+    anecdotals.push({ id: id("anec"), studentId: st.userId, observerId: section.adviserId, sectionId: st.sectionId, observationDatetime: inTermDate(), descriptionOfIncident: rand(INCIDENTS), descriptionOfLocation: "Classroom", notesRecommendationsActions: "Monitor and counsel.", confidentialityLevel: "restricted" as Confidentiality, termId: term.id });
   }
   await prisma.anecdotalRecord.createMany({ data: anecdotals, skipDuplicates: true });
   const anecdotalRecs = await prisma.anecdotalRecord.findMany({ where: { id: { in: anecdotals.map((a) => a.id) } } });
-  await prisma.anecdotalRecordFollowup.createMany({ data: anecdotalRecs.map((a) => ({ id: id("af"), anecdotalRecordId: a.id, followupBy: a.observerId, followupDate: pickDate(2025, 10, 12), notes: "Followed up with student." })), skipDuplicates: true });
+  await prisma.anecdotalRecordFollowup.createMany({ data: anecdotalRecs.map((a) => ({ id: id("af"), anecdotalRecordId: a.id, followupBy: a.observerId, followupDate: inTermDate(), notes: "Followed up with student." })), skipDuplicates: true });
 
   // Non-adviser subject teacher: files anecdotal records by category.
   const subjTeacherEmail = "teacher.subject@zentra.test";
@@ -263,7 +271,7 @@ async function main() {
       studentId: st.userId,
       observerId: subjTeacher.id,
       sectionId: targetSection.id,
-      observationDatetime: pickDate(2025, 10, 15),
+      observationDatetime: inTermDate(),
       descriptionOfIncident: rand(INCIDENTS),
       descriptionOfLocation: "Classroom",
       notesRecommendationsActions: "Coordinated with adviser.",
@@ -286,7 +294,7 @@ async function main() {
   const health = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
-    health.push({ id: id("hr"), studentId: st.userId, visitDatetime: pickDate(2025, 10, 11), complaint: rand(COMPLAINTS), diagnosis: rand(DIAGNOSES), treatmentGiven: "Administered first aid and advised rest.", recordedBy: nurse.id, termId: term.id, confidentialityLevel: "restricted" as Confidentiality });
+    health.push({ id: id("hr"), studentId: st.userId, visitDatetime: inTermDate(), complaint: rand(COMPLAINTS), diagnosis: rand(DIAGNOSES), treatmentGiven: "Administered first aid and advised rest.", recordedBy: nurse.id, termId: term.id, confidentialityLevel: "restricted" as Confidentiality });
   }
   await prisma.healthRecord.createMany({ data: health, skipDuplicates: true });
 
@@ -309,15 +317,15 @@ async function main() {
     await prisma.admLearnerProfile.create({
       data: {
         ...a,
-        parentMeetings: { create: [{ recordedBy: admCoord.id, meetingDatetime: pickDate(2025, 10, 12), attended: true, minutesOfMeeting: "Discussed ADM plan." }] },
-        modules: { create: [{ moduleName: "Module 1: Literacy", releaseDate: pickDate(2025, 10, 1), dueDate: pickDate(2025, 11, 15), submitted: true, submissionDate: pickDate(2025, 11, 10), recordedBy: admCoord.id }] },
-        devices: { create: [{ deviceType: "Tablet", deviceSerial: `SN${randInt(10000, 99999)}`, issuedBy: admCoord.id, issuedDate: pickDate(2025, 10, 5) }] },
+        parentMeetings: { create: [{ recordedBy: admCoord.id, meetingDatetime: inTermDate(), attended: true, minutesOfMeeting: "Discussed ADM plan." }] },
+        modules: { create: [{ moduleName: "Module 1: Literacy", releaseDate: inTermDate(), dueDate: inTermDate(), submitted: true, submissionDate: inTermDate(), recordedBy: admCoord.id }] },
+        devices: { create: [{ deviceType: "Tablet", deviceSerial: `SN${randInt(10000, 99999)}`, issuedBy: admCoord.id, issuedDate: inTermDate() }] },
       },
     });
   }
 
   // Risk snapshots (>=20)
-  await prisma.riskSnapshot.createMany({ data: allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents)).map((st) => ({ id: id("rs"), studentId: st.userId, riskLevel: "Low" as RiskLevel, riskCount: 0, snapshotDate: pickDate(2025, 10, 11), termId: term.id })), skipDuplicates: true });
+  await prisma.riskSnapshot.createMany({ data: allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents)).map((st) => ({ id: id("rs"), studentId: st.userId, riskLevel: "Low" as RiskLevel, riskCount: 0, snapshotDate: inTermDate(), termId: term.id })), skipDuplicates: true });
 
   // Audit logs (>=20)
   await prisma.auditLog.createMany({ data: Array.from({ length: MIN_RECORDS }, (_, i) => ({ id: id("al"), userId: principal.id, actionType: rand(["account_approval", "grade_lock", "grade_unlock", "referral_status_change", "intervention_approval"] as ActionType[]), sourceTable: "StudentProfile", sourceId: allStudents[i % totalStudents].userId, reason: "Seeded audit entry." })), skipDuplicates: true });
@@ -339,3 +347,4 @@ async function main() {
 main()
   .catch((e) => { console.error(e); process.exit(1); })
   .finally(() => prisma.$disconnect());
+

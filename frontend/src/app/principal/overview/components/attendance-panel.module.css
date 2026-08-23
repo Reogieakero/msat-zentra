@@ -104,6 +104,45 @@
   background: var(--primary, #166534);
 }
 
+.chartTitleSkeleton {
+  width: 12rem;
+  height: 1rem;
+}
+
+.lineWrapSkeleton {
+  width: 100%;
+  height: 150px;
+  margin-top: 0.375rem;
+}
+
+.gradeHeadSkeleton {
+  width: 5rem;
+  height: 0.6875rem;
+}
+
+.gradeMetricSkeleton {
+  width: 4rem;
+  height: 1.375rem;
+}
+
+.gradeBarSkeleton {
+  width: 100%;
+  height: 4px;
+}
+
+.tabLinkSkeleton {
+  width: 9rem;
+  height: 2rem;
+  margin-top: 0.25rem;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
 @media (max-width: 560px) {
   .gradeGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
