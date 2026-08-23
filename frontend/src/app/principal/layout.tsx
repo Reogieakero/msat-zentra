@@ -23,7 +23,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <Link href="/principal/overview" className={styles.brand}>
+        <Link href="/principal/dashboard" className={styles.brand}>
           <span className={styles.brandMark}>Z</span>
         </Link>
         <button

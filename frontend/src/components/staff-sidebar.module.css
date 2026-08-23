@@ -36,10 +36,48 @@
 .menu {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  list-style: none;
+  margin: 0.125rem 0 0.25rem;
+  padding: 0 0 0 1.75rem;
+}
+
+.subitem {
+  height: 1.75rem;
+  padding-inline: 0.5rem;
+  font-size: 0.8125rem;
+  color: color-mix(in oklch, var(--sidebar-foreground) 80%, transparent);
+}
+
+.itemChevron {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: center;
+  display: block;
+  transition: transform 140ms ease-out;
+}
+
+.itemChevronOpen {
+  transform: rotate(180deg);
+}
+
+.collapsed .itemChevron {
+  display: none;
+}
+
+.collapsed .submenu {
+  display: none;
 }
 
 .item {
@@ -48,12 +86,18 @@
   gap: 0.625rem;
   height: 2rem;
   padding-inline: 0.5rem;
+  border: none;
+  background: transparent;
   border-radius: var(--radius-md);
+  font: inherit;
   font-size: 0.875rem;
   text-decoration: none;
   color: var(--sidebar-foreground);
   position: relative;
   outline: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
   transition: background-color 140ms ease-out, color 140ms ease-out;
 }
 
@@ -88,6 +132,7 @@
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
+  align-self: center;
 }
 
 .itemLabel {

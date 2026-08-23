@@ -69,7 +69,7 @@ export function LoginForm({
       if (data.accessToken) setAccessToken(data.accessToken);
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =
-        (data.role === "principal" && "/principal/overview") ||
+        (data.role === "principal" && "/principal/dashboard") ||
         (data.role === "registrar" && "/registrar") ||
         (data.role === "record_keeper" && "/record-keeper") ||
         `/${role}`;
