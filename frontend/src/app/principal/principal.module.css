@@ -23,7 +23,7 @@
   padding: 1rem;
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 .topbar {
@@ -41,6 +41,35 @@
   background-color: var(--background);
 }
 
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  cursor: pointer;
+  outline: none;
+}
+
+.menuButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.menuIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+@media (max-width: 767px) {
+  .menuButton {
+    display: inline-flex;
+  }
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -54,7 +83,7 @@
 }
 
 .brandText {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -150,5 +179,17 @@
 @media (prefers-reduced-motion: reduce) {
   .shell {
     transition: none;
+  }
+}
+
+/* Mobile: 8px side gutters, 1rem gap below the navbar */
+@media (max-width: 767px) {
+  .shell {
+    margin-left: 0;
+    margin-top: 3rem;
+  }
+
+  .main {
+    padding: 1rem 0.5rem 0.5rem;
   }
 }

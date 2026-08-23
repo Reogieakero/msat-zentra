@@ -19,28 +19,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
 import styles from "./principal.module.css";
 
 const STORAGE_KEY = "zentra.sidebar.mode";
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { open, setOpen, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const { open, setOpen, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [mode, setMode] = React.useState<SidebarMode>(() => {
-    if (typeof window === "undefined") return "hover";
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return saved === "hover" || saved === "expanded" || saved === "collapsible"
-      ? saved
-      : "hover";
-  });
+  const [mode, setMode] = React.useState<SidebarMode>("hover");
 
   React.useEffect(() => {
     setMounted(true);
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved === "hover" || saved === "expanded" || saved === "collapsible") {
+      setMode(saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  React.useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, mode);
   }, [mode]);
 
@@ -65,6 +67,20 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
+        <button
+          type="button"
+          className={styles.menuButton}
+          aria-label={openMobile ? "Close sidebar" : "Open sidebar"}
+          aria-expanded={openMobile}
+          onClick={() => setOpenMobile(!openMobile)}
+        >
+          {openMobile ? (
+            <X className={styles.menuIcon} />
+          ) : (
+            <Menu className={styles.menuIcon} />
+          )}
+        </button>
+
         <Link href="/principal/dashboard" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>

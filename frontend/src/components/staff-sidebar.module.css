@@ -12,7 +12,7 @@
   color: var(--sidebar-foreground);
   border-right: 1px solid var(--sidebar-border);
   transition: width 180ms ease-out;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 .collapsed {
@@ -267,16 +267,30 @@
 .mobile {
   position: fixed;
   top: 3rem;
-  bottom: 0;
   left: 0;
+  right: 0;
   z-index: 30;
-  transform: translateX(-100%);
+  max-height: calc(100dvh - 3rem);
+  overflow-y: auto;
+  background-color: var(--sidebar);
+  border-bottom: 1px solid var(--sidebar-border);
+  transform: translateY(-100%);
   transition: transform 200ms ease-out;
-  width: 16rem;
+  width: 100%;
+  max-width: 100vw;
+}
+
+.mobile .sidebar {
+  position: static;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  width: 100%;
+  border-right: none;
 }
 
 .mobileOpen {
-  transform: translateX(0);
+  transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
