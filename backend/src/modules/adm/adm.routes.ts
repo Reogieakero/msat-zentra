@@ -9,6 +9,21 @@ import { fanoutNotification } from "../../lib/notify.js";
 
 const router = Router();
 
+const GRADE_LABEL: Record<string, string> = {
+  G7: "Grade 7",
+  G8: "Grade 8",
+  G9: "Grade 9",
+  G10: "Grade 10",
+  G11: "Grade 11",
+  G12: "Grade 12",
+};
+
+const ELIGIBILITY_LABEL: Record<string, string> = {
+  pending: "For Review",
+  eligible: "Eligible",
+  ineligible: "Ineligible",
+};
+
 router.get(
   "/referrals",
   requireAuth,
@@ -16,15 +31,26 @@ router.get(
   async (req, res, next) => {
     try {
       const profiles = await prisma.admLearnerProfile.findMany({
-        include: { student: true, referral: true },
+        include: {
+          student: { include: { user: true } },
+          preparedByUser: true,
+        },
         orderBy: { id: "asc" },
       });
-      // Principal: status-only — strip confidential fields
-      const out = profiles.map((p) =>
-        req.user!.role === "principal"
-          ? { id: p.id, studentId: p.studentId, eligibilityStatus: p.eligibilityStatus, approvedBy: p.approvedBy, approvedAt: p.approvedAt }
-          : p
-      );
+      const out = profiles.map((p) => {
+        const signed = !!p.approvedBy;
+        const base = {
+          id: p.id,
+          lrn: p.student.lrn,
+          student: p.student.user.fullName,
+          grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
+          status: signed ? "signed" : "pending_signature",
+          eligibility: ELIGIBILITY_LABEL[p.eligibilityStatus] ?? p.eligibilityStatus,
+          preparedBy: p.preparedByUser.fullName,
+        };
+        // Principal: status-only — strip confidential fields
+        return req.user!.role === "principal" ? base : { ...base, studentId: p.studentId };
+      });
       res.json(out);
     } catch (e) { next(e); }
   }

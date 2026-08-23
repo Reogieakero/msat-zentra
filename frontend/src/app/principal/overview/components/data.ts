@@ -46,7 +46,6 @@ export type AdmDocument = {
   student: string;
   grade: string;
   preparedBy: string;
-  datePrepared: string;
   status: "pending_signature" | "signed";
   eligibility: string;
 };

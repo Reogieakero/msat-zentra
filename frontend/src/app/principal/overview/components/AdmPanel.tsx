@@ -8,8 +8,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 import { TabLink } from "./TabLink";
-import { ADM_DOCUMENTS, ADM_DONUT_COLORS, GRADE_ORDER } from "./data";
+import { ADM_DONUT_COLORS, GRADE_ORDER, type AdmDocument } from "./data";
+import { apiClient } from "@/lib/api/client";
 import styles from "./adm-panel.module.css";
+
+const EMPTY: AdmDocument[] = [];
 
 export function AdmPanel({
   href,
@@ -18,10 +21,56 @@ export function AdmPanel({
   href: string;
   label: string;
 }) {
-  const pendingDocs = ADM_DOCUMENTS.filter(
-    (d) => d.status === "pending_signature"
-  );
-  const signed = ADM_DOCUMENTS.length - pendingDocs.length;
+  const [docs, setDocs] = React.useState<AdmDocument[]>(EMPTY);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get<AdmDocument[]>("/api/adm/referrals")
+      .then((res) => {
+        if (!cancelled) setDocs(res.data);
+      })
+      .catch((err: unknown) => {
+        console.error("[/api/adm/referrals] fetch failed:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={styles.admPanel}>
+        <div className={styles.admList}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className={styles.admDoc}>
+              <div className={styles.admDocMain}>
+                <div className={styles.admDocTop}>
+                  <span className={styles.admDocId}>ADM-0000</span>
+                  <span className={styles.admStatus}>Pending Approval</span>
+                </div>
+                <div className={styles.admDocMeta}>
+                  <span className={styles.mono}>000000000000</span>
+                  <span>Loading…</span>
+                </div>
+              </div>
+              <Button size="sm" className={styles.admSign} disabled>
+                Approve
+              </Button>
+            </div>
+          ))}
+        </div>
+        <TabLink href={href} label={label} />
+      </div>
+    );
+  }
+
+  const pendingDocs = docs.filter((d) => d.status === "pending_signature");
+  const signed = docs.length - pendingDocs.length;
 
   const admDonutData = GRADE_ORDER.map((grade, i) => ({
     grade,
@@ -105,7 +154,7 @@ export function AdmPanel({
                 <span>{d.student}</span>
                 <span>{d.grade}</span>
                 <span className={styles.admMuted}>
-                  Prepared by {d.preparedBy} · {d.datePrepared}
+                  Prepared by {d.preparedBy}
                 </span>
               </div>
               <span className={styles.admEligibility}>
