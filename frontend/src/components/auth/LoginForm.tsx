@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { setAccessToken } from "@/lib/api/client";
+import { setAccessToken, setRefreshToken } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import styles from "./LoginForm.module.css";
 
@@ -67,6 +67,7 @@ export function LoginForm({
         return;
       }
       if (data.accessToken) setAccessToken(data.accessToken);
+      if (data.refreshToken) setRefreshToken(data.refreshToken);
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =
         (data.role === "principal" && "/principal/overview") ||

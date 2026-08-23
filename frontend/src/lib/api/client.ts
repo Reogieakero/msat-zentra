@@ -53,6 +53,12 @@ export function setAccessToken(token: string | null) {
   else window.localStorage.removeItem(ACCESS_KEY);
 }
 
+export function setRefreshToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem("zentra.refresh", token);
+  else window.localStorage.removeItem("zentra.refresh");
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = window.localStorage.getItem("zentra.refresh");
   if (!refreshToken) return null;
