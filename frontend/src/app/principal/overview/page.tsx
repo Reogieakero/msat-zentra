@@ -27,7 +27,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
 } from "recharts";
 import styles from "./overview.module.css";
 
@@ -128,6 +127,96 @@ const GRADE_ATTENDANCE: GradeAttendance[] = [
   { grade: "Grade 11", present: 210, total: 218 },
   { grade: "Grade 12", present: 210, total: 233 },
 ];
+
+type AdmDocument = {
+  id: string;
+  lrn: string;
+  student: string;
+  grade: string;
+  preparedBy: string;
+  datePrepared: string;
+  status: "pending_signature" | "signed";
+  eligibility: string;
+};
+
+const ADM_DOCUMENTS: AdmDocument[] = [
+  {
+    id: "ADM-2041",
+    lrn: "109876543220",
+    student: "A. Mendoza",
+    grade: "Grade 7",
+    preparedBy: "Mr. Cruz",
+    datePrepared: "Aug 19, 2026",
+    status: "pending_signature",
+    eligibility: "Eligible",
+  },
+  {
+    id: "ADM-2042",
+    lrn: "109876543221",
+    student: "J. Fernando",
+    grade: "Grade 8",
+    preparedBy: "Ms. Reyes",
+    datePrepared: "Aug 20, 2026",
+    status: "pending_signature",
+    eligibility: "Eligible",
+  },
+  {
+    id: "ADM-2043",
+    lrn: "109876543222",
+    student: "K. Villanueva",
+    grade: "Grade 9",
+    preparedBy: "Ms. Santos",
+    datePrepared: "Aug 21, 2026",
+    status: "pending_signature",
+    eligibility: "For Review",
+  },
+  {
+    id: "ADM-2039",
+    lrn: "109876543218",
+    student: "R. Aquino",
+    grade: "Grade 10",
+    preparedBy: "Mr. Dela Torre",
+    datePrepared: "Aug 17, 2026",
+    status: "signed",
+    eligibility: "Eligible",
+  },
+];
+
+const ADM_DONUT_COLORS = [
+  "#166534",
+  "#1d4ed8",
+  "#b91c1c",
+  "#c2410c",
+  "#7c3aed",
+  "#0e7490",
+];
+
+type Sf10Status = "missing" | "available" | "attached";
+
+type Sf10Level = {
+  grade: string;
+  attached: number;
+  available: number;
+  missing: number;
+};
+
+const SF10_LEVELS: Sf10Level[] = [
+  { grade: "Grade 7", attached: 2, available: 1, missing: 1 },
+  { grade: "Grade 8", attached: 1, available: 2, missing: 0 },
+  { grade: "Grade 9", attached: 2, available: 0, missing: 1 },
+  { grade: "Grade 10", attached: 1, available: 1, missing: 1 },
+  { grade: "Grade 11", attached: 2, available: 1, missing: 0 },
+  { grade: "Grade 12", attached: 1, available: 0, missing: 1 },
+];
+
+const SF10_STATUS_META: Record<
+  Sf10Status,
+  { label: string; color: string }
+> = {
+  missing: { label: "Missing", color: "#b91c1c" },
+  available: { label: "Available", color: "#c2410c" },
+  attached: { label: "Attached", color: "#166534" },
+};
 
 type TabId = "anecdotal" | "attendance" | "adm" | "sf10";
 
@@ -288,6 +377,10 @@ export default function PrincipalOverviewPage() {
                 <AnecdotalPanel href={tab.href} label={tab.label} />
               ) : tab.id === "attendance" ? (
                 <AttendancePanel href={tab.href} label={tab.label} />
+              ) : tab.id === "adm" ? (
+                <AdmPanel href={tab.href} label={tab.label} />
+              ) : tab.id === "sf10" ? (
+                <Sf10Panel href={tab.href} label={tab.label} />
               ) : (
                 <>
                   <div className={styles.tabStatRow}>
@@ -485,28 +578,7 @@ function AttendancePanel({
             <div key={g.grade} className={styles.gradeCard}>
               <div className={styles.gradeHead}>
                 <span className={styles.gradeName}>{g.grade}</span>
-                <span className={styles.gradeDonut}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <Pie
-                        data={[
-                          { name: "present", value: g.present },
-                          { name: "absent", value: g.total - g.present },
-                        ]}
-                        dataKey="value"
-                        innerRadius={11}
-                        outerRadius={18}
-                        startAngle={90}
-                        endAngle={-270}
-                        stroke="none"
-                        isAnimationActive={false}
-                      >
-                        <Cell fill="var(--color-present)" />
-                        <Cell fill="color-mix(in oklch, var(--foreground), transparent 90%)" />
-                      </Pie>
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                </span>
+                <span className={styles.gradeRate}>{rate}%</span>
               </div>
               <div className={styles.gradeMetric}>
                 <span className={styles.gradePresent}>{g.present}</span>
@@ -517,6 +589,267 @@ function AttendancePanel({
                   className={styles.gradeBarFill}
                   style={{ width: `${rate}%` }}
                 />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Button asChild variant="outline" size="sm" className={styles.tabLink}>
+        <a href={href}>
+          Open {label}
+          <ArrowRight aria-hidden />
+        </a>
+      </Button>
+    </div>
+  );
+}
+
+function AdmPanel({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  const pendingDocs = ADM_DOCUMENTS.filter(
+    (d) => d.status === "pending_signature"
+  );
+  const signed = ADM_DOCUMENTS.length - pendingDocs.length;
+
+  const GRADE_ORDER = [
+    "Grade 7",
+    "Grade 8",
+    "Grade 9",
+    "Grade 10",
+    "Grade 11",
+    "Grade 12",
+  ];
+  const admDonutData = GRADE_ORDER.map((grade, i) => ({
+    grade,
+    value: pendingDocs.filter((d) => d.grade === grade).length,
+    color: ADM_DONUT_COLORS[i],
+  })).filter((d) => d.value > 0);
+
+  const admDonutConfig = admDonutData.reduce<ChartConfig>((acc, d) => {
+    acc[d.grade] = { label: d.grade, color: d.color };
+    return acc;
+  }, {});
+
+  return (
+    <div className={styles.admPanel}>
+      <div className={styles.admTop}>
+        <div className={styles.admSummary}>
+          <div className={styles.admSummaryItem}>
+            <span className={styles.admSummaryValue}>{pendingDocs.length}</span>
+            <span className={styles.admSummaryLabel}>Pending Cases</span>
+          </div>
+          <div className={styles.admSummaryItem}>
+            <span className={styles.admSummaryValue}>{signed}</span>
+            <span className={styles.admSummaryLabel}>Signed This Term</span>
+          </div>
+        </div>
+
+        <span className={styles.admDonut}>
+          <ChartContainer
+            id="adm-donut"
+            config={admDonutConfig}
+            className={styles.admDonutWrap}
+          >
+            <RechartsPieChart>
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent nameKey="grade" hideLabel />}
+              />
+              <Pie
+                data={admDonutData}
+                dataKey="value"
+                nameKey="grade"
+                innerRadius={20}
+                outerRadius={34}
+                stroke="none"
+                isAnimationActive={false}
+                paddingAngle={2}
+              >
+                {admDonutData.map((d) => (
+                  <Cell key={d.grade} fill={d.color} />
+                ))}
+              </Pie>
+            </RechartsPieChart>
+          </ChartContainer>
+        </span>
+
+        <ul className={styles.admDonutLegend}>
+          {admDonutData.map((d) => (
+            <li key={d.grade} className={styles.admLegendItem}>
+              <span
+                className={styles.admLegendDot}
+                style={{ backgroundColor: d.color }}
+                aria-hidden
+              />
+              <span className={styles.admLegendLabel}>{d.grade}</span>
+              <span className={styles.admLegendValue}>{d.value}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className={styles.admList}>
+        {pendingDocs.map((d) => (
+          <div key={d.id} className={styles.admDoc}>
+            <div className={styles.admDocMain}>
+              <div className={styles.admDocTop}>
+                <span className={styles.admDocId}>{d.id}</span>
+                <span className={styles.admStatus}>Pending Approval</span>
+              </div>
+              <div className={styles.admDocMeta}>
+                <span className={styles.mono}>{d.lrn}</span>
+                <span>{d.student}</span>
+                <span>{d.grade}</span>
+                <span className={styles.admMuted}>
+                  Prepared by {d.preparedBy} · {d.datePrepared}
+                </span>
+              </div>
+              <span className={styles.admEligibility}>
+                Eligibility: {d.eligibility}
+              </span>
+            </div>
+            <Button size="sm" className={styles.admSign}>
+              Approve
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <Button asChild variant="outline" size="sm" className={styles.tabLink}>
+        <a href={href}>
+          Open {label}
+          <ArrowRight aria-hidden />
+        </a>
+      </Button>
+    </div>
+  );
+}
+
+function Sf10Panel({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  const GRADE_ORDER = [
+    "Grade 7",
+    "Grade 8",
+    "Grade 9",
+    "Grade 10",
+    "Grade 11",
+    "Grade 12",
+  ];
+
+  const counts = {
+    missing: SF10_LEVELS.reduce((s, l) => s + l.missing, 0),
+    available: SF10_LEVELS.reduce((s, l) => s + l.available, 0),
+    attached: SF10_LEVELS.reduce((s, l) => s + l.attached, 0),
+  };
+  const sf10DonutData = (
+    ["attached", "available", "missing"] as Sf10Status[]
+  ).map((s) => ({
+    status: s,
+    value: counts[s],
+    color: SF10_STATUS_META[s].color,
+  }));
+
+  const sf10DonutConfig = sf10DonutData.reduce<ChartConfig>((acc, d) => {
+    acc[d.status] = { label: SF10_STATUS_META[d.status].label, color: d.color };
+    return acc;
+  }, {});
+
+  return (
+    <div className={styles.sf10Panel}>
+      <div className={styles.admTop}>
+        <div className={styles.sf10DonutGroup}>
+          <span className={styles.admDonut}>
+            <ChartContainer
+              id="sf10-donut"
+              config={sf10DonutConfig}
+              className={styles.admDonutWrap}
+            >
+              <RechartsPieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent nameKey="status" hideLabel />}
+                />
+                <Pie
+                  data={sf10DonutData}
+                  dataKey="value"
+                  nameKey="status"
+                  innerRadius={20}
+                  outerRadius={34}
+                  stroke="none"
+                  isAnimationActive={false}
+                  paddingAngle={2}
+                >
+                  {sf10DonutData.map((d) => (
+                    <Cell key={d.status} fill={d.color} />
+                  ))}
+                </Pie>
+              </RechartsPieChart>
+            </ChartContainer>
+          </span>
+
+          <ul className={styles.sf10DonutLegend}>
+            {sf10DonutData.map((d) => (
+              <li key={d.status} className={styles.sf10SummaryItem}>
+                <span
+                  className={styles.sf10SummaryDot}
+                  style={{ backgroundColor: d.color }}
+                  aria-hidden
+                />
+                <span className={styles.sf10SummaryValue}>{d.value}</span>
+                <span className={styles.sf10SummaryLabel}>
+                  {SF10_STATUS_META[d.status].label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className={styles.sf10SummaryTotal}>
+          <span className={styles.sf10SummaryValue}>
+            {counts.attached + counts.available + counts.missing}
+          </span>
+          <span className={styles.sf10SummaryLabel}>Total Records</span>
+        </div>
+      </div>
+
+      <div className={styles.sf10Grid}>
+        {GRADE_ORDER.map((grade) => {
+          const level = SF10_LEVELS.find((l) => l.grade === grade);
+          if (!level) return null;
+          return (
+            <div key={grade} className={styles.sf10Grade}>
+              <span className={styles.sf10GradeName}>{grade}</span>
+              <div className={styles.sf10Levels}>
+                {(["attached", "available", "missing"] as Sf10Status[]).map(
+                  (s) => (
+                    <div
+                      key={s}
+                      className={styles.sf10LevelStat}
+                      style={{ borderColor: SF10_STATUS_META[s].color }}
+                    >
+                      <span
+                        className={styles.sf10LevelValue}
+                        style={{ color: SF10_STATUS_META[s].color }}
+                      >
+                        {level[s]}
+                      </span>
+                      <span className={styles.sf10LevelLabel}>
+                        {SF10_STATUS_META[s].label}
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           );
