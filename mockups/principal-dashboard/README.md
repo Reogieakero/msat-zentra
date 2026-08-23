@@ -7,7 +7,7 @@ as the real Zentra frontend (PLAN.md §2) so it stays consistent when the actual
 ## Files
 | File | Purpose |
 |---|---|
-| `index.html` | Full dashboard layout: sidebar, top bar (year/term/grade filters), KPI row, risk heat map, action-required rail, recent notifications. |
+| `index.html` | Full dashboard layout: collapsible sidebar (icon-only by default, expands on hover like Supabase), top bar (year/term/grade filters), KPI row, risk heat map, action-required rail, recent notifications. |
 | `styles.css` | Design tokens + reusable component classes (`card`, `kpi-*`, `hm-*` heat shades, nav). Comments map each token to PLAN.md §2. |
 | `app.js` | Populates the heat-map matrix and notification list from sample data (counts only, no student names). |
 
@@ -27,6 +27,7 @@ Tailwind is loaded via CDN (`cdn.tailwindcss.com`) so the config + tokens apply 
 - **Type:** Space Grotesk (display) + Inter (body) + IBM Plex Mono (IDs/grades/counts).
 - **Density:** data-dense, sticky-header-ready tables, monospaced numbers.
 - **Motion:** micro only (140ms ease-out) — see `prefers-reduced-motion` guard in `styles.css`.
+- **Sidebar:** collapsed to icons (`w-[68px]`) by default; expands to `w-64` on hover (`group-hover`) with labels fading in — same feel as the Supabase console. Transition is width-only (200ms ease-out) so content doesn't reflow.
 
 > These tokens live in **two places** on purpose: the Tailwind `config` block in `index.html`
 > and the CSS variables in `styles.css`. Keep them in sync when porting to the Next.js app

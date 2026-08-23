@@ -39,34 +39,34 @@
 <body class="h-full bg-ink-50 text-ink-800 font-sans antialiased">
 
   <div class="min-h-full flex">
-    <!-- ░░░ SIDEBAR ░░░ -->
-    <aside class="hidden md:flex w-64 shrink-0 flex-col border-r border-ink-200 bg-white">
-      <div class="h-16 flex items-center gap-2.5 px-5 border-b border-ink-200">
-        <div class="h-8 w-8 rounded-md bg-brand-600 flex items-center justify-center">
+    <!-- ░░░ SIDEBAR (Supabase-style: collapsed by default, expands on hover) ░░░ -->
+    <aside class="sidebar group hidden md:flex w-[68px] hover:w-64 shrink-0 flex-col border-r border-ink-200 bg-white transition-[width] duration-200 ease-out overflow-hidden">
+      <div class="h-16 flex items-center gap-2.5 px-4 border-b border-ink-200 whitespace-nowrap">
+        <div class="h-8 w-8 shrink-0 rounded-md bg-brand-600 flex items-center justify-center">
           <svg viewBox="0 0 24 24" class="h-4.5 w-4.5 text-white" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V7l8-4 8 4v12"/><path d="M9 22V12h6v10"/></svg>
         </div>
-        <div>
+        <div class="nav-label">
           <p class="font-display font-semibold text-ink-900 leading-none">Zentra</p>
           <p class="text-[10px] text-ink-400 mt-0.5">Mati School of Arts & Trades</p>
         </div>
       </div>
 
       <nav class="flex-1 px-3 py-4 space-y-0.5 text-sm">
-        <p class="px-3 text-[10px] font-semibold uppercase tracking-wider text-ink-400 mb-1">Overview</p>
-        <a class="nav-item nav-active" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>School Years</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg>Academic Perf.</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L6 20l2-7L3 9h7z"/></svg>Risk & Early Int.</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13l2 2 4-4"/></svg>ADM Approvals</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3-3 1.5-1.5L12 12l4.5-4.5L18 11"/><path d="M5 19h14"/></svg>Honor Roll</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M3 3l18 18"/></svg>Reports</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Audit Log</a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Notifications<span class="ml-auto badge">3</span></a>
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h6"/><path d="M16 11l2 2 4-4"/></svg>Account Approvals</a>
+        <p class="nav-label px-3 text-[10px] font-semibold uppercase tracking-wider text-ink-400 mb-1 whitespace-nowrap">Overview</p>
+        <a class="nav-item nav-active" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="nav-label whitespace-nowrap">Dashboard</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="nav-label whitespace-nowrap">School Years</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg><span class="nav-label whitespace-nowrap">Academic Perf.</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L6 20l2-7L3 9h7z"/></svg><span class="nav-label whitespace-nowrap">Risk &amp; Early Int.</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13l2 2 4-4"/></svg><span class="nav-label whitespace-nowrap">ADM Approvals</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3-3 1.5-1.5L12 12l4.5-4.5L18 11"/><path d="M5 19h14"/></svg><span class="nav-label whitespace-nowrap">Honor Roll</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M3 3l18 18"/></svg><span class="nav-label whitespace-nowrap">Reports</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="nav-label whitespace-nowrap">Audit Log</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="nav-label whitespace-nowrap flex-1">Notifications</span><span class="badge ml-auto opacity-0 group-hover:opacity-100 transition">3</span></a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h6"/><path d="M16 11l2 2 4-4"/></svg><span class="nav-label whitespace-nowrap">Account Approvals</span></a>
       </nav>
 
       <div class="p-3 border-t border-ink-200">
-        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 3.1V3a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 15 4.6a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 9.9V10a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>Settings</a>
+        <a class="nav-item" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 3.1V3a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 15 4.6a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 9.9V10a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg><span class="nav-label whitespace-nowrap">Settings</span></a>
       </div>
     </aside>
 
