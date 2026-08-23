@@ -32,6 +32,9 @@ function rand<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 function randInt(min: number, max: number): number { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function pickDate(sy: number, sm: number, em: number): Date { return new Date(sy, randInt(sm, em) - 1, randInt(1, 28), randInt(7, 16), randInt(0, 59)); }
 function id(prefix: string): string { return `${prefix}_${Math.random().toString(36).slice(2, 12)}`; }
+// Deterministic id derived from a stable key so re-runs reuse existing rows
+// instead of generating fresh random ids that dangle from FK constraints.
+function keyId(prefix: string, key: string): string { return `${prefix}_${key.replace(/[^a-zA-Z0-9]/g, "_")}`; }
 
 const STAFF_ACCOUNTS = [
   { email: "principal@zentra.test", fullName: "Default Principal", role: "principal" as Role },
@@ -139,27 +142,42 @@ async function main() {
   // Teacher assignments (per section/subject/term), grade components + assessments (per subject+term,
   // matching the schema unique (subjectId, termId, componentType)), and grades for all students in the grade.
   const teacherAssignments: { id: string; teacherId: string; subjectId: string; sectionId: string; termId: string }[] = [];
-  const gradeComponents: { id: string; subjectId: string; termId: string; componentType: ComponentType; weightPercentage: number }[] = [];
-  const assessments: { id: string; gradeComponentId: string; title: string; maxScore: number; dateGiven: Date; createdBy: string }[] = [];
   const studentGrades: { id: string; assessmentId: string; studentId: string; rawScore: number; percentageScore: number }[] = [];
   const finalGrades: { id: string; studentId: string; subjectId: string; termId: string; computedAverage: number; transmutedGrade: number; remarks: Remarks; lockStatus: LockStatus }[] = [];
 
   const componentTypes: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"];
-  const gcByKey: Record<string, string> = {};
 
-  // 1) Grade components + assessments per subject+term (school-wide). Unique (subjectId, termId, componentType).
-  const assessByKey: Record<string, string> = {};
+  // 1) Grade components per subject+term (school-wide). Unique (subjectId, termId, componentType).
   for (const grade of GRADE_LEVELS) {
     for (const s of SUBJECT_NAMES[grade]) {
       const subjectId = subjectIds[`${grade}:${s.code}`];
       let weight = 30;
       for (const ct of componentTypes) {
         const compWeight = ct === "QUARTERLY_EXAM" ? 40 : weight;
-        const gcId = id("gc");
-        gradeComponents.push({ id: gcId, subjectId, termId: term.id, componentType: ct, weightPercentage: compWeight });
-        gcByKey[`${subjectId}:${ct}`] = gcId;
+        await prisma.gradeComponent.upsert({
+          where: { subjectId_termId_componentType: { subjectId, termId: term.id, componentType: ct } },
+          update: { weightPercentage: compWeight },
+          create: { subjectId, termId: term.id, componentType: ct, weightPercentage: compWeight },
+        });
         weight += 15;
-        const aId = id("assess");
+      }
+    }
+  }
+  // Read back the actual persisted component ids so assessments reference real rows.
+  const persistedGC = await prisma.gradeComponent.findMany({ where: { termId: term.id } });
+  const gcByKey: Record<string, string> = {};
+  for (const gc of persistedGC) gcByKey[`${gc.subjectId}:${gc.componentType}`] = gc.id;
+
+  // Assessments per component (skipDuplicates on @@unique([gradeComponentId, title])).
+  const assessments: { id: string; gradeComponentId: string; title: string; maxScore: number; dateGiven: Date; createdBy: string }[] = [];
+  const assessByKey: Record<string, string> = {};
+  for (const grade of GRADE_LEVELS) {
+    for (const s of SUBJECT_NAMES[grade]) {
+      const subjectId = subjectIds[`${grade}:${s.code}`];
+      for (const ct of componentTypes) {
+        const gcId = gcByKey[`${subjectId}:${ct}`];
+        if (!gcId) continue;
+        const aId = keyId("assess", `${subjectId}:${ct}`);
         assessments.push({ id: aId, gradeComponentId: gcId, title: `${ct} ${s.code}`, maxScore: 100, dateGiven: pickDate(2025, 10, 11), createdBy: "seed" });
         assessByKey[`${subjectId}:${ct}`] = aId;
       }
@@ -179,6 +197,7 @@ async function main() {
       const gradeStudents = allStudents.filter((st) => st.gradeLevel === grade);
       for (const ct of componentTypes) {
         const aId = assessByKey[`${subjectId}:${ct}`];
+        if (!aId) continue;
         for (const st of gradeStudents) {
           const raw = randInt(60, 100);
           studentGrades.push({ id: id("sg"), assessmentId: aId, studentId: st.userId, rawScore: raw, percentageScore: raw });
@@ -191,7 +210,6 @@ async function main() {
     }
   }
   await prisma.teacherSubjectAssignment.createMany({ data: teacherAssignments, skipDuplicates: true });
-  await prisma.gradeComponent.createMany({ data: gradeComponents, skipDuplicates: true });
   await prisma.assessment.createMany({ data: assessments, skipDuplicates: true });
   await prisma.studentGrade.createMany({ data: studentGrades, skipDuplicates: true });
   await prisma.finalGrade.createMany({ data: finalGrades, skipDuplicates: true });
