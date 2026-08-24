@@ -2,7 +2,11 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./attendance-heatmap.module.css";
+
+const SKELETON_GRADES = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
+const SKELETON_DAYS = 60;
 
 type GradeDay = {
   date: string;
@@ -148,11 +152,18 @@ export function AttendanceHeatmap() {
                   </div>
                 </article>
               ))}
-              {loading && grades.length === 0 ? (
-                <article className={styles.card}>
-                  <p className={styles.grade}>Loading…</p>
-                </article>
-              ) : null}
+              {loading && grades.length === 0
+                ? SKELETON_GRADES.map((g) => (
+                    <article key={g} className={styles.card} aria-hidden>
+                      <Skeleton className={styles.skeletonGrade} />
+                      <div className={styles.grid}>
+                        {Array.from({ length: SKELETON_DAYS }).map((_, i) => (
+                          <Skeleton key={i} className={styles.skeletonBlock} />
+                        ))}
+                      </div>
+                    </article>
+                  ))
+                : null}
             </div>
           </div>
           <div className={styles.legend}>

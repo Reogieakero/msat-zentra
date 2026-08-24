@@ -46,6 +46,7 @@ export type AdmDocument = {
   student: string;
   grade: string;
   preparedBy: string;
+  datePrepared?: string;
   status: "pending_signature" | "signed";
   eligibility: string;
 };
@@ -93,22 +94,23 @@ export const ADM_DOCUMENTS: AdmDocument[] = [
   },
 ];
 
-export type Sf10Status = "missing" | "available" | "attached";
+export type Sf10Status = "missing" | "available" | "attach" | "released";
 
 export type Sf10Level = {
   grade: string;
-  attached: number;
+  attach: number;
   available: number;
   missing: number;
+  released: number;
 };
 
 export const SF10_LEVELS: Sf10Level[] = [
-  { grade: "Grade 7", attached: 2, available: 1, missing: 1 },
-  { grade: "Grade 8", attached: 1, available: 2, missing: 0 },
-  { grade: "Grade 9", attached: 2, available: 0, missing: 1 },
-  { grade: "Grade 10", attached: 1, available: 1, missing: 1 },
-  { grade: "Grade 11", attached: 2, available: 1, missing: 0 },
-  { grade: "Grade 12", attached: 1, available: 0, missing: 1 },
+  { grade: "Grade 7", attach: 2, available: 1, missing: 1, released: 0 },
+  { grade: "Grade 8", attach: 1, available: 2, missing: 0, released: 1 },
+  { grade: "Grade 9", attach: 2, available: 0, missing: 1, released: 0 },
+  { grade: "Grade 10", attach: 1, available: 1, missing: 1, released: 1 },
+  { grade: "Grade 11", attach: 2, available: 1, missing: 0, released: 0 },
+  { grade: "Grade 12", attach: 1, available: 0, missing: 1, released: 1 },
 ];
 
 export const SF10_STATUS_META: Record<
@@ -117,7 +119,8 @@ export const SF10_STATUS_META: Record<
 > = {
   missing: { label: "Missing", color: "#b91c1c" },
   available: { label: "Available", color: "#c2410c" },
-  attached: { label: "Attached", color: "#166534" },
+  attach: { label: "Attached", color: "#166534" },
+  released: { label: "Released", color: "#6d28d9" },
 };
 
 export type SchoolDay = {
