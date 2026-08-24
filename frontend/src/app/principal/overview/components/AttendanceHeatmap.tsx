@@ -19,8 +19,9 @@ type GradeDay = {
 type HeatGrade = { grade: string; enrolled: number; days: GradeDay[] };
 type HeatmapResponse = { session: "AM" | "PM"; grades: HeatGrade[] };
 
-// Color scale: lightest = 0, darkest green = present === enrolled (full attendance).
-const SCALE = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"];
+// Color scale: 0 (empty/absent) -> full present (green). Theme-aware via CSS
+// variables so the empty block is dark in dark mode, not near-white.
+const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(--hm-4)"];
 
 function dayColor(count: number, enrolled: number): string {
   if (enrolled <= 0 || count <= 0) return SCALE[0];
