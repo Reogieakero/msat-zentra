@@ -81,7 +81,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
           )}
         </button>
 
-        <Link href="/principal/dashboard" className={styles.brand}>
+        <Link href="/principal/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
 

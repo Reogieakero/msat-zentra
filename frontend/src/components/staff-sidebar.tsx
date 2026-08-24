@@ -50,7 +50,7 @@ const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { title: "Dashboard", href: "/principal/dashboard", icon: LayoutDashboard },
+      { title: "Overview", href: "/principal/overview", icon: LayoutDashboard },
     ],
   },
   {
@@ -113,7 +113,7 @@ function useIsActive() {
   const pathname = usePathname();
   return React.useCallback(
     (href: string) =>
-      href === "/principal/dashboard"
+      href === "/principal/overview"
         ? pathname === href
         : pathname === href || pathname.startsWith(`${href}/`),
     [pathname],
