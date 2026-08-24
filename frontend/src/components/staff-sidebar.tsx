@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -135,6 +135,7 @@ function SidebarShell({
 }) {
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
   const isActive = useIsActive();
+  const router = useRouter();
   const collapsed = isMobile ? false : !expanded;
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     "/principal/adm": true,
@@ -153,9 +154,10 @@ function SidebarShell({
           <button
             type="button"
             className={`${styles.item} ${subActive ? styles.itemActive : ""}`}
-            onClick={() =>
-              setOpenGroups((prev) => ({ ...prev, [item.href]: !prev[item.href] }))
-            }
+            onClick={() => {
+              setOpenGroups((prev) => ({ ...prev, [item.href]: !prev[item.href] }));
+              router.push(item.href);
+            }}
             aria-expanded={open}
           >
             <item.icon className={styles.itemIcon} />

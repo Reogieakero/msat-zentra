@@ -2,8 +2,38 @@ import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { evaluateRisk } from "../../services/risk.js";
+import { getRiskBoard } from "./riskBoard.service.js";
+import {
+  getRiskHeatmap,
+  getSectionFactorStudents,
+  type RiskFactor,
+} from "./riskHeatmap.service.js";
 
 const router = Router();
+
+async function resolveActiveTermId(): Promise<string | null> {
+  const term = await prisma.term.findFirst({
+    where: { schoolYear: { isActive: true } },
+    orderBy: { termNumber: "asc" },
+    select: { id: true },
+  });
+  return term?.id ?? null;
+}
+
+// Principal board overview (O4): KPIs, level distribution, factor totals, trend.
+router.get(
+  "/board",
+  requireAuth,
+  requireRole("principal"),
+  async (_req, res, next) => {
+    try {
+      const board = await getRiskBoard();
+      res.json(board);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 // Student/parent: limited projection only (O1) — risk_level + behavioral flag.
 router.get(
@@ -25,6 +55,52 @@ router.get(
       const limited = { lrn: profile.lrn, riskLevel: profile.riskLevel };
       res.json(limited);
     } catch (e) { next(e); }
+  }
+);
+
+// Principal board heat map: all sections × risk-factor counts (O4, status-only).
+router.get(
+  "/heatmap",
+  requireAuth,
+  requireRole("principal"),
+  async (_req, res, next) => {
+    try {
+      const termId = await resolveActiveTermId();
+      if (!termId) {
+        return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
+      }
+      const heatmap = await getRiskHeatmap(termId);
+      res.json(heatmap);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Per section × factor at-risk student list (principal only).
+router.get(
+  "/sections/:id/students",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const termId = typeof req.query.termId === "string" ? req.query.termId : null;
+      const factor = req.query.factor as RiskFactor | undefined;
+      if (!termId) {
+        return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
+      }
+      if (!factor || !["Academic", "Attendance", "Behavioral"].includes(factor)) {
+        return res.status(400).json({ error: { code: "MISSING_FACTOR", message: "factor query required" } });
+      }
+      const students = await getSectionFactorStudents(
+        String(req.params.id),
+        factor,
+        termId
+      );
+      res.json({ sectionId: String(req.params.id), termId, factor, students });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 

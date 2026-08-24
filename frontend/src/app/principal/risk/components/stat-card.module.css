@@ -1,0 +1,74 @@
+.card {
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0;
+}
+
+.title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.icon {
+  width: 15px;
+  height: 15px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.value {
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.skelTitle {
+  height: 0.8125rem;
+  width: 9rem;
+}
+
+.skelIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+}
+
+.skelValue {
+  height: 1.875rem;
+  width: 6rem;
+  margin-top: 0.5rem;
+}
+
+.skelHint {
+  height: 0.6875rem;
+  width: 7rem;
+  margin-top: 0.25rem;
+}

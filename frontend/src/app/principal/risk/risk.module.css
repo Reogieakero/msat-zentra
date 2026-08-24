@@ -1,0 +1,80 @@
+.page {
+  --hm-0: color-mix(in oklch, var(--foreground), transparent 94%);
+  --hm-1: color-mix(in oklch, #b91c1c, transparent 82%);
+  --hm-2: color-mix(in oklch, #b91c1c, transparent 64%);
+  --hm-3: color-mix(in oklch, #b91c1c, transparent 42%);
+  --hm-4: color-mix(in oklch, #b91c1c, transparent 18%);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  min-height: 100%;
+  background-color: var(--background);
+}
+
+.error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--destructive);
+}
+
+.pageHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.main {
+  min-width: 0;
+}
+
+.rail {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .kpiRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

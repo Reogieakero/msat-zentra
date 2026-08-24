@@ -1,4 +1,5 @@
 import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, Sf10Source, ActionType, NotifChannel, LockStatus } from "@prisma/client";
+import { recomputeRisk } from "../src/services/risk.js";
 import argon2 from "argon2";
 
 const prisma = new PrismaClient();
@@ -324,8 +325,17 @@ async function main() {
     });
   }
 
-  // Risk snapshots (>=20)
-  await prisma.riskSnapshot.createMany({ data: allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents)).map((st) => ({ id: id("rs"), studentId: st.userId, riskLevel: "Low" as RiskLevel, riskCount: 0, snapshotDate: inTermDate(), termId: term.id })), skipDuplicates: true });
+  // Risk snapshots (>=20) — computed from real seeded grades/attendance/anecdotals.
+  const riskStudents = allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents));
+  for (const st of riskStudents) {
+    try {
+      await recomputeRisk(st.userId, term.id);
+    } catch {
+      await prisma.riskSnapshot.create({
+        data: { id: id("rs"), studentId: st.userId, riskLevel: "Low" as RiskLevel, riskCount: 0, snapshotDate: inTermDate(), termId: term.id },
+      });
+    }
+  }
 
   // Audit logs (>=20)
   await prisma.auditLog.createMany({ data: Array.from({ length: MIN_RECORDS }, (_, i) => ({ id: id("al"), userId: principal.id, actionType: rand(["account_approval", "grade_lock", "grade_unlock", "referral_status_change", "intervention_approval"] as ActionType[]), sourceTable: "StudentProfile", sourceId: allStudents[i % totalStudents].userId, reason: "Seeded audit entry." })), skipDuplicates: true });
