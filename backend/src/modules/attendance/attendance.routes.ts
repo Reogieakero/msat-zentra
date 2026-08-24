@@ -50,6 +50,100 @@ const GRADE_LABEL: Record<string, string> = {
   G12: "Grade 12",
 };
 
+// Attendance heat map: per-grade, per-day present/total rates split by AM/PM session.
+router.get(
+  "/heatmap",
+  requireAuth,
+  requireRole("principal", "adviser", "guidance_counselor", "nurse"),
+  async (req, res, next) => {
+    try {
+      const session: "AM" | "PM" = req.query.session === "PM" ? "PM" : "AM";
+      const statusFilter =
+        req.query.status === "late" ||
+        req.query.status === "absent" ||
+        req.query.status === "excused"
+          ? (req.query.status as "late" | "absent" | "excused")
+          : "present";
+      const activeTerm = await prisma.term.findFirst({
+        where: { schoolYear: { isActive: true } },
+        orderBy: { termNumber: "asc" },
+        select: { id: true, startDate: true },
+      });
+      const termId = activeTerm?.id;
+      const where = { session, ...(termId ? { termId } : {}) };
+
+      const records = await prisma.attendanceRecord.findMany({
+        where,
+        include: { student: { select: { gradeLevel: true } } },
+        orderBy: { date: "asc" },
+      });
+
+      // Authoritative denominator: number of enrolled students per year level.
+      const enrolledByGrade: Record<string, number> = {};
+      const enrollCounts = await prisma.studentProfile.groupBy({
+        by: ["gradeLevel"],
+        _count: { _all: true },
+      });
+      for (const e of enrollCounts) enrolledByGrade[e.gradeLevel] = e._count._all;
+
+      // Build a continuous date axis from the term start date to today so every
+      // grade card shows the same number of blocks aligned to the same dates.
+      const start = activeTerm?.startDate
+        ? new Date(activeTerm.startDate.toISOString().slice(0, 10) + "T00:00:00Z")
+        : null;
+      const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
+      const axisStart = start ?? records[0]?.date ?? today;
+      const dayKeys: string[] = [];
+      for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
+        dayKeys.push(d.toISOString().slice(0, 10));
+      }
+
+      // Count non-absent records per grade/day. Absent is derived so every
+      // enrolled student is accounted for even when a record was never submitted.
+      const gradeDayStatus: Record<string, Map<string, { present: number; late: number; excused: number }>> = {};
+      for (const r of records) {
+        const grade = r.student.gradeLevel;
+        const key = r.date.toISOString().slice(0, 10);
+        if (!gradeDayStatus[grade]) gradeDayStatus[grade] = new Map();
+        if (!gradeDayStatus[grade].has(key)) {
+          gradeDayStatus[grade].set(key, { present: 0, late: 0, excused: 0 });
+        }
+        const cell = gradeDayStatus[grade].get(key)!;
+        if (r.status === "present") cell.present++;
+        else if (r.status === "late") cell.late++;
+        else if (r.status === "excused") cell.excused++;
+      }
+
+      const grades = GRADE_ORDER.map((grade) => {
+        const statusMap = gradeDayStatus[grade] ?? new Map<string, { present: number; late: number; excused: number }>();
+        const total = enrolledByGrade[grade] ?? 0;
+        return {
+          grade: GRADE_LABEL[grade],
+          enrolled: total,
+          days: dayKeys.map((key) => {
+            const cell = statusMap.get(key) ?? { present: 0, late: 0, excused: 0 };
+            // Absent = enrolled − (present + late + excused); never negative.
+            const accounted = cell.present + cell.late + cell.excused;
+            const absent = Math.max(0, total - accounted);
+            const d = new Date(key + "T00:00:00Z");
+            const date = d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              timeZone: "UTC",
+            });
+            return { date, present: cell.present, late: cell.late, absent, excused: cell.excused, total };
+          }),
+        };
+      });
+
+      res.json({ session, status: statusFilter, grades });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.get(
   "/summary",
   requireAuth,
