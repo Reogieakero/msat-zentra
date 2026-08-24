@@ -86,10 +86,13 @@ export default function PrincipalAcademicsPage() {
   const selectedSection =
     source.sections.find((s) => s.sectionId === selectedSectionId) ?? null;
 
-  // Reopen the floating Average Grade card whenever the selection changes.
-  React.useEffect(() => {
-    setGradeCardOpen(true);
-  }, [selectedSectionId]);
+  const handleSelectSection = React.useCallback(
+    (id: string | null) => {
+      setSelectedSectionId(id);
+      setGradeCardOpen(true);
+    },
+    []
+  );
 
   const gradeTabs = React.useMemo(
     () =>
@@ -215,7 +218,7 @@ export default function PrincipalAcademicsPage() {
                       onClick={() => {
                         setGradeTab(g);
                         const first = source.sections.find((s) => s.grade === g);
-                        setSelectedSectionId(first?.sectionId ?? null);
+                        handleSelectSection(first?.sectionId ?? null);
                       }}
                     >
                       {g.replace("Grade ", "G")}
@@ -227,7 +230,7 @@ export default function PrincipalAcademicsPage() {
                     sections={sectionsForGrade}
                     loading={loading}
                     selectedSectionId={selectedSectionId}
-                    onSelectSection={setSelectedSectionId}
+                    onSelectSection={handleSelectSection}
                   />
                 </div>
               </CardContent>
