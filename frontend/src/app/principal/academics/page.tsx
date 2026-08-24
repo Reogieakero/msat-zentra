@@ -19,7 +19,8 @@ import { GradeBreakdownDrawer } from "./components/GradeBreakdownDrawer";
 import { MOCK, subjectColumns, type StudentRow, type AcademicsMock } from "./mockData";
 import { apiClient } from "@/lib/api/client";
 import { Users as UsersIcon, X } from "lucide-react";
-import styles from "./academics.module.css";
+import styles from "./page.module.css";
+import shared from "./academics.module.css";
 
 export default function PrincipalAcademicsPage() {
   const [selectedStudent, setSelectedStudent] = React.useState<StudentRow | null>(null);
@@ -190,7 +191,7 @@ export default function PrincipalAcademicsPage() {
       {!loading && !hasFinals ? (
         <Card>
           <CardContent>
-            <p className={styles.empty}>No finalized grades for this term.</p>
+            <p className={shared.empty}>No finalized grades for this term.</p>
           </CardContent>
         </Card>
       ) : (
@@ -244,13 +245,13 @@ export default function PrincipalAcademicsPage() {
                   <CardAction>
                     <ul className={styles.legend}>
                       <li className={styles.legendItem}>
-                        <span className={`${styles.dot} ${styles.dotPass}`} /> &gt;80% partial
+                        <span className={`${shared.dot} ${shared.dotPass}`} /> &gt;80% partial
                       </li>
                       <li className={styles.legendItem}>
-                        <span className={`${styles.dot} ${styles.dotPartial}`} /> ≥75% partial
+                        <span className={`${shared.dot} ${shared.dotPartial}`} /> ≥75% partial
                       </li>
                       <li className={styles.legendItem}>
-                        <span className={`${styles.dot} ${styles.dotFail}`} /> &lt;75% partial
+                        <span className={`${shared.dot} ${shared.dotFail}`} /> &lt;75% partial
                       </li>
                     </ul>
                   </CardAction>
@@ -279,9 +280,9 @@ export default function PrincipalAcademicsPage() {
                     loading={loading}
                   />
                 ) : (
-                  <div className={styles.placeholder}>
-                    <UsersIcon className={styles.placeholderIcon} aria-hidden />
-                    <p className={styles.placeholderText}>
+                  <div className={shared.placeholder}>
+                    <UsersIcon className={shared.placeholderIcon} aria-hidden />
+                    <p className={shared.placeholderText}>
                       Select a section from the left to view its students
                     </p>
                   </div>

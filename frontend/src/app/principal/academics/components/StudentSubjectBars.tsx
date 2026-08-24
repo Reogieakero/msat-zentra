@@ -2,7 +2,7 @@
 
 import type { StudentRow } from "../mockData";
 import { SUBJECT_CODES } from "../mockData";
-import styles from "../academics.module.css";
+import styles from "./StudentSubjectBars.module.css";
 
 interface Props {
   student: StudentRow | null;

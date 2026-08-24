@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import { RiskBadge } from "./RiskBadge";
 import type { StudentRow } from "../mockData";
-import styles from "../academics.module.css";
+import styles from "./GradeBreakdownDrawer.module.css";
+import shared from "../academics.module.css";
 
 interface Props {
   student: StudentRow | null;
@@ -63,10 +64,10 @@ export function GradeBreakdownDrawer({ student, open, onOpenChange }: Props) {
                 <p className={styles.weights}>
                   {WEIGHTS} · Partial grades (not locked/final)
                 </p>
-                <div className={styles.tableWrap} style={{ marginTop: "0.5rem" }}>
+                <div className={shared.tableWrap} style={{ marginTop: "0.5rem" }}>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className={styles.stickyHead}>
+                      <tr className={shared.stickyHead}>
                         <th className="p-2 text-left font-medium">Subject</th>
                         <th className="p-2 text-right font-medium">Partial Grade</th>
                         <th className="p-2 text-right font-medium">Standing</th>
@@ -77,13 +78,13 @@ export function GradeBreakdownDrawer({ student, open, onOpenChange }: Props) {
                       {student.subjects.map((s) => (
                         <tr key={s.subject} className="border-b">
                           <td className="p-2">{s.subject}</td>
-                          <td className={`p-2 text-right ${styles.mono}`}>
+                          <td className={`p-2 text-right ${shared.mono}`}>
                             {s.computedAverage.toFixed(1)}
                           </td>
-                          <td className={`p-2 text-right ${styles.mono}`}>
+                          <td className={`p-2 text-right ${shared.mono}`}>
                             {s.transmutedGrade}
                           </td>
-                          <td className={`p-2 text-right ${styles.mono}`}>
+                          <td className={`p-2 text-right ${shared.mono}`}>
                             {s.transmutedGrade > 80
                               ? "On track"
                               : s.transmutedGrade >= 75

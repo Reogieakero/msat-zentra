@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { RiskLevel } from "../mockData";
-import styles from "../academics.module.css";
+import styles from "./RiskBadge.module.css";
 
 const RISK_CLASS: Record<RiskLevel, string> = {
   High: styles.riskHigh,

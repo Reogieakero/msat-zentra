@@ -1,0 +1,101 @@
+.dotTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dotTable tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.dotTable tbody tr:last-child {
+  border-bottom: none;
+}
+
+.diagCell {
+  padding: 0.3rem 0.3rem;
+  vertical-align: middle;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.lrnCell {
+  width: 120px;
+  padding-left: 0.75rem;
+  padding-right: 0.5rem;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  letter-spacing: 0.01em;
+}
+
+.dotCell:first-of-type {
+  padding-left: 0.4rem;
+  width: 22px;
+}
+
+.codeHeader {
+  height: auto;
+  padding: 0.3rem 0.25rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.dotCell {
+  text-align: center;
+  width: 24px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.studentRow {
+  cursor: pointer;
+}
+
+.studentRow:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.clickHint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.viewCell {
+  text-align: right;
+  width: 1%;
+}
+
+.lrnSkeleton {
+  height: 0.875rem;
+  width: 90px;
+}
+
+.dotSkeleton {
+  height: 0.625rem;
+  width: 0.625rem;
+  border-radius: 999px;
+  margin: 0 auto;
+}
+
+.viewSkeleton {
+  height: 0.875rem;
+  width: 2.5rem;
+}

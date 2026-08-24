@@ -14,7 +14,7 @@ import type {
   HonorRollCandidate,
   PotentialHonorCandidate,
 } from "../mockData";
-import styles from "../academics.module.css";
+import styles from "./AcademicsKpis.module.css";
 
 export type KpiFocus = "honor" | "potential";
 

@@ -10,7 +10,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import styles from "../academics.module.css";
+import styles from "./SectionStudentsPanel.module.css";
+import shared from "../academics.module.css";
 
 interface Props {
   section: SectionSummary | null;
@@ -58,7 +59,7 @@ export function SectionStudentsPanel({
   };
   if (loading) {
     return (
-      <div className={styles.tableWrap}>
+      <div className={shared.tableWrap}>
         <table className={styles.dotTable}>
           <thead>
             <tr>
@@ -74,7 +75,7 @@ export function SectionStudentsPanel({
           <tbody>
             {Array.from({ length: 8 }).map((_, r) => (
               <tr key={r} className={styles.studentRow}>
-                <td className={`${styles.mono} ${styles.diagCell} ${styles.lrnCell}`}>
+                <td className={`${shared.mono} ${styles.diagCell} ${styles.lrnCell}`}>
                   <Skeleton className={styles.lrnSkeleton} />
                 </td>
                 {subjects.map((subj) => (
@@ -95,15 +96,15 @@ export function SectionStudentsPanel({
 
   if (!section) {
     return (
-      <div className={styles.tableWrap}>
-        <p className={styles.empty}>Select a section to view its students.</p>
+      <div className={shared.tableWrap}>
+        <p className={shared.empty}>Select a section to view its students.</p>
       </div>
     );
   }
 
   return (
     <TooltipProvider>
-      <div className={styles.tableWrap}>
+      <div className={shared.tableWrap}>
         <table className={styles.dotTable}>
           <thead>
             <tr>
@@ -125,7 +126,7 @@ export function SectionStudentsPanel({
                 onMouseEnter={() => handleEnter(st)}
                 onMouseLeave={handleLeave}
               >
-                <td className={`${styles.mono} ${styles.diagCell} ${styles.lrnCell}`}>
+                <td className={`${shared.mono} ${styles.diagCell} ${styles.lrnCell}`}>
                   {st.lrn}
                 </td>
                 {subjects.map((subj) => {
@@ -142,12 +143,12 @@ export function SectionStudentsPanel({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span
-                            className={`${styles.dot} ${
+                            className={`${shared.dot} ${
                               dot === "pass"
-                                ? styles.dotPass
+                                ? shared.dotPass
                                 : dot === "partial"
-                                  ? styles.dotPartial
-                                  : styles.dotFail
+                                  ? shared.dotPartial
+                                  : shared.dotFail
                             }`}
                           />
                         </TooltipTrigger>
