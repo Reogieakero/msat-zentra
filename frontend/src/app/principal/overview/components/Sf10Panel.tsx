@@ -15,7 +15,7 @@ import styles from "./sf10-panel.module.css";
 
 const EMPTY: Sf10Level[] = [];
 
-const SF10_STATUSES: Sf10Status[] = ["attached", "available", "missing"];
+const SF10_STATUSES: Sf10Status[] = ["attach", "available", "missing", "released"];
 
 export function Sf10Panel({
   href,
@@ -83,7 +83,8 @@ export function Sf10Panel({
   const counts = {
     missing: levels.reduce((s, l) => s + l.missing, 0),
     available: levels.reduce((s, l) => s + l.available, 0),
-    attached: levels.reduce((s, l) => s + l.attached, 0),
+    attach: levels.reduce((s, l) => s + l.attach, 0),
+    released: levels.reduce((s, l) => s + l.released, 0),
   };
   const sf10DonutData = SF10_STATUSES.map((s) => ({
     status: s,
@@ -148,7 +149,7 @@ export function Sf10Panel({
 
         <div className={styles.sf10SummaryTotal}>
           <span className={styles.sf10SummaryValue}>
-            {counts.attached + counts.available + counts.missing}
+            {counts.attach + counts.available + counts.missing + counts.released}
           </span>
           <span className={styles.sf10SummaryLabel}>Total Records</span>
         </div>

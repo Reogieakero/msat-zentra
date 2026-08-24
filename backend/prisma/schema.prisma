@@ -123,6 +123,12 @@ enum Sf10Source {
   manual
 }
 
+enum Sf10Status {
+  attach
+  available
+  released
+}
+
 enum ActionType {
   sf10_update
   grade_lock
@@ -235,6 +241,7 @@ model StaffProfile {
   employeeId   String  @unique
   department   String?
   isAdviser    Boolean @default(false)
+  handledGradeLevels GradeLevel[]
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -561,12 +568,15 @@ model Sf10Record {
   id                String      @id @default(uuid())
   studentId         String      @unique
   source            Sf10Source
+  status            Sf10Status  @default(attach)
   uploadedFileUrl   String?
   ocrExtractedData  Json?
   verifiedBy        String?
   verifiedAt        DateTime?
   validatedBy       String?
   validatedAt       DateTime?
+  releasedAt        DateTime?
+  archivedAt        DateTime?
   currentVersion    Int         @default(1)
   student           StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   verifiedByUser    User?          @relation("Sf10VerifiedBy", fields: [verifiedBy], references: [id])

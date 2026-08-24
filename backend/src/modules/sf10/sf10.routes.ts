@@ -25,26 +25,31 @@ router.get(
   async (req, res, next) => {
     try {
       const records = await prisma.sf10Record.findMany({
-        select: {
-          student: { select: { gradeLevel: true } },
-          uploadedFileUrl: true,
-          verifiedAt: true,
-          validatedAt: true,
-        },
+        select: { student: { select: { gradeLevel: true } }, status: true },
       });
 
       const byGrade: Record<
         string,
-        { attached: number; available: number; missing: number }
+        { attach: number; available: number; missing: number; released: number }
       > = {};
-      for (const g of GRADE_ORDER) byGrade[g] = { attached: 0, available: 0, missing: 0 };
+      for (const g of GRADE_ORDER) byGrade[g] = { attach: 0, available: 0, missing: 0, released: 0 };
 
       for (const r of records) {
         const g = r.student.gradeLevel;
-        if (!byGrade[g]) byGrade[g] = { attached: 0, available: 0, missing: 0 };
-        if (r.validatedAt) byGrade[g].attached += 1;
-        else if (r.uploadedFileUrl || r.verifiedAt) byGrade[g].available += 1;
-        else byGrade[g].missing += 1;
+        if (!byGrade[g]) byGrade[g] = { attach: 0, available: 0, missing: 0, released: 0 };
+        byGrade[g][r.status] += 1;
+      }
+
+      // Students with no SF10 record at all are "missing" for their grade.
+      const studentsWithoutRecord = await prisma.studentProfile.groupBy({
+        by: ["gradeLevel"],
+        where: { sf10Records: { none: {} } },
+        _count: { _all: true },
+      });
+      for (const s of studentsWithoutRecord) {
+        const g = s.gradeLevel;
+        if (!byGrade[g]) byGrade[g] = { attach: 0, available: 0, missing: 0, released: 0 };
+        byGrade[g].missing += s._count._all;
       }
 
       const levels = GRADE_ORDER.map((g) => ({ grade: GRADE_LABEL[g], ...byGrade[g] }));
@@ -63,7 +68,7 @@ router.post(
     try {
       const record = await prisma.sf10Record.upsert({
         where: { studentId: req.body.studentId },
-        create: { studentId: req.body.studentId, source: "ocr_upload", uploadedFileUrl: req.body.fileUrl },
+        create: { studentId: req.body.studentId, source: "ocr_upload", status: "attach", uploadedFileUrl: req.body.fileUrl },
         update: { source: "ocr_upload", uploadedFileUrl: req.body.fileUrl },
       });
       // OCR job enqueue is external (OCR_WORKER_URL); here we just acknowledge.
@@ -99,19 +104,64 @@ router.post(
   }
 );
 
+async function assertHandlesGrade(recordId: string, user: { id: string }) {
+  const record = await prisma.sf10Record.findUnique({
+    where: { id: recordId },
+    select: {
+      id: true,
+      status: true,
+      verifiedBy: true,
+      currentVersion: true,
+      ocrExtractedData: true,
+      student: { select: { gradeLevel: true } },
+    },
+  });
+  if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
+  const staff = await prisma.staffProfile.findUnique({
+    where: { userId: user.id },
+    select: { handledGradeLevels: true },
+  });
+  if (staff && staff.handledGradeLevels.length > 0 &&
+      !staff.handledGradeLevels.includes(record.student.gradeLevel)) {
+    throw new AppError(403, "GRADE_SCOPE", "You do not handle this student's grade level");
+  }
+  return record;
+}
+
 router.post(
   "/:id/validate",
   requireAuth,
   requireRole("record_keeper", "registrar"),
   async (req, res, next) => {
     try {
-      const record = await prisma.sf10Record.findUnique({ where: { id: String(req.params.id) } });
-      if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
+      const record = await assertHandlesGrade(String(req.params.id), req.user!);
+      if (record.status !== "attach") throw new AppError(409, "BAD_STATUS", "Record must be in 'attach' status to validate");
       if (record.verifiedBy == null) throw new AppError(409, "NOT_VERIFIED", "Must be verified before validation");
       const updated = await prisma.$transaction([
-        prisma.sf10Record.update({ where: { id: record.id }, data: { validatedBy: req.user!.id, validatedAt: new Date(), currentVersion: { increment: 1 } } }),
+        prisma.sf10Record.update({ where: { id: record.id }, data: { validatedBy: req.user!.id, validatedAt: new Date(), status: "available", currentVersion: { increment: 1 } } }),
         prisma.sf10RecordVersion.create({ data: { sf10RecordId: record.id, versionNumber: record.currentVersion + 1, dataSnapshot: (record.ocrExtractedData as object) ?? {}, changedBy: req.user!.id, changeReason: "Validation" } }),
         prisma.auditLog.create({ data: { userId: req.user!.id, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 validated" } }),
+      ]);
+      res.json(updated[0]);
+    } catch (e) { next(e); }
+  }
+);
+
+router.post(
+  "/:id/release",
+  requireAuth,
+  requireRole("record_keeper", "registrar"),
+  async (req, res, next) => {
+    try {
+      const record = await assertHandlesGrade(String(req.params.id), req.user!);
+      if (record.status !== "available") throw new AppError(409, "BAD_STATUS", "Record must be 'available' before release");
+      const now = new Date();
+      const updated = await prisma.$transaction([
+        prisma.sf10Record.update({
+          where: { id: record.id },
+          data: { status: "released", releasedAt: now, archivedAt: now },
+        }),
+        prisma.auditLog.create({ data: { userId: req.user!.id, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 released and archived" } }),
       ]);
       res.json(updated[0]);
     } catch (e) { next(e); }

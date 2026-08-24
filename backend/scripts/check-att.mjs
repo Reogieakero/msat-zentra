@@ -1,0 +1,13 @@
+import { PrismaClient } from "@prisma/client";
+const p = new PrismaClient();
+const rows = await p.attendanceRecord.groupBy({ by: ["status", "session"], _count: true });
+console.log("ATTENDANCE BY status/session:", JSON.stringify(rows, null, 2));
+const total = await p.attendanceRecord.count();
+console.log("TOTAL attendance:", total);
+const sy = await p.schoolYear.findMany({ select: { id: true, isActive: true } });
+console.log("SCHOOL YEARS:", JSON.stringify(sy));
+const terms = await p.term.findMany({ select: { id: true, termNumber: true, startDate: true, schoolYearId: true } });
+console.log("TERMS:", JSON.stringify(terms, null, 2));
+const one = await p.attendanceRecord.findFirst({ where: { status: "present" }, include: { student: { select: { gradeLevel: true } } } });
+console.log("SAMPLE present (if any):", JSON.stringify(one));
+await p.$disconnect();

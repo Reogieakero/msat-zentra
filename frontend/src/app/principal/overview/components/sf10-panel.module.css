@@ -73,7 +73,7 @@
 
 .sf10Grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.625rem;
 }
 
@@ -82,10 +82,10 @@
   flex-direction: column;
   gap: 0.375rem;
   padding: 0.625rem 0.75rem;
-  border: 1px solid var(--border, #e7e5e4);
+  border: none;
   border-radius: var(--radius-lg);
   background: var(--card, #ffffff);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground), transparent 92%);
 }
 
 .sf10GradeName {
@@ -98,7 +98,7 @@
 
 .sf10Levels {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.375rem;
 }
 
@@ -108,7 +108,7 @@
   align-items: center;
   gap: 0.0625rem;
   padding: 0.375rem 0.25rem;
-  border: 1px solid;
+  border: none;
   border-radius: 0.5rem;
   background: color-mix(in oklch, var(--background), transparent 40%);
 }
