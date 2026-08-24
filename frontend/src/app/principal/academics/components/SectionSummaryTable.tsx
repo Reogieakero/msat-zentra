@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/table";
 import { ChevronRight } from "lucide-react";
 import type { SectionSummary } from "../mockData";
-import styles from "../academics.module.css";
+import styles from "./SectionSummaryTable.module.css";
+import shared from "../academics.module.css";
 
 interface Props {
   sections: SectionSummary[];
@@ -28,9 +29,9 @@ export function SectionSummaryTable({
 }: Props) {
   if (loading) {
     return (
-      <div className={styles.tableWrap}>
+      <div className={shared.tableWrap}>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className={styles.skeletonRow} />
+          <div key={i} className={shared.skeletonRow} />
         ))}
       </div>
     );
@@ -38,16 +39,16 @@ export function SectionSummaryTable({
 
   if (sections.length === 0) {
     return (
-      <div className={styles.tableWrap}>
-        <p className={styles.empty}>No sections match.</p>
+      <div className={shared.tableWrap}>
+        <p className={shared.empty}>No sections match.</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.tableWrap}>
+    <div className={shared.tableWrap}>
       <Table>
-        <TableHeader className={styles.stickyHead}>
+        <TableHeader className={shared.stickyHead}>
           <TableRow>
             <TableHead aria-label="Select" className="w-8" />
             <TableHead>Section</TableHead>

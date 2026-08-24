@@ -4,7 +4,8 @@ import * as React from "react";
 import type { HonorRollCandidate, PotentialHonorCandidate } from "../mockData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X } from "lucide-react";
-import styles from "../academics.module.css";
+import styles from "./HonorRollTable.module.css";
+import shared from "../academics.module.css";
 
 interface Props {
   title: string;
@@ -65,7 +66,7 @@ export function HonorRollTable({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <p className={styles.empty}>No students in this category yet.</p>
+        <p className={shared.empty}>No students in this category yet.</p>
       ) : (
         <table className={styles.honorTable}>
           <thead>
@@ -80,14 +81,14 @@ export function HonorRollTable({
             {rows.map((c) => (
               <tr key={c.studentId}>
                 <td className={styles.honorName}>{c.name}</td>
-                <td className={styles.mono}>{c.overallAverage.toFixed(1)}</td>
+                <td className={shared.mono}>{c.overallAverage.toFixed(1)}</td>
                 <td>
                   <span className={`${styles.tierChip} ${styles[`tier_${c.tier.replace(/\s+/g, "")}`]}`}>
                     {c.tier}
                   </span>
                 </td>
                 {showUnlocked && (
-                  <td className={styles.mono}>
+                  <td className={shared.mono}>
                     {(c as PotentialHonorCandidate).unlockedSubjects}
                   </td>
                 )}

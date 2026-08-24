@@ -3,7 +3,8 @@
 import * as React from "react";
 import { type SectionSummary } from "../mockData";
 import { Skeleton } from "@/components/ui/skeleton";
-import styles from "../academics.module.css";
+import styles from "./AverageGradeByLevel.module.css";
+import shared from "../academics.module.css";
 
 interface Props {
   sections: SectionSummary[];
@@ -63,7 +64,7 @@ export function AverageGradeByLevel({
   }
 
   if (rows.length === 0) {
-    return <p className={styles.empty}>No finalized grades for this term.</p>;
+    return <p className={shared.empty}>No finalized grades for this term.</p>;
   }
 
   return (
@@ -84,7 +85,7 @@ export function AverageGradeByLevel({
                 style={{ width: `${s.average}%` }}
               />
             </div>
-            <span className={`${styles.avgLevelVal} ${styles.mono}`}>
+            <span className={`${styles.avgLevelVal} ${shared.mono}`}>
               {s.average.toFixed(1)}
             </span>
           </div>

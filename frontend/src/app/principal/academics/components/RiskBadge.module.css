@@ -1,0 +1,17 @@
+.riskHigh {
+  background-color: color-mix(in oklch, var(--destructive), transparent 12%);
+  color: var(--destructive);
+  border-color: color-mix(in oklch, var(--destructive), transparent 40%);
+}
+
+.riskModerate {
+  background-color: color-mix(in oklch, oklch(0.7 0.16 70), transparent 15%);
+  color: oklch(0.55 0.16 60);
+  border-color: color-mix(in oklch, oklch(0.7 0.16 70), transparent 45%);
+}
+
+.riskLow {
+  background-color: color-mix(in oklch, var(--primary), transparent 12%);
+  color: var(--primary);
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+}
