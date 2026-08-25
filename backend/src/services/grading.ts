@@ -23,6 +23,22 @@ export function remarksFromTransmuted(transmuted: number): "Passed" | "Failed" {
   return transmuted >= 75 ? "Passed" : "Failed";
 }
 
+export type HonorRollTier = "Highest Honors" | "High Honors" | "With Honors";
+
+// DepEd honor roll classification (DO 8, s. 2015): requires all subject grades
+// to be finalized and uses the general average with the lowest subject grade.
+// Shared by the academics + overview endpoints so the honor-roll concept is
+// identical across principal pages.
+export function classifyHonorRoll(
+  overallAverage: number,
+  lowestSubject: number
+): HonorRollTier | null {
+  if (overallAverage >= 98 && lowestSubject >= 90) return "Highest Honors";
+  if (overallAverage >= 95 && lowestSubject >= 85) return "High Honors";
+  if (overallAverage >= 90 && lowestSubject >= 85) return "With Honors";
+  return null;
+}
+
 // Weighted sum of component averages → computed grade, then transmute.
 export function computeFinalGrade(
   componentAverages: { weightPercentage: number; average: number }[]

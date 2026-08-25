@@ -23,12 +23,7 @@ export function ActionRequired({ data }: { data: OverviewData | null }) {
   const accountApprovals = data?.accountApprovals ?? 0;
   const attendanceWatch = data?.attendanceWatch ?? 0;
 
-  const riskStudents = data?.atRisk
-    ? data.atRisk.attendance +
-      data.atRisk.grades +
-      data.atRisk.behavior +
-      data.atRisk.wellbeing
-    : 0;
+  const riskStudents = data?.atRisk ? data.atRisk.students : 0;
 
   const honorRoll = data?.honorRoll ?? 0;
 
@@ -47,12 +42,12 @@ export function ActionRequired({ data }: { data: OverviewData | null }) {
         "Alternate Delivery Mode learner profiles prepared by the ADM Coordinator are queued for your final digital signature before release.",
     },
     {
-      key: "completion",
+      key: "accounts",
       icon: UserCheck,
-      title: "ADM Students Completion",
+      title: "Pending Account Approvals",
       count: accountApprovals,
-      href: "/principal/adm",
-      cta: "View completions",
+      href: "/principal/overview",
+      cta: "Review accounts",
       image:
         "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80",
     },
@@ -71,7 +66,7 @@ export function ActionRequired({ data }: { data: OverviewData | null }) {
       icon: Award,
       title: "Honor Roll",
       count: honorRoll,
-      href: "/principal/honor-roll",
+      href: "/principal/academics",
       cta: "View honor roll",
       image:
         "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80",

@@ -135,7 +135,7 @@ export type OverviewData = {
     attendance: number;
     grades: number;
     behavior: number;
-    wellbeing: number;
+    students: number;
   };
   admPending: number;
   accountApprovals: number;

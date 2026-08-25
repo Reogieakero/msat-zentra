@@ -1,5 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
-import { remarksFromTransmuted } from "../../services/grading.js";
+import {
+  remarksFromTransmuted,
+  classifyHonorRoll,
+  type HonorRollTier,
+} from "../../services/grading.js";
+import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
 
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
@@ -18,23 +23,12 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-// DepEd honor roll classification (DO 8, s. 2015): requires all subject grades
-// to be locked/finalized. Bands use the general average and the lowest subject grade.
+// DepEd honor roll bands use the general average and the lowest subject grade.
 const TIER_RANK: Record<HonorRollTier, number> = {
   "Highest Honors": 3,
   "High Honors": 2,
   "With Honors": 1,
 };
-
-function classifyHonorRoll(
-  overallAverage: number,
-  lowestSubject: number
-): HonorRollTier | null {
-  if (overallAverage >= 98 && lowestSubject >= 90) return "Highest Honors";
-  if (overallAverage >= 95 && lowestSubject >= 85) return "High Honors";
-  if (overallAverage >= 90 && lowestSubject >= 85) return "With Honors";
-  return null;
-}
 
 export interface AcademicsSummary {
   termLabel: string;
@@ -89,8 +83,6 @@ export interface PassFailByGradeDTO {
   failed: number;
 }
 
-export type HonorRollTier = "Highest Honors" | "High Honors" | "With Honors";
-
 export interface HonorRollCandidateDTO {
   studentId: string;
   name: string;
@@ -122,6 +114,14 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
               finalizedAt: true,
               subject: { select: { name: true } },
             },
+          },
+          attendanceRecords: {
+            where: { termId },
+            select: { status: true },
+          },
+          anecdotalRecords: {
+            where: { termId },
+            select: { id: true },
           },
         },
       },
@@ -163,14 +163,22 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
       if (overallAverage >= 75) gradeAcc.passed += 1;
       else gradeAcc.failed += 1;
 
-      const atRisk =
-        student.riskLevel === "High" || student.riskLevel === "Moderate";
+      // Live risk level via the shared engine (do NOT trust the stale stored
+      // riskLevel column — must match the Risk board/students pages).
+      const liveLevel = levelFromFlags(
+        computeRiskFactors({
+          finalGrades: finals.map((f) => ({ transmutedGrade: f.transmutedGrade })),
+          attendance: student.attendanceRecords,
+          anecdotalCount: student.anecdotalRecords.length,
+        })
+      );
+      const atRisk = liveLevel === "High" || liveLevel === "Moderate";
 
       students.push({
         studentId: student.userId,
         lrn: student.lrn,
         name: student.user.fullName,
-        riskLevel: student.riskLevel,
+        riskLevel: liveLevel,
         overallAverage,
         attendanceRatePct: 0,
         subjects,
@@ -181,7 +189,7 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
       const allLocked = finals.every(
         (f) => f.lockStatus === "locked" || f.finalizedAt != null
       );
-      if (allLocked && student.riskLevel !== "High") {
+      if (allLocked && liveLevel !== "High") {
         const lowestSubject = subjects.reduce(
           (min, s) => Math.min(min, s.transmutedGrade),
           Infinity
@@ -195,7 +203,7 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
             tier,
           });
         }
-      } else if (!allLocked && student.riskLevel !== "High") {
+      } else if (!allLocked && liveLevel !== "High") {
         // Potential engine: current raw partial grades already meet a band, so the
         // student can still reach the honor roll once remaining grades are locked.
         const lowestSubject = subjects.reduce(

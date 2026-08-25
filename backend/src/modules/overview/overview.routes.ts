@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import {
+  computeRiskFactors,
+  isAtRisk,
+  levelFromFlags,
+} from "../../services/risk.js";
+import { classifyHonorRoll } from "../../services/grading.js";
 
 const router = Router();
 
@@ -37,7 +43,6 @@ router.get(
           prisma.studentProfile.findMany({
             where: schoolYearId ? { section: { schoolYearId } } : undefined,
             select: {
-              riskLevel: true,
               finalGrades: { where: termId ? { termId } : undefined, select: { transmutedGrade: true } },
               attendanceRecords: {
                 where: termId ? { termId } : undefined,
@@ -53,34 +58,39 @@ router.get(
           prisma.user.count({ where: { status: "pending" } }),
         ]);
 
+      // Live risk recompute via the shared engine so the Overview agrees with
+      // the Risk board/students pages (stored riskLevel column is NOT trusted).
       let attendance = 0;
       let grades = 0;
       let behavior = 0;
-      let wellbeing = 0;
+      let atRiskStudents = 0;
       let honorRoll = 0;
       for (const s of students) {
+        const flags = computeRiskFactors({
+          finalGrades: s.finalGrades,
+          attendance: s.attendanceRecords,
+          anecdotalCount: s.anecdotalRecords.length,
+        });
+        if (flags.attendanceFlag) attendance++;
+        if (flags.academicFlag) grades++;
+        if (flags.behavioralFlag) behavior++;
+        const level = levelFromFlags(flags);
+        if (isAtRisk(level)) atRiskStudents++;
+        // Honor roll eligibility uses the same DepEd classifier as the Academics
+        // page (general average + lowest subject). A student classifies into a
+        // tier if their current averages meet a DepEd band.
+        const gGrades = s.finalGrades.map((g) => g.transmutedGrade ?? 100);
         const avg =
-          s.finalGrades.length > 0
-            ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
-              s.finalGrades.length
+          gGrades.length > 0
+            ? gGrades.reduce((sum, g) => sum + g, 0) / gGrades.length
             : 100;
-        const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-        const total = s.attendanceRecords.length;
-        const attFlag = total > 0 && present / total < 0.8;
-        const gradeFlag = avg < 75;
-        const behFlag = s.anecdotalRecords.length > 0;
-        if (attFlag) attendance++;
-        if (gradeFlag) grades++;
-        if (behFlag) behavior++;
-        // Wellbeing = ADM learner profiles (handled separately via admPending pool);
-        // count here only reflects behavioral+academic+attendance risk.
-        if ((s.riskLevel === "High" || s.riskLevel === "Moderate") && avg >= 90 && !gradeFlag) {
-          honorRoll++;
-        }
+        const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
+        if (classifyHonorRoll(avg, lowest)) honorRoll++;
       }
-      wellbeing = admPending; // learners awaiting ADM signature are the wellbeing flag
 
-      const atRisk = { attendance, grades, behavior, wellbeing };
+      // Factor totals (counts of students triggering each flag) — these align
+      // with the Risk board's factorTotals. No "wellbeing" pseudo-factor.
+      const atRisk = { attendance, grades, behavior, students: atRiskStudents };
 
       // Sections with attendance below 80% (attendance watch).
       const sections = schoolYearId
