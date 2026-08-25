@@ -11,11 +11,14 @@ const STORAGE_KEY = "principal:overview:activeTab";
 
 export function BrowserWindow({ tabs }: { tabs: TabDef[] }) {
   const validIds = tabs.map((t) => t.id);
-  const [activeTab, setActiveTab] = React.useState<TabId>(() => {
-    if (typeof window === "undefined") return tabs[0].id;
+  const [activeTab, setActiveTab] = React.useState<TabId>(tabs[0].id);
+
+  React.useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as TabId | null;
-    return stored && validIds.includes(stored) ? stored : tabs[0].id;
-  });
+    if (stored && validIds.includes(stored)) {
+      queueMicrotask(() => setActiveTab(stored));
+    }
+  }, [validIds]);
 
   const handleSelect = (id: TabId) => {
     setActiveTab(id);
