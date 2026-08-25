@@ -60,7 +60,7 @@ export default function PrincipalOverviewPage() {
       </div>
       {error ? <p className={styles.error}>{error}</p> : null}
       <AttendanceHeatmap />
-      <ActionRequired />
+      <ActionRequired data={data} />
     </section>
   );
 }

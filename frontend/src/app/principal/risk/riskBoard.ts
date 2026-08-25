@@ -189,4 +189,3 @@ export function useRiskBoard() {
 
   return { data, loading, error };
 }
-

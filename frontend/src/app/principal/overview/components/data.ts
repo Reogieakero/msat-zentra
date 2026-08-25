@@ -51,49 +51,6 @@ export type AdmDocument = {
   eligibility: string;
 };
 
-export const ADM_DOCUMENTS: AdmDocument[] = [
-  {
-    id: "ADM-2041",
-    lrn: "109876543220",
-    student: "A. Mendoza",
-    grade: "Grade 7",
-    preparedBy: "Mr. Cruz",
-    datePrepared: "Aug 19, 2026",
-    status: "pending_signature",
-    eligibility: "Eligible",
-  },
-  {
-    id: "ADM-2042",
-    lrn: "109876543221",
-    student: "J. Fernando",
-    grade: "Grade 8",
-    preparedBy: "Ms. Reyes",
-    datePrepared: "Aug 20, 2026",
-    status: "pending_signature",
-    eligibility: "Eligible",
-  },
-  {
-    id: "ADM-2043",
-    lrn: "109876543222",
-    student: "K. Villanueva",
-    grade: "Grade 9",
-    preparedBy: "Ms. Santos",
-    datePrepared: "Aug 21, 2026",
-    status: "pending_signature",
-    eligibility: "For Review",
-  },
-  {
-    id: "ADM-2039",
-    lrn: "109876543218",
-    student: "R. Aquino",
-    grade: "Grade 10",
-    preparedBy: "Mr. Dela Torre",
-    datePrepared: "Aug 17, 2026",
-    status: "signed",
-    eligibility: "Eligible",
-  },
-];
-
 export type Sf10Status = "missing" | "available" | "attach" | "released";
 
 export type Sf10Level = {
@@ -104,15 +61,6 @@ export type Sf10Level = {
   released: number;
 };
 
-export const SF10_LEVELS: Sf10Level[] = [
-  { grade: "Grade 7", attach: 2, available: 1, missing: 1, released: 0 },
-  { grade: "Grade 8", attach: 1, available: 2, missing: 0, released: 1 },
-  { grade: "Grade 9", attach: 2, available: 0, missing: 1, released: 0 },
-  { grade: "Grade 10", attach: 1, available: 1, missing: 1, released: 1 },
-  { grade: "Grade 11", attach: 2, available: 1, missing: 0, released: 0 },
-  { grade: "Grade 12", attach: 1, available: 0, missing: 1, released: 1 },
-];
-
 export const SF10_STATUS_META: Record<
   Sf10Status,
   { label: string; color: string }
@@ -122,72 +70,6 @@ export const SF10_STATUS_META: Record<
   attach: { label: "Attached", color: "#166534" },
   released: { label: "Released", color: "#6d28d9" },
 };
-
-export type SchoolDay = {
-  grade: string;
-  days: { present: number; total: number }[];
-};
-
-function buildDays(seed: number, baseRate: number): { present: number; total: number }[] {
-  const days: { present: number; total: number }[] = [];
-  let s = seed;
-  const rand = () => {
-    s = (s * 1103515245 + 12345) & 0x7fffffff;
-    return s / 0x7fffffff;
-  };
-  for (let i = 0; i < 100; i++) {
-    const total = 30 + Math.floor(rand() * 6);
-    const drift = (rand() - 0.5) * 0.12;
-    const rate = Math.min(1, Math.max(0.7, baseRate + drift));
-    days.push({ present: Math.round(total * rate), total });
-  }
-  return days;
-}
-
-export const SCHOOL_DAYS: SchoolDay[] = [
-  { grade: "Grade 7", days: buildDays(11, 0.97) },
-  { grade: "Grade 8", days: buildDays(29, 0.96) },
-  { grade: "Grade 9", days: buildDays(47, 0.95) },
-  { grade: "Grade 10", days: buildDays(63, 0.94) },
-  { grade: "Grade 11", days: buildDays(81, 0.96) },
-  { grade: "Grade 12", days: buildDays(97, 0.9) },
-];
-
-export type AccountApproval = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  routedTo: "record_keeper" | "registrar";
-  status: "pending" | "approved";
-};
-
-export const ACCOUNT_APPROVALS: AccountApproval[] = [
-  {
-    id: "ACC-441",
-    name: "Ms. P. Bautista",
-    email: "p.bautista@zentra.test",
-    role: "Adviser (Grade 7)",
-    routedTo: "record_keeper",
-    status: "pending",
-  },
-  {
-    id: "ACC-442",
-    name: "Mr. L. Mercado",
-    email: "l.mercado@zentra.test",
-    role: "Subject Teacher",
-    routedTo: "record_keeper",
-    status: "pending",
-  },
-  {
-    id: "ACC-443",
-    name: "Ms. C. Ramos",
-    email: "c.ramos@zentra.test",
-    role: "Registrar Asst.",
-    routedTo: "registrar",
-    status: "pending",
-  },
-];
 
 export const GRADE_ORDER = [
   "Grade 7",
@@ -240,38 +122,23 @@ export const TABS: Omit<TabDef, "icon">[] = [
   },
 ];
 
-type RiskFactors = {
-  attendance: number;
-  grades: number;
-  behavior: number;
-  wellbeing: number;
-};
-
 export const SCHOOL_NAME = "Mati School of Arts and Trades";
 
 export type OverviewData = {
-  schoolName?: string;
   kpis: {
     enrollment: number;
     activeSections: number;
     teachers: number;
     anecdotals: number;
   };
-  atRisk: RiskFactors;
-};
-
-export const MOCK: OverviewData = {
-  schoolName: "Mati School of Arts and Trades",
-  kpis: {
-    enrollment: 1284,
-    activeSections: 36,
-    teachers: 58,
-    anecdotals: 312,
-  },
   atRisk: {
-    attendance: 47,
-    grades: 63,
-    behavior: 28,
-    wellbeing: 12,
-  },
+    attendance: number;
+    grades: number;
+    behavior: number;
+    wellbeing: number;
+  };
+  admPending: number;
+  accountApprovals: number;
+  attendanceWatch: number;
+  honorRoll: number;
 };

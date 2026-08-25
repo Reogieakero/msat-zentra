@@ -9,6 +9,7 @@ import {
   getSectionFactorStudents,
   type RiskFactor,
 } from "./riskHeatmap.service.js";
+import { getRiskStudents } from "./riskStudents.service.js";
 
 const router = Router();
 
@@ -46,6 +47,26 @@ router.get(
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 15));
       const result = await getLowRiskStudents(page, pageSize);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal: full at-risk student list with status-only factors (O1). Optional
+// `section` filter (section name) for the heatmap drill-down.
+router.get(
+  "/students",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 1000));
+      const section =
+        typeof req.query.section === "string" ? req.query.section : undefined;
+      const result = await getRiskStudents(page, pageSize, section);
       res.json(result);
     } catch (e) {
       next(e);

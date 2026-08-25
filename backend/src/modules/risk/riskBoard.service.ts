@@ -42,48 +42,46 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
       })
     : [];
 
-  const [profiles, Students] = await Promise.all([
-    prisma.studentProfile.groupBy({
-      by: ["riskLevel"],
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
-      _count: { _all: true },
-    }),
-    prisma.studentProfile.findMany({
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
-      select: {
-        finalGrades: { where: { termId: terms[0]?.id }, select: { transmutedGrade: true } },
-        attendanceRecords: { where: { termId: terms[0]?.id }, select: { status: true } },
-        anecdotalRecords: { where: { termId: terms[0]?.id }, select: { id: true } },
-      },
-    }),
-  ]);
+  const Students = await prisma.studentProfile.findMany({
+    where: schoolYearId ? { section: { schoolYearId } } : undefined,
+    select: {
+      finalGrades: { where: { termId: terms[0]?.id }, select: { transmutedGrade: true } },
+      attendanceRecords: { where: { termId: terms[0]?.id }, select: { status: true } },
+      anecdotalRecords: { where: { termId: terms[0]?.id }, select: { id: true } },
+    },
+  });
 
-  const levelMap = new Map<RiskLevel, number>();
-  for (const p of profiles) levelMap.set(p.riskLevel, p._count._all);
-
-  const high = levelMap.get("High") ?? 0;
-  const moderate = levelMap.get("Moderate") ?? 0;
-  const low = levelMap.get("Low") ?? 0;
-
-  // Factor totals computed live (same logic as the heatmap) so the board and
-  // the Section × Risk-Factor panel share one source of truth.
-  const termId = terms[0]?.id;
+  // Level distribution + factor totals are both derived live from the same
+  // factor logic (>=2 = High, 1 = Moderate, 0 = Low) so the board and the
+  // students list share one source of truth and never trust stale stored
+  // riskLevel columns.
   let academic = 0;
   let attendance = 0;
   let behavioral = 0;
+  let high = 0;
+  let moderate = 0;
+  let low = 0;
   for (const s of Students) {
     const avg =
       s.finalGrades.length > 0
         ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
           s.finalGrades.length
         : 100;
-    if (avg < 75) academic++;
+    const aFlag = avg < 75;
+    if (aFlag) academic++;
 
     const present = s.attendanceRecords.filter((a) => a.status === "present").length;
     const total = s.attendanceRecords.length;
-    if (total > 0 && present / total < 0.8) attendance++;
+    const tFlag = total > 0 && present / total < 0.8;
+    if (tFlag) attendance++;
 
-    if (s.anecdotalRecords.length > 0) behavioral++;
+    const bFlag = s.anecdotalRecords.length > 0;
+    if (bFlag) behavioral++;
+
+    const count = (aFlag ? 1 : 0) + (tFlag ? 1 : 0) + (bFlag ? 1 : 0);
+    if (count >= 2) high++;
+    else if (count === 1) moderate++;
+    else low++;
   }
 
   // Total at-risk flags = sum of triggered factors across all students.

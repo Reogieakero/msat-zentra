@@ -2,12 +2,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { FileSignature, UserCheck, CalendarX, Award, ShieldAlert, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  ADM_DOCUMENTS,
-  SCHOOL_DAYS,
-  ACCOUNT_APPROVALS,
-  MOCK,
-} from "./data";
+import type { OverviewData } from "./data";
 import styles from "./action-required.module.css";
 
 type ActionCard = {
@@ -22,31 +17,20 @@ type ActionCard = {
   description?: string;
 };
 
-export function ActionRequired() {
+export function ActionRequired({ data }: { data: OverviewData | null }) {
   const router = useRouter();
-  const pendingSignatures = ADM_DOCUMENTS.filter(
-    (d) => d.status === "pending_signature"
-  ).length;
+  const pendingSignatures = data?.admPending ?? 0;
+  const accountApprovals = data?.accountApprovals ?? 0;
+  const attendanceWatch = data?.attendanceWatch ?? 0;
 
-  const accountApprovals = ACCOUNT_APPROVALS.filter(
-    (a) => a.status === "pending"
-  ).length;
+  const riskStudents = data?.atRisk
+    ? data.atRisk.attendance +
+      data.atRisk.grades +
+      data.atRisk.behavior +
+      data.atRisk.wellbeing
+    : 0;
 
-  const attendanceWatch = SCHOOL_DAYS.filter((g) => {
-    const rate = g.days.reduce(
-      (sum, d) => sum + (d.total > 0 ? d.present / d.total : 1),
-      0
-    ) / g.days.length;
-    return rate < 0.8;
-  }).length;
-
-  const riskStudents =
-    MOCK.atRisk.attendance +
-    MOCK.atRisk.grades +
-    MOCK.atRisk.behavior +
-    MOCK.atRisk.wellbeing;
-
-  const honorRoll = MOCK.kpis.anecdotals > 0 ? 86 : 0;
+  const honorRoll = data?.honorRoll ?? 0;
 
   const cards: ActionCard[] = [
     {

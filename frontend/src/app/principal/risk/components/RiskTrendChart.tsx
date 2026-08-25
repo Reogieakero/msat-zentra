@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RISK_LEVEL_COLORS } from "../mockData";
+import { RISK_LEVEL_COLORS } from "../riskData";
 import type { RiskBoardData } from "../riskBoard";
 import styles from "./risk-trend-chart.module.css";
 

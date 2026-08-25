@@ -16,7 +16,7 @@ import { SectionStudentsPanel } from "./components/SectionStudentsPanel";
 import { StudentSubjectBars } from "./components/StudentSubjectBars";
 import { AverageGradeByLevel } from "./components/AverageGradeByLevel";
 import { GradeBreakdownDrawer } from "./components/GradeBreakdownDrawer";
-import { MOCK, subjectColumns, type StudentRow, type AcademicsMock } from "./mockData";
+import { subjectColumns, type StudentRow, type AcademicsMock } from "./mockData";
 import { apiClient } from "@/lib/api/client";
 import { Users as UsersIcon, X } from "lucide-react";
 import styles from "./page.module.css";
@@ -44,14 +44,10 @@ export default function PrincipalAcademicsPage() {
   };
 
   const loading = !data && !error;
-  const source = loading ? EMPTY : data ?? MOCK;
+  const source = data ?? EMPTY;
 
-  const [selectedSectionId, setSelectedSectionId] = React.useState<string | null>(
-    MOCK.sections[0]?.sectionId ?? null
-  );
-  const [gradeTab, setGradeTab] = React.useState<string>(
-    MOCK.sections[0]?.grade ?? ""
-  );
+  const [selectedSectionId, setSelectedSectionId] = React.useState<string | null>(null);
+  const [gradeTab, setGradeTab] = React.useState<string>("");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -81,10 +77,12 @@ export default function PrincipalAcademicsPage() {
     setDrawerOpen(true);
   };
 
-  const hasFinals = (data ?? MOCK).sections.length > 0;
+  const hasFinals = (data ?? EMPTY).sections.length > 0;
 
   const selectedSection =
-    source.sections.find((s) => s.sectionId === selectedSectionId) ?? null;
+    source.sections.find((s) => s.sectionId === selectedSectionId) ??
+    source.sections[0] ??
+    null;
 
   const handleSelectSection = React.useCallback(
     (id: string | null) => {
@@ -104,8 +102,8 @@ export default function PrincipalAcademicsPage() {
   );
 
   const sectionsForGrade = React.useMemo(
-    () => source.sections.filter((s) => s.grade === gradeTab),
-    [source, gradeTab]
+    () => source.sections.filter((s) => s.grade === (gradeTab || gradeTabs[0])),
+    [source, gradeTab, gradeTabs]
   );
 
   // Derive subject columns from the selected section's students (backend
