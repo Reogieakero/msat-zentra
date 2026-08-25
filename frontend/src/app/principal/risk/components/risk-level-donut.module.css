@@ -1,0 +1,118 @@
+.card {
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  --card-spacing: 0;
+}
+
+.skelChart {
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+}
+
+.skelCenterValue {
+  height: 1rem;
+  width: 2.5rem;
+}
+
+.skelCenterLabel {
+  height: 0.625rem;
+  width: 3rem;
+  margin-top: 0.25rem;
+}
+
+.skelSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.skelLegendLabel {
+  height: 0.75rem;
+  width: 4rem;
+}
+
+.skelLegendValue {
+  height: 0.75rem;
+  width: 1.5rem;
+  margin-left: auto;
+}
+
+.header {
+  padding-bottom: 0;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.chartWrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.centerValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.centerLabel {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--muted-foreground);
+}
+
+.legendValue {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
