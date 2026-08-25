@@ -258,6 +258,13 @@
   margin-left: 0.5rem;
 }
 
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .legend {
   display: flex;
   align-items: center;
@@ -286,4 +293,6 @@
   font-size: 0.6875rem;
   color: var(--muted-foreground);
   font-style: italic;
+  text-align: right;
+  white-space: nowrap;
 }

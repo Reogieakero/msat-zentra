@@ -172,18 +172,20 @@ export function RiskFactorHeatmap() {
             </div>
           </TooltipProvider>
         )}
-        <div className={styles.legend}>
-          <span className={styles.legendLabel}>0</span>
-          <span className={styles.legendSwatches}>
-            {SCALE.map((c, i) => (
-              <span key={i} className={styles.legendSwatch} style={{ background: c }} />
-            ))}
-          </span>
-          <span className={styles.legendLabel}>high</span>
+        <div className={styles.footerRow}>
+          <div className={styles.legend}>
+            <span className={styles.legendLabel}>0</span>
+            <span className={styles.legendSwatches}>
+              {SCALE.map((c, i) => (
+                <span key={i} className={styles.legendSwatch} style={{ background: c }} />
+              ))}
+            </span>
+            <span className={styles.legendLabel}>high</span>
+          </div>
+          <p className={styles.confidential}>
+            Confidential source hidden — status-only view.
+          </p>
         </div>
-        <p className={styles.confidential}>
-          Confidential source hidden — status-only view.
-        </p>
       </CardContent>
 
       {selected && (

@@ -6,6 +6,7 @@ import { RiskLevelDonut } from "./components/RiskLevelDonut";
 import { RiskTrendChart } from "./components/RiskTrendChart";
 import { RiskFactorHeatmap } from "./components/RiskFactorHeatmap";
 import { OutcomeSummary } from "./components/OutcomeSummary";
+import { LowRiskStudents } from "./components/LowRiskStudents";
 import { useRiskBoard } from "./riskBoard";
 import styles from "./risk.module.css";
 
@@ -62,6 +63,7 @@ export default function PrincipalRiskBoardPage() {
             factorTotals={data?.factorTotals ?? null}
             loading={loading}
           />
+          <LowRiskStudents />
         </aside>
       </div>
     </section>

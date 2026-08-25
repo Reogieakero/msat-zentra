@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { evaluateRisk } from "../../services/risk.js";
 import { getRiskBoard } from "./riskBoard.service.js";
+import { getLowRiskStudents } from "./lowRiskStudents.service.js";
 import {
   getRiskHeatmap,
   getSectionFactorStudents,
@@ -29,6 +30,23 @@ router.get(
     try {
       const board = await getRiskBoard();
       res.json(board);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal: paginated low-risk student list (LRN + name only).
+router.get(
+  "/low-risk-students",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 15));
+      const result = await getLowRiskStudents(page, pageSize);
+      res.json(result);
     } catch (e) {
       next(e);
     }

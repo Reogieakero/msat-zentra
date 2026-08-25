@@ -42,7 +42,7 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
       })
     : [];
 
-  const [profiles, riskCounts] = await Promise.all([
+  const [profiles, Students] = await Promise.all([
     prisma.studentProfile.groupBy({
       by: ["riskLevel"],
       where: schoolYearId ? { section: { schoolYearId } } : undefined,
@@ -50,7 +50,11 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
     }),
     prisma.studentProfile.findMany({
       where: schoolYearId ? { section: { schoolYearId } } : undefined,
-      select: { riskCount: true },
+      select: {
+        finalGrades: { where: { termId: terms[0]?.id }, select: { transmutedGrade: true } },
+        attendanceRecords: { where: { termId: terms[0]?.id }, select: { status: true } },
+        anecdotalRecords: { where: { termId: terms[0]?.id }, select: { id: true } },
+      },
     }),
   ]);
 
@@ -61,21 +65,29 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
   const moderate = levelMap.get("Moderate") ?? 0;
   const low = levelMap.get("Low") ?? 0;
 
-  // Total at-risk flags = sum of every student's triggered risk factors (0..3).
-  // Equals the sum of the three factor totals below.
-  const totalAtRiskFlags = riskCounts.reduce((sum, r) => sum + (r.riskCount ?? 0), 0);
-
-  // Factor totals: a student at riskCount N has triggered the first N factors
-  // (Academic >=1, Attendance >=2, Behavioral =3).
+  // Factor totals computed live (same logic as the heatmap) so the board and
+  // the Section × Risk-Factor panel share one source of truth.
+  const termId = terms[0]?.id;
   let academic = 0;
   let attendance = 0;
   let behavioral = 0;
-  for (const r of riskCounts) {
-    const c = r.riskCount ?? 0;
-    if (c >= 1) academic++;
-    if (c >= 2) attendance++;
-    if (c >= 3) behavioral++;
+  for (const s of Students) {
+    const avg =
+      s.finalGrades.length > 0
+        ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
+          s.finalGrades.length
+        : 100;
+    if (avg < 75) academic++;
+
+    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
+    const total = s.attendanceRecords.length;
+    if (total > 0 && present / total < 0.8) attendance++;
+
+    if (s.anecdotalRecords.length > 0) behavioral++;
   }
+
+  // Total at-risk flags = sum of triggered factors across all students.
+  const totalAtRiskFlags = academic + attendance + behavioral;
 
   const trend = await Promise.all(
     terms.map(async (t) => {

@@ -62,6 +62,68 @@ export async function fetchSectionFactorStudents(
   return data.students;
 }
 
+export interface LowRiskStudent {
+  lrn: string;
+  name: string;
+}
+
+export interface LowRiskResult {
+  students: LowRiskStudent[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function fetchLowRiskStudents(
+  page: number,
+  pageSize = 15
+): Promise<LowRiskResult> {
+  const { data } = await apiClient.get<LowRiskResult>("/api/risk/low-risk-students", {
+    params: { page, pageSize },
+  });
+  return data;
+}
+
+export function useLowRiskStudents(pageSize = 15) {
+  const [students, setStudents] = useState<LowRiskStudent[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLowRiskStudents(page, pageSize)
+      .then((res) => {
+        if (!cancelled) {
+          setStudents(res.students);
+          setTotal(res.total);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          setError(
+            status
+              ? `Failed to load low-risk students (HTTP ${status})`
+              : "Failed to load low-risk students"
+          );
+          console.error("[/api/risk/low-risk-students] fetch failed:", err);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  return { students, total, page, totalPages, setPage, loading, error };
+}
+
 export function useRiskHeatmap() {
   const [data, setData] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);

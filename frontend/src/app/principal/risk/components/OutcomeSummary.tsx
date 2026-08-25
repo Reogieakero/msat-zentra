@@ -69,6 +69,20 @@ export function OutcomeSummary({
   const total =
     safeOutcome.ongoing + safeOutcome.resolved + safeOutcome.unresolved;
 
+  const [fill, setFill] = React.useState(false);
+  React.useEffect(() => {
+    let frame = 0;
+    setFill(false);
+    frame = requestAnimationFrame(() => setFill(true));
+    const interval = setInterval(() => {
+      setFill((prev) => !prev);
+    }, 3000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
@@ -87,12 +101,15 @@ export function OutcomeSummary({
                   <span className={styles.label}>{o.label}</span>
                   <span className={styles.value}>{value}</span>
                 </div>
-                <div className={styles.bar}>
-                  <span
-                    className={styles.barFill}
-                    style={{ width: `${pct}%`, background: o.color }}
-                  />
-                </div>
+                 <div className={styles.bar}>
+                   <span
+                     className={styles.barFill}
+                     style={{
+                       width: `${fill ? pct : 0}%`,
+                       background: o.color,
+                     }}
+                   />
+                 </div>
               </li>
             );
           })}
