@@ -27,6 +27,19 @@ export function OutcomeSummary({
   factorTotals: RiskBoardData["factorTotals"] | null;
   loading?: boolean;
 }) {
+  const [fill, setFill] = React.useState(false);
+  React.useEffect(() => {
+    let frame = 0;
+    frame = requestAnimationFrame(() => setFill(true));
+    const interval = setInterval(() => {
+      setFill((prev) => !prev);
+    }, 3000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearInterval(interval);
+    };
+  }, []);
+
   if (loading) {
     return (
       <Card className={styles.card}>
@@ -68,20 +81,6 @@ export function OutcomeSummary({
 
   const total =
     safeOutcome.ongoing + safeOutcome.resolved + safeOutcome.unresolved;
-
-  const [fill, setFill] = React.useState(false);
-  React.useEffect(() => {
-    let frame = 0;
-    setFill(false);
-    frame = requestAnimationFrame(() => setFill(true));
-    const interval = setInterval(() => {
-      setFill((prev) => !prev);
-    }, 3000);
-    return () => {
-      cancelAnimationFrame(frame);
-      clearInterval(interval);
-    };
-  }, []);
 
   return (
     <Card className={styles.card}>
