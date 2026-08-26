@@ -35,12 +35,21 @@ export function FloatingMenu({
   onSelect: (id: string) => void;
   legend?: React.ReactNode;
   selectedSectionId?: string | null;
-  onSelectSection?: (id: string) => void;
+  onSelectSection?: (id: string | null) => void;
 }) {
   const [sections, setSections] = React.useState<MenuSection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const pinned = React.useRef(false);
   const router = useRouter();
+  const sectionRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  // Once the section list is loaded, scroll the active (e.g. persisted)
+  // section into view so the Grades & sections card reflects the selection.
+  React.useEffect(() => {
+    if (!selectedSectionId || sections.length === 0) return;
+    const el = sectionRefs.current.get(selectedSectionId);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [selectedSectionId, sections]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -65,6 +74,19 @@ export function FloatingMenu({
       cancelled = true;
     };
   }, []);
+
+  // If the incoming selected section no longer exists in the loaded list
+  // (e.g. a persisted id from a previous term), clear it so the card and the
+  // rest of the page don't stay stuck on a stale selection.
+  React.useEffect(() => {
+    if (
+      selectedSectionId &&
+      sections.length > 0 &&
+      !sections.some((s) => s.id === selectedSectionId)
+    ) {
+      onSelectSection?.(null);
+    }
+  }, [selectedSectionId, sections, onSelectSection]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -147,9 +169,13 @@ export function FloatingMenu({
               <div key={grade} className={styles.gradeGroup}>
                 <p className={styles.gradeHead}>Grade {grade}</p>
                 <ul className={styles.sectionList}>
-                  {secs.map((s) => (
+                   {secs.map((s) => (
                     <li key={s.id}>
                       <button
+                        ref={(el) => {
+                          if (el) sectionRefs.current.set(s.id, el);
+                          else sectionRefs.current.delete(s.id);
+                        }}
                         type="button"
                         className={`${styles.sectionItem} ${selectedSectionId === s.id ? styles.sectionItemActive : ""}`}
                         aria-pressed={selectedSectionId === s.id}

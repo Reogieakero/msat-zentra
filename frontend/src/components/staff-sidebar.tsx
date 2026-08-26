@@ -63,7 +63,7 @@ const NAV: NavGroup[] = [
         icon: ShieldAlert,
         subItems: [
           { title: "Students", href: "/principal/risk/students" },
-          { title: "Heat Map", href: "/principal/risk/heat-map" },
+          { title: "Heat Map", href: "/principal/risk/heatmaps" },
           { title: "Interventions", href: "/principal/risk/interventions" },
         ],
       },

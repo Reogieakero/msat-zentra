@@ -360,9 +360,12 @@ export interface TrendPoint {
   present: number; // school-wide present-student count for the session/date
 }
 
-// School-wide daily attendance trend (AM session) across all sections.
-export function mockAttendanceTrend(): TrendPoint[] {
-  const sections = mockSectionAttendance("AM");
+// Daily attendance trend across all sections, or for a single section when
+// `sectionId` is provided, so the mock matches the selected section/session.
+export function mockAttendanceTrend(sectionId?: string | null): TrendPoint[] {
+  const sections = mockSectionAttendance("AM").filter(
+    (s) => !sectionId || s.sectionId === sectionId
+  );
   const len = sections[0]?.days.length ?? 0;
   const points: TrendPoint[] = [];
   for (let i = 0; i < len; i++) {
@@ -373,7 +376,7 @@ export function mockAttendanceTrend(): TrendPoint[] {
       p += d.present;
       t += d.total;
     }
-    const date = sections[0].days[i].date;
+    const date = sections[0]?.days[i]?.date ?? "";
     points.push({ date, present: p });
   }
   return points;

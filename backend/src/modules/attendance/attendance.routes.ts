@@ -394,6 +394,10 @@ router.get(
   async (req, res, next) => {
     try {
       const session: "AM" | "PM" = req.query.session === "PM" ? "PM" : "AM";
+      const selectedSectionId =
+        typeof req.query.sectionId === "string" && req.query.sectionId.length > 0
+          ? req.query.sectionId
+          : undefined;
       const activeTerm = await prisma.term.findFirst({
         where: { schoolYear: { isActive: true } },
         orderBy: { termNumber: "asc" },
@@ -423,8 +427,9 @@ router.get(
         dayKeys.push(d.toISOString().slice(0, 10));
       }
 
+      const sectionIds = sections.map((s) => s.id);
       const raw = await prisma.attendanceRecord.findMany({
-        where: { termId },
+        where: { termId, sectionId: { in: sectionIds } },
         select: { sectionId: true, date: true, session: true, status: true },
       });
 
@@ -444,14 +449,15 @@ router.get(
         return map;
       };
       const all = buildSessions();
-      const amMap = new Map<string, Cell>();
-      const pmMap = new Map<string, Cell>();
+      const amMap: Record<string, Map<string, Cell>> = {};
+      const pmMap: Record<string, Map<string, Cell>> = {};
       for (const r of raw) {
         if (r.session !== "AM" && r.session !== "PM") continue;
         const key = r.date.toISOString().slice(0, 10);
         const target = r.session === "AM" ? amMap : pmMap;
-        if (!target.has(key)) target.set(key, { present: 0, late: 0, excused: 0, total: 0 });
-        const cell = target.get(key)!;
+        if (!target[r.sectionId]) target[r.sectionId] = new Map();
+        if (!target[r.sectionId].has(key)) target[r.sectionId].set(key, { present: 0, late: 0, excused: 0, total: 0 });
+        const cell = target[r.sectionId].get(key)!;
         cell.total += 1;
         if (r.status === "present") cell.present++;
         else if (r.status === "late") cell.late++;
@@ -461,6 +467,12 @@ router.get(
       const rateOf = (cell: Cell | undefined, enrolled: number) => {
         if (!cell || cell.total === 0 || enrolled <= 0) return 0;
         return Math.round((cell.present / enrolled) * 1000) / 10;
+      };
+      const rateOfSection = (map: Map<string, Cell> | undefined, enrolled: number, days: number) => {
+        if (!map || map.size === 0 || enrolled <= 0 || days <= 0) return 0;
+        let p = 0;
+        for (const c of map.values()) p += c.present;
+        return Math.round((p / (enrolled * days)) * 1000) / 10;
       };
       const avgOf = (map: Record<string, Map<string, Cell>>, id: string) => {
         const m = map[id];
@@ -500,20 +512,28 @@ router.get(
           enrolled,
           rate,
           belowDays,
-          amRate: rateOf(amMap.get(s.id), enrolled),
-          pmRate: rateOf(pmMap.get(s.id), enrolled),
+          amRate: rateOfSection(amMap[s.id], enrolled, days.length),
+          pmRate: rateOfSection(pmMap[s.id], enrolled, days.length),
           trend,
         };
       });
 
-      // School-wide daily trend: present-student count for the selected session,
-      // per day, from the term start to today.
+      // Daily trend: present-student count for the selected session, per day,
+      // from the term start to today. When a section is selected, the trend
+      // follows that section only; otherwise it is the school-wide total.
       const sessionMap = session === "PM" ? pmMap : amMap;
       const trend: { date: string; present: number }[] = dayKeys.map((key) => {
-        const cell = sessionMap.get(key);
+        let present = 0;
+        if (selectedSectionId) {
+          present = sessionMap[selectedSectionId]?.get(key)?.present ?? 0;
+        } else {
+          for (const sectionId of Object.keys(sessionMap)) {
+            present += sessionMap[sectionId].get(key)?.present ?? 0;
+          }
+        }
         const d = new Date(key + "T00:00:00Z");
         const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-        return { date, present: cell?.present ?? 0 };
+        return { date, present };
       });
 
       // Counted school days: weekdays (Mon–Fri) from the term start to today.

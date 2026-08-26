@@ -46,52 +46,53 @@ export function AttendanceBelow({
       if (!cancelled) setLoading(true);
     });
 
-    if (selectedSectionId) {
-      apiClient
-        .get<{ section: string; schoolDays: number; students: SectionStudent[] }>(
-          `/api/attendance/sections/${selectedSectionId}/students`,
-          { params: { session } }
-        )
-        .then((res) => {
-          if (!cancelled) {
-            setStudents(res.data.students);
-            setSectionLabel(res.data.section);
-            setSchoolDays(res.data.schoolDays ?? 0);
-          }
-        })
-        .catch((err: unknown) => {
-          if (!cancelled) {
-            console.error("[/api/attendance/sections/:id/students] fetch failed:", err);
-            setStudents([]);
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    } else {
-      apiClient
-        .get<{ sections: SectionAttendanceStat[]; trend: TrendPoint[]; schoolDays: number }>(
-          "/api/attendance/section-stats",
-          { params: { session } }
-        )
-        .then((res) => {
-          if (!cancelled) {
-            setStats(res.data.sections);
-            setTrend(res.data.trend);
-            setSchoolDays(res.data.schoolDays ?? 0);
-          }
-        })
-        .catch((err: unknown) => {
-          if (!cancelled) {
-            console.error("[/api/attendance/section-stats] fetch failed:", err);
-            setStats(mockSectionStats());
-            setTrend(mockAttendanceTrend());
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    }
+    // Always fetch the trend for the current session, scoped to the selected
+    // section when one is chosen, so the line graph matches the heatblocks.
+    const statsReq = apiClient
+      .get<{ sections: SectionAttendanceStat[]; trend: TrendPoint[]; schoolDays: number }>(
+        "/api/attendance/section-stats",
+        { params: { session, ...(selectedSectionId ? { sectionId: selectedSectionId } : {}) } }
+      )
+      .then((res) => {
+        if (!cancelled) {
+          setStats(res.data.sections);
+          setTrend(res.data.trend);
+          setSchoolDays(res.data.schoolDays ?? 0);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          console.error("[/api/attendance/section-stats] fetch failed:", err);
+          setStats(mockSectionStats());
+          setTrend(mockAttendanceTrend(selectedSectionId));
+        }
+      });
+
+    // When a section is selected, also load its roster for the drill-down table.
+    const studentsReq = selectedSectionId
+      ? apiClient
+          .get<{ section: string; schoolDays: number; students: SectionStudent[] }>(
+            `/api/attendance/sections/${selectedSectionId}/students`,
+            { params: { session } }
+          )
+          .then((res) => {
+            if (!cancelled) {
+              setStudents(res.data.students);
+              setSectionLabel(res.data.section);
+              setSchoolDays(res.data.schoolDays ?? 0);
+            }
+          })
+          .catch((err: unknown) => {
+            if (!cancelled) {
+              console.error("[/api/attendance/sections/:id/students] fetch failed:", err);
+              setStudents([]);
+            }
+          })
+      : Promise.resolve();
+
+    Promise.all([statsReq, studentsReq]).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
@@ -220,7 +221,9 @@ export function AttendanceBelow({
           </div>
 
           <div className={styles.right} id="trend">
-            <p className={styles.chartTitle}>School-wide trend</p>
+            <p className={styles.chartTitle}>
+              {isDrillDown ? `Attendance trend · ${sectionLabel}` : "School-wide trend · all sections (present count)"}
+            </p>
             {loading ? (
               <Skeleton className={styles.chartSkel} />
             ) : (
@@ -234,7 +237,8 @@ export function AttendanceBelow({
                     minTickGap={28}
                   />
                   <YAxis
-                    domain={[0, "auto"]}
+                    domain={[0, (max: number) => Math.max(5, Math.ceil(max / 5) * 5)]}
+                    allowDecimals={false}
                     tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
