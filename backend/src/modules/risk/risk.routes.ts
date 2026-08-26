@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { evaluateRisk } from "../../services/risk.js";
+import {
+  evaluateRisk,
+  resolveActiveTermId,
+} from "../../services/risk.js";
 import { getRiskBoard } from "./riskBoard.service.js";
 import { getLowRiskStudents } from "./lowRiskStudents.service.js";
 import {
@@ -12,15 +15,6 @@ import {
 import { getRiskStudents } from "./riskStudents.service.js";
 
 const router = Router();
-
-async function resolveActiveTermId(): Promise<string | null> {
-  const term = await prisma.term.findFirst({
-    where: { schoolYear: { isActive: true } },
-    orderBy: { termNumber: "asc" },
-    select: { id: true },
-  });
-  return term?.id ?? null;
-}
 
 // Principal board overview (O4): KPIs, level distribution, factor totals, trend.
 router.get(
@@ -168,14 +162,16 @@ router.get(
       // grades: students with any subject < 75
       const lowGradeStudents = new Set(finals.filter((f) => (f.transmutedGrade ?? 100) < 75).map((f) => f.studentId));
       factors.grades = lowGradeStudents.size;
-      // attendance: students with < 80% present
-      const attByStudent = new Map<string, { present: number; total: number }>();
+      // attendance: students with < 80% present, measured against the section's
+      // enrolled headcount (consistent with the Attendance system).
+      const enrolled = students.length;
+      const attByStudent = new Map<string, { present: number }>();
       for (const a of attendance) {
-        const cur = attByStudent.get(a.studentId) ?? { present: 0, total: 0 };
-        cur.total++; if (a.status === "present") cur.present++;
+        const cur = attByStudent.get(a.studentId) ?? { present: 0 };
+        if (a.status === "present") cur.present++;
         attByStudent.set(a.studentId, cur);
       }
-      for (const [, v] of attByStudent) if (v.total > 0 && v.present / v.total < 0.8) factors.attendance++;
+      for (const [, v] of attByStudent) if (enrolled > 0 && v.present / enrolled < 0.8) factors.attendance++;
       res.json({ sectionId: String(req.params.id), termId, factors });
     } catch (e) { next(e); }
   }

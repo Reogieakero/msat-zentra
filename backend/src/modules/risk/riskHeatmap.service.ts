@@ -30,6 +30,10 @@ async function sectionFactors(
     },
   });
 
+  // Enrolled headcount = every student in the section (matches the Attendance
+  // system's enrolledBySection denominator).
+  const enrolled = students.length;
+
   let academic = 0;
   let attendance = 0;
   let behavioral = 0;
@@ -43,8 +47,7 @@ async function sectionFactors(
     if (avg < 75) academic++;
 
     const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    const total = s.attendanceRecords.length;
-    if (total > 0 && present / total < 0.8) attendance++;
+    if (enrolled > 0 && present / enrolled < 0.8) attendance++;
 
     if (s.anecdotalRecords.length > 0) behavioral++;
   }

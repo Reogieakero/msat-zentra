@@ -3,17 +3,36 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
-import { mockSectionAttendance, type SectionAttendance } from "../../components/mockData";
 import styles from "./attendance.module.css";
 
+export interface AttendanceDay {
+  date: string;
+  isoDate: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  total: number;
+}
+
+export interface SectionAttendance {
+  sectionId: string;
+  section: string;
+  gradeLevel: string;
+  enrolled: number;
+  days: AttendanceDay[];
+}
+
+// Color scale aligned to the 80% attendance threshold (see Risk/Attendance
+// systems): below 80% reads amber/red (at-risk), 80%+ green (safe).
 const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(--hm-4)"];
 
 function dayColor(present: number, enrolled: number): string {
   if (enrolled <= 0 || present <= 0) return SCALE[0];
   const ratio = present / enrolled;
-  if (ratio >= 0.999) return SCALE[4];
-  if (ratio >= 0.66) return SCALE[3];
-  if (ratio >= 0.33) return SCALE[2];
+  if (ratio >= 0.9) return SCALE[4];
+  if (ratio >= 0.8) return SCALE[3];
+  if (ratio >= 0.5) return SCALE[2];
   return SCALE[1];
 }
 
@@ -36,6 +55,7 @@ export function SectionAttendanceHeatmap({
   selectedSectionId?: string | null;
 }) {
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
   const [sections, setSections] = React.useState<SectionAttendance[]>([]);
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -55,7 +75,7 @@ export function SectionAttendanceHeatmap({
       .catch((err: unknown) => {
         if (!cancelled) {
           console.error("[/api/attendance/section-heatmap] fetch failed:", err);
-          setSections(mockSectionAttendance(session));
+          setError(true);
         }
       })
       .finally(() => {
@@ -139,6 +159,11 @@ export function SectionAttendanceHeatmap({
               </article>
             ))}
           </div>
+        </div>
+      ) : error ? (
+        <div className={styles.empty}>
+          <p>Unable to load attendance heatblocks.</p>
+          <p className={styles.emptyHint}>Check your connection and try again.</p>
         </div>
       ) : (
         <TooltipProvider>

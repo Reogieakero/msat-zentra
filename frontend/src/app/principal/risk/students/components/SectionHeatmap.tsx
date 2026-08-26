@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type BackendHeatmap, type RiskFactor } from "../api";
+import { formatSection } from "@/lib/utils";
 import styles from "./SectionHeatmap.module.css";
 
 function ErrorNote({ message }: { message: string }) {
@@ -69,7 +70,7 @@ export function SectionHeatmap({
                           }
                         }}
                       >
-                        <td className={styles.sectionCell}>{row.section}</td>
+                        <td className={styles.sectionCell}>{formatSection(row.section)}</td>
                         {factors.map((f) => (
                           <td key={f} className={styles.mono}>
                             {row.factors[f]}

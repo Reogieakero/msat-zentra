@@ -19,12 +19,6 @@
 }
 
 .page {
-  --acad-0: color-mix(in oklch, var(--primary), transparent 92%);
-  --acad-1: color-mix(in oklch, var(--primary), transparent 78%);
-  --acad-2: color-mix(in oklch, #f59e0b, transparent 70%);
-  --acad-3: color-mix(in oklch, var(--destructive), transparent 64%);
-  --acad-4: color-mix(in oklch, var(--destructive), transparent 30%);
-
   flex: 1;
   min-width: 0;
   display: flex;
@@ -67,6 +61,23 @@
   letter-spacing: -0.01em;
   color: var(--foreground);
   line-height: 1.1;
+}
+
+/* Academics header matches the Records Heatmap header (1.125rem + highlight). */
+.academicTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklch, var(--primary), transparent 85%),
+    color-mix(in oklch, var(--primary), transparent 85%)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 70%;
+  background-position: 0 70%;
+  width: max-content;
 }
 
 .subtitle {
@@ -147,12 +158,16 @@
   gap: 1.25rem;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+.toggleMeta {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.panelEmpty {
+  margin: 1rem 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: center;
 }
 
 .segmented {
@@ -504,11 +519,49 @@
   }
 }
 
-/* ---- Academic matrix ---- */
+/* ---- Academic matrix (per grade) ---- */
+.gradeMatrix {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.gradeMatrix:first-of-type {
+  border-top: none;
+  padding-top: 0.25rem;
+}
+
+.matrixGradeHead {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
 .matrix {
   display: grid;
   gap: 0.25rem;
   align-items: stretch;
+  min-width: max-content;
+}
+
+.matrixScroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+  padding-bottom: 0.25rem;
+}
+
+.matrixScroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.matrixScroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--foreground), transparent 85%);
+  border-radius: 9999px;
 }
 
 .matrixCorner {
@@ -549,6 +602,69 @@
   cursor: default;
 }
 
+/* ---- Skeletons ---- */
+.tileIconSkel {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.tileValueSkel {
+  width: 56px;
+  height: 1.5rem;
+}
+
+.tileLabelSkel {
+  width: 70%;
+  height: 0.75rem;
+}
+
+.tileHintSkel {
+  width: 55%;
+  height: 0.625rem;
+}
+
+.matrixGradeHeadSkel {
+  width: 72px;
+  height: 0.875rem;
+}
+
+.matrixColHeadSkel {
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.matrixRowHeadSkel {
+  height: 0.875rem;
+  width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.matrixCellSkel {
+  min-height: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+}
+
+.barLabelSkel {
+  width: 64px;
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.barTrackSkel {
+  flex: 1;
+  height: 10px;
+  border-radius: 9999px;
+}
+
+.barValueSkel {
+  width: 32px;
+  height: 0.8125rem;
+  border-radius: var(--radius-sm);
+}
+
 /* ---- Insights ---- */
 .insights {
   display: flex;
@@ -565,6 +681,8 @@
 }
 
 .tile {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 0.875rem;
@@ -572,6 +690,33 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background-color: var(--card);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  cursor: default;
+}
+
+/* Cursor-tracking blob gradient that brightens the card as the mouse moves. */
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  background: radial-gradient(
+    220px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in oklch, var(--primary), transparent 82%),
+    transparent 60%
+  );
+}
+
+.tile:hover::before {
+  opacity: 1;
+}
+
+.tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.3);
+  border-color: color-mix(in oklch, var(--primary), transparent 50%);
 }
 
 .tileIcon {
@@ -636,6 +781,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.split > .panel {
+  grid-column: 1 / -1;
 }
 
 .panel {

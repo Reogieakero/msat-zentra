@@ -645,6 +645,91 @@ router.get(
   }
 );
 
+// School-wide AM/PM attendance pattern for the active term: overall AM/PM
+// present rate plus the average present rate per weekday. Powers the "Patterns"
+// overlay on the risk heatmaps index. Derived from real attendance records.
+router.get(
+  "/session-pattern",
+  requireAuth,
+  requireRole("principal", "adviser", "guidance_counselor", "nurse"),
+  async (req, res, next) => {
+    try {
+      const activeTerm = await prisma.term.findFirst({
+        where: { schoolYear: { isActive: true } },
+        orderBy: { termNumber: "asc" },
+        select: { id: true, startDate: true },
+      });
+      const termId = activeTerm?.id;
+      if (!termId) {
+        res.json({ amRate: 0, pmRate: 0, byDay: [] });
+        return;
+      }
+
+      const start = activeTerm?.startDate
+        ? new Date(activeTerm.startDate.toISOString().slice(0, 10) + "T00:00:00Z")
+        : null;
+      const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
+      const axisStart = start ?? today;
+      const dayKeys: string[] = [];
+      for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
+        dayKeys.push(d.toISOString().slice(0, 10));
+      }
+
+      const sections = await prisma.section.findMany({
+        where: { schoolYear: { isActive: true } },
+        select: { id: true, students: { select: { userId: true } } },
+      });
+      const enrolledBySection: Record<string, number> = {};
+      for (const s of sections) enrolledBySection[s.id] = s.students.length;
+      const totalEnrolled = Object.values(enrolledBySection).reduce((a, b) => a + b, 0);
+
+      const records = await prisma.attendanceRecord.findMany({
+        where: { termId },
+        select: { sectionId: true, date: true, session: true, status: true },
+      });
+
+      type Cell = { present: number; total: number };
+      const am: Record<string, Cell> = {};
+      const pm: Record<string, Cell> = {};
+      const byWeekday: Record<number, { present: number; total: number }> = {};
+      for (const r of records) {
+        const key = r.date.toISOString().slice(0, 10);
+        const target = r.session === "AM" ? am : r.session === "PM" ? pm : null;
+        if (target) {
+          if (!target[key]) target[key] = { present: 0, total: 0 };
+          target[key].total += 1;
+          if (r.status === "present") target[key].present += 1;
+        }
+        const wd = new Date(key + "T00:00:00Z").getUTCDay();
+        if (wd === 0 || wd === 6) continue;
+        if (!byWeekday[wd]) byWeekday[wd] = { present: 0, total: 0 };
+        byWeekday[wd].total += 1;
+        if (r.status === "present") byWeekday[wd].present += 1;
+      }
+
+      const expected = totalEnrolled * dayKeys.length;
+      const amPresent = Object.values(am).reduce((a, c) => a + c.present, 0);
+      const pmPresent = Object.values(pm).reduce((a, c) => a + c.present, 0);
+      const amRate = expected > 0 ? Math.round((amPresent / expected) * 1000) / 10 : 0;
+      const pmRate = expected > 0 ? Math.round((pmPresent / expected) * 1000) / 10 : 0;
+
+      const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+      const byDay = DAY_NAMES.map((day, i) => {
+        const wd = i + 1;
+        const cell = byWeekday[wd] ?? { present: 0, total: 0 };
+        return {
+          day,
+          rate: cell.total > 0 ? Math.round((cell.present / cell.total) * 1000) / 10 : 0,
+        };
+      });
+
+      res.json({ amRate, pmRate, byDay });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.get(
   "/students/:id/attendance-rate",
   requireAuth,

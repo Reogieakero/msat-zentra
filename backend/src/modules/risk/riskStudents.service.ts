@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { resolveActiveTermId } from "../../services/risk.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -17,15 +18,6 @@ export interface RiskStudentsResult {
   total: number;
   page: number;
   pageSize: number;
-}
-
-async function resolveActiveTermId(): Promise<string | null> {
-  const term = await prisma.term.findFirst({
-    where: { schoolYear: { isActive: true } },
-    orderBy: { termNumber: "asc" },
-    select: { id: true },
-  });
-  return term?.id ?? null;
 }
 
 // Principal: full at-risk student list (status-only factors, no confidential
@@ -58,7 +50,7 @@ export async function getRiskStudents(
         lrn: true,
         riskLevel: true,
         riskCount: true,
-        section: { select: { name: true } },
+        section: { select: { name: true, _count: { select: { students: true } } } },
         user: { select: { fullName: true } },
         finalGrades: { where: termId ? { termId } : undefined, select: { transmutedGrade: true } },
         attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
@@ -75,9 +67,9 @@ export async function getRiskStudents(
           s.finalGrades.length
         : 100;
     const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    const totalAtt = s.attendanceRecords.length;
+    const enrolled = s.section?._count.students ?? 0;
     const academic = avg < 75;
-    const attendance = totalAtt > 0 && present / totalAtt < 0.8;
+    const attendance = enrolled > 0 && present / enrolled < 0.8;
     const behavioral = s.anecdotalRecords.length > 0;
     // Derive level + count from the live factors so the list always matches
     // the engine rule (risk.ts): >=2 = High, 1 = Moderate, 0 = Low. The stored

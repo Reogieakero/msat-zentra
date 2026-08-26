@@ -6,13 +6,16 @@ import { getAcademicsSummary } from "./academics.service.js";
 const router = Router();
 
 // Principal academics KPIs (O4): section summaries, pass/fail by grade, honor roll.
+// ?mode=raw includes every graded row (locked or not); ?mode=final (default)
+// restricts to locked/finalized grades only.
 router.get(
   "/",
   requireAuth,
   requireRole("principal"),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      const summary = await getAcademicsSummary();
+      const mode = req.query.mode === "raw" ? "raw" : "final";
+      const summary = await getAcademicsSummary(mode);
       res.json(summary);
     } catch (e) {
       next(e);

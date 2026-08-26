@@ -1,11 +1,13 @@
 import * as React from "react";
 import { X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockSessionPattern, delay, type SessionPattern } from "./mockData";
+import { apiClient } from "@/lib/api/client";
+import type { SessionPattern } from "./types";
 import styles from "./floats.module.css";
 
 export function PatternFloats({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
   const [pattern, setPattern] = React.useState<SessionPattern | null>(null);
   const [visible, setVisible] = React.useState(false);
 
@@ -23,9 +25,16 @@ export function PatternFloats({ onClose }: { onClose: () => void }) {
     queueMicrotask(() => {
       if (!cancelled) setLoading(true);
     });
-    delay(mockSessionPattern(), 450)
-      .then((p) => {
-        if (!cancelled) setPattern(p);
+    apiClient
+      .get<SessionPattern>("/api/attendance/session-pattern")
+      .then((res) => {
+        if (!cancelled) setPattern(res.data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          console.error("[/api/attendance/session-pattern] fetch failed:", err);
+          setError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -55,7 +64,7 @@ export function PatternFloats({ onClose }: { onClose: () => void }) {
               <X size={16} />
             </button>
           </div>
-          {loading || !pattern ? (
+          {loading || error || !pattern ? (
             <Skeleton className={styles.skel} />
           ) : (
             <div className={styles.pattern}>
@@ -87,7 +96,7 @@ export function PatternFloats({ onClose }: { onClose: () => void }) {
           <div className={styles.cardHead}>
             <h3 className={styles.cardTitle}>By weekday</h3>
           </div>
-          {loading || !pattern ? (
+          {loading || error || !pattern ? (
             <Skeleton className={styles.skel} />
           ) : (
             <div className={styles.dayBars}>

@@ -114,6 +114,57 @@
   font-size: 0.8125rem;
 }
 
+/* Loading skeletons mirror the real grade-group / block layout. */
+.skeletonWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.skelHead {
+  width: 160px;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.skelBlock {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  min-height: 52px;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.skelDot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.skelText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.skelName {
+  width: 70%;
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.skelLrn {
+  width: 45%;
+  height: 0.625rem;
+  border-radius: var(--radius-sm);
+}
+
 .emptyIcon,
 .panelEmptyIcon {
   width: 1.5rem;

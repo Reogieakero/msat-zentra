@@ -5,6 +5,7 @@ import {
   computeRiskFactors,
   isAtRisk,
   levelFromFlags,
+  resolveActiveTermId,
 } from "../../services/risk.js";
 import { classifyHonorRoll } from "../../services/grading.js";
 
@@ -25,14 +26,9 @@ router.get(
       });
       const schoolYearId = activeYear?.id;
 
-      const term = schoolYearId
-        ? await prisma.term.findFirst({
-            where: { schoolYearId },
-            orderBy: { termNumber: "asc" },
-            select: { id: true },
-          })
-        : null;
-      const termId = term?.id;
+      // Single active-term resolver, shared with the Risk endpoints so the
+      // Overview's live recompute matches the board/heatmap/students exactly.
+      const termId = await resolveActiveTermId();
 
       const [enrollment, activeSections, teachers, anecdotals, students, admPending, accountApprovals] =
         await Promise.all([
@@ -43,6 +39,7 @@ router.get(
           prisma.studentProfile.findMany({
             where: schoolYearId ? { section: { schoolYearId } } : undefined,
             select: {
+              section: { select: { _count: { select: { students: true } } } },
               finalGrades: { where: termId ? { termId } : undefined, select: { transmutedGrade: true } },
               attendanceRecords: {
                 where: termId ? { termId } : undefined,
@@ -70,6 +67,7 @@ router.get(
           finalGrades: s.finalGrades,
           attendance: s.attendanceRecords,
           anecdotalCount: s.anecdotalRecords.length,
+          enrolled: s.section?._count.students ?? 0,
         });
         if (flags.attendanceFlag) attendance++;
         if (flags.academicFlag) grades++;

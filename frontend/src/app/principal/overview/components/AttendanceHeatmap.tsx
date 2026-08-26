@@ -20,15 +20,17 @@ type HeatGrade = { grade: string; enrolled: number; days: GradeDay[] };
 type HeatmapResponse = { session: "AM" | "PM"; grades: HeatGrade[] };
 
 // Color scale: 0 (empty/absent) -> full present (green). Theme-aware via CSS
-// variables so the empty block is dark in dark mode, not near-white.
+// variables so the empty block is dark in dark mode, not near-white. Bands are
+// aligned to the 80% attendance threshold used by the Risk/Attendance systems,
+// so a block below 80% reads as amber/red (at-risk) and 80%+ as green (safe).
 const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(--hm-4)"];
 
 function dayColor(count: number, enrolled: number): string {
   if (enrolled <= 0 || count <= 0) return SCALE[0];
   const ratio = count / enrolled;
-  if (ratio >= 0.999) return SCALE[4];
-  if (ratio >= 0.66) return SCALE[3];
-  if (ratio >= 0.33) return SCALE[2];
+  if (ratio >= 0.9) return SCALE[4];
+  if (ratio >= 0.8) return SCALE[3];
+  if (ratio >= 0.5) return SCALE[2];
   return SCALE[1];
 }
 

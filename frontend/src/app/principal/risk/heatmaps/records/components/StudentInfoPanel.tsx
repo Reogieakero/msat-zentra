@@ -1,6 +1,6 @@
 import * as React from "react";
 import { X, CircleDot } from "lucide-react";
-import type { RecordStudent } from "../mockData";
+import type { RecordStudent } from "../types";
 import styles from "../records.module.css";
 
 function severityTone(sev: "Low" | "Moderate" | "High"): string {

@@ -296,6 +296,21 @@
   border: 1px solid var(--border);
 }
 
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.emptyHint {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card {
     transition: none;

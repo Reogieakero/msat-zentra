@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Flame, Activity, GraduationCap } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockMenuSections, type MenuSection } from "./mockData";
+import { formatSection } from "@/lib/utils";
+import type { MenuSection } from "./types";
 import styles from "./menu.module.css";
 
 const RECORDS_PATH = "/principal/risk/heatmaps/records";
@@ -66,7 +67,7 @@ export function FloatingMenu({
       .catch((err: unknown) => {
         if (!cancelled) {
           console.error("[/api/attendance/sections] fetch failed:", err);
-          setSections(mockMenuSections());
+          setSections([]);
         }
       })
       .finally(() => {
@@ -186,7 +187,7 @@ export function FloatingMenu({
                           go("attendance");
                         }}
                       >
-                        {s.section.replace("Grade ", "")}
+                        {formatSection(s.section).replace("Grade ", "")}
                       </button>
                     </li>
                   ))}

@@ -1,18 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { Search } from "lucide-react";
 import {
-  mockRecords,
-  delay,
   type RecordStudent,
   type RecordDataset,
-} from "./mockData";
+} from "./types";
 import { StudentInfoPanel } from "./components/StudentInfoPanel";
 import { FloatingMenu } from "../components/FloatingMenu";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
+import { formatSectionShort } from "@/lib/utils";
 import styles from "./records.module.css";
 import menu from "../components/heatmap.module.css";
 import menuMod from "../components/menu.module.css";
@@ -135,6 +135,7 @@ type LegendCategory = { key: string; label: string; color: string; value: number
 
 export default function PrincipalRecordsPage() {
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
   const [data, setData] = React.useState<RecordDataset | null>(null);
   const [query, setQuery] = React.useState("");
 
@@ -164,13 +165,8 @@ export default function PrincipalRecordsPage() {
       .catch((err: unknown) => {
         if (cancelled) return;
         console.error("[/api/anecdotal/records] fetch failed:", err);
-        // Fall back to mock data so the heatmap still renders offline / in dev.
-        delay(mockRecords, 600).then((res) => {
-          if (!cancelled) {
-            setData(res);
-            setLoading(false);
-          }
-        });
+        setError(true);
+        setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -314,9 +310,30 @@ export default function PrincipalRecordsPage() {
           ref={heatmapRef}
         >
           {loading ? (
-            <div className={styles.loading}>
-              <Loader2 className={styles.spin} aria-hidden />
-              <span>Loading student records…</span>
+            <div className={styles.skeletonWrap} aria-busy="true" aria-label="Loading student records">
+              {Array.from({ length: 4 }).map((_, gi) => (
+                <div key={gi} className={styles.gradeGroup}>
+                  <div className={styles.gradeHead}>
+                    <Skeleton className={styles.skelHead} />
+                  </div>
+                  <div className={styles.blockGrid}>
+                    {Array.from({ length: 6 }).map((__, bi) => (
+                      <div key={bi} className={styles.skelBlock}>
+                        <Skeleton className={styles.skelDot} />
+                        <div className={styles.skelText}>
+                          <Skeleton className={styles.skelName} />
+                          <Skeleton className={styles.skelLrn} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className={styles.empty}>
+              <SlidersHorizontal className={styles.emptyIcon} aria-hidden />
+              <p>Unable to load student records.</p>
             </div>
           ) : visibleStudents.length === 0 ? (
             <div className={styles.empty}>
@@ -328,7 +345,7 @@ export default function PrincipalRecordsPage() {
               <div key={section.sectionId} className={styles.gradeGroup} data-grade={section.gradeLevel}>
                 <div className={styles.gradeHead}>
                   <span className={styles.gradeLabel}>Grade {section.gradeLevel}</span>
-                  <span className={styles.sectionLabel}>{section.section.replace(`Grade ${section.gradeLevel}-`, "Section ")}</span>
+                  <span className={styles.sectionLabel}>{formatSectionShort(section.section)}</span>
                   <span className={styles.gradeCount}>{section.students.length}</span>
                 </div>
                 <div className={styles.blockGrid}>

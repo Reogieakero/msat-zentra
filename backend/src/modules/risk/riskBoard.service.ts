@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel, OutcomeStatus } from "@prisma/client";
+import { resolveActiveTermId } from "../../services/risk.js";
 
 export interface RiskBoardResult {
   kpis: {
@@ -42,12 +43,16 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
       })
     : [];
 
+  // Live risk recompute uses the single active-term resolver (same source of
+  // truth as the heatmap/students endpoints) so the board never drifts.
+  const activeTermId = await resolveActiveTermId();
+
   const Students = await prisma.studentProfile.findMany({
     where: schoolYearId ? { section: { schoolYearId } } : undefined,
     select: {
-      finalGrades: { where: { termId: terms[0]?.id }, select: { transmutedGrade: true } },
-      attendanceRecords: { where: { termId: terms[0]?.id }, select: { status: true } },
-      anecdotalRecords: { where: { termId: terms[0]?.id }, select: { id: true } },
+      finalGrades: { where: { termId: activeTermId ?? undefined }, select: { transmutedGrade: true } },
+      attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
+      anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
     },
   });
 

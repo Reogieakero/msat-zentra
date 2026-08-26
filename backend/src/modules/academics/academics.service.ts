@@ -90,7 +90,9 @@ export interface HonorRollCandidateDTO {
   tier: HonorRollTier;
 }
 
-export async function getAcademicsSummary(): Promise<AcademicsSummary> {
+export async function getAcademicsSummary(
+  mode: "raw" | "final" = "final"
+): Promise<AcademicsSummary> {
   const activeTerm = await prisma.term.findFirst({
     where: { schoolYear: { isActive: true } },
     orderBy: { termNumber: "asc" },
@@ -98,6 +100,10 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
   });
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
+
+  // "final" = only locked/finalized grades; "raw" = include every graded row
+  // (locked or not) so the principal can preview before grades are finalized.
+  const lockedOnly = mode === "final";
 
   const sections = await prisma.section.findMany({
     include: {
@@ -141,6 +147,9 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
     for (const student of section.students) {
       const finals = (student.finalGrades ?? [])
         .filter((f) => f.termId === termId)
+        .filter((f) =>
+          lockedOnly ? f.lockStatus === "locked" || f.finalizedAt != null : true
+        )
         .filter((f) => f.transmutedGrade != null && f.computedAverage != null);
       if (finals.length === 0) continue;
 
@@ -170,6 +179,7 @@ export async function getAcademicsSummary(): Promise<AcademicsSummary> {
           finalGrades: finals.map((f) => ({ transmutedGrade: f.transmutedGrade })),
           attendance: student.attendanceRecords,
           anecdotalCount: student.anecdotalRecords.length,
+          enrolled: section.students.length,
         })
       );
       const atRisk = liveLevel === "High" || liveLevel === "Moderate";

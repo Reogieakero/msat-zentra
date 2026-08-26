@@ -3,12 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Minus, TriangleAlert, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import {
-  mockSectionStats,
-  mockAttendanceTrend,
-  type SectionAttendanceStat,
-  type TrendPoint,
-} from "../../components/mockData";
+import type { SectionAttendanceStat, TrendPoint } from "../../components/types";
 import styles from "./below.module.css";
 
 interface SectionStudent {
@@ -32,6 +27,7 @@ export function AttendanceBelow({
   session: "AM" | "PM";
 }) {
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
   const [stats, setStats] = React.useState<SectionAttendanceStat[]>([]);
   const [trend, setTrend] = React.useState<TrendPoint[]>([]);
   const [students, setStudents] = React.useState<SectionStudent[]>([]);
@@ -63,8 +59,7 @@ export function AttendanceBelow({
       .catch((err: unknown) => {
         if (!cancelled) {
           console.error("[/api/attendance/section-stats] fetch failed:", err);
-          setStats(mockSectionStats());
-          setTrend(mockAttendanceTrend(selectedSectionId));
+          setError(true);
         }
       });
 

@@ -30,6 +30,7 @@ export default function PrincipalAcademicsPage() {
   const [hoveredStudent, setHoveredStudent] = React.useState<StudentRow | null>(null);
   const [focusMode, setFocusMode] = React.useState<KpiFocus | null>(null);
   const [gradeCardOpen, setGradeCardOpen] = React.useState(true);
+  const [mode, setMode] = React.useState<"final" | "raw">("final");
 
   const handleSelectKpi = (key: KpiFocus) => {
     setFocusMode((prev) => (prev === key ? null : key));
@@ -52,7 +53,7 @@ export default function PrincipalAcademicsPage() {
   React.useEffect(() => {
     let cancelled = false;
     apiClient
-      .get<AcademicsMock>("/api/academics")
+      .get<AcademicsMock>("/api/academics", { params: { mode } })
       .then((res) => {
         if (!cancelled) setData(res.data);
       })
@@ -70,7 +71,7 @@ export default function PrincipalAcademicsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [mode]);
 
   const handleSelectStudent = (student: StudentRow) => {
     setSelectedStudent(student);
@@ -188,6 +189,32 @@ export default function PrincipalAcademicsPage() {
         focus={focusMode}
         onSelectKpi={handleSelectKpi}
       />
+
+      <div className={shared.toolbar}>
+        <div className={shared.segmented}>
+          <button
+            type="button"
+            className={`${shared.segment} ${mode === "final" ? shared.segmentOn : ""}`}
+            onClick={() => setMode("final")}
+            aria-pressed={mode === "final"}
+          >
+            Final
+          </button>
+          <button
+            type="button"
+            className={`${shared.segment} ${mode === "raw" ? shared.segmentOn : ""}`}
+            onClick={() => setMode("raw")}
+            aria-pressed={mode === "raw"}
+          >
+            Raw
+          </button>
+        </div>
+        <span className={shared.toggleMeta}>
+          {mode === "final"
+            ? "Showing locked / finalized grades only"
+            : "Showing all graded rows (includes not-yet-finalized)"}
+        </span>
+      </div>
 
       {!loading && !hasFinals ? (
         <Card>
