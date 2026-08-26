@@ -148,6 +148,21 @@
   box-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.35);
 }
 
+.gradeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gradeCardTitle {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  padding-left: 0.25rem;
+}
+
 .legendTitle {
   display: flex;
   align-items: center;

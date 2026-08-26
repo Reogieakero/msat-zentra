@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Users, SlidersHorizontal } from "lucide-react";
+import { Loader2, SlidersHorizontal } from "lucide-react";
 import { Search } from "lucide-react";
 import {
   mockRecords,
@@ -12,6 +12,7 @@ import {
 import { StudentInfoPanel } from "./components/StudentInfoPanel";
 import { FloatingMenu } from "../components/FloatingMenu";
 import { Input } from "@/components/ui/input";
+import { apiClient } from "@/lib/api/client";
 import styles from "./records.module.css";
 import menu from "../components/heatmap.module.css";
 import menuMod from "../components/menu.module.css";
@@ -20,14 +21,83 @@ function flatten(data: RecordDataset): RecordStudent[] {
   return data.sections.flatMap((s) => s.students);
 }
 
-type AnecdotalCategory =
-  | "Discipline"
-  | "Counseling"
-  | "Attendance"
-  | "Merit"
-  | "Intervention"
-  | "Bullying"
-  | "Fighting";
+// Shape returned by GET /api/anecdotal/records (see backend anecdotal.routes.ts).
+type RawBackendRecord = {
+  id: string;
+  date: string;
+  category: BackendCategory;
+  description: string;
+  severity: "Low" | "Moderate" | "High";
+  staff: string;
+  resolution: string;
+  followUp: "Pending" | "Resolved" | "Monitoring";
+};
+
+type RawBackendStudent = {
+  lrn: string;
+  name: string;
+  status: string;
+  gradeLevel: string; // "G7" … "G12"
+  section: string; // "Grade 7-A"
+  sectionId: string;
+  behavioral: RawBackendRecord[];
+};
+
+type RawBackendSection = {
+  sectionId: string;
+  section: string;
+  gradeLevel: string;
+  students: RawBackendStudent[];
+};
+
+const GRADE_PREFIX = "G"; // GradeLevel enum values are G7…G12
+
+function normalizeGrade(level: string): string {
+  return level.startsWith(GRADE_PREFIX) ? level.slice(GRADE_PREFIX.length) : level;
+}
+
+function normalizeStatus(status: string): RecordStudent["status"] {
+  switch (status) {
+    case "active":
+      return "Active";
+    case "pending":
+      return "New";
+    case "inactive":
+    case "archived":
+      return "Inactive";
+    default:
+      return "Active";
+  }
+}
+
+// Adapt the backend records payload to the frontend RecordDataset shape. Falls
+// back to mock typing when the live payload is unavailable (handled by caller).
+function normalizeRecords(raw: {
+  schoolYear: string;
+  sections: RawBackendSection[];
+}): RecordDataset {
+  return {
+    schoolYear: raw.schoolYear,
+    sections: raw.sections.map((section) => ({
+      sectionId: section.sectionId,
+      section: section.section,
+      gradeLevel: normalizeGrade(section.gradeLevel),
+      students: section.students.map((st) => ({
+        lrn: st.lrn,
+        name: st.name,
+        status: normalizeStatus(st.status),
+        gradeLevel: normalizeGrade(st.gradeLevel),
+        section: st.section,
+        sectionId: st.sectionId,
+        academic: { averageGrade: "", sf10Status: "Missing", missingRecords: [], completion: 0 },
+        behavioral: st.behavioral,
+      })),
+    })),
+  };
+}
+
+// Backend anecdotal categories (mirror of AnecdotalCategory enum in the backend).
+type BackendCategory = "behavioral" | "bullying" | "academic" | "attendance" | "health";
 
 const SEVERITY_RANK: Record<RecordStudent["behavioral"][number]["severity"], number> = {
   High: 3,
@@ -37,31 +107,31 @@ const SEVERITY_RANK: Record<RecordStudent["behavioral"][number]["severity"], num
 
 // The dominant anecdotal category for a student = the category of their most
 // severe behavioral record.
-function primaryCategory(student: RecordStudent): AnecdotalCategory {
+function primaryCategory(student: RecordStudent): BackendCategory {
   return student.behavioral.reduce((top, rec) =>
     SEVERITY_RANK[rec.severity] > SEVERITY_RANK[top.severity] ? rec : top
-  ).category;
+  ).category as BackendCategory;
 }
 
-const CATEGORY_LEGEND: AnecdotalCategory[] = [
-  "Discipline",
-  "Counseling",
-  "Attendance",
-  "Merit",
-  "Intervention",
-  "Bullying",
-  "Fighting",
-];
-
-const CATEGORY_COLOR: Record<AnecdotalCategory, string> = {
-  Discipline: "#b91c1c",
-  Counseling: "#1d4ed8",
-  Attendance: "#b45309",
-  Merit: "#15803d",
-  Intervention: "#6d28d9",
-  Bullying: "#be185d",
-  Fighting: "#0f766e",
+// Canonical backend anecdotal categories (must match backend AnecdotalCategory
+// enum + CATEGORY_META in backend/src/modules/anecdotal/anecdotal.routes.ts).
+const CATEGORY_META: Record<BackendCategory, { label: string; color: string }> = {
+  behavioral: { label: "Behavioral", color: "#166534" },
+  bullying: { label: "Bullying", color: "#b91c1c" },
+  academic: { label: "Academic", color: "#1d4ed8" },
+  attendance: { label: "Attendance", color: "#c2410c" },
+  health: { label: "Health", color: "#7c3aed" },
 };
+
+const CATEGORY_COLOR: Record<BackendCategory, string> = {
+  behavioral: CATEGORY_META.behavioral.color,
+  bullying: CATEGORY_META.bullying.color,
+  academic: CATEGORY_META.academic.color,
+  attendance: CATEGORY_META.attendance.color,
+  health: CATEGORY_META.health.color,
+};
+
+type LegendCategory = { key: string; label: string; color: string; value: number };
 
 export default function PrincipalRecordsPage() {
   const [loading, setLoading] = React.useState(true);
@@ -69,15 +139,55 @@ export default function PrincipalRecordsPage() {
   const [query, setQuery] = React.useState("");
 
   const [selected, setSelected] = React.useState<RecordStudent | null>(null);
+  const [legendCategories, setLegendCategories] = React.useState<LegendCategory[]>(
+    (Object.keys(CATEGORY_META) as BackendCategory[]).map((key) => ({
+      key,
+      label: CATEGORY_META[key].label,
+      color: CATEGORY_META[key].color,
+      value: 0,
+    }))
+  );
+
+  // Grade-level selection for the floating card; null = all grades.
+  const [selectedGrade, setSelectedGrade] = React.useState<string | null>(null);
+  const heatmapRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     let cancelled = false;
-    delay(mockRecords, 600).then((res) => {
-      if (!cancelled) {
-        setData(res);
+    apiClient
+      .get<{ schoolYear: string; sections: RawBackendSection[] }>("/api/anecdotal/records")
+      .then((res) => {
+        if (cancelled) return;
+        setData(normalizeRecords(res.data));
         setLoading(false);
-      }
-    });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        console.error("[/api/anecdotal/records] fetch failed:", err);
+        // Fall back to mock data so the heatmap still renders offline / in dev.
+        delay(mockRecords, 600).then((res) => {
+          if (!cancelled) {
+            setData(res);
+            setLoading(false);
+          }
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Wire the floating-card legend to the backend's anecdotal category summary.
+  React.useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get<{ categories: LegendCategory[] }>("/api/anecdotal/summary")
+      .then((res) => {
+        if (!cancelled && res.data?.categories?.length) setLegendCategories(res.data.categories);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) console.error("[/api/anecdotal/summary] fetch failed:", err);
+      });
     return () => {
       cancelled = true;
     };
@@ -97,8 +207,51 @@ export default function PrincipalRecordsPage() {
               : true
           ),
       }))
-      .filter((s) => s.students.length > 0);
-  }, [data, query]);
+      .filter((s) => s.students.length > 0)
+      .filter((s) => (selectedGrade ? s.gradeLevel === selectedGrade : true));
+  }, [data, query, selectedGrade]);
+
+  // Distinct grade levels present in the data, sorted ascending, for the card.
+  const availableGrades = React.useMemo(() => {
+    if (!data) return [];
+    const set = new Set<string>();
+    data.sections.forEach((s) => set.add(s.gradeLevel));
+    return Array.from(set).sort((a, b) => Number(a) - Number(b));
+  }, [data]);
+
+  // Auto-scroll the heatmap to the chosen grade when the user picks one.
+  React.useEffect(() => {
+    if (!selectedGrade || !heatmapRef.current) return;
+    const target = heatmapRef.current.querySelector<HTMLElement>(
+      `[data-grade="${selectedGrade}"]`
+    );
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedGrade, filteredSections]);
+
+  const gradeCard = (
+    <div aria-label="Filter by grade level">
+      <span className={menuMod.gradeCardTitle}>Grade level</span>
+      <div className={menuMod.sectionList}>
+        <button
+          type="button"
+          className={`${menuMod.sectionItem} ${selectedGrade === null ? menuMod.sectionItemActive : ""}`}
+          onClick={() => setSelectedGrade(null)}
+        >
+          All
+        </button>
+        {availableGrades.map((g) => (
+          <button
+            key={g}
+            type="button"
+            className={`${menuMod.sectionItem} ${selectedGrade === g ? menuMod.sectionItemActive : ""}`}
+            onClick={() => setSelectedGrade(g)}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   const visibleStudents = React.useMemo(() => flatten({ schoolYear: data?.schoolYear ?? "", sections: filteredSections }), [filteredSections, data]);
 
@@ -112,14 +265,14 @@ export default function PrincipalRecordsPage() {
   const legend = (
     <div className={menuMod.legend} aria-label="Anecdotal category legend">
       <span className={menuMod.legendTitle}>Anecdotal records</span>
-        {CATEGORY_LEGEND.map((cat) => (
-          <span key={cat} className={menuMod.legendItem}>
+        {legendCategories.map((cat) => (
+          <span key={cat.key} className={menuMod.legendItem}>
             <span
               className={menuMod.legendDot}
-              style={{ backgroundColor: CATEGORY_COLOR[cat] }}
+              style={{ backgroundColor: cat.color }}
               aria-hidden
             />
-            {cat}
+            {cat.label}
           </span>
         ))}
     </div>
@@ -128,15 +281,12 @@ export default function PrincipalRecordsPage() {
   return (
     <div className={menu.shell}>
       <div className={menu.layout}>
-        <FloatingMenu selected="behavioral-count" onSelect={() => {}} legend={legend} />
+        <FloatingMenu selected="behavioral-count" onSelect={() => {}} legend={legend} gradeCard={gradeCard} />
 
         <section className={styles.page}>
-          <header className={styles.head}>
-        <div className={styles.headText}>
-          <span className={styles.kicker}>
-            <Users size={14} aria-hidden /> Student Records
-          </span>
-          <h1 className={styles.title}>Records Heatmap</h1>
+        <header className={styles.head}>
+          <div className={styles.headText}>
+            <h1 className={styles.title}>Records Heatmap</h1>
           <p className={styles.subtitle}>
             {data ? `School year ${data.schoolYear}` : "Loading…"} · {visibleStudents.length} students in view
           </p>
@@ -161,6 +311,7 @@ export default function PrincipalRecordsPage() {
       <div className={styles.body}>
         <div
           className={styles.heatmap}
+          ref={heatmapRef}
         >
           {loading ? (
             <div className={styles.loading}>
@@ -174,7 +325,7 @@ export default function PrincipalRecordsPage() {
             </div>
           ) : (
             filteredSections.map((section) => (
-              <div key={section.sectionId} className={styles.gradeGroup}>
+              <div key={section.sectionId} className={styles.gradeGroup} data-grade={section.gradeLevel}>
                 <div className={styles.gradeHead}>
                   <span className={styles.gradeLabel}>Grade {section.gradeLevel}</span>
                   <span className={styles.sectionLabel}>{section.section.replace(`Grade ${section.gradeLevel}-`, "Section ")}</span>

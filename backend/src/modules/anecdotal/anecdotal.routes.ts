@@ -96,6 +96,127 @@ const CATEGORY_META: Record<
   health: { label: "Health", color: "#7c3aed" },
 };
 
+// Principal: records heatmap source — every section with its students that have
+// anecdotal records, including each record's category/severity/follow-up. The
+// categories returned here are the canonical backend AnecdotalCategory enum, so
+// the heatmap legend and block colors stay wired to the backend.
+router.get(
+  "/records",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const activeTerm = await prisma.term.findFirst({
+        where: { schoolYear: { isActive: true } },
+        orderBy: { termNumber: "asc" },
+        select: { id: true, schoolYearId: true },
+      });
+      const termId = activeTerm?.id;
+      const schoolYear = activeTerm
+        ? ((await prisma.schoolYear.findUnique({
+            where: { id: activeTerm.schoolYearId },
+            select: { name: true },
+          }))?.name ?? "")
+        : "";
+      const where = termId ? { termId } : {};
+
+      const [sections, records] = await Promise.all([
+        prisma.section.findMany({
+          where: termId ? { schoolYearId: activeTerm!.schoolYearId } : {},
+          orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+            students: {
+              select: {
+                userId: true,
+                lrn: true,
+                user: { select: { fullName: true, status: true } },
+              },
+            },
+          },
+        }),
+        prisma.anecdotalRecord.findMany({
+          where,
+          select: {
+            id: true,
+            studentId: true,
+            sectionId: true,
+            observationDatetime: true,
+            descriptionOfIncident: true,
+            notesRecommendationsActions: true,
+            category: true,
+            confidentialityLevel: true,
+            observer: { select: { fullName: true } },
+            followups: { orderBy: { followupDate: "desc" }, take: 1, select: { id: true } },
+            referrals: { take: 1, orderBy: { id: "desc" }, select: { status: true } },
+          },
+        }),
+      ]);
+
+      const recordByStudent = new Map<string, typeof records>();
+      for (const r of records) {
+        const arr = recordByStudent.get(r.studentId) ?? [];
+        arr.push(r);
+        recordByStudent.set(r.studentId, arr);
+      }
+
+      const dataSections = sections
+        .map((section) => {
+          const students = section.students
+            .map((st) => {
+              const recs = recordByStudent.get(st.userId);
+              if (!recs || recs.length === 0) return null;
+              return {
+                lrn: st.lrn,
+                name: st.user.fullName,
+                status: st.user.status,
+                gradeLevel: section.gradeLevel,
+                section: section.name,
+                sectionId: section.id,
+                behavioral: recs.map((r) => ({
+                  id: r.id,
+                  date: r.observationDatetime.toISOString().slice(0, 10),
+                  category: r.category,
+                  description: r.descriptionOfIncident,
+                  severity:
+                    r.referrals[0]?.status === "resolved"
+                      ? "Low"
+                      : r.confidentialityLevel === "confidential"
+                        ? "High"
+                        : "Moderate",
+                  staff: r.observer.fullName,
+                  resolution: r.notesRecommendationsActions ?? "",
+                  followUp: r.referrals[0]?.status === "resolved"
+                    ? "Resolved"
+                    : r.followups.length > 0
+                      ? "Monitoring"
+                      : "Pending",
+                })),
+              };
+            })
+            .filter((s): s is NonNullable<typeof s> => s !== null);
+          if (students.length === 0) return null;
+          return {
+            sectionId: section.id,
+            section: section.name,
+            gradeLevel: section.gradeLevel,
+            students,
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
+
+      res.json({
+        schoolYear,
+        sections: dataSections,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.get(
   "/summary",
   requireAuth,

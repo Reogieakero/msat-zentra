@@ -1,9 +1,12 @@
 export type StudentStatus = "Active" | "Transferred" | "Inactive" | "New";
 
+// Mirrors the backend AnecdotalCategory enum.
+export type BehavioralCategory = "behavioral" | "bullying" | "academic" | "attendance" | "health";
+
 export interface BehavioralRecord {
   id: string;
   date: string;
-  category: "Discipline" | "Counseling" | "Attendance" | "Merit" | "Intervention" | "Bullying" | "Fighting";
+  category: BehavioralCategory;
   description: string;
   severity: "Low" | "Moderate" | "High";
   staff: string;
@@ -56,7 +59,7 @@ const LAST = [
 ];
 
 const CATEGORIES: BehavioralRecord["category"][] = [
-  "Discipline", "Counseling", "Attendance", "Merit", "Intervention", "Bullying", "Fighting",
+  "behavioral", "bullying", "academic", "attendance", "health",
 ];
 const SEVERITIES: BehavioralRecord["severity"][] = ["Low", "Moderate", "High"];
 const FOLLOW: BehavioralRecord["followUp"][] = ["Pending", "Resolved", "Monitoring"];

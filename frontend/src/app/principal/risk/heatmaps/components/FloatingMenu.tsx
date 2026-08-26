@@ -28,12 +28,14 @@ export function FloatingMenu({
   selected,
   onSelect,
   legend,
+  gradeCard,
   selectedSectionId,
   onSelectSection,
 }: {
   selected: string;
   onSelect: (id: string) => void;
   legend?: React.ReactNode;
+  gradeCard?: React.ReactNode;
   selectedSectionId?: string | null;
   onSelectSection?: (id: string | null) => void;
 }) {
@@ -196,6 +198,7 @@ export function FloatingMenu({
         </nav>
       ) : null}
 
+      {gradeCard ? <div className={styles.gradeCard}>{gradeCard}</div> : null}
       {legend ? <div className={styles.legend}>{legend}</div> : null}
     </div>
   );
