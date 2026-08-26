@@ -313,8 +313,8 @@ export function mockAcademicHeatmap(): AcademicHeatmapData {
     subjectTotals: [],
   };
 
-  let subjectEnrolledSum: number[] = [];
-  let subjectBelowSum: number[] = [];
+  const subjectEnrolledSum: number[] = [];
+  const subjectBelowSum: number[] = [];
 
   data.sections = sections.map((s, si) => {
     const enrolled = 28 + ((si * 3) % 12);

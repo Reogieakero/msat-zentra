@@ -44,7 +44,9 @@ export function FloatingMenu({
 
   React.useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
     apiClient
       .get<{ sections: MenuSection[] }>("/api/attendance/sections")
       .then((res) => {
