@@ -16,7 +16,7 @@
   flex-wrap: wrap;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--border);
-  margin-top: 3rem;
+  margin-top: 2rem;
 }
 
 .headText {
@@ -38,11 +38,20 @@
 
 .title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--foreground);
   line-height: 1.1;
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklch, var(--primary), transparent 85%),
+    color-mix(in oklch, var(--primary), transparent 85%)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 70%;
+  background-position: 0 70%;
+  width: max-content;
 }
 
 .subtitle {
@@ -131,10 +140,9 @@
 
 .gradeHead {
   display: flex;
-  align-items: baseline;
-  gap: 0.625rem;
-  position: sticky;
-  top: calc(3rem + 0.5rem);
+  align-items: flex-start;
+  gap: 1rem;
+  min-height: 2.5rem;
   background-color: color-mix(in oklch, var(--background), transparent 88%);
   backdrop-filter: blur(4px);
   padding: 0.25rem 0;
