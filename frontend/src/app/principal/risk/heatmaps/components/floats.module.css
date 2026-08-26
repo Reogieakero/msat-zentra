@@ -1,0 +1,146 @@
+.layer {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 50;
+  width: 340px;
+  max-width: 90vw;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(48px) scale(0.98);
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.layerVisible {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.45);
+  padding: 1.125rem;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: border-box;
+}
+
+.close:hover {
+  background-color: color-mix(in oklch, var(--foreground), transparent 92%);
+  color: var(--foreground);
+}
+
+.pattern {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.sessionRow {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sessionLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.sessionBar {
+  height: 8px;
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--foreground), transparent 92%);
+  overflow: hidden;
+}
+
+.sessionFill {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+}
+
+.sessionVal {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.dayBars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.375rem;
+  height: 120px;
+}
+
+.dayCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.dayBar {
+  width: 100%;
+  max-width: 24px;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+}
+
+.dayLabel {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+.skel {
+  height: 96px;
+  border-radius: var(--radius-md);
+}
