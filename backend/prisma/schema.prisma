@@ -171,6 +171,7 @@ model User {
   anecdotalFollowups  AnecdotalRecordFollowup[]
   referralsMade       Referral[]             @relation("ReferredBy")
   interventions       Intervention[]         @relation("InterventionReviewer")
+  assignedInterventions Intervention[]         @relation("InterventionAssignee")
   healthRecords       HealthRecord[]
   homeVisitations     HomeVisitationRecord[]
   admProfilesPrepared AdmLearnerProfile[]    @relation("AdmPreparedBy")
@@ -454,6 +455,8 @@ model Intervention {
   riskLevelAtFlag   RiskLevel
   recommendedAction String
   reviewedBy        String
+  assignedTo        String?
+  assignedAt        DateTime?
   approvalStatus    ApprovalStatus  @default(pending)
   approvedAction    String?
   outcomeStatus     OutcomeStatus   @default(ongoing)
@@ -461,6 +464,7 @@ model Intervention {
   referral          Referral?       @relation(fields: [referralId], references: [id])
   student           StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   reviewer          User            @relation("InterventionReviewer", fields: [reviewedBy], references: [id])
+  assignee          User?           @relation("InterventionAssignee", fields: [assignedTo], references: [id])
 }
 // ---------------------------------------------------------------------------
 // 3.6 Specialist modules

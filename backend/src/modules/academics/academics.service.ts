@@ -176,7 +176,10 @@ export async function getAcademicsSummary(
       // riskLevel column — must match the Risk board/students pages).
       const liveLevel = levelFromFlags(
         computeRiskFactors({
-          finalGrades: finals.map((f) => ({ transmutedGrade: f.transmutedGrade })),
+          finalGrades: finals.map((f) => ({
+            computedAverage: f.computedAverage,
+            transmutedGrade: f.transmutedGrade,
+          })),
           attendance: student.attendanceRecords,
           anecdotalCount: student.anecdotalRecords.length,
           enrolled: section.students.length,

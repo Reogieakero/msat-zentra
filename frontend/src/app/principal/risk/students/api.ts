@@ -79,10 +79,14 @@ export interface BackendStudentsResult {
 }
 
 export async function fetchRiskStudents(
-  section?: string
+  section?: string,
+  gradeMode: "raw" | "final" = "final"
 ): Promise<BackendStudentsResult> {
+  const params: Record<string, string> = { pageSize: "1000" };
+  if (section) params.section = section;
+  params.gradeMode = gradeMode;
   const { data } = await apiClient.get<BackendStudentsResult>("/api/risk/students", {
-    params: section ? { section, pageSize: 1000 } : { pageSize: 1000 },
+    params,
   });
   return data;
 }

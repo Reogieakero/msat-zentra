@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel } from "@prisma/client";
+import type { GradeMode } from "../../services/risk.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -18,13 +19,17 @@ export interface HeatmapResult {
 
 async function sectionFactors(
   sectionId: string,
-  termId: string
+  termId: string,
+  gradeMode: GradeMode = "final"
 ): Promise<Record<RiskFactor, number>> {
   const students = await prisma.studentProfile.findMany({
     where: { sectionId },
     select: {
       userId: true,
-      finalGrades: { where: { termId }, select: { transmutedGrade: true } },
+      finalGrades: {
+        where: { termId },
+        select: { computedAverage: true, transmutedGrade: true },
+      },
       attendanceRecords: { where: { termId }, select: { status: true } },
       anecdotalRecords: { where: { termId }, select: { id: true } },
     },
@@ -38,10 +43,13 @@ async function sectionFactors(
   let attendance = 0;
   let behavioral = 0;
 
+  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
+    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
+
   for (const s of students) {
     const avg =
       s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
+        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
           s.finalGrades.length
         : 100;
     if (avg < 75) academic++;
@@ -56,7 +64,10 @@ async function sectionFactors(
 }
 
 // All sections × risk-factor counts for the active board (O4, status-only).
-export async function getRiskHeatmap(termId: string): Promise<HeatmapResult> {
+export async function getRiskHeatmap(
+  termId: string,
+  gradeMode: GradeMode = "final"
+): Promise<HeatmapResult> {
   const sections = await prisma.section.findMany({
     where: { schoolYear: { isActive: true } },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
@@ -71,7 +82,7 @@ export async function getRiskHeatmap(termId: string): Promise<HeatmapResult> {
 
   const result: HeatmapSection[] = [];
   for (const sec of sections) {
-    const factors = await sectionFactors(sec.id, termId);
+    const factors = await sectionFactors(sec.id, termId, gradeMode);
     factorTotals.Academic += factors.Academic;
     factorTotals.Attendance += factors.Attendance;
     factorTotals.Behavioral += factors.Behavioral;
@@ -97,7 +108,8 @@ export interface HeatmapStudent {
 export async function getSectionFactorStudents(
   sectionId: string,
   factor: RiskFactor,
-  termId: string
+  termId: string,
+  gradeMode: GradeMode = "final"
 ): Promise<HeatmapStudent[]> {
   const students = await prisma.studentProfile.findMany({
     where: { sectionId },
@@ -105,16 +117,22 @@ export async function getSectionFactorStudents(
       lrn: true,
       riskLevel: true,
       user: { select: { fullName: true } },
-      finalGrades: { where: { termId }, select: { transmutedGrade: true } },
+      finalGrades: {
+        where: { termId },
+        select: { computedAverage: true, transmutedGrade: true },
+      },
       attendanceRecords: { where: { termId }, select: { status: true } },
       anecdotalRecords: { where: { termId }, select: { id: true } },
     },
   });
 
+  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
+    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
+
   const matches = (s: (typeof students)[number]): boolean => {
     const avg =
       s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
+        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
           s.finalGrades.length
         : 100;
     const present = s.attendanceRecords.filter((a) => a.status === "present").length;

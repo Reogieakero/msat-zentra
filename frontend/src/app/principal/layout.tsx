@@ -20,9 +20,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
+import { GradeModeProvider, useGradeMode } from "./grade-mode-context";
 import styles from "./principal.module.css";
 
 const STORAGE_KEY = "zentra.sidebar.mode";
+
+function GradeBasisSelector() {
+  const { gradeMode, setGradeMode } = useGradeMode();
+  return (
+    <div className={styles.accountGradeBasis}>
+      <span className={styles.accountGroupLabel}>Grade basis</span>
+      <div className={styles.segmentedCompact} role="group" aria-label="Grade basis">
+        <button
+          type="button"
+          className={`${styles.segmentCompact} ${gradeMode === "final" ? styles.segmentCompactOn : ""}`}
+          aria-pressed={gradeMode === "final"}
+          onClick={() => setGradeMode("final")}
+        >
+          Final
+        </button>
+        <button
+          type="button"
+          className={`${styles.segmentCompact} ${gradeMode === "raw" ? styles.segmentCompactOn : ""}`}
+          aria-pressed={gradeMode === "raw"}
+          onClick={() => setGradeMode("raw")}
+        >
+          Raw
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -150,6 +178,10 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
               </DropdownMenuItem>
             </div>
             <DropdownMenuSeparator />
+            <div className={styles.accountGroup}>
+              <GradeBasisSelector />
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className={styles.accountItem}
               onSelect={(event) => {
@@ -188,7 +220,9 @@ export default function PrincipalLayout({
 }) {
   return (
     <SidebarProvider defaultOpen={false}>
-      <PrincipalShell>{children}</PrincipalShell>
+      <GradeModeProvider>
+        <PrincipalShell>{children}</PrincipalShell>
+      </GradeModeProvider>
     </SidebarProvider>
   );
 }

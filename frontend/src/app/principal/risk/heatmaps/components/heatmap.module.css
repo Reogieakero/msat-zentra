@@ -676,7 +676,8 @@
 
 .statRow {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 260px));
+  justify-content: start;
   gap: 1rem;
 }
 
@@ -792,6 +793,12 @@
   border-radius: var(--radius-lg);
   background-color: var(--card);
   padding: 1.125rem;
+}
+
+.barePanel {
+  border: none;
+  background-color: transparent;
+  padding: 0;
 }
 
 .panelTitle {

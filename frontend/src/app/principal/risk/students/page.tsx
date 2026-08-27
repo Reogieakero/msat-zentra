@@ -10,6 +10,7 @@ import {
   type BackendBoard,
   type BackendStudent,
 } from "./api";
+import { useGradeMode } from "../../grade-mode-context";
 import { BrowserCard } from "./components/BrowserCard";
 import { SectionHeatmap } from "./components/SectionHeatmap";
 import { RiskKpiRail } from "./components/RiskKpiRail";
@@ -20,6 +21,7 @@ const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];
 const STORAGE_KEY = "zentra.riskStudents.activeSection";
 
 export default function RiskBoardStudentsPage() {
+  const { gradeMode } = useGradeMode();
   const [loading, setLoading] = React.useState(true);
   const [selectedSection, setSelectedSection] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
@@ -114,7 +116,7 @@ export default function RiskBoardStudentsPage() {
   const scopeKey = selectedSection ?? "";
 
   React.useEffect(() => {
-    const cached = cacheRef.current[scopeKey];
+    const cached = cacheRef.current[`${scopeKey}:${gradeMode}`];
     if (cached) {
       setStudents(cached);
       setStudentsLoading(false);
@@ -123,10 +125,10 @@ export default function RiskBoardStudentsPage() {
     }
     let cancelled = false;
     setStudentsLoading(true);
-    fetchRiskStudents(scopeKey === "" ? undefined : scopeKey)
+    fetchRiskStudents(scopeKey === "" ? undefined : scopeKey, gradeMode)
       .then((res) => {
         if (!cancelled) {
-          cacheRef.current[scopeKey] = res.students;
+          cacheRef.current[`${scopeKey}:${gradeMode}`] = res.students;
           setStudents(res.students);
           setStudentsError(null);
         }
@@ -143,7 +145,7 @@ export default function RiskBoardStudentsPage() {
     return () => {
       cancelled = true;
     };
-  }, [scopeKey]);
+  }, [scopeKey, gradeMode]);
 
   const [query, setQuery] = React.useState("");
 

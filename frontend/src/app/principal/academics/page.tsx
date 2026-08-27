@@ -18,11 +18,13 @@ import { AverageGradeByLevel } from "./components/AverageGradeByLevel";
 import { GradeBreakdownDrawer } from "./components/GradeBreakdownDrawer";
 import { subjectColumns, type StudentRow, type AcademicsMock } from "./mockData";
 import { apiClient } from "@/lib/api/client";
+import { useGradeMode } from "../grade-mode-context";
 import { Users as UsersIcon, X } from "lucide-react";
 import styles from "./page.module.css";
 import shared from "./academics.module.css";
 
 export default function PrincipalAcademicsPage() {
+  const { gradeMode } = useGradeMode();
   const [selectedStudent, setSelectedStudent] = React.useState<StudentRow | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [data, setData] = React.useState<AcademicsMock | null>(null);
@@ -30,7 +32,6 @@ export default function PrincipalAcademicsPage() {
   const [hoveredStudent, setHoveredStudent] = React.useState<StudentRow | null>(null);
   const [focusMode, setFocusMode] = React.useState<KpiFocus | null>(null);
   const [gradeCardOpen, setGradeCardOpen] = React.useState(true);
-  const [mode, setMode] = React.useState<"final" | "raw">("final");
 
   const handleSelectKpi = (key: KpiFocus) => {
     setFocusMode((prev) => (prev === key ? null : key));
@@ -53,7 +54,7 @@ export default function PrincipalAcademicsPage() {
   React.useEffect(() => {
     let cancelled = false;
     apiClient
-      .get<AcademicsMock>("/api/academics", { params: { mode } })
+      .get<AcademicsMock>("/api/academics", { params: { mode: gradeMode } })
       .then((res) => {
         if (!cancelled) setData(res.data);
       })
@@ -71,7 +72,7 @@ export default function PrincipalAcademicsPage() {
     return () => {
       cancelled = true;
     };
-  }, [mode]);
+  }, [gradeMode]);
 
   const handleSelectStudent = (student: StudentRow) => {
     setSelectedStudent(student);
@@ -190,31 +191,7 @@ export default function PrincipalAcademicsPage() {
         onSelectKpi={handleSelectKpi}
       />
 
-      <div className={shared.toolbar}>
-        <div className={shared.segmented}>
-          <button
-            type="button"
-            className={`${shared.segment} ${mode === "final" ? shared.segmentOn : ""}`}
-            onClick={() => setMode("final")}
-            aria-pressed={mode === "final"}
-          >
-            Final
-          </button>
-          <button
-            type="button"
-            className={`${shared.segment} ${mode === "raw" ? shared.segmentOn : ""}`}
-            onClick={() => setMode("raw")}
-            aria-pressed={mode === "raw"}
-          >
-            Raw
-          </button>
-        </div>
-        <span className={shared.toggleMeta}>
-          {mode === "final"
-            ? "Showing locked / finalized grades only"
-            : "Showing all graded rows (includes not-yet-finalized)"}
-        </span>
-      </div>
+      <div className={shared.toolbar} />
 
       {!loading && !hasFinals ? (
         <Card>

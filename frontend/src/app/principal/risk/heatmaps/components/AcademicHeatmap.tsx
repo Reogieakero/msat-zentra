@@ -4,6 +4,7 @@ import { AlertTriangle, Flame, BookOpen } from "lucide-react";
 import { type AcademicHeatmapData } from "./types";
 import { apiClient } from "@/lib/api/client";
 import { BlobCard } from "./BlobCard";
+import { useGradeMode } from "../../../grade-mode-context";
 import styles from "./heatmap.module.css";
 
 // Brand-aligned green intensity ramp (single hue = system --primary deep green).
@@ -139,22 +140,16 @@ function normalizeAcademic(raw: BackendAcademicSummary): AcademicHeatmapData {
   };
 }
 
-type GradeMode = "raw" | "final";
-
 export function AcademicHeatmap() {
+  const { gradeMode } = useGradeMode();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
   const [data, setData] = React.useState<AcademicHeatmapData | null>(null);
-  // Default to "raw" so the heat map populates on load: grades are typically
-  // unlocked until finalized, and "final" mode would otherwise filter to an
-  // empty set (see backend lockedOnly logic). The highlighted segment stays
-  // in sync with the data actually displayed.
-  const [mode, setMode] = React.useState<GradeMode>("raw");
 
   React.useEffect(() => {
     let cancelled = false;
     apiClient
-      .get<BackendAcademicSummary>("/api/academics", { params: { mode } })
+      .get<BackendAcademicSummary>("/api/academics", { params: { mode: gradeMode } })
       .then((res) => {
         if (cancelled) return;
         setData(normalizeAcademic(res.data));
@@ -169,7 +164,7 @@ export function AcademicHeatmap() {
     return () => {
       cancelled = true;
     };
-  }, [mode]);
+  }, [gradeMode]);
 
   const sections = data?.sections ?? [];
   const totals = data?.subjectTotals ?? [];
@@ -233,7 +228,7 @@ export function AcademicHeatmap() {
                 <span className={styles.tileValue}>{studentsBelowTotal}</span>
                 <span className={styles.tileLabel}>Students below 75</span>
                 <span className={styles.tileHint}>
-                  {mode === "final" ? "finalized grades" : "all graded rows"}
+                  {gradeMode === "final" ? "finalized grades" : "all graded rows"}
                 </span>
               </div>
             </BlobCard>
@@ -267,34 +262,8 @@ export function AcademicHeatmap() {
         )}
       </div>
 
-      <div className={styles.toolbar}>
-        <div className={styles.segmented}>
-          <button
-            type="button"
-            className={`${styles.segment} ${mode === "final" ? styles.segmentOn : ""}`}
-            onClick={() => setMode("final")}
-            aria-pressed={mode === "final"}
-          >
-            Final
-          </button>
-          <button
-            type="button"
-            className={`${styles.segment} ${mode === "raw" ? styles.segmentOn : ""}`}
-            onClick={() => setMode("raw")}
-            aria-pressed={mode === "raw"}
-          >
-            Raw
-          </button>
-        </div>
-        <span className={styles.toggleMeta}>
-          {mode === "final"
-            ? "Showing locked / finalized grades only"
-            : "Showing all graded rows (includes not-yet-finalized)"}
-        </span>
-      </div>
-
       <div className={styles.split}>
-        <div className={styles.panel}>
+        <div className={`${styles.panel} ${styles.barePanel}`}>
           <h3 className={styles.panelTitle}>Section × Subject — students below 75</h3>
           {loading ? (
             <div className={styles.gradeMatrix}>

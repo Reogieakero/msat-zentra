@@ -18,8 +18,10 @@ export interface RiskBoardData {
   trend: { term: string; high: number; moderate: number; low: number }[];
 }
 
-export async function fetchRiskBoard(): Promise<RiskBoardData> {
-  const { data } = await apiClient.get<RiskBoardData>("/api/risk/board");
+export async function fetchRiskBoard(gradeMode: "raw" | "final" = "final"): Promise<RiskBoardData> {
+  const { data } = await apiClient.get<RiskBoardData>("/api/risk/board", {
+    params: { gradeMode },
+  });
   return data;
 }
 
@@ -45,19 +47,22 @@ export interface HeatmapStudent {
   factor: RiskFactor;
 }
 
-export async function fetchRiskHeatmap(): Promise<HeatmapData> {
-  const { data } = await apiClient.get<HeatmapData>("/api/risk/heatmap");
+export async function fetchRiskHeatmap(gradeMode: "raw" | "final" = "final"): Promise<HeatmapData> {
+  const { data } = await apiClient.get<HeatmapData>("/api/risk/heatmap", {
+    params: { gradeMode },
+  });
   return data;
 }
 
 export async function fetchSectionFactorStudents(
   sectionId: string,
   factor: RiskFactor,
-  termId: string
+  termId: string,
+  gradeMode: "raw" | "final" = "final"
 ): Promise<HeatmapStudent[]> {
   const { data } = await apiClient.get<{ students: HeatmapStudent[] }>(
     `/api/risk/sections/${sectionId}/students`,
-    { params: { termId, factor } }
+    { params: { termId, factor, gradeMode } }
   );
   return data.students;
 }
@@ -124,14 +129,14 @@ export function useLowRiskStudents(pageSize = 15) {
   return { students, total, page, totalPages, setPage, loading, error };
 }
 
-export function useRiskHeatmap() {
+export function useRiskHeatmap(gradeMode: "raw" | "final" = "final") {
   const [data, setData] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchRiskHeatmap()
+    fetchRiskHeatmap(gradeMode)
       .then((res) => {
         if (!cancelled) setData(res);
       })
@@ -152,19 +157,19 @@ export function useRiskHeatmap() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [gradeMode]);
 
   return { data, loading, error };
 }
 
-export function useRiskBoard() {
+export function useRiskBoard(gradeMode: "raw" | "final" = "final") {
   const [data, setData] = useState<RiskBoardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchRiskBoard()
+    fetchRiskBoard(gradeMode)
       .then((res) => {
         if (!cancelled) setData(res);
       })
@@ -185,7 +190,7 @@ export function useRiskBoard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [gradeMode]);
 
   return { data, loading, error };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { AlertTriangle, Activity } from "lucide-react";
 import { StatCard } from "./components/StatCard";
 import { RiskLevelDonut } from "./components/RiskLevelDonut";
@@ -8,10 +9,12 @@ import { RiskFactorHeatmap } from "./components/RiskFactorHeatmap";
 import { OutcomeSummary } from "./components/OutcomeSummary";
 import { LowRiskStudents } from "./components/LowRiskStudents";
 import { useRiskBoard } from "./riskBoard";
+import { useGradeMode } from "../grade-mode-context";
 import styles from "./risk.module.css";
 
 export default function PrincipalRiskBoardPage() {
-  const { data, loading, error } = useRiskBoard();
+  const { gradeMode } = useGradeMode();
+  const { data, loading, error } = useRiskBoard(gradeMode);
 
   const totalAtRiskFlags = data?.kpis.totalAtRiskFlags ?? 0;
   const highRiskStudents = data?.kpis.highRiskStudents ?? 0;
@@ -55,7 +58,7 @@ export default function PrincipalRiskBoardPage() {
 
       <div className={styles.body}>
         <div className={styles.main}>
-          <RiskFactorHeatmap />
+          <RiskFactorHeatmap gradeMode={gradeMode} />
         </div>
         <aside className={styles.rail}>
           <OutcomeSummary

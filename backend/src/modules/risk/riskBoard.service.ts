@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel, OutcomeStatus } from "@prisma/client";
-import { resolveActiveTermId } from "../../services/risk.js";
+import { resolveActiveTermId, type GradeMode } from "../../services/risk.js";
 
 export interface RiskBoardResult {
   kpis: {
@@ -24,7 +24,11 @@ export interface RiskBoardResult {
 
 // PLAN.md §6.3 — principal board overview (O4). Aggregates the active school
 // year's student risk state plus per-term snapshots for the trend line.
-export async function getRiskBoard(): Promise<RiskBoardResult> {
+// `gradeMode` selects whether the academic factor uses final (transmuted) or
+// raw computed averages.
+export async function getRiskBoard(
+  gradeMode: GradeMode = "final"
+): Promise<RiskBoardResult> {
   const activeYear = await prisma.schoolYear.findFirst({
     where: { isActive: true },
     select: { id: true },
@@ -50,11 +54,17 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
   const Students = await prisma.studentProfile.findMany({
     where: schoolYearId ? { section: { schoolYearId } } : undefined,
     select: {
-      finalGrades: { where: { termId: activeTermId ?? undefined }, select: { transmutedGrade: true } },
+      finalGrades: {
+        where: { termId: activeTermId ?? undefined },
+        select: { computedAverage: true, transmutedGrade: true },
+      },
       attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
       anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
     },
   });
+
+  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
+    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
 
   // Level distribution + factor totals are both derived live from the same
   // factor logic (>=2 = High, 1 = Moderate, 0 = Low) so the board and the
@@ -69,7 +79,7 @@ export async function getRiskBoard(): Promise<RiskBoardResult> {
   for (const s of Students) {
     const avg =
       s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
+        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
           s.finalGrades.length
         : 100;
     const aFlag = avg < 75;

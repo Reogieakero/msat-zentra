@@ -21,10 +21,14 @@ export interface RiskResult {
 // PLAN.md §6.3 — live recompute. Returns flags + level without writing.
 export async function evaluateRisk(
   studentId: string,
-  termId: string
+  termId: string,
+  gradeMode: GradeMode = "final"
 ): Promise<{ academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult }> {
   const [finalGrades, attendance, anecdotals, profile] = await Promise.all([
-    prisma.finalGrade.findMany({ where: { studentId, termId }, select: { transmutedGrade: true } }),
+    prisma.finalGrade.findMany({
+      where: { studentId, termId },
+      select: { computedAverage: true, transmutedGrade: true },
+    }),
     prisma.attendanceRecord.findMany({ where: { studentId, termId }, select: { status: true } }),
     prisma.anecdotalRecord.count({ where: { studentId, termId } }),
     prisma.studentProfile.findUnique({
@@ -34,7 +38,7 @@ export async function evaluateRisk(
   ]);
 
   const academicFlag = finalGrades.length > 0
-    ? finalGrades.reduce((s, g) => s + (g.transmutedGrade ?? 0), 0) / finalGrades.length < 75
+    ? finalGrades.reduce((s, g) => s + (gradeValue(g, gradeMode) ?? 0), 0) / finalGrades.length < 75
     : false;
 
   const attPresent = attendance.filter((a) => a.status === "present").length;
@@ -55,8 +59,21 @@ export interface RiskFactors {
   behavioralFlag: boolean;
 }
 
+export type GradeMode = "raw" | "final";
+
+// A subject grade with both the raw (pre-transmutation) average and the final
+// transmuted grade, so the academic flag can be recomputed on either basis.
+export interface RiskGrade {
+  computedAverage: number | null;
+  transmutedGrade: number | null;
+}
+
 export interface FactorInputs {
-  finalGrades: { transmutedGrade: number | null }[];
+  finalGrades: RiskGrade[];
+  // "final" = recompute academic risk from each subject's transmutedGrade
+  // (DepEd transmuted). "raw" = recompute from each subject's computedAverage
+  // (the raw weighted component average, before transmutation).
+  gradeMode?: GradeMode;
   attendance: { status: string }[];
   anecdotalCount: number;
   // Enrolled headcount of the student's section. The attendance flag uses
@@ -65,15 +82,20 @@ export interface FactorInputs {
   enrolled: number;
 }
 
+// Picks the grade value used for the academic flag given the selected basis.
+function gradeValue(g: RiskGrade, mode: GradeMode): number | null {
+  return mode === "raw" ? g.computedAverage : g.transmutedGrade;
+}
+
 // Pure recompute of risk flags + level from already-fetched data. Mirrors the
 // DB-backed evaluateRisk() rule so every endpoint agrees on a single source of
 // truth (>=2 = High, 1 = Moderate, 0 = Low). Used by overview/academics so the
 // stored, possibly-stale riskLevel column is never trusted directly.
 export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
-  const { finalGrades, attendance, anecdotalCount, enrolled } = inputs;
+  const { finalGrades, gradeMode = "final", attendance, anecdotalCount, enrolled } = inputs;
   const academicFlag =
     finalGrades.length > 0
-      ? finalGrades.reduce((s, g) => s + (g.transmutedGrade ?? 0), 0) /
+      ? finalGrades.reduce((s, g) => s + (gradeValue(g, gradeMode) ?? 0), 0) /
           finalGrades.length <
         75
       : false;

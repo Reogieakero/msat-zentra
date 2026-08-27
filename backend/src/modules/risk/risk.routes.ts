@@ -13,6 +13,11 @@ import {
   type RiskFactor,
 } from "./riskHeatmap.service.js";
 import { getRiskStudents } from "./riskStudents.service.js";
+import {
+  getInterventionStudents,
+  createIntervention,
+  patchIntervention,
+} from "./interventions.service.js";
 
 const router = Router();
 
@@ -21,9 +26,13 @@ router.get(
   "/board",
   requireAuth,
   requireRole("principal"),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      const board = await getRiskBoard();
+      const gradeMode =
+        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
+          ? (req.query.gradeMode as "raw" | "final")
+          : "final";
+      const board = await getRiskBoard(gradeMode);
       res.json(board);
     } catch (e) {
       next(e);
@@ -60,7 +69,11 @@ router.get(
       const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 1000));
       const section =
         typeof req.query.section === "string" ? req.query.section : undefined;
-      const result = await getRiskStudents(page, pageSize, section);
+      const gradeMode =
+        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
+          ? (req.query.gradeMode as "raw" | "final")
+          : "final";
+      const result = await getRiskStudents(page, pageSize, section, gradeMode);
       res.json(result);
     } catch (e) {
       next(e);
@@ -96,13 +109,17 @@ router.get(
   "/heatmap",
   requireAuth,
   requireRole("principal"),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
       const termId = await resolveActiveTermId();
       if (!termId) {
         return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       }
-      const heatmap = await getRiskHeatmap(termId);
+      const gradeMode =
+        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
+          ? (req.query.gradeMode as "raw" | "final")
+          : "final";
+      const heatmap = await getRiskHeatmap(termId, gradeMode);
       res.json(heatmap);
     } catch (e) {
       next(e);
@@ -119,6 +136,10 @@ router.get(
     try {
       const termId = typeof req.query.termId === "string" ? req.query.termId : null;
       const factor = req.query.factor as RiskFactor | undefined;
+      const gradeMode =
+        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
+          ? (req.query.gradeMode as "raw" | "final")
+          : "final";
       if (!termId) {
         return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
       }
@@ -128,7 +149,8 @@ router.get(
       const students = await getSectionFactorStudents(
         String(req.params.id),
         factor,
-        termId
+        termId,
+        gradeMode
       );
       res.json({ sectionId: String(req.params.id), termId, factor, students });
     } catch (e) {
@@ -174,6 +196,122 @@ router.get(
       for (const [, v] of attByStudent) if (enrolled > 0 && v.present / enrolled < 0.8) factors.attendance++;
       res.json({ sectionId: String(req.params.id), termId, factors });
     } catch (e) { next(e); }
+  }
+);
+
+// Principal: staff directory for intervention assignment (all staff roles).
+router.get(
+  "/staff",
+  requireAuth,
+  requireRole("principal"),
+  async (_req, res, next) => {
+    try {
+      const staff = await prisma.user.findMany({
+        where: {
+          role: {
+            in: [
+              "subject_teacher",
+              "adviser",
+              "nurse",
+              "adm_coordinator",
+              "guidance_counselor",
+              "record_keeper",
+              "registrar",
+            ],
+          },
+        },
+        select: { id: true, fullName: true, role: true },
+        orderBy: [{ role: "asc" }, { fullName: "asc" }],
+      });
+      res.json(staff);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal: at-risk students (RiskSnapshot) for the active term, each with
+// their current intervention link. This is the principal's intervention queue.
+router.get(
+  "/interventions",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+      const riskLevel =
+        typeof req.query.riskLevel === "string"
+          ? (req.query.riskLevel as "Low" | "Moderate" | "High")
+          : undefined;
+      const hasIntervention =
+        typeof req.query.hasIntervention === "string"
+          ? req.query.hasIntervention === "true"
+          : undefined;
+      const factor =
+        typeof req.query.factor === "string"
+          ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
+          : undefined;
+      const gradeMode =
+        typeof req.query.gradeMode === "string" &&
+        (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
+          ? (req.query.gradeMode as "raw" | "final")
+          : undefined;
+      const result = await getInterventionStudents({
+        riskLevel,
+        hasIntervention,
+        factor,
+        gradeMode,
+        page,
+        pageSize,
+      });
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal: create an intervention for an at-risk student and assign staff.
+router.post(
+  "/interventions",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const body = req.body ?? {};
+      const created = await createIntervention(req.user!.id, {
+        studentId: body.studentId,
+        recommendedAction: body.recommendedAction,
+        assignedTo: body.assignedTo,
+        riskLevelAtFlag: body.riskLevelAtFlag,
+      });
+      res.status(201).json(created);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal: approve/reject, set outcome (only when approved), or re-assign /
+// edit a pending intervention. Server-enforced in the service layer.
+router.patch(
+  "/interventions/:id",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const body = req.body ?? {};
+      const updated = await patchIntervention(String(req.params.id), {
+        approvalStatus: body.approvalStatus,
+        outcomeStatus: body.outcomeStatus,
+        assignedTo: body.assignedTo,
+        recommendedAction: body.recommendedAction,
+      });
+      res.json(updated);
+    } catch (e) {
+      next(e);
+    }
   }
 );
 

@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { resolveActiveTermId } from "../../services/risk.js";
+import { resolveActiveTermId, type GradeMode } from "../../services/risk.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -21,11 +21,13 @@ export interface RiskStudentsResult {
 }
 
 // Principal: full at-risk student list (status-only factors, no confidential
-// fields) for the active school year. Optional section filter.
+// fields) for the active school year. Optional section filter. `gradeMode`
+// selects whether the academic factor uses final (transmuted) or raw averages.
 export async function getRiskStudents(
   page: number,
   pageSize: number,
-  section?: string
+  section?: string,
+  gradeMode: GradeMode = "final"
 ): Promise<RiskStudentsResult> {
   const termId = await resolveActiveTermId();
   const schoolYear = await prisma.schoolYear.findFirst({
@@ -52,7 +54,10 @@ export async function getRiskStudents(
         riskCount: true,
         section: { select: { name: true, _count: { select: { students: true } } } },
         user: { select: { fullName: true } },
-        finalGrades: { where: termId ? { termId } : undefined, select: { transmutedGrade: true } },
+        finalGrades: {
+          where: termId ? { termId } : undefined,
+          select: { computedAverage: true, transmutedGrade: true },
+        },
         attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
       },
@@ -60,10 +65,13 @@ export async function getRiskStudents(
     prisma.studentProfile.count({ where }),
   ]);
 
+  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
+    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
+
   const students: RiskStudentRow[] = rows.map((s) => {
     const avg =
       s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
+        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
           s.finalGrades.length
         : 100;
     const present = s.attendanceRecords.filter((a) => a.status === "present").length;

@@ -40,7 +40,7 @@ router.get(
             where: schoolYearId ? { section: { schoolYearId } } : undefined,
             select: {
               section: { select: { _count: { select: { students: true } } } },
-              finalGrades: { where: termId ? { termId } : undefined, select: { transmutedGrade: true } },
+              finalGrades: { where: termId ? { termId } : undefined, select: { computedAverage: true, transmutedGrade: true } },
               attendanceRecords: {
                 where: termId ? { termId } : undefined,
                 select: { status: true },

@@ -36,6 +36,18 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  // Interventions page + drawer use the same mount/filter-triggered data-fetch
+  // effect pattern as the rest of the risk module (records, riskBoard); the
+  // effect body only kicks off an async fetch or resets transient action state.
+  {
+    files: [
+      "src/app/principal/risk/interventions/page.tsx",
+      "src/app/principal/risk/interventions/components/InterventionDrawer.tsx",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Vendored WebGL fluid simulation (PavelDoGreat / tkabalin, MIT). Heavy use of
   // `any` against the raw WebGL context and loop-scoped reassignment; leave it
   // as-is rather than rewrite a third-party lib.
