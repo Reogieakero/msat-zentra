@@ -1,0 +1,175 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+.rankFloat {
+  position: fixed;
+  right: calc(1rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  width: min(360px, calc(100vw - 2rem));
+  max-height: 80vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px -12px rgb(0 0 0 / 0.35);
+  animation: rankFloatIn 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rankFloatHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.rankFloatTitle {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.rankFloatClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, color 150ms ease-out;
+}
+
+.rankFloatClose:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  color: var(--foreground);
+}
+
+.rankFloatCloseIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.rankFloat > :global([data-slot="card"]) {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@keyframes rankFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rankFloat {
+    animation: none;
+  }
+}
+
+.awardSheet {
+  top: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  height: auto;
+  width: min(22rem, calc(100vw - 2rem));
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.awardSheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
+}
+
+.awardSheetBasis {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.awardSheetNote {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.error {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--destructive);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.skeletonHero,
+.skeletonBar,
+.skeletonTable {
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 60%);
+  animation: hrPulse 1.5s ease-in-out infinite;
+}
+
+.skeletonHero {
+  height: 9.5rem;
+}
+
+.skeletonBar {
+  height: 2.5rem;
+}
+
+.skeletonTable {
+  height: 18rem;
+}
+
+@keyframes hrPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

@@ -1,0 +1,152 @@
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.875rem 1rem 0.75rem;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.headTitle {
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tab {
+  min-width: 32px;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 150ms ease-out, background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.tab:hover {
+  color: var(--foreground);
+}
+
+.tabActive {
+  background-color: color-mix(in oklch, var(--primary), transparent 85%);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  color: var(--foreground);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.table thead th {
+  text-align: center;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background-color: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.table tbody td {
+  text-align: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  vertical-align: middle;
+}
+
+.row:hover td {
+  background-color: color-mix(in oklch, var(--muted), transparent 70%);
+}
+
+.nameCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 11rem;
+  text-align: center;
+}
+
+.name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--muted-foreground);
+}
+
+.numCol {
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.subjCol {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  width: 2.5rem;
+}
+
+.fail {
+  color: var(--destructive);
+  font-weight: 700;
+}
+
+.tierBadge {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.skeletonHead {
+  height: 2.5rem;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--muted), transparent 70%);
+}
+
+.skeletonRow {
+  height: 2.5rem;
+  margin: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background-color: color-mix(in oklch, var(--muted), transparent 60%);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

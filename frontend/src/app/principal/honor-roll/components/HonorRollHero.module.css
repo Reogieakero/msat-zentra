@@ -1,0 +1,118 @@
+.bannerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.bannerCardBox {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background-color: var(--card);
+}
+
+.bannerCardMain {
+  position: relative;
+  min-height: 9.5rem;
+  display: flex;
+}
+
+.bannerImage {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklch, var(--primary), transparent 8%),
+      color-mix(in oklch, var(--primary), transparent 42%)),
+    radial-gradient(120% 120% at 100% 0%, color-mix(in oklch, var(--primary), transparent 70%), transparent);
+  opacity: 0.16;
+}
+
+.bannerCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.bannerBadge {
+  align-self: flex-start;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.bannerCardSquare {
+  display: flex;
+  min-height: 9.5rem;
+}
+
+.bannerCardSquare .bannerCard {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.squareIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--primary);
+  margin-bottom: 0.35rem;
+}
+
+.squareLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.squareValue {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.squareHint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 1023px) {
+  .bannerRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .bannerCardMain {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .bannerRow {
+    grid-template-columns: 1fr;
+  }
+}
