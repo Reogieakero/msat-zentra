@@ -35,8 +35,8 @@ const REFERRAL_STAGES = [
 ] as const;
 
 function useReferralsAllBoard() {
-  const [cases, setCases] = React.useState<AdmCase[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [cases, setCases] = React.useState<AdmCase[]>(MOCK_ADM_CASES);
+  const [loading, setLoading] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [pendingAction, setPendingAction] = React.useState<{
     id: string;
@@ -51,10 +51,6 @@ function useReferralsAllBoard() {
     [cases]
   );
 
-  React.useEffect(() => {
-    setCases(MOCK_ADM_CASES);
-    setLoading(false);
-  }, []);
 
   const handleSign = (id: string) =>
     apiClient
