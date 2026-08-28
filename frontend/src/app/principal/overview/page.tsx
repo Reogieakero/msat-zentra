@@ -6,13 +6,14 @@ import { SchoolCard } from "./components/SchoolCard";
 import { BrowserWindow } from "./components/BrowserWindow";
 import { AttendanceHeatmap } from "./components/AttendanceHeatmap";
 import { ActionRequired } from "./components/ActionRequired";
-import { TABS, SCHOOL_NAME } from "./components/data";
+import { TABS, SCHOOL_NAME, tabValueFor } from "./components/data";
 import type { TabDef, OverviewData } from "./components/data";
 import { apiClient } from "@/lib/api/client";
 import styles from "./overview.module.css";
 
 const TAB_DEFS: TabDef[] = TABS.map((t) => ({
   ...t,
+  value: 0,
   icon:
     t.id === "anecdotal"
       ? NotebookPen
@@ -56,7 +57,9 @@ export default function PrincipalOverviewPage() {
           kpis={data?.kpis ?? kpisFallback}
           loading={!data && !error}
         />
-        <BrowserWindow tabs={TAB_DEFS} />
+        <BrowserWindow
+          tabs={TAB_DEFS.map((t) => ({ ...t, value: tabValueFor(t.id, data) }))}
+        />
       </div>
       {error ? <p className={styles.error}>{error}</p> : null}
       <AttendanceHeatmap />

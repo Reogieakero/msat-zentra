@@ -76,7 +76,7 @@ export function BrowserWindow({ tabs }: { tabs: TabDef[] }) {
                   <tab.icon size={20} />
                 </span>
                 <span className={styles.tabStatValue}>
-                  {tab.value.toLocaleString()}
+                  {(tab.value ?? 0).toLocaleString()}
                 </span>
               </div>
               <p className={styles.tabHint}>{tab.hint}</p>

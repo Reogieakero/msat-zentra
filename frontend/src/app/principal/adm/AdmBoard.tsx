@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
-import { fetchAdmDashboard, type AdmDashboard } from "./api";
+import { fetchAdmDashboard, fetchAdmReferrals, type AdmDashboard } from "./api";
 import { useMinLoading } from "./useMinLoading";
 import modal from "./components/admModal.module.css";
 import {
@@ -72,39 +72,44 @@ function useAdmBoard() {
   const [dashboard, setDashboard] = React.useState<AdmDashboard | null>(null);
 
   const load = React.useCallback((signal?: AbortSignal) => {
-    return fetchAdmDashboard(signal)
-      .then((data) => {
-        if (!data) return; // aborted
-        setDashboard(data);
-        setCases(
-          data.latestReferred.map<AdmCase>((r) => ({
-            id: r.id,
-            student: r.student,
-            lrn: r.lrn,
-            grade: r.grade,
-            section: "",
-            stage: r.stage,
-            eligibilityStatus:
-              r.eligibilityStatus === "eligible"
-                ? "eligible"
-                : r.eligibilityStatus === "ineligible"
-                ? "ineligible"
-                : "pending",
-            meetingAttended: false,
-            modulesSubmitted: 0,
-            modulesTotal: 0,
-            deviceIssued: false,
-            preparedBy: r.preparedBy,
-            datePrepared: "",
-            forms: r.forms.map((f) => ({ id: f.id, formType: f.formType, title: f.title, status: f.status })),
-            approvedBy: r.approvedBy,
-            approvalDate: null,
-          }))
-        );
+    // KPIs + stage breakdown come from the dashboard; the case list is sourced
+    // from the same /referrals/all endpoint the "All Referrals" page uses, so
+    // the board and the full list can never diverge.
+    return Promise.all([
+      fetchAdmDashboard(signal),
+      fetchAdmReferrals(1, 1000, signal),
+    ])
+      .then(([dash, referrals]) => {
+        if (!dash) return; // aborted
+        setDashboard(dash);
+        const rows = (referrals?.rows ?? []).map<AdmCase>((r) => ({
+          id: r.id,
+          student: r.student,
+          lrn: r.lrn,
+          grade: r.grade,
+          section: "",
+          stage: r.stage,
+          eligibilityStatus:
+            r.eligibilityStatus === "eligible"
+              ? "eligible"
+              : r.eligibilityStatus === "ineligible"
+              ? "ineligible"
+              : "pending",
+          meetingAttended: false,
+          modulesSubmitted: 0,
+          modulesTotal: 0,
+          deviceIssued: false,
+          preparedBy: r.preparedBy,
+          datePrepared: r.datePrepared,
+          forms: r.forms.map((f) => ({ id: f.id, formType: f.formType, title: f.title, status: f.status })),
+          approvedBy: r.approvedBy,
+          approvalDate: r.approvalDate,
+        }));
+        setCases(rows);
       })
       .catch((err: unknown) => {
         if ((err as { code?: string })?.code === "ERR_CANCELED") return;
-        console.error("[/api/adm/dashboard] fetch failed:", err);
+        console.error("[/api/adm] fetch failed:", err);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -143,7 +148,7 @@ function useAdmBoard() {
   const allReferred = React.useMemo(
     () =>
       [...cases].filter((c) =>
-        ["referred", "eligibility", "consultation", "principal_approval"].includes(
+        ["meeting_parents", "home_visitation", "certification", "principal_approval"].includes(
           c.stage
         )
       ),

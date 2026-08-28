@@ -169,7 +169,7 @@ function useReferralsAllBoard() {
     () =>
       [...cases]
         .filter((c) => (REFERRAL_STAGES as readonly string[]).includes(c.stage))
-        .sort((a, b) => b.datePrepared.localeCompare(a.datePrepared)),
+        .sort((a, b) => (b.datePrepared ?? "").localeCompare(a.datePrepared ?? "")),
     [cases]
   );
 

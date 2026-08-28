@@ -41,8 +41,13 @@ router.get(
         count: profiles.filter((p) => p.stage === s.stage).length,
       }));
 
+      // Gate matches isAwaitingSignature() on the frontend so the KPI only
+      // counts cases the sign action can actually act on.
       const pendingSignature = profiles.filter(
-        (p) => !p.approvedBy && p.eligibilityStatus === "eligible"
+        (p) =>
+          !p.approvedBy &&
+          p.eligibilityStatus === "eligible" &&
+          p.stage === "principal_approval"
       ).length;
       const signed = profiles.filter((p) => p.approvedBy).length;
 
@@ -68,6 +73,7 @@ router.get(
             | "principal_approval",
           eligibilityStatus: p.eligibilityStatus,
           preparedBy: p.preparedByUser.fullName,
+          datePrepared: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : null,
           approvedBy: p.approvedBy ? "Principal" : null,
           forms: p.forms.map((f) => ({
             id: f.id,
@@ -90,6 +96,7 @@ router.get(
 );
 
 const GRADE_LABEL: Record<string, string> = {
+  G7: "Grade 7",
   G8: "Grade 8",
   G9: "Grade 9",
   G10: "Grade 10",
@@ -181,7 +188,7 @@ router.get(
               ? ("ineligible" as const)
               : ("pending" as const),
           preparedBy: p.preparedByUser.fullName,
-          datePrepared: null,
+          datePrepared: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : null,
           approvedBy: p.approvedBy ? "Principal" : null,
           approvalDate: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : null,
           forms: p.forms.map((f) => ({

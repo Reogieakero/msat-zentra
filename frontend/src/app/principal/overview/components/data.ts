@@ -87,40 +87,55 @@ export type TabDef = {
   label: string;
   icon: ComponentType<{ className?: string; size?: number }>;
   href: string;
-  value: number;
+  value?: number;
   hint: string;
 };
 
+// Tab definitions only — counts and hrefs are supplied live from /api/overview
+// so the Overview never displays hardcoded/mock numbers.
 export const TABS: Omit<TabDef, "icon">[] = [
   {
     id: "anecdotal",
     label: "Anecdotal Records",
     href: "/principal/risk",
-    value: 312,
     hint: "By category and recently logged learners",
   },
   {
     id: "attendance",
     label: "Attendances",
-    href: "/principal/risk",
-    value: 47,
+    href: "/principal/risk/heatmaps/attendance",
     hint: "Students below 80% present",
   },
   {
     id: "adm",
     label: "ADM",
     href: "/principal/adm",
-    value: 18,
     hint: "Active learner profiles",
   },
   {
     id: "sf10",
     label: "SF10",
-    href: "/principal/reports",
-    value: 1240,
+    href: "/principal/academics",
     hint: "Cumulative learner forms",
   },
 ];
+
+// Maps each tab to its live count from the /api/overview response.
+export function tabValueFor(id: TabId, data: OverviewData | null): number {
+  if (!data) return 0;
+  switch (id) {
+    case "anecdotal":
+      return data.kpis.anecdotals;
+    case "attendance":
+      return data.attendanceWatch;
+    case "adm":
+      return data.admPending;
+    case "sf10":
+      return data.kpis.enrollment;
+    default:
+      return 0;
+  }
+}
 
 export const SCHOOL_NAME = "Mati School of Arts and Trades";
 

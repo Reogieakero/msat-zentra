@@ -528,6 +528,7 @@ model AdmLearnerProfile {
   id                  String          @id @default(uuid())
   studentId           String
   referralId          String
+  createdAt           DateTime        @default(now())
   eligibilityStatus   AdmEligibility  @default(pending)
   stage               AdmStage        @default(anecdotal)
   preparedBy          String

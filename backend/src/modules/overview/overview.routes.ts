@@ -40,7 +40,7 @@ router.get(
             where: schoolYearId ? { section: { schoolYearId } } : undefined,
             select: {
               section: { select: { _count: { select: { students: true } } } },
-              finalGrades: { where: termId ? { termId } : undefined, select: { computedAverage: true, transmutedGrade: true } },
+              finalGrades: { where: termId ? { termId } : undefined, select: { computedAverage: true, transmutedGrade: true, lockStatus: true, finalizedAt: true } },
               attendanceRecords: {
                 where: termId ? { termId } : undefined,
                 select: { status: true },
@@ -74,16 +74,18 @@ router.get(
         if (flags.behavioralFlag) behavior++;
         const level = levelFromFlags(flags);
         if (isAtRisk(level)) atRiskStudents++;
-        // Honor roll eligibility uses the same DepEd classifier as the Academics
-        // page (general average + lowest subject). A student classifies into a
-        // tier if their current averages meet a DepEd band.
-        const gGrades = s.finalGrades.map((g) => g.transmutedGrade ?? 100);
-        const avg =
-          gGrades.length > 0
-            ? gGrades.reduce((sum, g) => sum + g, 0) / gGrades.length
-            : 100;
-        const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
-        if (classifyHonorRoll(avg, lowest)) honorRoll++;
+        // Honor roll uses the SAME rule as the Academics page: every subject
+        // grade must be locked/finalized and the student must not be High risk.
+        const finals = s.finalGrades;
+        const allLocked =
+          finals.length > 0 &&
+          finals.every((g) => g.lockStatus === "locked" || g.finalizedAt != null);
+        if (allLocked && level !== "High") {
+          const gGrades = finals.map((g) => g.transmutedGrade ?? 100);
+          const avg = gGrades.reduce((sum, g) => sum + g, 0) / gGrades.length;
+          const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
+          if (classifyHonorRoll(avg, lowest)) honorRoll++;
+        }
       }
 
       // Factor totals (counts of students triggering each flag) — these align
