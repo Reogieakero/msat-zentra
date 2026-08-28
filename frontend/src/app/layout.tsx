@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "Zentra SIS for Mati School of Arts and Trades — learner records, grading, attendance, and early intervention.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
