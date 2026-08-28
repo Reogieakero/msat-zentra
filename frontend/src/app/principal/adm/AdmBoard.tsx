@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
 import { fetchAdmDashboard, type AdmDashboard } from "./api";
+import { useMinLoading } from "./useMinLoading";
 import modal from "./components/admModal.module.css";
 import {
   PieChart,
@@ -30,7 +31,7 @@ import {
   isAwaitingSignature,
   type AdmCase,
   type AdmPipelineStage,
-} from "./mockData";
+} from "./adm";
 import { FormIcon } from "./components/FormIcon";
 import layout from "./components/admLayout.module.css";
 import header from "./components/admHeader.module.css";
@@ -62,7 +63,7 @@ const STAGE_BAR_COLORS: Record<AdmPipelineStage, string> = {
 
 function useAdmBoard() {
   const [cases, setCases] = React.useState<AdmCase[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = useMinLoading(600);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [pendingAction, setPendingAction] = React.useState<{
     id: string;

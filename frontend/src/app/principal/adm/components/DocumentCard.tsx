@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Folder, FileText } from "lucide-react";
-import { ADM_DOCUMENTS, type AdmDocument } from "../mockData";
+import { ADM_DOCUMENTS, type AdmDocument } from "../adm";
 import docs from "./admDocs.module.css";
 import legend from "./admLegend.module.css";
 

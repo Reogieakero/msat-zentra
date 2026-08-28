@@ -3,8 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { AdmBrowser, CaseTable } from "../../AdmBoard";
-import { type AdmCase } from "../../mockData";
+import { type AdmCase } from "../../adm";
 import { apiClient } from "@/lib/api/client";
+import { useMinLoading } from "../../useMinLoading";
 import {
   fetchAdmReferrals,
   type AdmReferralRow,
@@ -111,7 +112,7 @@ function useReferralsAllBoard() {
     }
     window.localStorage.setItem("adm_referrals_stage", stage);
   }, [stage]);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = useMinLoading(600);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [pendingAction, setPendingAction] = React.useState<{

@@ -16,7 +16,7 @@ import { SectionStudentsPanel } from "./components/SectionStudentsPanel";
 import { StudentSubjectBars } from "./components/StudentSubjectBars";
 import { AverageGradeByLevel } from "./components/AverageGradeByLevel";
 import { GradeBreakdownDrawer } from "./components/GradeBreakdownDrawer";
-import { subjectColumns, type StudentRow, type AcademicsMock } from "./mockData";
+import { subjectColumns, type StudentRow, type AcademicsMock } from "./academics-data";
 import { apiClient } from "@/lib/api/client";
 import { useGradeMode } from "../grade-mode-context";
 import { Users as UsersIcon, X } from "lucide-react";

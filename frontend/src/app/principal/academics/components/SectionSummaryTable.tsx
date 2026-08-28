@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronRight } from "lucide-react";
-import type { SectionSummary } from "../mockData";
+import type { SectionSummary } from "../academics-data";
 import styles from "./SectionSummaryTable.module.css";
 import shared from "../academics.module.css";
 

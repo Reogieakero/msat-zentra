@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ADM_DOCUMENTS,
   stageLabel,
   type AdmCase,
-} from "../../mockData";
+} from "../../adm";
 import { AdmBrowser } from "../../AdmBoard";
 import { DOC_LEGEND } from "../../components/DocumentCard";
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +18,18 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { fetchAdmApprovals, type AdmApprovalRow } from "../../api";
+import { useMinLoading } from "../../useMinLoading";
 import styles from "./approvals.module.css";
 import legend from "../../components/admLegend.module.css";
 
 const LEGEND_LABEL: Record<string, string> = Object.fromEntries(
   DOC_LEGEND.map((item) => [item.color.toLowerCase(), item.label])
 );
+
+function titleCase(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 function toAdmCase(r: AdmApprovalRow): AdmCase {
   return {
@@ -47,7 +54,7 @@ function toAdmCase(r: AdmApprovalRow): AdmCase {
 
 function useApprovalsBoard() {
   const [approved, setApproved] = React.useState<AdmCase[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = useMinLoading(600);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -155,7 +162,17 @@ export function ApprovalsBoard() {
             {error ? (
               <p className={styles.empty}>{error}</p>
             ) : loading ? (
-              <p className={styles.empty}>Loading approved profiles…</p>
+              <div className={styles.list}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className={styles.listItem}>
+                    <Skeleton className={styles.skelAvatar} />
+                    <div className={styles.listMain}>
+                      <Skeleton className={styles.skelLine} />
+                      <Skeleton className={styles.skelLineSm} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <Command className={styles.command}>
                 <CommandInput
@@ -180,10 +197,9 @@ export function ApprovalsBoard() {
                       </span>
                       <span className={styles.listMain}>
                         <span className={styles.listName}>{c.student}</span>
-                        <span className={styles.listMeta}>
-                          {c.id} · {c.approvedBy} · {c.approvalDate}
-                        </span>
+                        <span className={styles.listMeta}>{c.id}</span>
                       </span>
+                      <span className={styles.listTime}>{c.approvalDate}</span>
                     </CommandItem>
                   ))}
                   <CommandEmpty className={styles.empty}>No matching profiles.</CommandEmpty>
@@ -196,7 +212,29 @@ export function ApprovalsBoard() {
 
       <div className={styles.rightPanel}>
         {loading ? (
-          <p className={styles.empty}>Loading…</p>
+          <div className={styles.detailSkeleton}>
+            <div className={styles.docHead}>
+              <div className={styles.skelHeadText}>
+                <Skeleton className={styles.skelTitle} />
+                <Skeleton className={styles.skelLine} />
+              </div>
+              <Skeleton className={styles.skelBadge} />
+            </div>
+            <div className={styles.folderRow}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className={styles.skelFolder} />
+              ))}
+            </div>
+            <div className={styles.progressSection}>
+              <Skeleton className={styles.skelLine} />
+              <div className={styles.progressStats}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className={styles.skelStat} />
+                ))}
+              </div>
+              <Skeleton className={styles.skelModule} />
+            </div>
+          </div>
         ) : error ? (
           <p className={styles.empty}>{error}</p>
         ) : selected ? (
@@ -284,7 +322,7 @@ export function ApprovalsBoard() {
                         : styles.statValueNo
                     }`}
                   >
-                    {selected.eligibilityStatus}
+                    {titleCase(selected.eligibilityStatus)}
                   </span>
                 </div>
                 <div className={styles.statCard} onMouseMove={handleBlob}>

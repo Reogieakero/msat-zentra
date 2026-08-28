@@ -13,7 +13,7 @@ import type {
   SectionSummary,
   HonorRollCandidate,
   PotentialHonorCandidate,
-} from "../mockData";
+} from "../academics-data";
 import styles from "./AcademicsKpis.module.css";
 
 export type KpiFocus = "honor" | "potential";

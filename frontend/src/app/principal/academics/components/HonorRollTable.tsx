@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { HonorRollCandidate, PotentialHonorCandidate } from "../mockData";
+import type { HonorRollCandidate, PotentialHonorCandidate } from "../academics-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X } from "lucide-react";
 import styles from "./HonorRollTable.module.css";

@@ -107,7 +107,7 @@ export const ADM_STAGE_FLOW: AdmStageMeta[] = [
     owner: "principal",
     principalAction: true,
     description:
-      "Principal approves the certification and authorizes release of the module, scheduling of module distribution and submission, and follow-up counseling / psychosocial intervention.",
+      "Principal signs the certification and authorizes release of the module, scheduling of module distribution and submission, and follow-up counseling / psychosocial intervention.",
   },
   {
     stage: "enrollment_monitoring",

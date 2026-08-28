@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Check } from "lucide-react";
-import { ADM_PIPELINE, type AdmPipelineStage } from "../mockData";
+import { ADM_PIPELINE, type AdmPipelineStage } from "../adm";
 import pipeline from "./admPipeline.module.css";
 
 export function PipelineStrip({

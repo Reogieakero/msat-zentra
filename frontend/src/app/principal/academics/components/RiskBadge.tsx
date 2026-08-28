@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { RiskLevel } from "../mockData";
+import type { RiskLevel } from "../academics-data";
 import styles from "./RiskBadge.module.css";
 
 const RISK_CLASS: Record<RiskLevel, string> = {

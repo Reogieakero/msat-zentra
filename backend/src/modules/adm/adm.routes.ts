@@ -352,11 +352,11 @@ router.post(
       if (profile.approvedBy) throw new AppError(409, "ALREADY_APPROVED", "Already signed by principal");
       if (profile.eligibilityStatus !== "eligible")
         throw new AppError(409, "NOT_CERTIFIED", "Case must pass Recommendation & Certification before School Head approval");
-      if (profile.stage !== "certification")
-        throw new AppError(409, "NOT_CERTIFIED", "Case must be at Recommendation & Certification before School Head approval");
+      if (profile.stage !== "principal_approval")
+        throw new AppError(409, "NOT_AT_SCHOOL_HEAD", "Case must be at School Head (Principal) Approval before signing");
       const updated = await prisma.admLearnerProfile.update({
         where: { id: profile.id },
-        data: { approvedBy: req.user!.id, approvedAt: new Date(), stage: "principal_approval" },
+        data: { approvedBy: req.user!.id, approvedAt: new Date(), stage: "enrollment_monitoring" },
       });
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "Principal final signature", oldValue: { approvedBy: null }, newValue: { approvedBy: req.user!.id } });
       res.json(updated);
@@ -389,7 +389,7 @@ router.post(
           approvedBy: null,
           approvedAt: null,
           eligibilityStatus: "pending",
-          stage: "certification",
+          stage: "principal_approval",
         },
       });
       await writeAudit({

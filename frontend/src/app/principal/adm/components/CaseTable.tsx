@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { isAwaitingSignature, stageLabel, type AdmCase } from "../mockData";
+import { isAwaitingSignature, canReturn, stageLabel, type AdmCase } from "../adm";
 import { FormIcon } from "./FormIcon";
 import table from "./admTable.module.css";
 import actions from "./admActions.module.css";
@@ -87,28 +87,31 @@ export function CaseTable({
                 <td className={shared.mono}>
                   {awaiting ? "ready to sign" : c.approvalDate ?? c.datePrepared}
                 </td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  {awaiting ? (
-                    <div className={actions.rowActions}>
-                      <button
-                        type="button"
-                        className={actions.rowSign}
-                        onClick={() => onRequestAction(c.id, "sign")}
-                      >
-                        Sign
-                      </button>
-                      <button
-                        type="button"
-                        className={actions.rowReturn}
-                        onClick={() => onRequestAction(c.id, "return")}
-                      >
-                        Return
-                      </button>
-                    </div>
-                  ) : (
-                    <span className={actions.rowActionEmpty}>—</span>
-                  )}
-                </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    {awaiting ? (
+                      <div className={actions.rowActions}>
+                        <button
+                          type="button"
+                          className={actions.rowSign}
+                          onClick={() => onRequestAction(c.id, "sign")}
+                        >
+                          Sign
+                        </button>
+                      </div>
+                    ) : canReturn(c) ? (
+                      <div className={actions.rowActions}>
+                        <button
+                          type="button"
+                          className={actions.rowReturn}
+                          onClick={() => onRequestAction(c.id, "return")}
+                        >
+                          Return
+                        </button>
+                      </div>
+                    ) : (
+                      <span className={actions.rowActionEmpty}>—</span>
+                    )}
+                  </td>
               </tr>
             );
           })}

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type SectionSummary } from "../mockData";
+import { type SectionSummary } from "../academics-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./AverageGradeByLevel.module.css";
 import shared from "../academics.module.css";

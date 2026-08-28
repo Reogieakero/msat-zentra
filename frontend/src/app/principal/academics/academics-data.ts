@@ -53,7 +53,7 @@ export interface PotentialHonorCandidate {
   unlockedSubjects: number;
 }
 
-export interface AcademicsMock {
+export interface AcademicsSummary {
   termLabel: string;
   sections: SectionSummary[];
   passFailByGrade: PassFailByGrade[];
@@ -61,6 +61,10 @@ export interface AcademicsMock {
   potentialHonorRoll: PotentialHonorCandidate[];
 }
 
+/** Alias retained for the academics page response type. */
+export type AcademicsMock = AcademicsSummary;
+
+/** Subject name → short display code used in compact student cards. */
 export const SUBJECT_CODES: Record<string, string> = {
   English: "ENG",
   Mathematics: "MATH",
@@ -73,6 +77,7 @@ export const SUBJECT_CODES: Record<string, string> = {
   ICT: "ICT",
 };
 
+/** Fallback subject column order when no section has been selected yet. */
 export const subjectColumns: string[] = [
   "English",
   "Mathematics",
