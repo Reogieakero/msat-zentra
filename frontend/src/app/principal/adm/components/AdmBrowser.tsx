@@ -10,7 +10,7 @@ export function AdmBrowser({
   action,
   children,
 }: {
-  tabs: { id: string; label: string }[];
+  tabs: { id: string; label: string; count?: number }[];
   activeTab: string;
   onTabChange: (id: string) => void;
   action?: React.ReactNode;
@@ -35,6 +35,15 @@ export function AdmBrowser({
               onClick={() => onTabChange(tab.id)}
             >
               {tab.label}
+              {typeof tab.count === "number" && (
+                <span
+                  className={`${browser.tabBadge} ${
+                    activeTab === tab.id ? browser.tabBadgeActive : ""
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>

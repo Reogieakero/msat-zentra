@@ -1,10 +1,10 @@
 export type AdmPipelineStage =
   | "anecdotal"
   | "consultation"
-  | "referred"
-  | "eligibility"
-  | "principal_approval"
+  | "meeting_parents"
+  | "home_visitation"
   | "certification"
+  | "principal_approval"
   | "enrollment_monitoring"
   | "completion";
 
@@ -55,7 +55,7 @@ export const ADM_PIPELINE: {
       "Routed to Guidance Counselor, School Nurse, or Learner Rights and Protection Committee. Means of verification: Guidance and CPP Forms, HEEADSS & CSSRS, Referral Form.",
   },
   {
-    stage: "referred",
+    stage: "meeting_parents",
     order: 3,
     label: "Meeting with Parents/Guardians",
     owner: "ADM Coordinator & Teachers",
@@ -64,7 +64,7 @@ export const ADM_PIPELINE: {
       "Meeting with Parents/Legal Guardians attended by the ADM Coordinator and Teachers. Decision point: did parents attend? YES → Minutes of Meeting & Attendance Logbook. NO → Home Visitation (HV Form).",
   },
   {
-    stage: "eligibility",
+    stage: "home_visitation",
     order: 4,
     label: "Home Visitation (if no meeting)",
     owner: "Guidance Counselor",
@@ -167,7 +167,7 @@ export const MOCK_ADM_CASES: AdmCase[] = [
     lrn: "11876543213",
     grade: "Grade 8",
     section: "8-D",
-    stage: "referred",
+    stage: "meeting_parents",
     eligibilityStatus: "pending",
     meetingAttended: false,
     modulesSubmitted: 0,
@@ -184,7 +184,7 @@ export const MOCK_ADM_CASES: AdmCase[] = [
     lrn: "11876543214",
     grade: "Grade 10",
     section: "10-A",
-    stage: "eligibility",
+    stage: "home_visitation",
     eligibilityStatus: "pending",
     meetingAttended: false,
     modulesSubmitted: 0,
@@ -201,7 +201,7 @@ export const MOCK_ADM_CASES: AdmCase[] = [
     lrn: "11876543215",
     grade: "Grade 12",
     section: "12-B",
-    stage: "referred",
+    stage: "meeting_parents",
     eligibilityStatus: "ineligible",
     meetingAttended: false,
     modulesSubmitted: 0,
@@ -401,3 +401,45 @@ export const ADM_DOCUMENTS: AdmDocument[] = [
     icon: "pdf",
   },
 ];
+
+/** Maps an ADM form type to its display color and label (mirrors FormIcon FORM_META). */
+const FORM_DOC_META: Record<
+  string,
+  { label: string; color: string }
+> = {
+  REFERRAL_FORM: { label: "Referral Form", color: "#ffc371" },
+  ANECDOTAL_REPORT: { label: "Anecdotal Report", color: "#4facfe" },
+  CERTIFICATION: { label: "Certification", color: "#00f2fe" },
+  MINUTES_OF_MEETING: { label: "Minutes of Meeting", color: "#a18cd1" },
+  HV_FORM: { label: "Home Visit Form", color: "#ff5f6d" },
+};
+
+/**
+ * Builds the document cards shown in the approval dialog from the files
+ * actually attached to an ADM case (its `forms`), instead of the static list.
+ */
+export function formsToDocuments(
+  forms: { id: string; formType: string; title: string; status: string }[] | undefined
+): AdmDocument[] {
+  if (!forms || forms.length === 0) return [];
+  return forms.map((f) => {
+    const meta = FORM_DOC_META[f.formType] ?? {
+      label: f.title || f.formType,
+      color: "var(--primary)",
+    };
+    const label = meta.label.replace(/\s+/g, "_");
+    const statusTag =
+      f.status === "verified"
+        ? "verified"
+        : f.status === "submitted"
+        ? "submitted"
+        : "pending";
+    return {
+      name: `${label}.pdf`,
+      type: "PDF",
+      size: statusTag === "verified" ? "verified" : "submitted",
+      color: meta.color,
+      icon: "pdf" as const,
+    };
+  });
+}

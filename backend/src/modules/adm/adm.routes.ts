@@ -6,7 +6,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
-import { ADM_STAGE_FLOW, ADM_STAGES } from "../../services/adm.js";
+import { ADM_STAGE_FLOW, ADM_STAGES, canTransition, type AdmStage } from "../../services/adm.js";
 
 const router = Router();
 
@@ -35,19 +35,10 @@ router.get(
         orderBy: { id: "desc" },
       });
 
-      const deriveStage = (p: {
-        approvedBy: string | null;
-        eligibilityStatus: string;
-      }): string => {
-        if (p.approvedBy) return "principal_approval";
-        if (p.eligibilityStatus === "eligible") return "eligibility";
-        return "referred";
-      };
-
       const stageBreakdown = ADM_STAGE_FLOW.map((s) => ({
         stage: s.stage,
         short: s.label,
-        count: profiles.filter((p) => deriveStage(p) === s.stage).length,
+        count: profiles.filter((p) => p.stage === s.stage).length,
       }));
 
       const pendingSignature = profiles.filter(
@@ -55,15 +46,26 @@ router.get(
       ).length;
       const signed = profiles.filter((p) => p.approvedBy).length;
 
+      const ACTIVE_STAGES = [
+        "meeting_parents",
+        "home_visitation",
+        "certification",
+        "principal_approval",
+      ];
+
       const latestReferred = profiles
-        .filter((p) => ["referred", "eligibility", "principal_approval"].includes(deriveStage(p)))
+        .filter((p) => ACTIVE_STAGES.includes(p.stage))
         .slice(0, 5)
         .map((p) => ({
           id: p.id,
           lrn: p.student.lrn,
           student: p.student.user.fullName,
           grade: p.student.gradeLevel,
-          stage: deriveStage(p) as "referred" | "eligibility" | "principal_approval",
+          stage: p.stage as
+            | "meeting_parents"
+            | "home_visitation"
+            | "certification"
+            | "principal_approval",
           eligibilityStatus: p.eligibilityStatus,
           preparedBy: p.preparedByUser.fullName,
           approvedBy: p.approvedBy,
@@ -103,7 +105,12 @@ const ELIGIBILITY_LABEL: Record<string, string> = {
 
 const PAGE_SIZE = 20;
 
-const REFERRAL_STAGES = ["referred", "eligibility", "consultation", "principal_approval"];
+const REFERRAL_STAGES = [
+  "meeting_parents",
+  "home_visitation",
+  "certification",
+  "principal_approval",
+];
 
 router.get(
   "/referrals/all",
@@ -127,15 +134,6 @@ router.get(
           ? stageParam
           : "";
 
-      const deriveStage = (p: {
-        approvedBy: string | null;
-        eligibilityStatus: string;
-      }): string => {
-        if (p.approvedBy) return "principal_approval";
-        if (p.eligibilityStatus === "eligible") return "eligibility";
-        return "referred";
-      };
-
       const profiles = await prisma.admLearnerProfile.findMany({
         include: {
           student: { include: { user: true } },
@@ -145,12 +143,10 @@ router.get(
         orderBy: { id: "desc" },
       });
 
-      const referred = profiles.filter((p) =>
-        REFERRAL_STAGES.includes(deriveStage(p))
-      );
+      const referred = profiles.filter((p) => REFERRAL_STAGES.includes(p.stage));
       const filtered = (q || stageFilter)
         ? referred.filter((p) => {
-            const stage = deriveStage(p);
+            const stage = p.stage;
             if (stageFilter && stage !== stageFilter) return false;
             if (q) {
               return (
@@ -165,12 +161,13 @@ router.get(
       const pageItems = filtered.slice(skip, skip + limit);
       const total = filtered.length;
 
+      const stageCounts: Record<string, number> = {};
+      for (const p of referred) {
+        stageCounts[p.stage] = (stageCounts[p.stage] ?? 0) + 1;
+      }
+
       const out = pageItems.map((p) => {
-        const stage = deriveStage(p) as
-          | "referred"
-          | "eligibility"
-          | "consultation"
-          | "principal_approval";
+        const stage = p.stage;
         const base = {
           id: p.id,
           lrn: p.student.lrn,
@@ -201,11 +198,89 @@ router.get(
       res.json({
         rows: out,
         total,
+        totalReferred: referred.length,
+        stageCounts,
         page,
         totalPages: Math.max(1, Math.ceil(total / limit)),
         limit,
       });
     } catch (e) { next(e); }
+  }
+);
+
+router.get(
+  "/approvals",
+  requireAuth,
+  requireRole("adm_coordinator", "principal"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = PAGE_SIZE;
+      const skip = (page - 1) * limit;
+      const q =
+        typeof req.query.q === "string" && req.query.q.trim()
+          ? req.query.q.trim().toLowerCase()
+          : "";
+
+      const profiles = await prisma.admLearnerProfile.findMany({
+        where: { approvedBy: { not: null } },
+        include: {
+          student: { include: { user: true } },
+          approvedByUser: true,
+          preparedByUser: true,
+          forms: { orderBy: { uploadedAt: "desc" } },
+        },
+        orderBy: { approvedAt: "desc" },
+      });
+
+      const filtered = q
+        ? profiles.filter(
+            (p) =>
+              p.student.user.fullName.toLowerCase().includes(q) ||
+              p.student.lrn.toLowerCase().includes(q) ||
+              p.id.toLowerCase().includes(q) ||
+              (p.approvedByUser?.fullName ?? "").toLowerCase().includes(q)
+          )
+        : profiles;
+      const total = filtered.length;
+      const pageItems = filtered.slice(skip, skip + limit);
+
+      const out = pageItems.map((p) => {
+        const base = {
+          id: p.id,
+          lrn: p.student.lrn,
+          student: p.student.user.fullName,
+          grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
+          section: p.student.sectionId ?? "",
+          eligibilityStatus:
+            p.eligibilityStatus === "eligible"
+              ? ("eligible" as const)
+              : p.eligibilityStatus === "ineligible"
+              ? ("ineligible" as const)
+              : ("pending" as const),
+          preparedBy: p.preparedByUser.fullName,
+          approvedBy: p.approvedByUser?.fullName ?? "Principal",
+          approvalDate: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : null,
+          forms: p.forms.map((f) => ({
+            id: f.id,
+            formType: f.formType,
+            title: f.title,
+            status: f.status,
+          })),
+        };
+        return req.user!.role === "principal" ? base : { ...base, studentId: p.studentId };
+      });
+
+      res.json({
+        rows: out,
+        total,
+        page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        limit,
+      });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 
@@ -275,9 +350,13 @@ router.post(
       const profile = await prisma.admLearnerProfile.findUnique({ where: { id: String(req.params.id) } });
       if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
       if (profile.approvedBy) throw new AppError(409, "ALREADY_APPROVED", "Already signed by principal");
+      if (profile.eligibilityStatus !== "eligible")
+        throw new AppError(409, "NOT_CERTIFIED", "Case must pass Recommendation & Certification before School Head approval");
+      if (profile.stage !== "certification")
+        throw new AppError(409, "NOT_CERTIFIED", "Case must be at Recommendation & Certification before School Head approval");
       const updated = await prisma.admLearnerProfile.update({
         where: { id: profile.id },
-        data: { approvedBy: req.user!.id, approvedAt: new Date() },
+        data: { approvedBy: req.user!.id, approvedAt: new Date(), stage: "principal_approval" },
       });
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "Principal final signature", oldValue: { approvedBy: null }, newValue: { approvedBy: req.user!.id } });
       res.json(updated);
@@ -310,6 +389,7 @@ router.post(
           approvedBy: null,
           approvedAt: null,
           eligibilityStatus: "pending",
+          stage: "certification",
         },
       });
       await writeAudit({
@@ -327,6 +407,71 @@ router.post(
         action: "return",
         message: "ADM profile returned by principal for revision.",
         sourceId: profile.id,
+      });
+      res.json(updated);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+const ROLE_FOR_STAGE: Record<AdmStage, string[]> = {
+  anecdotal: ["adviser"],
+  consultation: ["guidance_counselor", "nurse"],
+  meeting_parents: ["adm_coordinator"],
+  home_visitation: ["guidance_counselor"],
+  certification: ["adm_coordinator"],
+  principal_approval: ["principal"],
+  enrollment_monitoring: ["adm_coordinator"],
+  completion: ["adm_coordinator"],
+};
+
+const advanceSchema = z.object({
+  stage: z.enum(ADM_STAGES as [AdmStage, ...AdmStage[]]),
+});
+
+router.patch(
+  "/:id/stage",
+  requireAuth,
+  validate("body", advanceSchema),
+  async (req, res, next) => {
+    try {
+      const profile = await prisma.admLearnerProfile.findUnique({
+        where: { id: String(req.params.id) },
+      });
+      if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+      const target = req.body.stage as AdmStage;
+      if (profile.stage === target) {
+        res.json(profile);
+        return;
+      }
+      if (!canTransition(profile.stage, target)) {
+        throw new AppError(
+          409,
+          "ADM_INVALID_TRANSITION",
+          `Cannot move from ${profile.stage} to ${target}`
+        );
+      }
+      const allowed = ROLE_FOR_STAGE[target] ?? [];
+      if (!allowed.includes(req.user!.role)) {
+        throw new AppError(
+          403,
+          "FORBIDDEN_STAGE",
+          `Role ${req.user!.role} cannot move a case to ${target}`
+        );
+      }
+      const updated = await prisma.admLearnerProfile.update({
+        where: { id: profile.id },
+        data: { stage: target },
+      });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "adm_edit",
+        sourceTable: "adm_learner_profiles",
+        sourceId: profile.id,
+        reason: `ADM stage advanced to ${target}`,
+        oldValue: { stage: profile.stage },
+        newValue: { stage: target },
       });
       res.json(updated);
     } catch (e) {

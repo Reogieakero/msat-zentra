@@ -9,8 +9,8 @@ import {
   fetchAdmReferrals,
   type AdmReferralRow,
 } from "../../api";
-import { DOC_LEGEND, DocumentCard } from "../../components/DocumentCard";
-import { ADM_DOCUMENTS } from "../../mockData";
+import { DOC_LEGEND } from "../../components/DocumentCard";
+import { FormIcon } from "../../components/FormIcon";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,16 +40,17 @@ import menu from "../../components/admCardMenu.module.css";
 const PAGE_SIZE = 20;
 
 const REFERRAL_STAGES = [
-  "referred",
-  "eligibility",
-  "consultation",
+  "meeting_parents",
+  "home_visitation",
+  "certification",
   "principal_approval",
 ] as const;
 
 const STAGE_TABS: { id: string; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "referred", label: "Meeting with Parents/Guardians" },
-  { id: "eligibility", label: "Eligibility Evaluation" },
+  { id: "meeting_parents", label: "Meeting with Parents/Guardians" },
+  { id: "home_visitation", label: "Home Visitation" },
+  { id: "certification", label: "Recommendation & Certification" },
   { id: "principal_approval", label: "School Head (Principal) Approval" },
 ];
 
@@ -91,9 +92,25 @@ function toAdmCase(r: AdmReferralRow): AdmCase {
 function useReferralsAllBoard() {
   const [cases, setCases] = React.useState<AdmCase[]>([]);
   const [total, setTotal] = React.useState(0);
+  const [totalReferred, setTotalReferred] = React.useState(0);
+  const [stageCounts, setStageCounts] = React.useState<Record<string, number>>({});
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
   const [stage, setStage] = React.useState<string>("all");
+
+  React.useEffect(() => {
+    const saved = window.localStorage.getItem("adm_referrals_stage");
+    if (saved) requestAnimationFrame(() => setStage(saved));
+  }, []);
+
+  const firstStageWrite = React.useRef(true);
+  React.useEffect(() => {
+    if (firstStageWrite.current) {
+      firstStageWrite.current = false;
+      return;
+    }
+    window.localStorage.setItem("adm_referrals_stage", stage);
+  }, [stage]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -104,6 +121,7 @@ function useReferralsAllBoard() {
 
   const load = React.useCallback(
     (p: number, signal?: AbortSignal) => {
+      setLoading(true);
       return fetchAdmReferrals(
         p,
         PAGE_SIZE,
@@ -117,6 +135,14 @@ function useReferralsAllBoard() {
           const rows = Array.isArray(data.rows) ? data.rows : [];
           setCases(rows.map(toAdmCase));
           setTotal(typeof data.total === "number" ? data.total : rows.length);
+          setTotalReferred(
+            typeof data.totalReferred === "number" ? data.totalReferred : rows.length
+          );
+          setStageCounts(
+            data.stageCounts && typeof data.stageCounts === "object"
+              ? data.stageCounts
+              : {}
+          );
           setPage(typeof data.page === "number" ? data.page : p);
         })
         .catch((err: unknown) => {
@@ -181,6 +207,8 @@ function useReferralsAllBoard() {
     error,
     allReferred,
     total,
+    totalReferred,
+    stageCounts,
     page,
     totalPages,
     goToPage,
@@ -199,6 +227,16 @@ function useReferralsAllBoard() {
 
 export function ReferralsAllBoard() {
   const board = useReferralsAllBoard();
+
+  const stageTabs = React.useMemo(() => {
+    return STAGE_TABS.map((t) => ({
+      ...t,
+      count:
+        t.id === "all"
+          ? board.totalReferred
+          : board.stageCounts[t.id] ?? 0,
+    }));
+  }, [board.totalReferred, board.stageCounts]);
 
   return (
     <section className={styles.page}>
@@ -236,7 +274,7 @@ export function ReferralsAllBoard() {
       </div>
 
       <AdmBrowser
-        tabs={STAGE_TABS}
+        tabs={stageTabs}
         activeTab={board.stage}
         onTabChange={(id) => board.setStage(id)}
         action={
@@ -330,15 +368,17 @@ export function ReferralsAllBoard() {
                   {pendingCase.student}{" "}
                   <span className={shared.mono}>({pendingCase.lrn})</span>
                 </span>
-                <div className={dialog.dialogDocsRow}>
-                  {ADM_DOCUMENTS.map((doc, i) => (
-                    <DocumentCard
-                      key={doc.name}
-                      doc={doc}
-                      style={{ animationDelay: `${Math.min(i, 24) * 80}ms` }}
-                    />
-                  ))}
-                </div>
+                  <div className={dialog.dialogDocsRow}>
+                    {(pendingCase.forms ?? []).map((f, i) => (
+                      <FormIcon
+                        key={f.id}
+                        formType={f.formType}
+                        title={f.title}
+                        status={f.status}
+                        index={i}
+                      />
+                    ))}
+                  </div>
               </div>
             );
           })()}

@@ -26,7 +26,7 @@ export interface AdmLatestReferred {
   lrn: string;
   student: string;
   grade: string;
-  stage: "referred" | "eligibility" | "principal_approval";
+  stage: "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: string;
   preparedBy: string;
   approvedBy: string | null;
@@ -44,7 +44,7 @@ export interface AdmReferralRow {
   lrn: string;
   student: string;
   grade: string;
-  stage: "referred" | "eligibility" | "consultation" | "principal_approval";
+  stage: "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   preparedBy: string;
   datePrepared: string;
@@ -56,6 +56,8 @@ export interface AdmReferralRow {
 export interface AdmReferralsPage {
   rows: AdmReferralRow[];
   total: number;
+  totalReferred: number;
+  stageCounts: Record<string, number>;
   page: number;
   totalPages: number;
   limit: number;
@@ -75,6 +77,44 @@ export async function fetchAdmReferrals(
       limit,
       ...(q ? { q } : {}),
       ...(stage ? { stage } : {}),
+    },
+  });
+  return res.data;
+}
+
+export interface AdmApprovalRow {
+  id: string;
+  lrn: string;
+  student: string;
+  grade: string;
+  section: string;
+  eligibilityStatus: "pending" | "eligible" | "ineligible";
+  preparedBy: string;
+  approvedBy: string | null;
+  approvalDate: string | null;
+  forms: { id: string; formType: string; title: string; status: string }[];
+}
+
+export interface AdmApprovalsPage {
+  rows: AdmApprovalRow[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export async function fetchAdmApprovals(
+  page = 1,
+  limit = 20,
+  signal?: AbortSignal,
+  q?: string
+): Promise<AdmApprovalsPage> {
+  const res = await apiClient.get<AdmApprovalsPage>("/api/adm/approvals", {
+    signal,
+    params: {
+      page,
+      limit,
+      ...(q ? { q } : {}),
     },
   });
   return res.data;

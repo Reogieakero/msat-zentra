@@ -27,11 +27,11 @@ import { X, Clock, CheckCircle2, Users } from "lucide-react";
 import kpiStyles from "../overview/components/kpi.module.css";
 import {
   ADM_PIPELINE,
-  ADM_DOCUMENTS,
   isAwaitingSignature,
   type AdmCase,
   type AdmPipelineStage,
 } from "./mockData";
+import { FormIcon } from "./components/FormIcon";
 import layout from "./components/admLayout.module.css";
 import header from "./components/admHeader.module.css";
 import kpi from "./components/admKpi.module.css";
@@ -40,7 +40,6 @@ import dialog from "./components/admDialog.module.css";
 import actions from "./components/admActions.module.css";
 import shared from "../academics/academics.module.css";
 import { AdmBrowser } from "./components/AdmBrowser";
-import { DocumentCard } from "./components/DocumentCard";
 import { PipelineStrip } from "./components/PipelineStrip";
 import { CaseTable } from "./components/CaseTable";
 import { KpiCard } from "./components/KpiCard";
@@ -53,8 +52,8 @@ const STAGES: AdmPipelineStage[] = ADM_PIPELINE.map((s) => s.stage);
 const STAGE_BAR_COLORS: Record<AdmPipelineStage, string> = {
   anecdotal: "#a8a29e",
   consultation: "#f59e0b",
-  referred: "#3b82f6",
-  eligibility: "#8b5cf6",
+  meeting_parents: "#3b82f6",
+  home_visitation: "#8b5cf6",
   principal_approval: "#ef4444",
   certification: "#0ea5e9",
   enrollment_monitoring: "#06b6d4",
@@ -132,7 +131,7 @@ function useAdmBoard() {
     () =>
       [...cases]
         .filter((c) =>
-          ["referred", "eligibility", "consultation", "principal_approval"].includes(
+          ["meeting_parents", "home_visitation", "certification", "principal_approval"].includes(
             c.stage
           )
         )
@@ -363,8 +362,8 @@ export function AdmBoard({
 
       <div className={layout.splitRow}>
         <AdmBrowser
-          tabs={[{ id: "referred", label: "Latest Referred" }]}
-          activeTab="referred"
+          tabs={[{ id: "certification", label: "Latest Referred" }]}
+          activeTab="certification"
           onTabChange={() => {}}
           action={
             <a
@@ -414,11 +413,13 @@ export function AdmBoard({
                     {pendingCase.student} <span className={shared.mono}>({pendingCase.lrn})</span>
                   </span>
                   <div className={dialog.dialogDocsRow}>
-                    {ADM_DOCUMENTS.map((doc, i) => (
-                      <DocumentCard
-                        key={doc.name}
-                        doc={doc}
-                        style={{ animationDelay: `${Math.min(i, 24) * 80}ms` }}
+                    {(pendingCase.forms ?? []).map((f, i) => (
+                      <FormIcon
+                        key={f.id}
+                        formType={f.formType}
+                        title={f.title}
+                        status={f.status}
+                        index={i}
                       />
                     ))}
                   </div>

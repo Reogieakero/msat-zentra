@@ -116,6 +116,16 @@ enum AdmEligibility {
   eligible
   ineligible
 }
+enum AdmStage {
+  anecdotal
+  consultation
+  meeting_parents
+  home_visitation
+  certification
+  principal_approval
+  enrollment_monitoring
+  completion
+}
 enum AdmFormType {
   REFERRAL_FORM
   ANECDOTAL_REPORT
@@ -519,6 +529,7 @@ model AdmLearnerProfile {
   studentId           String
   referralId          String
   eligibilityStatus   AdmEligibility  @default(pending)
+  stage               AdmStage        @default(anecdotal)
   preparedBy          String
   approvedBy          String?
   approvedAt          DateTime?

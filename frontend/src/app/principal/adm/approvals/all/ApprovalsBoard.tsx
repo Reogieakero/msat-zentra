@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import {
-  MOCK_ADM_CASES,
   ADM_DOCUMENTS,
   stageLabel,
+  type AdmCase,
 } from "../../mockData";
 import { AdmBrowser } from "../../AdmBoard";
 import { DOC_LEGEND } from "../../components/DocumentCard";
@@ -16,6 +16,7 @@ import {
   CommandEmpty,
   CommandItem,
 } from "@/components/ui/command";
+import { fetchAdmApprovals, type AdmApprovalRow } from "../../api";
 import styles from "./approvals.module.css";
 import legend from "../../components/admLegend.module.css";
 
@@ -23,22 +24,54 @@ const LEGEND_LABEL: Record<string, string> = Object.fromEntries(
   DOC_LEGEND.map((item) => [item.color.toLowerCase(), item.label])
 );
 
-function useApprovalsBoard() {
-  const approved = React.useMemo(
-    () =>
-      [...MOCK_ADM_CASES]
-        .filter((c) => c.approvedBy !== null)
-        .sort((a, b) => (a.approvalDate ?? "").localeCompare(b.approvalDate ?? "")),
-    []
-  );
+function toAdmCase(r: AdmApprovalRow): AdmCase {
+  return {
+    id: r.id,
+    student: r.student,
+    lrn: r.lrn,
+    grade: r.grade,
+    section: r.section,
+    stage: "principal_approval",
+    eligibilityStatus: r.eligibilityStatus,
+    meetingAttended: false,
+    modulesSubmitted: 0,
+    modulesTotal: 0,
+    deviceIssued: false,
+    preparedBy: r.preparedBy,
+    datePrepared: "",
+    approvedBy: r.approvedBy,
+    approvalDate: r.approvalDate,
+    forms: r.forms,
+  };
+}
 
-  const [selectedId, setSelectedId] = React.useState<string | null>(
-    approved.length ? approved[0].id : null
-  );
+function useApprovalsBoard() {
+  const [approved, setApproved] = React.useState<AdmCase[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    fetchAdmApprovals(1, 100, controller.signal)
+      .then((data) => {
+        if (!data) return;
+        const rows = Array.isArray(data.rows) ? data.rows : [];
+        setApproved(rows.map(toAdmCase));
+        setSelectedId(rows.length ? rows[0].id : null);
+      })
+      .catch((err: unknown) => {
+        if ((err as { code?: string })?.code === "ERR_CANCELED") return;
+        setError("Failed to load approved profiles");
+        console.error("[/api/adm/approvals] fetch failed:", err);
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
 
   const selected = approved.find((c) => c.id === selectedId) ?? approved[0] ?? null;
 
-  return { approved, selected, selectedId, setSelectedId };
+  return { approved, selected, selectedId, setSelectedId, loading, error };
 }
 
 function FileIcon({ icon }: { icon: "image" | "video" | "code" | "pdf" | "ppt" }) {
@@ -84,7 +117,8 @@ function FileIcon({ icon }: { icon: "image" | "video" | "code" | "pdf" | "ppt" }
 }
 
 export function ApprovalsBoard() {
-  const { approved, selected, selectedId, setSelectedId } = useApprovalsBoard();
+  const { approved, selected, selectedId, setSelectedId, loading, error } =
+    useApprovalsBoard();
   const [query, setQuery] = React.useState("");
 
   const filtered = React.useMemo(() => {
@@ -118,44 +152,54 @@ export function ApprovalsBoard() {
             activeTab="all"
             onTabChange={() => {}}
           >
-            <Command className={styles.command}>
-              <CommandInput
-                placeholder="Search by name, ID, or approver…"
-                value={query}
-                onValueChange={setQuery}
-              />
-              <CommandList className={styles.list}>
-                {filtered.map((c) => (
-                  <CommandItem
-                    key={c.id}
-                    value={`${c.student} ${c.id} ${c.approvedBy ?? ""}`}
-                    className={`${styles.listItem} ${c.id === selectedId ? styles.listItemActive : ""}`}
-                    onSelect={() => setSelectedId(c.id)}
-                  >
-                    <span className={styles.listAvatar}>
-                      {c.student
-                        .split(" ")
-                        .map((p) => p[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </span>
-                    <span className={styles.listMain}>
-                      <span className={styles.listName}>{c.student}</span>
-                      <span className={styles.listMeta}>
-                        {c.id} · {c.approvedBy} · {c.approvalDate}
+            {error ? (
+              <p className={styles.empty}>{error}</p>
+            ) : loading ? (
+              <p className={styles.empty}>Loading approved profiles…</p>
+            ) : (
+              <Command className={styles.command}>
+                <CommandInput
+                  placeholder="Search by name, ID, or approver…"
+                  value={query}
+                  onValueChange={setQuery}
+                />
+                <CommandList className={styles.list}>
+                  {filtered.map((c) => (
+                    <CommandItem
+                      key={c.id}
+                      value={`${c.student} ${c.id} ${c.approvedBy ?? ""}`}
+                      className={`${styles.listItem} ${c.id === selectedId ? styles.listItemActive : ""}`}
+                      onSelect={() => setSelectedId(c.id)}
+                    >
+                      <span className={styles.listAvatar}>
+                        {c.student
+                          .split(" ")
+                          .map((p) => p[0])
+                          .slice(0, 2)
+                          .join("")}
                       </span>
-                    </span>
-                  </CommandItem>
-                ))}
-                <CommandEmpty className={styles.empty}>No matching profiles.</CommandEmpty>
-              </CommandList>
-            </Command>
+                      <span className={styles.listMain}>
+                        <span className={styles.listName}>{c.student}</span>
+                        <span className={styles.listMeta}>
+                          {c.id} · {c.approvedBy} · {c.approvalDate}
+                        </span>
+                      </span>
+                    </CommandItem>
+                  ))}
+                  <CommandEmpty className={styles.empty}>No matching profiles.</CommandEmpty>
+                </CommandList>
+              </Command>
+            )}
           </AdmBrowser>
         </div>
       </div>
 
       <div className={styles.rightPanel}>
-        {selected ? (
+        {loading ? (
+          <p className={styles.empty}>Loading…</p>
+        ) : error ? (
+          <p className={styles.empty}>{error}</p>
+        ) : selected ? (
           <>
             <div className={styles.docHead}>
               <div>

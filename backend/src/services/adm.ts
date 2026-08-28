@@ -1,45 +1,45 @@
 import { AppError } from "../lib/errors.js";
 
-// PLAN.md §6.4 — ADM referral state machine, extended to the 8-stage
-// ADM Case Pipeline used by the Principal dashboard:
-//   1. anecdotal          — Adviser files a behavioral/academic record
-//   2. consultation        — Guidance Counselor / School Nurse review
-//   3. referred            — Student referred to ADM Coordinator
-//   4. eligibility         — Coordinator evaluates profile + supporting records
-//   5. principal_approval  — Principal final-signs the forwarded recommendation
-//   6. certification       — Coordinator certifies + issues the learning device
-//   7. enrollment_monitoring— Coordinator + teacher track attendance/modules
-//   8. completion          — Device return recorded; case closed
+// PLAN.md §6.4 — ADM referral state machine, the 8-stage ADM Case Pipeline:
+//   1. anecdotal            — Adviser files a behavioral/academic record
+//   2. consultation         — Guidance Counselor / School Nurse / LRPC review
+//   3. meeting_parents      — Meeting with Parents/Guardians (ADM Coordinator & Teachers)
+//   4. home_visitation      — Home Visitation if parents did not attend (Guidance)
+//   5. certification        — ADM Coordinator records recommendation + ADM Certification
+//   6. principal_approval   — Principal (School Head) final-signs the certification
+//   7. enrollment_monitoring— Student completes modules; Coordinator/Teacher track
+//   8. completion           — Device return recorded; case closed
 // Linear stages; illegal transitions are rejected with 409 (role gating in routes).
+// IMPORTANT: a case may only be principal-approved AFTER it reaches certification.
 
 export type AdmStage =
   | "anecdotal"
   | "consultation"
-  | "referred"
-  | "eligibility"
-  | "principal_approval"
+  | "meeting_parents"
+  | "home_visitation"
   | "certification"
+  | "principal_approval"
   | "enrollment_monitoring"
   | "completion";
 
 export const ADM_STAGES: AdmStage[] = [
   "anecdotal",
   "consultation",
-  "referred",
-  "eligibility",
-  "principal_approval",
+  "meeting_parents",
+  "home_visitation",
   "certification",
+  "principal_approval",
   "enrollment_monitoring",
   "completion",
 ];
 
 const TRANSITIONS: Record<AdmStage, AdmStage[]> = {
   anecdotal: ["consultation"],
-  consultation: ["referred"],
-  referred: ["eligibility"],
-  eligibility: ["principal_approval"],
-  principal_approval: ["certification"],
-  certification: ["enrollment_monitoring"],
+  consultation: ["meeting_parents"],
+  meeting_parents: ["home_visitation", "certification"],
+  home_visitation: ["certification"],
+  certification: ["principal_approval"],
+  principal_approval: ["enrollment_monitoring"],
   enrollment_monitoring: ["completion"],
   completion: [],
 };
@@ -74,36 +74,40 @@ export const ADM_STAGE_FLOW: AdmStageMeta[] = [
     description: "Guidance Counselor / School Nurse review the record.",
   },
   {
-    stage: "referred",
+    stage: "meeting_parents",
     order: 3,
-    label: "Referral to ADM Coordinator",
+    label: "Meeting with Parents/Guardians",
     owner: "adm_coordinator",
     principalAction: false,
-    description: "Student recommended for ADM is referred.",
+    description:
+      "Meeting with Parents/Legal Guardians attended by the ADM Coordinator and Teachers. Attended → Minutes of Meeting & Attendance Logbook; otherwise → Home Visitation.",
   },
   {
-    stage: "eligibility",
+    stage: "home_visitation",
     order: 4,
-    label: "Eligibility evaluation",
-    owner: "adm_coordinator",
+    label: "Home Visitation (if no meeting)",
+    owner: "guidance",
     principalAction: false,
-    description: "Coordinator reviews the student's profile and supporting records.",
-  },
-  {
-    stage: "principal_approval",
-    order: 5,
-    label: "Principal review and approval",
-    owner: "principal",
-    principalAction: true,
-    description: "Final approval of the forwarded recommendation.",
+    description:
+      "If parents did not attend the meeting, a Home Visitation is conducted (GCForm-12). Both branches converge at the Coordinator recommendation.",
   },
   {
     stage: "certification",
-    order: 6,
-    label: "Certification and device issuance",
+    order: 5,
+    label: "Recommendation & Certification",
     owner: "adm_coordinator",
     principalAction: false,
-    description: "Coordinator records ADM certification and distributes the tablet.",
+    description:
+      "ADM Coordinator records the recommendation and issues the ADM Certification, preparing the module for release.",
+  },
+  {
+    stage: "principal_approval",
+    order: 6,
+    label: "School Head (Principal) Approval",
+    owner: "principal",
+    principalAction: true,
+    description:
+      "Principal approves the certification and authorizes release of the module, scheduling of module distribution and submission, and follow-up counseling / psychosocial intervention.",
   },
   {
     stage: "enrollment_monitoring",
