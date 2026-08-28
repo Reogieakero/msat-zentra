@@ -116,6 +116,14 @@ enum AdmEligibility {
   eligible
   ineligible
 }
+enum AdmFormType {
+  REFERRAL_FORM
+  ANECDOTAL_REPORT
+  CERTIFICATION
+  MINUTES_OF_MEETING
+  HV_FORM
+}
+
 
 enum Sf10Source {
   auto_populated
@@ -179,6 +187,7 @@ model User {
   admMeetings         AdmParentMeeting[]
   admModules          AdmModule[]
   admDevicesIssued    AdmDevice[]            @relation("DeviceIssuedBy")
+  admFormsUploaded    AdmForm[]
   sf10Records         Sf10Record[]           @relation("Sf10VerifiedBy")
   sf10Validated       Sf10Record[]           @relation("Sf10ValidatedBy")
   sf10Versions        Sf10RecordVersion[]
@@ -524,8 +533,8 @@ model AdmLearnerProfile {
   parentMeetings      AdmParentMeeting[]
   modules             AdmModule[]
   devices             AdmDevice[]
+  forms               AdmForm[]
 }
-
 model AdmParentMeeting {
   id                    String             @id @default(uuid())
   admLearnerProfileId   String
@@ -564,6 +573,27 @@ model AdmDevice {
   admLearnerProfile   AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
   issuer              User             @relation("DeviceIssuedBy", fields: [issuedBy], references: [id])
 }
+
+model AdmForm {
+  id                  String       @id @default(uuid())
+  admLearnerProfileId String
+  formType            AdmFormType
+  title               String
+  fileUrl             String?
+  status              AdmFormStatus @default(submitted)
+  uploadedBy          String
+  uploadedAt          DateTime?    @default(now())
+  notes               String?
+  admLearnerProfile   AdmLearnerProfile @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
+  uploader            User             @relation(fields: [uploadedBy], references: [id])
+}
+
+enum AdmFormStatus {
+  pending
+  submitted
+  verified
+}
+
 
 // ---------------------------------------------------------------------------
 // 3.7 Records & compliance

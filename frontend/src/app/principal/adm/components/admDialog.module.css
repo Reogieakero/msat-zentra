@@ -1,0 +1,60 @@
+.alertSign {
+  background: var(--primary, #166534);
+  color: var(--primary-foreground, #ffffff);
+}
+
+.alertReturn {
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.dialogDocs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--muted), transparent 88%);
+}
+
+.dialogDocsName {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.dialogPipe {
+  padding-top: 0.25rem;
+}
+
+.dialogWide {
+  max-width: min(92vw, 560px) !important;
+  width: 100%;
+}
+
+.dialogDocsRow {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0.625rem;
+  padding-bottom: 0.25rem;
+}
+
+.dialogDocsRow > span {
+  flex: none;
+  padding: 0.375rem;
+  border: 1px solid color-mix(in oklch, var(--doc-color, var(--primary)), transparent 70%);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--doc-color, var(--primary)), transparent 94%);
+}
+
+.dialogDocsRow :global(.docFolder) {
+  width: 34px;
+  height: 28px;
+}
+
+.dialogDocsRow :global(.docFolderIcon) {
+  width: 30px;
+  height: 30px;
+}

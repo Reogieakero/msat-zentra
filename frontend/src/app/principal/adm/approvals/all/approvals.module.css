@@ -1,0 +1,702 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.browserWrap {
+  min-height: 0;
+}
+
+.searchCmd {
+  width: 100%;
+}
+
+.command {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.command :global([data-slot="command-input-wrapper"]) {
+  padding: 0;
+}
+
+.leftPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  overflow: hidden;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--muted-foreground), transparent 70%);
+  border-radius: 9999px;
+}
+
+.list {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground), transparent 70%) transparent;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  flex: none;
+}
+
+.listItem:last-child {
+  border-bottom: none;
+}
+
+.listItem:hover {
+  background: color-mix(in oklch, var(--muted), transparent 88%);
+}
+
+.listItemActive {
+  background: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.listAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex: none;
+}
+
+.listMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.listName {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.listMeta {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.rightPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.docHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+
+
+.docTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.docSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.folderRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem 1.25rem;
+  padding: 1rem 0 0.5rem;
+}
+
+.empty {
+  margin: auto;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+/* ---------- Uiverse folder card (adapted) ---------- */
+.folderCard {
+  width: 170px;
+  height: 130px;
+  perspective: 1200px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.folderName {
+  display: none;
+}
+
+.folderCaption {
+  display: none;
+}
+
+.folderToggle {
+  display: none;
+}
+
+.hintWrapper {
+  position: absolute;
+  top: -40px;
+  right: -50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  z-index: 100;
+  animation: floatHint 2.5s ease-in-out infinite;
+}
+
+.hintText {
+  font-family: "Inter", -apple-system, sans-serif;
+  color: #60a5fa;
+  font-size: 10px;
+  font-weight: 900;
+  text-decoration: underline;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  position: relative;
+  right: -25px;
+  top: 10px;
+  transform: rotate(45deg);
+}
+
+.hintArrow {
+  height: 35px;
+  width: 35px;
+}
+
+@keyframes floatHint {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.folderCard:hover .hintWrapper {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.folderContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.folderCard:hover .folderContainer {
+  transform: rotateX(10deg) rotateY(-5deg);
+}
+
+.folderBack {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.4));
+}
+
+.folderFrontWrapper {
+  position: absolute;
+  bottom: -7px;
+  width: 100%;
+  z-index: 90;
+  transform-origin: bottom;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 12px;
+}
+
+.folderLabel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 30px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+}
+
+.folderFront {
+  display: block;
+  width: 100%;
+}
+
+.counter {
+  position: absolute;
+  top: -95px;
+  right: -75px;
+  background-color: #a18cd1;
+  padding: 4px 8px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transform: scale(0) translateY(20px);
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.folderCard:hover .folderContainer .counter {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  transition-delay: 0.2s;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  background: #34d399;
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 0 10px #34d399;
+}
+
+.statusDot::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #34d399;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+.counterLabel {
+  font-family: "Inter", sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  color: black;
+  text-transform: capitalize;
+}
+
+.counterNumber {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.counter:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #60a5fa;
+  transform: scale(1.1) translateY(-5px) !important;
+  cursor: help;
+}
+
+.counter:hover .counterNumber {
+  color: #60a5fa;
+  transition: color 0.3s ease;
+}
+
+.file {
+  position: absolute;
+  bottom: 5px;
+  left: 10%;
+  width: 80%;
+  height: 85px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 0;
+}
+
+.file1 {
+  z-index: 25;
+  transition-delay: 0.15s;
+}
+.file2 {
+  z-index: 24;
+  transition-delay: 0.1s;
+}
+.file3 {
+  z-index: 23;
+  transition-delay: 0.05s;
+}
+.file4 {
+  z-index: 22;
+  transition-delay: 0.02s;
+}
+.file5 {
+  z-index: 21;
+  transition-delay: 0s;
+}
+
+.fileOnly {
+  z-index: 25;
+  background: #3b4252;
+  transition-delay: 0s;
+}
+
+.shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-20deg);
+  transition: none;
+}
+
+.folderCard:hover .folderContainer .shine {
+  left: 150%;
+  transition: left 0.8s ease-in-out;
+  transition-delay: 0.3s;
+}
+
+.fileText {
+  font-family: "Inter", sans-serif;
+  font-size: 9px;
+  color: white;
+  padding: 12px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.3s ease 0.4s;
+}
+
+.folderCard:hover .folderContainer .fileText {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fileCaption {
+  font-family: "Inter", sans-serif;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease 0.45s;
+}
+
+.folderCard:hover .folderContainer .fileCaption {
+  opacity: 1;
+}
+
+.folderCard:hover .folderContainer .folderFrontWrapper {
+  transform: rotateX(-50deg);
+}
+
+.folderCard:hover .folderContainer .file1 {
+  transform: translateY(-70px) rotate(-10deg) translateX(-15px) translateZ(20px);
+}
+.folderCard:hover .folderContainer .file2 {
+  transform: translateY(-55px) rotate(8deg) translateX(18px) translateZ(10px);
+}
+.folderCard:hover .folderContainer .file3 {
+  transform: translateY(-40px) rotate(-15deg) translateX(-8px);
+}
+.folderCard:hover .folderContainer .file4 {
+  transform: translateY(-25px) rotate(12deg) translateX(12px);
+}
+.folderCard:hover .folderContainer .file5 {
+  transform: translateY(-10px) rotate(-5deg);
+}
+
+.folderCard:hover .folderContainer .file:hover {
+  cursor: pointer;
+  filter: brightness(1.1);
+}
+
+.folderCard:hover .folderContainer .file1:hover {
+  transform: translateY(-80px) rotate(-10deg) translateX(-15px) translateZ(20px);
+}
+.folderCard:hover .folderContainer .file2:hover {
+  transform: translateY(-65px) rotate(8deg) translateX(18px) translateZ(10px);
+}
+.folderCard:hover .folderContainer .file3:hover {
+  transform: translateY(-50px) rotate(-15deg) translateX(-8px);
+}
+.folderCard:hover .folderContainer .file4:hover {
+  transform: translateY(-35px) rotate(12deg) translateX(12px);
+}
+.folderCard:hover .folderContainer .file5:hover {
+  transform: translateY(-20px) rotate(-5deg);
+}
+
+.folderCard:hover .folderContainer .fileOnly {
+  transform: translateY(-58px) rotate(-4deg) translateX(2px) translateZ(20px);
+}
+
+.fileIcon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.3s ease;
+}
+
+.fileTag {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 7px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.folderCard:hover .folderContainer .file:hover .fileIcon {
+  color: rgba(255, 255, 255, 0.9);
+}
+.folderCard:hover .folderContainer .fileTag {
+  opacity: 1;
+}
+
+.folderSearch {
+  position: absolute;
+  top: -40px;
+  left: 10%;
+  width: 30px;
+  height: 25px;
+  background-color: #60a5fa;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 0;
+  z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.searchIcon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: "Inter", sans-serif;
+  font-size: 9px;
+  margin-left: 8px;
+  outline: none;
+  transition: width 0.4s ease;
+}
+.searchInput::placeholder {
+  color: #ffffff;
+}
+
+.folderCard:hover .folderContainer .folderSearch {
+  opacity: 1;
+  top: -80px;
+  width: 80%;
+}
+
+.folderCard:hover .folderContainer .folderSearch:focus-within {
+  width: 90%;
+  background-color: #ff3b30;
+}
+
+.folderCard:hover .folderContainer .folderSearch:focus-within .searchInput {
+  width: 100%;
+}
+
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.sectionLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.progressStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
+.statCard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--background), transparent 40%);
+  transition: border-color 150ms ease-out;
+}
+
+.statCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  background: radial-gradient(
+    120px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in oklch, var(--primary), transparent 82%),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.statCard:hover::before {
+  opacity: 1;
+}
+
+.statCard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.statLabel {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.statValue {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.statValueYes {
+  color: #16a34a;
+}
+
+.statValueNo {
+  color: #dc2626;
+}
+
+.moduleBar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.moduleBarTrack {
+  height: 8px;
+  width: 100%;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--foreground), transparent 90%);
+  overflow: hidden;
+}
+
+.moduleBarFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--primary);
+}

@@ -1,0 +1,21 @@
+.menuCard {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--popover-foreground);
+}
+
+.menuHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.menuTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+}

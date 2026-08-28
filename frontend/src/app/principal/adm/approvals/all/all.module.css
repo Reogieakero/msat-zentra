@@ -1,0 +1,12 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 100vh;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.headerText {
+  margin-top: 4rem;
+}

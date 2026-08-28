@@ -1,0 +1,24 @@
+.admBrowser {
+  margin-top: 4rem;
+  background: #fafaf9;
+  border: 1px solid #d6d3d1;
+}
+
+.admBrowser > div {
+  gap: 0.5rem;
+}
+
+.admTabBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex: none;
+  min-width: 0;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--border, #e7e5e4);
+  margin-bottom: -1px;
+  margin-left: 0.5rem;
+  scrollbar-width: thin;
+}

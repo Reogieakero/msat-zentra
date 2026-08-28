@@ -1,4 +1,4 @@
-import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, Sf10Source, ActionType, NotifChannel, LockStatus } from "@prisma/client";
+import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus } from "@prisma/client";
 import { recomputeRisk } from "../src/services/risk.js";
 import argon2 from "argon2";
 
@@ -314,6 +314,13 @@ async function main() {
     const ref = referralRecs[i % referralRecs.length];
     admData.push({ id: id("adm"), studentId: st.userId, referralId: ref.id, eligibilityStatus: rand(["pending", "eligible", "ineligible"] as AdmEligibility[]), preparedBy: admCoord.id, certificationDetails: { needs: "Educational support", plan: "Individualized plan" }, termId: term.id, confidentialityLevel: "restricted" as Confidentiality });
   }
+  const FORM_SET: { type: AdmFormType; title: string; status: AdmFormStatus }[] = [
+    { type: "REFERRAL_FORM", title: "Referral Form", status: "verified" },
+    { type: "ANECDOTAL_REPORT", title: "Anecdotal Report", status: "verified" },
+    { type: "MINUTES_OF_MEETING", title: "Minutes of Meeting", status: "submitted" },
+    { type: "HV_FORM", title: "HV Form", status: "submitted" },
+    { type: "CERTIFICATION", title: "Certification", status: "pending" },
+  ];
   for (const a of admData) {
     await prisma.admLearnerProfile.create({
       data: {
@@ -321,6 +328,15 @@ async function main() {
         parentMeetings: { create: [{ recordedBy: admCoord.id, meetingDatetime: inTermDate(), attended: true, minutesOfMeeting: "Discussed ADM plan." }] },
         modules: { create: [{ moduleName: "Module 1: Literacy", releaseDate: inTermDate(), dueDate: inTermDate(), submitted: true, submissionDate: inTermDate(), recordedBy: admCoord.id }] },
         devices: { create: [{ deviceType: "Tablet", deviceSerial: `SN${randInt(10000, 99999)}`, issuedBy: admCoord.id, issuedDate: inTermDate() }] },
+        forms: {
+          create: FORM_SET.map((f) => ({
+            formType: f.type,
+            title: f.title,
+            status: f.status,
+            uploadedBy: admCoord.id,
+            notes: "Seeded ADM form.",
+          })),
+        },
       },
     });
   }

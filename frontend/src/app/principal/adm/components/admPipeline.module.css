@@ -1,0 +1,142 @@
+.track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.markerCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 2rem;
+}
+
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--border, #e7e5e4);
+  background: var(--card, #ffffff);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  flex: none;
+}
+
+.markerIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: #166534;
+}
+
+.markerNum {
+  line-height: 1;
+}
+
+.connector {
+  flex: 1 1 auto;
+  width: 2px;
+  margin: 0.375rem 0;
+  background: var(--border, #e7e5e4);
+  border-radius: 999px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 0.875rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.25;
+}
+
+.owner {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: color-mix(in oklch, var(--foreground), transparent 30%);
+}
+
+.badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  color: #166534;
+  background: color-mix(in oklch, #22c55e, transparent 86%);
+  border: 1px solid color-mix(in oklch, #22c55e, transparent 65%);
+}
+
+/* Done state */
+.done .marker {
+  border-color: color-mix(in oklch, #22c55e, transparent 55%);
+  background: color-mix(in oklch, #22c55e, transparent 90%);
+}
+
+.done .connector {
+  background: color-mix(in oklch, #22c55e, transparent 55%);
+}
+
+.done .label {
+  color: color-mix(in oklch, var(--foreground), transparent 25%);
+}
+
+/* Active state */
+.active .marker {
+  border-color: var(--primary, #166534);
+  background: var(--primary, #166534);
+  color: var(--primary-foreground, #ffffff);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary, #166534), transparent 80%);
+}
+
+.active .label {
+  color: var(--primary, #166534);
+}
+
+/* Principal action state */
+.principal .marker {
+  border-style: dashed;
+  border-color: color-mix(in oklch, #7c3aed, transparent 50%);
+}
+
+.principal .badge {
+  color: #6d28d9;
+  background: color-mix(in oklch, #7c3aed, transparent 90%);
+  border-color: color-mix(in oklch, #7c3aed, transparent 70%);
+}

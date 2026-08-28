@@ -8,11 +8,15 @@
   width: 100%;
   height: 220px;
   padding: 1.25rem;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-lg);
   background-color: var(--card);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+  box-shadow: none;
   transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.kpiPlain {
+  background-color: transparent;
 }
 
 .kpi::before {
@@ -31,8 +35,8 @@
 }
 
 .kpi:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .kpi:hover::before {

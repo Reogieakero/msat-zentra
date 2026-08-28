@@ -1,0 +1,93 @@
+.formIcon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  animation: iconRise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+
+@keyframes iconRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.sheet {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  border: 1px solid color-mix(in oklch, var(--doc-color, var(--primary)), transparent 55%);
+  box-shadow: 0 6px 14px -10px color-mix(in oklch, var(--doc-color, var(--primary)), transparent 30%);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease-out;
+}
+
+.formIcon:hover .sheet {
+  transform: translateY(-4px) rotate(-6deg);
+  box-shadow: 0 12px 20px -12px color-mix(in oklch, var(--doc-color, var(--primary)), transparent 10%);
+}
+
+.glyph {
+  width: 20px;
+  height: 20px;
+  color: var(--doc-color, var(--primary));
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.formIcon:hover .glyph {
+  transform: scale(1.08);
+}
+
+.statusDot {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+  background: var(--muted-foreground);
+  color: #fff;
+}
+
+.statusGlyph {
+  width: 9px;
+  height: 9px;
+}
+
+.verified {
+  background: #22c55e;
+}
+
+.submitted {
+  background: var(--primary, #166534);
+}
+
+.pending {
+  background: #f59e0b;
+}
+
+.caption {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--foreground);
+  max-width: 56px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

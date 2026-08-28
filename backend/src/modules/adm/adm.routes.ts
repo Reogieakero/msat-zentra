@@ -6,11 +6,88 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { ADM_STAGE_FLOW, ADM_STAGES } from "../../services/adm.js";
 
 const router = Router();
 
+router.get(
+  "/pipeline",
+  requireAuth,
+  requireRole("adm_coordinator", "principal"),
+  async (_req, res) => {
+    res.json({ stages: ADM_STAGES, flow: ADM_STAGE_FLOW });
+  }
+);
+
+
+router.get(
+  "/dashboard",
+  requireAuth,
+  requireRole("adm_coordinator", "principal"),
+  async (_req, res, next) => {
+    try {
+      const profiles = await prisma.admLearnerProfile.findMany({
+        include: {
+          student: { include: { user: true } },
+          preparedByUser: true,
+          forms: { orderBy: { uploadedAt: "desc" } },
+        },
+        orderBy: { id: "desc" },
+      });
+
+      const deriveStage = (p: {
+        approvedBy: string | null;
+        eligibilityStatus: string;
+      }): string => {
+        if (p.approvedBy) return "principal_approval";
+        if (p.eligibilityStatus === "eligible") return "eligibility";
+        return "referred";
+      };
+
+      const stageBreakdown = ADM_STAGE_FLOW.map((s) => ({
+        stage: s.stage,
+        short: s.label,
+        count: profiles.filter((p) => deriveStage(p) === s.stage).length,
+      }));
+
+      const pendingSignature = profiles.filter(
+        (p) => !p.approvedBy && p.eligibilityStatus === "eligible"
+      ).length;
+      const signed = profiles.filter((p) => p.approvedBy).length;
+
+      const latestReferred = profiles
+        .filter((p) => ["referred", "eligibility", "principal_approval"].includes(deriveStage(p)))
+        .slice(0, 5)
+        .map((p) => ({
+          id: p.id,
+          lrn: p.student.lrn,
+          student: p.student.user.fullName,
+          grade: p.student.gradeLevel,
+          stage: deriveStage(p) as "referred" | "eligibility" | "principal_approval",
+          eligibilityStatus: p.eligibilityStatus,
+          preparedBy: p.preparedByUser.fullName,
+          approvedBy: p.approvedBy,
+          forms: p.forms.map((f) => ({
+            id: f.id,
+            formType: f.formType,
+            title: f.title,
+            status: f.status,
+            uploadedAt: f.uploadedAt,
+          })),
+        }));
+
+      res.json({
+        kpis: { pendingSignature, signed, active: profiles.length },
+        stageBreakdown,
+        latestReferred,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 const GRADE_LABEL: Record<string, string> = {
-  G7: "Grade 7",
   G8: "Grade 8",
   G9: "Grade 9",
   G10: "Grade 10",

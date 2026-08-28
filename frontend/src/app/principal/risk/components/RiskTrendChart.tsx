@@ -86,7 +86,14 @@ export function RiskTrendChart({
                 fontSize: 11,
                 borderRadius: 6,
                 border: "1px solid var(--border)",
-                background: "var(--card)",
+                background: "var(--popover)",
+                color: "var(--popover-foreground)",
+              }}
+              labelStyle={{
+                color: "var(--popover-foreground)",
+              }}
+              itemStyle={{
+                color: "var(--popover-foreground)",
               }}
             />
             <Line

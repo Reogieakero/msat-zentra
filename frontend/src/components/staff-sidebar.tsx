@@ -74,7 +74,7 @@ const NAV: NavGroup[] = [
         badge: "2",
         subItems: [
           { title: "Referrals", href: "/principal/adm/referrals" },
-          { title: "Approvals", href: "/principal/adm/approvals" },
+          { title: "Approvals", href: "/principal/adm/approvals/all" },
         ],
       },
       {

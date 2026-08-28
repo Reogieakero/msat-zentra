@@ -1,0 +1,330 @@
+.tableWrap {
+  overflow-x: auto;
+}
+
+.board {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.board thead th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  background: var(--card, #ffffff);
+  border-bottom: 1px solid var(--border, #e7e5e4);
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+.board tbody td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 93%);
+  vertical-align: middle;
+}
+
+.row {
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+
+.row:hover {
+  background: color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.rowActive {
+  background: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.center {
+  text-align: center;
+}
+
+.studentCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+}
+
+.studentName {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.lrn {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.stageChip,
+.eligChip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.stage_anecdotal {
+  color: #57534e;
+  background: color-mix(in oklch, #a8a29e, transparent 88%);
+  border-color: color-mix(in oklch, #a8a29e, transparent 70%);
+}
+
+.stage_consultation {
+  color: #b45309;
+  background: color-mix(in oklch, #f59e0b, transparent 86%);
+  border-color: color-mix(in oklch, #f59e0b, transparent 70%);
+}
+
+.stage_referred {
+  color: #1d4ed8;
+  background: color-mix(in oklch, #3b82f6, transparent 88%);
+  border-color: color-mix(in oklch, #3b82f6, transparent 70%);
+}
+
+.stage_eligibility {
+  color: #7c3aed;
+  background: color-mix(in oklch, #8b5cf6, transparent 88%);
+  border-color: color-mix(in oklch, #8b5cf6, transparent 70%);
+}
+
+.stage_principal_approval {
+  color: #b91c1c;
+  background: color-mix(in oklch, #ef4444, transparent 88%);
+  border-color: color-mix(in oklch, #ef4444, transparent 70%);
+}
+
+.stage_certification {
+  color: #0c4a6e;
+  background: color-mix(in oklch, #0ea5e9, transparent 88%);
+  border-color: color-mix(in oklch, #0ea5e9, transparent 70%);
+}
+
+.stage_enrollment_monitoring {
+  color: #0e7490;
+  background: color-mix(in oklch, #06b6d4, transparent 88%);
+  border-color: color-mix(in oklch, #06b6d4, transparent 70%);
+}
+
+.stage_completion {
+  color: #166534;
+  background: color-mix(in oklch, #22c55e, transparent 88%);
+  border-color: color-mix(in oklch, #22c55e, transparent 70%);
+}
+
+.elig_eligible {
+  color: #166534;
+  background: color-mix(in oklch, #22c55e, transparent 88%);
+  border-color: color-mix(in oklch, #22c55e, transparent 70%);
+}
+
+.elig_pending {
+  color: #b45309;
+  background: color-mix(in oklch, #f59e0b, transparent 86%);
+  border-color: color-mix(in oklch, #f59e0b, transparent 70%);
+}
+
+.elig_ineligible {
+  color: #b91c1c;
+  background: color-mix(in oklch, #ef4444, transparent 88%);
+  border-color: color-mix(in oklch, #ef4444, transparent 70%);
+}
+
+.tickYes {
+  width: 1rem;
+  height: 1rem;
+  color: var(--primary, #166534);
+  margin: 0 auto;
+}
+
+.tickNo {
+  width: 1rem;
+  height: 1rem;
+  color: #b91c1c;
+  margin: 0 auto;
+}
+
+.signedMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--primary, #166534);
+}
+
+.signedIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.pendingSign {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.neutralSign {
+  color: var(--muted-foreground);
+}
+
+.boardSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.boardSkeletonRow {
+  width: 100%;
+  height: 2.5rem;
+}
+
+.listCard {
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.listHeader {
+  padding-bottom: 0.5rem;
+}
+
+.listTitle {
+  font-size: 0.9375rem;
+}
+
+.listHint {
+  font-size: 0.75rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.25rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 93%);
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+
+.listItem:last-child {
+  border-bottom: none;
+}
+
+.listItem:hover {
+  background: color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.listMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.listName {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.listMeta {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.listSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex: none;
+}
+
+.listDate {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.listSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.listSkeletonRow {
+  width: 100%;
+  height: 2.5rem;
+}
+
+.caseTableWrap {
+  overflow-x: auto;
+}
+
+.caseTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.caseTable thead th {
+  text-align: center;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border, #e7e5e4);
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+.caseTable tbody td {
+  text-align: center;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 93%);
+  vertical-align: middle;
+}
+
+.caseRow {
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+
+.caseRow:hover {
+  background: color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.docChips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.docNone {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
