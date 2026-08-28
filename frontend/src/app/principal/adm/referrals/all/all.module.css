@@ -7,3 +7,12 @@
 .headerText {
   margin-top: 4rem;
 }
+
+.pager {
+  margin-top: 1rem;
+}
+
+.pageDisabled {
+  opacity: 0.4;
+  pointer-events: none;
+}

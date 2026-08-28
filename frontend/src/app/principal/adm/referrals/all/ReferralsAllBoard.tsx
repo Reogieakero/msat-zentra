@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AdmBrowser, CaseTable } from "../../AdmBoard";
-import {
-  MOCK_ADM_CASES,
-  type AdmCase,
-} from "../../mockData";
+import { type AdmCase } from "../../mockData";
 import { apiClient } from "@/lib/api/client";
+import {
+  fetchAdmReferrals,
+  type AdmReferralRow,
+} from "../../api";
 import { DOC_LEGEND, DocumentCard } from "../../components/DocumentCard";
 import { ADM_DOCUMENTS } from "../../mockData";
 import {
@@ -22,10 +23,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import shared from "../../../academics/academics.module.css";
 import styles from "./all.module.css";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import header from "../../components/admHeader.module.css";
 import dialog from "../../components/admDialog.module.css";
 import legend from "../../components/admLegend.module.css";
 import menu from "../../components/admCardMenu.module.css";
+
+const PAGE_SIZE = 20;
 
 const REFERRAL_STAGES = [
   "referred",
@@ -34,14 +46,97 @@ const REFERRAL_STAGES = [
   "principal_approval",
 ] as const;
 
+const STAGE_TABS: { id: string; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "referred", label: "Meeting with Parents/Guardians" },
+  { id: "eligibility", label: "Eligibility Evaluation" },
+  { id: "principal_approval", label: "School Head (Principal) Approval" },
+];
+
+function pageItems(current: number, totalPages: number): (number | "ellipsis")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const items: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(totalPages - 1, current + 1);
+  if (start > 2) items.push("ellipsis");
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < totalPages - 1) items.push("ellipsis");
+  items.push(totalPages);
+  return items;
+}
+
+function toAdmCase(r: AdmReferralRow): AdmCase {
+  return {
+    id: r.id,
+    student: r.student,
+    lrn: r.lrn,
+    grade: r.grade,
+    section: "",
+    stage: r.stage,
+    eligibilityStatus: r.eligibilityStatus,
+    meetingAttended: false,
+    modulesSubmitted: 0,
+    modulesTotal: 0,
+    deviceIssued: false,
+    preparedBy: r.preparedBy,
+    datePrepared: r.datePrepared,
+    approvedBy: r.approvedBy,
+    approvalDate: r.approvalDate,
+    forms: r.forms,
+  };
+}
+
 function useReferralsAllBoard() {
-  const [cases, setCases] = React.useState<AdmCase[]>(MOCK_ADM_CASES);
-  const [loading, setLoading] = React.useState(false);
+  const [cases, setCases] = React.useState<AdmCase[]>([]);
+  const [total, setTotal] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const [search, setSearch] = React.useState("");
+  const [stage, setStage] = React.useState<string>("all");
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [pendingAction, setPendingAction] = React.useState<{
     id: string;
     type: "sign" | "return";
   } | null>(null);
+
+  const load = React.useCallback(
+    (p: number, signal?: AbortSignal) => {
+      return fetchAdmReferrals(
+        p,
+        PAGE_SIZE,
+        signal,
+        search.trim(),
+        stage === "all" ? "" : stage
+      )
+        .then((data) => {
+          if (!data) return;
+          setError(null);
+          const rows = Array.isArray(data.rows) ? data.rows : [];
+          setCases(rows.map(toAdmCase));
+          setTotal(typeof data.total === "number" ? data.total : rows.length);
+          setPage(typeof data.page === "number" ? data.page : p);
+        })
+        .catch((err: unknown) => {
+          if ((err as { code?: string })?.code === "ERR_CANCELED") return;
+          setError("Failed to load referrals");
+          console.error("[/api/adm/referrals] fetch failed:", err);
+        })
+        .finally(() => setLoading(false));
+    },
+    [search, stage]
+  );
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const t = setTimeout(() => load(1, controller.signal), 300);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [load]);
 
   const allReferred = React.useMemo(
     () =>
@@ -51,43 +146,23 @@ function useReferralsAllBoard() {
     [cases]
   );
 
-
   const handleSign = (id: string) =>
     apiClient
       .post(`/api/adm/${id}/principal-approve`)
-      .then(() =>
-        setCases((prev) =>
-          prev.map((c) =>
-            c.id === id
-              ? {
-                  ...c,
-                  approvedBy: "Principal",
-                  approvalDate: "2026-08-27",
-                  stage: "enrollment_monitoring",
-                }
-              : c
-          )
-        )
-      )
+      .then(() => load(page))
       .catch((err: unknown) =>
         console.error("[/api/adm principal-approve] failed:", err)
-      );
+      )
+      .finally(() => setSelectedId(null));
 
   const handleReturn = (id: string) =>
     apiClient
       .post(`/api/adm/${id}/principal-return`)
-      .then(() =>
-        setCases((prev) =>
-          prev.map((c) =>
-            c.id === id
-              ? { ...c, stage: "eligibility", eligibilityStatus: "pending" }
-              : c
-          )
-        )
-      )
+      .then(() => load(page))
       .catch((err: unknown) =>
         console.error("[/api/adm principal-return] failed:", err)
-      );
+      )
+      .finally(() => setSelectedId(null));
 
   const confirmPending = () => {
     if (!pendingAction) return;
@@ -96,21 +171,34 @@ function useReferralsAllBoard() {
     setPendingAction(null);
   };
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const goToPage = (p: number) => load(p);
+
   return {
     cases,
     loading,
+    error,
     allReferred,
+    total,
+    page,
+    totalPages,
+    goToPage,
+    search,
+    setSearch,
+    stage,
+    setStage,
     selectedId,
     setSelectedId,
     pendingAction,
     setPendingAction,
     confirmPending,
+    reload: () => load(page),
   };
 }
 
 export function ReferralsAllBoard() {
   const board = useReferralsAllBoard();
-  const router = useRouter();
 
   return (
     <section className={styles.page}>
@@ -138,29 +226,79 @@ export function ReferralsAllBoard() {
               ))}
             </div>
           </div>
-          <button
-            type="button"
+          <Link
+            href="/principal/adm"
             className={header.seeAllBtn}
-            onClick={() => router.push("/principal/adm")}
           >
             Back to board
-          </button>
+          </Link>
         </div>
       </div>
 
       <AdmBrowser
-        tabs={[{ id: "all", label: "All Referrals" }]}
-        activeTab="all"
-        onTabChange={() => {}}
+        tabs={STAGE_TABS}
+        activeTab={board.stage}
+        onTabChange={(id) => board.setStage(id)}
+        action={
+          <input
+            type="search"
+            value={board.search}
+            placeholder="Search name, LRN, or ID"
+            onChange={(e) => board.setSearch(e.target.value)}
+            className={header.searchInput}
+            aria-label="Search referrals"
+          />
+        }
       >
-        <CaseTable
-          rows={board.allReferred}
-          loading={board.loading}
-          emptyLabel="No referrals yet."
-          onSelect={board.setSelectedId}
-          onRequestAction={(id, type) => board.setPendingAction({ id, type })}
-        />
+        {board.error ? (
+          <p className={shared.empty}>{board.error}</p>
+        ) : (
+          <CaseTable
+            rows={board.allReferred}
+            loading={board.loading}
+            emptyLabel="No referrals yet."
+            onSelect={board.setSelectedId}
+            onRequestAction={(id, type) => board.setPendingAction({ id, type })}
+          />
+        )}
       </AdmBrowser>
+
+      {!board.loading && !board.error && board.total > 0 ? (
+        <Pagination className={styles.pager}>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => board.goToPage(board.page - 1)}
+                aria-disabled={board.page <= 1}
+                className={board.page <= 1 ? styles.pageDisabled : undefined}
+              />
+            </PaginationItem>
+            {pageItems(board.page, board.totalPages).map((p, i) =>
+              p === "ellipsis" ? (
+                <PaginationItem key={`e${i}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    isActive={p === board.page}
+                    onClick={() => board.goToPage(p as number)}
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => board.goToPage(board.page + 1)}
+                aria-disabled={board.page >= board.totalPages}
+                className={board.page >= board.totalPages ? styles.pageDisabled : undefined}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      ) : null}
 
       <AlertDialog
         open={board.pendingAction !== null}

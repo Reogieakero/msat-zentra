@@ -101,6 +101,114 @@ const ELIGIBILITY_LABEL: Record<string, string> = {
   ineligible: "Ineligible",
 };
 
+const PAGE_SIZE = 20;
+
+const REFERRAL_STAGES = ["referred", "eligibility", "consultation", "principal_approval"];
+
+router.get(
+  "/referrals/all",
+  requireAuth,
+  requireRole("adm_coordinator", "principal"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = PAGE_SIZE;
+      const skip = (page - 1) * limit;
+      const q =
+        typeof req.query.q === "string" && req.query.q.trim()
+          ? req.query.q.trim().toLowerCase()
+          : "";
+      const stageParam =
+        typeof req.query.stage === "string" && req.query.stage.trim()
+          ? req.query.stage.trim()
+          : "";
+      const stageFilter =
+        stageParam && REFERRAL_STAGES.includes(stageParam)
+          ? stageParam
+          : "";
+
+      const deriveStage = (p: {
+        approvedBy: string | null;
+        eligibilityStatus: string;
+      }): string => {
+        if (p.approvedBy) return "principal_approval";
+        if (p.eligibilityStatus === "eligible") return "eligibility";
+        return "referred";
+      };
+
+      const profiles = await prisma.admLearnerProfile.findMany({
+        include: {
+          student: { include: { user: true } },
+          preparedByUser: true,
+          forms: { orderBy: { uploadedAt: "desc" } },
+        },
+        orderBy: { id: "desc" },
+      });
+
+      const referred = profiles.filter((p) =>
+        REFERRAL_STAGES.includes(deriveStage(p))
+      );
+      const filtered = (q || stageFilter)
+        ? referred.filter((p) => {
+            const stage = deriveStage(p);
+            if (stageFilter && stage !== stageFilter) return false;
+            if (q) {
+              return (
+                p.student.user.fullName.toLowerCase().includes(q) ||
+                p.student.lrn.toLowerCase().includes(q) ||
+                p.id.toLowerCase().includes(q)
+              );
+            }
+            return true;
+          })
+        : referred;
+      const pageItems = filtered.slice(skip, skip + limit);
+      const total = filtered.length;
+
+      const out = pageItems.map((p) => {
+        const stage = deriveStage(p) as
+          | "referred"
+          | "eligibility"
+          | "consultation"
+          | "principal_approval";
+        const base = {
+          id: p.id,
+          lrn: p.student.lrn,
+          student: p.student.user.fullName,
+          grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
+          stage,
+          eligibilityStatus:
+            p.eligibilityStatus === "eligible"
+              ? ("eligible" as const)
+              : p.eligibilityStatus === "ineligible"
+              ? ("ineligible" as const)
+              : ("pending" as const),
+          preparedBy: p.preparedByUser.fullName,
+          datePrepared: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : "",
+          approvedBy: p.approvedBy ? "Principal" : null,
+          approvalDate: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : null,
+          forms: p.forms.map((f) => ({
+            id: f.id,
+            formType: f.formType,
+            title: f.title,
+            status: f.status,
+          })),
+        };
+        // Principal: status-only — strip confidential fields
+        return req.user!.role === "principal" ? base : { ...base, studentId: p.studentId };
+      });
+
+      res.json({
+        rows: out,
+        total,
+        page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        limit,
+      });
+    } catch (e) { next(e); }
+  }
+);
+
 router.get(
   "/referrals",
   requireAuth,
