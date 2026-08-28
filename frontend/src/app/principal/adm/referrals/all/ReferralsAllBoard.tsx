@@ -7,6 +7,7 @@ import {
   MOCK_ADM_CASES,
   type AdmCase,
 } from "../../mockData";
+import { apiClient } from "@/lib/api/client";
 import { DOC_LEGEND, DocumentCard } from "../../components/DocumentCard";
 import { ADM_DOCUMENTS } from "../../mockData";
 import {
@@ -56,25 +57,41 @@ function useReferralsAllBoard() {
   }, []);
 
   const handleSign = (id: string) =>
-    setCases((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              approvedBy: "Principal",
-              approvalDate: "2026-08-27",
-              stage: "enrollment_monitoring",
-            }
-          : c
+    apiClient
+      .post(`/api/adm/${id}/principal-approve`)
+      .then(() =>
+        setCases((prev) =>
+          prev.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  approvedBy: "Principal",
+                  approvalDate: "2026-08-27",
+                  stage: "enrollment_monitoring",
+                }
+              : c
+          )
+        )
       )
-    );
+      .catch((err: unknown) =>
+        console.error("[/api/adm principal-approve] failed:", err)
+      );
 
   const handleReturn = (id: string) =>
-    setCases((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, stage: "eligibility", eligibilityStatus: "pending" } : c
+    apiClient
+      .post(`/api/adm/${id}/principal-return`)
+      .then(() =>
+        setCases((prev) =>
+          prev.map((c) =>
+            c.id === id
+              ? { ...c, stage: "eligibility", eligibilityStatus: "pending" }
+              : c
+          )
+        )
       )
-    );
+      .catch((err: unknown) =>
+        console.error("[/api/adm principal-return] failed:", err)
+      );
 
   const confirmPending = () => {
     if (!pendingAction) return;

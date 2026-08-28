@@ -159,12 +159,11 @@ function useAdmBoard() {
   };
 
   const handleReturn = (id: string) => {
-    setCases((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, stage: "eligibility", eligibilityStatus: "pending" } : c
-      )
-    );
-    setSelectedId(null);
+    apiClient
+      .post(`/api/adm/${id}/principal-return`)
+      .then(() => load())
+      .catch((err: unknown) => console.error("[/api/adm principal-return] failed:", err))
+      .finally(() => setSelectedId(null));
   };
 
   const confirmPending = () => {

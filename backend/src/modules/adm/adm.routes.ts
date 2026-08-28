@@ -185,6 +185,49 @@ const deviceIssueSchema = z.object({
   conditionNotes: z.string().optional(),
 });
 router.post(
+  "/:id/principal-return",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const profile = await prisma.admLearnerProfile.findUnique({
+        where: { id: String(req.params.id) },
+      });
+      if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+      if (!profile.approvedBy)
+        throw new AppError(409, "NOT_YET_APPROVED", "Cannot return a profile that has not been signed");
+      const updated = await prisma.admLearnerProfile.update({
+        where: { id: profile.id },
+        data: {
+          approvedBy: null,
+          approvedAt: null,
+          eligibilityStatus: "pending",
+        },
+      });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "adm_edit",
+        sourceTable: "adm_learner_profiles",
+        sourceId: profile.id,
+        reason: "Principal returned profile to ADM Coordinator for revision",
+        oldValue: { approvedBy: profile.approvedBy, eligibilityStatus: profile.eligibilityStatus },
+        newValue: { approvedBy: null, eligibilityStatus: "pending" },
+      });
+      await fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "adm_learner_profiles",
+        action: "return",
+        message: "ADM profile returned by principal for revision.",
+        sourceId: profile.id,
+      });
+      res.json(updated);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
   "/devices/issue",
   requireAuth,
   requireRole("adm_coordinator"),
