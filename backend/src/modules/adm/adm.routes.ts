@@ -60,7 +60,7 @@ router.get(
           id: p.id,
           lrn: p.student.lrn,
           student: p.student.user.fullName,
-          grade: p.student.gradeLevel,
+          grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
           stage: p.stage as
             | "meeting_parents"
             | "home_visitation"
@@ -68,7 +68,7 @@ router.get(
             | "principal_approval",
           eligibilityStatus: p.eligibilityStatus,
           preparedBy: p.preparedByUser.fullName,
-          approvedBy: p.approvedBy,
+          approvedBy: p.approvedBy ? "Principal" : null,
           forms: p.forms.map((f) => ({
             id: f.id,
             formType: f.formType,
@@ -181,7 +181,7 @@ router.get(
               ? ("ineligible" as const)
               : ("pending" as const),
           preparedBy: p.preparedByUser.fullName,
-          datePrepared: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : "",
+          datePrepared: null,
           approvedBy: p.approvedBy ? "Principal" : null,
           approvalDate: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : null,
           forms: p.forms.map((f) => ({
