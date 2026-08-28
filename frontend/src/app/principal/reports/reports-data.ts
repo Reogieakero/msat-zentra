@@ -38,6 +38,7 @@ export type ReportsPayload = {
     referred: number;
     resolved: number;
     ongoing: number;
+    unresolved: number;
   }[];
   honorRollByGrade: { grade: string; candidates: number }[];
   admStages: { stage: string; count: number }[];

@@ -3,6 +3,7 @@ import {
   computeRiskFactors,
   levelFromFlags,
 } from "../../services/risk.js";
+import { classifyHonorRoll } from "../../services/grading.js";
 
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
@@ -41,6 +42,7 @@ export interface ReportsPayload {
     referred: number;
     resolved: number;
     ongoing: number;
+    unresolved: number;
   }[];
   honorRollByGrade: { grade: string; candidates: number }[];
   admStages: { stage: string; count: number }[];
@@ -198,12 +200,21 @@ export async function getReports(params: {
         })
       );
       riskCounts[level] += 1;
+      // Honor roll uses the SAME DepEd rule as Academics/Overview: every subject
+      // grade must be locked/finalized, the student must not be High risk, AND
+      // the average must meet a DepEd honor band (classifyHonorRoll). Counting
+      // any locked non-High student would overstate the figure vs those pages.
       const allLocked =
         finals.length > 0 &&
         finals.every((f) => f.lockStatus === "locked" || f.finalizedAt != null);
       if (allLocked && level !== "High") {
-        honorRoll += 1;
-        honorRollByGradeMap.set(grade, (honorRollByGradeMap.get(grade) ?? 0) + 1);
+        const gGrades = finals.map((f) => f.transmutedGrade as number);
+        const avg = gGrades.reduce((s, g) => s + g, 0) / gGrades.length;
+        const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
+        if (classifyHonorRoll(avg, lowest)) {
+          honorRoll += 1;
+          honorRollByGradeMap.set(grade, (honorRollByGradeMap.get(grade) ?? 0) + 1);
+        }
       }
     }
   }
@@ -362,9 +373,9 @@ function buildInterventionSuccess(
   params: { scope: ReportScope },
   sections: { id: string; gradeLevel: string; name: string }[],
   interventions: { outcomeStatus: string; student: { gradeLevel: string; sectionId: string | null } | null }[]
-): { grade: string; referred: number; resolved: number; ongoing: number }[] {
+): { grade: string; referred: number; resolved: number; ongoing: number; unresolved: number }[] {
   // Group interventions by the section/grade label appropriate to the scope.
-  const groups = new Map<string, { referred: number; resolved: number; ongoing: number }>();
+  const groups = new Map<string, { referred: number; resolved: number; ongoing: number; unresolved: number }>();
   const labelFor = (gradeLevel: string, sectionId: string | null): string => {
     if (params.scope === "section") {
       const sec = sections.find((s) => s.id === sectionId);
@@ -375,10 +386,11 @@ function buildInterventionSuccess(
   for (const iv of interventions) {
     if (!iv.student) continue;
     const label = labelFor(iv.student.gradeLevel, iv.student.sectionId ?? "");
-    const acc = groups.get(label) ?? { referred: 0, resolved: 0, ongoing: 0 };
+    const acc = groups.get(label) ?? { referred: 0, resolved: 0, ongoing: 0, unresolved: 0 };
     acc.referred += 1;
     if (iv.outcomeStatus === "resolved") acc.resolved += 1;
     else if (iv.outcomeStatus === "ongoing") acc.ongoing += 1;
+    else acc.unresolved += 1;
     groups.set(label, acc);
   }
   return Array.from(groups.entries())
@@ -477,19 +489,21 @@ function buildAuditActivity(logs: { actionType: string }[]): { action: string; c
 }
 
 function buildAnecdotalCategories(records: { category: string }[]): { category: string; count: number }[] {
+  // Labels mirror backend AnecdotalCategory enum CATEGORY_META so the Reports
+  // breakdown agrees with the Risk / Anecdotal pages (bullying -> "Bullying").
   const LABELS: Record<string, string> = {
     behavioral: "Behavioral",
     academic: "Academic",
     attendance: "Attendance",
     health: "Health",
-    bullying: "Social",
+    bullying: "Bullying",
   };
   const counts = new Map<string, number>();
   for (const r of records) {
     const label = LABELS[r.category] ?? r.category;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  const ORDER = ["Behavioral", "Academic", "Attendance", "Social", "Health"];
+  const ORDER = ["Behavioral", "Academic", "Attendance", "Bullying", "Health"];
   return ORDER.filter((c) => counts.has(c)).map((c) => ({ category: c, count: counts.get(c)! }));
 }
 

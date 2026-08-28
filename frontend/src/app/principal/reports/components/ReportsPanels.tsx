@@ -33,6 +33,7 @@ const CHART_CONFIG = {
   referred: { label: "Referred" },
   resolved: { label: "Resolved" },
   ongoing: { label: "Ongoing" },
+  unresolved: { label: "Unresolved" },
 } as const;
 
 const LIST_COLORS = [
@@ -141,7 +142,7 @@ function MiniBar({
 function StackedMini({
   data,
 }: {
-  data: { grade: string; referred: number; resolved: number; ongoing: number }[];
+  data: { grade: string; referred: number; resolved: number; ongoing: number; unresolved: number }[];
 }) {
   return (
     <ChartContainer config={CHART_CONFIG} className={styles.chartMini} style={{ height: 150 }}>
@@ -151,7 +152,7 @@ function StackedMini({
         <ChartTooltip content={<ChartTooltipContent />} />
         <Bar dataKey="resolved" stackId="a" fill="var(--primary)" radius={[4, 4, 0, 0]} />
         <Bar dataKey="ongoing" stackId="a" fill="var(--accent)" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="referred" stackId="a" fill="var(--border)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="unresolved" stackId="a" fill="var(--border)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ChartContainer>
   );
