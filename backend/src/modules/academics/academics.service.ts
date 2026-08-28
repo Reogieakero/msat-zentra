@@ -31,6 +31,7 @@ const TIER_RANK: Record<HonorRollTier, number> = {
 };
 
 export interface AcademicsSummary {
+  schoolYear: string;
   termLabel: string;
   sections: SectionSummaryDTO[];
   passFailByGrade: PassFailByGradeDTO[];
@@ -96,10 +97,11 @@ export async function getAcademicsSummary(
   const activeTerm = await prisma.term.findFirst({
     where: { schoolYear: { isActive: true } },
     orderBy: { termNumber: "asc" },
-    select: { id: true, termNumber: true },
+    select: { id: true, termNumber: true, schoolYear: { select: { name: true } } },
   });
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
+  const schoolYear = activeTerm?.schoolYear?.name ?? "No active school year";
 
   // "final" = only locked/finalized grades; "raw" = include every graded row
   // (locked or not) so the principal can preview before grades are finalized.
@@ -279,18 +281,17 @@ export async function getAcademicsSummary(
       const tierDiff = TIER_RANK[b.tier] - TIER_RANK[a.tier];
       if (tierDiff !== 0) return tierDiff;
       return b.overallAverage - a.overallAverage;
-    })
-    .slice(0, 12);
+    });
 
   const potentialHonorRoll = potentialPool
     .sort((a, b) => {
       const tierDiff = TIER_RANK[b.tier] - TIER_RANK[a.tier];
       if (tierDiff !== 0) return tierDiff;
       return b.overallAverage - a.overallAverage;
-    })
-    .slice(0, 12);
+    });
 
   return {
+    schoolYear,
     termLabel,
     sections: sectionSummaries,
     passFailByGrade,

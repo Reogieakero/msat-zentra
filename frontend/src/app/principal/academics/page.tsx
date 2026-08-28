@@ -38,6 +38,7 @@ export default function PrincipalAcademicsPage() {
   };
 
   const EMPTY: AcademicsMock = {
+    schoolYear: "",
     termLabel: "",
     sections: [],
     passFailByGrade: [],

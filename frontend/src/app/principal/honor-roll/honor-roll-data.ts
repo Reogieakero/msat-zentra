@@ -140,10 +140,19 @@ export function deriveHonorRoll(summary: AcademicsMock): {
     .map(({ student, section, tier }) => toCandidate(student, section, tier))
     .sort((a, b) => b.overallAverage - a.overallAverage);
 
+  // Reconciliation: the backend's confirmed pool is authoritative. If a preview
+  // student isn't present in the section payload (e.g. filtered server-side),
+  // they are dropped — surface the mismatch instead of silently undercounting.
+  if (summary.honorRollPreview.length !== candidates.length) {
+    console.warn(
+      `[honor-roll] ${summary.honorRollPreview.length} previewed candidates but only ${candidates.length} joined to section data.`
+    );
+  }
+
   return {
     candidates,
     termLabel: summary.termLabel,
-    schoolYear: "Active Term",
+    schoolYear: summary.schoolYear,
   };
 }
 

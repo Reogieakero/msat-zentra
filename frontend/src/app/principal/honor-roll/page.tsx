@@ -100,7 +100,7 @@ export default function PrincipalHonorRollPage() {
       <HonorRollHero
         data={{
           termLabel,
-          schoolYear: "Active Term",
+          schoolYear: derived?.schoolYear ?? "",
           awards: AWARD_CATEGORIES,
         }}
         candidateCount={filtered.length}

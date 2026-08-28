@@ -54,6 +54,7 @@ export interface PotentialHonorCandidate {
 }
 
 export interface AcademicsSummary {
+  schoolYear: string;
   termLabel: string;
   sections: SectionSummary[];
   passFailByGrade: PassFailByGrade[];
