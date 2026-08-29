@@ -4,10 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
 } from "@/components/ui/sheet";
 
 import { AuditEntry, isConfidentialTable, fetchAuditSource } from "../audit-data";
@@ -59,12 +57,12 @@ export function AuditDrawer({
       <SheetContent side="right" className={styles.sheet}>
         {entry && (
           <>
-            <SheetHeader>
-              <SheetTitle>Source record</SheetTitle>
+            <div>
+              <SheetTitle className={styles.title}>Source record</SheetTitle>
               <SheetDescription className={styles.subtitle}>
                 {entry.sourceTable} #{entry.sourceId}
               </SheetDescription>
-            </SheetHeader>
+            </div>
 
             {confidential ? (
               <div className={styles.notice}>
@@ -93,12 +91,12 @@ export function AuditDrawer({
               </dl>
             )}
 
-            <SheetFooter className={styles.footer}>
+            <div className={styles.footer}>
               <span>Changed by {entry.user}</span>
               <span className={styles.muted}>
                 {currentUser === entry.user ? "(you)" : ""}
               </span>
-            </SheetFooter>
+            </div>
           </>
         )}
       </SheetContent>

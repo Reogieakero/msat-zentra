@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
@@ -62,7 +61,7 @@ export function InterventionDrawer({
       <SheetContent side="right" showCloseButton={false} className={styles.sheet}>
         {student && (
           <>
-            <SheetHeader className={styles.drawerHead}>
+            <div className={styles.drawerHead}>
               <div>
                 <SheetTitle className={styles.drawerTitle}>
                   {student.studentName}
@@ -79,7 +78,7 @@ export function InterventionDrawer({
               >
                 <X size={16} aria-hidden />
               </button>
-            </SheetHeader>
+            </div>
 
             <div className={styles.metaRow}>
               <span>Risk: {student.riskLevel}</span>
