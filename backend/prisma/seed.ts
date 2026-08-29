@@ -287,9 +287,46 @@ async function main() {
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));
   await prisma.referral.createMany({ data: referralsData, skipDuplicates: true });
 
-  // Interventions (>=20)
-  const referralRecs = await prisma.referral.findMany({ where: { id: { in: referralsData.map((r) => r.id) } } });
-  await prisma.intervention.createMany({ data: referralRecs.map((r) => ({ id: id("int"), studentId: r.studentId, referralId: r.id, riskLevelAtFlag: "Low" as RiskLevel, recommendedAction: "Counseling session and behavior contract.", reviewedBy: guidance.id, approvalStatus: rand(["pending", "approved", "rejected"] as ApprovalStatus[]), outcomeStatus: rand(["ongoing", "resolved", "unresolved"] as OutcomeStatus[]) })), skipDuplicates: true });
+  // Interventions (>=20) — riskLevelAtFlag mirrors the student's engine-computed
+  // risk level (not a hardcoded "Low") so the stored snapshot is truthful.
+  const referralRecs = await prisma.referral.findMany({ where: { id: { in: referralsData.map((r) => r.id) } }, include: { student: { select: { riskLevel: true } } } });
+  await prisma.intervention.createMany({
+    data: referralRecs.map((r) => ({
+      id: id("int"),
+      studentId: r.studentId,
+      referralId: r.id,
+      riskLevelAtFlag: (r.student?.riskLevel ?? ("Moderate" as RiskLevel)) as RiskLevel,
+      recommendedAction: "Counseling session and behavior contract.",
+      reviewedBy: guidance.id,
+      approvalStatus: rand(["pending", "approved", "rejected"] as ApprovalStatus[]),
+      outcomeStatus: rand(["ongoing", "resolved", "unresolved"] as OutcomeStatus[]),
+    })),
+    skipDuplicates: true,
+  });
+
+  // Deterministic at-risk student with NO intervention assigned — lets the
+  // Principal exercise the "Create & assign" flow on a clean row. We force a
+  // Moderate risk (single anecdote → behavioral flag) and delete any intervention
+  // that may have been created for this student above so the drawer shows "None".
+  const unassignedAtRisk = allStudents[MIN_RECORDS] ?? allStudents[0];
+  if (unassignedAtRisk) {
+    const section = await prisma.section.findFirst({ where: { students: { some: { userId: unassignedAtRisk.userId } } }, select: { id: true } });
+    await prisma.anecdotalRecord.create({
+      data: {
+        id: id("an"),
+        studentId: unassignedAtRisk.userId,
+        observerId: guidance.id,
+        sectionId: section?.id ?? unassignedAtRisk.sectionId,
+        observationDatetime: inTermDate(),
+        descriptionOfIncident: "Seeded behavioral note — unassigned at-risk student.",
+        category: "behavioral" as any,
+        termId: term.id,
+        confidentialityLevel: "restricted" as any,
+      },
+    });
+    await prisma.intervention.deleteMany({ where: { studentId: unassignedAtRisk.userId } });
+    await recomputeRisk(unassignedAtRisk.userId, term.id);
+  }
 
   // Health (>=20)
   const health = [];

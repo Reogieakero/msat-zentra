@@ -34,12 +34,21 @@ function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
 
 function statusPill(s: RiskSnapshotStudent): { cls: string; label: string } {
   const iv = s.intervention;
-  if (!iv) return { cls: styles.statusNone, label: "None" };
-  const approval =
-    iv.approvalStatus === "approved"
-      ? ` · ${titleCase(iv.outcomeStatus)}`
-      : ` · ${titleCase(iv.approvalStatus)}`;
-  return { cls: styles.statusNone, label: `Assigned${approval}` };
+  if (!iv) return { cls: styles.statusUnassigned, label: "Unassigned" };
+  return { cls: styles.statusAssigned, label: "Assigned" };
+}
+
+function progressPill(s: RiskSnapshotStudent): { cls: string; label: string } | null {
+  const iv = s.intervention;
+  if (!iv) return null;
+  const label = titleCase(iv.outcomeStatus);
+  const cls =
+    iv.outcomeStatus === "resolved"
+      ? styles.statusResolved
+      : iv.outcomeStatus === "unresolved"
+        ? styles.statusUnresolved
+        : styles.statusOngoing;
+  return { cls, label };
 }
 
 export function InterventionsTable({
@@ -84,6 +93,7 @@ export function InterventionsTable({
           ) : (
             rows.map((r, i) => {
               const pill = statusPill(r);
+              const prog = progressPill(r);
               return (
                 <tr key={`${r.intervention?.id ?? r.studentId}-${i}`} onClick={() => onSelect(r)}>
                   <td className={styles.colLeft}>
@@ -113,6 +123,11 @@ export function InterventionsTable({
                   </td>
                   <td>
                     <span className={`${styles.statusPill} ${pill.cls}`}>{pill.label}</span>
+                    {prog ? (
+                      <div className={styles.statusSub}>
+                        <span className={`${styles.statusPill} ${prog.cls}`}>{prog.label}</span>
+                      </div>
+                    ) : null}
                   </td>
                 </tr>
               );
