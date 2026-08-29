@@ -6,7 +6,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
-import { ADM_STAGE_FLOW, ADM_STAGES, canTransition, type AdmStage } from "../../services/adm.js";
+import { ADM_STAGE_FLOW, ADM_STAGES, canTransition, evaluateAdmEligibility, type AdmStage } from "../../services/adm.js";
 
 const router = Router();
 
@@ -467,9 +467,40 @@ router.patch(
           `Role ${req.user!.role} cannot move a case to ${target}`
         );
       }
+      // Eligibility is derived from the documented evidence chain. Recompute it
+      // whenever a case enters (or passes) the certification stage so the
+      // Reports/ADM eligibility buckets stay accurate without manual tagging.
+      const data: { stage: AdmStage; eligibilityStatus?: "pending" | "eligible" | "ineligible" } = {
+        stage: target,
+      };
+      if (
+        target === "certification" ||
+        target === "principal_approval" ||
+        target === "enrollment_monitoring" ||
+        target === "completion"
+      ) {
+        const full = await prisma.admLearnerProfile.findUnique({
+          where: { id: profile.id },
+          select: {
+            stage: true,
+            forms: { select: { formType: true, status: true } },
+            parentMeetings: { select: { attended: true } },
+          },
+        });
+        if (full) {
+          data.eligibilityStatus = evaluateAdmEligibility({
+            stage: target,
+            forms: full.forms,
+            parentMeetings: full.parentMeetings,
+          });
+        }
+      } else {
+        // Moving back before certification resets eligibility to pending.
+        data.eligibilityStatus = "pending";
+      }
       const updated = await prisma.admLearnerProfile.update({
         where: { id: profile.id },
-        data: { stage: target },
+        data,
       });
       await writeAudit({
         userId: req.user!.id,

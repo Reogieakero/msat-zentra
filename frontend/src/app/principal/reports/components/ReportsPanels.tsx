@@ -101,11 +101,13 @@ function MiniBar({
   dataKey,
   labelKey,
   height = 150,
+  hideLabels = false,
 }: {
   data: Record<string, string | number>[];
   dataKey: string;
   labelKey: string;
   height?: number;
+  hideLabels?: boolean;
 }) {
   const horizontal = labelKey !== "grade" && labelKey !== "section" && labelKey !== "action" && labelKey !== "category";
   return (
@@ -126,6 +128,7 @@ function MiniBar({
           fontSize={10}
           width={horizontal ? 84 : undefined}
           height={horizontal ? undefined : 8}
+          hide={horizontal ? hideLabels : undefined}
         />
         <ChartTooltip content={<ChartTooltipContent />} />
         <Bar
@@ -369,7 +372,7 @@ export function ReportPanel({
       return (
         <PanelFrame title={panel.title} hint={panel.hint}>
           {data.attendanceWatch.length ? (
-            <MiniBar data={data.attendanceWatch} dataKey="rate" labelKey="section" />
+            <MiniBar data={data.attendanceWatch} dataKey="rate" labelKey="section" hideLabels />
           ) : (
             <EmptyState />
           )}

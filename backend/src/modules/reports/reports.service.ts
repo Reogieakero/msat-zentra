@@ -1,8 +1,4 @@
 import { prisma } from "../../lib/prisma.js";
-import {
-  computeRiskFactors,
-  levelFromFlags,
-} from "../../services/risk.js";
 import { classifyHonorRoll } from "../../services/grading.js";
 
 const GRADE_LABELS: Record<string, string> = {
@@ -16,6 +12,12 @@ const GRADE_LABELS: Record<string, string> = {
 
 function gradeLabel(gradeLevel: string): string {
   return GRADE_LABELS[gradeLevel] ?? gradeLevel;
+}
+
+// Numeric grade level from a "Grade <name>" label, for stable G7→G12 ordering.
+function gradeNum(label: string): number {
+  const m = label.match(/\d+/);
+  return m ? Number(m[0]) : 0;
 }
 
 function round1(n: number): number {
@@ -191,14 +193,28 @@ export async function getReports(params: {
         transmutedSum += avg;
         transmutedCount += 1;
       }
-      const level = levelFromFlags(
-        computeRiskFactors({
-          finalGrades: student.finalGrades,
-          attendance: student.attendanceRecords,
-          anecdotalCount: student.anecdotalRecords.length,
-          enrolled: section.students.length,
-        })
+      // Risk level uses the SAME rule as the Risk board (riskBoard.service):
+      // academic flag from transmuted grades (gradeMode "final"), attendance flag
+      // from present / totalRecords for THIS student (not section enrollment),
+      // behavioral from any anecdotal. Keeps the two cards in sync.
+      const studentFinals = (student.finalGrades ?? []).filter(
+        (f) => f.transmutedGrade != null
       );
+      const sAvg =
+        studentFinals.length > 0
+          ? studentFinals.reduce((sum, g) => sum + (g.transmutedGrade as number), 0) /
+            studentFinals.length
+          : 100;
+      const aFlag = sAvg < 75;
+      const sPresent = (student.attendanceRecords ?? []).filter(
+        (a) => a.status === "present"
+      ).length;
+      const sTotal = (student.attendanceRecords ?? []).length;
+      const tFlag = sTotal > 0 && sPresent / sTotal < 0.8;
+      const bFlag = (student.anecdotalRecords ?? []).length > 0;
+      const sCount = (aFlag ? 1 : 0) + (tFlag ? 1 : 0) + (bFlag ? 1 : 0);
+      const level: "High" | "Moderate" | "Low" =
+        sCount >= 2 ? "High" : sCount === 1 ? "Moderate" : "Low";
       riskCounts[level] += 1;
       // Honor roll uses the SAME DepEd rule as Academics/Overview: every subject
       // grade must be locked/finalized, the student must not be High risk, AND
@@ -455,7 +471,10 @@ async function buildAttendanceWatch(
       return { section: `Grade ${s.name}`, rate };
     })
     .filter((s) => s.rate > 0 && s.rate < 80)
-    .sort((a, b) => a.rate - b.rate);
+    .sort(
+      (a, b) =>
+        gradeNum(a.section) - gradeNum(b.section) || a.rate - b.rate
+    );
 }
 
 function buildAuditActivity(logs: { actionType: string }[]): { action: string; count: number }[] {

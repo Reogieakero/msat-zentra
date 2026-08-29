@@ -141,3 +141,43 @@ export function assertTransition(from: AdmStage, to: AdmStage) {
 export function requireHomeVisitation(attended: boolean): boolean {
   return !attended;
 }
+
+// PLAN.md §6.4 — eligibility is DERIVED, never free-typed. A learner is
+// certified eligible only when the ADM Coordinator has assembled the full
+// documented evidence chain at the certification stage:
+//   - referral form filed
+//   - anecdotal report filed
+//   - ADM certification form VERIFIED (the recommendation itself)
+//   - parent engagement: a meeting attended (minutes logged) OR a home
+//     visitation form filed when the parents did not attend
+// Anything at/after certification missing that evidence is "ineligible";
+// cases not yet at certification stay "pending" until the coordinator acts.
+export type AdmEligibilityInput = {
+  stage: AdmStage;
+  forms: { formType: string; status?: string }[];
+  parentMeetings: { attended: boolean }[];
+};
+
+export function evaluateAdmEligibility(input: AdmEligibilityInput): "pending" | "eligible" | "ineligible" {
+  const { stage, forms, parentMeetings } = input;
+  if (stage !== "certification" && stage !== "principal_approval" && stage !== "enrollment_monitoring" && stage !== "completion") {
+    return "pending";
+  }
+  const has = (type: string, verified = false) =>
+    forms.some((f) => f.formType === type && (!verified || f.status === "verified"));
+
+  const referral = has("REFERRAL_FORM");
+  const anecdotal = has("ANECDOTAL_REPORT");
+  const certification = has("CERTIFICATION", true);
+  const meetingAttended = parentMeetings.some((m) => m.attended) || has("MINUTES_OF_MEETING");
+  const homeVisit = has("HV_FORM");
+
+  // A meeting attended satisfies parent engagement; otherwise a home
+  // visitation form is required.
+  const parentEngagement = meetingAttended || homeVisit;
+
+  if (referral && anecdotal && certification && parentEngagement) return "eligible";
+  // At certification stage but the evidence chain is incomplete → ineligible.
+  return "ineligible";
+}
+
