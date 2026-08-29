@@ -2,26 +2,28 @@
 
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationLink,
+} from "@/components/ui/pagination";
 import { fetchInterventionStudents } from "./api";
 import type { RiskSnapshotStudent, GradeMode } from "./types";
 import { useGradeMode } from "../../grade-mode-context";
-import { InterventionFilters } from "./components/InterventionFilters";
 import { InterventionsTable } from "./components/InterventionsTable";
 import { InterventionDrawer } from "./components/InterventionDrawer";
 import menu from "../heatmaps/components/heatmap.module.css";
 import styles from "./interventions.module.css";
-
-type Filters = {
-  riskLevel: "all" | "Moderate" | "High";
-  hasIntervention: boolean | undefined;
-  factor: "all" | "Academic" | "Attendance" | "Behavioral";
-};
-
-const EMPTY_FILTERS: Filters = {
-  riskLevel: "all",
-  hasIntervention: undefined,
-  factor: "all",
-};
 
 const PAGE_SIZE = 20;
 
@@ -33,14 +35,14 @@ export default function PrincipalInterventionsPage() {
   const [total, setTotal] = React.useState(0);
   const [highModerate, setHighModerate] = React.useState(0);
   const [page, setPage] = React.useState(1);
-  const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
+  const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<RiskSnapshotStudent | null>(null);
 
   const load = React.useCallback(
-    (f: Filters, p: number, mode: GradeMode) => {
+    (_q: string, p: number, mode: GradeMode) => {
       setLoading(true);
       setError(null);
-      fetchInterventionStudents({ ...f, gradeMode: mode }, p, PAGE_SIZE)
+      fetchInterventionStudents({ gradeMode: mode }, p, PAGE_SIZE)
         .then((res) => {
           setRows(res.students);
           setTotal(res.total);
@@ -62,15 +64,26 @@ export default function PrincipalInterventionsPage() {
   );
 
   React.useEffect(() => {
-    load(EMPTY_FILTERS, 1, gradeMode);
+    load("", 1, gradeMode);
   }, [load, gradeMode]);
 
-  const onFiltersChange = (next: Filters) => {
-    setFilters(next);
-    load(next, 1, gradeMode);
-  };
+  // Client-side search by student name / LRN.
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.studentName.toLowerCase().includes(q) || r.lrn.toLowerCase().includes(q)
+    );
+  }, [rows, query]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const goTo = (p: number) => {
+    const next = Math.min(Math.max(1, p), totalPages);
+    setPage(next);
+    load(query, next, gradeMode);
+  };
 
   return (
     <div className={menu.shell}>
@@ -80,7 +93,7 @@ export default function PrincipalInterventionsPage() {
             <div className={styles.headText}>
               <h1 className={styles.title}>Interventions</h1>
               <p className={styles.subtitle}>
-                School-wide at-risk students · assign &amp; track
+                School-wide at-risk students · track progress
               </p>
             </div>
             <div className={styles.toolbarMeta}>
@@ -92,45 +105,65 @@ export default function PrincipalInterventionsPage() {
             </div>
           </header>
 
-          <InterventionFilters value={filters} onChange={onFiltersChange} />
+          <div className={styles.toolbar}>
+            <Command className={styles.search}>
+              <CommandInput
+                placeholder="Search by student name or LRN…"
+                value={query}
+                onValueChange={setQuery}
+              />
+              <CommandList className={styles.searchList}>
+                <CommandEmpty>No matching students.</CommandEmpty>
+                {filtered.map((r) => (
+                  <CommandItem
+                    key={r.studentId}
+                    value={`${r.studentName} ${r.lrn}`}
+                    onSelect={() => setSelected(r)}
+                  >
+                    <span className={styles.searchName}>{r.studentName}</span>
+                    <span className={styles.searchLrn}>{r.lrn}</span>
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </div>
 
           <InterventionsTable
-            rows={rows}
+            rows={filtered}
             loading={loading}
             error={error}
             onSelect={setSelected}
           />
 
           {!loading && !error && totalPages > 1 ? (
-            <div className={styles.pager}>
-              <button
-                type="button"
-                className={styles.pagerBtn}
-                disabled={page <= 1}
-                onClick={() => load(filters, page - 1, gradeMode)}
-              >
-                Previous
-              </button>
-              <span>
-                Page {page} of {totalPages}
-              </span>
-              <button
-                type="button"
-                className={styles.pagerBtn}
-                disabled={page >= totalPages}
-                onClick={() => load(filters, page + 1, gradeMode)}
-              >
-                Next
-              </button>
-            </div>
+            <Pagination className={styles.pager}>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => goTo(page - 1)}
+                    className={page <= 1 ? styles.disabled : undefined}
+                    aria-disabled={page <= 1}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationLink isActive={false} onClick={() => goTo(page)}>
+                    Page {page} of {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => goTo(page + 1)}
+                    className={page >= totalPages ? styles.disabled : undefined}
+                    aria-disabled={page >= totalPages}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           ) : null}
         </section>
       </div>
 
-      <InterventionDrawer
-        student={selected}
-        onClose={() => setSelected(null)}
-      />
+      <InterventionDrawer student={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

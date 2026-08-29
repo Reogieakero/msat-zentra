@@ -33,10 +33,6 @@ function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
   );
 }
 
-function statusVariant(assigned: boolean): "default" | "secondary" {
-  return assigned ? "default" : "secondary";
-}
-
 function outcomeVariant(outcome: NonNullable<RiskSnapshotStudent["intervention"]>["outcomeStatus"]): "default" | "secondary" | "destructive" {
   if (outcome === "resolved") return "secondary";
   if (outcome === "unresolved") return "destructive";
@@ -86,7 +82,7 @@ export function InterventionsTable({
               const iv = r.intervention;
               return (
                 <tr key={`${r.intervention?.id ?? r.studentId}-${i}`} onClick={() => onSelect(r)}>
-                  <td className={styles.colLeft}>
+                  <td>
                     <div className={styles.stuName}>{r.studentName}</div>
                     <div className={styles.stuLrn}>{r.lrn}</div>
                   </td>
@@ -102,14 +98,13 @@ export function InterventionsTable({
                   </td>
                   <td>
                     <div className={styles.progressCell}>
-                      <Badge variant={statusVariant(!!iv)}>
-                        {iv ? "Assigned" : "Unassigned"}
-                      </Badge>
                       {iv ? (
                         <Badge variant={outcomeVariant(iv.outcomeStatus)}>
                           {titleCase(iv.outcomeStatus)}
                         </Badge>
-                      ) : null}
+                      ) : (
+                        <span className={styles.note}>—</span>
+                      )}
                     </div>
                   </td>
                 </tr>

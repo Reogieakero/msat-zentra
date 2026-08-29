@@ -281,29 +281,45 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
+  margin-top: 0.75rem;
 }
 
-.pagerBtn {
-  border: 1px solid var(--border);
-  background-color: var(--card);
-  color: var(--foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.375rem 0.625rem;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.pagerBtn:hover:not(:disabled) {
-  border-color: color-mix(in oklch, var(--primary), transparent 50%);
-}
-
-.pagerBtn:disabled {
+.pager :global([aria-disabled="true"]) {
   opacity: 0.45;
-  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.search {
+  width: min(320px, 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.searchList {
+  max-height: 16rem;
+}
+
+.searchName {
+  font-weight: 600;
+}
+
+.searchLrn {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
 }
 
 /* ---- Drawer ---- */
