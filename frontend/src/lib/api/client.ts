@@ -31,13 +31,25 @@ apiClient.interceptors.response.use(
           original.headers.Authorization = `Bearer ${token}`;
           return apiClient(original);
         }
+        redirectToUnauthorized();
       } catch {
         refreshPromise = null;
+        redirectToUnauthorized();
       }
     }
     return Promise.reject(error);
   },
 );
+
+// When auth recovery fails on a 401, route the user to the 403 page.
+function redirectToUnauthorized() {
+  if (typeof window === "undefined") return;
+  setAccessToken(null);
+  window.localStorage.removeItem("zentra.refresh");
+  if (window.location.pathname !== "/errors/403") {
+    window.location.href = "/errors/403";
+  }
+}
 
 // --- access token storage ( bridging backend JWT with the client ) ---
 const ACCESS_KEY = "zentra.access";
