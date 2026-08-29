@@ -376,20 +376,28 @@
 ```
 
 **Widgets & Data Tables**
-- 👁 **Audit table** — cols: `timestamp`, `user` (actor), `action_type`, `source_table`, `source_id`, `reason`, expandable **old_value/new_value** JSON.
-  - *Example:* `2026-08-21 09:14 · adviser.jdelacruz · grade_lock · final_grades:id=882 · "Term close" · {lock_status:unlocked}→{lock_status:locked, locked_by:…}`.
-- 👁 **Covered action types:** sf10_update, grade_lock, grade_unlock, anecdotal_edit, health_record_edit, home_visitation_edit, adm_edit, referral_status_change, intervention_approval, account_approval, role_change.
+- 👁 **Audit table** — cols: `timestamp`, `user` (actor), `actor_role` (derived from `users.role`, joined server-side), `action_type`, `source_table`, `source_id`, `reason`, expandable **old_value/new_value** JSON.
+  - *Example:* `2026-08-21 09:14 · adviser.jdelacruz (subject_teacher) · grade_lock · final_grades:id=882 · "Term close" · {lock_status:unlocked}→{lock_status:locked, locked_by:…}`.
+- 👁 **Covered action types:**
+  - Cross-module: `sf10_update`, `grade_lock`, `grade_unlock`, `anecdotal_edit`,
+    `health_record_edit`, `home_visitation_edit`, `adm_edit`,
+    `referral_status_change`, `intervention_approval`, `account_approval`,
+    `role_change`.
+  - Principal-originated: `adm_principal_approve` (final-sign), `school_year_create`,
+    `term_create`, `school_year_set_active`, `school_year_edit`,
+    `honor_roll_mark_awarded`, `report_refresh`, `principal_profile_change`,
+    `principal_password_change`.
   - These are **system events**, not clinical write-ups — so old/new JSON is visible (unlike hidden ADM/health columns elsewhere).
 
-**Filter & Toolbar:** ✎ action_type / user / date range / source_table. ✎ Export filtered CSV.
+**Filter & Toolbar:** ✎ action_type / user / **actor scope (Anyone / Actions by me)** / date range / source_table. ✎ Export filtered CSV. Default sort newest-first.
 
-**Interactions & Drill-downs:** expand row → diff JSON; click `source_id` → opens related record if permitted.
+**Interactions & Drill-downs:** expand row → diff JSON; click `source_id` → opens related record **if permitted**. For confidential `source_table` (anecdotal_records, health_records, home_visitation_records, adm_learner_profiles) the drill-down returns **status-only** — hidden clinical columns are never exposed via the audit drill-down (O1).
 
-**States:** Loading — skeleton table. Empty — "No audit entries match." Large — virtualized scroll + pagination.
+**States:** Loading — skeleton table. Empty — "No audit entries match." Large — virtualized scroll + pagination (default newest-first).
 
-**Audit & Notifications:** this page *is* the audit; no additional writes on view.
+**Audit & Notifications:** this page *is* the audit; no additional writes on view. The "Actions by me" filter mirrors the Settings → Security "audit entries attributable to Principal" subset.
 
-**Confidentiality:** old/new JSON visible (system events only); confidential clinical fields remain hidden at source.
+**Confidentiality:** old/new JSON visible (system events only); confidential clinical fields remain hidden at source **and** via audit drill-down. `old_value`/`new_value` payloads capped server-side to avoid oversized rows.
 
 **✅ CAN** filter, export. **🔒 CANNOT** edit/delete rows (immutable).
 
@@ -506,7 +514,7 @@
 
 - Principal session requires `role = principal` in JWT; all module pages gate on `requireRole('principal')`.
 - Confidential columns on `anecdotal_records`, `health_records`, `home_visitation_records`, `adm_learner_profiles` are stripped server-side before reaching the client (O1) — never rendered, even if requested.
-- Every sensitive action (final-sign ADM, set active year, refresh snapshot) writes an `audit_logs` row with reason.
+- Every sensitive action (final-sign ADM, set active year, refresh snapshot, mark award, profile/password change) writes an `audit_logs` row with `actor_role` + reason.
 - `notifications` fire to web/mobile/email per `channel`.
 - The Principal **cannot** bypass confidentiality tiering: status-only is enforced both by RLS (row-level, PLAN.md §4.3) and app-layer field hiding.
 

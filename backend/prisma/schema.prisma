@@ -159,6 +159,15 @@ enum ActionType {
   intervention_approval
   account_approval
   role_change
+  adm_principal_approve
+  school_year_create
+  term_create
+  school_year_set_active
+  school_year_edit
+  honor_roll_mark_awarded
+  report_refresh
+  principal_profile_change
+  principal_password_change
 }
 
 enum NotifChannel {

@@ -1,0 +1,26 @@
+.wrap {
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: var(--radius-md, 6px);
+  background: var(--card, #fff);
+  overflow: hidden;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.headRow,
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8fr 1fr 1fr 2fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.cell {
+  height: 16px;
+}
+
+.cellWide {
+  height: 16px;
+}

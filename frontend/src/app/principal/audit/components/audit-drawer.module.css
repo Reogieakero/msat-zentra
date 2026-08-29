@@ -1,0 +1,149 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+  animation: fade 120ms ease-out;
+}
+
+.drawer {
+  width: min(420px, 92vw);
+  height: 100%;
+  background: var(--card, #fff);
+  border-left: 1px solid var(--border, #e7e5e4);
+  box-shadow: -8px 0 24px rgba(28, 25, 23, 0.08);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+  animation: slide 150ms ease-out;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--muted-foreground, #78716c);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  margin: 2px 0 0;
+}
+
+.close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted-foreground, #78716c);
+  padding: 4px;
+  border-radius: var(--radius-md, 6px);
+}
+
+.close:hover {
+  background: var(--muted, #f5f5f4);
+}
+
+.closeIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--muted, #f5f5f4);
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: var(--radius-md, 6px);
+  font-size: 12.5px;
+  color: var(--foreground, #1c1917);
+}
+
+.noticeIcon {
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  color: var(--muted-foreground, #78716c);
+}
+
+.list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, #e7e5e4);
+}
+
+.itemLabel {
+  font-size: 12px;
+  color: var(--muted-foreground, #78716c);
+}
+
+.itemValue {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.footer {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--muted-foreground, #78716c);
+  display: flex;
+  gap: 6px;
+}
+
+.muted {
+  opacity: 0.7;
+}
+
+.sourceSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeletonRow {
+  height: 18px;
+  width: 100%;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(16px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
