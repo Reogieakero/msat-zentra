@@ -2,13 +2,7 @@
 
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandItem,
-} from "@/components/ui/command";
+import { Command, CommandInput } from "@/components/ui/command";
 import {
   Pagination,
   PaginationContent,
@@ -112,19 +106,6 @@ export default function PrincipalInterventionsPage() {
                 value={query}
                 onValueChange={setQuery}
               />
-              <CommandList className={styles.searchList}>
-                <CommandEmpty>No matching students.</CommandEmpty>
-                {filtered.map((r) => (
-                  <CommandItem
-                    key={r.studentId}
-                    value={`${r.studentName} ${r.lrn}`}
-                    onSelect={() => setSelected(r)}
-                  >
-                    <span className={styles.searchName}>{r.studentName}</span>
-                    <span className={styles.searchLrn}>{r.lrn}</span>
-                  </CommandItem>
-                ))}
-              </CommandList>
             </Command>
           </div>
 

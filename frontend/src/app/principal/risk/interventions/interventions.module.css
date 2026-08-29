@@ -80,6 +80,7 @@
 
 .table th {
   text-align: center;
+  vertical-align: middle;
   font-weight: 600;
   color: var(--muted-foreground);
   background-color: var(--card);
@@ -307,45 +308,28 @@
   background-color: var(--card);
 }
 
-.searchList {
-  max-height: 16rem;
-}
-
-.searchName {
-  font-weight: 600;
-}
-
-.searchLrn {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted-foreground);
-  font-size: 0.6875rem;
-}
-
-/* ---- Drawer ---- */
+/* ---- Drawer (mirrors audit drawer: gutter, overlay, animation) ---- */
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
-  background-color: color-mix(in oklch, var(--foreground), transparent 70%);
-  animation: fade 150ms ease;
+  background: rgba(28, 25, 23, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+  animation: fade 120ms ease-out;
 }
 
 .drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 50;
-  width: min(380px, 92vw);
-  height: 100vh;
+  width: min(420px, 92vw);
+  height: 100%;
+  background: var(--card, #fff);
+  border-left: 1px solid var(--border, #e7e5e4);
+  box-shadow: -8px 0 24px rgba(28, 25, 23, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  border-left: 1px solid var(--border);
-  background-color: var(--popover);
-  color: var(--popover-foreground);
-  box-shadow: -16px 0 40px -20px rgba(0, 0, 0, 0.4);
+  padding: 20px;
+  gap: 16px;
+  animation: slide 150ms ease-out;
   animation: slideIn 180ms ease;
   overflow-y: auto;
 }
