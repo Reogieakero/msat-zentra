@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Badge } from "@/components/ui/badge";
 import type { RiskSnapshotStudent } from "../types";
 import styles from "../interventions.module.css";
 
@@ -32,23 +33,14 @@ function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
   );
 }
 
-function statusPill(s: RiskSnapshotStudent): { cls: string; label: string } {
-  const iv = s.intervention;
-  if (!iv) return { cls: styles.statusUnassigned, label: "Unassigned" };
-  return { cls: styles.statusAssigned, label: "Assigned" };
+function statusVariant(assigned: boolean): "default" | "secondary" {
+  return assigned ? "default" : "secondary";
 }
 
-function progressPill(s: RiskSnapshotStudent): { cls: string; label: string } | null {
-  const iv = s.intervention;
-  if (!iv) return null;
-  const label = titleCase(iv.outcomeStatus);
-  const cls =
-    iv.outcomeStatus === "resolved"
-      ? styles.statusResolved
-      : iv.outcomeStatus === "unresolved"
-        ? styles.statusUnresolved
-        : styles.statusOngoing;
-  return { cls, label };
+function outcomeVariant(outcome: NonNullable<RiskSnapshotStudent["intervention"]>["outcomeStatus"]): "default" | "secondary" | "destructive" {
+  if (outcome === "resolved") return "secondary";
+  if (outcome === "unresolved") return "destructive";
+  return "default";
 }
 
 export function InterventionsTable({
@@ -71,14 +63,13 @@ export function InterventionsTable({
             <th>Section</th>
             <th>Risk</th>
             <th>Factors</th>
-            <th className={styles.colLeft}>Intervention</th>
-            <th>Status</th>
+            <th>Progress</th>
           </tr>
         </thead>
         <tbody>
           {error ? (
             <tr>
-              <td colSpan={6} className={styles.error}>
+              <td colSpan={5} className={styles.error}>
                 {error}
               </td>
             </tr>
@@ -86,14 +77,13 @@ export function InterventionsTable({
             <SkeletonRows />
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={6} className={styles.empty}>
+              <td colSpan={5} className={styles.empty}>
                 No at-risk students match the current filters.
               </td>
             </tr>
           ) : (
             rows.map((r, i) => {
-              const pill = statusPill(r);
-              const prog = progressPill(r);
+              const iv = r.intervention;
               return (
                 <tr key={`${r.intervention?.id ?? r.studentId}-${i}`} onClick={() => onSelect(r)}>
                   <td className={styles.colLeft}>
@@ -110,24 +100,17 @@ export function InterventionsTable({
                   <td>
                     <FactorChips factors={r.factors} />
                   </td>
-                  <td className={styles.colLeft}>
-                    {r.intervention ? (
-                      <span className={styles.recoText}>
-                        {r.intervention.assignedStaffName
-                          ? `→ ${r.intervention.assignedStaffName}`
-                          : "Unassigned"}
-                      </span>
-                    ) : (
-                      <span className={styles.note}>—</span>
-                    )}
-                  </td>
                   <td>
-                    <span className={`${styles.statusPill} ${pill.cls}`}>{pill.label}</span>
-                    {prog ? (
-                      <div className={styles.statusSub}>
-                        <span className={`${styles.statusPill} ${prog.cls}`}>{prog.label}</span>
-                      </div>
-                    ) : null}
+                    <div className={styles.progressCell}>
+                      <Badge variant={statusVariant(!!iv)}>
+                        {iv ? "Assigned" : "Unassigned"}
+                      </Badge>
+                      {iv ? (
+                        <Badge variant={outcomeVariant(iv.outcomeStatus)}>
+                          {titleCase(iv.outcomeStatus)}
+                        </Badge>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );
@@ -155,9 +138,6 @@ function SkeletonRows() {
           </td>
           <td>
             <span className={styles.skelCell} style={{ width: "40%" }} />
-          </td>
-          <td className={styles.colLeft}>
-            <span className={styles.skelCell} style={{ width: "80%" }} />
           </td>
           <td>
             <span className={styles.skelCell} style={{ width: "60%", height: "16px" }} />

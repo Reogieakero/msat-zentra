@@ -1,5 +1,5 @@
 import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus } from "@prisma/client";
-import { recomputeRisk } from "../src/services/risk.js";
+import { recomputeRisk, evaluateRisk } from "../src/services/risk.js";
 import argon2 from "argon2";
 
 const prisma = new PrismaClient();
@@ -287,22 +287,26 @@ async function main() {
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));
   await prisma.referral.createMany({ data: referralsData, skipDuplicates: true });
 
-  // Interventions (>=20) — riskLevelAtFlag mirrors the student's engine-computed
-  // risk level (not a hardcoded "Low") so the stored snapshot is truthful.
-  const referralRecs = await prisma.referral.findMany({ where: { id: { in: referralsData.map((r) => r.id) } }, include: { student: { select: { riskLevel: true } } } });
-  await prisma.intervention.createMany({
-    data: referralRecs.map((r) => ({
-      id: id("int"),
-      studentId: r.studentId,
-      referralId: r.id,
-      riskLevelAtFlag: (r.student?.riskLevel ?? ("Moderate" as RiskLevel)) as RiskLevel,
-      recommendedAction: "Counseling session and behavior contract.",
-      reviewedBy: guidance.id,
-      approvalStatus: rand(["pending", "approved", "rejected"] as ApprovalStatus[]),
-      outcomeStatus: rand(["ongoing", "resolved", "unresolved"] as OutcomeStatus[]),
-    })),
-    skipDuplicates: true,
-  });
+  // Interventions (>=20). riskLevelAtFlag must mirror the engine-computed risk
+  // level, not the schema default "Low". The intervention students are not all in
+  // the first-20 recompute slice, so evaluate each one live against the engine
+  // rule (>=2 flags = High, 1 = Moderate) before storing the snapshot.
+  const referralRecs = await prisma.referral.findMany({ where: { id: { in: referralsData.map((r) => r.id) } } });
+  for (const r of referralRecs) {
+    const { result } = await evaluateRisk(r.studentId, term.id);
+    await prisma.intervention.create({
+      data: {
+        id: id("int"),
+        studentId: r.studentId,
+        referralId: r.id,
+        riskLevelAtFlag: result.riskLevel,
+        recommendedAction: "Counseling session and behavior contract.",
+        reviewedBy: guidance.id,
+        approvalStatus: rand(["pending", "approved", "rejected"] as ApprovalStatus[]),
+        outcomeStatus: rand(["ongoing", "resolved", "unresolved"] as OutcomeStatus[]),
+      },
+    });
+  }
 
   // Deterministic at-risk student with NO intervention assigned — lets the
   // Principal exercise the "Create & assign" flow on a clean row. We force a

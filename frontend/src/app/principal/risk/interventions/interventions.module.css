@@ -596,6 +596,13 @@
   margin-top: 0.25rem;
 }
 
+.progressCell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 /* ---- Drawer form ---- */
 .form {
   display: flex;
