@@ -29,19 +29,16 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { open, setOpen, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [mode, setMode] = React.useState<SidebarMode>("hover");
-
-  React.useEffect(() => {
-    setMounted(true);
+  const [mode, setMode] = React.useState<SidebarMode>(() => {
+    if (typeof window === "undefined") return "hover";
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (saved === "hover" || saved === "expanded" || saved === "collapsible") {
-      setMode(saved);
+      return saved;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return "hover";
+  });
 
   React.useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, mode);
@@ -56,7 +53,7 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
     setOpen(next === "expanded");
   };
 
-  const isDark = mounted && resolvedTheme === "dark";
+  const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
     Object.keys(window.localStorage)
