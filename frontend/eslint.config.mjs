@@ -48,11 +48,16 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
-  // Vendored WebGL fluid simulation (PavelDoGreat / tkabalin, MIT). Heavy use of
-  // `any` against the raw WebGL context and loop-scoped reassignment; leave it
-  // as-is rather than rewrite a third-party lib.
+  // Vendored WebGL background components (PavelDoGreat / tkabalin, MIT /
+  // beautiful-backgrounds). Heavy use of `any` against the raw WebGL context and
+  // loop-scoped reassignment; leave as-is rather than rewrite a third-party lib.
   {
-    files: ["src/lib/fluid/fluidBackground.ts"],
+    files: [
+      "src/lib/fluid/fluidBackground.ts",
+      "src/components/ui/molten-metal.tsx",
+      "src/components/ui/liquid-ether.tsx",
+      "src/components/ui/gradient-waves.tsx",
+    ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "prefer-const": "off",

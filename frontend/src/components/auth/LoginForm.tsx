@@ -71,7 +71,7 @@ export function LoginForm({
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =
         (data.role === "principal" && "/principal/overview") ||
-        (data.role === "registrar" && "/registrar") ||
+        (data.role === "registrar" && "/registrar/overview") ||
         (data.role === "record_keeper" && "/record-keeper") ||
         `/${role}`;
       router.push(home);
