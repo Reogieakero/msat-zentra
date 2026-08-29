@@ -18,7 +18,10 @@ type ThemeContextValue = {
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 const STORAGE_KEY = "theme";
 
-const FontContext = React.createContext<FontPref | null>(null);
+const FontContext = React.createContext<{
+  font: FontPref;
+  setFont: (font: FontPref) => void;
+} | null>(null);
 const FONT_STORAGE_KEY = "zentra.font";
 
 function getInitialFont(): FontPref {
@@ -57,36 +60,20 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const value = React.useMemo<FontPref>(
-    () => (mounted ? font : "inter"),
-    [font, mounted],
+  const value = React.useMemo(
+    () => ({ font: mounted ? font : "inter", setFont }),
+    [font, mounted, setFont],
   );
 
-  return (
-    <FontContext.Provider value={value}>
-      <FontSetter onSet={setFont} />
-      {children}
-    </FontContext.Provider>
-  );
-}
-
-function FontSetter({ onSet }: { onSet: (f: FontPref) => void }) {
-  // Expose the setter through context without re-rendering consumers.
-  React.useEffect(() => {
-    (window as unknown as { __zentraSetFont?: (f: FontPref) => void }).__zentraSetFont =
-      onSet;
-  }, [onSet]);
-  return null;
+  return <FontContext.Provider value={value}>{children}</FontContext.Provider>;
 }
 
 export function useFont(): { font: FontPref; setFont: (f: FontPref) => void } {
-  const font = React.useContext(FontContext) ?? "inter";
-  const setFont = React.useCallback((next: FontPref) => {
-    const fn = (window as unknown as { __zentraSetFont?: (f: FontPref) => void })
-      .__zentraSetFont;
-    fn?.(next);
-  }, []);
-  return { font, setFont };
+  const context = React.useContext(FontContext);
+  if (!context) {
+    return { font: "inter", setFont: () => {} };
+  }
+  return context;
 }
 
 function getInitialTheme(): Theme {
