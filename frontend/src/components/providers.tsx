@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/sonner";
 
 type Theme = "light" | "dark";
 
+export type FontPref = "inter" | "nunito";
+
 type ThemeContextValue = {
   theme: Theme;
   resolvedTheme: Theme;
@@ -15,6 +17,77 @@ type ThemeContextValue = {
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 const STORAGE_KEY = "theme";
+
+const FontContext = React.createContext<FontPref | null>(null);
+const FONT_STORAGE_KEY = "zentra.font";
+
+function getInitialFont(): FontPref {
+  if (typeof window === "undefined") return "inter";
+  const stored = window.localStorage.getItem(FONT_STORAGE_KEY);
+  if (stored === "inter" || stored === "nunito") return stored;
+  return "inter";
+}
+
+function applyFont(font: FontPref) {
+  const root = document.documentElement;
+  root.style.setProperty(
+    "--font-sans",
+    font === "nunito" ? "var(--font-nunito)" : "var(--font-inter)",
+  );
+}
+
+export function FontProvider({ children }: { children: React.ReactNode }) {
+  const [font, setFontState] = React.useState<FontPref>("inter");
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    const initial = getInitialFont();
+    setFontState(initial);
+    applyFont(initial);
+    setMounted(true);
+  }, []);
+
+  const setFont = React.useCallback((next: FontPref) => {
+    setFontState(next);
+    applyFont(next);
+    try {
+      window.localStorage.setItem(FONT_STORAGE_KEY, next);
+    } catch {
+      /* ignore storage failures */
+    }
+  }, []);
+
+  const value = React.useMemo<FontPref>(
+    () => (mounted ? font : "inter"),
+    [font, mounted],
+  );
+
+  return (
+    <FontContext.Provider value={value}>
+      <FontSetter onSet={setFont} />
+      {children}
+    </FontContext.Provider>
+  );
+}
+
+function FontSetter({ onSet }: { onSet: (f: FontPref) => void }) {
+  // Expose the setter through context without re-rendering consumers.
+  React.useEffect(() => {
+    (window as unknown as { __zentraSetFont?: (f: FontPref) => void }).__zentraSetFont =
+      onSet;
+  }, [onSet]);
+  return null;
+}
+
+export function useFont(): { font: FontPref; setFont: (f: FontPref) => void } {
+  const font = React.useContext(FontContext) ?? "inter";
+  const setFont = React.useCallback((next: FontPref) => {
+    const fn = (window as unknown as { __zentraSetFont?: (f: FontPref) => void })
+      .__zentraSetFont;
+    fn?.(next);
+  }, []);
+  return { font, setFont };
+}
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "dark";
@@ -86,10 +159,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-        <Toaster position="top-right" />
-      </QueryClientProvider>
+      <FontProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+          <Toaster position="top-right" />
+        </QueryClientProvider>
+      </FontProvider>
     </ThemeProvider>
   );
 }

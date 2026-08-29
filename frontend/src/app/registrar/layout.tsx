@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "@/components/providers";
+import { useTheme, useFont } from "@/components/providers";
 import { RegistrarSidebar, type SidebarMode } from "@/components/registrar-sidebar";
 import { SidebarModeContext } from "@/components/sidebar-mode";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
 import styles from "./registrar.module.css";
 
 const STORAGE_KEY = "zentra.sidebar.mode";
@@ -29,6 +29,7 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { open, setOpen, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
+  const { font, setFont } = useFont();
   const [hovered, setHovered] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [mode, setMode] = React.useState<SidebarMode>(() => {
@@ -143,6 +144,37 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
                 <Moon className={styles.accountIcon} />
                 <span>Dark</span>
                 {isDark ? (
+                  <span className={styles.accountCheck}>Active</span>
+                ) : null}
+              </DropdownMenuItem>
+            </div>
+            <div className={styles.accountGroup}>
+              <div className={styles.accountGroupLabel}>
+                <span>Font</span>
+              </div>
+              <DropdownMenuItem
+                className={`${styles.accountItem} ${styles.accountSubItem}`}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setFont("inter");
+                }}
+              >
+                <Type className={styles.accountIcon} />
+                <span>Inter</span>
+                {font === "inter" ? (
+                  <span className={styles.accountCheck}>Active</span>
+                ) : null}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className={`${styles.accountItem} ${styles.accountSubItem}`}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setFont("nunito");
+                }}
+              >
+                <Type className={styles.accountIcon} />
+                <span>Nunito</span>
+                {font === "nunito" ? (
                   <span className={styles.accountCheck}>Active</span>
                 ) : null}
               </DropdownMenuItem>
