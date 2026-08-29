@@ -1,6 +1,6 @@
 import * as React from "react";
 import { X } from "lucide-react";
-import type { InterventionLink, RiskSnapshotStudent } from "../types";
+import type { RiskSnapshotStudent } from "../types";
 import styles from "../interventions.module.css";
 
 function titleCase(v: string): string {
@@ -24,14 +24,28 @@ export function InterventionDrawer({
   student: RiskSnapshotStudent | null;
   onClose: () => void;
 }) {
+  React.useEffect(() => {
+    if (!student) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [student, onClose]);
+
   if (!student) return null;
 
   const iv = student.intervention;
 
   return (
-    <>
-      <div className={styles.overlay} onClick={onClose} aria-hidden />
-      <aside className={styles.drawer} aria-label="Intervention detail" role="dialog">
+    <div className={styles.overlay} onClick={onClose} role="presentation">
+      <aside
+        className={styles.drawer}
+        aria-label="Intervention detail"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.drawerHead}>
           <div>
             <h2 className={styles.drawerTitle}>{student.studentName}</h2>
@@ -114,6 +128,6 @@ export function InterventionDrawer({
           )}
         </section>
       </aside>
-    </>
+    </div>
   );
 }
