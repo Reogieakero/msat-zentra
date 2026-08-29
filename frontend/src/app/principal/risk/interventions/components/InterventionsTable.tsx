@@ -82,10 +82,10 @@ export function InterventionsTable({
               </td>
             </tr>
           ) : (
-            rows.map((r) => {
+            rows.map((r, i) => {
               const pill = statusPill(r);
               return (
-                <tr key={r.studentId} onClick={() => onSelect(r)}>
+                <tr key={`${r.intervention?.id ?? r.studentId}-${i}`} onClick={() => onSelect(r)}>
                   <td className={styles.colLeft}>
                     <div className={styles.stuName}>{r.studentName}</div>
                     <div className={styles.stuLrn}>{r.lrn}</div>

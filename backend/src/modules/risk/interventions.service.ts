@@ -162,9 +162,26 @@ export async function getInterventionStudents(
     },
   });
 
-  const highModerate = snaps.length;
+  // A student can have more than one RiskSnapshot row for a term (engine
+  // re-runs append new snapshots). Collapse to one row per student, keeping
+  // the most recent snapshot, so the principal sees each at-risk student once.
+  const byStudent = new Map<string, (typeof snaps)[number]>();
+  for (const s of snaps) {
+    const id = s.student.userId;
+    const prev = byStudent.get(id);
+    if (!prev) {
+      byStudent.set(id, s);
+      continue;
+    }
+    const prevDate = prev.snapshotDate?.getTime() ?? 0;
+    const curDate = s.snapshotDate?.getTime() ?? 0;
+    if (curDate >= prevDate) byStudent.set(id, s);
+  }
+  const deduped = [...byStudent.values()];
 
-  const mapped: RiskSnapshotStudent[] = snaps.map((s) => {
+  const highModerate = deduped.length;
+
+  const mapped: RiskSnapshotStudent[] = deduped.map((s) => {
     const st = s.student;
     const enrolled = st.section?._count.students ?? 0;
     const flags = computeRiskFactors({
