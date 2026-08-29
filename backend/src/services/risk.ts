@@ -152,7 +152,6 @@ export async function recomputeRisk(studentId: string, termId: string) {
             studentId,
             riskLevelAtFlag: result.riskLevel,
             recommendedAction: "Auto-flagged at-risk student — assigned to Guidance Counselor for follow-up.",
-            reviewedBy: guidance.id,
             assignedTo: guidance.id,
             assignedAt: new Date(),
             approvalStatus: "approved",

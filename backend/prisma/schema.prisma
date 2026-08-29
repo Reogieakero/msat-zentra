@@ -197,7 +197,6 @@ model User {
   anecdotalRecords    AnecdotalRecord[]      @relation("ObserverAnecdotals")
   anecdotalFollowups  AnecdotalRecordFollowup[]
   referralsMade       Referral[]             @relation("ReferredBy")
-  interventions       Intervention[]         @relation("InterventionReviewer")
   assignedInterventions Intervention[]         @relation("InterventionAssignee")
   healthRecords       HealthRecord[]
   homeVisitations     HomeVisitationRecord[]
@@ -473,25 +472,19 @@ model Referral {
   healthRecords     HealthRecord[]
   homeVisitations   HomeVisitationRecord[]
   admProfiles       AdmLearnerProfile[]
-  interventions     Intervention[]
 }
 
 model Intervention {
   id                String          @id @default(uuid())
   studentId         String
-  referralId        String?
   riskLevelAtFlag   RiskLevel
   recommendedAction String
-  reviewedBy        String
   assignedTo        String?
   assignedAt        DateTime?
   approvalStatus    ApprovalStatus  @default(pending)
-  approvedAction    String?
   outcomeStatus     OutcomeStatus   @default(ongoing)
   outcomeNotes      String?
-  referral          Referral?       @relation(fields: [referralId], references: [id])
   student           StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
-  reviewer          User            @relation("InterventionReviewer", fields: [reviewedBy], references: [id])
   assignee          User?           @relation("InterventionAssignee", fields: [assignedTo], references: [id])
 }
 // ---------------------------------------------------------------------------

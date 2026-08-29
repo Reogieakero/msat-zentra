@@ -287,22 +287,22 @@ async function main() {
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));
   await prisma.referral.createMany({ data: referralsData, skipDuplicates: true });
 
-  // Interventions (>=20). riskLevelAtFlag must mirror the engine-computed risk
-  // level, not the schema default "Low". The intervention students are not all in
-  // the first-20 recompute slice, so evaluate each one live against the engine
-  // rule (>=2 flags = High, 1 = Moderate) before storing the snapshot.
-  const referralRecs = await prisma.referral.findMany({ where: { id: { in: referralsData.map((r) => r.id) } } });
-  for (const r of referralRecs) {
-    const { result } = await evaluateRisk(r.studentId, term.id);
+  // Interventions (>=20). Seeded to mirror the auto-creation rule: for each
+  // at-risk student (first MIN_RECORDS), evaluate the engine risk and create an
+  // intervention assigned to the Guidance Counselor. No referralId/reviewedBy
+  // (those columns were removed — interventions are engine-driven, not referred).
+  for (const st of allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents))) {
+    const { result } = await evaluateRisk(st.userId, term.id);
+    if (result.riskLevel === "Low") continue;
     await prisma.intervention.create({
       data: {
         id: id("int"),
-        studentId: r.studentId,
-        referralId: r.id,
+        studentId: st.userId,
         riskLevelAtFlag: result.riskLevel,
         recommendedAction: "Counseling session and behavior contract.",
-        reviewedBy: guidance.id,
-        approvalStatus: rand(["pending", "approved", "rejected"] as ApprovalStatus[]),
+        assignedTo: guidance.id,
+        assignedAt: inTermDate(),
+        approvalStatus: "approved" as ApprovalStatus,
         outcomeStatus: rand(["ongoing", "resolved", "unresolved"] as OutcomeStatus[]),
       },
     });
@@ -406,7 +406,7 @@ async function main() {
   console.log(`Seed complete:
   - Staff: ${STAFF_ACCOUNTS.length} + ${sections.length} advisers
   - Sections: ${sections.length}, Students: ${totalStudents}
-  - Attendance: ${attendance.length}, Anecdotal: ${anecdotals.length}, Referrals: ${referralsData.length}, Interventions: ${referralRecs.length}
+  - Attendance: ${attendance.length}, Anecdotal: ${anecdotals.length}, Referrals: ${referralsData.length}, Interventions: auto-created for at-risk students (engine rule)
   - Health: ${health.length}, HomeVisitation: ${home.length}, ADM: ${admData.length}, RiskSnapshots: ${Math.min(MIN_RECORDS, totalStudents)}
   - AuditLogs: ${MIN_RECORDS}, Notifications: ${MIN_RECORDS}, ReportSnapshots: ${Math.min(MIN_RECORDS, sections.length)}`);
 }

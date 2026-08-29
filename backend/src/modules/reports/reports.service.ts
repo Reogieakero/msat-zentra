@@ -159,7 +159,6 @@ export async function getReports(params: {
         },
       }),
       prisma.intervention.findMany({
-        where: termId ? { referral: { termId } } : undefined,
         select: { outcomeStatus: true, student: { select: { gradeLevel: true, sectionId: true } } },
       }),
       prisma.admLearnerProfile.findMany({
