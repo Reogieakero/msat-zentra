@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Command, CommandInput } from "@/components/ui/command";
 import {
   Pagination,
   PaginationContent,
@@ -29,11 +28,10 @@ export default function PrincipalInterventionsPage() {
   const [total, setTotal] = React.useState(0);
   const [highModerate, setHighModerate] = React.useState(0);
   const [page, setPage] = React.useState(1);
-  const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<RiskSnapshotStudent | null>(null);
 
   const load = React.useCallback(
-    (_q: string, p: number, mode: GradeMode) => {
+    (p: number, mode: GradeMode) => {
       setLoading(true);
       setError(null);
       fetchInterventionStudents({ gradeMode: mode }, p, PAGE_SIZE)
@@ -58,25 +56,15 @@ export default function PrincipalInterventionsPage() {
   );
 
   React.useEffect(() => {
-    load("", 1, gradeMode);
+    load(1, gradeMode);
   }, [load, gradeMode]);
-
-  // Client-side search by student name / LRN.
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.studentName.toLowerCase().includes(q) || r.lrn.toLowerCase().includes(q)
-    );
-  }, [rows, query]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const goTo = (p: number) => {
     const next = Math.min(Math.max(1, p), totalPages);
     setPage(next);
-    load(query, next, gradeMode);
+    load(next, gradeMode);
   };
 
   return (
@@ -99,18 +87,8 @@ export default function PrincipalInterventionsPage() {
             </div>
           </header>
 
-          <div className={styles.toolbar}>
-            <Command className={styles.search}>
-              <CommandInput
-                placeholder="Search by student name or LRN…"
-                value={query}
-                onValueChange={setQuery}
-              />
-            </Command>
-          </div>
-
           <InterventionsTable
-            rows={filtered}
+            rows={rows}
             loading={loading}
             error={error}
             onSelect={setSelected}
