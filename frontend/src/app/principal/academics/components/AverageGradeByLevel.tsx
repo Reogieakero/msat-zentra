@@ -70,7 +70,7 @@ export function AverageGradeByLevel({
   return (
     <div className={styles.avgLevel}>
       <p className={styles.avgLevelScope}>
-        {activeGrade.replace("Grade ", "Grade ")}
+        {activeGrade}
         {activeSectionId
           ? ` · ${sections.find((s) => s.sectionId === activeSectionId)?.section ?? ""}`
           : " · All sections"}

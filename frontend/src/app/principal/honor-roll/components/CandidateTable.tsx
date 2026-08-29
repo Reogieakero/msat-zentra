@@ -82,7 +82,7 @@ export function CandidateTable({
                 {columns.map((col) => {
                   const g = gradeByCode.get(col.code);
                   if (!g) return <td key={col.code} className={styles.subjCol} />;
-                  const failing = g.transmutedGrade < 85;
+                  const failing = g.transmutedGrade < 75;
                   return (
                     <td
                       key={col.code}
@@ -124,7 +124,7 @@ export function CandidateTable({
               }`}
               onClick={() => onGradeChange(String(g))}
             >
-              {g}
+              Grade {g}
             </button>
           ))}
         </div>

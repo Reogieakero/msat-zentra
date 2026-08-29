@@ -5,9 +5,11 @@ import styles from "./reports-toolbar.module.css";
 
 export function ReportsToolbar({
   onRefresh,
+  onExport,
   loading,
 }: {
   onRefresh: () => void;
+  onExport?: () => void;
   loading?: boolean;
 }) {
   return (
@@ -18,7 +20,7 @@ export function ReportsToolbar({
           <RefreshIcon />
           Refresh
         </Button>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" onClick={onExport} disabled={loading}>
           <DownloadIcon />
           Export
         </Button>

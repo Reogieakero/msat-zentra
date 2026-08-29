@@ -351,19 +351,23 @@ export function ApprovalsBoard() {
                 <div className={styles.progressStats} style={{ gap: "0.375rem" }}>
                   <span className={styles.statLabel}>Modules</span>
                   <span className={styles.statValue}>
-                    {selected.modulesSubmitted} / {selected.modulesTotal}
+                    {selected.modulesTotal > 0
+                      ? `${selected.modulesSubmitted} / ${selected.modulesTotal}`
+                      : "Not tracked"}
                   </span>
                 </div>
-                <div className={styles.moduleBarTrack}>
-                  <div
-                    className={styles.moduleBarFill}
-                    style={{
-                      width: `${Math.round(
-                        (selected.modulesSubmitted / selected.modulesTotal) * 100
-                      )}%`,
-                    }}
-                  />
-                </div>
+                {selected.modulesTotal > 0 ? (
+                  <div className={styles.moduleBarTrack}>
+                    <div
+                      className={styles.moduleBarFill}
+                      style={{
+                        width: `${Math.round(
+                          (selected.modulesSubmitted / selected.modulesTotal) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           </>

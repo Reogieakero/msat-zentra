@@ -74,7 +74,31 @@ export default function PrincipalHonorRollPage() {
   const handleGradeChange = (value: string) => setGrade(value);
 
   const handleExport = () => {
-    console.info("[honor-roll] export — candidates:", filtered.length);
+    if (filtered.length === 0) return;
+    const header = ["Rank", "Name", "LRN", "Section", "Term Avg", "Tier"];
+    const rows = filtered
+      .slice()
+      .sort((a, b) => b.overallAverage - a.overallAverage)
+      .map((c, i) => [
+        String(i + 1),
+        c.name,
+        c.lrn,
+        c.section,
+        c.overallAverage.toFixed(1),
+        c.tier,
+      ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `honor-roll-grade-${grade}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (error) {

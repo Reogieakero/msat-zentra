@@ -17,6 +17,12 @@ const FACTOR_LABEL: Record<string, string> = {
   behavioral: "Behavioral",
 };
 
+const FACTOR_CHIP: Record<string, string> = {
+  academic: "#b91c1c",
+  attendance: "#2563eb",
+  behavioral: "#7c3aed",
+};
+
 function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
   const active = (Object.keys(factors) as (keyof RiskSnapshotStudent["factors"])[]).filter(
     (k) => factors[k]
@@ -25,7 +31,11 @@ function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
   return (
     <span className={styles.chips}>
       {active.map((k) => (
-        <span key={k} className={styles.factorChip}>
+        <span
+          key={k}
+          className={styles.factorChip}
+          style={{ color: FACTOR_CHIP[k], borderColor: FACTOR_CHIP[k] }}
+        >
           {FACTOR_LABEL[k]}
         </span>
       ))}

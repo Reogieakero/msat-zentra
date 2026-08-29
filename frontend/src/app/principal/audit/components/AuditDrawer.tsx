@@ -1,6 +1,14 @@
 import * as React from "react";
-import { X, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 
 import { AuditEntry, isConfidentialTable, fetchAuditSource } from "../audit-data";
 import styles from "./audit-drawer.module.css";
@@ -46,75 +54,54 @@ export function AuditDrawer({
     };
   }, [entry]);
 
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!entry) return null;
-
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
-      <aside
-        className={styles.drawer}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Source record detail"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className={styles.header}>
-          <div>
-            <h2 className={styles.title}>Source record</h2>
-            <p className={styles.subtitle}>
-              {entry.sourceTable} #{entry.sourceId}
-            </p>
-          </div>
-          <button
-            type="button"
-            className={styles.close}
-            aria-label="Close"
-            onClick={onClose}
-          >
-            <X className={styles.closeIcon} />
-          </button>
-        </header>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className={styles.sheet}>
+        {entry && (
+          <>
+            <SheetHeader>
+              <SheetTitle>Source record</SheetTitle>
+              <SheetDescription className={styles.subtitle}>
+                {entry.sourceTable} #{entry.sourceId}
+              </SheetDescription>
+            </SheetHeader>
 
-        {confidential ? (
-          <div className={styles.notice}>
-            <Lock className={styles.noticeIcon} aria-hidden />
-            <span>
-              Confidential source — status-only view. Clinical detail columns are
-              hidden by design (O1).
-            </span>
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className={styles.sourceSkeleton}>
-            <Skeleton className={styles.skeletonRow} />
-            <Skeleton className={styles.skeletonRow} />
-            <Skeleton className={styles.skeletonRow} />
-          </div>
-        ) : (
-          <dl className={styles.list}>
-            {fields.map((r) => (
-              <div className={styles.item} key={r.label}>
-                <dt className={styles.itemLabel}>{r.label}</dt>
-                <dd className={styles.itemValue}>{r.value}</dd>
+            {confidential ? (
+              <div className={styles.notice}>
+                <Lock className={styles.noticeIcon} aria-hidden />
+                <span>
+                  Confidential source — status-only view. Clinical detail columns are
+                  hidden by design (O1).
+                </span>
               </div>
-            ))}
-          </dl>
-        )}
+            ) : null}
 
-        <footer className={styles.footer}>
-          <span>Changed by {entry.user}</span>
-          <span className={styles.muted}>{currentUser === entry.user ? "(you)" : ""}</span>
-        </footer>
-      </aside>
-    </div>
+            {loading ? (
+              <div className={styles.sourceSkeleton}>
+                <Skeleton className={styles.skeletonRow} />
+                <Skeleton className={styles.skeletonRow} />
+                <Skeleton className={styles.skeletonRow} />
+              </div>
+            ) : (
+              <dl className={styles.list}>
+                {fields.map((r) => (
+                  <div className={styles.item} key={r.label}>
+                    <dt className={styles.itemLabel}>{r.label}</dt>
+                    <dd className={styles.itemValue}>{r.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            <SheetFooter className={styles.footer}>
+              <span>Changed by {entry.user}</span>
+              <span className={styles.muted}>
+                {currentUser === entry.user ? "(you)" : ""}
+              </span>
+            </SheetFooter>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }

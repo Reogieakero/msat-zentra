@@ -37,6 +37,53 @@ export default function PrincipalReportsPage() {
     load();
   };
 
+  const handleExport = () => {
+    if (!data) return;
+    const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const block = (rows: (string | number | null)[][]) =>
+      rows.map((r) => r.map(escape).join(",")).join("\n");
+    const sections: string[] = [];
+    sections.push(`"Reports — ${data.termLabel} (${data.schoolYear})"`);
+    sections.push(
+      block([
+        ["Metric", "Value"],
+        ["Avg transmuted grade", data.kpis.avgTransmuted],
+        ["Interventions resolved", data.kpis.interventionsResolved],
+        ["Intervention success rate", `${data.kpis.interventionRate}%`],
+        ["Sections at risk", data.kpis.sectionsAtRisk],
+        ["Honor roll candidates", data.kpis.honorRoll],
+      ])
+    );
+    sections.push(
+      block([
+        ["Risk level", "Count"],
+        ...data.riskDistribution.map((r) => [r.level, r.count]),
+      ])
+    );
+    sections.push(
+      block([
+        ["Grade", "Honor roll candidates"],
+        ...data.honorRollByGrade.map((r) => [r.grade, r.candidates]),
+      ])
+    );
+    sections.push(
+      block([
+        ["ADM stage", "Count"],
+        ...data.admStages.map((r) => [r.stage, r.count]),
+      ])
+    );
+    const csv = sections.join("\n\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reports-${data.schoolYear}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section className={styles.page}>
       <div className={styles.head}>
@@ -46,7 +93,7 @@ export default function PrincipalReportsPage() {
             Every transaction and data stream across the school, visualized.
           </p>
         </div>
-        <ReportsToolbar onRefresh={handleRefresh} loading={loading} />
+        <ReportsToolbar onRefresh={handleRefresh} onExport={handleExport} loading={loading} />
       </div>
 
       {error ? (

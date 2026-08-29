@@ -21,7 +21,7 @@ const PAGE_SIZE = 25;
 export default function PrincipalAuditPage() {
   const session = useSession();
   const currentUserId = session?.sub ?? "";
-  const currentUserEmail = session?.role === "principal" ? "principal" : "";
+  const currentUserEmail = currentUserId;
 
   const [entries, setEntries] = React.useState<AuditEntry[]>([]);
   const [total, setTotal] = React.useState(0);

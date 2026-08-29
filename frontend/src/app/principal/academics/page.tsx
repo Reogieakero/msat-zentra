@@ -224,7 +224,7 @@ export default function PrincipalAcademicsPage() {
                         handleSelectSection(first?.sectionId ?? null);
                       }}
                     >
-                      {g.replace("Grade ", "G")}
+                      {g}
                     </button>
                   ))}
                 </div>
