@@ -6,6 +6,7 @@ import { Sf10Summary } from "./components/Sf10Summary";
 import { AcademicsKpis } from "./components/AcademicsKpis";
 import { StudentApprovals } from "./components/StudentApprovals";
 import { AttentionPanel } from "./components/AttentionPanel";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { RegistrarOverviewData } from "./components/data";
 import { apiClient } from "@/lib/api/client";
 import { useMediaQuery } from "@/components/use-media-query";
@@ -28,6 +29,7 @@ const EMPTY: RegistrarOverviewData = {
 export default function RegistrarOverviewPage() {
   const [data, setData] = useState<RegistrarOverviewData>(EMPTY);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +44,9 @@ export default function RegistrarOverviewPage() {
           setError(status ? `Failed to load overview (HTTP ${status})` : "Failed to load overview");
           console.error("[/api/registrar/overview] fetch failed:", err);
         }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -53,6 +58,32 @@ export default function RegistrarOverviewPage() {
   // at laptop/tablet widths it stacks under the academic section.
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const showRailAside = isDesktop;
+
+  if (loading && !error) {
+    return (
+      <section className={styles.page}>
+        <div className={styles.layout}>
+          <div className={styles.main}>
+            <Skeleton className={styles.skelCard} />
+            <Skeleton className={styles.skelCard} />
+            <Skeleton className={styles.skelCard} />
+            {!showRailAside ? (
+              <div className={styles.railInline}>
+                <Skeleton className={styles.skelCard} />
+                <Skeleton className={styles.skelCard} />
+              </div>
+            ) : null}
+          </div>
+          {showRailAside ? (
+            <aside className={styles.rail} aria-label="Registrar summary">
+              <Skeleton className={styles.skelCard} />
+              <Skeleton className={styles.skelCard} />
+            </aside>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page}>
