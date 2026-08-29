@@ -9,6 +9,7 @@ import {
   PaginationPrevious,
   PaginationNext,
   PaginationLink,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { fetchInterventionStudents } from "./api";
 import type { RiskSnapshotStudent, GradeMode } from "./types";
@@ -19,6 +20,20 @@ import menu from "../heatmaps/components/heatmap.module.css";
 import styles from "./interventions.module.css";
 
 const PAGE_SIZE = 20;
+
+function pageItems(current: number, totalPages: number): (number | "ellipsis")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const items: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(totalPages - 1, current + 1);
+  if (start > 2) items.push("ellipsis");
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < totalPages - 1) items.push("ellipsis");
+  items.push(totalPages);
+  return items;
+}
 
 export default function PrincipalInterventionsPage() {
   const { gradeMode } = useGradeMode();
@@ -100,20 +115,31 @@ export default function PrincipalInterventionsPage() {
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => goTo(page - 1)}
-                    className={page <= 1 ? styles.disabled : undefined}
                     aria-disabled={page <= 1}
+                    className={page <= 1 ? styles.pageDisabled : undefined}
                   />
                 </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink isActive={false} onClick={() => goTo(page)}>
-                    Page {page} of {totalPages}
-                  </PaginationLink>
-                </PaginationItem>
+                {pageItems(page, totalPages).map((p, i) =>
+                  p === "ellipsis" ? (
+                    <PaginationItem key={`e${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => goTo(p as number)}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )}
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => goTo(page + 1)}
-                    className={page >= totalPages ? styles.disabled : undefined}
                     aria-disabled={page >= totalPages}
+                    className={page >= totalPages ? styles.pageDisabled : undefined}
                   />
                 </PaginationItem>
               </PaginationContent>

@@ -106,10 +106,6 @@
   background-color: color-mix(in oklch, var(--primary), transparent 94%);
 }
 
-.colLeft {
-  text-align: left !important;
-}
-
 .mono {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -283,7 +279,7 @@
 .pager {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
@@ -293,7 +289,7 @@
   pointer-events: none;
 }
 
-.disabled {
+.pageDisabled {
   opacity: 0.45;
   pointer-events: none;
 }

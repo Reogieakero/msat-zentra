@@ -55,7 +55,7 @@ export function InterventionsTable({
       <table className={styles.table}>
         <thead>
           <tr>
-            <th className={styles.colLeft}>Student</th>
+            <th>Student</th>
             <th>Section</th>
             <th>Risk</th>
             <th>Factors</th>
