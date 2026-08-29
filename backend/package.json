@@ -18,6 +18,7 @@
   "dependencies": {
     "@prisma/client": "^6.1.0",
     "@types/argon2": "^0.14.1",
+    "@upstash/redis": "^1.38.3",
     "argon2": "^0.45.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",

@@ -15,6 +15,13 @@ const envSchema = z.object({
   MOBILE_ORIGIN: z.string().default("msat-zentra://app"),
   STORAGE_BUCKET: z.string().default("zentra-docs"),
   OCR_WORKER_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  CACHE_TTL_SECONDS: z.coerce.number().default(60),
+  CACHE_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;

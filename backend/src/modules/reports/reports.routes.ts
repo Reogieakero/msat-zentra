@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
 import { getReports, type ReportScope } from "./reports.service.js";
 
 const router = Router();
@@ -15,6 +16,7 @@ router.get(
   "/",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["reports", "principal"] }),
   async (req, res, next) => {
     try {
       const scopeParam = typeof req.query.scope === "string" ? req.query.scope : "school";

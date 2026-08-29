@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
 import {
   evaluateRisk,
   resolveActiveTermId,
@@ -22,6 +23,7 @@ router.get(
   "/board",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
       const gradeMode =
@@ -41,6 +43,7 @@ router.get(
   "/low-risk-students",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -59,6 +62,7 @@ router.get(
   "/students",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -105,6 +109,7 @@ router.get(
   "/heatmap",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
       const termId = await resolveActiveTermId();
@@ -128,6 +133,7 @@ router.get(
   "/sections/:id/students",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
       const termId = typeof req.query.termId === "string" ? req.query.termId : null;
@@ -200,6 +206,7 @@ router.get(
   "/staff",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (_req, res, next) => {
     try {
       const staff = await prisma.user.findMany({
@@ -232,6 +239,7 @@ router.get(
   "/interventions",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
 import { getAcademicsSummary } from "./academics.service.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ router.get(
   "/",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["academics", "principal"] }),
   async (req, res, next) => {
     try {
       const mode = req.query.mode === "raw" ? "raw" : "final";

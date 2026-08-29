@@ -2,6 +2,7 @@ import { Router } from "express";
 import { GradeLevel } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.get(
   "/overview",
   requireAuth,
   requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "overview"] }),
   async (_req, res, next) => {
     try {
       const GRADE_BAND: GradeLevel[] = ["G11", "G12"];

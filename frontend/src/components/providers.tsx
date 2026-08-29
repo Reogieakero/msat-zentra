@@ -136,7 +136,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
+            // Read-heavy role dashboards (Principal/Registrar) are also cached at
+            // the API layer (Upstash Redis, see backend/src/lib/cache.ts). Keep a
+            // client-side window so navigations between tabs feel instant without
+            // hammering the backend, while still refetching on focus after a bit.
             staleTime: 30_000,
+            gcTime: 5 * 60_000,
             refetchOnWindowFocus: false,
             retry: 1,
           },

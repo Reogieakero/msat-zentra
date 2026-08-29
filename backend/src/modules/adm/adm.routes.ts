@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
@@ -24,6 +25,7 @@ router.get(
   "/dashboard",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
+  cache({ tags: ["adm"] }),
   async (_req, res, next) => {
     try {
       const profiles = await prisma.admLearnerProfile.findMany({
@@ -123,6 +125,7 @@ router.get(
   "/referrals/all",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
+  cache({ tags: ["adm"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -219,6 +222,7 @@ router.get(
   "/approvals",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
+  cache({ tags: ["adm"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
@@ -295,6 +299,7 @@ router.get(
   "/referrals",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
+  cache({ tags: ["adm"] }),
   async (req, res, next) => {
     try {
       const profiles = await prisma.admLearnerProfile.findMany({
@@ -343,6 +348,7 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "ADM learner profile created" });
       await fanoutNotification({ userId: req.user!.id, sourceTable: "adm_learner_profiles", action: "certify", message: "ADM profile ready for principal signature.", sourceId: profile.id });
+      await invalidateTags(["adm", "overview", "principal"]);
       res.status(201).json(profile);
     } catch (e) { next(e); }
   }
@@ -366,6 +372,7 @@ router.post(
         data: { approvedBy: req.user!.id, approvedAt: new Date(), stage: "enrollment_monitoring" },
       });
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "Principal final signature", oldValue: { approvedBy: null }, newValue: { approvedBy: req.user!.id } });
+      await invalidateTags(["adm", "overview", "principal"]);
       res.json(updated);
     } catch (e) { next(e); }
   }
@@ -415,6 +422,7 @@ router.post(
         message: "ADM profile returned by principal for revision.",
         sourceId: profile.id,
       });
+      await invalidateTags(["adm", "overview", "principal"]);
       res.json(updated);
     } catch (e) {
       next(e);
@@ -511,6 +519,7 @@ router.patch(
         oldValue: { stage: profile.stage },
         newValue: { stage: target },
       });
+      await invalidateTags(["adm", "overview", "principal"]);
       res.json(updated);
     } catch (e) {
       next(e);
@@ -529,6 +538,7 @@ router.post(
         data: { ...req.body, issuedBy: req.user!.id, issuedDate: req.body.issuedDate ? new Date(req.body.issuedDate) : new Date() },
       });
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_devices", sourceId: device.id, reason: "ADM device issued" });
+      await invalidateTags(["adm", "overview", "principal"]);
       res.status(201).json(device);
     } catch (e) { next(e); }
   }
@@ -547,6 +557,7 @@ router.post(
       if (device.returnedDate) throw new AppError(409, "ALREADY_RETURNED", "Device already returned");
       const updated = await prisma.admDevice.update({ where: { id: device.id }, data: { returnedDate: req.body.returnedDate ? new Date(req.body.returnedDate) : new Date() } });
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_devices", sourceId: device.id, reason: "ADM device returned" });
+      await invalidateTags(["adm", "overview", "principal"]);
       res.json(updated);
     } catch (e) { next(e); }
   }

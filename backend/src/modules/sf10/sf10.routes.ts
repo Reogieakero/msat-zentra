@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 
@@ -142,6 +143,7 @@ router.post(
         prisma.sf10RecordVersion.create({ data: { sf10RecordId: record.id, versionNumber: record.currentVersion + 1, dataSnapshot: (record.ocrExtractedData as object) ?? {}, changedBy: req.user!.id, changeReason: "Validation" } }),
         prisma.auditLog.create({ data: { userId: req.user!.id, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 validated" } }),
       ]);
+      await invalidateTags(["registrar", "overview", "principal"]);
       res.json(updated[0]);
     } catch (e) { next(e); }
   }
@@ -163,6 +165,7 @@ router.post(
         }),
         prisma.auditLog.create({ data: { userId: req.user!.id, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 released and archived" } }),
       ]);
+      await invalidateTags(["registrar", "overview", "principal"]);
       res.json(updated[0]);
     } catch (e) { next(e); }
   }

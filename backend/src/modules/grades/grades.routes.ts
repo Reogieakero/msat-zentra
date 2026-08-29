@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole, requireOwnershipOrRole } from "../../middleware/auth.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
 import { computeFinalGrade } from "../../services/grading.js";
@@ -94,6 +95,7 @@ router.post(
         data: { lockStatus: "locked", lockedBy: req.user!.id, lockedAt: new Date() },
       });
       await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Adviser locked final grade" });
+      await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
       res.json(updated);
     } catch (e) { next(e); }
   }
@@ -118,6 +120,7 @@ router.post(
         data: { finalizedBy: req.user!.id, finalizedAt: new Date() },
       });
       await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Registrar approved/validated final grade" });
+      await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
       res.json(updated);
     } catch (e) { next(e); }
   }

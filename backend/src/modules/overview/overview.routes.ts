@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { cache } from "../../lib/cache.js";
 import {
   computeRiskFactors,
   isAtRisk,
@@ -18,6 +19,7 @@ router.get(
   "/",
   requireAuth,
   requireRole("principal"),
+  cache({ tags: ["overview", "principal"] }),
   async (_req, res, next) => {
     try {
       const activeYear = await prisma.schoolYear.findFirst({
