@@ -1,0 +1,84 @@
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.mockTag {
+  height: 1.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.cardBody {
+  padding: 1rem;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--background);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease-out;
+}
+
+.kpi:hover {
+  border-color: var(--primary);
+}
+
+.kpiIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
+}
+
+.kpiIcon :global(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.kpiValue {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--foreground);
+}
+
+.kpiLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}

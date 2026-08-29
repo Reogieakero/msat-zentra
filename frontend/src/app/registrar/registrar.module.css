@@ -1,0 +1,226 @@
+.wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  margin-left: 3rem;
+  margin-top: 3rem;
+  transition: margin-left 180ms ease-out;
+}
+
+.shellExpanded {
+  margin-left: 13rem;
+}
+
+.main {
+  flex: 1;
+  padding: 1rem;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3rem;
+  padding-inline: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--background);
+}
+
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  cursor: pointer;
+  outline: none;
+}
+
+.menuButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.menuIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+@media (max-width: 767px) {
+  .menuButton {
+    display: inline-flex;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  outline: none;
+}
+
+.brand:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+  border-radius: var(--radius-md);
+}
+
+.brandText {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.search {
+  width: 16rem;
+  max-width: 40vw;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.searchCommand {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+.searchCommand :global([data-slot="command-input"]) {
+  height: 2.25rem;
+}
+
+.accountGradeBasis {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.segmentedCompact {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.segmentCompact {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.segmentCompactOn {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.avatarButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  border-radius: 9999px;
+  cursor: pointer;
+  outline: none;
+  transition: box-shadow 140ms ease-out;
+}
+
+.avatarButton:hover {
+  box-shadow: 0 0 0 2px var(--muted);
+}
+
+.avatarButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.avatarIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.accountMenu {
+  min-width: 12rem;
+}
+
+.accountItem {
+  gap: 0.5rem;
+}
+
+.accountIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.accountGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.accountGroupLabel {
+  padding: 0.25rem 0.5rem 0.125rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.accountSubItem {
+  padding-left: 1.75rem;
+}
+
+.accountCheck {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell {
+    transition: none;
+  }
+}
+
+/* Mobile: 8px side gutters, 1rem gap below the navbar */
+@media (max-width: 767px) {
+  .shell {
+    margin-left: 0;
+    margin-top: 3rem;
+  }
+
+  .main {
+    padding: 1rem 0.5rem 0.5rem;
+  }
+}

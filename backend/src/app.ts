@@ -17,6 +17,7 @@ import auditRoutes from "./modules/audit/audit.routes.js";
 import overviewRoutes from "./modules/overview/overview.routes.js";
 import academicsRoutes from "./modules/academics/academics.routes.js";
 import reportsRoutes from "./modules/reports/reports.routes.js";
+import registrarRoutes from "./modules/registrar/registrar.routes.js";
 
 export function createApp() {
   const env = getEnv();
@@ -39,6 +40,7 @@ export function createApp() {
   app.use("/api/overview", overviewRoutes);
   app.use("/api/academics", academicsRoutes);
   app.use("/api/reports", reportsRoutes);
+  app.use("/api/registrar", registrarRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
