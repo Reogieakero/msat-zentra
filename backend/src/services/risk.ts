@@ -120,6 +120,9 @@ export function isAtRisk(level: RiskLevel): boolean {
 }
 
 // Writes the computed risk to student_profiles and appends a risk_snapshots row (O4).
+// When a student crosses into Moderate/High risk and has no open intervention, an
+// intervention is auto-created and assigned to the Guidance Counselor — interventions
+// are engine-driven, not manually assigned by the Principal (who only views/tracks).
 export async function recomputeRisk(studentId: string, termId: string) {
   const { result } = await evaluateRisk(studentId, termId);
   await prisma.$transaction([
@@ -131,5 +134,33 @@ export async function recomputeRisk(studentId: string, termId: string) {
       data: { studentId, riskLevel: result.riskLevel, riskCount: result.riskCount, termId },
     }),
   ]);
+
+  const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
+  if (atRisk) {
+    const open = await prisma.intervention.findFirst({
+      where: { studentId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
+      select: { id: true },
+    });
+    if (!open) {
+      const guidance = await prisma.user.findFirst({
+        where: { role: "guidance_counselor", status: "active" },
+        select: { id: true },
+      });
+      if (guidance) {
+        await prisma.intervention.create({
+          data: {
+            studentId,
+            riskLevelAtFlag: result.riskLevel,
+            recommendedAction: "Auto-flagged at-risk student — assigned to Guidance Counselor for follow-up.",
+            reviewedBy: guidance.id,
+            assignedTo: guidance.id,
+            assignedAt: new Date(),
+            approvalStatus: "approved",
+            outcomeStatus: "ongoing",
+          },
+        });
+      }
+    }
+  }
   return result;
 }

@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchInterventionStudents, fetchStaffOptions } from "./api";
-import type { InterventionLink, RiskSnapshotStudent, StaffOption, GradeMode } from "./types";
+import { fetchInterventionStudents } from "./api";
+import type { RiskSnapshotStudent, GradeMode } from "./types";
 import { useGradeMode } from "../../grade-mode-context";
 import { InterventionFilters } from "./components/InterventionFilters";
 import { InterventionsTable } from "./components/InterventionsTable";
@@ -34,7 +34,6 @@ export default function PrincipalInterventionsPage() {
   const [highModerate, setHighModerate] = React.useState(0);
   const [page, setPage] = React.useState(1);
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
-  const [staff, setStaff] = React.useState<StaffOption[]>([]);
   const [selected, setSelected] = React.useState<RiskSnapshotStudent | null>(null);
 
   const load = React.useCallback(
@@ -64,23 +63,11 @@ export default function PrincipalInterventionsPage() {
 
   React.useEffect(() => {
     load(EMPTY_FILTERS, 1, gradeMode);
-    fetchStaffOptions()
-      .then(setStaff)
-      .catch((e) => console.error("[/api/risk/staff] fetch failed:", e));
   }, [load, gradeMode]);
 
   const onFiltersChange = (next: Filters) => {
     setFilters(next);
     load(next, 1, gradeMode);
-  };
-
-  const onSaved = (studentId: string, link: InterventionLink | null) => {
-    setRows((prev) =>
-      prev.map((r) => (r.studentId === studentId ? { ...r, intervention: link } : r))
-    );
-    setSelected((cur) =>
-      cur && cur.studentId === studentId ? { ...cur, intervention: link } : cur
-    );
   };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -142,9 +129,7 @@ export default function PrincipalInterventionsPage() {
 
       <InterventionDrawer
         student={selected}
-        staff={staff}
         onClose={() => setSelected(null)}
-        onSaved={onSaved}
       />
     </div>
   );

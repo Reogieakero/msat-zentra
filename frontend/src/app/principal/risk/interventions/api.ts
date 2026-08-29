@@ -1,12 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import type {
-  CreateInterventionBody,
-  InterventionStudentsResult,
-  PatchInterventionBody,
-  RiskSnapshotStudent,
-  StaffOption,
-  StudentFilters,
-} from "./types";
+import type { InterventionStudentsResult, StudentFilters } from "./types";
 
 export async function fetchInterventionStudents(
   filters: StudentFilters,
@@ -23,32 +16,6 @@ export async function fetchInterventionStudents(
   const { data } = await apiClient.get<InterventionStudentsResult>(
     "/api/risk/interventions",
     { params }
-  );
-  return data;
-}
-
-export async function fetchStaffOptions(): Promise<StaffOption[]> {
-  const { data } = await apiClient.get<StaffOption[]>("/api/risk/staff");
-  return data;
-}
-
-export async function createIntervention(
-  body: CreateInterventionBody
-): Promise<RiskSnapshotStudent["intervention"]> {
-  const { data } = await apiClient.post<RiskSnapshotStudent["intervention"]>(
-    "/api/risk/interventions",
-    body
-  );
-  return data;
-}
-
-export async function updateIntervention(
-  id: string,
-  body: PatchInterventionBody
-): Promise<RiskSnapshotStudent["intervention"]> {
-  const { data } = await apiClient.patch<RiskSnapshotStudent["intervention"]>(
-    `/api/risk/interventions/${id}`,
-    body
   );
   return data;
 }

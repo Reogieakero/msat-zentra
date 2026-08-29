@@ -13,11 +13,7 @@ import {
   type RiskFactor,
 } from "./riskHeatmap.service.js";
 import { getRiskStudents } from "./riskStudents.service.js";
-import {
-  getInterventionStudents,
-  createIntervention,
-  patchIntervention,
-} from "./interventions.service.js";
+import { getInterventionStudents } from "./interventions.service.js";
 
 const router = Router();
 
@@ -272,47 +268,9 @@ router.get(
   }
 );
 
-// Principal: create an intervention for an at-risk student and assign staff.
-router.post(
-  "/interventions",
-  requireAuth,
-  requireRole("principal"),
-  async (req, res, next) => {
-    try {
-      const body = req.body ?? {};
-      const created = await createIntervention(req.user!.id, {
-        studentId: body.studentId,
-        recommendedAction: body.recommendedAction,
-        assignedTo: body.assignedTo,
-        riskLevelAtFlag: body.riskLevelAtFlag,
-      });
-      res.status(201).json(created);
-    } catch (e) {
-      next(e);
-    }
-  }
-);
-
-// Principal: approve/reject, set outcome (only when approved), or re-assign /
-// edit a pending intervention. Server-enforced in the service layer.
-router.patch(
-  "/interventions/:id",
-  requireAuth,
-  requireRole("principal"),
-  async (req, res, next) => {
-    try {
-      const body = req.body ?? {};
-      const updated = await patchIntervention(String(req.params.id), {
-        approvalStatus: body.approvalStatus,
-        outcomeStatus: body.outcomeStatus,
-        assignedTo: body.assignedTo,
-        recommendedAction: body.recommendedAction,
-      });
-      res.json(updated);
-    } catch (e) {
-      next(e);
-    }
-  }
-);
+// Interventions are auto-created by the risk engine (recomputeRisk) and assigned to
+// the Guidance Counselor. The Principal has read-only visibility (list + detail) — no
+// create/assign/approve/edit endpoints are exposed. The guidance_counselor owns the
+// lifecycle (outcome updates) via their own role-guarded routes if/when added.
 
 export default router;
