@@ -70,6 +70,7 @@ enum ComponentType {
 enum LockStatus {
   unlocked
   locked
+  adviser_approved
 }
 
 enum Remarks {
@@ -394,6 +395,8 @@ model FinalGrade {
   lockStatus        LockStatus   @default(unlocked)
   lockedBy          String?
   lockedAt          DateTime?
+  adviserApprovedBy String?
+  adviserApprovedAt DateTime?
   finalizedBy       String?
   finalizedAt       DateTime?
   student           StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)

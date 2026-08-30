@@ -16,17 +16,14 @@ import styles from "./FinalGradesGetStartedModal.module.css";
 
 const DISMISS_KEY = "zentra.finalGrades.getStarted.dismissed";
 
-export function FinalGradesGetStartedModal() {
-  const [open, setOpen] = React.useState(false);
-  const [dismissed, setDismissed] = React.useState(true);
+function readDismissed(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(DISMISS_KEY) !== null;
+}
 
-  React.useEffect(() => {
-    const seen = window.localStorage.getItem(DISMISS_KEY);
-    if (!seen) {
-      setDismissed(false);
-      setOpen(true);
-    }
-  }, []);
+export function FinalGradesGetStartedModal() {
+  const [dismissed, setDismissed] = React.useState<boolean>(readDismissed);
+  const [open, setOpen] = React.useState<boolean>(!readDismissed());
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
