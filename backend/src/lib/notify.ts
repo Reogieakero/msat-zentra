@@ -15,6 +15,8 @@ const TYPE_MAP: Record<string, string> = {
   "audit_logs:alert": "audit_alert",
   "anecdotal_record_followups:create": "new_followup",
   "referrals:status": "referral_status_change",
+  "adviser_sf10_access_requests:approve": "sf10_access_decision",
+  "adviser_sf10_access_requests:deny": "sf10_access_decision",
 };
 
 export function deriveNotifType(sourceTable: string, action: string): string {

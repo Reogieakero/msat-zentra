@@ -169,6 +169,14 @@ enum ActionType {
   report_refresh
   principal_profile_change
   principal_password_change
+  sf10_access_grant
+  sf10_access_deny
+}
+
+enum AccessRequestStatus {
+  pending
+  approved
+  denied
 }
 
 enum NotifChannel {
@@ -215,6 +223,8 @@ model User {
   notifications       Notification[]
   refreshTokens       RefreshToken[]
   sectionsAdvised     Section[]              @relation("AdviserSection")
+  sf10AccessRequests  AdviserSf10AccessRequest[] @relation("Sf10AccessAdviser")
+  sf10AccessDecided   AdviserSf10AccessRequest[] @relation("Sf10AccessDecidedBy")
   teacherAssignments  TeacherSubjectAssignment[]
 }
 
@@ -325,6 +335,7 @@ model Section {
   anecdotalRecords AnecdotalRecord[]
   teacherAssignments TeacherSubjectAssignment[]
   rosterEntries StudentRoster[]
+  sf10AccessRequests AdviserSf10AccessRequest[]
 }
 
 // Decoupled enrollment roster: a student enrolled in a section for a school year,
@@ -702,6 +713,30 @@ model ReportSnapshot {
   payload      Json
   generatedAt  DateTime  @default(now())
   term         Term      @relation(fields: [termId], references: [id])
+}
+
+// Adviser request for extra read access to their advisees' SF10 records (Grade
+// 11–12 only). The registrar reviews and approves/denies. Approval grants SF10
+// read for the adviser's section advisees via this request row (status gate),
+// not by mutating sf10_records.
+model AdviserSf10AccessRequest {
+  id             String              @id @default(uuid())
+  adviserId      String
+  sectionId      String
+  gradeLevel     GradeLevel
+  reason         String
+  status         AccessRequestStatus @default(pending)
+  decidedBy      String?
+  decidedAt      DateTime?
+  decisionReason String?
+  requestedAt    DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  adviser        User                @relation("Sf10AccessAdviser", fields: [adviserId], references: [id], onDelete: Cascade)
+  section        Section             @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  decidedByUser  User?               @relation("Sf10AccessDecidedBy", fields: [decidedBy], references: [id])
+  @@index([status])
+  @@index([adviserId])
+  @@index([sectionId])
 }
 
 // ---------------------------------------------------------------------------

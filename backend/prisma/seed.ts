@@ -435,6 +435,55 @@ async function main() {
     }
   }
 
+  // Adviser SF10 access requests (registrar review surface) — G11–G12 only.
+  // One pending, one already approved, one already denied, to exercise all
+  // states on the registrar Adviser Access Requests page.
+  const accessSections = sections.filter((s) => s.gradeLevel === "G11" || s.gradeLevel === "G12");
+  if (accessSections.length > 0) {
+    const pendingSection = accessSections[0];
+    const approvedSection = accessSections[1] ?? accessSections[0];
+    const deniedSection = accessSections[2] ?? accessSections[0];
+    await prisma.adviserSf10AccessRequest.createMany({
+      data: [
+        {
+          id: "asr_seed_pending",
+          adviserId: pendingSection.adviserId,
+          sectionId: pendingSection.id,
+          gradeLevel: pendingSection.gradeLevel,
+          reason:
+            "I need to cross-check final SF10 entries against the uploaded learner documents before endorsement to the division office.",
+          status: "pending" as any,
+          requestedAt: new Date(Date.now() - 1000 * 60 * 42),
+        },
+        {
+          id: "asr_seed_approved",
+          adviserId: approvedSection.adviserId,
+          sectionId: approvedSection.id,
+          gradeLevel: approvedSection.gradeLevel,
+          reason: "Preparing graduation clearance packet; need SF10 read to confirm no unresolved records.",
+          status: "approved" as any,
+          decidedBy: registrarUser.id,
+          decidedAt: new Date(Date.now() - 1000 * 60 * 60 * 25),
+          requestedAt: new Date(Date.now() - 1000 * 60 * 60 * 26),
+        },
+        {
+          id: "asr_seed_denied",
+          adviserId: deniedSection.adviserId,
+          sectionId: deniedSection.id,
+          gradeLevel: deniedSection.gradeLevel,
+          reason: "Requested SF10 access to review anecdotal attachments not available in the standard advisee view.",
+          status: "denied" as any,
+          decidedBy: registrarUser.id,
+          decidedAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
+          decisionReason:
+            "Anecdotal attachments are not part of the SF10 record. Access to SF10 read was not granted.",
+          requestedAt: new Date(Date.now() - 1000 * 60 * 60 * 50),
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+
   // Audit logs (>=20)
   await prisma.auditLog.createMany({ data: Array.from({ length: MIN_RECORDS }, (_, i) => ({ id: id("al"), userId: principal.id, actionType: rand(["account_approval", "grade_lock", "grade_unlock", "referral_status_change", "intervention_approval"] as ActionType[]), sourceTable: "StudentProfile", sourceId: allStudents[i % totalStudents].userId, reason: "Seeded audit entry." })), skipDuplicates: true });
 

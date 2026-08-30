@@ -1,8 +1,15 @@
 import { Router } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { GradeLevel } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
+import { writeAudit } from "../../lib/audit.js";
+import { fanoutNotification } from "../../lib/notify.js";
+import { invalidateTags } from "../../lib/cache.js";
+import { AppError } from "../../lib/errors.js";
+
+const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
 
 const router = Router();
 
@@ -307,6 +314,176 @@ router.get(
     } catch (e) {
       next(e);
     }
+  }
+);
+
+// List adviser SF10 access requests (registrar G11–12 band only). Server-side
+// filter: requests whose section gradeLevel is in the registrar band. Optional
+// ?status filters by request status. Live from the database — no mocked data.
+router.get(
+  "/adviser-access-requests",
+  requireAuth,
+  requireRole("registrar"),
+  cache({ tags: ["registrar", "adviser-access"] }),
+  async (req, res, next) => {
+    try {
+      const statusFilter = req.query.status
+        ? String(req.query.status)
+        : undefined;
+
+      const where = {
+        section: { gradeLevel: { in: GRADE_BAND } },
+        ...(statusFilter ? { status: statusFilter as any } : {}),
+      };
+
+      const rows = await prisma.adviserSf10AccessRequest.findMany({
+        where,
+        include: {
+          adviser: {
+            select: {
+              id: true,
+              fullName: true,
+              staffProfile: { select: { employeeId: true } },
+            },
+          },
+          section: { select: { name: true } },
+        },
+        orderBy: [{ requestedAt: "desc" }],
+      });
+
+      const requests = await Promise.all(
+        rows.map(async (r) => {
+          const students = await prisma.studentProfile.findMany({
+            where: { sectionId: r.sectionId },
+            select: {
+              lrn: true,
+              user: { select: { fullName: true } },
+              sf10Records: { select: { status: true } },
+            },
+            orderBy: { lrn: "asc" },
+          });
+          const affectedAdvisees = students.map((s) => {
+            const sf10 = s.sf10Records[0]?.status;
+            return {
+              lrn: s.lrn,
+              name: s.user.fullName,
+              gradeLevel: r.gradeLevel,
+              section: r.section.name,
+              sf10Status:
+                sf10 === "released"
+                  ? "validated"
+                  : sf10 === "available"
+                    ? "verified"
+                    : "pending",
+            };
+          });
+          return {
+            id: r.id,
+            adviserId: r.adviserId,
+            adviserName: r.adviser.fullName,
+            employeeId: r.adviser.staffProfile?.employeeId ?? "—",
+            section: r.section.name,
+            gradeLevel: r.gradeLevel,
+            reason: r.reason,
+            status: r.status,
+            decisionReason: r.decisionReason,
+            requestedAt: r.requestedAt.toISOString(),
+            decidedAt: r.decidedAt?.toISOString() ?? null,
+            affectedAdvisees,
+          };
+        })
+      );
+
+      res.json({ requests });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Decide (approve or deny) an adviser SF10 access request. Shared handler:
+// sets status + decision, writes an audit entry, and fans out a notification to
+// the requesting adviser. 409 if the request is already decided.
+async function decideAccessRequest(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  approved: boolean
+) {
+  try {
+    const id = String(req.query.id ?? req.params.id);
+    const request = await prisma.adviserSf10AccessRequest.findUnique({
+      where: { id },
+      include: {
+        adviser: { select: { fullName: true } },
+        section: { select: { name: true } },
+      },
+    });
+    if (!request) throw new AppError(404, "REQUEST_NOT_FOUND", "Access request not found");
+    if (request.status !== "pending")
+      throw new AppError(409, "ALREADY_DECIDED", "Request already processed");
+
+    const reason = approved
+      ? null
+      : String((req.body as { reason?: string })?.reason ?? "Denied by registrar");
+
+    const updated = await prisma.adviserSf10AccessRequest.update({
+      where: { id },
+      data: {
+        status: approved ? "approved" : "denied",
+        decidedBy: req.user!.id,
+        decidedAt: new Date(),
+        decisionReason: reason,
+      },
+      include: { section: { select: { name: true } } },
+    });
+
+    await writeAudit({
+      userId: req.user!.id,
+      actionType: approved ? "sf10_access_grant" : "sf10_access_deny",
+      sourceTable: "adviser_sf10_access_requests",
+      sourceId: updated.id,
+      reason: approved ? "SF10 read access granted" : (reason ?? undefined),
+    });
+
+    await fanoutNotification({
+      userId: updated.adviserId,
+      sourceTable: "adviser_sf10_access_requests",
+      action: approved ? "approve" : "deny",
+      message: approved
+        ? `Your request for SF10 read access (${updated.section.name}) was approved.`
+        : `Your request for SF10 read access (${updated.section.name}) was denied.`,
+      sourceId: updated.id,
+    });
+
+    await invalidateTags(["registrar", "adviser-access", "overview"]);
+
+    res.json({
+      id: updated.id,
+      status: updated.status,
+      decisionReason: updated.decisionReason,
+      decidedAt: updated.decidedAt?.toISOString() ?? undefined,
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+router.post(
+  "/adviser-access-requests/:id/approve",
+  requireAuth,
+  requireRole("registrar"),
+  (req, res, next) => {
+    decideAccessRequest(req, res, next, true).catch(next);
+  }
+);
+
+router.post(
+  "/adviser-access-requests/:id/deny",
+  requireAuth,
+  requireRole("registrar"),
+  (req, res, next) => {
+    decideAccessRequest(req, res, next, false).catch(next);
   }
 );
 
