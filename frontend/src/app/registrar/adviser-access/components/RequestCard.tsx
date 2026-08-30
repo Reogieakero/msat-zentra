@@ -13,6 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { AdviserAccessRequest } from "./types";
 import { formatRelativeTime } from "./types";
+import { Sf10ConfirmModal } from "./Sf10ConfirmModal";
 import styles from "./request-card.module.css";
 
 type Props = {
@@ -45,7 +46,7 @@ export function RequestCard({
   onViewAdvisees,
   onActed,
 }: Props) {
-  const [dialog, setDialog] = React.useState<null | "approve" | "reject">(null);
+  const [dialog, setDialog] = React.useState<null | "reject" | "confirm" | "approve">(null);
   const [reason, setReason] = React.useState("");
 
   const isProcessed = request.status !== "pending";
@@ -114,15 +115,15 @@ export function RequestCard({
           </span>
         ) : (
           <div className={styles.actions}>
-            <Button
-              variant="default"
-              size="sm"
-              disabled={acting}
-              onClick={() => setDialog("approve")}
-            >
-              <Check className={styles.actionIcon} />
-              {acting ? "…" : "Approve"}
-            </Button>
+              <Button
+                variant="default"
+                size="sm"
+                disabled={acting}
+                onClick={() => setDialog("confirm")}
+              >
+                <Check className={styles.actionIcon} />
+                {acting ? "…" : "Approve"}
+              </Button>
             <Button
               variant="outline"
               size="sm"
@@ -136,60 +137,47 @@ export function RequestCard({
         )}
       </footer>
 
-      <Dialog open={dialog !== null} onOpenChange={(o) => !o && closeDialog()}>
+      <Dialog open={dialog === "reject"} onOpenChange={(o) => !o && closeDialog()}>
         <DialogContent>
-          {dialog === "approve" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Grant SF10 access</DialogTitle>
-                <DialogDescription>
-                  Approve <strong>{request.adviserName}</strong> ({request.section}) for
-                  read access to their advisees&apos; SF10 records (Grade 11–12)? The
-                  adviser will be notified.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={closeDialog} disabled={acting}>
-                  Cancel
-                </Button>
-                <Button variant="default" onClick={confirmApprove} disabled={acting}>
-                  {acting ? "Approving…" : "Confirm approve"}
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Deny access request</DialogTitle>
-                <DialogDescription>
-                  Deny <strong>{request.adviserName}</strong> ({request.section})? Add a
-                  reason for the denial.
-                </DialogDescription>
-              </DialogHeader>
-              <div className={styles.dialogBody}>
-                <Textarea
-                  placeholder="Reason for denial (required)"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className={styles.reasonInput}
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={closeDialog} disabled={acting}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={confirmReject}
-                  disabled={acting || !reason.trim()}
-                >
-                  {acting ? "Denying…" : "Confirm deny"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+          <DialogHeader>
+            <DialogTitle>Deny access request</DialogTitle>
+            <DialogDescription>
+              Deny <strong>{request.adviserName}</strong> ({request.section})? Add a
+              reason for the denial.
+            </DialogDescription>
+          </DialogHeader>
+          <div className={styles.dialogBody}>
+            <Textarea
+              placeholder="Reason for denial (required)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className={styles.reasonInput}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog} disabled={acting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmReject}
+              disabled={acting || !reason.trim()}
+            >
+              {acting ? "Denying…" : "Confirm deny"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sf10ConfirmModal
+        requestId={request.id}
+        adviserName={request.adviserName}
+        section={request.section}
+        open={dialog === "confirm"}
+        acting={acting}
+        onOpenChange={(o) => !o && closeDialog()}
+        onConfirm={confirmApprove}
+      />
     </article>
   );
 }

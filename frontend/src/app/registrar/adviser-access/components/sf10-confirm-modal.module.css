@@ -1,0 +1,244 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: color-mix(in oklch, var(--foreground), transparent 86%);
+  backdrop-filter: blur(2px);
+}
+
+.overlay[data-open="true"] {
+  display: flex;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: 100%;
+  max-width: 30rem;
+  max-height: 85vh;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.35);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.iconSvg {
+  width: 16px;
+  height: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stateText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.spin {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+  animation: sf10-spin 0.8s linear infinite;
+}
+
+.warnIcon {
+  width: 22px;
+  height: 22px;
+  color: var(--destructive);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 72%);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lrn {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.rec {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.released {
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.source {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.version {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--destructive);
+}
+
+.missingIcon {
+  width: 13px;
+  height: 13px;
+}
+
+.note {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warning, #d97706);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 72%);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.125rem;
+}
+
+.cancel,
+.confirm {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, opacity 140ms ease-out;
+}
+
+.cancel {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+}
+
+.cancel:hover:not(:disabled) {
+  background-color: color-mix(in oklch, var(--foreground), transparent 92%);
+}
+
+.confirm {
+  border: 1px solid transparent;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.confirm:hover:not(:disabled) {
+  background-color: color-mix(in oklch, var(--primary), transparent 85%);
+}
+
+.cancel:disabled,
+.confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@keyframes sf10-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

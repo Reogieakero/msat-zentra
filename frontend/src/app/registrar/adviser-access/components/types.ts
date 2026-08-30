@@ -1,5 +1,23 @@
 export type AccessRequestStatus = "pending" | "approved" | "denied";
 
+export type Sf10RecordStatus = "attach" | "available" | "released";
+
+export type Sf10RecordDetail = {
+  id: string;
+  source: string;
+  status: Sf10RecordStatus;
+  fileUrl: string | null;
+  verifiedAt: string | null;
+  validatedAt: string | null;
+  currentVersion: number;
+};
+
+export type Sf10RecordForAdvisee = {
+  lrn: string;
+  name: string;
+  record: Sf10RecordDetail | null;
+};
+
 export type AffectedAdvisee = {
   lrn: string;
   name: string;

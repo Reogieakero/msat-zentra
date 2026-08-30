@@ -401,6 +401,69 @@ router.get(
   }
 );
 
+// SF10 records for the advisees of a given access request. Used by the registrar
+// review modal before approving, so they can confirm each learner's SF10 record
+// is present and correct. Returns the real Sf10Record fields (status, source,
+// file URL, verified/validated dates, version) joined to the student.
+router.get(
+  "/adviser-access-requests/:id/records",
+  requireAuth,
+  requireRole("registrar"),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      const request = await prisma.adviserSf10AccessRequest.findUnique({
+        where: { id },
+        select: { id: true, sectionId: true, gradeLevel: true },
+      });
+      if (!request) throw new AppError(404, "REQUEST_NOT_FOUND", "Access request not found");
+
+      const students = await prisma.studentProfile.findMany({
+        where: { sectionId: request.sectionId, gradeLevel: request.gradeLevel },
+        select: {
+          lrn: true,
+          user: { select: { fullName: true } },
+          sf10Records: {
+            select: {
+              id: true,
+              source: true,
+              status: true,
+              uploadedFileUrl: true,
+              verifiedAt: true,
+              validatedAt: true,
+              currentVersion: true,
+            },
+          },
+        },
+        orderBy: { lrn: "asc" },
+      });
+
+      const records = students.map((s) => {
+        const rec = s.sf10Records[0];
+        return {
+          lrn: s.lrn,
+          name: s.user.fullName,
+          record: rec
+            ? {
+                id: rec.id,
+                source: rec.source,
+                status: rec.status,
+                fileUrl: rec.uploadedFileUrl,
+                verifiedAt: rec.verifiedAt?.toISOString() ?? null,
+                validatedAt: rec.validatedAt?.toISOString() ?? null,
+                currentVersion: rec.currentVersion,
+              }
+            : null,
+        };
+      });
+
+      res.json({ requestId: id, records });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 // Decide (approve or deny) an adviser SF10 access request. Shared handler:
 // sets status + decision, writes an audit entry, and fans out a notification to
 // the requesting adviser. 409 if the request is already decided.
