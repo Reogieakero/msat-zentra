@@ -1,0 +1,125 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 16px 1.5rem;
+}
+
+.error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in oklch, var(--destructive), transparent 70%);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--destructive), transparent 92%);
+  color: var(--destructive);
+  font-size: 0.8125rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0;
+  align-items: start;
+  gap: 0;
+  transition: grid-template-columns 220ms ease-out, gap 220ms ease-out;
+}
+
+.layout[data-selected="true"] {
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 1.25rem;
+}
+
+.tableCol {
+  min-width: 0;
+  margin-top: 3rem;
+  transition: margin-top 220ms ease-out;
+}
+
+.main {
+  min-width: 0;
+  overflow: hidden;
+  transform: translateX(24px);
+  opacity: 0;
+  transition: transform 220ms ease-out, opacity 220ms ease-out;
+  pointer-events: none;
+}
+
+.layout[data-selected="true"] .main {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.colTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.main {
+  min-width: 0;
+}
+
+.profileSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.skelAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+}
+
+.skelLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skelLineLg {
+  height: 1.25rem;
+  width: 40%;
+  border-radius: var(--radius-md);
+}
+
+.skelLineSm {
+  height: 0.875rem;
+  width: 25%;
+  border-radius: var(--radius-md);
+}
+
+.skelBlock {
+  height: 3.5rem;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.skelActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.skelBtn {
+  height: 2rem;
+  width: 7.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelBtnGhost {
+  height: 2rem;
+  width: 7.5rem;
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

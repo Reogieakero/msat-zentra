@@ -221,7 +221,12 @@ export async function getReports(params: {
       // any locked non-High student would overstate the figure vs those pages.
       const allLocked =
         finals.length > 0 &&
-        finals.every((f) => f.lockStatus === "locked" || f.finalizedAt != null);
+        finals.every(
+          (f) =>
+            f.lockStatus === "locked" ||
+            f.lockStatus === "adviser_approved" ||
+            f.finalizedAt != null
+        );
       if (allLocked && level !== "High") {
         const gGrades = finals.map((f) => f.transmutedGrade as number);
         const avg = gGrades.reduce((s, g) => s + g, 0) / gGrades.length;

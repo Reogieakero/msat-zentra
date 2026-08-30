@@ -187,6 +187,7 @@ model User {
   role           Role
   fullName       String
   contactNumber  String?
+  lrn            String? // claimed LRN at sign-up; verified against StudentRoster at approval
   status         UserStatus  @default(pending)
   approvedBy     String?
   approvedAt     DateTime?
@@ -287,6 +288,7 @@ model SchoolYear {
   createdAt  DateTime @default(now())
   terms      Term[]
   sections   Section[]
+  rosterEntries StudentRoster[]
 }
 
 model Term {
@@ -322,6 +324,26 @@ model Section {
   attendanceRecords AttendanceRecord[]
   anecdotalRecords AnecdotalRecord[]
   teacherAssignments TeacherSubjectAssignment[]
+  rosterEntries StudentRoster[]
+}
+
+// Decoupled enrollment roster: a student enrolled in a section for a school year,
+// independent of whether they have a login account yet. Used by the registrar
+// "Accounts Breakdown" to report enrolled-but-not-yet-registered students
+// ("no account") by matching roster LRN against student_profiles.
+model StudentRoster {
+  id           String   @id @default(uuid())
+  lrn          String
+  fullName     String
+  gradeLevel   GradeLevel
+  sectionId    String
+  schoolYearId String
+  section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  @@unique([lrn, schoolYearId])
+  @@index([gradeLevel])
+  @@index([sectionId])
+  @@index([schoolYearId])
 }
 
 model Subject {

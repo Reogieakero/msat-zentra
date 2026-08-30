@@ -81,7 +81,12 @@ router.get(
         const finals = s.finalGrades;
         const allLocked =
           finals.length > 0 &&
-          finals.every((g) => g.lockStatus === "locked" || g.finalizedAt != null);
+          finals.every(
+            (g) =>
+              g.lockStatus === "locked" ||
+              g.lockStatus === "adviser_approved" ||
+              g.finalizedAt != null
+          );
         if (allLocked && level !== "High") {
           const gGrades = finals.map((g) => g.transmutedGrade ?? 100);
           const avg = gGrades.reduce((sum, g) => sum + g, 0) / gGrades.length;

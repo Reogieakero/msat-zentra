@@ -244,4 +244,55 @@ router.get(
   }
 );
 
+// Accounts breakdown per grade level + section (registrar G11–G12 band). The source
+// of truth is the decoupled StudentRoster (enrolled students). "withAccount" = roster
+// LRN matched by a student whose user is active; "pending" = matched but user still
+// pending (signed up, awaiting registrar approval). Computed live; no mocked data.
+router.get(
+  "/account-breakdown",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "accounts"] }),
+  async (_req, res, next) => {
+    try {
+      const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
+
+      const activeYear = await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      const schoolYearId = activeYear?.id;
+
+      const roster = await prisma.studentRoster.findMany({
+        where: { gradeLevel: { in: GRADE_BAND }, schoolYearId: schoolYearId ?? "__none__" },
+        select: { lrn: true, gradeLevel: true, section: { select: { name: true } } },
+      });
+
+      // LRNs that actually have a student_profiles/login account, with their status.
+      const lrns = roster.map((r) => r.lrn);
+      const profiles = await prisma.studentProfile.findMany({
+        where: { lrn: { in: lrns } },
+        select: { lrn: true, user: { select: { status: true } } },
+      });
+      const statusByLrn = new Map<string, string>();
+      for (const pr of profiles) statusByLrn.set(pr.lrn, pr.user.status);
+
+      const groups = new Map<string, { label: string; withAccount: number; pending: number }>();
+      for (const r of roster) {
+        const label = `${gradeLabel(r.gradeLevel)} · ${r.section?.name ?? "Unsectioned"}`;
+        if (!groups.has(label)) groups.set(label, { label, withAccount: 0, pending: 0 });
+        const g = groups.get(label)!;
+        const status = statusByLrn.get(r.lrn);
+        if (status === "active") g.withAccount++;
+        else if (status === "pending") g.pending++;
+      }
+
+      const data = Array.from(groups.values()).map((g, i) => ({ id: `g${i}-${g.label}`, ...g }));
+      res.json({ data });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 export default router;

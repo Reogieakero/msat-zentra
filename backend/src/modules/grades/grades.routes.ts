@@ -84,17 +84,44 @@ const lockSchema = z.object({});
 router.post(
   "/final-grades/:id/lock",
   requireAuth,
-  requireRole("adviser"),
+  requireRole("subject_teacher", "adviser"),
   async (req, res, next) => {
     try {
       const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
       if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-      if (fg.lockStatus === "locked") throw new AppError(409, "ALREADY_LOCKED", "Final already locked");
+      if (fg.lockStatus !== "unlocked") throw new AppError(409, "ALREADY_LOCKED", "Final already locked");
       const updated = await prisma.finalGrade.update({
         where: { id: fg.id },
         data: { lockStatus: "locked", lockedBy: req.user!.id, lockedAt: new Date() },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Adviser locked final grade" });
+      await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Subject teacher submitted final grade for adviser approval" });
+      await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
+      res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
+// Stage 2 — adviser approves the subject teacher's locked final, passing it to
+// the registrar/record keeper for final validation.
+router.post(
+  "/final-grades/:id/adviser-approve",
+  requireAuth,
+  requireRole("adviser"),
+  gradeBandGuard(async (req) => {
+    const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) }, select: { studentId: true } });
+    if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
+    return fg.studentId;
+  }),
+  async (req, res, next) => {
+    try {
+      const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
+      if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
+      if (fg.lockStatus !== "locked") throw new AppError(409, "NOT_LOCKED", "Final must be locked by the subject teacher before adviser approval");
+      const updated = await prisma.finalGrade.update({
+        where: { id: fg.id },
+        data: { lockStatus: "adviser_approved", adviserApprovedBy: req.user!.id, adviserApprovedAt: new Date() },
+      });
+      await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Adviser approved final grade" });
       await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
       res.json(updated);
     } catch (e) { next(e); }
@@ -114,7 +141,7 @@ router.post(
     try {
       const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
       if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-      if (fg.lockStatus !== "locked") throw new AppError(409, "NOT_LOCKED", "Final must be locked before registrar approval");
+      if (fg.lockStatus !== "adviser_approved") throw new AppError(409, "NOT_ADVISER_APPROVED", "Final must be adviser-approved before registrar final approval");
       const updated = await prisma.finalGrade.update({
         where: { id: fg.id },
         data: { finalizedBy: req.user!.id, finalizedAt: new Date() },

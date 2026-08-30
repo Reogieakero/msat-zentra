@@ -9,7 +9,8 @@ import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { writeAudit } from "../../lib/audit.js";
-import type { Role } from "@prisma/client";
+import { matchLrn } from "../../lib/lrnMatch.js";
+import type { Role, GradeLevel } from "@prisma/client";
 
 const router = Router();
 
@@ -21,21 +22,42 @@ const registerSchema = z.object({
   fullName: z.string().min(1),
   role: z.enum(["student", "parent", "subject_teacher", "adviser"]),
   contactNumber: z.string().optional(),
+  lrn: z.string().optional(),
 });
 
 router.post("/register/:kind", validate("body", registerSchema), async (req, res, next) => {
   try {
-    const { email, password, fullName, role, contactNumber } = req.body;
+    const { email, password, fullName, role, contactNumber, lrn } = req.body;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new AppError(409, "EMAIL_EXISTS", "Email already registered");
 
+    // LRN is captured only for student self-registration; it is verified
+    // against the StudentRoster by the registrar before approval.
     const passwordHash = await argon2.hash(password);
     const user = await prisma.user.create({
-      data: { email, passwordHash, fullName, role, contactNumber, status: "pending" },
+      data: { email, passwordHash, fullName, role, contactNumber, lrn: role === "student" ? lrn ?? null : null, status: "pending" },
     });
     res.status(201).json({ id: user.id, email: user.email, role: user.role, status: user.status });
   } catch (e) { next(e); }
 });
+
+// LRN verification engine. Given a claimed LRN + name, returns the matching
+// official StudentRoster record and a side-by-side comparison verdict so the
+// registrar can confirm the requester is the enrolled student.
+router.get(
+  "/match-lrn",
+  requireAuth,
+  requireRole("record_keeper", "registrar"),
+  async (req, res, next) => {
+    try {
+      const lrn = typeof req.query.lrn === "string" ? req.query.lrn.trim() : "";
+      const name = typeof req.query.name === "string" ? req.query.name : "";
+      if (!lrn) throw new AppError(400, "LRN_REQUIRED", "lrn query parameter is required");
+      const result = await matchLrn(lrn, name);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+);
 
 const STAFF_ROLES: Role[] = [
   "subject_teacher",
@@ -129,6 +151,145 @@ router.post(
       });
       res.json({ id: updated.id, status: updated.status });
     } catch (e) { next(e); }
+  }
+);
+
+// List pending account requests. Registrar sees grade band G11–G12 only; record
+// keeper sees G7–G10. Grade-band enforcement is server-side via the student
+// profile gradeLevel. Optional ?role filters by account role (defaults student).
+router.get(
+  "/pending",
+  requireAuth,
+  requireRole("record_keeper", "registrar"),
+  async (req, res, next) => {
+    try {
+      const band: GradeLevel[] =
+        req.user!.role === "registrar" ? ["G11", "G12"] : ["G7", "G8", "G9", "G10"];
+      const roleFilter = req.query.role ? String(req.query.role) : "student";
+
+      // Two sources of pending students:
+      //  1) Those with a StudentProfile already (e.g. seeded) — use profile data.
+      //  2) Real sign-ups with no profile yet — read the claimed LRN from User
+      //     and resolve grade band from the official StudentRoster.
+      const [profiled, bare] = await Promise.all([
+        prisma.studentProfile.findMany({
+          where: { gradeLevel: { in: band }, user: { status: "pending", role: roleFilter as Role } },
+          select: {
+            userId: true,
+            lrn: true,
+            gradeLevel: true,
+            birthdate: true,
+            address: true,
+            photoUrl: true,
+            section: { select: { name: true } },
+            user: {
+              select: { id: true, fullName: true, email: true, contactNumber: true, status: true, createdAt: true },
+            },
+          },
+          orderBy: { user: { createdAt: "asc" } },
+        }),
+        prisma.user.findMany({
+          where: {
+            status: "pending",
+            role: roleFilter as Role,
+            studentProfile: null,
+          },
+          select: { id: true, fullName: true, email: true, contactNumber: true, lrn: true, status: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        }),
+      ]);
+
+      const students = profiled.map((s) => ({
+        id: s.user.id,
+        lrn: s.lrn,
+        name: s.user.fullName,
+        gradeLevel: s.gradeLevel as GradeLevel | string,
+        section: s.section?.name ?? "—",
+        email: s.user.email,
+        contactNumber: s.user.contactNumber ?? "—",
+        birthdate: s.birthdate ? s.birthdate.toISOString().slice(0, 10) : "—",
+        address: s.address ?? "—",
+        imageUrl: s.photoUrl ?? null,
+        status: s.user.status,
+        requestedAt: s.user.createdAt.toISOString(),
+      }));
+
+      for (const u of bare) {
+        let gradeLevel: string = "—";
+        let section = "—";
+        if (u.lrn) {
+          const roster = await prisma.studentRoster.findFirst({
+            where: { lrn: u.lrn },
+            include: { section: { select: { name: true } } },
+            orderBy: { schoolYearId: "desc" },
+          });
+          if (roster) {
+            if (!band.includes(roster.gradeLevel)) continue; // grade-band enforcement
+            gradeLevel = roster.gradeLevel;
+            section = roster.section?.name ?? "—";
+          }
+        }
+        students.push({
+          id: u.id,
+          lrn: u.lrn ?? "—",
+          name: u.fullName,
+          gradeLevel,
+          section,
+          email: u.email,
+          contactNumber: u.contactNumber ?? "—",
+          birthdate: "—",
+          address: "—",
+          imageUrl: null,
+          status: u.status,
+          requestedAt: u.createdAt.toISOString(),
+        });
+      }
+
+      res.json({ students });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+const rejectSchema = z.object({ reason: z.string().min(1) });
+router.post(
+  "/reject/:userId",
+  requireAuth,
+  requireRole("record_keeper", "registrar"),
+  gradeBandGuard(async (req) => String(req.params.userId)),
+  validate("params", approveSchema),
+  validate("body", rejectSchema),
+  async (req, res, next) => {
+    try {
+      const target = await prisma.user.findUnique({ where: { id: String(req.params.userId) } });
+      if (!target) throw new AppError(404, "USER_NOT_FOUND", "User not found");
+      if (target.status !== "pending")
+        throw new AppError(409, "NOT_PENDING", "Only pending accounts can be rejected");
+
+      const updated = await prisma.user.update({
+        where: { id: target.id },
+        data: { status: "suspended", approvedBy: req.user!.id, approvedAt: new Date() },
+      });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "account_approval",
+        sourceTable: "users",
+        sourceId: updated.id,
+        reason: req.body.reason,
+        oldValue: { status: "pending" },
+        newValue: { status: "suspended" },
+      });
+      await fanoutNotification({
+        userId: updated.id,
+        sourceTable: "users",
+        action: "reject",
+        message: "Your account request was not approved.",
+      });
+      res.json({ id: updated.id, status: updated.status });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 

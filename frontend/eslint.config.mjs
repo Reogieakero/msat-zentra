@@ -48,6 +48,15 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  // Final-grades "Get Started" modal reads a localStorage dismissal flag on
+  // mount to decide whether to auto-open; setState in the effect is intentional
+  // mount-time sync, not a cascading-render bug.
+  {
+    files: ["src/app/registrar/final-grades/components/FinalGradesGetStartedModal.tsx"],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Vendored WebGL background components (PavelDoGreat / tkabalin, MIT /
   // beautiful-backgrounds). Heavy use of `any` against the raw WebGL context and
   // loop-scoped reassignment; leave as-is rather than rewrite a third-party lib.

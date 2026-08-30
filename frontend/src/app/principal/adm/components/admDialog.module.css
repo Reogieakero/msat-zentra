@@ -4,8 +4,8 @@
 }
 
 .alertReturn {
-  background: #b91c1c;
-  color: #ffffff;
+  background: var(--destructive, #b91c1c);
+  color: var(--destructive-foreground, #ffffff);
 }
 
 .dialogDocs {

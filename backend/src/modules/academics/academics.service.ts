@@ -150,7 +150,9 @@ export async function getAcademicsSummary(
       const finals = (student.finalGrades ?? [])
         .filter((f) => f.termId === termId)
         .filter((f) =>
-          lockedOnly ? f.lockStatus === "locked" || f.finalizedAt != null : true
+          lockedOnly
+            ? f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
+            : true
         )
         .filter((f) => f.transmutedGrade != null && f.computedAverage != null);
       if (finals.length === 0) continue;
@@ -202,7 +204,7 @@ export async function getAcademicsSummary(
       // Honor roll (DepEd): only when every subject grade is locked/finalized,
       // and the student is not High risk.
       const allLocked = finals.every(
-        (f) => f.lockStatus === "locked" || f.finalizedAt != null
+        (f) => f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
       );
       if (allLocked && liveLevel !== "High") {
         const lowestSubject = subjects.reduce(
@@ -228,7 +230,10 @@ export async function getAcademicsSummary(
         const tier = classifyHonorRoll(overallAverage, lowestSubject);
         if (tier) {
           const unlockedSubjects = finals.filter(
-            (f) => f.lockStatus !== "locked" && f.finalizedAt == null
+            (f) =>
+              f.lockStatus !== "locked" &&
+              f.lockStatus !== "adviser_approved" &&
+              f.finalizedAt == null
           ).length;
           potentialPool.push({
             studentId: student.userId,

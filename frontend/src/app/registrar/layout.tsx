@@ -41,13 +41,18 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
     return "hover";
   });
 
+  const [mounted, setMounted] = React.useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard mounted flag to avoid hydration mismatch
+  React.useEffect(() => setMounted(true), []);
+
   React.useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, mode);
   }, [mode]);
 
-  const hovering = mode === "hover" && hovered && !open;
+  const hovering = mounted && mode === "hover" && hovered && !open;
   const expanded =
-    open || (mode === "hover" && hovered && !open) || (mode === "expanded" && !isMobile);
+    mounted &&
+    (open || (mode === "hover" && hovered && !open) || (mode === "expanded" && !isMobile));
 
   const handleModeChange = (next: SidebarMode) => {
     setMode(next);
@@ -203,7 +208,7 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
       <SidebarModeContext.Provider value={mode}>
         <div
           className={`${styles.shell} ${
-            mode === "expanded" && !isMobile ? styles.shellExpanded : ""
+            mounted && mode === "expanded" && !isMobile ? styles.shellExpanded : ""
           }`}
         >
           <main className={styles.main}>{children}</main>

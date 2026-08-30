@@ -14,4 +14,4 @@ Grounded in `PLAN.md` RBAC (§4) and confidentiality tiering (§4.3).
 | School Nurse | — | ⬜ Pending |
 | ADM Coordinator | — | ⬜ Pending |
 | Record Keeper | — | ⬜ Pending |
-| Registrar | — | ⬜ Pending |
+| Registrar | [registrar.md](registrar.md) | ✅ Done (student approval) |

@@ -1,0 +1,161 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.headIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.headIconSvg {
+  width: 15px;
+  height: 15px;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1.375rem;
+  width: 0.8125rem;
+  height: 0.8125rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.searchInput {
+  padding-left: 1.75rem;
+  height: 1.75rem;
+  width: 60%;
+  max-width: 220px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.headRow {
+  background-color: color-mix(in oklch, var(--muted), transparent 60%);
+}
+
+.rowClickable {
+  cursor: pointer;
+  transition: background-color 140ms ease-out;
+}
+
+.rowClickable:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 96%);
+}
+
+.rowActive {
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+  box-shadow: inset 3px 0 0 0 var(--primary);
+}
+
+.rowActive:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 90%);
+}
+
+.lrn {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.nameCell {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.gradeTag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionText {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.skelRow {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowClickable {
+    transition: none;
+  }
+}

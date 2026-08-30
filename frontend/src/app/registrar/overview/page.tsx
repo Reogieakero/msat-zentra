@@ -64,20 +64,87 @@ export default function RegistrarOverviewPage() {
       <section className={styles.page}>
         <div className={styles.layout}>
           <div className={styles.main}>
-            <Skeleton className={styles.skelCard} />
-            <Skeleton className={styles.skelCard} />
-            <Skeleton className={styles.skelCard} />
+            {/* Action Required — heading + 3 KPI cards */}
+            <div className={styles.skelSection}>
+              <Skeleton className={styles.skelHeading} />
+              <div className={styles.skelKpiGrid}>
+                <Skeleton className={styles.skelKpi} />
+                <Skeleton className={styles.skelKpi} />
+                <Skeleton className={styles.skelKpi} />
+              </div>
+            </div>
+
+            {/* SF10 Summary — split: left SF10 Records panel + right request/upload */}
+            <div className={styles.skelSplit}>
+              <div className={styles.skelPanelCol}>
+                <div className={styles.skelPanel}>
+                  <div className={styles.skelPanelHead}>
+                    <Skeleton className={styles.skelLineSm} />
+                    <Skeleton className={styles.skelLineXs} />
+                  </div>
+                  <div className={styles.skelTwoCol}>
+                    <div className={styles.skelSubCard}>
+                      <Skeleton className={styles.skelLineSm} />
+                      <Skeleton className={styles.skelRow} />
+                      <Skeleton className={styles.skelRow} />
+                      <Skeleton className={styles.skelRow} />
+                    </div>
+                    <div className={styles.skelSubCard}>
+                      <Skeleton className={styles.skelLineSm} />
+                      <Skeleton className={styles.skelRow} />
+                      <Skeleton className={styles.skelRow} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.skelPanelCol}>
+                <div className={styles.skelPanel}>
+                  <div className={styles.skelPanelHead}>
+                    <Skeleton className={styles.skelLineSm} />
+                    <Skeleton className={styles.skelLineXs} />
+                  </div>
+                  <Skeleton className={styles.skelRow} />
+                  <Skeleton className={styles.skelRow} />
+                  <Skeleton className={styles.skelRow} />
+                  <Skeleton className={styles.skelBtn} />
+                </div>
+                <div className={styles.skelPanel}>
+                  <div className={styles.skelPanelHead}>
+                    <Skeleton className={styles.skelLineSm} />
+                    <Skeleton className={styles.skelLineXs} />
+                  </div>
+                  <Skeleton className={styles.skelDropzone} />
+                  <Skeleton className={styles.skelBtn} />
+                </div>
+              </div>
+            </div>
+
+            {/* Academics — section header + 3 KPI cards */}
+            <div className={styles.skelCardBlock}>
+              <div className={styles.skelCardHead}>
+                <Skeleton className={styles.skelLineSm} />
+              </div>
+              <div className={styles.skelCardBody}>
+                <div className={styles.skelKpiGrid}>
+                  <Skeleton className={styles.skelKpi} />
+                  <Skeleton className={styles.skelKpi} />
+                  <Skeleton className={styles.skelKpi} />
+                </div>
+              </div>
+            </div>
+
             {!showRailAside ? (
               <div className={styles.railInline}>
-                <Skeleton className={styles.skelCard} />
-                <Skeleton className={styles.skelCard} />
+                <SkeletonRail />
+                <SkeletonRail />
               </div>
             ) : null}
           </div>
+
           {showRailAside ? (
             <aside className={styles.rail} aria-label="Registrar summary">
-              <Skeleton className={styles.skelCard} />
-              <Skeleton className={styles.skelCard} />
+              <SkeletonRail />
+              <SkeletonRail />
             </aside>
           ) : null}
         </div>
@@ -109,5 +176,22 @@ export default function RegistrarOverviewPage() {
         ) : null}
       </div>
     </section>
+  );
+}
+
+function SkeletonRail() {
+  return (
+    <div className={styles.skelRailCard}>
+      <div className={styles.skelCardHead}>
+        <Skeleton className={styles.skelLineSm} />
+        <Skeleton className={styles.skelPill} />
+      </div>
+      <div className={styles.skelRailList}>
+        <Skeleton className={styles.skelRailRow} />
+        <Skeleton className={styles.skelRailRow} />
+        <Skeleton className={styles.skelRailRow} />
+      </div>
+      <Skeleton className={styles.skelBtn} />
+    </div>
   );
 }

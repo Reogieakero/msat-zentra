@@ -142,6 +142,22 @@ async function main() {
 
   await prisma.studentProfile.createMany({ data: studentProfiles, skipDuplicates: true });
   await prisma.parentProfile.createMany({ data: parentProfiles, skipDuplicates: true });
+
+  // StudentRoster: decoupled enrollment, built from PERSISTED student_profiles so
+  // roster LRNs match the real accounts. One roster entry per enrolled student —
+  // the breakdown therefore reflects the exact section population (withAccount /
+  // pending), with noAccount = enrolled but never registered.
+  const persistedProfiles = await prisma.studentProfile.findMany({
+    select: { lrn: true, gradeLevel: true, sectionId: true },
+  });
+  const sectionById = new Map(sections.map((s) => [s.id, s]));
+  const roster: { lrn: string; fullName: string; gradeLevel: GradeLevel; sectionId: string; schoolYearId: string }[] = [];
+  for (const sp of persistedProfiles) {
+    const section = sectionById.get(sp.sectionId);
+    if (!section) continue;
+    roster.push({ lrn: sp.lrn, fullName: `Roster ${sp.lrn}`, gradeLevel: sp.gradeLevel, sectionId: sp.sectionId, schoolYearId: schoolYear.id });
+  }
+  await prisma.studentRoster.createMany({ data: roster, skipDuplicates: true });
   await prisma.parentStudentLink.createMany({ data: parentLinks, skipDuplicates: true });
   await prisma.sf10Record.createMany({ data: sf10, skipDuplicates: true });
 

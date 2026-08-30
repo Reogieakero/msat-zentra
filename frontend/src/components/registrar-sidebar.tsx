@@ -57,7 +57,7 @@ const NAV: NavGroup[] = [
     label: "Records",
     items: [
       { title: "Final Grade Approvals", href: "/registrar/final-grades", icon: Award },
-      { title: "Account Approvals", href: "/registrar/accounts", icon: UserCheck, badge: "MOCK" },
+      { title: "Account Approvals", href: "/registrar/accounts", icon: UserCheck },
       { title: "Adviser Access Requests", href: "/registrar/adviser-access", icon: ShieldQuestion, badge: "MOCK" },
       { title: "Sections & Subjects", href: "/registrar/academics", icon: GraduationCap },
       { title: "Report Cards", href: "/registrar/report-cards", icon: FileBarChart },
@@ -101,7 +101,14 @@ function SidebarShell({
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
   const isActive = useIsActive();
   const router = useRouter();
-  const collapsed = isMobile ? false : !expanded;
+  const [mounted, setMounted] = React.useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard mounted flag to avoid hydration mismatch
+  React.useEffect(() => setMounted(true), []);
+  // Avoid SSR/client hydration mismatch: server and first client render use a
+  // stable collapsed state; real expanded/hover state applies after mount.
+  const collapsed = mounted ? (isMobile ? false : !expanded) : true;
+  const expandedView = mounted ? expanded : false;
+  const hoveringView = mounted ? hovering : false;
 
   const renderItem = (item: NavItem, nested = false) => {
     const active = isActive(item.href);
@@ -146,9 +153,9 @@ function SidebarShell({
   const aside = (
     <aside
       className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${
-        hovering ? styles.hoverElevated : ""
+        hoveringView ? styles.hoverElevated : ""
       }`}
-      data-state={expanded ? "expanded" : "collapsed"}
+      data-state={expandedView ? "expanded" : "collapsed"}
       data-collapsible="icon"
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}

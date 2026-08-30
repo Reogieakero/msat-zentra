@@ -23,9 +23,25 @@ export function gradeBandGuard(resolveStudentId: (req: Request) => string | Prom
         where: { userId: studentId },
         select: { gradeLevel: true },
       });
-      if (!profile) return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
 
-      const band = bandFor(profile.gradeLevel);
+      let grade: GradeLevel | null | undefined = profile?.gradeLevel;
+      if (!grade) {
+        // Pending students have no profile yet; derive band from the roster LRN.
+        const user = await prisma.user.findUnique({
+          where: { id: studentId },
+          select: { lrn: true },
+        });
+        if (user?.lrn) {
+          const roster = await prisma.studentRoster.findFirst({
+            where: { lrn: user.lrn },
+            orderBy: { schoolYearId: "desc" },
+          });
+          grade = roster?.gradeLevel;
+        }
+      }
+      if (!grade) return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
+
+      const band = bandFor(grade);
       const allowed =
         (req.user.role === "record_keeper" && band === "7-10") ||
         (req.user.role === "registrar" && band === "11-12");

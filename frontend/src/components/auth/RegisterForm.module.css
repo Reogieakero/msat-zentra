@@ -1,0 +1,76 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--destructive, #c0392b);
+}
+
+.submit {
+  margin-top: 0.25rem;
+}
+
+.spinner {
+  animation: regSpin 0.8s linear infinite;
+}
+
+@keyframes regSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.signin {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.signinLink {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signinLink:hover {
+  text-decoration: underline;
+}
