@@ -153,6 +153,9 @@ async function main() {
   const teacherAssignments: { id: string; teacherId: string; subjectId: string; sectionId: string; termId: string }[] = [];
   const studentGrades: { id: string; assessmentId: string; studentId: string; rawScore: number; percentageScore: number }[] = [];
   const finalGrades: { id: string; studentId: string; subjectId: string; termId: string; computedAverage: number; transmutedGrade: number; remarks: Remarks; lockStatus: LockStatus }[] = [];
+  // G11–G12 final-grade ids that advisers have already "locked" (so the registrar
+  // Final Grade Approvals screen has live data to validate). ~60% of G11–G12 rows.
+  const lockedFinalGradeIds: string[] = [];
 
   const componentTypes: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"];
 
@@ -214,7 +217,11 @@ async function main() {
       }
       for (const st of gradeStudents) {
         const avg = randInt(70, 98);
-        finalGrades.push({ id: id("fg"), studentId: st.userId, subjectId, termId: term.id, computedAverage: avg, transmutedGrade: avg, remarks: avg >= 75 ? "Passed" as Remarks : "Failed" as Remarks, lockStatus: "unlocked" as LockStatus });
+        const fgId = id("fg");
+        // Advisers lock ~60% of G11–G12 finals; all lower grades stay unlocked.
+        const shouldLock = (grade === "G11" || grade === "G12") && Math.random() < 0.6;
+        if (shouldLock) lockedFinalGradeIds.push(fgId);
+        finalGrades.push({ id: fgId, studentId: st.userId, subjectId, termId: term.id, computedAverage: avg, transmutedGrade: avg, remarks: avg >= 75 ? "Passed" as Remarks : "Failed" as Remarks, lockStatus: shouldLock ? ("locked" as LockStatus) : ("unlocked" as LockStatus) });
       }
     }
   }
@@ -222,6 +229,13 @@ async function main() {
   await prisma.assessment.createMany({ data: assessments, skipDuplicates: true });
   await prisma.studentGrade.createMany({ data: studentGrades, skipDuplicates: true });
   await prisma.finalGrade.createMany({ data: finalGrades, skipDuplicates: true });
+  // Stamp lockedAt on the seeded locked G11–G12 finals so the lock is complete.
+  if (lockedFinalGradeIds.length) {
+    await prisma.finalGrade.updateMany({
+      where: { id: { in: lockedFinalGradeIds } },
+      data: { lockedAt: new Date() },
+    });
+  }
 
   // Attendance (>=20)
   const attendance = [];

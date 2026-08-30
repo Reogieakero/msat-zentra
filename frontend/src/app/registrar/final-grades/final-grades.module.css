@@ -1,0 +1,248 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0.25rem 0.25rem;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+/* Summary strip */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.toolbarRight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-left: auto;
+}
+
+.search {
+  position: relative;
+  flex: 0 1 14rem;
+  max-width: 14rem;
+  min-width: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 1.75rem;
+  padding-left: 1.75rem;
+  font-size: 0.8125rem;
+}
+
+/* Status dropdown — matches principal/audit */
+.dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+
+.dropdown:hover {
+  background: var(--muted);
+}
+
+.dropdownValue {
+  font-weight: 500;
+}
+
+.dropdownChevron {
+  width: 14px;
+  height: 14px;
+  color: var(--muted-foreground);
+}
+
+.menu {
+  min-width: 180px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.approveAll {
+}
+
+.countBadge {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.error {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--destructive-foreground);
+  background: var(--destructive);
+  border-radius: var(--radius-md);
+}
+
+.skeletonWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Mirror of .summary (3 KPI cards) */
+.skelSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .skelSummary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skelKpi {
+  min-height: 7.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Mirror of .toolbar */
+.skelToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.skelSearch {
+  flex: 0 1 14rem;
+  max-width: 14rem;
+  height: 1.75rem;
+  border-radius: var(--radius-md);
+}
+
+.skelToolbarRight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-left: auto;
+}
+
+.skelDropdown {
+  height: 1.75rem;
+  width: 7.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelBtn {
+  height: 1.75rem;
+  width: 7.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelCount {
+  height: 1.25rem;
+  width: 4rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Mirror of .tableWrap */
+.skelTable {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.skelTableHead {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--muted);
+}
+
+.skelTh {
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.skelRow {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Pager */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.25rem;
+}

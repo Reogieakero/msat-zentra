@@ -161,4 +161,68 @@ router.get(
   }
 );
 
+// List of G11–G12 final-grade rows scoped to the registrar grade band, for the
+// Final Grade Approvals screen. A row is "pending" (awaiting registrar approval)
+// when it is locked but not yet finalized; "approve" once finalized. All values
+// are computed live from the database — no mocked data.
+router.get(
+  "/final-grades",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "academics", "overview"] }),
+  async (req, res, next) => {
+    try {
+      const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
+
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
+
+      const where = {
+        student: { gradeLevel: { in: GRADE_BAND } },
+        lockStatus: "locked" as const,
+      };
+
+      const [rows, total] = await Promise.all([
+        prisma.finalGrade.findMany({
+          where,
+          include: {
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                section: true,
+                user: { select: { fullName: true } },
+              },
+            },
+            subject: { select: { name: true } },
+            term: { select: { termNumber: true, schoolYear: { select: { name: true } } } },
+          },
+          orderBy: [{ termId: "asc" }, { subjectId: "asc" }, { id: "asc" }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.finalGrade.count({ where }),
+      ]);
+
+      const grades = rows.map((r) => ({
+        id: r.id,
+        lrn: r.student.lrn,
+        name: r.student.user.fullName,
+        gradeLevel: r.student.gradeLevel,
+        section: r.student.section?.name ?? "—",
+        subject: r.subject.name,
+        term: `${r.term.schoolYear.name.split(" ")[0]} T${r.term.termNumber}`,
+        computedAverage: r.computedAverage ?? 0,
+        transmutedGrade: r.transmutedGrade ?? 0,
+        remarks: r.remarks ?? "—",
+        status: r.finalizedAt ? ("approve" as const) : ("pending" as const),
+      }));
+
+      res.json({ grades, total, page, pageSize });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 export default router;
