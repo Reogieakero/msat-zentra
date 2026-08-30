@@ -57,6 +57,7 @@ const eslintConfig = defineConfig([
       "src/components/ui/molten-metal.tsx",
       "src/components/ui/liquid-ether.tsx",
       "src/components/ui/gradient-waves.tsx",
+      "src/components/ui/web-threads/WebThreads.tsx",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
