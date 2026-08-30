@@ -5,6 +5,7 @@ import { ShieldQuestion } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RequestCard } from "./components/RequestCard";
+import { AdviseePanel } from "./components/AdviseePanel";
 import { apiClient } from "@/lib/api/client";
 import type { AdviserAccessRequest, AccessRequestStatus } from "./components/types";
 import styles from "./adviser-access.module.css";
@@ -26,6 +27,7 @@ export default function AdviserAccessPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [acting, setActing] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -140,29 +142,42 @@ export default function AdviserAccessPage() {
           </TabsList>
 
           <TabsContent value={filter} className={styles.tabsContent}>
-            {loading ? (
-              <div className={styles.grid}>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className={styles.skelCard} />
-                ))}
+            <div className={styles.layout} data-selected={selectedId ? "true" : "false"}>
+              <div className={styles.listCol}>
+                {loading ? (
+                  <div className={styles.grid}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className={styles.skelCard} />
+                    ))}
+                  </div>
+                ) : visible.length === 0 ? (
+                  <div className={styles.empty}>
+                    <ShieldQuestion className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>No {filter} requests for grades 11–12.</p>
+                  </div>
+                ) : (
+                  <div className={styles.grid}>
+                    {visible.map((r) => (
+                      <RequestCard
+                        key={r.id}
+                        request={r}
+                        acting={acting === r.id}
+                        selected={selectedId === r.id}
+                        onViewAdvisees={() => setSelectedId(r.id)}
+                        onActed={handleActed}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : visible.length === 0 ? (
-              <div className={styles.empty}>
-                <ShieldQuestion className={styles.emptyIcon} />
-                <p className={styles.emptyText}>No {filter} requests for grades 11–12.</p>
-              </div>
-            ) : (
-              <div className={styles.grid}>
-                {visible.map((r) => (
-                  <RequestCard
-                    key={r.id}
-                    request={r}
-                    acting={acting === r.id}
-                    onActed={handleActed}
-                  />
-                ))}
-              </div>
-            )}
+
+              <aside className={styles.sidebar}>
+                <AdviseePanel
+                  request={requests.find((r) => r.id === selectedId) ?? null}
+                  onClose={() => setSelectedId(null)}
+                />
+              </aside>
+            </div>
           </TabsContent>
         </Tabs>
       )}

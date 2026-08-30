@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ShieldQuestion, Check, X, ChevronDown, FileCheck2, Clock } from "lucide-react";
+import { ShieldQuestion, Check, X, PanelRight, FileCheck2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,13 +11,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import type { AdviserAccessRequest, AffectedAdvisee } from "./types";
+import type { AdviserAccessRequest } from "./types";
 import { formatRelativeTime } from "./types";
 import styles from "./request-card.module.css";
 
 type Props = {
   request: AdviserAccessRequest;
   acting: boolean;
+  selected?: boolean;
+  onViewAdvisees: () => void;
   onActed: (id: string, approved: boolean, reason?: string) => void;
 };
 
@@ -36,8 +38,13 @@ function initials(name: string): string {
     .join("");
 }
 
-export function RequestCard({ request, acting, onActed }: Props) {
-  const [expanded, setExpanded] = React.useState(request.status !== "pending");
+export function RequestCard({
+  request,
+  acting,
+  selected,
+  onViewAdvisees,
+  onActed,
+}: Props) {
   const [dialog, setDialog] = React.useState<null | "approve" | "reject">(null);
   const [reason, setReason] = React.useState("");
 
@@ -57,7 +64,7 @@ export function RequestCard({ request, acting, onActed }: Props) {
   };
 
   return (
-    <article className={`${styles.card} ${expanded ? styles.cardOpen : ""}`}>
+    <article className={`${styles.card} ${selected ? styles.cardSelected : ""}`}>
       <header className={styles.header}>
         <span className={styles.avatar}>{initials(request.adviserName)}</span>
         <div className={styles.identity}>
@@ -86,22 +93,8 @@ export function RequestCard({ request, acting, onActed }: Props) {
 
       <p className={styles.reason}>{request.reason}</p>
 
-      {expanded ? (
-        <div className={styles.expanded}>
-          <div className={styles.adviseeHead}>
-            <span className={styles.adviseeTitle}>Affected advisees</span>
-            <Badge variant="outline">{request.affectedAdvisees.length}</Badge>
-          </div>
-          <ul className={styles.adviseeList}>
-            {request.affectedAdvisees.map((a) => (
-              <AdviseeRow key={a.lrn} advisee={a} />
-            ))}
-          </ul>
-
-          {isProcessed && request.decisionReason ? (
-            <p className={styles.decisionReason}>{request.decisionReason}</p>
-          ) : null}
-        </div>
+      {isProcessed && request.decisionReason ? (
+        <p className={styles.decisionReason}>{request.decisionReason}</p>
       ) : null}
 
       <footer className={styles.footer}>
@@ -109,12 +102,10 @@ export function RequestCard({ request, acting, onActed }: Props) {
           variant="outline"
           size="sm"
           className={styles.ghostBtn}
-          onClick={() => setExpanded((v) => !v)}
+          onClick={onViewAdvisees}
         >
-          {expanded ? "Hide" : "View"} advisees
-          <ChevronDown
-            className={`${styles.chev} ${expanded ? styles.chevOpen : ""}`}
-          />
+          <PanelRight className={styles.actionIcon} />
+          View advisees
         </Button>
 
         {isProcessed ? (
@@ -201,27 +192,4 @@ export function RequestCard({ request, acting, onActed }: Props) {
       </Dialog>
     </article>
   );
-}
-
-function AdviseeRow({ advisee }: { advisee: AffectedAdvisee }) {
-  return (
-    <li className={styles.advisee}>
-      <div className={styles.adviseeIdentity}>
-        <span className={styles.adviseeName}>{advisee.name}</span>
-        <span className={styles.adviseeLrn}>{advisee.lrn}</span>
-      </div>
-      <div className={styles.adviseeMeta}>
-        <span className={styles.grade}>{advisee.gradeLevel}</span>
-        <Sf10Badge status={advisee.sf10Status} />
-      </div>
-    </li>
-  );
-}
-
-function Sf10Badge({ status }: { status: AffectedAdvisee["sf10Status"] }) {
-  if (status === "validated")
-    return <Badge variant="default" className={styles.sf10Validated}>Validated</Badge>;
-  if (status === "verified")
-    return <Badge variant="secondary">Verified</Badge>;
-  return <Badge variant="warning">Pending</Badge>;
 }
