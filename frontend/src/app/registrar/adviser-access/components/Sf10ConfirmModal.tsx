@@ -19,11 +19,11 @@ type Props = {
 
 function statusBadge(status: Sf10RecordStatus | undefined) {
   if (status === "released")
-    return <Badge variant="default" className={styles.released}>Released</Badge>;
+    return <Badge variant="default" className={styles.validated}>Validated</Badge>;
   if (status === "available")
-    return <Badge variant="secondary">Available</Badge>;
+    return <Badge variant="secondary">Verified</Badge>;
   if (status === "attach")
-    return <Badge variant="warning">Attach</Badge>;
+    return <Badge variant="warning">Pending</Badge>;
   return <Badge variant="outline">No record</Badge>;
 }
 
@@ -116,7 +116,7 @@ export function Sf10ConfirmModal({
                   <span className={styles.name}>{r.name}</span>
                   <span className={styles.lrn}>{r.lrn}</span>
                 </div>
-                <div className={styles.rec}>
+                 <div className={styles.rec}>
                   {r.record ? (
                     <>
                       {statusBadge(r.record.status)}
@@ -124,6 +124,16 @@ export function Sf10ConfirmModal({
                         {r.record.source.replace(/_/g, " ")}
                       </span>
                       <span className={styles.version}>v{r.record.currentVersion}</span>
+                      {r.record.fileUrl ? (
+                        <a
+                          className={styles.fileLink}
+                          href={r.record.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View file
+                        </a>
+                      ) : null}
                     </>
                   ) : (
                     <span className={styles.missing}>
