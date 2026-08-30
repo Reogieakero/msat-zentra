@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ShieldQuestion } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RequestCard } from "./components/RequestCard";
 import { apiClient } from "@/lib/api/client";
 import type { AdviserAccessRequest, AccessRequestStatus } from "./components/types";
@@ -122,56 +123,48 @@ export default function AdviserAccessPage() {
       {error ? (
         <p className={styles.error}>{error}</p>
       ) : (
-        <>
-          <div className={styles.toolbar}>
-            <div className={styles.tabs} role="tablist" aria-label="Filter requests">
-              {FILTERS.map((f) => {
-                const active = filter === f.value;
-                const tabCount =
-                  f.value === "all"
-                    ? requests.length
-                    : counts[f.value as AccessRequestStatus];
-                return (
-                  <button
-                    key={f.value}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    className={`${styles.tab} ${active ? styles.tabActive : ""}`}
-                    onClick={() => setFilter(f.value)}
-                  >
-                    {f.label}
-                    <span className={styles.tabCount}>{tabCount}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className={styles.tabs}>
+          <TabsList className={styles.tabsList} aria-label="Filter requests">
+            {FILTERS.map((f) => {
+              const tabCount =
+                f.value === "all"
+                  ? requests.length
+                  : counts[f.value as AccessRequestStatus];
+              return (
+                <TabsTrigger key={f.value} value={f.value} className={styles.tabTrigger}>
+                  {f.label}
+                  <span className={styles.tabCount}>{tabCount}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-          {loading ? (
-            <div className={styles.grid}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className={styles.skelCard} />
-              ))}
-            </div>
-          ) : visible.length === 0 ? (
-            <div className={styles.empty}>
-              <ShieldQuestion className={styles.emptyIcon} />
-              <p className={styles.emptyText}>No {filter} requests for grades 11–12.</p>
-            </div>
-          ) : (
-            <div className={styles.grid}>
-              {visible.map((r) => (
-                <RequestCard
-                  key={r.id}
-                  request={r}
-                  acting={acting === r.id}
-                  onActed={handleActed}
-                />
-              ))}
-            </div>
-          )}
-        </>
+          <TabsContent value={filter} className={styles.tabsContent}>
+            {loading ? (
+              <div className={styles.grid}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className={styles.skelCard} />
+                ))}
+              </div>
+            ) : visible.length === 0 ? (
+              <div className={styles.empty}>
+                <ShieldQuestion className={styles.emptyIcon} />
+                <p className={styles.emptyText}>No {filter} requests for grades 11–12.</p>
+              </div>
+            ) : (
+              <div className={styles.grid}>
+                {visible.map((r) => (
+                  <RequestCard
+                    key={r.id}
+                    request={r}
+                    acting={acting === r.id}
+                    onActed={handleActed}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </section>
   );
