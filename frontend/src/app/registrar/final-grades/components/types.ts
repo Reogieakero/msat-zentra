@@ -17,6 +17,8 @@ export type FinalGrade = {
 export type FinalGradesResponse = {
   grades: FinalGrade[];
   total: number;
+  pending: number;
+  approved: number;
   page: number;
   pageSize: number;
 };

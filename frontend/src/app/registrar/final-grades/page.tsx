@@ -14,6 +14,7 @@ import { SearchIcon, ChevronDown } from "lucide-react";
 import { FinalGradeApprovalTable } from "./components/FinalGradeApprovalTable";
 import { KpiThreadsCard } from "./components/KpiThreadsCard";
 import { FinalGradesPagination } from "./components/FinalGradesPagination";
+import { FinalGradesGetStartedModal } from "./components/FinalGradesGetStartedModal";
 import { apiClient } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -30,7 +31,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "approve", label: "Approved" },
 ];
 
-const EMPTY: FinalGradesResponse = { grades: [], total: 0, page: 1, pageSize: 50 };
+const EMPTY: FinalGradesResponse = { grades: [], total: 0, pending: 0, approved: 0, page: 1, pageSize: 50 };
 
 export default function FinalGradeApprovalsPage() {
   const [grades, setGrades] = React.useState<FinalGrade[]>(EMPTY.grades);
@@ -41,6 +42,8 @@ export default function FinalGradeApprovalsPage() {
   const [approving, setApproving] = React.useState<string | null>(null);
   const [page, setPage] = React.useState(1);
   const [total, setTotal] = React.useState(0);
+  const [pending, setPending] = React.useState(0);
+  const [approved, setApproved] = React.useState(0);
   const [pageSize, setPageSize] = React.useState(50);
 
   React.useEffect(() => {
@@ -51,6 +54,8 @@ export default function FinalGradeApprovalsPage() {
         if (cancelled) return;
         setGrades(res.data.grades);
         setTotal(res.data.total);
+        setPending(res.data.pending);
+        setApproved(res.data.approved);
         setPage(res.data.page);
         setPageSize(res.data.pageSize);
       })
@@ -79,6 +84,8 @@ export default function FinalGradeApprovalsPage() {
       .then((res) => {
         setGrades(res.data.grades);
         setTotal(res.data.total);
+        setPending(res.data.pending);
+        setApproved(res.data.approved);
         setPage(res.data.page);
         setPageSize(res.data.pageSize);
       })
@@ -101,15 +108,15 @@ export default function FinalGradeApprovalsPage() {
       setGrades((prev) =>
         prev.map((g) => (g.id === id ? { ...g, status: "approve" } : g))
       );
+      // Keep the totals (across all pages) in sync with the optimistic update.
+      setPending((p) => Math.max(0, p - 1));
+      setApproved((a) => a + 1);
     } catch (err) {
       console.error("[/api/grades/final-grades/:id/registrar-approve] failed:", err);
     } finally {
       setApproving(null);
     }
   };
-
-  const pending = grades.filter((g) => g.status === "pending").length;
-  const approved = grades.filter((g) => g.status === "approve").length;
 
   const filtered = grades.filter((g) => {
     if (status !== "all" && g.status !== status) return false;
@@ -163,6 +170,7 @@ export default function FinalGradeApprovalsPage() {
             G11–12 locked finals awaiting registrar validation
           </p>
         </div>
+        <FinalGradesGetStartedModal />
       </header>
 
       {error ? <p className={styles.error}>{error}</p> : null}

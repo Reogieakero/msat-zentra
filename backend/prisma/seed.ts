@@ -218,10 +218,20 @@ async function main() {
       for (const st of gradeStudents) {
         const avg = randInt(70, 98);
         const fgId = id("fg");
-        // Advisers lock ~60% of G11–G12 finals; all lower grades stay unlocked.
-        const shouldLock = (grade === "G11" || grade === "G12") && Math.random() < 0.6;
-        if (shouldLock) lockedFinalGradeIds.push(fgId);
-        finalGrades.push({ id: fgId, studentId: st.userId, subjectId, termId: term.id, computedAverage: avg, transmutedGrade: avg, remarks: avg >= 75 ? "Passed" as Remarks : "Failed" as Remarks, lockStatus: shouldLock ? ("locked" as LockStatus) : ("unlocked" as LockStatus) });
+        // Advisers approve ~60% of G11–G12 finals (adviser_approved), so they
+        // reach the registrar for final approval; all lower grades stay unlocked.
+        const shouldApprove = (grade === "G11" || grade === "G12") && Math.random() < 0.6;
+        if (shouldApprove) lockedFinalGradeIds.push(fgId);
+        finalGrades.push({
+          id: fgId,
+          studentId: st.userId,
+          subjectId,
+          termId: term.id,
+          computedAverage: avg,
+          transmutedGrade: avg,
+          remarks: avg >= 75 ? ("Passed" as Remarks) : ("Failed" as Remarks),
+          lockStatus: shouldApprove ? ("adviser_approved" as LockStatus) : ("unlocked" as LockStatus),
+        });
       }
     }
   }
@@ -229,11 +239,12 @@ async function main() {
   await prisma.assessment.createMany({ data: assessments, skipDuplicates: true });
   await prisma.studentGrade.createMany({ data: studentGrades, skipDuplicates: true });
   await prisma.finalGrade.createMany({ data: finalGrades, skipDuplicates: true });
-  // Stamp lockedAt on the seeded locked G11–G12 finals so the lock is complete.
+  // Stamp adviserApprovedAt on the seeded adviser-approved G11–G12 finals so the
+  // approval state is complete.
   if (lockedFinalGradeIds.length) {
     await prisma.finalGrade.updateMany({
       where: { id: { in: lockedFinalGradeIds } },
-      data: { lockedAt: new Date() },
+      data: { adviserApprovedAt: new Date() },
     });
   }
 
@@ -366,7 +377,7 @@ async function main() {
   const admData = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
-    const ref = referralRecs[i % referralRecs.length];
+    const ref = referralsData[i % referralsData.length];
     admData.push({ id: id("adm"), studentId: st.userId, referralId: ref.id, eligibilityStatus: rand(["pending", "eligible", "ineligible"] as AdmEligibility[]), preparedBy: admCoord.id, certificationDetails: { needs: "Educational support", plan: "Individualized plan" }, termId: term.id, confidentialityLevel: "restricted" as Confidentiality });
   }
   const FORM_SET: { type: AdmFormType; title: string; status: AdmFormStatus }[] = [

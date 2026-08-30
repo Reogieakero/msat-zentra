@@ -41,10 +41,10 @@ router.get(
         where: { isAdviser: true, user: { status: "pending" } },
       });
 
-      // lockedFinalsAwaiting: locked final grades for G11–12 students that are
-      // awaiting registrar release/approval.
+      // lockedFinalsAwaiting: adviser-approved final grades for G11–12 students
+      // that are awaiting registrar final approval.
       const lockedFinalsAwaiting = await prisma.finalGrade.count({
-        where: { lockStatus: "locked", student: { gradeLevel: { in: GRADE_BAND } } },
+        where: { lockStatus: "adviser_approved", student: { gradeLevel: { in: GRADE_BAND } } },
       });
 
       // sf10Released: released SF10 records for G11–12 students.
@@ -162,9 +162,10 @@ router.get(
 );
 
 // List of G11–G12 final-grade rows scoped to the registrar grade band, for the
-// Final Grade Approvals screen. A row is "pending" (awaiting registrar approval)
-// when it is locked but not yet finalized; "approve" once finalized. All values
-// are computed live from the database — no mocked data.
+// Final Grade Approvals screen. Only finals the adviser has already approved
+// (lockStatus "adviser_approved") reach the registrar. A row is "pending" (awaiting
+// registrar final approval) until finalizedAt is set; "approve" once finalized.
+// All values are computed live from the database — no mocked data.
 router.get(
   "/final-grades",
   requireAuth,
@@ -179,10 +180,10 @@ router.get(
 
       const where = {
         student: { gradeLevel: { in: GRADE_BAND } },
-        lockStatus: "locked" as const,
+        lockStatus: "adviser_approved" as const,
       };
 
-      const [rows, total] = await Promise.all([
+      const [rows, total, counts] = await Promise.all([
         prisma.finalGrade.findMany({
           where,
           include: {
@@ -202,7 +203,18 @@ router.get(
           take: pageSize,
         }),
         prisma.finalGrade.count({ where }),
+        prisma.finalGrade.groupBy({
+          by: ["finalizedAt"],
+          where,
+          _count: { _all: true },
+        }),
       ]);
+
+      // Total counts across ALL pages (not the current page slice).
+      const approvedTotal = counts
+        .filter((c) => c.finalizedAt !== null)
+        .reduce((sum, c) => sum + c._count._all, 0);
+      const pendingTotal = total - approvedTotal;
 
       const grades = rows.map((r) => ({
         id: r.id,
@@ -218,7 +230,14 @@ router.get(
         status: r.finalizedAt ? ("approve" as const) : ("pending" as const),
       }));
 
-      res.json({ grades, total, page, pageSize });
+      res.json({
+        grades,
+        total,
+        pending: pendingTotal,
+        approved: approvedTotal,
+        page,
+        pageSize,
+      });
     } catch (e) {
       next(e);
     }
