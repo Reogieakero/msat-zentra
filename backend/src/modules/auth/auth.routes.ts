@@ -171,7 +171,7 @@ router.get(
       //  1) Those with a StudentProfile already (e.g. seeded) — use profile data.
       //  2) Real sign-ups with no profile yet — read the claimed LRN from User
       //     and resolve grade band from the official StudentRoster.
-      const [profiled, bare] = await Promise.all([
+      const [profiled, bare, rosterSections] = await Promise.all([
         prisma.studentProfile.findMany({
           where: { gradeLevel: { in: band }, user: { status: "pending", role: roleFilter as Role } },
           select: {
@@ -197,14 +197,22 @@ router.get(
           select: { id: true, fullName: true, email: true, contactNumber: true, lrn: true, status: true, createdAt: true },
           orderBy: { createdAt: "asc" },
         }),
+        // Canonical section source: the enrolled StudentRoster, not the profile.
+        prisma.studentRoster.findMany({
+          where: { gradeLevel: { in: band } },
+          select: { lrn: true, section: { select: { name: true } } },
+        }),
       ]);
+
+      const rosterSectionByLrn = new Map<string, string>();
+      for (const r of rosterSections) rosterSectionByLrn.set(r.lrn, r.section?.name ?? "—");
 
       const students = profiled.map((s) => ({
         id: s.user.id,
         lrn: s.lrn,
         name: s.user.fullName,
         gradeLevel: s.gradeLevel as GradeLevel | string,
-        section: s.section?.name ?? "—",
+        section: rosterSectionByLrn.get(s.lrn) ?? s.section?.name ?? "—",
         email: s.user.email,
         contactNumber: s.user.contactNumber ?? "—",
         birthdate: s.birthdate ? s.birthdate.toISOString().slice(0, 10) : "—",

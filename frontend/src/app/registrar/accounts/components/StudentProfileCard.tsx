@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeTime, type PendingStudent } from "./types";
+import { formatGrade } from "@/lib/utils";
 import { LrnVerification } from "./LrnVerification";
 import styles from "./student-profile-card.module.css";
 
@@ -93,7 +94,7 @@ export function StudentProfileCard({ student, acting, onActed, onClose }: Props)
       </header>
 
       <dl className={styles.grid}>
-        <Field label="Grade Level" value={`Grade ${student.gradeLevel}`} />
+        <Field label="Grade Level" value={formatGrade(student.gradeLevel)} />
         <Field label="Section" value={student.section} />
         <Field label="Email" value={student.email} />
         <Field label="Contact Number" value={student.contactNumber} />

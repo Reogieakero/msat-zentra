@@ -127,11 +127,16 @@
   height: 1.5rem;
   padding-inline: 0.5rem;
   border-radius: 9999px;
-  background: color-mix(in oklch, var(--primary), transparent 88%);
-  color: var(--primary);
+  background: color-mix(in oklch, var(--foreground), transparent 90%);
+  color: var(--foreground);
   font-size: 0.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+:global(.dark) .gradeTag {
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
 }
 
 .sectionText {

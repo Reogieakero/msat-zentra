@@ -268,6 +268,8 @@ router.get(
         select: { lrn: true, gradeLevel: true, section: { select: { name: true } } },
       });
 
+      const rosteredLrns = new Set(roster.map((r) => r.lrn));
+
       // LRNs that actually have a student_profiles/login account, with their status.
       const lrns = roster.map((r) => r.lrn);
       const profiles = await prisma.studentProfile.findMany({
@@ -285,6 +287,19 @@ router.get(
         const status = statusByLrn.get(r.lrn);
         if (status === "active") g.withAccount++;
         else if (status === "pending") g.pending++;
+      }
+
+      // Pending sign-ups that have no roster entry yet (e.g. just registered) still
+      // count toward the pending total shown in the Pending Students table, so the
+      // breakdown and the table reconcile. Attribute them by their profile grade/section.
+      const pendingUsers = await prisma.studentProfile.findMany({
+        where: { gradeLevel: { in: GRADE_BAND }, user: { status: "pending" }, lrn: { notIn: Array.from(rosteredLrns) } },
+        select: { gradeLevel: true, section: { select: { name: true } } },
+      });
+      for (const p of pendingUsers) {
+        const label = `${gradeLabel(p.gradeLevel)} · ${p.section?.name ?? "Unsectioned"}`;
+        if (!groups.has(label)) groups.set(label, { label, withAccount: 0, pending: 0 });
+        groups.get(label)!.pending++;
       }
 
       const data = Array.from(groups.values()).map((g, i) => ({ id: `g${i}-${g.label}`, ...g }));

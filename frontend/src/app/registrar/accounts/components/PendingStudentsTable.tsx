@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PendingStudent } from "./types";
+import { formatGrade } from "@/lib/utils";
 import styles from "./pending-students-table.module.css";
 
 type Props = {
@@ -114,7 +115,7 @@ export function PendingStudentsTable({ students, selectedId, onSelect, loading }
                     <TableCell className={styles.lrn}>{s.lrn}</TableCell>
                     <TableCell className={styles.nameCell}>{s.name}</TableCell>
                     <TableCell>
-                      <span className={styles.gradeTag}>{s.gradeLevel}</span>
+                      <span className={styles.gradeTag}>{formatGrade(s.gradeLevel)}</span>
                     </TableCell>
                     <TableCell className={styles.sectionText}>{s.section}</TableCell>
                     <TableCell>

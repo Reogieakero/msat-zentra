@@ -30,3 +30,13 @@ export function formatSectionShort(raw: string | null | undefined): string {
   const letter = match[2];
   return letter ? `Section ${letter.toUpperCase()}` : raw;
 }
+
+// Normalize a grade level into the display form "Grade 11" from either the
+// stored DB form ("G11") or a label that already includes "Grade". Passes
+// null/empty/unknown values through unchanged so other surfaces stay intact.
+export function formatGrade(raw: string | null | undefined): string {
+  if (!raw) return raw ?? "";
+  const match = raw.match(/^G?(\d{1,2})$/i);
+  if (match) return `Grade ${match[1]}`;
+  return raw;
+}
