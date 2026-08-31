@@ -1,0 +1,120 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.required {
+  color: var(--destructive);
+}
+
+.control {
+  width: 100%;
+  height: 28px;
+  font-size: 13px;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--destructive);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.875rem;
+}
+
+/* Select trigger — matches /registrar/final-grades status dropdown */
+.selectTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+
+.selectTrigger:hover {
+  background: var(--muted);
+}
+
+.selectTrigger[data-placeholder] {
+  color: var(--muted-foreground);
+}
+
+.selectContent {
+  min-width: 180px;
+  padding: 4px;
+}
+
+.selectItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.selectItem[data-highlighted] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.selectItem :global([data-slot="select-item-indicator"]) {
+  display: none;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.switchLabel {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

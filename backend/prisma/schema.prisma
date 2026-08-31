@@ -171,6 +171,9 @@ enum ActionType {
   principal_password_change
   sf10_access_grant
   sf10_access_deny
+  create
+  update
+  delete
 }
 
 enum AccessRequestStatus {

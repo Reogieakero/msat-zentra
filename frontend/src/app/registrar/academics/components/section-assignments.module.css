@@ -1,0 +1,248 @@
+.assign {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.assignHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.assignTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.assignSub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.addRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.addField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.addLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.addControl {
+  min-width: 11rem;
+}
+
+.selectTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+
+.selectTrigger:hover {
+  background: var(--muted);
+}
+
+.selectTrigger[data-placeholder] {
+  color: var(--muted-foreground);
+}
+
+.selectContent {
+  min-width: 180px;
+  padding: 4px;
+}
+
+.selectItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.selectItem[data-highlighted] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.selectItem :global([data-slot="select-item-indicator"]) {
+  display: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.itemSubject {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.itemCode {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.itemName {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemTeacher {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.itemTerm {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.addButton {
+  height: 28px;
+  padding: 0 1rem;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.removeButton {
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--destructive);
+  flex-shrink: 0;
+}
+
+.removeButton:hover {
+  background: color-mix(in oklch, var(--destructive), transparent 90%);
+}
+
+.pickerToggle {
+  height: 1.75rem;
+  font-size: 0.75rem;
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--muted), transparent 60%);
+}
+
+.pickerList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.375rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, background 120ms ease-out;
+}
+
+.pickerItem:hover {
+  border-color: color-mix(in oklch, var(--border), var(--foreground) 18%);
+}
+
+.pickerItemActive {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.pickerCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 0.6875rem;
+  color: var(--primary-foreground);
+  flex-shrink: 0;
+}
+
+.pickerCheck[data-checked="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.pickerCode {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.pickerName {
+  font-size: 0.75rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

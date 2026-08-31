@@ -18,6 +18,7 @@ import overviewRoutes from "./modules/overview/overview.routes.js";
 import academicsRoutes from "./modules/academics/academics.routes.js";
 import reportsRoutes from "./modules/reports/reports.routes.js";
 import registrarRoutes from "./modules/registrar/registrar.routes.js";
+import registrarAcademicsRoutes from "./modules/registrar/academics.routes.js";
 
 export function createApp() {
   const env = getEnv();
@@ -41,6 +42,7 @@ export function createApp() {
   app.use("/api/academics", academicsRoutes);
   app.use("/api/reports", reportsRoutes);
   app.use("/api/registrar", registrarRoutes);
+  app.use("/api/registrar/academics", registrarAcademicsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
