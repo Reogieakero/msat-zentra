@@ -550,4 +550,39 @@ router.post(
   }
 );
 
+// List G11–G12 students (registrar band) for the SF10 upload picker. Returns
+// lrn, name, grade level, and section so the registrar can target a record.
+// Live from the database — no mocked data.
+router.get(
+  "/students",
+  requireAuth,
+  requireRole("registrar"),
+  async (req, res, next) => {
+    try {
+      const rows = await prisma.studentProfile.findMany({
+        where: { gradeLevel: { in: GRADE_BAND } },
+        orderBy: [{ gradeLevel: "asc" }, { lrn: "asc" }],
+        select: {
+          userId: true,
+          lrn: true,
+          gradeLevel: true,
+          user: { select: { fullName: true } },
+          section: { select: { name: true } },
+        },
+      });
+      res.json({
+        students: rows.map((s) => ({
+          studentId: s.userId,
+          lrn: s.lrn,
+          fullName: s.user.fullName,
+          gradeLevel: s.gradeLevel,
+          section: s.section?.name ?? "—",
+        })),
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 export default router;

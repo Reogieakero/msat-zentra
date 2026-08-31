@@ -664,6 +664,8 @@ model Sf10Record {
   validatedAt       DateTime?
   releasedAt        DateTime?
   archivedAt        DateTime?
+  uploadedAt        DateTime?
+  updatedAt         DateTime    @updatedAt
   currentVersion    Int         @default(1)
   student           StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   verifiedByUser    User?          @relation("Sf10VerifiedBy", fields: [verifiedBy], references: [id])

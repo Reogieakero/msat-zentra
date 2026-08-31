@@ -69,6 +69,12 @@ async function main() {
   }
   const principal = await prisma.user.findUniqueOrThrow({ where: { email: "principal@zentra.test" } });
   const registrarUser = await prisma.user.findUniqueOrThrow({ where: { email: "registrar@zentra.test" } });
+  // Registrar is hardcoded (no self-registration) and owns the senior-high band.
+  await prisma.staffProfile.upsert({
+    where: { userId: registrarUser.id },
+    update: { handledGradeLevels: ["G11", "G12"] },
+    create: { userId: registrarUser.id, employeeId: "REG01", isAdviser: false, department: "Registrar", handledGradeLevels: ["G11", "G12"] },
+  });
   const nurse = await prisma.user.findUniqueOrThrow({ where: { email: "nurse@zentra.test" } });
   const guidance = await prisma.user.findUniqueOrThrow({ where: { email: "guidance@zentra.test" } });
   const admCoord = await prisma.user.findUniqueOrThrow({ where: { email: "adm@zentra.test" } });
