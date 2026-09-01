@@ -6,7 +6,7 @@ import {
   evaluateRisk,
   resolveActiveTermId,
 } from "../../services/risk.js";
-import { getRiskBoard } from "./riskBoard.service.js";
+import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
 import { getLowRiskStudents } from "./lowRiskStudents.service.js";
 import {
   getRiskHeatmap,
@@ -32,6 +32,44 @@ router.get(
           : "final";
       const board = await getRiskBoard(gradeMode);
       res.json(board);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// School years (with nested terms) to power the Risk Trend filters.
+router.get(
+  "/school-years",
+  requireAuth,
+  requireRole("principal"),
+  cache({ tags: ["risk", "principal", "schoolyear"] }),
+  async (_req, res, next) => {
+    try {
+      res.json(await getSchoolsForRisk());
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// School-year/term-scoped risk trend for the Risk Trend chart.
+router.get(
+  "/trend",
+  requireAuth,
+  requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
+  async (req, res, next) => {
+    try {
+      const schoolYearId =
+        typeof req.query.schoolYearId === "string" && req.query.schoolYearId !== ""
+          ? req.query.schoolYearId
+          : undefined;
+      const termId =
+        typeof req.query.termId === "string" && req.query.termId !== ""
+          ? req.query.termId
+          : undefined;
+      res.json(await getRiskTrend(schoolYearId, termId));
     } catch (e) {
       next(e);
     }

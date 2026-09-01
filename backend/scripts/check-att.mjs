@@ -1,5 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-const p = new PrismaClient();
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
+const p = new PrismaClient({ adapter: createPrismaAdapter() });
 const rows = await p.attendanceRecord.groupBy({ by: ["status", "session"], _count: true });
 console.log("ATTENDANCE BY status/session:", JSON.stringify(rows, null, 2));
 const total = await p.attendanceRecord.count();

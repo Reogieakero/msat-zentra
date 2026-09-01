@@ -45,7 +45,6 @@ export function OutcomeSummary({
       <Card className={styles.card}>
         <CardHeader className={styles.header}>
           <CardTitle>Intervention Outcome</CardTitle>
-          <span className={styles.subtitle}>status-only</span>
         </CardHeader>
         <CardContent className={styles.content}>
           <ul className={styles.list}>
@@ -85,12 +84,11 @@ export function OutcomeSummary({
   return (
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
-        <CardTitle>Intervention Outcome</CardTitle>
-        <span className={styles.subtitle}>status-only</span>
-      </CardHeader>
-      <CardContent className={styles.content}>
-        <ul className={styles.list}>
-          {OUTCOME_META.map((o) => {
+          <CardTitle>Intervention Outcome</CardTitle>
+        </CardHeader>
+        <CardContent className={styles.content}>
+          <ul className={styles.list}>
+            {OUTCOME_META.map((o) => {
             const value = safeOutcome[o.key as OutcomeKey];
             const pct = total > 0 ? Math.round((value / total) * 100) : 0;
             return (

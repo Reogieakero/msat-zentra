@@ -12,7 +12,9 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { TabLink } from "./TabLink";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutGrid, Sun, Moon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type AttendanceSummary,
@@ -24,7 +26,7 @@ import styles from "./attendance-panel.module.css";
 const EMPTY: AttendanceSummary = { trend: [], grades: [] };
 
 const chartConfig = {
-  present: { label: "Present", color: "#166534" },
+  present: { label: "Present", color: "var(--primary)" },
 } satisfies ChartConfig;
 
 export function AttendancePanel({
@@ -36,11 +38,15 @@ export function AttendancePanel({
 }) {
   const [summary, setSummary] = React.useState<AttendanceSummary>(EMPTY);
   const [loading, setLoading] = React.useState(true);
+  const [session, setSession] = React.useState<"ALL" | "AM" | "PM">("ALL");
+  const [selectedGrade, setSelectedGrade] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
     apiClient
-      .get<AttendanceSummary>("/api/attendance/summary")
+      .get<AttendanceSummary>("/api/attendance/summary", {
+        params: session === "ALL" ? {} : { session },
+      })
       .then((res) => {
         if (!cancelled) setSummary(res.data);
       })
@@ -53,7 +59,7 @@ export function AttendancePanel({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   if (loading) {
     return (
@@ -71,7 +77,6 @@ export function AttendancePanel({
             </div>
           ))}
         </div>
-        <Skeleton className={styles.tabLinkSkeleton} />
       </div>
     );
   }
@@ -88,8 +93,29 @@ export function AttendancePanel({
 
   return (
     <div className={styles.attendancePanel}>
+      <div className={styles.filterBar}>
+        <Tabs value={session} onValueChange={(v) => { setSession(v as "ALL" | "AM" | "PM"); setLoading(true); }}>
+          <TabsList variant="line" className={styles.sessionTabs}>
+            <TabsTrigger value="ALL" className={styles.sessionTab}>
+              <LayoutGrid aria-hidden />
+              All
+            </TabsTrigger>
+            <TabsTrigger value="AM" className={styles.sessionTab}>
+              <Sun aria-hidden />
+              AM
+            </TabsTrigger>
+            <TabsTrigger value="PM" className={styles.sessionTab}>
+              <Moon aria-hidden />
+              PM
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button asChild variant="default" size="sm" className={styles.openButton}>
+          <a href={href}>Open {label}</a>
+        </Button>
+      </div>
       <div className={styles.attendanceChartCard}>
-        <h3 className={styles.chartTitle}>Total Present · Last 5 School Days</h3>
+        <h3 className={styles.chartTitle}>Total Present · Last 5 School Days{session !== "ALL" ? ` · ${session}` : ""}</h3>
         <ChartContainer
           id="attendance-trend"
           config={chartConfig}
@@ -99,15 +125,17 @@ export function AttendancePanel({
             data={trend}
             margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="day"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              fontSize={12}
-            />
-            <YAxis tickLine={false} axisLine={false} fontSize={12} width={40} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="color-mix(in oklch, var(--primary), transparent 85%)" />
+              <XAxis
+                dataKey="day"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                fontSize={12}
+                stroke="var(--primary)"
+                tick={{ fill: "var(--primary)" }}
+              />
+              <YAxis tickLine={false} axisLine={false} fontSize={12} width={40} stroke="var(--primary)" tick={{ fill: "var(--primary)" }} />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Line
               dataKey="present"
@@ -132,7 +160,16 @@ export function AttendancePanel({
               ? Math.round((latest.present / latest.total) * 100)
               : 0;
             return (
-              <div key={g.grade} className={styles.gradeCard}>
+              <button
+                type="button"
+                key={g.grade}
+                onClick={() =>
+                  setSelectedGrade((cur) => (cur === g.grade ? null : g.grade))
+                }
+                className={`${styles.gradeCard} ${
+                  selectedGrade === g.grade ? styles.gradeCardSelected : ""
+                }`}
+              >
                 <div className={styles.gradeHead}>
                   <span className={styles.gradeName}>{g.grade}</span>
                   <span className={styles.gradeRate}>{rate}%</span>
@@ -156,13 +193,11 @@ export function AttendancePanel({
                     <span className={styles.gradeDaysPrev}>{g.present}</span>
                   </div>
                 )}
-              </div>
+              </button>
             );
           })
         )}
       </div>
-
-      <TabLink href={href} label={label} />
     </div>
   );
 }

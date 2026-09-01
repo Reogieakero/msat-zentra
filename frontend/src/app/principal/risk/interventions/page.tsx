@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Pagination,
   PaginationContent,
@@ -41,9 +40,20 @@ export default function PrincipalInterventionsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<RiskSnapshotStudent[]>([]);
   const [total, setTotal] = React.useState(0);
-  const [highModerate, setHighModerate] = React.useState(0);
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState<RiskSnapshotStudent | null>(null);
+  const [query, setQuery] = React.useState("");
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.studentName.toLowerCase().includes(q) ||
+        r.lrn.toLowerCase().includes(q) ||
+        r.section.toLowerCase().includes(q)
+    );
+  }, [rows, query]);
 
   const load = React.useCallback(
     (p: number, mode: GradeMode) => {
@@ -53,7 +63,6 @@ export default function PrincipalInterventionsPage() {
         .then((res) => {
           setRows(res.students);
           setTotal(res.total);
-          setHighModerate(res.highModerate);
           setPage(res.page);
         })
         .catch((err: unknown) => {
@@ -90,22 +99,17 @@ export default function PrincipalInterventionsPage() {
             <div className={styles.headText}>
               <h1 className={styles.title}>Interventions</h1>
               <p className={styles.subtitle}>
-                School-wide at-risk students · track progress
+                Early-intervention progress tracking
               </p>
-            </div>
-            <div className={styles.toolbarMeta}>
-              {loading ? (
-                <Skeleton style={{ width: 90, height: 12 }} />
-              ) : (
-                `${highModerate} at-risk · ${total} shown`
-              )}
             </div>
           </header>
 
           <InterventionsTable
-            rows={rows}
+            rows={filtered}
             loading={loading}
             error={error}
+            query={query}
+            onSearchChange={setQuery}
             onSelect={setSelected}
           />
 
@@ -148,7 +152,11 @@ export default function PrincipalInterventionsPage() {
         </section>
       </div>
 
-      <InterventionDrawer student={selected} onClose={() => setSelected(null)} />
+      <InterventionDrawer
+        student={selected}
+        gradeMode={gradeMode}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }

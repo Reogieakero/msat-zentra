@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/providers";
-import { StaffSidebar, type SidebarMode } from "@/components/staff-sidebar";
+import { StaffSidebar } from "@/components/staff-sidebar";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -22,8 +22,6 @@ import {
 import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
 import { GradeModeProvider, useGradeMode } from "./grade-mode-context";
 import styles from "./principal.module.css";
-
-const STORAGE_KEY = "zentra.sidebar.mode";
 
 function GradeBasisSelector() {
   const { gradeMode, setGradeMode } = useGradeMode();
@@ -54,34 +52,14 @@ function GradeBasisSelector() {
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { open, setOpen, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
-  const [hovered, setHovered] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [mode, setMode] = React.useState<SidebarMode>("hover");
 
   React.useEffect(() => {
     setMounted(true);
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved === "hover" || saved === "expanded" || saved === "collapsible") {
-      setMode(saved);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  React.useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, mode);
-  }, [mode]);
-
-  const hovering = mode === "hover" && hovered && !open;
-  const expanded =
-    open || (mode === "hover" && hovered && !open) || (mode === "expanded" && !isMobile);
-
-  const handleModeChange = (next: SidebarMode) => {
-    setMode(next);
-    setOpen(next === "expanded");
-  };
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -195,17 +173,9 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <StaffSidebar
-        expanded={expanded}
-        hovering={hovering}
-        onHoverChange={setHovered}
-        mode={mode}
-        onModeChange={handleModeChange}
-      />
+      <StaffSidebar />
       <div
-        className={`${styles.shell} ${
-          mode === "expanded" && !isMobile ? styles.shellExpanded : ""
-        }`}
+        className={`${styles.shell} ${!isMobile ? styles.shellExpanded : ""}`}
       >
         <main className={styles.main}>{children}</main>
       </div>

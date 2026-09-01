@@ -16,6 +16,9 @@ export interface StudentRow {
   riskLevel: RiskLevel;
   overallAverage: number;
   attendanceRatePct: number;
+  presentAm: number;
+  presentPm: number;
+  schoolDays: number;
   subjects: StudentSubject[];
 }
 

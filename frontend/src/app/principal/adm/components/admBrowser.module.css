@@ -1,7 +1,8 @@
 .admBrowser {
-  margin-top: 4rem;
-  background: #fafaf9;
-  border: 1px solid #d6d3d1;
+  margin-top: 0.5rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
 .admBrowser > div {
@@ -42,4 +43,86 @@
 .tabBadgeActive {
   background: var(--primary, #1d4ed8);
   color: var(--primary-foreground, #fff);
+}
+
+.browserCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.18);
+}
+
+.browserTitleBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: color-mix(in oklch, var(--background), transparent 30%);
+  border-bottom: 1px solid var(--border, #e7e5e4);
+  overflow: visible;
+}
+
+.browserBody {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: var(--card, #ffffff);
+  overflow: auto;
+}
+
+.trafficLights {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.lightRed,
+.lightYellow,
+.lightGreen {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+
+.lightRed {
+  background-color: #ff5f57;
+}
+
+.lightYellow {
+  background-color: #febc2e;
+}
+
+.lightGreen {
+  background-color: #28c840;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out,
+    border-color 140ms ease-out;
+}
+
+.tab:hover {
+  background: color-mix(in oklch, var(--muted-foreground), transparent 90%);
+  color: var(--foreground);
+}
+
+.tabActive {
+  background: var(--card, #ffffff);
+  border-color: var(--border, #e7e5e4);
+  color: var(--foreground);
 }

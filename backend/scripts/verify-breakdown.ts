@@ -1,5 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-const p = new PrismaClient();
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
+const p = new PrismaClient({ adapter: createPrismaAdapter() });
 (async () => {
   const secs = await p.section.findMany({ where: { gradeLevel: { in: ["G11","G12"] } }, select: { id: true, name: true, gradeLevel: true } });
   for (const s of secs) {

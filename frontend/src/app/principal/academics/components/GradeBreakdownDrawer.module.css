@@ -1,27 +1,47 @@
+.sheet {
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  height: auto;
+  border-radius: var(--radius-lg, 12px);
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.sheet :global([data-slot="sheet-header"]) {
+  padding: 0;
+}
+
 .drawerSection {
-  padding: 0 1rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-.drawerMeta {
+.metaRow {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.drawerName {
-  margin: 0;
-  font-size: 1rem;
+.metaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background-color: var(--card);
+}
+
+.metaValue {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 600;
   color: var(--foreground);
-}
-
-.drawerSub {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
 }
 
 .statGrid {
@@ -33,26 +53,292 @@
 .statBox {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 0.625rem 0.75rem;
+  padding: 0.75rem 0.875rem;
   background-color: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .statLabel {
   font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
 
 .statValue {
-  font-size: 1rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--foreground);
+}
+
+.gradesBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.gradesHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.gradesTitle {
+  margin: 0;
+  font-size: 0.875rem;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: var(--foreground);
 }
 
 .weights {
+  margin: 0;
   font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  text-align: right;
+}
+
+.gradesTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.th {
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.thRight {
+  text-align: right;
+}
+
+.thCenter {
+  text-align: center;
+}
+
+.row {
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.td {
+  padding: 0.5rem 0.625rem;
+  color: var(--foreground);
+  vertical-align: middle;
+}
+
+.tdNum {
+  text-align: right;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.tdRight {
+  text-align: right;
+}
+
+.tdCenter {
+  text-align: center;
+}
+
+.standing {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.weightCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--primary), transparent 95%);
+}
+
+.weightCardTitle {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.weightList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.weightItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.weightName {
+  color: var(--foreground);
+}
+
+.weightPct {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}
+
+.standingGood {
+  color: var(--primary);
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+}
+
+.standingWarn {
+  color: var(--warning, #d97706);
+  background: color-mix(in oklch, var(--warning, #d97706), transparent 88%);
+}
+
+.standingLow {
+  color: var(--destructive);
+  background: color-mix(in oklch, var(--destructive), transparent 88%);
+}
+
+.note {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.attendanceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.attendanceHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sessionTabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background), transparent 40%);
+}
+
+.sessionTab {
+  min-width: 40px;
+  padding: 0.2rem 0.625rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+}
+
+.sessionTab:hover {
+  color: var(--foreground);
+}
+
+.sessionTabActive {
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.attendanceBody {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.donut {
+  width: 72px;
+  height: 72px;
+  flex: none;
+}
+
+.donutTrack {
+  stroke: var(--border);
+}
+
+.donutValue {
+  stroke: var(--primary);
+  stroke-linecap: round;
+  transition: stroke-dasharray 200ms ease-out;
+}
+
+.donutCenter {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  fill: var(--foreground);
+}
+
+.donutCenterTotal {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--muted-foreground);
+}
+
+.attendanceReadout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.attendancePct {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--foreground);
+}
+
+.attendanceTotal {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.attendanceDetail {
+  margin: 0;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
 }

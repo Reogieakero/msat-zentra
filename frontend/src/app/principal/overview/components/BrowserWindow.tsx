@@ -66,7 +66,7 @@ export function BrowserWindow({ tabs }: { tabs: TabDef[] }) {
           ) : tab.id === "attendance" ? (
             <AttendancePanel href={tab.href} label={tab.label} />
           ) : tab.id === "adm" ? (
-            <AdmPanel href={tab.href} label={tab.label} />
+            <AdmPanel href={tab.href} />
           ) : tab.id === "sf10" ? (
             <Sf10Panel href={tab.href} label={tab.label} />
           ) : (

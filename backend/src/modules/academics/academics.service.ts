@@ -5,6 +5,7 @@ import {
   type HonorRollTier,
 } from "../../services/grading.js";
 import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
+import { schoolDaysToDate } from "../../services/attendance.js";
 
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
@@ -64,6 +65,9 @@ export interface StudentRowDTO {
   riskLevel: "High" | "Moderate" | "Low";
   overallAverage: number;
   attendanceRatePct: number;
+  presentAm: number;
+  presentPm: number;
+  schoolDays: number;
   subjects: StudentSubjectDTO[];
 }
 
@@ -97,11 +101,14 @@ export async function getAcademicsSummary(
   const activeTerm = await prisma.term.findFirst({
     where: { schoolYear: { isActive: true } },
     orderBy: { termNumber: "asc" },
-    select: { id: true, termNumber: true, schoolYear: { select: { name: true } } },
+    select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
   });
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
   const schoolYear = activeTerm?.schoolYear?.name ?? "No active school year";
+  // Global "school days done" — weekdays from term start through today.
+  // Single source of truth shared with the attendance heatmaps.
+  const schoolDays = schoolDaysToDate(activeTerm?.startDate);
 
   // "final" = only locked/finalized grades; "raw" = include every graded row
   // (locked or not) so the principal can preview before grades are finalized.
@@ -125,7 +132,7 @@ export async function getAcademicsSummary(
           },
           attendanceRecords: {
             where: { termId },
-            select: { status: true },
+            select: { status: true, session: true, date: true },
           },
           anecdotalRecords: {
             where: { termId },
@@ -191,13 +198,25 @@ export async function getAcademicsSummary(
       );
       const atRisk = liveLevel === "High" || liveLevel === "Moderate";
 
+      const amRecords = student.attendanceRecords.filter((a) => a.session === "AM");
+      const pmRecords = student.attendanceRecords.filter((a) => a.session === "PM");
+      const presentAm = amRecords.filter((a) => a.status === "present").length;
+      const presentPm = pmRecords.filter((a) => a.status === "present").length;
+      const totalRecords = student.attendanceRecords.length;
+      const attendanceRatePct = totalRecords > 0
+        ? round1((presentAm + presentPm) / totalRecords * 100)
+        : 0;
+
       students.push({
         studentId: student.userId,
         lrn: student.lrn,
         name: student.user.fullName,
         riskLevel: liveLevel,
         overallAverage,
-        attendanceRatePct: 0,
+        attendanceRatePct,
+        presentAm,
+        presentPm,
+        schoolDays,
         subjects,
       });
 

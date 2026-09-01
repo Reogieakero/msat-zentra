@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, UserCheck, CalendarX, Award, ShieldAlert, ArrowRight } from "lucide-react";
+import { FileSignature, CalendarX, Award, ShieldAlert, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { OverviewData } from "./data";
 import styles from "./action-required.module.css";
@@ -19,8 +19,7 @@ type ActionCard = {
 
 export function ActionRequired({ data }: { data: OverviewData | null }) {
   const router = useRouter();
-  const pendingSignatures = data?.admPending ?? 0;
-  const accountApprovals = data?.accountApprovals ?? 0;
+  const admReferred = data?.admPending ?? 0;
   const attendanceWatch = data?.attendanceWatch ?? 0;
 
   const riskStudents = data?.atRisk ? data.atRisk.students : 0;
@@ -31,25 +30,15 @@ export function ActionRequired({ data }: { data: OverviewData | null }) {
     {
       key: "adm",
       icon: FileSignature,
-      title: "ADM Signatures",
-      count: pendingSignatures,
-      href: "/principal/adm",
-      cta: "Review signatures",
+      title: "ADM Referred",
+      count: admReferred,
+      href: "/principal/adm/referrals/all",
+      cta: "Review referrals",
       featured: true,
       image:
         "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=800&q=80",
       description:
-        "Alternate Delivery Mode learner profiles prepared by the ADM Coordinator are queued for your final digital signature before release.",
-    },
-    {
-      key: "accounts",
-      icon: UserCheck,
-      title: "Pending Account Approvals",
-      count: accountApprovals,
-      href: "/principal/overview",
-      cta: "Review accounts",
-      image:
-        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80",
+        "Alternate Delivery Mode learner cases currently in the referral pipeline (Meeting with Parents, Home Visitation, Certification, or Principal Approval) need follow-up.",
     },
     {
       key: "attendance",

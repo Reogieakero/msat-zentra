@@ -1,8 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import { readFileSync } from "fs";
 
 const raw = readFileSync(new URL("./migrations/0001_rls.sql", import.meta.url), "utf8");
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const drop = `
 drop policy if exists anecdotal_visible on "AnecdotalRecord";

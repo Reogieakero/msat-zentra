@@ -65,10 +65,10 @@ export const SF10_STATUS_META: Record<
   Sf10Status,
   { label: string; color: string }
 > = {
-  missing: { label: "Missing", color: "#b91c1c" },
-  available: { label: "Available", color: "#c2410c" },
-  attach: { label: "Attached", color: "#166534" },
-  released: { label: "Released", color: "#6d28d9" },
+  missing: { label: "Missing", color: "var(--destructive)" },
+  available: { label: "Available", color: "var(--warning, #d97706)" },
+  attach: { label: "Attached", color: "var(--primary)" },
+  released: { label: "Released", color: "var(--chart-4)" },
 };
 
 export const GRADE_ORDER = [

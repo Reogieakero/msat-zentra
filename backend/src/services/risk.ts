@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import type { RiskLevel } from "@prisma/client";
+import type { RiskLevel } from "../generated/prisma/client.js";
 
 // Single source of truth for "the active term": the first term (by termNumber
 // asc) of the active school year. Used by every risk endpoint/service so the

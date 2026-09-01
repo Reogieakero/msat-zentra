@@ -3,6 +3,14 @@ import { X, CircleDot } from "lucide-react";
 import type { RecordStudent } from "../types";
 import styles from "../records.module.css";
 
+function titleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function severityTone(sev: "Low" | "Moderate" | "High"): string {
   return sev === "High" ? styles.sevHigh : sev === "Moderate" ? styles.sevModerate : styles.sevLow;
 }
@@ -59,10 +67,10 @@ export function StudentInfoPanel({
                         <span className={styles.timelineDate}>{rec.date}</span>
                         <span className={`${styles.sevTag} ${severityTone(rec.severity)}`}>{rec.severity}</span>
                       </div>
-                      <p className={styles.timelineCat}>{rec.category}</p>
+                      <p className={styles.timelineCat}>{titleCase(rec.category)}</p>
                       <p className={styles.timelineDesc}>{rec.description}</p>
                       <p className={styles.timelineNote}>
-                        {rec.staff} · {rec.resolution}
+                        {rec.staff} · {titleCase(rec.resolution)}
                       </p>
                       <span className={`${styles.followTag} ${followTone(rec.followUp)}`}>{rec.followUp}</span>
                     </div>

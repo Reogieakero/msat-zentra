@@ -1,5 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-const p = new PrismaClient();
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
+const p = new PrismaClient({ adapter: createPrismaAdapter() });
 const r = await p.attendanceRecord.findFirst({
   where: { status: "present", session: "AM" },
   include: { student: { include: { user: true } } },

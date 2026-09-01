@@ -130,6 +130,18 @@ export function stageLabel(stage: AdmPipelineStage): string {
   );
 }
 
+/** Brand-consistent dot colors for each ADM pipeline stage, used in legends. */
+export const STAGE_COLORS: Record<AdmPipelineStage, string> = {
+  anecdotal: "#a8a29e",
+  consultation: "#f59e0b",
+  meeting_parents: "#3b82f6",
+  home_visitation: "#8b5cf6",
+  certification: "#0ea5e9",
+  principal_approval: "#166534",
+  enrollment_monitoring: "#10b981",
+  completion: "#64748b",
+};
+
 export type AdmDocument = {
   name: string;
   type: string;

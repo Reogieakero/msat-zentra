@@ -35,35 +35,33 @@
   gap: 0.75rem;
 }
 
-.tabs {
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
+.sessionTabs {
+  --primary: var(--primary);
+  gap: 0.25rem;
 }
 
-.tab {
-  min-width: 44px;
-  padding: 0.25rem 0.75rem;
-  border: none;
-  border-radius: calc(var(--radius-md) - 2px);
-  background-color: transparent;
+.sessionTab {
+  border-radius: 999px;
+  padding: 0.25rem 0.625rem;
+}
+
+.sessionTabs [data-slot="tabs-trigger"] {
   color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
-.tab:hover {
-  color: var(--foreground);
+.sessionTabs [data-slot="tabs-trigger"] svg {
+  width: 16px;
+  height: 16px;
 }
 
-.tabActive {
-  background-color: color-mix(in oklch, var(--primary), transparent 85%);
-  color: var(--foreground);
+.sessionTabs [data-slot="tabs-trigger"][aria-selected="true"] {
+  color: var(--primary) !important;
+  background-color: color-mix(in oklch, var(--primary), transparent 88%) !important;
+  border-color: color-mix(in oklch, var(--primary), transparent 70%) !important;
+}
+
+.sessionTabs [data-slot="tabs-trigger"][aria-selected="true"]::after {
+  display: none;
 }
 
 .error {
@@ -79,16 +77,16 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
-  background-color: var(--card);
-  color: var(--foreground);
+  background-color: transparent;
+  color: var(--muted-foreground);
   cursor: pointer;
-  transition: border-color 150ms ease-out, background-color 150ms ease-out;
+  transition: color 150ms ease-out, background-color 150ms ease-out;
 }
 
 .arrow:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  color: var(--foreground);
   background-color: color-mix(in oklch, var(--primary), transparent 92%);
 }
 

@@ -6,7 +6,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { PieChart as RechartsPieChart, Pie, Cell } from "recharts";
-import { TabLink } from "./TabLink";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type AnecdotalCategory,
@@ -47,6 +46,12 @@ export function AnecdotalPanel({
   }, []);
 
   const categories = summary.categories as AnecdotalCategory[];
+
+  // Brand-tinted fills for the donut + legend, derived from the system
+  // --primary token so every slice stays on-brand while remaining distinct.
+  const brandFills = categories.map((_, i) =>
+    `color-mix(in oklch, var(--primary), transparent ${Math.min(i * 16, 72)}%)`
+  );
 
   const total = summary.total;
   const topCategory = [...categories].sort((a, b) => b.value - a.value)[0]?.label ?? "-";
@@ -117,8 +122,6 @@ export function AnecdotalPanel({
             </table>
           </div>
         </div>
-
-        <Skeleton className={styles.tabLinkSkeleton} />
       </div>
     );
   }
@@ -145,8 +148,8 @@ export function AnecdotalPanel({
                 outerRadius={42}
                 paddingAngle={2}
               >
-                {categories.map((entry) => (
-                  <Cell key={entry.key} fill={entry.color} />
+                {categories.map((entry, i) => (
+                  <Cell key={entry.key} fill={brandFills[i]} />
                 ))}
               </Pie>
             </RechartsPieChart>
@@ -154,11 +157,11 @@ export function AnecdotalPanel({
         </div>
 
         <ul className={styles.donutLegend}>
-          {categories.map((c) => (
+          {categories.map((c, i) => (
             <li key={c.key} className={styles.legendItem}>
               <span
                 className={styles.legendDot}
-                style={{ backgroundColor: c.color }}
+                style={{ backgroundColor: brandFills[i] }}
                 aria-hidden
               />
               <span className={styles.legendLabel}>{c.label}</span>
@@ -184,7 +187,12 @@ export function AnecdotalPanel({
       </div>
 
       <div className={styles.anecdotalTableCard}>
-        <h3 className={styles.tableTitle}>Recently Logged Learners</h3>
+        <div className={styles.tableHeader}>
+          <h3 className={styles.tableTitle}>Recently Logged Learners</h3>
+          <a className={styles.seeAll} href={href}>
+            See all records
+          </a>
+        </div>
         <div className={styles.tableScroll}>
           <table className={styles.anecdotalTable}>
             <thead>
@@ -218,8 +226,6 @@ export function AnecdotalPanel({
           </table>
         </div>
       </div>
-
-      <TabLink href={href} label={label} />
     </div>
   );
 }

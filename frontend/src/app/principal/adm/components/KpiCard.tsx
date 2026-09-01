@@ -24,7 +24,7 @@ export function KpiCard({
 
   return (
     <div className={kpiStyles.kpi} onMouseMove={handleMove}>
-      <span className={kpiStyles.kpiIconWrap}>{icon}</span>
+      <span className={kpiStyles.kpiIconOnly}>{icon}</span>
       <dd className={kpiStyles.kpiValue}>
         {loading ? <Skeleton className={kpiStyles.kpiSkeleton} /> : value}
       </dd>

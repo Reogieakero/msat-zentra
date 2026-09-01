@@ -73,11 +73,6 @@
   background-color: color-mix(in oklch, var(--primary), transparent 92%);
 }
 
-.clickHint {
-  font-size: 0.6875rem;
-  color: var(--muted-foreground);
-}
-
 .viewCell {
   text-align: right;
   width: 1%;

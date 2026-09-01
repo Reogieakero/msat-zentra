@@ -6,7 +6,7 @@
 
 .admTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
 }
 
@@ -62,11 +62,14 @@
   color: var(--muted-foreground);
 }
 
+.sf10TotalValue {
+  color: var(--primary);
+}
+
 .sf10SummaryTotal {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  margin-left: auto;
   padding-left: 1rem;
   text-align: right;
 }

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { createApp } from "./app.js";
 import { getEnv } from "./config/env.js";
 import { logger } from "./lib/pino.js";

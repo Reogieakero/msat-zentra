@@ -9,19 +9,24 @@ export function StatCard({
   value,
   hint,
   icon: Icon,
-  accent,
   loading = false,
 }: {
   label: string;
   value: string;
   hint?: string;
   icon: LucideIcon;
-  accent?: string;
   loading?: boolean;
 }) {
+  const handleMove = (e: React.MouseEvent<HTMLElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+    card.style.setProperty("--my", `${e.clientY - rect.top}px`);
+  };
+
   if (loading) {
     return (
-      <Card size="sm" className={styles.card}>
+      <Card size="sm" className={styles.card} onMouseMove={handleMove}>
         <CardHeader className={styles.header}>
           <Skeleton className={styles.skelTitle} />
           <Skeleton className={styles.skelIcon} />
@@ -35,15 +40,10 @@ export function StatCard({
   }
 
   return (
-    <Card size="sm" className={styles.card}>
+    <Card size="sm" className={styles.card} onMouseMove={handleMove}>
       <CardHeader className={styles.header}>
         <CardTitle className={styles.title}>{label}</CardTitle>
-        <span
-          className={styles.iconWrap}
-          style={accent ? { color: accent } : undefined}
-        >
-          <Icon className={styles.icon} aria-hidden />
-        </span>
+        <Icon className={styles.icon} aria-hidden style={{ color: "var(--primary)" }} />
       </CardHeader>
       <CardContent className={styles.content}>
         <span className={styles.value}>{value}</span>

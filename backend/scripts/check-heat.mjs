@@ -1,5 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
+const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const session = "AM";
 const activeTerm = await prisma.term.findFirst({

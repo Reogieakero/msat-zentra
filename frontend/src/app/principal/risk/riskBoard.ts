@@ -25,6 +25,12 @@ export async function fetchRiskBoard(gradeMode: "raw" | "final" = "final"): Prom
   return data;
 }
 
+export interface RiskTrendData {
+  schoolYearId: string | null;
+  termId: string | null;
+  trend: { date: string; term: string; high: number; moderate: number; low: number }[];
+}
+
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
 export interface HeatmapSection {

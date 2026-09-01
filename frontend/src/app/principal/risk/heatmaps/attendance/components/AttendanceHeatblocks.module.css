@@ -1,0 +1,219 @@
+.card {
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tabsList {
+  height: 2rem;
+  padding: 0.125rem;
+}
+
+.tabsTrigger {
+  height: 1.75rem;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: color 150ms ease-out, background-color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.arrow:hover {
+  color: var(--foreground);
+  background-color: color-mix(in oklch, var(--primary), transparent 90%);
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+}
+
+.arrow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring, var(--primary));
+}
+
+.arrowIcon {
+  width: 17px;
+  height: 17px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.25rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  width: max-content;
+}
+
+.cardShell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 253px;
+  padding: 0.875rem 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.shellSelected {
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary), transparent 70%);
+}
+
+.shellBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.grade {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.enrolled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.enrolledIcon {
+  width: 0.8125rem;
+  height: 0.8125rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(16, 11px);
+  gap: 3px;
+  width: max-content;
+}
+
+/* GitHub-style contribution squares: fixed 11px cells with a 3px gap and a
+   slight rounding, matching the GitHub contribution graph block sizes. */
+.block {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+.blockWeekend {
+  opacity: 0.85;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  justify-content: flex-end;
+}
+
+.legendLabel {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.legendSwatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.legendSwatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.tooltipLine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.skelGrade {
+  width: 40%;
+  height: 0.875rem;
+  border-radius: 3px;
+}
+
+.skelBlock {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background-color: color-mix(in oklch, var(--muted), transparent 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardShell {
+    transition: none;
+  }
+}

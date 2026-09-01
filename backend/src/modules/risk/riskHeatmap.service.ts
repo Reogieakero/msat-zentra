@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import type { RiskLevel } from "@prisma/client";
+import type { RiskLevel } from "../../generated/prisma/client.js";
 import type { GradeMode } from "../../services/risk.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";

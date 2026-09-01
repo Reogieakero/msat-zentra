@@ -54,7 +54,7 @@ export interface SectionAttendanceStat {
   section: string;
   gradeLevel: string;
   enrolled: number;
-  rate: number; // 0..100
+  rate: number; // 0..100 — avg present per school day ÷ headcount
   belowDays: number; // days under 80%
   amRate: number; // 0..100
   pmRate: number; // 0..100
@@ -63,7 +63,7 @@ export interface SectionAttendanceStat {
 
 export interface TrendPoint {
   date: string;
-  present: number; // school-wide present-student count for the session/date
+  rate: number; // 0..100 — daily present ÷ the relevant headcount (section or school)
 }
 
 export interface SessionPattern {

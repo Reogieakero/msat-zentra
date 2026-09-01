@@ -6,7 +6,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { PieChart as RechartsPieChart, Pie, Cell } from "recharts";
-import { TabLink } from "./TabLink";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SF10_STATUS_META, GRADE_ORDER, type Sf10Level } from "./data";
 import type { Sf10Status } from "./data";
@@ -148,11 +147,12 @@ export function Sf10Panel({
         </div>
 
         <div className={styles.sf10SummaryTotal}>
-          <span className={styles.sf10SummaryValue}>
+          <span className={`${styles.sf10SummaryValue} ${styles.sf10TotalValue}`}>
             {counts.attach + counts.available + counts.missing + counts.released}
           </span>
           <span className={styles.sf10SummaryLabel}>Total Records</span>
         </div>
+
       </div>
 
       <div className={styles.sf10Grid}>
@@ -185,8 +185,6 @@ export function Sf10Panel({
           );
         })}
       </div>
-
-      <TabLink href={href} label={label} />
     </div>
   );
 }

@@ -4,7 +4,19 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { computeAttendanceRate } from "../../services/attendance.js";
+import {
+  computeAttendanceRate,
+  buildDayAxis,
+  countSchoolDays,
+  formatDateKey,
+  isWeekendKey,
+  groupSectionDay,
+  dailyPresentPercent,
+  avgPresentPercent,
+  below80Days,
+  attendanceTrend,
+  type DayAgg,
+} from "../../services/attendance.js";
 import { recomputeRisk } from "../../services/risk.js";
 
 const router = Router();
@@ -150,40 +162,33 @@ router.get(
   requireRole("principal"),
   async (req, res, next) => {
     try {
+      const session: "AM" | "PM" | undefined =
+        req.query.session === "AM" || req.query.session === "PM"
+          ? (req.query.session as "AM" | "PM")
+          : undefined;
+
       const activeTerm = await prisma.term.findFirst({
         where: { schoolYear: { isActive: true } },
         orderBy: { termNumber: "asc" },
         select: { id: true },
       });
       const termId = activeTerm?.id;
-      const where = termId ? { termId } : {};
-
-      const dayRecords = await prisma.attendanceRecord.findMany({
-        where,
-        orderBy: { date: "desc" },
-        select: { date: true, status: true },
-      });
-
-      const byDay = new Map<string, { present: number; total: number }>();
-      for (const r of dayRecords) {
-        const key = r.date.toISOString().slice(0, 10);
-        if (!byDay.has(key)) byDay.set(key, { present: 0, total: 0 });
-        const agg = byDay.get(key)!;
-        agg.total += 1;
-        if (r.status === "present") agg.present += 1;
+      // Real-time date axis: the last 5 school days (Mon–Fri) ending today.
+      // Anchored to the current date so the panel always shows today even when
+      // no attendance record has been submitted yet for the most recent day.
+      const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
+      const dayKeys: string[] = [];
+      for (let d = new Date(today); dayKeys.length < 5; d.setUTCDate(d.getUTCDate() - 1)) {
+        const wd = d.getUTCDay();
+        if (wd !== 0 && wd !== 6) dayKeys.push(d.toISOString().slice(0, 10));
       }
-      const dayKeys = [...byDay.keys()].slice(0, 5).reverse();
+      dayKeys.reverse();
 
-      const trend = dayKeys.map((key) => {
-        const agg = byDay.get(key)!;
-        const d = new Date(key + "T00:00:00Z");
-        const day = d.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          timeZone: "UTC",
-        });
-        return { day, present: agg.present, total: agg.total };
-      });
+      const where = {
+        ...(termId ? { termId } : {}),
+        ...(session ? { session } : {}),
+        date: { gte: new Date(dayKeys[0] + "T00:00:00Z") },
+      };
 
       const records = await prisma.attendanceRecord.findMany({
         where,
@@ -194,21 +199,39 @@ router.get(
         },
       });
 
+      const byDay = new Map<string, { present: number; total: number }>();
       const gradeDayAgg: Record<string, Map<string, { present: number; total: number }>> = {};
       const gradeTermAgg: Record<string, { present: number; total: number }> = {};
       for (const r of records) {
-        const grade = r.student.gradeLevel;
         const key = r.date.toISOString().slice(0, 10);
-        if (!gradeDayAgg[grade]) gradeDayAgg[grade] = new Map();
-        if (!gradeDayAgg[grade].has(key)) gradeDayAgg[grade].set(key, { present: 0, total: 0 });
-        const agg = gradeDayAgg[grade].get(key)!;
+
+        if (!byDay.has(key)) byDay.set(key, { present: 0, total: 0 });
+        const agg = byDay.get(key)!;
         agg.total += 1;
         if (r.status === "present") agg.present += 1;
+
+        const grade = r.student.gradeLevel;
+        if (!gradeDayAgg[grade]) gradeDayAgg[grade] = new Map();
+        if (!gradeDayAgg[grade].has(key)) gradeDayAgg[grade].set(key, { present: 0, total: 0 });
+        const gAgg = gradeDayAgg[grade].get(key)!;
+        gAgg.total += 1;
+        if (r.status === "present") gAgg.present += 1;
 
         if (!gradeTermAgg[grade]) gradeTermAgg[grade] = { present: 0, total: 0 };
         gradeTermAgg[grade].total += 1;
         if (r.status === "present") gradeTermAgg[grade].present += 1;
       }
+
+      const trend = dayKeys.map((key) => {
+        const agg = byDay.get(key) ?? { present: 0, total: 0 };
+        const d = new Date(key + "T00:00:00Z");
+        const day = d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        });
+        return { day, present: agg.present, total: agg.total };
+      });
 
       const grades = GRADE_ORDER.filter((g) => gradeTermAgg[g]).map((g) => ({
         grade: GRADE_LABEL[g],
@@ -226,7 +249,7 @@ router.get(
         }),
       }));
 
-      res.json({ trend, grades });
+      res.json({ session: session ?? "ALL", trend, grades });
     } catch (e) {
       next(e);
     }
@@ -278,16 +301,9 @@ router.get(
       const enrolledBySection: Record<string, number> = {};
       for (const s of sections) enrolledBySection[s.id] = s.students.length;
 
-      // Continuous date axis: term start -> today.
-      const start = activeTerm?.startDate
-        ? new Date(activeTerm.startDate.toISOString().slice(0, 10) + "T00:00:00Z")
-        : null;
-      const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
-      const axisStart = start ?? today;
-      const dayKeys: string[] = [];
-      for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-        dayKeys.push(d.toISOString().slice(0, 10));
-      }
+      // Continuous date axis: term start -> today (shared engine).
+      const dayKeys = buildDayAxis(activeTerm?.startDate);
+      const schoolDays = countSchoolDays(dayKeys);
 
       const records = await prisma.attendanceRecord.findMany({
         where: { termId, session },
@@ -298,29 +314,10 @@ router.get(
         },
       });
 
-      const dayStatus: Record<
-        string,
-        Map<string, { present: number; late: number; excused: number }>
-      > = {};
-      for (const r of records) {
-        const key = r.date.toISOString().slice(0, 10);
-        if (!dayStatus[r.sectionId]) dayStatus[r.sectionId] = new Map();
-        if (!dayStatus[r.sectionId].has(key)) {
-          dayStatus[r.sectionId].set(key, { present: 0, late: 0, excused: 0 });
-        }
-        const cell = dayStatus[r.sectionId].get(key)!;
-        if (r.status === "present") cell.present++;
-        else if (r.status === "late") cell.late++;
-        else if (r.status === "excused") cell.excused++;
-      }
-
-      const fmt = (key: string) =>
-        new Date(key + "T00:00:00Z").toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          timeZone: "UTC",
-        });
+      // Aggregation + formatting all come from the generic engine so every
+      // attendance surface uses the same date axis, weekend handling, and
+      // present/late/excused/absent accounting.
+      const dayStatus = groupSectionDay(records);
 
       const result = sections.map((s) => {
         const statusMap = dayStatus[s.id] ?? new Map();
@@ -331,23 +328,29 @@ router.get(
           gradeLevel: GRADE_NUMERIC[s.gradeLevel] ?? s.gradeLevel,
           enrolled: total,
           days: dayKeys.map((key) => {
-            const cell = statusMap.get(key) ?? { present: 0, late: 0, excused: 0 };
-            const accounted = cell.present + cell.late + cell.excused;
+            const cell = statusMap.get(key);
+            const present = cell?.present ?? 0;
+            const late = cell?.late ?? 0;
+            const excused = cell?.excused ?? 0;
+            const accounted = present + late + excused;
             const absent = Math.max(0, total - accounted);
             return {
-              date: fmt(key),
+              date: formatDateKey(key),
               isoDate: key,
-              present: cell.present,
-              late: cell.late,
+              present,
+              late,
               absent,
-              excused: cell.excused,
+              excused,
               total,
+              isWeekend: isWeekendKey(key),
+              // Canonical daily present ratio (present ÷ headcount), 0..100.
+              ratio: dailyPresentPercent(present, total),
             };
           }),
         };
       });
 
-      res.json({ session, sections: result });
+      res.json({ session, sections: result, schoolDays });
     } catch (e) {
       next(e);
     }
@@ -416,16 +419,11 @@ router.get(
       });
       const enrolledBySection: Record<string, number> = {};
       for (const s of sections) enrolledBySection[s.id] = s.students.length;
+      const totalEnrolled = Object.values(enrolledBySection).reduce((a, b) => a + b, 0);
 
-      const start = activeTerm?.startDate
-        ? new Date(activeTerm.startDate.toISOString().slice(0, 10) + "T00:00:00Z")
-        : null;
-      const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
-      const axisStart = start ?? today;
-      const dayKeys: string[] = [];
-      for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-        dayKeys.push(d.toISOString().slice(0, 10));
-      }
+      // Shared engine: date axis + weekday count from the single source of truth.
+      const dayKeys = buildDayAxis(activeTerm?.startDate);
+      const schoolDays = countSchoolDays(dayKeys);
 
       const sectionIds = sections.map((s) => s.id);
       const raw = await prisma.attendanceRecord.findMany({
@@ -433,97 +431,44 @@ router.get(
         select: { sectionId: true, date: true, session: true, status: true },
       });
 
-      type Cell = { present: number; late: number; excused: number; total: number };
-      const buildSessions = () => {
-        const map: Record<string, Map<string, Cell>> = {};
-        for (const r of raw) {
-          const key = r.date.toISOString().slice(0, 10);
-          if (!map[r.sectionId]) map[r.sectionId] = new Map();
-          if (!map[r.sectionId].has(key)) map[r.sectionId].set(key, { present: 0, late: 0, excused: 0, total: 0 });
-          const cell = map[r.sectionId].get(key)!;
-          cell.total += 1;
-          if (r.status === "present") cell.present++;
-          else if (r.status === "late") cell.late++;
-          else if (r.status === "excused") cell.excused++;
-        }
-        return map;
-      };
-      const all = buildSessions();
-      const amMap: Record<string, Map<string, Cell>> = {};
-      const pmMap: Record<string, Map<string, Cell>> = {};
-      for (const r of raw) {
-        if (r.session !== "AM" && r.session !== "PM") continue;
-        const key = r.date.toISOString().slice(0, 10);
-        const target = r.session === "AM" ? amMap : pmMap;
-        if (!target[r.sectionId]) target[r.sectionId] = new Map();
-        if (!target[r.sectionId].has(key)) target[r.sectionId].set(key, { present: 0, late: 0, excused: 0, total: 0 });
-        const cell = target[r.sectionId].get(key)!;
-        cell.total += 1;
-        if (r.status === "present") cell.present++;
-        else if (r.status === "late") cell.late++;
-        else if (r.status === "excused") cell.excused++;
-      }
-
-      const rateOf = (cell: Cell | undefined, enrolled: number) => {
-        if (!cell || cell.total === 0 || enrolled <= 0) return 0;
-        return Math.round((cell.present / enrolled) * 1000) / 10;
-      };
-      const rateOfSection = (map: Map<string, Cell> | undefined, enrolled: number, days: number) => {
-        if (!map || map.size === 0 || enrolled <= 0 || days <= 0) return 0;
-        let p = 0;
-        for (const c of map.values()) p += c.present;
-        return Math.round((p / (enrolled * days)) * 1000) / 10;
-      };
-      const avgOf = (map: Record<string, Map<string, Cell>>, id: string) => {
-        const m = map[id];
-        if (!m) return 0;
-        let p = 0;
-        let t = 0;
-        for (const c of m.values()) {
-          p += c.present;
-          t += c.total;
-        }
-        return t > 0 ? Math.round((p / t) * 1000) / 10 : 0;
-      };
+      // Aggregate all records per section/day, then the selected session's ones.
+      const all = groupSectionDay(raw);
+      const sessionMap =
+        session === "PM"
+          ? groupSectionDay(raw.filter((r) => r.session === "PM"))
+          : groupSectionDay(raw.filter((r) => r.session === "AM"));
 
       const result = sections.map((s) => {
         const enrolled = enrolledBySection[s.id] ?? 0;
         const sm = all[s.id];
-        const days: Cell[] = dayKeys.map((k) => sm?.get(k) ?? { present: 0, late: 0, excused: 0, total: 0 });
-        const present = days.reduce((a, d) => a + d.present, 0);
-        const rate = days.length > 0 ? Math.round((present / days.length) * 10) / 10 : 0;
-        const belowDays = days.filter((d) => d.total > 0 && enrolled > 0 && d.present / enrolled < 0.8).length;
-
-        const half = Math.floor(days.length / 2);
-        const firstHalf = days.slice(0, half);
-        const secondHalf = days.slice(half);
-        const avgRate = (arr: Cell[]) => {
-          const pp = arr.reduce((a, d) => a + d.present, 0);
-          const tt = arr.reduce((a, d) => a + d.total, 0);
-          return tt > 0 ? (pp / tt) * 100 : 0;
-        };
-        const diff = avgRate(secondHalf) - avgRate(firstHalf);
-        const trend: "up" | "down" | "flat" = diff > 1.5 ? "up" : diff < -1.5 ? "down" : "flat";
+        const amMap = groupSectionDay(raw.filter((r) => r.sectionId === s.id && r.session === "AM"))[s.id];
+        const pmMap = groupSectionDay(raw.filter((r) => r.sectionId === s.id && r.session === "PM"))[s.id];
+        const days: DayAgg[] = dayKeys.map((k) => sm?.get(k) ?? { present: 0, late: 0, excused: 0, total: 0 });
+        const amDays: DayAgg[] = dayKeys.map((k) => amMap?.get(k) ?? { present: 0, late: 0, excused: 0, total: 0 });
+        const pmDays: DayAgg[] = dayKeys.map((k) => pmMap?.get(k) ?? { present: 0, late: 0, excused: 0, total: 0 });
 
         return {
           sectionId: s.id,
           section: `Grade ${s.name}`,
           gradeLevel: GRADE_NUMERIC[s.gradeLevel] ?? s.gradeLevel,
           enrolled,
-          rate,
-          belowDays,
-          amRate: rateOfSection(amMap[s.id], enrolled, days.length),
-          pmRate: rateOfSection(pmMap[s.id], enrolled, days.length),
-          trend,
+          // Canonical attendance % — average present per day ÷ headcount (0..100).
+          rate: avgPresentPercent(days, enrolled, schoolDays),
+          belowDays: below80Days(days, enrolled),
+          amRate: avgPresentPercent(amDays, enrolled, schoolDays),
+          pmRate: avgPresentPercent(pmDays, enrolled, schoolDays),
+          trend: attendanceTrend(days, enrolled),
         };
       });
 
-      // Daily trend: present-student count for the selected session, per day,
-      // from the term start to today. When a section is selected, the trend
-      // follows that section only; otherwise it is the school-wide total.
-      const sessionMap = session === "PM" ? pmMap : amMap;
-      const trend: { date: string; present: number }[] = dayKeys.map((key) => {
+      // Daily attendance % trend (present ÷ the relevant headcount, 0..100) for
+      // the selected session. Section-wide when a section is selected, otherwise
+      // the whole school. Matches the heatblocks' present ÷ headcount ratio.
+      const trend: { date: string; rate: number }[] = dayKeys.map((key) => {
         let present = 0;
+        const headcount = selectedSectionId
+          ? (enrolledBySection[selectedSectionId] ?? 0)
+          : totalEnrolled;
         if (selectedSectionId) {
           present = sessionMap[selectedSectionId]?.get(key)?.present ?? 0;
         } else {
@@ -531,18 +476,13 @@ router.get(
             present += sessionMap[sectionId].get(key)?.present ?? 0;
           }
         }
-        const d = new Date(key + "T00:00:00Z");
-        const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-        return { date, present };
+        return {
+          date: formatDateKey(key),
+          rate: dailyPresentPercent(present, headcount),
+        };
       });
 
-      // Counted school days: weekdays (Mon–Fri) from the term start to today.
-      const schoolDays = dayKeys.reduce((acc, key) => {
-        const wd = new Date(key + "T00:00:00Z").getUTCDay();
-        return wd !== 0 && wd !== 6 ? acc + 1 : acc;
-      }, 0);
-
-      res.json({ sections: result, trend, schoolDays });
+      res.json({ sections: result, trend, schoolDays, totalEnrolled });
     } catch (e) {
       next(e);
     }
@@ -572,18 +512,9 @@ router.get(
       }
 
       // Total ongoing school days: weekdays (Mon–Fri) from the term start date
-      // through today. Weekends are excluded so the denominator reflects actual
-      // instruction days, not every calendar day.
-      const start = activeTerm?.startDate
-        ? new Date(activeTerm.startDate.toISOString().slice(0, 10) + "T00:00:00Z")
-        : null;
-      const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
-      const axisStart = start ?? today;
-      let totalSchoolDays = 0;
-      for (let d = new Date(axisStart); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-        const wd = d.getUTCDay();
-        if (wd !== 0 && wd !== 6) totalSchoolDays += 1;
-      }
+      // through today. Same engine as the section stats so the denominators
+      // (schoolDays) never disagree between the overview and the roster.
+      const totalSchoolDays = countSchoolDays(buildDayAxis(activeTerm?.startDate));
 
       const section = await prisma.section.findUnique({
         where: { id: sectionId },

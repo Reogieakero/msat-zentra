@@ -96,11 +96,29 @@
   background: color-mix(in oklch, var(--background), transparent 40%);
 }
 
+.tableHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .tableTitle {
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--foreground);
+}
+
+.seeAll {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.seeAll:hover {
+  text-decoration: underline;
 }
 
 .tableScroll {
@@ -114,7 +132,7 @@
 }
 
 .anecdotalTable th {
-  text-align: left;
+  text-align: center;
   padding: 0.5rem 0.625rem;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -126,6 +144,7 @@
 }
 
 .anecdotalTable td {
+  text-align: center;
   padding: 0.5rem 0.625rem;
   border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 60%);
   color: var(--foreground);
@@ -143,6 +162,7 @@
 .mono {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .chartSkeleton {
@@ -187,10 +207,4 @@
   max-width: 8rem;
   height: 0.875rem;
   margin: 0.125rem 0;
-}
-
-.tabLinkSkeleton {
-  width: 9rem;
-  height: 2rem;
-  margin-top: 0.25rem;
 }

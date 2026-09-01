@@ -1,7 +1,6 @@
 import * as React from "react";
 import browser from "./admBrowser.module.css";
 import header from "./admHeader.module.css";
-import browserStyles from "../../risk/students/components/browserCardStyles.module.css";
 
 export function AdmBrowser({
   tabs,
@@ -17,12 +16,12 @@ export function AdmBrowser({
   children: React.ReactNode;
 }) {
   return (
-    <article className={`${browserStyles.browserCard} ${browser.admBrowser}`}>
-      <div className={browserStyles.browserTitleBar}>
-        <span className={browserStyles.trafficLights} aria-hidden="true">
-          <span className={browserStyles.lightRed} />
-          <span className={browserStyles.lightYellow} />
-          <span className={browserStyles.lightGreen} />
+    <article className={`${browser.browserCard} ${browser.admBrowser}`}>
+      <div className={browser.browserTitleBar}>
+        <span className={browser.trafficLights} aria-hidden="true">
+          <span className={browser.lightRed} />
+          <span className={browser.lightYellow} />
+          <span className={browser.lightGreen} />
         </span>
         <div className={browser.admTabBar} role="tablist">
           {tabs.map((tab) => (
@@ -31,7 +30,7 @@ export function AdmBrowser({
               type="button"
               role="tab"
               aria-selected={activeTab === tab.id}
-              className={`${browserStyles.tab} ${activeTab === tab.id ? browserStyles.tabActive : ""}`}
+              className={`${browser.tab} ${activeTab === tab.id ? browser.tabActive : ""}`}
               onClick={() => onTabChange(tab.id)}
             >
               {tab.label}
@@ -49,7 +48,7 @@ export function AdmBrowser({
         </div>
         {action && <div className={header.browserAction}>{action}</div>}
       </div>
-      <div className={browserStyles.browserBody}>{children}</div>
+      <div className={browser.browserBody}>{children}</div>
     </article>
   );
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
@@ -114,7 +115,7 @@ const ELIGIBILITY_LABEL: Record<string, string> = {
 
 const PAGE_SIZE = 20;
 
-const REFERRAL_STAGES = [
+const REFERRAL_STAGES: AdmStage[] = [
   "meeting_parents",
   "home_visitation",
   "certification",
@@ -139,42 +140,48 @@ router.get(
         typeof req.query.stage === "string" && req.query.stage.trim()
           ? req.query.stage.trim()
           : "";
-      const stageFilter =
-        stageParam && REFERRAL_STAGES.includes(stageParam)
-          ? stageParam
+      const stageFilter: AdmStage | "" =
+        stageParam && REFERRAL_STAGES.includes(stageParam as AdmStage)
+          ? (stageParam as AdmStage)
           : "";
 
-      const profiles = await prisma.admLearnerProfile.findMany({
-        include: {
-          student: { include: { user: true } },
-          preparedByUser: true,
-          forms: { orderBy: { uploadedAt: "desc" } },
-        },
-        orderBy: { id: "desc" },
-      });
-
-      const referred = profiles.filter((p) => REFERRAL_STAGES.includes(p.stage));
-      const filtered = (q || stageFilter)
-        ? referred.filter((p) => {
-            const stage = p.stage;
-            if (stageFilter && stage !== stageFilter) return false;
-            if (q) {
-              return (
-                p.student.user.fullName.toLowerCase().includes(q) ||
-                p.student.lrn.toLowerCase().includes(q) ||
-                p.id.toLowerCase().includes(q)
-              );
+      const where: Prisma.AdmLearnerProfileWhereInput = {
+        ...(stageFilter ? { stage: stageFilter } : { stage: { in: REFERRAL_STAGES } }),
+        ...(q
+          ? {
+              OR: [
+                { student: { user: { fullName: { contains: q, mode: "insensitive" as const } } } },
+                { student: { lrn: { contains: q } } },
+                { id: { contains: q } },
+              ],
             }
-            return true;
-          })
-        : referred;
-      const pageItems = filtered.slice(skip, skip + limit);
-      const total = filtered.length;
+          : {}),
+      };
 
-      const stageCounts: Record<string, number> = {};
-      for (const p of referred) {
-        stageCounts[p.stage] = (stageCounts[p.stage] ?? 0) + 1;
-      }
+      const referredWhere: Prisma.AdmLearnerProfileWhereInput = { stage: { in: REFERRAL_STAGES } };
+      const [pageItems, total, stageGroups, totalReferred] = await Promise.all([
+        prisma.admLearnerProfile.findMany({
+          where,
+          include: {
+            student: { include: { user: true } },
+            preparedByUser: true,
+            forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
+          },
+          orderBy: { id: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.admLearnerProfile.count({ where }),
+        prisma.admLearnerProfile.groupBy({
+          by: ["stage"],
+          where: referredWhere,
+          _count: { _all: true },
+        }),
+        prisma.admLearnerProfile.count({ where: referredWhere }),
+      ]);
+
+      const countsByStage: Record<string, number> = {};
+      for (const g of stageGroups) countsByStage[g.stage] = g._count?._all ?? 0;
 
       const out = pageItems.map((p) => {
         const stage = p.stage;
@@ -208,8 +215,8 @@ router.get(
       res.json({
         rows: out,
         total,
-        totalReferred: referred.length,
-        stageCounts,
+        totalReferred,
+        stageCounts: countsByStage,
         page,
         totalPages: Math.max(1, Math.ceil(total / limit)),
         limit,

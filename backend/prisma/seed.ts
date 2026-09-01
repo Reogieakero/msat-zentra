@@ -1,8 +1,10 @@
-import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import { recomputeRisk, evaluateRisk } from "../src/services/risk.js";
 import argon2 from "argon2";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const STAFF_PASSWORD = "Zentra2025!";
 const STUDENT_PASSWORD = "Student2025!";

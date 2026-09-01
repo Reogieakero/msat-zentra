@@ -18,9 +18,6 @@ export function LowRiskStudents() {
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
         <CardTitle>Low-Risk Students</CardTitle>
-        <span className={styles.subtitle}>
-          {loading ? "—" : `${total} students`}
-        </span>
       </CardHeader>
       <CardContent className={styles.content}>
         {error ? (
@@ -41,7 +38,7 @@ export function LowRiskStudents() {
             {students.map((s) => (
               <li key={s.lrn} className={styles.item}>
                 <span className={styles.dot} aria-hidden />
-                <span className={styles.lrn}>{s.lrn}</span>
+                <span className={styles.lrn}>{s.name}</span>
               </li>
             ))}
           </ul>

@@ -1,6 +1,6 @@
 import { prisma } from "./prisma.js";
 import { logger } from "./pino.js";
-import type { NotifChannel } from "@prisma/client";
+import type { NotifChannel } from "../generated/prisma/client.js";
 
 // O7: notification `type` is DERIVED from sourceTable+action, never caller-supplied.
 // Single source of truth for the mapping below.

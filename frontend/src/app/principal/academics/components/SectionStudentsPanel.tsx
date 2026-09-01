@@ -83,9 +83,7 @@ export function SectionStudentsPanel({
                     <Skeleton className={styles.dotSkeleton} />
                   </td>
                 ))}
-                <td className={`${styles.diagCell} ${styles.viewCell}`}>
-                  <Skeleton className={styles.viewSkeleton} />
-                </td>
+                <td className={`${styles.diagCell} ${styles.viewCell}`} />
               </tr>
             ))}
           </tbody>
@@ -162,9 +160,7 @@ export function SectionStudentsPanel({
                     </td>
                   );
                 })}
-                <td className={`${styles.diagCell} ${styles.viewCell}`}>
-                  <span className={styles.clickHint}>View →</span>
-                </td>
+                <td className={`${styles.diagCell} ${styles.viewCell}`} />
               </tr>
             ))}
           </tbody>

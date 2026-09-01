@@ -82,13 +82,16 @@
   --sidebar-border: oklch(0.922 0.006 95.5);
   --sidebar-ring: oklch(0.83 0.24 142);
 
-  /* Attendance heat map scale: 0 (empty/absent) -> full present (green) */
+  /* Attendance heat map scale: derived from the brand --primary so the map
+     inherits the system brand color. 0 = empty surface, higher bands blend
+     toward full brand saturation; below-threshold bands tint toward
+     --destructive to keep the at-risk signal. */
   --hm-0: oklch(0.97 0.005 95.5); /* empty — light surface in light mode */
-  --hm-1: oklch(0.85 0.2 142);
-  --hm-2: oklch(0.84 0.24 140);
-  --hm-3: oklch(0.5 0.2 142);
-  --hm-4: oklch(0.83 0.24 142); /* full present — bright green */
-  --hm-weekend: oklch(0.62 0.2 25); /* no-school day — red */
+  --hm-1: color-mix(in oklch, var(--primary), transparent 88%); /* low present — faint green */
+  --hm-2: color-mix(in oklch, var(--primary), transparent 70%);
+  --hm-3: color-mix(in oklch, var(--primary), transparent 40%); /* near-threshold */
+  --hm-4: var(--primary); /* full present — brand green */
+  --hm-weekend: color-mix(in oklch, var(--primary), transparent 80%); /* no-school day — faded green */
 }
 
 .dark {
@@ -124,13 +127,14 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 
-  /* Attendance heat map scale: 0 (empty/absent) -> full present (green) */
+  /* Attendance heat map scale: derived from the brand --primary so the map
+     inherits the system brand color in dark mode too. */
   --hm-0: oklch(0.32 0.01 95.5); /* empty — dark surface in dark mode */
-  --hm-1: oklch(0.55 0.12 150);
-  --hm-2: oklch(0.6 0.13 150);
-  --hm-3: oklch(0.68 0.14 150);
-  --hm-4: oklch(0.78 0.15 150); /* full present — bright green */
-  --hm-weekend: oklch(0.55 0.2 25); /* no-school day — red */
+  --hm-1: color-mix(in oklch, var(--primary), transparent 88%); /* low present — faint green */
+  --hm-2: color-mix(in oklch, var(--primary), transparent 70%);
+  --hm-3: color-mix(in oklch, var(--primary), transparent 40%); /* near-threshold */
+  --hm-4: var(--primary); /* full present — brand green */
+  --hm-weekend: color-mix(in oklch, var(--primary), transparent 80%); /* no-school day — faded green */
 }
 
 @layer base {

@@ -1,5 +1,7 @@
 import * as React from "react";
+import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import type { RiskSnapshotStudent } from "../types";
 import styles from "../interventions.module.css";
 
@@ -17,10 +19,10 @@ const FACTOR_LABEL: Record<string, string> = {
   behavioral: "Behavioral",
 };
 
-const FACTOR_CHIP: Record<string, string> = {
-  academic: "#b91c1c",
-  attendance: "#2563eb",
-  behavioral: "#7c3aed",
+const FACTOR_CLASS: Record<string, string> = {
+  academic: styles.factorAcademic,
+  attendance: styles.factorAttendance,
+  behavioral: styles.factorBehavioral,
 };
 
 function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
@@ -31,11 +33,8 @@ function FactorChips({ factors }: { factors: RiskSnapshotStudent["factors"] }) {
   return (
     <span className={styles.chips}>
       {active.map((k) => (
-        <span
-          key={k}
-          className={styles.factorChip}
-          style={{ color: FACTOR_CHIP[k], borderColor: FACTOR_CHIP[k] }}
-        >
+        <span key={k} className={`${styles.factorChip} ${FACTOR_CLASS[k]}`}>
+          <span className={styles.factorDot} aria-hidden />
           {FACTOR_LABEL[k]}
         </span>
       ))}
@@ -53,15 +52,32 @@ export function InterventionsTable({
   rows,
   loading,
   error,
+  query,
+  onSearchChange,
   onSelect,
 }: {
   rows: RiskSnapshotStudent[];
   loading: boolean;
   error: string | null;
+  query: string;
+  onSearchChange: (v: string) => void;
   onSelect: (row: RiskSnapshotStudent) => void;
 }) {
   return (
     <div className={styles.tableWrap}>
+      <div className={styles.tableToolbar}>
+        <div className={styles.search}>
+          <Search size={15} className={styles.searchIcon} aria-hidden />
+          <Input
+            type="search"
+            placeholder="Search name or LRN"
+            value={query}
+            onChange={(e) => onSearchChange(e.target.value)}
+            aria-label="Search students"
+            className={styles.searchInput}
+          />
+        </div>
+      </div>
       <table className={styles.table}>
         <thead>
           <tr>
@@ -84,7 +100,9 @@ export function InterventionsTable({
           ) : rows.length === 0 ? (
             <tr>
               <td colSpan={5} className={styles.empty}>
-                No at-risk students match the current filters.
+                {query.trim()
+                  ? `No at-risk students match “${query}”.`
+                  : "No at-risk students match the current filters."}
               </td>
             </tr>
           ) : (

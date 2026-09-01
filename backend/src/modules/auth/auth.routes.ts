@@ -10,7 +10,7 @@ import { validate } from "../../middleware/validate.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { writeAudit } from "../../lib/audit.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
-import type { Role, GradeLevel } from "@prisma/client";
+import type { Role, GradeLevel } from "../../generated/prisma/client.js";
 
 const router = Router();
 

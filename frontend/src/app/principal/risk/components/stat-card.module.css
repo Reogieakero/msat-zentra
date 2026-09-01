@@ -1,5 +1,40 @@
 .card {
+  position: relative;
+  overflow: hidden;
   height: 100%;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  background: radial-gradient(
+    140px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in oklch, var(--primary), transparent 82%),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
 }
 
 .header {
@@ -15,20 +50,10 @@
   color: var(--muted-foreground);
 }
 
-.iconWrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--primary), transparent 88%);
-  color: var(--primary);
-}
-
 .icon {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
 }
 
 .content {

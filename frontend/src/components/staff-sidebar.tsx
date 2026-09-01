@@ -11,20 +11,10 @@ import {
   Award,
   FileBarChart,
   ShieldCheck,
-  PanelLeft,
-  Check,
   ChevronDown,
 } from "lucide-react";
 
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useSidebar } from "@/components/ui/sidebar";
 import styles from "./staff-sidebar.module.css";
 
 type NavSubItem = {
@@ -63,7 +53,7 @@ const NAV: NavGroup[] = [
         icon: ShieldAlert,
         subItems: [
           { title: "Students", href: "/principal/risk/students" },
-          { title: "Heat Map", href: "/principal/risk/heatmaps" },
+          { title: "Heat Map", href: "/principal/risk/heatmaps/attendance" },
           { title: "Interventions", href: "/principal/risk/interventions" },
         ],
       },
@@ -92,14 +82,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-export type SidebarMode = "hover" | "expanded" | "collapsible";
-
-const MODE_LABELS: Record<SidebarMode, string> = {
-  hover: "Expand on hover",
-  expanded: "Expanded",
-  collapsible: "Collapsible",
-};
-
 function useIsActive() {
   const pathname = usePathname();
   return React.useCallback(
@@ -111,23 +93,10 @@ function useIsActive() {
   );
 }
 
-function SidebarShell({
-  expanded,
-  hovering,
-  onHoverChange,
-  mode,
-  onModeChange,
-}: {
-  expanded: boolean;
-  hovering: boolean;
-  onHoverChange: (hovered: boolean) => void;
-  mode: SidebarMode;
-  onModeChange: (mode: SidebarMode) => void;
-}) {
+function SidebarShell() {
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
   const isActive = useIsActive();
   const router = useRouter();
-  const collapsed = isMobile ? false : !expanded;
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
     "/principal/adm": true,
     "/principal/risk": true,
@@ -190,7 +159,6 @@ function SidebarShell({
           className={`${styles.item} ${nested ? styles.subitem : ""} ${
             active ? styles.itemActive : ""
           }`}
-          title={collapsed ? item.title : undefined}
           aria-current={active ? "page" : undefined}
         >
           <item.icon className={styles.itemIcon} />
@@ -202,54 +170,12 @@ function SidebarShell({
   };
 
   const aside = (
-    <aside
-      className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${
-        hovering ? styles.hoverElevated : ""
-      }`}
-      data-state={expanded ? "expanded" : "collapsed"}
-      data-collapsible="icon"
-      onMouseEnter={() => onHoverChange(true)}
-      onMouseLeave={() => onHoverChange(false)}
-    >
+    <aside className={styles.sidebar} data-state="expanded">
       <nav className={styles.content}>
         <ul className={styles.menu}>
           {NAV.flatMap((group) => group.items.map((item) => renderItem(item)))}
         </ul>
       </nav>
-
-      <div className={styles.footer}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={styles.settingsButton}
-              aria-label="Sidebar settings"
-              title="Sidebar settings"
-            >
-              <PanelLeft className={styles.itemIcon} />
-              <span className={styles.itemLabel}>Sidebar</span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align="start"
-            className={styles.settingsMenu}
-          >
-            <DropdownMenuLabel>Sidebar settings</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {(Object.keys(MODE_LABELS) as SidebarMode[]).map((key) => (
-              <DropdownMenuItem
-                key={key}
-                onSelect={() => onModeChange(key)}
-                className={styles.settingsItem}
-              >
-                <span className={styles.settingsItemLabel}>{MODE_LABELS[key]}</span>
-                {mode === key ? <Check className={styles.settingsCheck} /> : null}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </aside>
   );
 
@@ -272,28 +198,7 @@ function SidebarShell({
   return aside;
 }
 
-export function StaffSidebar({
-  expanded,
-  hovering,
-  onHoverChange,
-  mode,
-  onModeChange,
-}: {
-  expanded: boolean;
-  hovering: boolean;
-  onHoverChange: (hovered: boolean) => void;
-  mode: SidebarMode;
-  onModeChange: (mode: SidebarMode) => void;
-}) {
-  return (
-    <SidebarShell
-      expanded={expanded}
-      hovering={hovering}
-      onHoverChange={onHoverChange}
-      mode={mode}
-      onModeChange={onModeChange}
-    />
-  );
+export function StaffSidebar() {
+  return <SidebarShell />;
 }
-
 

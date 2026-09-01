@@ -1,0 +1,385 @@
+.card {
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.sessionChip {
+  text-transform: none;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+/* ---- KPI strip ---- */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kpiCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.kpiIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tone_default {
+  color: var(--primary);
+}
+
+.tone_good {
+  color: #15803d;
+}
+
+.tone_warn {
+  color: var(--destructive);
+}
+
+.kpiIconSvg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.kpiBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.kpiValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.kpiSuffix {
+  margin-left: 0.125rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.kpiLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpiValueSkel {
+  width: 3.5rem;
+  height: 1.25rem;
+  border-radius: 3px;
+}
+
+/* ---- stacked separate cards (same section) ---- */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.chart {
+  width: 100%;
+  height: 220px;
+}
+
+.chartSkel {
+  height: 220px;
+}
+
+.attentionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.attentionIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--destructive);
+}
+
+/* ---- KPI strip ---- */
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.table th {
+  padding: 0.5rem 0.625rem;
+  text-align: right;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.5rem 0.625rem;
+  text-align: right;
+  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 50%);
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.table tbody tr {
+  transition: background-color 120ms ease-out;
+}
+
+.table tbody tr:hover {
+  background-color: color-mix(in oklch, var(--muted), transparent 70%);
+}
+
+.colLeft {
+  text-align: left !important;
+}
+
+.sectionCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.sectionName {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.sectionGrade {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.lrn {
+  color: var(--muted-foreground);
+}
+
+.rate {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rate[data-low="true"] {
+  color: var(--destructive);
+}
+
+.rate[data-low="false"] {
+  color: #15803d;
+}
+
+.rateSub {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.rateBadge {
+  font-variant-numeric: tabular-nums;
+}
+
+.belowTrack {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted), transparent 40%);
+  vertical-align: middle;
+}
+
+.belowFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  max-width: 100%;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--destructive), transparent 25%);
+}
+
+.belowNum {
+  margin-left: 0.375rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 60%);
+}
+
+.alertsHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--foreground);
+}
+
+.alertIcon {
+  width: 0.9375rem;
+  height: 0.9375rem;
+  color: var(--destructive);
+}
+
+.alertList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alertItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 50%);
+}
+
+.alertItem:last-child {
+  border-bottom: none;
+}
+
+.alertName {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alertRate {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.alertEmpty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.alertSkel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.alertSkelRow {
+  height: 1rem;
+  border-radius: 3px;
+}
+
+.tableSkel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tableSkelRow {
+  height: 2rem;
+  border-radius: 3px;
+}
+
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.trendUp {
+  color: #15803d;
+}
+
+.trendDown {
+  color: var(--destructive);
+}
+
+.trendFlat {
+  color: var(--muted-foreground);
+}
+
+.schoolDays {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.schoolDaysIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+@media (max-width: 900px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .kpiGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table tbody tr {
+    transition: none;
+  }
+}

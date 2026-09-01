@@ -1,6 +1,6 @@
 import { prisma } from "./prisma.js";
 import { logger } from "./pino.js";
-import type { ActionType } from "@prisma/client";
+import type { ActionType } from "../generated/prisma/client.js";
 
 interface AuditInput {
   userId: string;

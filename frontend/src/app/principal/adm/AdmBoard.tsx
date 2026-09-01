@@ -12,11 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
 import { fetchAdmDashboard, fetchAdmReferrals, type AdmDashboard } from "./api";
 import { useMinLoading } from "./useMinLoading";
-import modal from "./components/admModal.module.css";
 import {
   PieChart,
   Pie,
@@ -24,11 +22,10 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
-import { X, Clock, CheckCircle2, Users } from "lucide-react";
+import { Clock, CheckCircle2, Users } from "lucide-react";
 import kpiStyles from "../overview/components/kpi.module.css";
 import {
   ADM_PIPELINE,
-  isAwaitingSignature,
   type AdmCase,
   type AdmPipelineStage,
 } from "./adm";
@@ -38,10 +35,8 @@ import header from "./components/admHeader.module.css";
 import kpi from "./components/admKpi.module.css";
 import legend from "./components/admLegend.module.css";
 import dialog from "./components/admDialog.module.css";
-import actions from "./components/admActions.module.css";
 import shared from "../academics/academics.module.css";
 import { AdmBrowser } from "./components/AdmBrowser";
-import { PipelineStrip } from "./components/PipelineStrip";
 import { CaseTable } from "./components/CaseTable";
 import { KpiCard } from "./components/KpiCard";
 
@@ -50,16 +45,20 @@ export { CaseTable } from "./components/CaseTable";
 
 const STAGES: AdmPipelineStage[] = ADM_PIPELINE.map((s) => s.stage);
 
-const STAGE_BAR_COLORS: Record<AdmPipelineStage, string> = {
+const SYSTEM_CHART_COLORS: Record<AdmPipelineStage, string> = {
   anecdotal: "#a8a29e",
   consultation: "#f59e0b",
   meeting_parents: "#3b82f6",
   home_visitation: "#8b5cf6",
-  principal_approval: "#ef4444",
   certification: "#0ea5e9",
+  principal_approval: "#ef4444",
   enrollment_monitoring: "#06b6d4",
   completion: "#22c55e",
 };
+
+function stageSystemColor(stage: AdmPipelineStage): string {
+  return SYSTEM_CHART_COLORS[stage];
+}
 
 function useAdmBoard() {
   const [cases, setCases] = React.useState<AdmCase[]>([]);
@@ -204,80 +203,14 @@ export function AdmBoard({
   description: string;
 }) {
   const board = useAdmBoard();
-  const [showPipeline, setShowPipeline] = React.useState(false);
   const [legendHovered, setLegendHovered] = React.useState(false);
-  const selected = board.selectedId ? board.cases.find((c) => c.id === board.selectedId) ?? null : null;
-  const selectedCase = selected;
-
-  React.useEffect(() => {
-    if (!showPipeline) return undefined;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowPipeline(false);
-    };
-    document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [showPipeline]);
 
   return (
     <section className={layout.page}>
       <div className={header.headerRow}>
         <div className={header.headerText}>
-          <span className={header.headerBadge}>Status-only</span>
           <h1 className={header.headerTitle}>{title}</h1>
           <p className={header.headerSub}>{description}</p>
-        </div>
-        <div className={header.headerActions}>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              aria-haspopup="dialog"
-              aria-expanded={showPipeline}
-              onClick={() => setShowPipeline(true)}
-            >
-              View pipeline
-            </Button>
-            {showPipeline && (
-              <div
-                className={modal.overlay}
-                role="dialog"
-                aria-modal="true"
-                aria-label="ADM Pipeline"
-                onClick={() => setShowPipeline(false)}
-              >
-                <div className={modal.panel} onClick={(e) => e.stopPropagation()}>
-                  <div className={modal.head}>
-                    <div>
-                      <h2 className={modal.title}>ADM Pipeline</h2>
-                      <p className={modal.subtitle}>
-                        {selectedCase
-                          ? `Current stage for ${selectedCase.student}: ${ADM_PIPELINE.find((s) => s.stage === selectedCase.stage)?.label ?? selectedCase.stage}.`
-                          : "Where each ADM case currently sits through intake to enrollment."}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Close pipeline"
-                      onClick={() => setShowPipeline(false)}
-                    >
-                      <X className={actions.detailCloseIcon} aria-hidden />
-                    </Button>
-                  </div>
-                  <div className={modal.body}>
-                    <PipelineStrip
-                      currentStage={selectedCase ? selectedCase.stage : "principal_approval"}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
         </div>
       </div>
 
@@ -328,7 +261,7 @@ export function AdmBoard({
                       stroke="none"
                     >
                       {board.stageBreakdown.map((d) => (
-                        <Cell key={d.stage} fill={STAGE_BAR_COLORS[d.stage]} />
+                        <Cell key={d.stage} fill={stageSystemColor(d.stage)} />
                       ))}
                     </Pie>
                   </PieChart>
@@ -459,7 +392,7 @@ export function AdmBoard({
           <span key={d.stage} className={legend.kpiLegendItem}>
             <span
               className={legend.kpiLegendSwatch}
-              style={{ background: STAGE_BAR_COLORS[d.stage] }}
+              style={{ background: stageSystemColor(d.stage) }}
             />
             <span className={legend.kpiLegendLabel}>{d.short}</span>
             <span className={legend.kpiLegendCount}>{d.count}</span>

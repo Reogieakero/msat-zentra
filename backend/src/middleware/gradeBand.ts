@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
-import type { GradeLevel } from "@prisma/client";
+import type { GradeLevel } from "../generated/prisma/client.js";
 
 const BAND_7_10: GradeLevel[] = ["G7", "G8", "G9", "G10"];
 const BAND_11_12: GradeLevel[] = ["G11", "G12"];

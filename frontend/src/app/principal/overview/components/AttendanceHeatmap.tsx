@@ -1,8 +1,9 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sun, Moon } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import styles from "./attendance-heatmap.module.css";
 
 const SKELETON_GRADES = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
@@ -83,20 +84,16 @@ export function AttendanceHeatmap() {
       <div className={styles.header}>
         <h3 className={styles.title}>Attendance Heat Map</h3>
         <div className={styles.controls}>
-          <div className={styles.tabs} role="tablist" aria-label="Attendance session">
-            {SESSIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                role="tab"
-                aria-selected={session === s}
-                className={session === s ? `${styles.tab} ${styles.tabActive}` : styles.tab}
-                onClick={() => setSession(s)}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          <Tabs value={session} onValueChange={(v) => setSession(v as Session)}>
+            <TabsList variant="line" className={styles.sessionTabs}>
+              {SESSIONS.map((s) => (
+                <TabsTrigger key={s} value={s} className={styles.sessionTab}>
+                  {s === "AM" ? <Sun aria-hidden /> : <Moon aria-hidden />}
+                  {s}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           <div className={styles.nav}>
             <button
               type="button"

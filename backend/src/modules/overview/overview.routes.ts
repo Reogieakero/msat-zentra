@@ -53,7 +53,9 @@ router.get(
               },
             },
           }),
-          prisma.admLearnerProfile.count({ where: { approvedBy: null } }),
+          prisma.admLearnerProfile.count({
+            where: { stage: { in: ["meeting_parents", "home_visitation", "certification", "principal_approval"] } },
+          }),
           prisma.user.count({ where: { status: "pending" } }),
         ]);
 

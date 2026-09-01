@@ -133,9 +133,11 @@ const CATEGORY_COLOR: Record<BackendCategory, string> = {
 
 type LegendCategory = { key: string; label: string; color: string; value: number };
 
+type ApiErrorPayload = { response?: { status?: number }; code?: string };
+
 export default function PrincipalRecordsPage() {
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(false);
+  const [error, setError] = React.useState<string | false>(false);
   const [data, setData] = React.useState<RecordDataset | null>(null);
   const [query, setQuery] = React.useState("");
 
@@ -164,8 +166,18 @@ export default function PrincipalRecordsPage() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
+        const ax = err as ApiErrorPayload;
+        const status = ax?.response?.status;
         console.error("[/api/anecdotal/records] fetch failed:", err);
-        setError(true);
+        if (status === 401 || status === 403) {
+          window.location.href = "/login";
+          return;
+        }
+        if (ax?.code === "ERR_NETWORK" || !status) {
+          setError("Network Error — the API server could not be reached. Confirm the backend is running at NEXT_PUBLIC_API_BASE_URL.");
+        } else {
+          setError(`Failed to load student records (HTTP ${status}).`);
+        }
         setLoading(false);
       });
     return () => {
@@ -283,11 +295,8 @@ export default function PrincipalRecordsPage() {
         <header className={styles.head}>
           <div className={styles.headText}>
             <h1 className={styles.title}>Records Heatmap</h1>
-          <p className={styles.subtitle}>
-            {data ? `School year ${data.schoolYear}` : "Loading…"} · {visibleStudents.length} students in view
-          </p>
-        </div>
-        <div className={styles.controls}>
+          </div>
+          <div className={styles.controls}>
           <div className={styles.search}>
             <Search size={15} className={styles.searchIcon} aria-hidden />
             <Input
@@ -333,7 +342,7 @@ export default function PrincipalRecordsPage() {
           ) : error ? (
             <div className={styles.empty}>
               <SlidersHorizontal className={styles.emptyIcon} aria-hidden />
-              <p>Unable to load student records.</p>
+              <p>{error}</p>
             </div>
           ) : visibleStudents.length === 0 ? (
             <div className={styles.empty}>

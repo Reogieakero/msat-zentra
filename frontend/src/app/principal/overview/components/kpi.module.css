@@ -65,9 +65,21 @@
   color: var(--primary);
 }
 
+.kpiIconOnly {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
 .kpiIcon {
   width: 14px;
   height: 14px;
+}
+
+.kpiIconOnly .kpiIcon {
+  width: 18px;
+  height: 18px;
 }
 
 .kpiValue {

@@ -1,42 +1,38 @@
 .headerRow {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
+  margin-top: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .headerText {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-}
-
-.headerBadge {
-  align-self: flex-start;
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.1875rem 0.5rem;
-  border-radius: 999px;
-  color: #6d28d9;
-  background: color-mix(in oklch, #7c3aed, transparent 88%);
-  border: 1px solid color-mix(in oklch, #7c3aed, transparent 70%);
+  align-items: flex-start;
+  gap: 0.5rem;
+  text-align: left;
+  min-width: 0;
 }
 
 .headerTitle {
-  font-size: 1.375rem;
+  font-family: var(--font-geist), var(--font-sans), system-ui, sans-serif;
+  font-size: 1.75rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: var(--foreground);
   margin: 0;
 }
 
 .headerSub {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: var(--muted-foreground);
   margin: 0;
-  max-width: 42rem;
+  max-width: 48rem;
 }
 
 .headerActions {

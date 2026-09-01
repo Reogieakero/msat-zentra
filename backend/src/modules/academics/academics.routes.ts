@@ -13,7 +13,11 @@ router.get(
   "/",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["academics", "principal"] }),
+  // Heavy, unpaginated compute (every student + every subject grade, plus
+  // live risk/honor-roll). Grades only change through the Registrar write
+  // routes, which invalidate the "academics" tag, so a longer TTL is safe and
+  // avoids a cold recompute on every principal navigation.
+  cache({ tags: ["academics", "principal"], ttl: 900 }),
   async (req, res, next) => {
     try {
       const mode = req.query.mode === "raw" ? "raw" : "final";

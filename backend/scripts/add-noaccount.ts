@@ -1,6 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
-const p = new PrismaClient();
+const p = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const FN = ["Maria","Juan","Ana","Pedro","Sofia","Lucas","Elena","Miguel","Rosa","Jose","Carmen","Antonio","Lucia","Diego","Gabriela","Andres","Isabella","Rafael","Paula","Manuel"];
 const LN = ["Santos","Reyes","Cruz","Garcia","Mendoza","Torres","Flores","Ramos","Diaz","Castillo","Manalo","Bautista","Villanueva","Ocampo","Aquino","Salazar"];
