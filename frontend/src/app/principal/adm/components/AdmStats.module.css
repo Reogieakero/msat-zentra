@@ -6,25 +6,6 @@
   padding: 2rem 0;
 }
 
-.heading {
-  margin: 0;
-  font-size: clamp(1.25rem, 2vw, 1.5rem);
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  color: var(--foreground);
-  text-align: center;
-}
-
-.subtitle {
-  margin: -0.75rem 0 0;
-  max-width: 48ch;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: var(--muted-foreground);
-  text-align: center;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

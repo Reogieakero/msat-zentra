@@ -45,12 +45,6 @@ export function AdmStats() {
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>Pipeline at a glance</h2>
-      <p className={styles.subtitle}>
-        Track referrals, approvals, and learner progress across every stage
-        of the Alternate Delivery Mode pipeline.
-      </p>
-
       <div className={styles.grid}>
         {STATS.map((stat) => (
           <div key={stat.key} className={styles.stat}>
