@@ -31,7 +31,7 @@ import {
 } from "./adm";
 import { FormIcon } from "./components/FormIcon";
 import layout from "./components/admLayout.module.css";
-import header from "./components/admHeader.module.css";
+import header from "./components/AdmHeader.module.css";
 import kpi from "./components/admKpi.module.css";
 import legend from "./components/admLegend.module.css";
 import dialog from "./components/admDialog.module.css";

@@ -33,7 +33,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
-import header from "../../components/admHeader.module.css";
+import header from "../../components/AdmHeader.module.css";
 import dialog from "../../components/admDialog.module.css";
 import legend from "../../components/admLegend.module.css";
 import menu from "../../components/admCardMenu.module.css";

@@ -1,6 +1,6 @@
 import * as React from "react";
 import browser from "./admBrowser.module.css";
-import header from "./admHeader.module.css";
+import header from "./AdmHeader.module.css";
 
 export function AdmBrowser({
   tabs,

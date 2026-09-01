@@ -1,7 +1,11 @@
+import { AdmHeader } from "./components/AdmHeader";
+import { AdmStats } from "./components/AdmStats";
+
 export default function PrincipalAdmPage() {
   return (
-    <div>
-      <h1>ADM</h1>
-    </div>
+    <>
+      <AdmHeader />
+      <AdmStats />
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { ApprovalsBoard } from "./ApprovalsBoard";
 import styles from "./all.module.css";
-import header from "../../components/admHeader.module.css";
+import header from "../../components/AdmHeader.module.css";
 
 export default function PrincipalAdmApprovalsAllPage() {
   return (
