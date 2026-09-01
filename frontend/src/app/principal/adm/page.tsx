@@ -9,8 +9,8 @@ export default function PrincipalAdmPage() {
     <>
       <AdmHeader />
       <AdmStats />
-      <AdmPipelineGuide />
       <AdmPipelineOverview />
+      <AdmPipelineGuide />
       <AdmRecentReferrals />
     </>
   );
