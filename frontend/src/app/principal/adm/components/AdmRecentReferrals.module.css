@@ -26,7 +26,8 @@
 }
 
 .table thead th {
-  padding: 0.75rem 1rem;
+  height: 2.75rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -35,10 +36,11 @@
   text-align: left;
   border-bottom: 1px solid var(--border);
   background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+  white-space: nowrap;
 }
 
 .table tbody td {
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 0.75rem;
   border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
   vertical-align: middle;
 }
@@ -47,24 +49,37 @@
   border-bottom: none;
 }
 
+.table thead th:first-child,
+.table tbody td:first-child {
+  padding-left: 1rem;
+}
+
+.table thead th:last-child,
+.table tbody td:last-child {
+  padding-right: 1rem;
+}
+
 .row {
+  cursor: pointer;
   transition: background-color 120ms ease;
 }
 
 .row:hover {
-  background-color: color-mix(in oklch, var(--primary), transparent 96%);
+  background-color: color-mix(in oklch, var(--primary), transparent 94%);
 }
 
 .studentCell {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+  min-width: 0;
 }
 
 .studentName {
   font-weight: 600;
-  color: var(--foreground);
   font-size: 0.8125rem;
+  color: var(--foreground);
+  letter-spacing: -0.005em;
 }
 
 .studentLrn {
@@ -72,10 +87,12 @@
   color: var(--muted-foreground);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 
 .grade {
   color: var(--muted-foreground);
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -113,6 +130,12 @@
 .preparedBy {
   color: var(--muted-foreground);
   font-size: 0.75rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .signBtn,
@@ -155,24 +178,28 @@
 }
 
 .empty {
-  padding: 2rem;
   text-align: center;
+  padding: 2.5rem 1rem;
   color: var(--muted-foreground);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
-.skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
+.skeletonWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  overflow: hidden;
 }
 
 .skeletonRow {
   height: 3rem;
-  border-radius: var(--radius-md);
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
   background: color-mix(in oklch, var(--foreground), transparent 92%);
   animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonRow:last-child {
+  border-bottom: none;
 }
 
 @keyframes pulse {

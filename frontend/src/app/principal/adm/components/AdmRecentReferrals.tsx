@@ -35,15 +35,11 @@ export function AdmRecentReferrals() {
   );
 
   const handleSign = (id: string) => {
-    apiClient.post(`/api/adm/${id}/principal-approve`).then(() => {
-      // Refresh will happen via invalidation or manual reload
-    });
+    apiClient.post(`/api/adm/${id}/principal-approve`);
   };
 
   const handleReturn = (id: string) => {
-    apiClient.post(`/api/adm/${id}/principal-return`).then(() => {
-      // Refresh will happen via invalidation or manual reload
-    });
+    apiClient.post(`/api/adm/${id}/principal-return`);
   };
 
   const canSign = (row: AdmLatestReferred) =>
@@ -58,13 +54,15 @@ export function AdmRecentReferrals() {
       <h2 className={styles.heading}>Recent Referrals</h2>
 
       {isPending ? (
-        <div className={styles.skeleton}>
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className={styles.skeletonWrap}>
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className={styles.skeletonRow} />
           ))}
         </div>
       ) : referrals.length === 0 ? (
-        <p className={styles.empty}>No recent referrals found.</p>
+        <div className={styles.tableWrap}>
+          <p className={styles.empty}>No recent referrals found.</p>
+        </div>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -120,23 +118,33 @@ export function AdmRecentReferrals() {
                   <td className={styles.preparedBy}>{row.preparedBy}</td>
                   <td>
                     {canSign(row) ? (
-                      <button
-                        type="button"
-                        className={styles.signBtn}
-                        onClick={() => handleSign(row.id)}
-                      >
-                        <Check aria-hidden />
-                        Sign
-                      </button>
+                      <div className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.signBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSign(row.id);
+                          }}
+                        >
+                          <Check aria-hidden />
+                          Sign
+                        </button>
+                      </div>
                     ) : canReturn(row) ? (
-                      <button
-                        type="button"
-                        className={styles.returnBtn}
-                        onClick={() => handleReturn(row.id)}
-                      >
-                        <ArrowLeftRight aria-hidden />
-                        Return
-                      </button>
+                      <div className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.returnBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReturn(row.id);
+                          }}
+                        >
+                          <ArrowLeftRight aria-hidden />
+                          Return
+                        </button>
+                      </div>
                     ) : (
                       <span className={styles.noAction}>—</span>
                     )}
