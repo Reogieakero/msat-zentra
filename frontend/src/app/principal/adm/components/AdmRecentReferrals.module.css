@@ -1,62 +1,23 @@
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem 0;
-}
-
-.heading {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.tableWrap {
-  border: 1px solid var(--border);
+.card {
+  min-width: 0;
   border-radius: var(--radius-lg);
-  background-color: var(--card);
   overflow: hidden;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
 }
 
-.table thead th {
-  height: 2.75rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted-foreground);
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
-  white-space: nowrap;
+.headerText {
+  min-width: 0;
 }
 
-.table tbody td {
-  padding: 0.625rem 0.75rem;
-  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
-  vertical-align: middle;
-}
-
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.table thead th:first-child,
-.table tbody td:first-child {
-  padding-left: 1rem;
-}
-
-.table thead th:last-child,
-.table tbody td:last-child {
-  padding-right: 1rem;
+.content {
+  overflow: hidden;
+  padding: 0;
 }
 
 .row {
@@ -184,30 +145,45 @@
   font-size: 0.8125rem;
 }
 
-.skeletonWrap {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  overflow: hidden;
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
 }
 
-.skeletonRow {
-  height: 3rem;
-  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
-  background: color-mix(in oklch, var(--foreground), transparent 92%);
-  animation: pulse 1.4s ease-in-out infinite;
+.footerInfo {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 
-.skeletonRow:last-child {
-  border-bottom: none;
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+.skelName {
+  width: 55%;
+  height: 0.875rem;
+}
+
+.skelLrn {
+  width: 35%;
+  height: 0.625rem;
+}
+
+.skelCell {
+  height: 0.75rem;
+}
+
+.skelAction {
+  width: 4rem;
+  height: 1.75rem;
+  border-radius: var(--radius-md);
 }

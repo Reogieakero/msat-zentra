@@ -3,7 +3,25 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import { Check, ArrowLeftRight } from "lucide-react";
+import { Check, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { fetchAdmDashboard, type AdmLatestReferred } from "../api";
 import { ADM_PIPELINE } from "../adm";
 import styles from "./AdmRecentReferrals.module.css";
@@ -50,43 +68,48 @@ export function AdmRecentReferrals() {
   const canReturn = (row: AdmLatestReferred) => !!row.approvedBy;
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.heading}>Recent Referrals</h2>
+    <Card className={styles.card}>
+      <CardHeader className={styles.header}>
+        <div className={styles.headerText}>
+          <CardTitle>Recent Referrals</CardTitle>
+          <CardDescription>
+            Latest ADM cases requiring your review or already signed.
+          </CardDescription>
+        </div>
+      </CardHeader>
 
-      {isPending ? (
-        <div className={styles.skeletonWrap}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className={styles.skeletonRow} />
-          ))}
-        </div>
-      ) : referrals.length === 0 ? (
-        <div className={styles.tableWrap}>
-          <p className={styles.empty}>No recent referrals found.</p>
-        </div>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Grade</th>
-                <th>Stage</th>
-                <th>Eligibility</th>
-                <th>Prepared By</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {referrals.map((row) => (
-                <tr key={row.id} className={styles.row}>
-                  <td>
+      <CardContent className={styles.content}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Student</TableHead>
+              <TableHead>Grade</TableHead>
+              <TableHead>Stage</TableHead>
+              <TableHead>Eligibility</TableHead>
+              <TableHead>Prepared By</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isPending ? (
+              <SkeletonRows />
+            ) : referrals.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className={styles.empty}>
+                  No recent referrals found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              referrals.map((row) => (
+                <TableRow key={row.id} className={styles.row}>
+                  <TableCell>
                     <div className={styles.studentCell}>
                       <span className={styles.studentName}>{row.student}</span>
                       <span className={styles.studentLrn}>{row.lrn}</span>
                     </div>
-                  </td>
-                  <td className={styles.grade}>{row.grade}</td>
-                  <td>
+                  </TableCell>
+                  <TableCell className={styles.grade}>{row.grade}</TableCell>
+                  <TableCell>
                     <span
                       className={styles.stageChip}
                       style={{
@@ -97,8 +120,8 @@ export function AdmRecentReferrals() {
                     >
                       {stageLabel(row.stage)}
                     </span>
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     <span
                       className={`${styles.eligibility} ${
                         row.eligibilityStatus === "eligible"
@@ -114,9 +137,9 @@ export function AdmRecentReferrals() {
                         ? "Ineligible"
                         : "Pending"}
                     </span>
-                  </td>
-                  <td className={styles.preparedBy}>{row.preparedBy}</td>
-                  <td>
+                  </TableCell>
+                  <TableCell className={styles.preparedBy}>{row.preparedBy}</TableCell>
+                  <TableCell>
                     {canSign(row) ? (
                       <div className={styles.actions}>
                         <button
@@ -148,13 +171,71 @@ export function AdmRecentReferrals() {
                     ) : (
                       <span className={styles.noAction}>—</span>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+
+      <CardFooter className={styles.footer}>
+        <span className={styles.footerInfo}>
+          {referrals.length > 0
+            ? `1–${referrals.length} of ${referrals.length}`
+            : "0 of 0"}
+        </span>
+        <div className={styles.footerActions}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={referrals.length === 0}
+          >
+            <ChevronLeft aria-hidden />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={referrals.length === 0}
+          >
+            Next
+            <ChevronRight aria-hidden />
+          </Button>
         </div>
-      )}
-    </section>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <TableRow key={i}>
+          <TableCell>
+            <div className={styles.studentCell}>
+              <Skeleton className={styles.skelName} />
+              <Skeleton className={styles.skelLrn} />
+            </div>
+          </TableCell>
+          <TableCell>
+            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
+          </TableCell>
+          <TableCell>
+            <Skeleton className={styles.skelCell} style={{ width: "60%" }} />
+          </TableCell>
+          <TableCell>
+            <Skeleton className={styles.skelCell} style={{ width: "40%" }} />
+          </TableCell>
+          <TableCell>
+            <Skeleton className={styles.skelCell} style={{ width: "70%" }} />
+          </TableCell>
+          <TableCell>
+            <Skeleton className={styles.skelAction} />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
   );
 }
