@@ -1,0 +1,162 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.controls {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.navBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.navBtn:hover:not(:disabled) {
+  background-color: color-mix(in oklch, var(--muted), transparent 70%);
+}
+
+.navBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.viewport {
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 0.25rem;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--foreground), transparent 98%);
+  scroll-snap-align: start;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.25);
+  border-color: color-mix(in oklch, var(--primary), transparent 50%);
+}
+
+.cardWarn {
+  border-color: color-mix(in oklch, var(--destructive), transparent 60%);
+  background-color: color-mix(in oklch, var(--destructive), transparent 96%);
+}
+
+.cardGood {
+  border-color: color-mix(in oklch, #22c55e, transparent 60%);
+  background-color: color-mix(in oklch, #22c55e, transparent 96%);
+}
+
+.cardTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
+}
+
+.cardWarn .cardIcon {
+  background-color: color-mix(in oklch, var(--destructive), transparent 90%);
+  color: var(--destructive);
+}
+
+.cardGood .cardIcon {
+  background-color: color-mix(in oklch, #22c55e, transparent 90%);
+  color: #15803d;
+}
+
+.cardValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardHint {
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+/* ---- Skeletons ---- */
+.skelIcon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--foreground), transparent 92%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skelValue {
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--foreground), transparent 92%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skelLabel {
+  width: 5rem;
+  height: 0.75rem;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--foreground), transparent 92%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}

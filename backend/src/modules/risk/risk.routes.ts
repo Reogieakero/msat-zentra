@@ -314,6 +314,50 @@ router.get(
   }
 );
 
+// Principal: intervention stats for the carousel/sidebar widgets.
+router.get(
+  "/interventions/stats",
+  requireAuth,
+  requireRole("principal"),
+  cache({ tags: ["risk", "principal"] }),
+  async (req, res, next) => {
+    try {
+      const gradeMode =
+        typeof req.query.gradeMode === "string" &&
+        (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
+          ? (req.query.gradeMode as "raw" | "final")
+          : undefined;
+      const result = await getInterventionStudents({
+        gradeMode,
+        page: 1,
+        pageSize: 1000,
+      });
+      const students = result.students;
+      const withIntervention = students.filter((s) => s.intervention !== null);
+      const pendingApproval = withIntervention.filter(
+        (s) => s.intervention?.approvalStatus === "pending"
+      );
+      const highRisk = students.filter((s) => s.riskLevel === "High");
+      const resolved = withIntervention.filter(
+        (s) => s.intervention?.outcomeStatus === "resolved"
+      );
+      const ongoing = withIntervention.filter(
+        (s) => s.intervention?.outcomeStatus === "ongoing"
+      );
+      res.json({
+        totalAtRisk: result.highModerate,
+        withIntervention: withIntervention.length,
+        pendingApproval: pendingApproval.length,
+        highRisk: highRisk.length,
+        resolved: resolved.length,
+        ongoing: ongoing.length,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 // Interventions are auto-created by the risk engine (recomputeRisk) and assigned to
 // the Guidance Counselor. The Principal has read-only visibility (list + detail) — no
 // create/assign/approve/edit endpoints are exposed. The guidance_counselor owns the

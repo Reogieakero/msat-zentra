@@ -19,3 +19,17 @@ export async function fetchInterventionStudents(
   );
   return data;
 }
+
+export interface InterventionStats {
+  totalAtRisk: number;
+  withIntervention: number;
+  pendingApproval: number;
+  highRisk: number;
+  resolved: number;
+  ongoing: number;
+}
+
+export async function fetchInterventionStats(): Promise<InterventionStats> {
+  const { data } = await apiClient.get<InterventionStats>("/api/risk/interventions/stats");
+  return data;
+}

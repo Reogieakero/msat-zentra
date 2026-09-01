@@ -120,7 +120,7 @@ router.get(
         : "";
       const where = termId ? { termId } : {};
 
-      const [sections, records] = await Promise.all([
+      const [sections, records, followups, referrals] = await Promise.all([
         prisma.section.findMany({
           where: termId ? { schoolYearId: activeTerm!.schoolYearId } : {},
           orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
@@ -149,11 +149,29 @@ router.get(
             category: true,
             confidentialityLevel: true,
             observer: { select: { fullName: true } },
-            followups: { orderBy: { followupDate: "desc" }, take: 1, select: { id: true } },
-            referrals: { take: 1, orderBy: { id: "desc" }, select: { status: true } },
           },
         }),
+        // Batched lookups instead of take:1 correlated sub-queries per record.
+        prisma.anecdotalRecordFollowup.groupBy({
+          by: ["anecdotalRecordId"],
+          where: termId ? { anecdotalRecord: { termId } } : {},
+          _count: { _all: true },
+        }),
+        prisma.referral.findMany({
+          where: termId ? { anecdotalRecord: { termId } } : {},
+          select: { id: true, anecdotalRecordId: true, status: true },
+        }),
       ]);
+
+      // Latest referral per record (matching the old orderBy id desc / take 1).
+      const latestReferral = new Map<string, { status: string; id: string }>();
+      for (const r of referrals) {
+        const prev = latestReferral.get(r.anecdotalRecordId);
+        if (!prev || r.id > prev.id) latestReferral.set(r.anecdotalRecordId, { status: r.status, id: r.id });
+      }
+      const hasFollowup = new Set(
+        followups.map((f) => f.anecdotalRecordId)
+      );
 
       const recordByStudent = new Map<string, typeof records>();
       for (const r of records) {
@@ -175,25 +193,28 @@ router.get(
                 gradeLevel: section.gradeLevel,
                 section: section.name,
                 sectionId: section.id,
-                behavioral: recs.map((r) => ({
-                  id: r.id,
-                  date: r.observationDatetime.toISOString().slice(0, 10),
-                  category: r.category,
-                  description: r.descriptionOfIncident,
-                  severity:
-                    r.referrals[0]?.status === "resolved"
-                      ? "Low"
-                      : r.confidentialityLevel === "confidential"
-                        ? "High"
-                        : "Moderate",
-                  staff: r.observer.fullName,
-                  resolution: r.notesRecommendationsActions ?? "",
-                  followUp: r.referrals[0]?.status === "resolved"
-                    ? "Resolved"
-                    : r.followups.length > 0
-                      ? "Monitoring"
-                      : "Pending",
-                })),
+                behavioral: recs.map((r) => {
+                  const referral = latestReferral.get(r.id);
+                  return {
+                    id: r.id,
+                    date: r.observationDatetime.toISOString().slice(0, 10),
+                    category: r.category,
+                    description: r.descriptionOfIncident,
+                    severity:
+                      referral?.status === "resolved"
+                        ? "Low"
+                        : r.confidentialityLevel === "confidential"
+                          ? "High"
+                          : "Moderate",
+                    staff: r.observer.fullName,
+                    resolution: r.notesRecommendationsActions ?? "",
+                    followUp: referral?.status === "resolved"
+                      ? "Resolved"
+                      : hasFollowup.has(r.id)
+                        ? "Monitoring"
+                        : "Pending",
+                  };
+                }),
               };
             })
             .filter((s): s is NonNullable<typeof s> => s !== null);

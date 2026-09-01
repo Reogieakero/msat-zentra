@@ -3,13 +3,19 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+.divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border);
 }
 
 .head {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
   padding-bottom: 1rem;
@@ -20,8 +26,22 @@
 .headText {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
 }
 
 .search {
@@ -172,10 +192,14 @@
 }
 
 .empty {
-  padding: 2.5rem 1rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
   text-align: center;
   color: var(--muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .error {

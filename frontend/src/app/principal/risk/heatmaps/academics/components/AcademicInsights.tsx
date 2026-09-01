@@ -180,9 +180,16 @@ function useChartTip<T>(items: T[], makeContent: (item: T) => React.ReactNode) {
   return { tip, listProps };
 }
 
-export function AcademicInsights() {
+export function AcademicInsights({
+  selectedId,
+  onSelectId,
+  onClearSection,
+}: {
+  selectedId: string | null;
+  onSelectId: (id: string | null) => void;
+  onClearSection: () => void;
+}) {
   const { gradeMode, setGradeMode } = useGradeMode();
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   const { data, isPending } = useQuery({
     queryKey: ["academic-insights", gradeMode],
@@ -633,7 +640,7 @@ export function AcademicInsights() {
               <button
                 type="button"
                 className={styles.closeBtn}
-                onClick={() => setSelectedId(null)}
+                  onClick={() => onClearSection()}
               >
                 <X className={styles.closeIcon} aria-hidden />
                 Close
@@ -684,7 +691,7 @@ export function AcademicInsights() {
                         <button
                           type="button"
                           className={`${styles.rankHead} ${selectedId === s.sectionId ? styles.rankOn : ""}`}
-                          onClick={() => setSelectedId(s.sectionId === selectedId ? null : s.sectionId)}
+                          onClick={() => onSelectId(s.sectionId === selectedId ? null : s.sectionId)}
                         >
                           <span className={styles.rankNo}>{i + 1}</span>
                           <span className={styles.rankLabel}>{s.section}</span>
