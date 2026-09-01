@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -11,7 +11,6 @@ import {
   Award,
   FileBarChart,
   ShieldCheck,
-  ChevronDown,
 } from "lucide-react";
 
 import { useSidebar } from "@/components/ui/sidebar";
@@ -98,58 +97,43 @@ function useIsActive() {
 function SidebarShell() {
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
   const isActive = useIsActive();
-  const router = useRouter();
-  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({
-    "/principal/adm": true,
-    "/principal/risk": true,
-  });
 
   const renderItem = (item: NavItem, nested = false) => {
     const active = isActive(item.href);
     const hasSub = !!item.subItems?.length;
-    const open = openGroups[item.href] ?? false;
     const subActive = item.subItems?.some((s) => isActive(s.href)) ?? false;
 
     if (hasSub && !nested) {
       return (
         <li key={item.href}>
-          <button
-            type="button"
+          <Link
+            href={item.href}
             className={`${styles.item} ${subActive ? styles.itemActive : ""}`}
-            onClick={() => {
-              setOpenGroups((prev) => ({ ...prev, [item.href]: !prev[item.href] }));
-              router.push(item.href);
-            }}
-            aria-expanded={open}
+            aria-current={active ? "page" : undefined}
           >
             <item.icon className={styles.itemIcon} />
             <span className={styles.itemLabel}>{item.title}</span>
             {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
-            <ChevronDown
-              className={`${styles.itemChevron} ${open ? styles.itemChevronOpen : ""}`}
-            />
-          </button>
-          {open ? (
-            <ul className={styles.submenu}>
-              {item.subItems!.map((sub) => {
-                const subIsActive = isActive(sub.href);
-                return (
-                  <li key={sub.href}>
-                    <Link
-                      href={sub.href}
-                      className={`${styles.subitem} ${
-                        subIsActive ? styles.itemActive : ""
-                      }`}
-                      aria-current={subIsActive ? "page" : undefined}
-                    >
-                      <span className={styles.itemLabel}>{sub.title}</span>
-                      {sub.badge ? <span className={styles.badge}>{sub.badge}</span> : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
+          </Link>
+          <ul className={styles.submenu}>
+            {item.subItems!.map((sub) => {
+              const subIsActive = isActive(sub.href);
+              return (
+                <li key={sub.href}>
+                  <Link
+                    href={sub.href}
+                    className={`${styles.subitem} ${
+                      subIsActive ? styles.itemActive : ""
+                    }`}
+                    aria-current={subIsActive ? "page" : undefined}
+                  >
+                    <span className={styles.itemLabel}>{sub.title}</span>
+                    {sub.badge ? <span className={styles.badge}>{sub.badge}</span> : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </li>
       );
     }
