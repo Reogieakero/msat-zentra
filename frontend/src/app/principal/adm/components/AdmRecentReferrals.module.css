@@ -15,6 +15,19 @@
   min-width: 0;
 }
 
+.seeAll {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 120ms ease;
+}
+
+.seeAll:hover {
+  color: color-mix(in oklch, var(--primary), transparent 30%);
+}
+
 .content {
   overflow: hidden;
   padding: 0;

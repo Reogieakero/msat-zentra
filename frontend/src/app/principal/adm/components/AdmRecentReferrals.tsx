@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { apiClient } from "@/lib/api/client";
-import { Check, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ArrowLeftRight } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -12,7 +13,6 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -76,6 +76,9 @@ export function AdmRecentReferrals() {
             Latest ADM cases requiring your review or already signed.
           </CardDescription>
         </div>
+        <Link href="/principal/adm/referrals/all" className={styles.seeAll}>
+          See All
+        </Link>
       </CardHeader>
 
       <CardContent className={styles.content}>
@@ -185,24 +188,6 @@ export function AdmRecentReferrals() {
             ? `1–${referrals.length} of ${referrals.length}`
             : "0 of 0"}
         </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={referrals.length === 0}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={referrals.length === 0}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
-        </div>
       </CardFooter>
     </Card>
   );
