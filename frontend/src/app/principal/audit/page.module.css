@@ -1,8 +1,55 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.25rem;
   padding: 4px 0;
+}
+
+.card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cardHeaderText {
+  min-width: 0;
+}
+
+.cardHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cardContent {
+  overflow: hidden;
+  padding: 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .head {

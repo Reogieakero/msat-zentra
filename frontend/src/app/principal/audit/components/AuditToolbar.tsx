@@ -1,13 +1,19 @@
 import * as React from "react";
-import { ChevronDown, Check } from "lucide-react";
-
+import {
+  ChevronDown,
+  Search,
+  X,
+  Download,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AuditActionType,
@@ -17,40 +23,76 @@ import {
   AuditRole,
 } from "../audit-data";
 import styles from "./audit-toolbar.module.css";
+import ivStyles from "../../risk/interventions/components/InterventionsListTable.module.css";
 
 export type ActorScope = "all" | "me";
 
 function FilterDropdown({
   label,
-  value,
-  options,
+  active,
+  activeLabel,
+  items,
+  allLabel,
   onSelect,
+  grouped,
 }: {
   label: string;
-  value: string;
-  options: { value: string; label: string }[];
+  active: string;
+  activeLabel?: string;
+  items: { value: string; label: string }[];
+  allLabel: string;
   onSelect: (v: string) => void;
+  grouped?: { label: string; items: { value: string; label: string }[] }[];
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={styles.dropdown}>
-          <span className={styles.dropdownLabel}>{label}:</span>
-          <span className={styles.dropdownValue}>{value}</span>
-          <ChevronDown className={styles.dropdownChevron} aria-hidden />
-        </button>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`${ivStyles.filterBtn} ${
+            active !== "all" ? ivStyles.filterActive : ""
+          }`}
+        >
+          {label}
+          {active !== "all" && (
+            <span className={ivStyles.filterDot} aria-hidden />
+          )}
+          <ChevronDown aria-hidden />
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className={styles.menu}>
-        {options.map((o) => (
-          <DropdownMenuItem
-            key={o.value}
-            className={styles.menuItem}
-            onSelect={() => onSelect(o.value)}
-          >
-            <span className={styles.menuCheck}>{o.value === value ? <Check className={styles.checkIcon} /> : null}</span>
-            {o.label}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="end" className={ivStyles.filterMenu}>
+        <DropdownMenuCheckboxItem
+          checked={active === "all"}
+          onCheckedChange={() => onSelect("all")}
+        >
+          {allLabel}
+        </DropdownMenuCheckboxItem>
+        {grouped
+          ? grouped.map((group) => (
+              <React.Fragment key={group.label}>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                {group.items.map((i) => (
+                  <DropdownMenuCheckboxItem
+                    key={i.value}
+                    checked={active === i.value}
+                    onCheckedChange={() => onSelect(i.value)}
+                  >
+                    {i.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </React.Fragment>
+            ))
+          : items.map((i) => (
+              <DropdownMenuCheckboxItem
+                key={i.value}
+                checked={active === i.value}
+                onCheckedChange={() => onSelect(i.value)}
+              >
+                {i.label}
+              </DropdownMenuCheckboxItem>
+            ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -83,70 +125,95 @@ export function AuditToolbar({
   onQueryChange: (v: string) => void;
   onExport: () => void;
 }) {
-  const scopeOptions = [
+  const scopeItems = [
     { value: "all", label: "Everyone" },
     { value: "me", label: "Actions by me" },
   ];
-  const roleOptions = [
+  const roleItems = [
     { value: "all", label: "All roles" },
     ...ACTOR_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
   ];
-  const actionOptions = [
+  const actionItems = [
     { value: "all", label: "All actions" },
     ...ACTION_TYPES.map((a) => ({ value: a.value, label: a.label })),
   ];
-  const sourceOptions = [
+  const sourceItems = [
     { value: "all", label: "All tables" },
     ...sourceTables.map((t) => ({ value: t, label: t })),
   ];
 
-  const scopeValue = scopeOptions.find((o) => o.value === actorScope)?.label ?? "Everyone";
-  const roleValue = roleOptions.find((o) => o.value === actorRole)?.label ?? "All roles";
-  const actionValue = actionOptions.find((o) => o.value === actionType)?.label ?? "All actions";
-  const sourceValue = sourceOptions.find((o) => o.value === sourceTable)?.label ?? "All tables";
+  const hasActiveFilters =
+    actionType !== "all" ||
+    actorRole !== "all" ||
+    actorScope !== "all" ||
+    sourceTable !== "all" ||
+    query.trim() !== "";
 
   return (
     <div className={styles.toolbar}>
-      <div className={styles.filters}>
-        <FilterDropdown label="Actor" value={scopeValue} options={scopeOptions} onSelect={(v) => onActorScopeChange(v as ActorScope)} />
-        <FilterDropdown label="Role" value={roleValue} options={roleOptions} onSelect={(v) => onActorRoleChange(v as AuditRole | "all")} />
-        <FilterDropdown label="Action" value={actionValue} options={actionOptions} onSelect={(v) => onActionTypeChange(v as AuditActionType | "all")} />
-        <FilterDropdown label="Source" value={sourceValue} options={sourceOptions} onSelect={(v) => onSourceTableChange(v)} />
-
-        <Input
-          placeholder="Search user / reason / id…"
+      <div className={styles.searchWrap}>
+        <Search className={ivStyles.searchIcon} aria-hidden />
+        <input
+          type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          className={styles.search}
+          placeholder="Search user, reason, or id…"
+          className={ivStyles.search}
+          aria-label="Search audit entries"
         />
       </div>
 
-      <div className={styles.actions}>
-        <Button size="sm" variant="outline" onClick={onExport}>
-          <DownloadIcon />
-          Export CSV
-        </Button>
-      </div>
-    </div>
-  );
-}
+      <FilterDropdown
+        label="Actor"
+        active={actorScope}
+        items={scopeItems}
+        allLabel="Everyone"
+        onSelect={(v) => onActorScopeChange(v as ActorScope)}
+      />
+      <FilterDropdown
+        label="Role"
+        active={actorRole}
+        items={roleItems}
+        allLabel="All roles"
+        onSelect={(v) => onActorRoleChange(v as AuditRole | "all")}
+      />
+      <FilterDropdown
+        label="Action"
+        active={actionType}
+        items={actionItems}
+        allLabel="All actions"
+        onSelect={(v) => onActionTypeChange(v as AuditActionType | "all")}
+      />
+      <FilterDropdown
+        label="Source"
+        active={sourceTable}
+        items={sourceItems}
+        allLabel="All tables"
+        onSelect={(v) => onSourceTableChange(v)}
+      />
 
-function DownloadIcon() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="M7 10l5 5 5-5" />
-      <path d="M12 15V3" />
-    </svg>
+      {hasActiveFilters ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className={ivStyles.clearBtn}
+          onClick={() => {
+            onActionTypeChange("all");
+            onActorRoleChange("all");
+            onActorScopeChange("all");
+            onSourceTableChange("all");
+            onQueryChange("");
+          }}
+        >
+          <X aria-hidden />
+          Clear
+        </Button>
+      ) : null}
+
+      <Button size="sm" variant="outline" onClick={onExport}>
+        <Download aria-hidden />
+        Export CSV
+      </Button>
+    </div>
   );
 }

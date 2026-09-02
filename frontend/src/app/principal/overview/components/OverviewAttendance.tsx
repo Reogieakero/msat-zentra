@@ -1,10 +1,12 @@
+"use client";
+
 import * as React from "react";
 import { ChevronLeft, ChevronRight, Sun, Moon } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import styles from "./attendance-heatmap.module.css";
+import styles from "./OverviewAttendance.module.css";
 
 const SKELETON_GRADES = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 const SKELETON_DAYS = 60;
@@ -20,10 +22,6 @@ type GradeDay = {
 type HeatGrade = { grade: string; enrolled: number; days: GradeDay[] };
 type HeatmapResponse = { session: "AM" | "PM"; grades: HeatGrade[] };
 
-// Color scale: 0 (empty/absent) -> full present (green). Theme-aware via CSS
-// variables so the empty block is dark in dark mode, not near-white. Bands are
-// aligned to the 80% attendance threshold used by the Risk/Attendance systems,
-// so a block below 80% reads as amber/red (at-risk) and 80%+ as green (safe).
 const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(--hm-4)"];
 
 function dayColor(count: number, enrolled: number): string {
@@ -38,7 +36,7 @@ function dayColor(count: number, enrolled: number): string {
 const SESSIONS = ["AM", "PM"] as const;
 type Session = (typeof SESSIONS)[number];
 
-export function AttendanceHeatmap() {
+export function OverviewAttendance() {
   const [session, setSession] = React.useState<Session>("AM");
   const [grades, setGrades] = React.useState<HeatGrade[]>([]);
   const [loading, setLoading] = React.useState(true);

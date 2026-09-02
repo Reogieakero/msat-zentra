@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MoreHorizontal, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Search, MoreHorizontal, ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../grade-mode-context";
@@ -205,6 +205,7 @@ export function InterventionTrackingTable() {
               >
                 Section
                 {sectionFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>
@@ -253,6 +254,7 @@ export function InterventionTrackingTable() {
               >
                 Status
                 {statusFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>
@@ -292,6 +294,7 @@ export function InterventionTrackingTable() {
               >
                 Risk
                 {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>

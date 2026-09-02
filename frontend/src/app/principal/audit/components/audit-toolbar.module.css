@@ -1,80 +1,12 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.filters {
+.searchWrap {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.dropdown {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 8px;
-  font-size: 13px;
-  color: var(--foreground, #1c1917);
-  background: var(--card, #fff);
-  border: 1px solid var(--border, #e7e5e4);
-  border-radius: var(--radius-md, 6px);
-  cursor: pointer;
-  transition: background 120ms ease-out;
-}
-
-.dropdown:hover {
-  background: var(--muted, #f5f5f4);
-}
-
-.dropdownLabel {
-  color: var(--muted-foreground, #78716c);
-}
-
-.dropdownValue {
-  font-weight: 500;
-}
-
-.dropdownChevron {
-  width: 14px;
-  height: 14px;
-  color: var(--muted-foreground, #78716c);
-}
-
-.menu {
-  min-width: 180px;
-}
-
-.menuItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.menuCheck {
-  display: inline-flex;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.checkIcon {
-  width: 14px;
-  height: 14px;
-}
-
-.search {
-  width: 220px;
-  height: 28px;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
 }

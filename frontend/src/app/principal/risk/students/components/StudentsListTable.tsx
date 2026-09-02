@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
@@ -166,6 +167,7 @@ export function StudentsListTable({
               >
                 Section
                 {selectedSection !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>
@@ -214,6 +216,7 @@ export function StudentsListTable({
               >
                 Risk
                 {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>

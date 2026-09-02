@@ -9,6 +9,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -192,6 +193,7 @@ export function RiskTrend() {
                 {yearChoice !== "auto" && (
                   <span className={styles.filterDot} aria-hidden />
                 )}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>
@@ -231,6 +233,7 @@ export function RiskTrend() {
                 {effectiveTermId !== undefined && (
                   <span className={styles.filterDot} aria-hidden />
                 )}
+                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>

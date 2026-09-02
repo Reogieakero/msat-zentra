@@ -4,8 +4,18 @@ import * as React from "react";
 
 import { AuditToolbar, type ActorScope } from "./components/AuditToolbar";
 import { AuditTable } from "./components/AuditTable";
-import { AuditPagination } from "./components/AuditPagination";
 import { AuditSkeleton } from "./components/AuditSkeleton";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardAction,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { useSession } from "@/lib/auth/useSession";
 import {
   fetchAuditEntries,
@@ -15,6 +25,7 @@ import {
   AuditRole,
 } from "./audit-data";
 import styles from "./page.module.css";
+import header from "../adm/components/AdmHeader.module.css";
 
 const PAGE_SIZE = 25;
 
@@ -95,76 +106,125 @@ export default function PrincipalAuditPage() {
     }).catch((err) => console.error("[/api/audit/export] failed:", err));
   };
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasActiveFilters =
+    actionType !== "all" ||
+    actorRole !== "all" ||
+    actorScope !== "all" ||
+    sourceTable !== "all" ||
+    query.trim() !== "";
+
+  const totalCount = total;
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const start = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, totalCount);
 
   return (
     <section className={styles.page}>
-      <div className={styles.head}>
-        <h1 className={styles.title}>Audit Log</h1>
-        <p className={styles.subtitle}>
+      <div className={header.hero}>
+        <h1 className={header.heroTitle}>Audit Log</h1>
+        <p className={header.heroSubtitle}>
           School-wide record of sensitive actions. Immutable — entries cannot be
           edited or deleted.
         </p>
       </div>
 
-      <AuditToolbar
-        actionType={actionType}
-        onActionTypeChange={(v) => {
-          setActionType(v);
-          setPage(1);
-        }}
-        actorRole={actorRole}
-        onActorRoleChange={(v) => {
-          setActorRole(v);
-          setPage(1);
-        }}
-        actorScope={actorScope}
-        onActorScopeChange={(v) => {
-          setActorScope(v);
-          setPage(1);
-        }}
-        sourceTable={sourceTable}
-        onSourceTableChange={(v) => {
-          setSourceTable(v);
-          setPage(1);
-        }}
-        sourceTables={sourceTables}
-        query={query}
-        onQueryChange={(v) => {
-          setQuery(v);
-          setPage(1);
-        }}
-        onExport={handleExport}
-      />
-
-      {error ? (
-        <div className={styles.error}>
-          <p>{error}</p>
-          <button type="button" className={styles.retry} onClick={handleRetry}>
-            Retry
-          </button>
-        </div>
-      ) : loading ? (
-        <AuditSkeleton rows={PAGE_SIZE} />
-      ) : entries.length === 0 ? (
-        <div className={styles.empty}>
-          <p>No audit entries match the current filters.</p>
-        </div>
-      ) : (
-        <>
-          <AuditTable entries={entries} currentUser={currentUserEmail} />
-          <div className={styles.footer}>
-            <span className={styles.count}>
-              {total} {total === 1 ? "entry" : "entries"}
-            </span>
-            <AuditPagination
-              page={page}
-              pageCount={pageCount}
-              onPageChange={setPage}
-            />
+      <Card className={styles.card}>
+        <CardHeader className={styles.cardHeader}>
+          <div className={styles.cardHeaderText}>
+            <CardTitle>Audit Entries</CardTitle>
+            <CardDescription>
+              {totalCount === 0
+                ? "No audit entries on record."
+                : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`}
+            </CardDescription>
           </div>
-        </>
-      )}
+          <CardAction className={styles.cardHeaderActions}>
+            <AuditToolbar
+              actionType={actionType}
+              onActionTypeChange={(v) => {
+                setActionType(v);
+                setPage(1);
+              }}
+              actorRole={actorRole}
+              onActorRoleChange={(v) => {
+                setActorRole(v);
+                setPage(1);
+              }}
+              actorScope={actorScope}
+              onActorScopeChange={(v) => {
+                setActorScope(v);
+                setPage(1);
+              }}
+              sourceTable={sourceTable}
+              onSourceTableChange={(v) => {
+                setSourceTable(v);
+                setPage(1);
+              }}
+              sourceTables={sourceTables}
+              query={query}
+              onQueryChange={(v) => {
+                setQuery(v);
+                setPage(1);
+              }}
+              onExport={handleExport}
+            />
+          </CardAction>
+        </CardHeader>
+
+        <CardContent className={styles.cardContent}>
+          {error ? (
+            <div className={styles.error}>
+              <p>{error}</p>
+              <button type="button" className={styles.retry} onClick={handleRetry}>
+                Retry
+              </button>
+            </div>
+          ) : loading ? (
+            <AuditSkeleton rows={PAGE_SIZE} />
+          ) : entries.length === 0 ? (
+            <div className={styles.empty}>
+              <p>
+                {query.trim()
+                  ? `No audit entries match "${query}".`
+                  : hasActiveFilters
+                    ? "No audit entries match the selected filters."
+                    : "No audit entries on record."}
+              </p>
+            </div>
+          ) : (
+            <AuditTable entries={entries} currentUser={currentUserEmail} />
+          )}
+        </CardContent>
+
+        {!loading && !error && totalCount > 0 ? (
+          <CardFooter className={styles.cardFooter}>
+            <span className={styles.count}>
+              {`${start}–${end} of ${totalCount}`}
+            </span>
+            <div className={styles.footerActions}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage <= 1 || totalCount === 0}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft aria-hidden />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= pageCount || totalCount === 0}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+                <ChevronRight aria-hidden />
+              </Button>
+            </div>
+          </CardFooter>
+        ) : null}
+      </Card>
     </section>
   );
 }
