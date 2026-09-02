@@ -170,6 +170,7 @@
   letter-spacing: 0.04em;
   color: var(--muted-foreground);
   text-align: left;
+  vertical-align: middle;
   border-bottom: 1px solid var(--border);
   background-color: color-mix(in oklch, var(--foreground), transparent 97%);
 }
@@ -240,6 +241,10 @@
 
 .centerCell {
   text-align: center;
+}
+
+.leftCell {
+  text-align: left;
 }
 
 .statusBadge {

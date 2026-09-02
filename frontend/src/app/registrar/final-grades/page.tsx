@@ -222,7 +222,7 @@ export default function FinalGradeApprovalsPage() {
                   </td>
                   <td className={styles.cell}>{formatSection(s.section)}</td>
                   <td className={styles.cell}>{s.term}</td>
-                  <td className={`${styles.mono} ${styles.centerCell}`}>{s.overall}</td>
+                  <td className={`${styles.mono} ${styles.leftCell}`}>{s.overall}</td>
                   <td>
                     <Badge variant="default" className={styles.statusBadge}>
                       Complete

@@ -1,19 +1,16 @@
-.panel {
-  margin-top: 1rem;
-  padding: 0.875rem 1rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, var(--card), transparent 40%);
+.dialogContent {
+  max-width: 34rem;
+  max-height: min(88vh, 42rem);
+  overflow-y: auto;
 }
 
-.head {
+.process {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.title {
+.processTitle {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 600;
@@ -22,121 +19,122 @@
   color: var(--muted-foreground);
 }
 
-.refresh {
-  font-size: 0.75rem;
-  color: var(--primary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.125rem 0.25rem;
-  border-radius: var(--radius-sm);
-}
-
-.refresh:hover {
-  text-decoration: underline;
-}
-
-.refresh:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.loading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-
-.spinner {
-  width: 0.875rem;
-  height: 0.875rem;
-  animation: lrnSpin 0.8s linear infinite;
-}
-
-@keyframes lrnSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.error {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--destructive, #c0392b);
-}
-
-.result {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.verdict {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  align-self: flex-start;
-  padding: 0.3125rem 0.625rem;
-  border-radius: var(--radius-md);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.verdictIcon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.match {
-  background-color: color-mix(in oklch, #16a34a, transparent 88%);
-  color: #15803d;
-}
-
-.mismatch {
-  background-color: color-mix(in oklch, #d97706, transparent 86%);
-  color: #b45309;
-}
-
-.notFound {
-  background-color: color-mix(in oklch, #dc2626, transparent 88%);
-  color: #b91c1c;
-}
-
-.compare {
+.steps {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.875rem;
+  background-color: color-mix(in oklch, var(--card), transparent 30%);
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr auto 1fr;
-  align-items: center;
+.step {
+  display: flex;
+  align-items: flex-start;
   gap: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
 }
 
-.rowLabel {
+.stepNum {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.05rem;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--primary), transparent 85%);
+  color: var(--foreground);
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--muted-foreground);
+}
+
+/* ── Submitted vs Record comparison ── */
+.sectionLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-size: 0.625rem;
-  letter-spacing: 0.03em;
-}
-
-.rowLeft,
-.rowRight {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  word-break: break-word;
-}
-
-.arrow {
   color: var(--muted-foreground);
+}
+
+.compareCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: color-mix(in oklch, var(--card), transparent 30%);
+}
+
+.compareHead {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted-foreground);
+}
+
+.compareCol {
+  min-width: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.pillOk {
+  background-color: color-mix(in oklch, #16a34a, transparent 88%);
+  color: #15803d;
+}
+
+.pillBad {
+  background-color: color-mix(in oklch, #dc2626, transparent 88%);
+  color: #b91c1c;
+}
+
+.compareRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5625rem 0.875rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+}
+
+.compareRow:last-child {
+  border-bottom: none;
+}
+
+.value {
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.valueMuted {
+  color: var(--muted-foreground);
+  font-style: italic;
+  font-size: 0.75rem;
 }
 
 .ok {
@@ -147,10 +145,29 @@
   color: #b91c1c;
 }
 
-.note {
-  grid-column: 2 / -1;
-  font-size: 0.6875rem;
-  color: var(--muted-foreground);
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.verdictMatch {
+  background-color: color-mix(in oklch, #16a34a, transparent 88%);
+  color: #15803d;
+}
+
+.verdictMismatch {
+  background-color: color-mix(in oklch, #d97706, transparent 86%);
+  color: #b45309;
+}
+
+.verdictNotFound {
+  background-color: color-mix(in oklch, #dc2626, transparent 88%);
+  color: #b91c1c;
 }
 
 .hint {
@@ -161,9 +178,29 @@
   padding-left: 0.5rem;
 }
 
-@media (max-width: 640px) {
-  .row {
-    grid-template-columns: 4.5rem 1fr auto 1fr;
-    font-size: 0.6875rem;
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 0;
+}
+
+.spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  animation: lrnSpin 0.8s linear infinite;
+  color: var(--primary);
+}
+
+@keyframes lrnSpin {
+  to {
+    transform: rotate(360deg);
   }
+}
+
+.loadingText {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
 }

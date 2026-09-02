@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Printer,
   Share2,
-  X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
@@ -21,7 +20,7 @@ import {
   Card,
   CardHeader,
   CardTitle,
-  CardAction,
+  CardDescription,
   CardContent,
 } from "@/components/ui/card";
 import {
@@ -33,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface SubjectRow {
   id: string;
   subject: string;
+  teacher: string;
   computedAverage: number;
   transmutedGrade: number;
   remarks: string;
@@ -79,7 +79,6 @@ export default function FinalGradeDetailPage() {
   const [showFullAbout, setShowFullAbout] = React.useState(false);
 
   const initial = student?.name?.charAt(0)?.toUpperCase() ?? "?";
-  const passedCount = student?.subjects.filter((s) => s.remarks === "Passed").length ?? 0;
   const failedCount = student?.subjects.filter((s) => s.remarks === "Failed").length ?? 0;
   const totalSubjects = student?.subjects.length ?? 0;
   const milestones = [25, 50, 75, 100];
@@ -221,21 +220,22 @@ export default function FinalGradeDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Subject Grades</CardTitle>
+                <CardDescription>Per-subject breakdown with computed and transmuted grades.</CardDescription>
               </CardHeader>
               <CardContent>
-                <table className="w-full text-sm border-collapse">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr>
-                      <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50 first:rounded-tl-lg last:rounded-tr-lg">
+                    <tr className="border-b">
+                      <th className="h-10 text-left text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                         Subject
                       </th>
-                      <th className="h-11 px-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
-                        Computed Avg
+                      <th className="h-10 text-right text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        Computed
                       </th>
-                      <th className="h-11 px-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
+                      <th className="h-10 text-right text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                         Transmuted
                       </th>
-                      <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
+                      <th className="h-10 text-left text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                         Remarks
                       </th>
                     </tr>
@@ -244,21 +244,22 @@ export default function FinalGradeDetailPage() {
                     {student.subjects.map((sub) => (
                       <tr
                         key={sub.id}
-                        className="border-t transition-colors hover:bg-muted/30"
+                        className="border-b last:border-0 hover:bg-muted/30 transition-colors"
                       >
-                        <td className="p-4 font-medium">{sub.subject}</td>
-                        <td className="p-4 text-center font-mono tabular-nums">
+                        <td className="py-3.5 pr-4">
+                          <span className="font-medium text-foreground">{sub.subject}</span>
+                          <span className="block text-xs text-muted-foreground mt-0.5">{sub.teacher}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-mono text-sm tabular-nums text-muted-foreground">
                           {sub.computedAverage}
                         </td>
-                        <td className="p-4 text-center font-mono tabular-nums">
+                        <td className="py-3.5 px-4 text-right font-mono text-sm font-medium tabular-nums text-foreground">
                           {sub.transmutedGrade}
                         </td>
-                        <td className="p-4">
+                        <td className="py-3.5 pl-4">
                           <Badge
-                            variant={
-                              sub.remarks === "Failed" ? "destructive" : "outline"
-                            }
-                            className="text-xs font-semibold"
+                            variant={sub.remarks === "Failed" ? "destructive" : "outline"}
+                            className="text-[11px] font-semibold px-2 py-0.5"
                           >
                             {sub.remarks}
                           </Badge>
@@ -318,53 +319,6 @@ export default function FinalGradeDetailPage() {
                     ? `Great Job! ${student.name}'s final grades are complete and all subjects are passing. Ready for your review.`
                     : `${student.name} has ${failedCount} subject(s) below 75. Adviser follow-up may be needed.`}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Subject Grades module list (replaces Course Completion) */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Subject Grades</CardTitle>
-                <CardAction>
-                  <span className="text-muted-foreground text-sm">
-                    {passedCount}/{totalSubjects}
-                  </span>
-                </CardAction>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {student.subjects.map((sub) => {
-                  const passed = sub.remarks === "Passed";
-                  return (
-                    <div
-                      key={sub.id}
-                      className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                        passed
-                          ? "border-green-500/20 bg-green-500/5"
-                          : "border-destructive/20 bg-destructive/5"
-                      }`}
-                    >
-                      <span
-                        className={`flex size-8 shrink-0 items-center justify-center rounded-full ${
-                          passed
-                            ? "bg-green-500 text-white"
-                            : "bg-destructive text-white"
-                        }`}
-                      >
-                        {passed ? (
-                          <Check className="size-4" aria-hidden />
-                        ) : (
-                          <X className="size-4" aria-hidden />
-                        )}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{sub.subject}</p>
-                        <p className="text-muted-foreground text-sm font-mono tabular-nums">
-                          {sub.transmutedGrade}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
               </CardContent>
             </Card>
           </div>

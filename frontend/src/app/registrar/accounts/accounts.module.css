@@ -2,124 +2,208 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1rem 16px 1.5rem;
-}
-
-.error {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid color-mix(in oklch, var(--destructive), transparent 70%);
-  border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--destructive), transparent 92%);
-  color: var(--destructive);
-  font-size: 0.8125rem;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 0;
-  align-items: start;
-  gap: 0;
-  transition: grid-template-columns 220ms ease-out, gap 220ms ease-out;
-}
-
-.layout[data-selected="true"] {
-  grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 1.25rem;
-}
-
-.tableCol {
+  padding: 1rem 0.25rem 0.25rem;
   min-width: 0;
-  margin-top: 3rem;
-  transition: margin-top 220ms ease-out;
 }
 
-.main {
+.card {
   min-width: 0;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  transform: translateX(24px);
-  opacity: 0;
-  transition: transform 220ms ease-out, opacity 220ms ease-out;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.countBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
   pointer-events: none;
 }
 
-.layout[data-selected="true"] .main {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
+.search {
+  width: 220px;
+  height: 2rem;
+  padding-left: 2rem;
 }
 
-.colTitle {
-  margin: 0 0 0.75rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--foreground);
+.clearBtn {
+  height: 2rem;
+  color: var(--muted-foreground);
 }
 
-.main {
+.content {
+  overflow: hidden;
+  padding: 0;
+}
+
+.studentCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
   min-width: 0;
 }
 
-.profileSkeleton {
+.studentName {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  letter-spacing: -0.005em;
+}
+
+.studentLrn {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.section {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.requested {
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.row:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 94%);
+}
+
+/* Flush table — no gutters */
+.content :global(table) {
+  font-size: 0.8125rem;
+  border-collapse: collapse;
+}
+
+.content :global(thead th) {
+  height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+}
+
+.content :global(tbody td) {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  vertical-align: middle;
+}
+
+.content :global(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.content :global(thead th:first-child),
+.content :global(tbody td:first-child) {
+  padding-left: 1rem;
+}
+
+.content :global(thead th:last-child),
+.content :global(tbody td:last-child) {
+  padding-right: 1rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.footer {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  padding: 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
 }
 
-.skelAvatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 9999px;
+.footerInfo {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 
-.skelLines {
+.footerActions {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.skelLineLg {
-  height: 1.25rem;
-  width: 40%;
-  border-radius: var(--radius-md);
-}
-
-.skelLineSm {
+.skelName {
+  width: 55%;
   height: 0.875rem;
-  width: 25%;
-  border-radius: var(--radius-md);
 }
 
-.skelBlock {
-  height: 3.5rem;
-  width: 100%;
-  border-radius: var(--radius-md);
+.skelLrn {
+  width: 35%;
+  height: 0.625rem;
 }
 
-.skelActions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+.skelCell {
+  height: 0.75rem;
 }
 
-.skelBtn {
-  height: 2rem;
-  width: 7.5rem;
-  border-radius: var(--radius-md);
-}
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 
-.skelBtnGhost {
-  height: 2rem;
-  width: 7.5rem;
-  border-radius: var(--radius-md);
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
+  .search {
+    width: 100%;
   }
 }

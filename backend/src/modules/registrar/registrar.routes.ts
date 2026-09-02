@@ -148,25 +148,64 @@ router.get(
       }));
 
       // pendingStudents: G11–12 students whose User is still pending (newly
-      // enrolled awaiting approval). Include first linked parent fullName.
-      const pendingStudentRows = await prisma.studentProfile.findMany({
-        where: { gradeLevel: { in: GRADE_BAND }, user: { status: "pending" } },
-        select: {
-          lrn: true,
-          gradeLevel: true,
-          user: { select: { fullName: true } },
-          parentLinks: {
-            take: 1,
-            select: { parent: { select: { user: { select: { fullName: true } } } } },
+      // enrolled awaiting approval). Includes both profiled students and bare
+      // self-sign-ups with no profile yet (their claimed LRN resolves them into
+      // the band from the official StudentRoster), reconciling with /api/auth/pending.
+      // Include first linked parent fullName.
+      const [profiledPending, barePending] = await Promise.all([
+        prisma.studentProfile.findMany({
+          where: { gradeLevel: { in: GRADE_BAND }, user: { status: "pending" } },
+          select: {
+            lrn: true,
+            gradeLevel: true,
+            user: { select: { fullName: true } },
+            parentLinks: {
+              take: 1,
+              select: { parent: { select: { user: { select: { fullName: true } } } } },
+            },
           },
-        },
-      });
-      const pendingStudents = pendingStudentRows.map((s) => ({
-        name: s.user.fullName,
-        lrn: s.lrn,
-        grade: gradeLabel(s.gradeLevel),
-        parent: s.parentLinks[0]?.parent.user.fullName ?? "—",
-      }));
+        }),
+        prisma.user.findMany({
+          where: { status: "pending", role: "student", studentProfile: null },
+          select: { fullName: true, lrn: true },
+        }),
+      ]);
+
+      // Resolve bare sign-ups into the band from the roster; skip only the ones
+      // whose LRN resolves to a roster entry OUTSIDE the band. A bare sign-up
+      // with an unresolvable LRN is still included (mirrors /api/auth/pending),
+      // shown with an unknown grade so the Overview and Accounts counts match.
+      const bareRows: { name: string; lrn: string; gradeLevel: string }[] = [];
+      for (const u of barePending) {
+        if (!u.lrn) continue;
+        const roster = await prisma.studentRoster.findFirst({
+          where: { lrn: u.lrn },
+          select: { lrn: true, gradeLevel: true },
+          orderBy: { schoolYearId: "desc" },
+        });
+        if (roster) {
+          if (!GRADE_BAND.includes(roster.gradeLevel)) continue; // out-of-band skip
+          bareRows.push({ name: u.fullName, lrn: u.lrn, gradeLevel: roster.gradeLevel });
+        } else {
+          // Unresolvable LRN — still pending/included like /api/auth/pending.
+          bareRows.push({ name: u.fullName, lrn: u.lrn, gradeLevel: "—" });
+        }
+      }
+
+      const pendingStudents = [
+        ...profiledPending.map((s) => ({
+          name: s.user.fullName,
+          lrn: s.lrn,
+          grade: gradeLabel(s.gradeLevel),
+          parent: s.parentLinks[0]?.parent.user.fullName ?? "—",
+        })),
+        ...bareRows.map((r) => ({
+          name: r.name,
+          lrn: r.lrn,
+          grade: gradeLabel(r.gradeLevel),
+          parent: "—",
+        })),
+      ];
 
       // sf10Students: G11–12 students who have an SF10 record (any status), take 5.
       const sf10StudentRows = await prisma.studentProfile.findMany({
@@ -257,10 +296,13 @@ router.get(
           computedAverage: true,
           transmutedGrade: true,
           remarks: true,
+          subjectId: true,
+          termId: true,
           student: {
             select: {
               lrn: true,
               gradeLevel: true,
+              sectionId: true,
               section: { select: { name: true } },
               user: { select: { fullName: true } },
             },
@@ -270,6 +312,31 @@ router.get(
         },
         orderBy: [{ termId: "asc" }, { student: { user: { fullName: "asc" } } }, { subject: { name: "asc" } }],
       });
+
+      // Batch-fetch teacher assignments for all unique (subject, section, term)
+      // combinations present in the result set.
+      const teacherKeys = new Set<string>();
+      for (const r of rows) {
+        if (r.student.sectionId) teacherKeys.add(`${r.subjectId}|${r.student.sectionId}|${r.termId}`);
+      }
+      const teacherAssignments = await prisma.teacherSubjectAssignment.findMany({
+        where: {
+          OR: Array.from(teacherKeys).map((k) => {
+            const [subjectId, sectionId, termId] = k.split("|");
+            return { subjectId, sectionId, termId };
+          }),
+        },
+        select: {
+          subjectId: true,
+          sectionId: true,
+          termId: true,
+          teacher: { select: { fullName: true } },
+        },
+      });
+      const teacherMap = new Map<string, string>();
+      for (const ta of teacherAssignments) {
+        teacherMap.set(`${ta.subjectId}|${ta.sectionId}|${ta.termId}`, ta.teacher.fullName);
+      }
 
       // Group rows by (studentId, termId).
       const byKey = new Map<string, typeof rows>();
@@ -320,14 +387,18 @@ router.get(
           overall: Math.round(
             (group.reduce((sum, r) => sum + (r.transmutedGrade ?? 0), 0) / group.length) * 100
           ) / 100,
-          subjects: group.map((r) => ({
-            id: r.id,
-            subject: r.subject.name,
-            computedAverage: r.computedAverage ?? 0,
-            transmutedGrade: r.transmutedGrade ?? 0,
-            remarks: r.remarks ?? "—",
-            status: "approved" as const,
-          })),
+          subjects: group.map((r) => {
+            const teacherKey = `${r.subjectId}|${r.student.sectionId}|${r.termId}`;
+            return {
+              id: r.id,
+              subject: r.subject.name,
+              teacher: teacherMap.get(teacherKey) ?? "—",
+              computedAverage: r.computedAverage ?? 0,
+              transmutedGrade: r.transmutedGrade ?? 0,
+              remarks: r.remarks ?? "—",
+              status: "approved" as const,
+            };
+          }),
           status: "approved" as const,
         };
       });
@@ -681,6 +752,87 @@ router.get(
           section: s.section?.name ?? "—",
         })),
       });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Registrar-scoped audit trail for account approvals. Restricted to the band
+// (G11–G12): entries are limited to account_approval actions on users that have
+// a StudentProfile in the registrar band. The acting user and the affected
+// student are both resolved so the registrar can see who did what to whom.
+// No cache: this reflects live auditor state.
+router.get(
+  "/accounts-audit",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
+      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "10"), 10) || 10, 1), 50);
+      const skip = (page - 1) * pageSize;
+
+      // Affected users that belong to the registrar band.
+      const bandProfiles = await prisma.studentProfile.findMany({
+        where: { gradeLevel: { in: GRADE_BAND } },
+        select: { userId: true },
+      });
+      const bandUserIds = bandProfiles.map((p) => p.userId);
+
+      const where: any = {
+        actionType: "account_approval",
+        sourceTable: "users",
+        sourceId: { in: bandUserIds },
+      };
+
+      const [rows, total] = await Promise.all([
+        prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: pageSize,
+          include: {
+            user: { select: { email: true, role: true, fullName: true } },
+          },
+        }),
+        prisma.auditLog.count({ where }),
+      ]);
+
+      // Resolve the affected student's details from the source user id.
+      const affectedIds = rows
+        .map((r) => r.sourceId)
+        .filter((id): id is string => Boolean(id));
+      const affected = await prisma.user.findMany({
+        where: { id: { in: affectedIds } },
+        select: {
+          id: true,
+          fullName: true,
+          status: true,
+          studentProfile: { select: { lrn: true, gradeLevel: true, section: { select: { name: true } } } },
+        },
+      });
+      const affectedByUserId = new Map(affected.map((u) => [u.id, u]));
+
+      const entries = rows.map((r) => {
+        const a = affectedByUserId.get(r.sourceId ?? "");
+        const approved = (r.newValue as { status?: string } | null)?.status === "active"
+          || (a?.status === "active");
+        return {
+          id: r.id,
+          timestamp: r.createdAt.toISOString(),
+          actor: r.user?.fullName ?? r.user?.email ?? "system",
+          actorRole: r.user?.role ?? "system",
+          studentName: a?.fullName ?? (r.reason || "Student"),
+          lrn: a?.studentProfile?.lrn ?? null,
+          gradeLevel: a?.studentProfile?.gradeLevel ?? null,
+          section: a?.studentProfile?.section?.name ?? null,
+          action: approved ? "approve" : "reject",
+          reason: approved ? "Account activated" : (r.reason ?? "Account rejected"),
+        };
+      });
+
+      res.json({ entries, total, page, pageSize });
     } catch (e) {
       next(e);
     }

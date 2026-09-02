@@ -46,7 +46,7 @@ const NAV: NavGroup[] = [
   {
     label: "Records",
     items: [
-      { title: "Final Grade Approvals", href: "/registrar/final-grades", icon: Award },
+      { title: "Final Grades", href: "/registrar/final-grades", icon: Award },
       { title: "Account Approvals", href: "/registrar/accounts", icon: UserCheck },
       { title: "Adviser Access Requests", href: "/registrar/adviser-access", icon: ShieldQuestion, badge: "MOCK" },
       { title: "Sections & Subjects", href: "/registrar/academics", icon: GraduationCap },
