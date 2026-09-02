@@ -6,6 +6,7 @@ import Stepper, { Step } from "@/components/ui/stepper/Stepper";
 import { DropdownSelect } from "./DropdownSelect";
 import type { GradeLevel, Subject } from "../data";
 import { createSubject, updateSubject } from "../api";
+import { toast } from "@/components/ui/sonner";
 import styles from "./form.module.css";
 import stepper from "./subject-form.module.css";
 
@@ -45,10 +46,16 @@ export function SubjectFormDialog({ open, subject, onOpenChange, onSave }: Props
       // from final grades — never entered by the registrar.
       onSave({ ...saved, active: true });
       onOpenChange(false);
+      toast.success({
+        title: isEdit ? "Subject updated" : "Subject created",
+        description: `${saved.name} has been saved successfully.`,
+      });
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? "Failed to save subject.");
+      const detail = msg ?? "Failed to save subject.";
+      setError(detail);
       setResetKey((k) => k + 1);
+      toast.error({ title: isEdit ? "Update failed" : "Creation failed", description: detail });
     }
   };
 

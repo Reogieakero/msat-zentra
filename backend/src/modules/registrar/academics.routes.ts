@@ -64,6 +64,87 @@ router.get(
   }
 );
 
+// Registrar "Sections & Subjects" landing overview. Returns the active school
+// year + active term, and every in-band subject with its total enrollment and a
+// per-section breakdown of that enrollment (for the grade-level filter + donut).
+// The subjects "active for the term / school year" are the active school year's
+// subjects (there is no per-term subject switch in this band).
+router.get(
+  "/overview",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "academics"] }),
+  async (_req, res, next) => {
+    try {
+      const activeYear = await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true, name: true },
+      });
+
+      const activeTerm = await prisma.term.findFirst({
+        where: { schoolYear: { isActive: true } },
+        orderBy: { termNumber: "asc" },
+        select: { termNumber: true },
+      });
+
+      const subjects = await prisma.subject.findMany({
+        where: { gradeLevel: { in: GRADE_BAND } },
+        orderBy: [{ gradeLevel: "asc" }, { code: "asc" }],
+      });
+
+      // Per-grade section breakdown so we only query each grade once.
+      const enrollmentsByGrade = await Promise.all(
+        GRADE_BAND.map(async (gl) => {
+          const rows = await prisma.studentProfile.groupBy({
+            by: ["sectionId"],
+            where: { gradeLevel: gl },
+            _count: { _all: true },
+          });
+          const sections = await prisma.section.findMany({
+            where: { id: { in: rows.map((r) => r.sectionId).filter(Boolean) as string[] } },
+            select: { id: true, name: true, gradeLevel: true },
+          });
+          const map = new Map(rows.map((r) => [r.sectionId, r._count._all]));
+          return {
+            gl,
+            total: rows.reduce((s, r) => s + r._count._all, 0),
+            sections: sections.map((sec) => ({
+              id: sec.id,
+              name: sec.name,
+              count: map.get(sec.id) ?? 0,
+            })),
+          };
+        }),
+      );
+
+      const byGrade = new Map(enrollmentsByGrade.map((e) => [e.gl, e]));
+
+      const result = subjects.map((s) => {
+        const grade = s.gradeLevel === "G11" ? 11 : 12;
+        const e = byGrade.get(s.gradeLevel);
+        return {
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          gradeLevel: grade,
+          active: true,
+          enrolled: e?.total ?? 0,
+          enrollments: e?.sections ?? [],
+        };
+      });
+
+      res.json({
+        schoolYear: activeYear?.name ?? null,
+        schoolYearId: activeYear?.id ?? null,
+        term: activeTerm?.termNumber ?? null,
+        subjects: result,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 // Create a G11–G12 subject.
 router.post(
   "/subjects",

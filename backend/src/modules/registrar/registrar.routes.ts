@@ -553,9 +553,9 @@ router.get(
           return {
             id: r.id,
             adviserId: r.adviserId,
-            adviserName: r.adviser.fullName,
-            employeeId: r.adviser.staffProfile?.employeeId ?? "—",
-            section: r.section.name,
+            adviserName: r.adviser?.fullName ?? "Unknown adviser",
+            employeeId: r.adviser?.staffProfile?.employeeId ?? "—",
+            section: r.section?.name ?? "Unsectioned",
             gradeLevel: r.gradeLevel,
             reason: r.reason,
             status: r.status,

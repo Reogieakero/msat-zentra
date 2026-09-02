@@ -1,0 +1,475 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  --donut-0: #2563eb;
+  --donut-1: #0d9488;
+  --donut-2: #d97706;
+  --donut-3: #7c3aed;
+  --donut-4: #db2777;
+  --donut-5: #16a34a;
+  --donut-6: #dc2626;
+  --donut-7: #64748b;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.period {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.periodIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.periodIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.periodText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.periodLabel {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.periodValue {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.filterBtn {
+  position: relative;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+.filterActive {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  color: var(--primary);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.filterDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.filterMenu {
+  min-width: 12rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.population {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  margin-top: 0.25rem;
+}
+
+.populationHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.populationTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.populationSub {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.populationPanel {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+  width: 100%;
+}
+
+.populationGrade {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.populationGradeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.populationGradeTag {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.populationGradeTotal {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.populationBody {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.populationChart {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.populationCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  pointer-events: none;
+  text-align: center;
+}
+
+.populationCenter strong {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.populationCenter small {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.populationLegend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.populationLegendItem {
+  display: flex;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.populationLegendDot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 0.3125rem;
+}
+
+.populationLegendBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.populationLegendRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.populationLegendPct {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.populationLegendName {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.populationLegendCount {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+}
+
+.cardSelected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 35%, transparent);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.codeWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 48px;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius, 0.5rem);
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+}
+
+.code {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.25;
+}
+
+.gradeTag {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.enrolledRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.enrolledIcon {
+  width: 15px;
+  height: 15px;
+  color: var(--muted-foreground);
+}
+
+.enrolledCount {
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.enrolledLabel {
+  color: var(--muted-foreground);
+}
+
+.barWrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 150px;
+  min-width: 0;
+}
+
+.expand {
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease, padding-top 0.2s ease;
+}
+
+.expandOpen {
+  max-height: 80px;
+  opacity: 1;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 200px;
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 20px;
+  height: 20px;
+  color: var(--muted-foreground);
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.skelCard {
+  cursor: default;
+}
+
+.skelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skelCode,
+.skelName,
+.skelLine,
+.skelDonut {
+  display: block;
+  background: color-mix(in oklch, var(--muted), transparent 55%);
+  border-radius: var(--radius, 0.5rem);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skelCode {
+  width: 44px;
+  height: 14px;
+}
+
+.skelName {
+  width: 60%;
+  height: 12px;
+}
+
+.skelBody {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.skelDonut {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skelLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.skelLine {
+  height: 11px;
+  width: 70%;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 560px) {
+  .populationBody {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}

@@ -1,118 +1,128 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, LayoutGrid } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { SubjectsPanel } from "./components/SubjectsPanel";
-import { SectionsPanel } from "./components/SectionsPanel";
-import { fetchSections, fetchSubjects, fetchTeachers } from "./api";
-import type { Assignment, Section, Subject, Teacher } from "./data";
+import { LayoutGrid, RefreshCw } from "lucide-react";
+import { AcademicsHeader } from "./components/AcademicsHeader";
+import { ConfigureSection } from "./components/ConfigureSection";
+import { SubjectOverviewGrid } from "./components/SubjectOverviewGrid";
+import { SubjectFormDialog } from "./components/SubjectFormDialog";
+import { SectionFormDialog } from "./components/SectionFormDialog";
+import { fetchAcademicsOverview, fetchTeachers } from "./api";
+import type { AcademicsOverview } from "./api";
+import type { Subject, Teacher } from "./data";
 import styles from "./academics.module.css";
-import tab from "./tabs.module.css";
+
+function toSubjectShape(s: { id: string; code: string; name: string; gradeLevel: number; active: boolean; enrolled: number }): Subject {
+  return { id: s.id, code: s.code, name: s.name, gradeLevel: s.gradeLevel as 11 | 12, active: s.active, enrolled: s.enrolled, passed: 0, failed: 0 };
+}
 
 export default function RegistrarAcademicsPage() {
-  const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [sections, setSections] = React.useState<Section[]>([]);
-  const [teachers, setTeachers] = React.useState<Teacher[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [overview, setOverview] = React.useState<AcademicsOverview | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-
-  const load = React.useCallback(async (signal?: AbortSignal) => {
-    setError(null);
-    try {
-      const [subj, secs, teach] = await Promise.all([
-        fetchSubjects(signal),
-        fetchSections(signal),
-        fetchTeachers(signal),
-      ]);
-      setSubjects(subj);
-      setSections(secs);
-      setTeachers(teach);
-    } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      setError(status ? `Failed to load academics (HTTP ${status})` : "Failed to load academics");
-      console.error("[/api/registrar/academics] fetch failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [loading, setLoading] = React.useState(true);
+  const [subjectDialogOpen, setSubjectDialogOpen] = React.useState(false);
+  const [sectionDialogOpen, setSectionDialogOpen] = React.useState(false);
+  const [teachers, setTeachers] = React.useState<Teacher[]>([]);
 
   React.useEffect(() => {
-    const ctrl = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch populates state
-    load(ctrl.signal);
-    return () => ctrl.abort();
-  }, [load]);
-
-  const handleSubjectUpsert = React.useCallback((subject: Subject) => {
-    setSubjects((prev) => {
-      const idx = prev.findIndex((s) => s.id === subject.id);
-      if (idx === -1) return [...prev, subject];
-      const next = [...prev];
-      next[idx] = subject;
-      return next;
-    });
+    let cancelled = false;
+    fetchAcademicsOverview()
+      .then((res) => {
+        if (!cancelled) setOverview(res);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        setError(
+          status ? `Failed to load academics (HTTP ${status})` : "Failed to load academics.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleSectionUpsert = React.useCallback((section: Section) => {
-    setSections((prev) => {
-      const idx = prev.findIndex((s) => s.id === section.id);
-      if (idx === -1) return [...prev, section];
-      const next = [...prev];
-      next[idx] = section;
-      return next;
-    });
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
+    fetchAcademicsOverview()
+      .then((res) => setOverview(res))
+      .catch((err: unknown) => {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        setError(
+          status ? `Failed to load academics (HTTP ${status})` : "Failed to load academics.",
+        );
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleAssignmentsChange = React.useCallback(
-    (sectionId: string, assignments: Assignment[]) => {
-      setSections((prev) =>
-        prev.map((s) => (s.id === sectionId ? { ...s, assignments } : s)),
-      );
-    },
-    [],
-  );
+  const openSectionDialog = React.useCallback(async () => {
+    setSectionDialogOpen(true);
+    if (teachers.length === 0) {
+      try {
+        setTeachers(await fetchTeachers());
+      } catch {
+        setTeachers([]);
+      }
+    }
+  }, [teachers.length]);
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Sections &amp; Subjects</h1>
-          <p className={styles.subtitle}>
-            Academic catalog for grades 11–12. Configure subjects and class sections,
-            then assign teachers per term.
-          </p>
+      <AcademicsHeader />
+
+      <ConfigureSection
+        onAddSubject={() => setSubjectDialogOpen(true)}
+        onAddSection={() => void openSectionDialog()}
+      />
+
+      {error ? (
+        <div className={styles.error}>
+          <span>{error}</span>
+          <button type="button" className={styles.retry} onClick={load}>
+            <RefreshCw className={styles.retryIcon} />
+            Retry
+          </button>
         </div>
-      </header>
+      ) : overview && overview.subjects.length === 0 && !loading ? (
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon}>
+            <LayoutGrid className={styles.emptyIconSvg} />
+          </span>
+          <p className={styles.emptyText}>No sections or subjects to show.</p>
+        </div>
+      ) : (
+        <SubjectOverviewGrid
+          schoolYear={overview?.schoolYear ?? null}
+          term={overview?.term ?? null}
+          subjects={overview?.subjects ?? []}
+          loading={loading}
+        />
+      )}
 
-      {error ? <p className={styles.error}>{error}</p> : null}
-
-      <Tabs defaultValue="subjects" className={tab.tabs}>
-        <TabsList variant="line" className={tab.list}>
-          <TabsTrigger value="subjects" className={tab.trigger}>
-            <BookOpen className={tab.icon} />
-            Subjects
-          </TabsTrigger>
-          <TabsTrigger value="sections" className={tab.trigger}>
-            <LayoutGrid className={tab.icon} />
-            Sections
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="subjects" className={tab.content}>
-          <SubjectsPanel subjects={subjects} loading={loading} onUpsert={handleSubjectUpsert} />
-        </TabsContent>
-        <TabsContent value="sections" className={tab.content}>
-          <SectionsPanel
-            sections={sections}
-            subjects={subjects}
-            teachers={teachers}
-            loading={loading}
-            onUpsert={handleSectionUpsert}
-            onAssignmentsChange={handleAssignmentsChange}
-          />
-        </TabsContent>
-      </Tabs>
+      <SubjectFormDialog
+        open={subjectDialogOpen}
+        subject={null}
+        onOpenChange={setSubjectDialogOpen}
+        onSave={() => {
+          setSubjectDialogOpen(false);
+          load();
+        }}
+      />
+      <SectionFormDialog
+        open={sectionDialogOpen}
+        section={null}
+        subjects={(overview?.subjects ?? []).map(toSubjectShape)}
+        teachers={teachers}
+        onOpenChange={setSectionDialogOpen}
+        onSave={() => {
+          setSectionDialogOpen(false);
+          load();
+        }}
+      />
     </section>
   );
 }

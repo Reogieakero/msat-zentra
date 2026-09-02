@@ -146,3 +146,36 @@ export async function fetchSubjectStudents(
   );
   return res.data;
 }
+
+export interface SectionEnrollment {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export interface SubjectOverview {
+  id: string;
+  code: string;
+  name: string;
+  gradeLevel: 11 | 12;
+  active: boolean;
+  enrolled: number;
+  enrollments: SectionEnrollment[];
+}
+
+export interface AcademicsOverview {
+  schoolYear: string | null;
+  schoolYearId: string | null;
+  term: number | null;
+  subjects: SubjectOverview[];
+}
+
+export async function fetchAcademicsOverview(
+  signal?: AbortSignal,
+): Promise<AcademicsOverview> {
+  const res = await withAbort(
+    apiClient.get<AcademicsOverview>("/api/registrar/academics/overview", { signal }),
+    signal,
+  );
+  return res.data;
+}

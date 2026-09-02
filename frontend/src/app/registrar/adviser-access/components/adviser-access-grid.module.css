@@ -1,0 +1,383 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground), transparent 96%);
+  cursor: pointer;
+  transition: border-color 160ms ease-out, box-shadow 160ms ease-out,
+    transform 160ms ease-out;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--primary), transparent 20%),
+    color-mix(in oklch, var(--primary), transparent 65%)
+  );
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.card:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 10px 26px -12px color-mix(in oklch, var(--foreground), transparent 84%);
+  transform: translateY(-2px);
+}
+
+.card[data-status="approved"]::before {
+  opacity: 1;
+}
+
+.card[data-status="denied"]::before {
+  opacity: 1;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--destructive), transparent 20%),
+    color-mix(in oklch, var(--destructive), transparent 65%)
+  );
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--primary), transparent 82%),
+    color-mix(in oklch, var(--primary), transparent 92%)
+  );
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.categoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.category {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--muted), transparent 80%);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.whenIcon {
+  width: 12px;
+  height: 12px;
+}
+
+.advisees {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--muted), transparent 72%);
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.progressLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.progressValue {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  position: relative;
+  height: 6px;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--foreground), transparent 90%);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    color-mix(in oklch, var(--primary), transparent 15%)
+  );
+  transition: width 300ms ease-out;
+}
+
+.barFill[data-status="denied"] {
+  background: linear-gradient(
+    90deg,
+    var(--destructive),
+    color-mix(in oklch, var(--destructive), transparent 15%)
+  );
+}
+
+.adviseesMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.avatarStack {
+  display: flex;
+  align-items: center;
+}
+
+.stacked {
+  margin-left: -8px;
+  box-sizing: border-box;
+}
+
+.stacked:first-child {
+  margin-left: 0;
+}
+
+.stackedFallback {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  background: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: -8px;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--muted-foreground), transparent 88%);
+  color: var(--muted-foreground);
+  font-size: 0.5625rem;
+  font-weight: 700;
+}
+
+.adviseesCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.countIcon {
+  width: 12px;
+  height: 12px;
+}
+
+.reason {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+.decisionReason {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.decisionReason[data-status="approved"] {
+  border-color: color-mix(in oklch, var(--primary), transparent 75%);
+}
+
+.decisionReason[data-status="denied"] {
+  border-color: color-mix(in oklch, var(--destructive), transparent 75%);
+  color: var(--destructive);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.viewBtn {
+  color: var(--muted-foreground);
+}
+
+.viewBtn:hover {
+  color: var(--foreground);
+}
+
+.actions {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.footerIcon {
+  width: 13px;
+  height: 13px;
+}
+
+.denyBtn {
+  color: var(--muted-foreground);
+}
+
+.denyBtn:hover {
+  color: var(--destructive);
+}
+
+.processedLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.skelCard {
+  cursor: default;
+  gap: 1rem;
+}
+
+.skelTop {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.skelAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.skelLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+}
+
+.skelTitle {
+  height: 14px;
+  width: 60%;
+}
+
+.skelSub {
+  height: 10px;
+  width: 40%;
+}
+
+.skelBar {
+  height: 6px;
+  width: 100%;
+}
+
+.skelFoot {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.skelChip {
+  height: 22px;
+  width: 80px;
+  border-radius: 9999px;
+}
+
+.dialogBody {
+  padding: 0.25rem 0;
+}
+
+.reasonInput {
+  min-height: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::before,
+  .barFill {
+    transition: none;
+  }
+}

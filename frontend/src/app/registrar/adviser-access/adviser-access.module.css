@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1rem 16px 1.5rem;
+  padding: 1rem 0 0.25rem;
 }
 
 .error {
@@ -13,6 +13,94 @@
   background: color-mix(in oklch, var(--destructive), transparent 92%);
   color: var(--destructive);
   font-size: 0.8125rem;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.sectionCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding-inline: 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--foreground), transparent 90%);
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionCount[data-status="pending"] {
+  background: color-mix(in oklch, #f59e0b, transparent 88%);
+  color: #b45309;
+}
+
+:global(.dark) .sectionCount[data-status="pending"] {
+  color: #fbbf24;
+}
+
+.sectionCount[data-status="approved"] {
+  background: color-mix(in oklch, #10b981, transparent 88%);
+  color: #047857;
+}
+
+:global(.dark) .sectionCount[data-status="approved"] {
+  color: #34d399;
+}
+
+.sectionCount[data-status="denied"] {
+  background: color-mix(in oklch, var(--destructive), transparent 90%);
+  color: var(--destructive);
+}
+
+.sectionEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.sectionEmpty p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
 }
 
 .head {

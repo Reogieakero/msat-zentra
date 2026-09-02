@@ -5,8 +5,9 @@
   height: 100%;
   padding: 1rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background-color: var(--card);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground), transparent 96%);
   overflow: hidden;
 }
 
@@ -28,8 +29,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--primary), transparent 90%);
   color: var(--primary);
   flex-shrink: 0;
 }
@@ -162,7 +165,7 @@
   min-height: 240px;
   padding: 1.5rem;
   border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background-color: var(--card);
   text-align: center;
 }
