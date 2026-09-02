@@ -43,50 +43,55 @@ router.get(
         where: { isAdviser: true, user: { status: "pending" } },
       });
 
-      // lockedFinalsAwaiting: adviser-approved final grades for G11–12 students
-      // still awaiting registrar final approval. Registrar approval sets only
-      // finalizedAt (lockStatus stays adviser_approved), so finalized rows must
-      // be excluded here to keep finalized + awaiting + draft = total.
-      const lockedFinalsAwaiting = await prisma.finalGrade.count({
-        where: {
-          lockStatus: "adviser_approved",
-          finalizedAt: null,
-          student: { gradeLevel: { in: GRADE_BAND } },
-        },
-      });
-
-      // sections: active-year G11–12 sections.
-      const sections = await prisma.section.count({
-        where: { gradeLevel: { in: GRADE_BAND }, schoolYear: { isActive: true } },
-      });
-
-      // subjects: G11–12 subjects.
-      const subjects = await prisma.subject.count({
-        where: { gradeLevel: { in: GRADE_BAND } },
-      });
-
-      // reportCards: every final-grade row for G11–12 students (one row ≈ one
+      // Report cards: every final-grade row for G11–12 students (one row ≈ one
       // report-card subject entry). Used as a proxy since there is no dedicated
       // "report card" model.
       const reportCards = await prisma.finalGrade.count({
         where: { student: { gradeLevel: { in: GRADE_BAND } } },
       });
 
-      // finalsFinalized / sf10ByStatus / sectionsByGrade / subjectsByGrade feed
-      // the overview header's KPI charts (donuts + per-grade bars).
-      const [finalsFinalized, sf10ByStatus, sectionsGrouped, subjectsGrouped] =
-        await Promise.all([
-          prisma.finalGrade.count({
-            where: {
-              student: { gradeLevel: { in: GRADE_BAND } },
-              finalizedAt: { not: null },
-            },
-          }),
-          prisma.sf10Record.groupBy({
-            by: ["status"],
-            where: { student: { gradeLevel: { in: GRADE_BAND } } },
-            _count: { _all: true },
-          }),
+      // The registrar is view-only in the grade pipeline: a student's term grades
+      const viewableFinalRows = await prisma.finalGrade.findMany({
+        where: { student: { gradeLevel: { in: GRADE_BAND } } },
+        select: {
+          lockStatus: true,
+          studentId: true,
+          termId: true,
+          subjectId: true,
+        },
+      });
+      const byStudentTerm = new Map<string, typeof viewableFinalRows>();
+      for (const r of viewableFinalRows) {
+        const key = `${r.studentId}|${r.termId}`;
+        if (!byStudentTerm.has(key)) byStudentTerm.set(key, []);
+        byStudentTerm.get(key)!.push(r);
+      }
+      let readyRows = 0;
+      let readyStudents = 0;
+      for (const group of byStudentTerm.values()) {
+        if (group.length > 0 && group.every((r) => r.lockStatus === "adviser_approved")) {
+          readyRows += group.length;
+          readyStudents++;
+        }
+      }
+      const awaitingRows = readyRows;
+
+      // sections/subjects: G11–12 active sections and subjects (KPI metrics).
+      const [sections, subjects] = await Promise.all([
+        prisma.section.count({
+          where: { gradeLevel: { in: GRADE_BAND }, schoolYear: { isActive: true } },
+        }),
+        prisma.subject.count({ where: { gradeLevel: { in: GRADE_BAND } } }),
+      ]);
+
+      // sf10ByStatus / sectionsByGrade / subjectsByGrade feed the overview
+      // header's KPI charts (donuts + per-grade bars).
+      const [sf10ByStatus, sectionsGrouped, subjectsGrouped] = await Promise.all([
+        prisma.sf10Record.groupBy({
+          by: ["status"],
+          where: { student: { gradeLevel: { in: GRADE_BAND } } },
+          _count: { _all: true },
+        }),
           prisma.section.groupBy({
             by: ["gradeLevel"],
             where: { gradeLevel: { in: GRADE_BAND }, schoolYear: { isActive: true } },
@@ -186,7 +191,7 @@ router.get(
       res.json({
         pendingAccounts,
         pendingAdviserAccess,
-        lockedFinalsAwaiting,
+        lockedFinalsAwaiting: awaitingRows,
         sf10Released,
         sections,
         subjects,
@@ -197,9 +202,9 @@ router.get(
         sf10Students,
         finals: {
           total: reportCards,
-          finalized: finalsFinalized,
-          awaiting: lockedFinalsAwaiting,
-          draft: reportCards - finalsFinalized - lockedFinalsAwaiting,
+          finalized: 0,
+          awaiting: awaitingRows,
+          draft: reportCards - awaitingRows,
         },
         sf10: {
           total: sf10Total,
@@ -222,11 +227,14 @@ router.get(
   }
 );
 
-// List of G11–G12 final-grade rows scoped to the registrar grade band, for the
-// Final Grade Approvals screen. Only finals the adviser has already approved
-// (lockStatus "adviser_approved") reach the registrar. A row is "pending" (awaiting
-// registrar final approval) until finalizedAt is set; "approve" once finalized.
-// All values are computed live from the database — no mocked data.
+// Registrar final-grade viewer. The registrar has a view-only role in the grade
+// pipeline:
+//   1. Subject teacher locks a subject's final grade (lockStatus "locked").
+//   2. Adviser approves it (lockStatus "adviser_approved").
+//   3. A student's grades become visible to the registrar ONLY when every subject
+//      for that student (in the term) has been adviser-approved.
+// The registrar cannot approve — this endpoint simply returns the complete,
+// viewable grade sets grouped by student. All values computed live — no mocks.
 router.get(
   "/final-grades",
   requireAuth,
@@ -239,76 +247,99 @@ router.get(
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
 
-      const filter = (req.query.filter as string) ?? "all";
-
-      const whereBase = {
-        student: { gradeLevel: { in: GRADE_BAND } },
-        lockStatus: "adviser_approved" as const,
-      };
-
-      const where =
-        filter === "pending"
-          ? { ...whereBase, finalizedAt: null }
-          : filter === "approve"
-            ? { ...whereBase, finalizedAt: { not: null } }
-            : whereBase;
-
-      const [rows, total, pendingTotal, approvedTotal] = await Promise.all([
-        prisma.finalGrade.findMany({
-          where,
-          include: {
-            student: {
-              select: {
-                lrn: true,
-                gradeLevel: true,
-                section: true,
-                user: { select: { fullName: true } },
-              },
+      // Every final-grade row for the registrar band, with the info needed to
+      // decide which students have a fully adviser-approved term.
+      const rows = await prisma.finalGrade.findMany({
+        where: { student: { gradeLevel: { in: GRADE_BAND } } },
+        select: {
+          id: true,
+          lockStatus: true,
+          computedAverage: true,
+          transmutedGrade: true,
+          remarks: true,
+          student: {
+            select: {
+              lrn: true,
+              gradeLevel: true,
+              section: { select: { name: true } },
+              user: { select: { fullName: true } },
             },
-            subject: { select: { name: true } },
-            term: { select: { termNumber: true, schoolYear: { select: { name: true } } } },
           },
-          orderBy:
-            filter === "pending"
-              ? [
-                  { adviserApprovedAt: "desc" },
-                  { termId: "asc" },
-                  { subjectId: "asc" },
-                  { id: "asc" },
-                ]
-              : [{ termId: "asc" }, { subjectId: "asc" }, { id: "asc" }],
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
-        prisma.finalGrade.count({ where }),
-        prisma.finalGrade.count({
-          where: { ...whereBase, finalizedAt: null },
-        }),
-        prisma.finalGrade.count({
-          where: { ...whereBase, finalizedAt: { not: null } },
-        }),
-      ]);
+          subject: { select: { name: true } },
+          term: { select: { id: true, termNumber: true, schoolYear: { select: { name: true } } } },
+        },
+        orderBy: [{ termId: "asc" }, { student: { user: { fullName: "asc" } } }, { subject: { name: "asc" } }],
+      });
 
-      const grades = rows.map((r) => ({
-        id: r.id,
-        lrn: r.student.lrn,
-        name: r.student.user.fullName,
-        gradeLevel: r.student.gradeLevel,
-        section: r.student.section?.name ?? "—",
-        subject: r.subject.name,
-        term: `${r.term.schoolYear.name.split(" ")[0]} T${r.term.termNumber}`,
-        computedAverage: r.computedAverage ?? 0,
-        transmutedGrade: r.transmutedGrade ?? 0,
-        remarks: r.remarks ?? "—",
-        status: r.finalizedAt ? ("approve" as const) : ("pending" as const),
-      }));
+      // Group rows by (studentId, termId).
+      const byKey = new Map<string, typeof rows>();
+      for (const r of rows) {
+        const key = `${r.student.lrn}|${r.term.id}`;
+        if (!byKey.has(key)) byKey.set(key, []);
+        byKey.get(key)!.push(r);
+      }
+
+      // A set is "viewable" when every subject the student is enrolled in for the
+      // term has an adviser-approved final grade. We approximate enrolment by the
+      // subjects present in the term for that student. One row per complete student.
+      const viewableGroups: (typeof rows)[] = [];
+      for (const group of byKey.values()) {
+        if (group.length > 0 && group.every((r) => r.lockStatus === "adviser_approved")) {
+          viewableGroups.push(group);
+        }
+      }
+
+      // Order complete students by name (the rows within a group are already
+      // ordered by term + name + subject).
+      viewableGroups.sort((a, b) =>
+        a[0].student.user.fullName.localeCompare(b[0].student.user.fullName)
+      );
+
+      const totalStudents = viewableGroups.length;
+      const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize));
+      const clampedPage = Math.min(page, totalPages);
+      const slice = viewableGroups.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
+
+      // Stats: "ready" = fully adviser-approved (viewable) rows; "complete" =
+      // distinct viewable student-terms. Both are informational for the registrar.
+      // "locked" / "adviserApproved" feed the grade pipeline stages on the page.
+      const readyCount = viewableGroups.reduce((sum, g) => sum + g.length, 0);
+      const completeCount = totalStudents;
+      const lockedCount = rows.filter((r) => r.lockStatus === "locked").length;
+      const adviserApprovedCount = rows.filter((r) => r.lockStatus === "adviser_approved").length;
+
+      const students = slice.map((group) => {
+        const r0 = group[0];
+        return {
+          id: `${r0.student.lrn}|${r0.term.id}`,
+          lrn: r0.student.lrn,
+          name: r0.student.user.fullName,
+          gradeLevel: r0.student.gradeLevel,
+          section: r0.student.section?.name ?? "—",
+          term: `${r0.term.schoolYear.name.split(" ")[0]} T${r0.term.termNumber}`,
+          overall: Math.round(
+            (group.reduce((sum, r) => sum + (r.transmutedGrade ?? 0), 0) / group.length) * 100
+          ) / 100,
+          subjects: group.map((r) => ({
+            id: r.id,
+            subject: r.subject.name,
+            computedAverage: r.computedAverage ?? 0,
+            transmutedGrade: r.transmutedGrade ?? 0,
+            remarks: r.remarks ?? "—",
+            status: "approved" as const,
+          })),
+          status: "approved" as const,
+        };
+      });
 
       res.json({
-        grades,
-        total,
-        pending: pendingTotal,
-        approved: approvedTotal,
-        page,
+        students,
+        total: totalStudents,
+        ready: readyCount,
+        complete: completeCount,
+        locked: lockedCount,
+        adviserApproved: adviserApprovedCount,
+        page: clampedPage,
         pageSize,
       });
     } catch (e) {

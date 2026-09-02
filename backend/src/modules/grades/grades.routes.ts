@@ -128,29 +128,4 @@ router.post(
   }
 );
 
-router.post(
-  "/final-grades/:id/registrar-approve",
-  requireAuth,
-  requireRole("record_keeper", "registrar"),
-  gradeBandGuard(async (req) => {
-    const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) }, select: { studentId: true } });
-    if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-    return fg.studentId;
-  }),
-  async (req, res, next) => {
-    try {
-      const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
-      if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-      if (fg.lockStatus !== "adviser_approved") throw new AppError(409, "NOT_ADVISER_APPROVED", "Final must be adviser-approved before registrar final approval");
-      const updated = await prisma.finalGrade.update({
-        where: { id: fg.id },
-        data: { finalizedBy: req.user!.id, finalizedAt: new Date() },
-      });
-      await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Registrar approved/validated final grade" });
-      await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
-      res.json(updated);
-    } catch (e) { next(e); }
-  }
-);
-
 export default router;

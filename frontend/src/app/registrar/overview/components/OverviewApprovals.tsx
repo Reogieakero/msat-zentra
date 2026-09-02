@@ -73,7 +73,7 @@ export function OverviewApprovals() {
       title: "Final Grade Approvals",
       count: data?.lockedFinalsAwaiting ?? 0,
       href: "/registrar/final-grades",
-      cta: "Review finals",
+      cta: "View finals",
     },
     {
       key: "students",

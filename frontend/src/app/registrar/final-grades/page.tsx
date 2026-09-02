@@ -1,281 +1,312 @@
 "use client";
 
 import * as React from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { SearchIcon, ChevronDown } from "lucide-react";
-import { FinalGradeApprovalTable } from "./components/FinalGradeApprovalTable";
-import { KpiThreadsCard } from "./components/KpiThreadsCard";
-import { FinalGradesPagination } from "./components/FinalGradesPagination";
-import { FinalGradesGetStartedModal } from "./components/FinalGradesGetStartedModal";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { Search, MoreHorizontal, Eye, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { formatSection } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  type FinalGrade,
-  type FinalGradesResponse,
-} from "./components/types";
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import styles from "./final-grades.module.css";
+import { GradePipeline } from "./GradePipeline";
 
-type StatusFilter = "all" | "pending" | "approve";
+interface SubjectRow {
+  id: string;
+  subject: string;
+  computedAverage: number;
+  transmutedGrade: number;
+  remarks: string;
+  status: "approved";
+}
 
-const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: "pending", label: "Pending" },
-  { value: "approve", label: "Approved" },
-];
+interface StudentRow {
+  id: string;
+  lrn: string;
+  name: string;
+  gradeLevel: string;
+  section: string;
+  term: string;
+  overall: number;
+  subjects: SubjectRow[];
+  status: "approved";
+}
 
-const EMPTY: FinalGradesResponse = { grades: [], total: 0, pending: 0, approved: 0, page: 1, pageSize: 50 };
+interface GradesResponse {
+  students: StudentRow[];
+  total: number;
+  ready: number;
+  complete: number;
+  locked: number;
+  adviserApproved: number;
+  page: number;
+  pageSize: number;
+}
+function Stat({
+  value,
+  label,
+  hint,
+}: {
+  value: number | undefined;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <div className={styles.stat}>
+      <span className={styles.statValue}>{value ?? "—"}</span>
+      <span className={styles.statLabel}>{label}</span>
+      <span className={styles.statHint}>{hint}</span>
+    </div>
+  );
+}
 
 export default function FinalGradeApprovalsPage() {
-  const [grades, setGrades] = React.useState<FinalGrade[]>(EMPTY.grades);
-  const [status, setStatus] = React.useState<StatusFilter>("all");
+  const router = useRouter();
   const [query, setQuery] = React.useState("");
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [approving, setApproving] = React.useState<string | null>(null);
   const [page, setPage] = React.useState(1);
-  const [total, setTotal] = React.useState(0);
-  const [pending, setPending] = React.useState(0);
-  const [approved, setApproved] = React.useState(0);
-  const [pageSize, setPageSize] = React.useState(50);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    apiClient
-      .get<FinalGradesResponse>("/api/registrar/final-grades", { params: { page: 1, pageSize } })
-      .then((res) => {
-        if (cancelled) return;
-        setGrades(res.data.grades);
-        setTotal(res.data.total);
-        setPending(res.data.pending);
-        setApproved(res.data.approved);
-        setPage(res.data.page);
-        setPageSize(res.data.pageSize);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const statusCode = (err as { response?: { status?: number } })?.response?.status;
-        setError(
-          statusCode
-            ? `Failed to load final grades (HTTP ${statusCode})`
-            : "Failed to load final grades"
-        );
-        console.error("[/api/registrar/final-grades] fetch failed:", err);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const load = React.useCallback((p: number) => {
-    setError(null);
-    apiClient
-      .get<FinalGradesResponse>("/api/registrar/final-grades", { params: { page: p, pageSize } })
-      .then((res) => {
-        setGrades(res.data.grades);
-        setTotal(res.data.total);
-        setPending(res.data.pending);
-        setApproved(res.data.approved);
-        setPage(res.data.page);
-        setPageSize(res.data.pageSize);
-      })
-      .catch((err: unknown) => {
-        const statusCode = (err as { response?: { status?: number } })?.response?.status;
-        setError(
-          statusCode
-            ? `Failed to load final grades (HTTP ${statusCode})`
-            : "Failed to load final grades"
-        );
-        console.error("[/api/registrar/final-grades] fetch failed:", err);
-      })
-      .finally(() => setLoading(false));
-  }, [pageSize]);
-
-  const handleApprove = async (id: string) => {
-    setApproving(id);
-    try {
-      await apiClient.post(`/api/grades/final-grades/${id}/registrar-approve`);
-      setGrades((prev) =>
-        prev.map((g) => (g.id === id ? { ...g, status: "approve" } : g))
-      );
-      // Keep the totals (across all pages) in sync with the optimistic update.
-      setPending((p) => Math.max(0, p - 1));
-      setApproved((a) => a + 1);
-    } catch (err) {
-      console.error("[/api/grades/final-grades/:id/registrar-approve] failed:", err);
-    } finally {
-      setApproving(null);
-    }
-  };
-
-  const filtered = grades.filter((g) => {
-    if (status !== "all" && g.status !== status) return false;
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      const hay = `${g.name} ${g.lrn} ${g.section}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
+  const { data, isPending } = useQuery({
+    queryKey: ["registrar-final-grades"],
+    queryFn: () =>
+      apiClient
+        .get<GradesResponse>("/api/registrar/final-grades", { params: { pageSize: 100 } })
+        .then((res) => res.data),
   });
 
-  const statusValue =
-    STATUS_OPTIONS.find((o) => o.value === status)?.label ?? "All statuses";
-
-  const pendingCount = filtered.filter((g) => g.status === "pending").length;
-
-  const handleApproveAll = async () => {
-    for (const g of filtered.filter((g) => g.status === "pending")) {
-      await handleApprove(g.id);
-    }
+  const stats = {
+    ready: data?.ready ?? 0,
+    complete: data?.complete ?? 0,
+    total: data?.total ?? 0,
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const goToPage = (p: number) => {
-    const next = Math.min(Math.max(p, 1), totalPages);
-    setPage(next);
-    setLoading(true);
-    load(next);
-  };
+  const allStudents = React.useMemo(() => data?.students ?? [], [data]);
 
-  // Reset to first page whenever the client-side status/search filter changes.
-  const onStatusChange = (value: StatusFilter) => {
-    setStatus(value);
-    setPage(1);
-    setLoading(true);
-    load(1);
-  };
-  const onQueryChange = (value: string) => {
-    setQuery(value);
-    setPage(1);
-    setLoading(true);
-    load(1);
-  };
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return allStudents.filter((s) => {
+      const matchesQuery =
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        s.lrn.toLowerCase().includes(q) ||
+        s.section.toLowerCase().includes(q) ||
+        s.subjects.some((sub) => sub.subject.toLowerCase().includes(q));
+      return matchesQuery;
+    });
+  }, [allStudents, query]);
+
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Final Grade Approvals</h1>
-          <p className={styles.subtitle}>
-            G11–12 locked finals awaiting registrar validation
-          </p>
-        </div>
-        <FinalGradesGetStartedModal />
-      </header>
+      <div className={styles.statsRow}>
+        {isPending ? (
+          <>
+            <Skeleton className={styles.statSkel} />
+            <Skeleton className={styles.statSkel} />
+            <Skeleton className={styles.statSkel} />
+          </>
+        ) : (
+          <>
+            <Stat
+              value={stats.ready}
+              label="Ready subjects"
+              hint="Adviser-approved final grades, viewable"
+            />
+            <Stat
+              value={stats.complete}
+              label="Complete sets"
+              hint="Students with a fully approved term"
+            />
+            <Stat value={stats.total} label="Total rows" hint="G11–12 grade entries" />
+          </>
+        )}
+      </div>
 
-      {error ? <p className={styles.error}>{error}</p> : null}
+      <hr className={styles.divider} />
 
-      {loading ? (
-        <div className={styles.skeletonWrap}>
-          <div className={styles.skelSummary}>
-            <Skeleton className={styles.skelKpi} />
-            <Skeleton className={styles.skelKpi} />
-            <Skeleton className={styles.skelKpi} />
+      <GradePipeline
+        counts={{
+          locked: data?.locked,
+          adviserApproved: data?.adviserApproved,
+          complete: data?.complete,
+        }}
+        isLoading={isPending}
+      />
+
+      <hr className={styles.divider} />
+
+      <div className={styles.listCard}>
+        <div className={styles.listHead}>
+          <div className={styles.listHeadText}>
+            <h2 className={styles.listTitle}>Final Grade Approvals</h2>
+            <p className={styles.listDesc}>
+              One row per student with a complete term — every subject adviser-approved.
+            </p>
           </div>
-
-          <div className={styles.skelToolbar}>
-            <Skeleton className={styles.skelSearch} />
-            <div className={styles.skelToolbarRight}>
-              <Skeleton className={styles.skelDropdown} />
-              <Skeleton className={styles.skelBtn} />
-              <Skeleton className={styles.skelCount} />
-            </div>
-          </div>
-
-          <div className={styles.skelTable}>
-            <div className={styles.skelTableHead}>
-              {Array.from({ length: 10 }).map((_, i) => (
-                <Skeleton key={i} className={styles.skelTh} />
-              ))}
-            </div>
-            {Array.from({ length: 6 }).map((_, r) => (
-              <div key={r} className={styles.skelRow}>
-                {Array.from({ length: 10 }).map((_, c) => (
-                  <Skeleton key={c} className={styles.skelTh} />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className={styles.summary}>
-            <KpiThreadsCard label="Pending" value={pending} hint="Locked finals to validate" />
-            <KpiThreadsCard label="Approved" value={approved} hint="Validated this session" />
-            <KpiThreadsCard label="Total" value={total} hint="G11–12 locked final grades" />
-          </div>
-
-          <div className={styles.toolbar}>
-            <div className={styles.search}>
-              <SearchIcon className={styles.searchIcon} />
+          <div className={styles.headerActions}>
+            <div className={styles.searchWrap}>
+              <Search className={styles.searchIcon} aria-hidden />
               <Input
-                placeholder="Search by LRN, name, or section"
+                className={styles.search}
+                placeholder="Search name, LRN, or subject…"
                 value={query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                className={styles.searchInput}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+                aria-label="Search final grades"
               />
             </div>
 
-            <div className={styles.toolbarRight}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className={styles.dropdown}>
-                    <span className={styles.dropdownValue}>{statusValue}</span>
-                    <ChevronDown className={styles.dropdownChevron} aria-hidden />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={styles.menu}>
-                  {STATUS_OPTIONS.map((o) => (
-                    <DropdownMenuItem
-                      key={o.value}
-                      className={styles.menuItem}
-                      onSelect={() => onStatusChange(o.value)}
-                    >
-                      {o.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
+            {query && (
               <Button
-                variant="default"
+                variant="ghost"
                 size="sm"
-                className={styles.approveAll}
-                disabled={pendingCount === 0 || approving !== null}
-                onClick={handleApproveAll}
+                className={styles.clearBtn}
+                onClick={() => {
+                  setQuery("");
+                  setPage(1);
+                }}
               >
-                {approving !== null ? "Approving…" : `Approve all (${pendingCount})`}
+                <X aria-hidden />
+                Clear
               </Button>
-
-              <Badge variant="outline" className={styles.countBadge}>
-                {filtered.length} shown
-              </Badge>
-            </div>
+            )}
           </div>
+        </div>
 
-          <FinalGradeApprovalTable
-            rows={filtered}
-            onApprove={handleApprove}
-            approving={approving}
-          />
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Section</th>
+              <th>Term</th>
+              <th className={styles.centerCell}>Overall Avg</th>
+              <th>Status</th>
+              <th className={styles.thAction} />
+            </tr>
+          </thead>
+          <tbody>
+            {isPending ? (
+              <SkeletonRows />
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className={styles.empty}>
+                  {query.trim()
+                    ? `No complete grade sets match "${query}".`
+                    : "No complete grade sets yet. Students appear once every subject is adviser-approved."}
+                </td>
+              </tr>
+            ) : (
+              pageRows.map((s) => (
+                <tr key={s.id} className={styles.tableRow}>
+                  <td>
+                    <div className={styles.studentCell}>
+                      <span className={styles.studentName}>{s.name}</span>
+                      <span className={styles.studentLrn}>{s.lrn}</span>
+                    </div>
+                  </td>
+                  <td className={styles.cell}>{formatSection(s.section)}</td>
+                  <td className={styles.cell}>{s.term}</td>
+                  <td className={`${styles.mono} ${styles.centerCell}`}>{s.overall}</td>
+                  <td>
+                    <Badge variant="default" className={styles.statusBadge}>
+                      Complete
+                    </Badge>
+                  </td>
+                  <td className={styles.actionCell}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <MoreHorizontal aria-hidden />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push(`/registrar/final-grades/${s.id}`)}>
+                          <Eye aria-hidden />
+                          View grade details
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem disabled>Registrar approval is not required</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
 
-          {totalPages > 1 ? (
-            <div className={styles.pager}>
-              <FinalGradesPagination page={page} pageCount={totalPages} onPageChange={goToPage} />
-            </div>
-          ) : null}
-        </>
-      )}
+        <div className={styles.footer}>
+          <span className={styles.footerInfo}>
+            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
+          </span>
+          <div className={styles.footerActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || filtered.length === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || filtered.length === 0}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <hr className={styles.divider} />
     </section>
+  );
+}
+
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <tr key={i}>
+          <td>
+            <div className={styles.studentCell}>
+              <Skeleton className={styles.skelName} />
+              <Skeleton className={styles.skelLrn} />
+            </div>
+          </td>
+          <td>
+            <Skeleton className={styles.skelCell} style={{ width: "60%" }} />
+          </td>
+          <td>
+            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
+          </td>
+          <td>
+            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
+          </td>
+          <td>
+            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
+          </td>
+          <td />
+        </tr>
+      ))}
+    </>
   );
 }

@@ -172,13 +172,23 @@ async function main() {
   const allStudents = studentProfiles.map((s) => ({ userId: s.userId, sectionId: s.sectionId, gradeLevel: s.gradeLevel }));
   const totalStudents = allStudents.length;
 
+  // G11–G12 students whose WHOLE term is adviser-approved (every subject locked and
+  // approved), so they surface as one complete per-student row in the registrar's
+  // Final Grade Approvals screen. ~70% of the band is seeded complete; the rest
+  // stay unlocked so partially-graded (not-yet-viewable) students also exist.
+  const completeStudentIds = new Set<string>();
+  for (const st of allStudents) {
+    if (st.gradeLevel !== "G11" && st.gradeLevel !== "G12") continue;
+    if (Math.random() < 0.7) completeStudentIds.add(st.userId);
+  }
+
   // Teacher assignments (per section/subject/term), grade components + assessments (per subject+term,
   // matching the schema unique (subjectId, termId, componentType)), and grades for all students in the grade.
   const teacherAssignments: { id: string; teacherId: string; subjectId: string; sectionId: string; termId: string }[] = [];
   const studentGrades: { id: string; assessmentId: string; studentId: string; rawScore: number; percentageScore: number }[] = [];
   const finalGrades: { id: string; studentId: string; subjectId: string; termId: string; computedAverage: number; transmutedGrade: number; remarks: Remarks; lockStatus: LockStatus }[] = [];
-  // G11–G12 final-grade ids that advisers have already "locked" (so the registrar
-  // Final Grade Approvals screen has live data to validate). ~60% of G11–G12 rows.
+  // G11–G12 final-grade ids that advisers have already approved (complete sets),
+  // so the registrar's Final Grade Approvals screen has live per-student rows.
   const lockedFinalGradeIds: string[] = [];
 
   const componentTypes: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"];
@@ -242,9 +252,9 @@ async function main() {
       for (const st of gradeStudents) {
         const avg = randInt(70, 98);
         const fgId = id("fg");
-        // Advisers approve ~60% of G11–G12 finals (adviser_approved), so they
-        // reach the registrar for final approval; all lower grades stay unlocked.
-        const shouldApprove = (grade === "G11" || grade === "G12") && Math.random() < 0.6;
+        // Advisers approve every subject of a G11–G12 student only when the whole
+        // term is complete (completeStudentIds); everyone else stays unlocked.
+        const shouldApprove = completeStudentIds.has(st.userId);
         if (shouldApprove) lockedFinalGradeIds.push(fgId);
         finalGrades.push({
           id: fgId,
