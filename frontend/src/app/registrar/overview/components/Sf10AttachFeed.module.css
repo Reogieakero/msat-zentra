@@ -1,0 +1,65 @@
+.card {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  gap: 1.5rem;
+  padding: 1rem 1rem 0.5rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.attachBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.content {
+  flex: 1;
+  overflow: hidden;
+  padding: 1rem 1rem 0.25rem;
+}
+
+.skelWrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.skelFolder {
+  height: 7.5rem;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.folderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  column-gap: 0.5rem;
+  row-gap: 1.5rem;
+}
+
+.feedItem {
+  display: flex;
+  justify-content: center;
+}
+
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 1rem 1rem;
+}

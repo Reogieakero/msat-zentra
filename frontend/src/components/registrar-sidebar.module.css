@@ -11,18 +11,7 @@
   background-color: var(--sidebar);
   color: var(--sidebar-foreground);
   border-right: 1px solid var(--sidebar-border);
-  transition: width 180ms ease-out;
   font-family: var(--font-sans), system-ui, sans-serif;
-}
-
-.collapsed {
-  width: 3rem;
-}
-
-.hoverElevated {
-  z-index: 35;
-  box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.25);
-  border-right-color: var(--sidebar-border);
 }
 
 /* Content / nav */
@@ -46,15 +35,6 @@
   padding: 0;
 }
 
-.submenu {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  list-style: none;
-  margin: 0.125rem 0 0.25rem;
-  padding: 0 0 0 1.75rem;
-}
-
 .subitem {
   height: 1.75rem;
   padding-inline: 0.5rem;
@@ -70,19 +50,6 @@
   margin-left: auto;
   align-self: center;
   display: block;
-  transition: transform 140ms ease-out;
-}
-
-.itemChevronOpen {
-  transform: rotate(180deg);
-}
-
-.collapsed .itemChevron {
-  display: none;
-}
-
-.collapsed .submenu {
-  display: none;
 }
 
 .item {
@@ -162,90 +129,6 @@
   font-size: 0.6875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-.collapsed .itemLabel,
-.collapsed .badge {
-  display: none;
-}
-
-.collapsed .item {
-  justify-content: center;
-  padding-inline: 0;
-}
-
-.collapsed .itemActive::before {
-  left: -0.5rem;
-}
-
-/* Footer / user */
-.footer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border-top: 1px solid var(--sidebar-border);
-}
-
-.settingsButton {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  width: 100%;
-  height: 2rem;
-  padding-inline: 0.5rem;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-md);
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--sidebar-foreground);
-  text-align: left;
-  cursor: pointer;
-  outline: none;
-  transition: background-color 140ms ease-out, color 140ms ease-out;
-}
-
-.settingsButton:hover {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
-}
-
-.settingsButton:focus-visible {
-  box-shadow: 0 0 0 2px var(--sidebar-ring);
-}
-
-.settingsMenu {
-  width: 12rem;
-}
-
-.settingsItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.settingsItemLabel {
-  flex: 1;
-  min-width: 0;
-}
-
-.settingsCheck {
-  width: 1rem;
-  height: 1rem;
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
-.collapsed .settingsButton {
-  justify-content: center;
-  padding-inline: 0;
-}
-
-.collapsed .settingsButton .itemLabel {
-  display: none;
 }
 
 /* Mobile drawer */

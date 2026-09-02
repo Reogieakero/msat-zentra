@@ -38,25 +38,21 @@ router.get(
     try {
       const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
 
-      // pendingAccounts: total pending users awaiting account approval.
-      const pendingAccounts = await prisma.user.count({
-        where: { status: "pending" },
-      });
-
       // pendingAdviserAccess: adviser staff accounts whose User is still pending.
       const pendingAdviserAccess = await prisma.staffProfile.count({
         where: { isAdviser: true, user: { status: "pending" } },
       });
 
       // lockedFinalsAwaiting: adviser-approved final grades for G11–12 students
-      // that are awaiting registrar final approval.
+      // still awaiting registrar final approval. Registrar approval sets only
+      // finalizedAt (lockStatus stays adviser_approved), so finalized rows must
+      // be excluded here to keep finalized + awaiting + draft = total.
       const lockedFinalsAwaiting = await prisma.finalGrade.count({
-        where: { lockStatus: "adviser_approved", student: { gradeLevel: { in: GRADE_BAND } } },
-      });
-
-      // sf10Released: released SF10 records for G11–12 students.
-      const sf10Released = await prisma.sf10Record.count({
-        where: { status: "released", student: { gradeLevel: { in: GRADE_BAND } } },
+        where: {
+          lockStatus: "adviser_approved",
+          finalizedAt: null,
+          student: { gradeLevel: { in: GRADE_BAND } },
+        },
       });
 
       // sections: active-year G11–12 sections.
@@ -76,12 +72,44 @@ router.get(
         where: { student: { gradeLevel: { in: GRADE_BAND } } },
       });
 
+      // finalsFinalized / sf10ByStatus / sectionsByGrade / subjectsByGrade feed
+      // the overview header's KPI charts (donuts + per-grade bars).
+      const [finalsFinalized, sf10ByStatus, sectionsGrouped, subjectsGrouped] =
+        await Promise.all([
+          prisma.finalGrade.count({
+            where: {
+              student: { gradeLevel: { in: GRADE_BAND } },
+              finalizedAt: { not: null },
+            },
+          }),
+          prisma.sf10Record.groupBy({
+            by: ["status"],
+            where: { student: { gradeLevel: { in: GRADE_BAND } } },
+            _count: { _all: true },
+          }),
+          prisma.section.groupBy({
+            by: ["gradeLevel"],
+            where: { gradeLevel: { in: GRADE_BAND }, schoolYear: { isActive: true } },
+            _count: { _all: true },
+          }),
+          prisma.subject.groupBy({
+            by: ["gradeLevel"],
+            where: { gradeLevel: { in: GRADE_BAND } },
+            _count: { _all: true },
+          }),
+        ]);
+
+      const sf10Total = sf10ByStatus.reduce((sum, r) => sum + r._count._all, 0);
+      const sf10Released = sf10ByStatus.find((r) => r.status === "released")?._count._all ?? 0;
+      const sf10Available = sf10ByStatus.find((r) => r.status === "available")?._count._all ?? 0;
+      const sf10Attach = sf10ByStatus.find((r) => r.status === "attach")?._count._all ?? 0;
+
       // latestAttachments: most recent SF10 records in "attach" status (G11–12).
       // Sf10Record has no updatedAt, so order by validatedAt (nullable) desc.
       const latestAttachRows = await prisma.sf10Record.findMany({
         where: { status: "attach", student: { gradeLevel: { in: GRADE_BAND } } },
         orderBy: { validatedAt: "desc" },
-        take: 7,
+        take: 100,
         select: {
           validatedAt: true,
           student: {
@@ -103,6 +131,7 @@ router.get(
         select: {
           lrn: true,
           gradeLevel: true,
+          section: { select: { name: true } },
           user: { select: { fullName: true } },
         },
       });
@@ -110,6 +139,7 @@ router.get(
         student: s.user.fullName,
         lrn: s.lrn,
         grade: gradeLabel(s.gradeLevel),
+        section: s.section?.name ?? "—",
       }));
 
       // pendingStudents: G11–12 students whose User is still pending (newly
@@ -149,6 +179,10 @@ router.get(
         grade: gradeLabel(s.gradeLevel),
       }));
 
+      // pendingAccounts: account requests the registrar can action — G11–12 student
+      // enrollments awaiting approval plus adviser-access requests.
+      const pendingAccounts = pendingStudents.length + pendingAdviserAccess;
+
       res.json({
         pendingAccounts,
         pendingAdviserAccess,
@@ -161,6 +195,26 @@ router.get(
         missingSf10,
         pendingStudents,
         sf10Students,
+        finals: {
+          total: reportCards,
+          finalized: finalsFinalized,
+          awaiting: lockedFinalsAwaiting,
+          draft: reportCards - finalsFinalized - lockedFinalsAwaiting,
+        },
+        sf10: {
+          total: sf10Total,
+          released: sf10Released,
+          available: sf10Available,
+          attach: sf10Attach,
+        },
+        sectionsByGrade: GRADE_BAND.map((g) => ({
+          grade: gradeLabel(g),
+          count: sectionsGrouped.find((r) => r.gradeLevel === g)?._count._all ?? 0,
+        })),
+        subjectsByGrade: GRADE_BAND.map((g) => ({
+          grade: gradeLabel(g),
+          count: subjectsGrouped.find((r) => r.gradeLevel === g)?._count._all ?? 0,
+        })),
       });
     } catch (e) {
       next(e);
@@ -185,12 +239,21 @@ router.get(
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
 
-      const where = {
+      const filter = (req.query.filter as string) ?? "all";
+
+      const whereBase = {
         student: { gradeLevel: { in: GRADE_BAND } },
         lockStatus: "adviser_approved" as const,
       };
 
-      const [rows, total, counts] = await Promise.all([
+      const where =
+        filter === "pending"
+          ? { ...whereBase, finalizedAt: null }
+          : filter === "approve"
+            ? { ...whereBase, finalizedAt: { not: null } }
+            : whereBase;
+
+      const [rows, total, pendingTotal, approvedTotal] = await Promise.all([
         prisma.finalGrade.findMany({
           where,
           include: {
@@ -205,23 +268,26 @@ router.get(
             subject: { select: { name: true } },
             term: { select: { termNumber: true, schoolYear: { select: { name: true } } } },
           },
-          orderBy: [{ termId: "asc" }, { subjectId: "asc" }, { id: "asc" }],
+          orderBy:
+            filter === "pending"
+              ? [
+                  { adviserApprovedAt: "desc" },
+                  { termId: "asc" },
+                  { subjectId: "asc" },
+                  { id: "asc" },
+                ]
+              : [{ termId: "asc" }, { subjectId: "asc" }, { id: "asc" }],
           skip: (page - 1) * pageSize,
           take: pageSize,
         }),
         prisma.finalGrade.count({ where }),
-        prisma.finalGrade.groupBy({
-          by: ["finalizedAt"],
-          where,
-          _count: { _all: true },
+        prisma.finalGrade.count({
+          where: { ...whereBase, finalizedAt: null },
+        }),
+        prisma.finalGrade.count({
+          where: { ...whereBase, finalizedAt: { not: null } },
         }),
       ]);
-
-      // Total counts across ALL pages (not the current page slice).
-      const approvedTotal = counts
-        .filter((c) => c.finalizedAt !== null)
-        .reduce((sum, c) => sum + c._count._all, 0);
-      const pendingTotal = total - approvedTotal;
 
       const grades = rows.map((r) => ({
         id: r.id,
@@ -286,10 +352,14 @@ router.get(
       const statusByLrn = new Map<string, string>();
       for (const pr of profiles) statusByLrn.set(pr.lrn, pr.user.status);
 
-      const groups = new Map<string, { label: string; withAccount: number; pending: number }>();
+      const groups = new Map<
+        string,
+        { label: string; grade: string; withAccount: number; pending: number }
+      >();
       for (const r of roster) {
         const label = `${gradeLabel(r.gradeLevel)} · ${r.section?.name ?? "Unsectioned"}`;
-        if (!groups.has(label)) groups.set(label, { label, withAccount: 0, pending: 0 });
+        if (!groups.has(label))
+          groups.set(label, { label, grade: gradeLabel(r.gradeLevel), withAccount: 0, pending: 0 });
         const g = groups.get(label)!;
         const status = statusByLrn.get(r.lrn);
         if (status === "active") g.withAccount++;
@@ -305,7 +375,8 @@ router.get(
       });
       for (const p of pendingUsers) {
         const label = `${gradeLabel(p.gradeLevel)} · ${p.section?.name ?? "Unsectioned"}`;
-        if (!groups.has(label)) groups.set(label, { label, withAccount: 0, pending: 0 });
+        if (!groups.has(label))
+          groups.set(label, { label, grade: gradeLabel(p.gradeLevel), withAccount: 0, pending: 0 });
         groups.get(label)!.pending++;
       }
 

@@ -9,13 +9,8 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  margin-left: 3rem;
-  margin-top: 3rem;
-  transition: margin-left 180ms ease-out;
-}
-
-.shellExpanded {
   margin-left: 13rem;
+  margin-top: 3rem;
 }
 
 .main {
@@ -205,12 +200,6 @@
   margin-left: auto;
   font-size: 0.75rem;
   color: var(--muted-foreground);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shell {
-    transition: none;
-  }
 }
 
 /* Mobile: 8px side gutters, 1rem gap below the navbar */

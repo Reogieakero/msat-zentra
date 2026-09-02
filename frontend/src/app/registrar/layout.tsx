@@ -4,8 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme, useFont } from "@/components/providers";
-import { RegistrarSidebar, type SidebarMode } from "@/components/registrar-sidebar";
-import { SidebarModeContext } from "@/components/sidebar-mode";
+import { RegistrarSidebar } from "@/components/registrar-sidebar";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -23,41 +22,12 @@ import {
 import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
 import styles from "./registrar.module.css";
 
-const STORAGE_KEY = "zentra.sidebar.mode";
-
 function RegistrarShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { open, setOpen, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
+  const { openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
-  const [hovered, setHovered] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [mode, setMode] = React.useState<SidebarMode>(() => {
-    if (typeof window === "undefined") return "hover";
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved === "hover" || saved === "expanded" || saved === "collapsible") {
-      return saved;
-    }
-    return "hover";
-  });
-
-  const [mounted, setMounted] = React.useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard mounted flag to avoid hydration mismatch
-  React.useEffect(() => setMounted(true), []);
-
-  React.useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, mode);
-  }, [mode]);
-
-  const hovering = mounted && mode === "hover" && hovered && !open;
-  const expanded =
-    mounted &&
-    (open || (mode === "hover" && hovered && !open) || (mode === "expanded" && !isMobile));
-
-  const handleModeChange = (next: SidebarMode) => {
-    setMode(next);
-    setOpen(next === "expanded");
-  };
 
   const isDark = resolvedTheme === "dark";
 
@@ -198,22 +168,10 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <RegistrarSidebar
-        expanded={expanded}
-        hovering={hovering}
-        onHoverChange={setHovered}
-        mode={mode}
-        onModeChange={handleModeChange}
-      />
-      <SidebarModeContext.Provider value={mode}>
-        <div
-          className={`${styles.shell} ${
-            mounted && mode === "expanded" && !isMobile ? styles.shellExpanded : ""
-          }`}
-        >
-          <main className={styles.main}>{children}</main>
-        </div>
-      </SidebarModeContext.Provider>
+      <RegistrarSidebar />
+      <div className={styles.shell}>
+        <main className={styles.main}>{children}</main>
+      </div>
     </div>
   );
 }
