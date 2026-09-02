@@ -13,6 +13,10 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Prisma 7 and some test suites construct clients at load time and only
+      # require the variable to be present (no connection is made in CI).
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zentra
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
