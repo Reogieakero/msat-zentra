@@ -8,12 +8,12 @@ import { SubjectOverviewGrid } from "./components/SubjectOverviewGrid";
 import { SubjectFormDialog } from "./components/SubjectFormDialog";
 import { SectionFormDialog } from "./components/SectionFormDialog";
 import { fetchAcademicsOverview, fetchTeachers } from "./api";
-import type { AcademicsOverview } from "./api";
+import type { AcademicsOverview, SubjectOverview } from "./api";
 import type { Subject, Teacher } from "./data";
 import styles from "./academics.module.css";
 
-function toSubjectShape(s: { id: string; code: string; name: string; gradeLevel: number; active: boolean; enrolled: number }): Subject {
-  return { id: s.id, code: s.code, name: s.name, gradeLevel: s.gradeLevel as 11 | 12, active: s.active, enrolled: s.enrolled, passed: 0, failed: 0 };
+function toSubjectShape(s: SubjectOverview): Subject {
+  return { id: s.id, code: s.code, name: s.name, gradeLevel: s.gradeLevel, active: s.active, enrolled: s.enrolled, passed: 0, failed: 0 };
 }
 
 export default function RegistrarAcademicsPage() {
@@ -59,6 +59,11 @@ export default function RegistrarAcademicsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const subjects = React.useMemo<SubjectOverview[]>(
+    () => (Array.isArray(overview?.subjects) ? overview!.subjects : []),
+    [overview],
+  );
+
   const openSectionDialog = React.useCallback(async () => {
     setSectionDialogOpen(true);
     if (teachers.length === 0) {
@@ -87,7 +92,7 @@ export default function RegistrarAcademicsPage() {
             Retry
           </button>
         </div>
-      ) : overview && overview.subjects.length === 0 && !loading ? (
+      ) : subjects.length === 0 && !loading ? (
         <div className={styles.empty}>
           <span className={styles.emptyIcon}>
             <LayoutGrid className={styles.emptyIconSvg} />
@@ -98,7 +103,7 @@ export default function RegistrarAcademicsPage() {
         <SubjectOverviewGrid
           schoolYear={overview?.schoolYear ?? null}
           term={overview?.term ?? null}
-          subjects={overview?.subjects ?? []}
+          subjects={subjects}
           loading={loading}
         />
       )}
@@ -115,7 +120,7 @@ export default function RegistrarAcademicsPage() {
       <SectionFormDialog
         open={sectionDialogOpen}
         section={null}
-        subjects={(overview?.subjects ?? []).map(toSubjectShape)}
+        subjects={subjects.map(toSubjectShape)}
         teachers={teachers}
         onOpenChange={setSectionDialogOpen}
         onSave={() => {
