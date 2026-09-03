@@ -7,9 +7,10 @@ import { ConfigureSection } from "./components/ConfigureSection";
 import { SubjectOverviewGrid } from "./components/SubjectOverviewGrid";
 import { SubjectFormDialog } from "./components/SubjectFormDialog";
 import { SectionFormDialog } from "./components/SectionFormDialog";
-import { fetchAcademicsOverview, fetchTeachers } from "./api";
-import type { AcademicsOverview, SubjectOverview } from "./api";
+import { fetchAcademicsOverview, fetchTeachers, fetchTeachersWithLoads } from "./api";
+import type { AcademicsOverview, SubjectOverview, TeacherWithLoads } from "./api";
 import type { Subject, Teacher } from "./data";
+import { TeachersSection } from "./components/TeachersSection";
 import styles from "./academics.module.css";
 
 function toSubjectShape(s: SubjectOverview): Subject {
@@ -23,6 +24,8 @@ export default function RegistrarAcademicsPage() {
   const [subjectDialogOpen, setSubjectDialogOpen] = React.useState(false);
   const [sectionDialogOpen, setSectionDialogOpen] = React.useState(false);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
+  const [teacherLoads, setTeacherLoads] = React.useState<TeacherWithLoads[]>([]);
+  const [teachersLoading, setTeachersLoading] = React.useState(true);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -39,6 +42,23 @@ export default function RegistrarAcademicsPage() {
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetchTeachersWithLoads()
+      .then((res) => {
+        if (!cancelled) setTeacherLoads(res);
+      })
+      .catch(() => {
+        if (!cancelled) setTeacherLoads([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTeachersLoading(false);
       });
     return () => {
       cancelled = true;
@@ -107,6 +127,8 @@ export default function RegistrarAcademicsPage() {
           loading={loading}
         />
       )}
+
+      <TeachersSection teachers={teacherLoads} loading={teachersLoading} />
 
       <SubjectFormDialog
         open={subjectDialogOpen}

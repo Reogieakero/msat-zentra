@@ -100,6 +100,64 @@ export async function fetchTeachers(signal?: AbortSignal): Promise<Teacher[]> {
   return res.data.teachers;
 }
 
+export interface TeacherLoad {
+  subjectId: string;
+  code: string;
+  name: string;
+  gradeLevel: 11 | 12;
+  sections: string[];
+  terms: number[];
+}
+
+export interface TeacherWithLoads {
+  id: string;
+  name: string;
+  loads: TeacherLoad[];
+}
+
+export async function fetchTeachersWithLoads(signal?: AbortSignal): Promise<TeacherWithLoads[]> {
+  const res = await withAbort(
+    apiClient.get<{ teachers: TeacherWithLoads[] }>("/api/registrar/academics/teachers", { signal }),
+    signal,
+  );
+  return res.data.teachers;
+}
+
+export interface TeacherAssignment {
+  id: string;
+  subjectId: string;
+  code: string;
+  name: string;
+  gradeLevel: 11 | 12;
+  section: string;
+  sectionId: string;
+  term: number;
+}
+
+export interface TeacherAdviser {
+  id: string;
+  name: string;
+  gradeLevel: 11 | 12;
+}
+
+export interface TeacherDetail {
+  id: string;
+  name: string;
+  adviser: TeacherAdviser[];
+  assignments: TeacherAssignment[];
+}
+
+export async function fetchTeacher(
+  id: string,
+  signal?: AbortSignal,
+): Promise<{ teacher: TeacherDetail }> {
+  const res = await withAbort(
+    apiClient.get<{ teacher: TeacherDetail }>(`/api/registrar/academics/teachers/${id}`, { signal }),
+    signal,
+  );
+  return res.data;
+}
+
 export async function assignTeacher(input: {
   sectionId: string;
   subjectId: string;

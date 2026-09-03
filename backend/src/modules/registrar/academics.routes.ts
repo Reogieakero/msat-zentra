@@ -438,8 +438,128 @@ router.get(
         orderBy: { fullName: "asc" },
         select: { id: true, fullName: true },
       });
+
+      // Teacher subject loads for the active school year, within the registrar
+      // grade band (G11/G12). Grouped per teacher + subject, listing the
+      // sections each subject is taught in and the term(s).
+      const loads = await prisma.teacherSubjectAssignment.findMany({
+        where: {
+          section: { schoolYear: { isActive: true }, gradeLevel: { in: GRADE_BAND } },
+        },
+        select: {
+          teacherId: true,
+          subjectId: true,
+          subject: { select: { code: true, name: true, gradeLevel: true } },
+          section: { select: { id: true, name: true } },
+          term: { select: { termNumber: true } },
+        },
+        orderBy: [{ subject: { code: "asc" } }, { section: { name: "asc" } }],
+      });
+
+      const byTeacher = new Map<
+        string,
+        Map<string, { subjectId: string; code: string; name: string; gradeLevel: number; sections: string[]; terms: number[] }>
+      >();
+      for (const l of loads) {
+        const subjectKey = l.subjectId;
+        let subjectMap = byTeacher.get(l.teacherId);
+        if (!subjectMap) {
+          subjectMap = new Map();
+          byTeacher.set(l.teacherId, subjectMap);
+        }
+        const grade = l.subject.gradeLevel === "G11" ? 11 : 12;
+        let entry = subjectMap.get(subjectKey);
+        if (!entry) {
+          entry = {
+            subjectId: l.subjectId,
+            code: l.subject.code,
+            name: l.subject.name,
+            gradeLevel: grade,
+            sections: [],
+            terms: [],
+          };
+          subjectMap.set(subjectKey, entry);
+        }
+        if (!entry.sections.includes(l.section.name)) entry.sections.push(l.section.name);
+        if (!entry.terms.includes(l.term.termNumber)) entry.terms.push(l.term.termNumber);
+      }
+
       res.json({
-        teachers: teachers.map((t) => ({ id: t.id, name: t.fullName })),
+        teachers: teachers.map((t) => ({
+          id: t.id,
+          name: t.fullName,
+          loads: Array.from((byTeacher.get(t.id) ?? new Map()).values()),
+        })),
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Single teacher with their full workload/assignment rows for the active
+// school year within the registrar grade band. One row per section+term.
+router.get(
+  "/teachers/:id",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "academics"] }),
+  async (req, res, next) => {
+    try {
+      const userId = String(req.params.id);
+      const teacher = await prisma.user.findFirst({
+        where: { id: userId, role: { in: ["subject_teacher", "adviser"] }, status: "active" },
+        select: { id: true, fullName: true },
+      });
+      if (!teacher) throw new AppError(404, "TEACHER_NOT_FOUND", "Teacher not found");
+
+      // Advisory section(s) the teacher leads, distinct from subject loads.
+      // Only for the active school year within the registrar grade band.
+      const advisory = await prisma.section.findMany({
+        where: {
+          adviserId: userId,
+          schoolYear: { isActive: true },
+          gradeLevel: { in: GRADE_BAND },
+        },
+        select: { id: true, name: true, gradeLevel: true },
+        orderBy: { name: "asc" },
+      });
+
+      const assignments = await prisma.teacherSubjectAssignment.findMany({
+        where: {
+          teacherId: userId,
+          section: { schoolYear: { isActive: true }, gradeLevel: { in: GRADE_BAND } },
+        },
+        select: {
+          id: true,
+          subjectId: true,
+          subject: { select: { code: true, name: true, gradeLevel: true } },
+          section: { select: { id: true, name: true } },
+          term: { select: { termNumber: true } },
+        },
+        orderBy: [{ subject: { code: "asc" } }, { section: { name: "asc" } }, { term: { termNumber: "asc" } }],
+      });
+
+      res.json({
+        teacher: {
+          id: teacher.id,
+          name: teacher.fullName,
+          adviser: advisory.map((s) => ({
+            id: s.id,
+            name: s.name,
+            gradeLevel: s.gradeLevel === "G11" ? 11 : 12,
+          })),
+          assignments: assignments.map((a) => ({
+            id: a.id,
+            subjectId: a.subjectId,
+            code: a.subject.code,
+            name: a.subject.name,
+            gradeLevel: a.subject.gradeLevel === "G11" ? 11 : 12,
+            section: a.section.name,
+            sectionId: a.section.id,
+            term: a.term.termNumber,
+          })),
+        },
       });
     } catch (e) {
       next(e);

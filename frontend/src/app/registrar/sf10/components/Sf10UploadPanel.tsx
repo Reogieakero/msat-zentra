@@ -1,69 +1,40 @@
 "use client";
 
 import * as React from "react";
-import { UploadCloud, FileUp, Paperclip } from "lucide-react";
+import { UploadCloud, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
-import { fetchRegistrarStudents, type UploadableStudent } from "../api";
 import styles from "../sf10.module.css";
 
-export function Sf10UploadPanel({
-  onUpload,
-  uploading,
-}: {
-  onUpload: (studentId: string, file: File) => Promise<void>;
-  uploading: boolean;
-}) {
+export function Sf10UploadPanel({ onUpload }: { onUpload: (file: File) => Promise<void> }) {
   const [dragging, setDragging] = React.useState(false);
   const [file, setFile] = React.useState<File | null>(null);
-  const [studentId, setStudentId] = React.useState<string>("");
-  const [students, setStudents] = React.useState<UploadableStudent[]>([]);
-  const [loadingStudents, setLoadingStudents] = React.useState(true);
+  const [uploading, setUploading] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    fetchRegistrarStudents(controller.signal)
-      .then(setStudents)
-      .catch((err: unknown) => {
-        if ((err as { code?: string })?.code === "ERR_CANCELED") return;
-        console.error("[/api/registrar/students] failed:", err);
-      })
-      .finally(() => setLoadingStudents(false));
-    return () => controller.abort();
-  }, []);
 
   const handleFiles = (files: FileList | null) => {
     if (files && files.length > 0) setFile(files[0]);
   };
 
-  const canSubmit = !!file && !!studentId && !uploading;
+  const canSubmit = !!file && !uploading;
 
   const handleUpload = async () => {
     if (!canSubmit || !file) return;
+    setUploading(true);
     try {
-      await onUpload(studentId, file);
-      const student = students.find((s) => s.studentId === studentId);
+      await onUpload(file);
       toast.success({
         title: "SF10 uploaded",
-        description: `${file.name} attached for ${student?.fullName ?? "student"}.`,
+        description: `${file.name} attached to the registry.`,
       });
       setFile(null);
-      setStudentId("");
       if (inputRef.current) inputRef.current.value = "";
     } catch {
       toast.error({ title: "Upload failed", description: "Could not attach the SF10 file." });
+    } finally {
+      setUploading(false);
     }
   };
-
-  const selectedStudent = students.find((s) => s.studentId === studentId);
 
   return (
     <div className={styles.panel}>
@@ -95,52 +66,23 @@ export function Sf10UploadPanel({
           onChange={(e) => handleFiles(e.target.files)}
         />
         <span className={styles.dropIcon}>
-          {file ? <FileUp /> : <UploadCloud />}
+          <UploadCloud />
         </span>
-        <p className={styles.dropTitle}>
-          {file ? file.name : "Drag & drop SF10 file"}
-        </p>
+        <p className={styles.dropTitle}>{file ? file.name : "Drag & drop SF10 file"}</p>
         <p className={styles.dropHint}>PDF, JPG or PNG · or click to browse</p>
       </div>
 
       <div className={styles.uploadBody}>
-        <div>
-          <label className={styles.fieldLabel} htmlFor="sf10-student">
-            Student
-          </label>
-          <Select value={studentId} onValueChange={setStudentId}>
-            <SelectTrigger id="sf10-student" className={styles.search}>
-              <SelectValue
-                placeholder={loadingStudents ? "Loading students…" : "Select student by LRN"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {students.map((s) => (
-                <SelectItem key={s.studentId} value={s.studentId}>
-                  {s.fullName} · {s.lrn}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedStudent ? (
-            <p className={styles.fieldHint}>
-              {selectedStudent.gradeLevel} · {selectedStudent.section}
-            </p>
-          ) : null}
-        </div>
-
         <div className={styles.uploadActions}>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className={styles.uploadActions}
             onClick={() => {
               setFile(null);
-              setStudentId("");
               if (inputRef.current) inputRef.current.value = "";
             }}
-            disabled={!file && !studentId}
+            disabled={!file}
           >
             Clear
           </Button>
