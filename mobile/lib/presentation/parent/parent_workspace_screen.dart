@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../shared/widgets/sync_status_pill.dart';
 import '../shared/dev_offline_drawer.dart';
 import '../shared/widgets/custom_card.dart';
 import 'widgets/attendance_heatmap.dart';
 import 'widgets/quarterly_report_card.dart';
 
-class ParentWorkspaceScreen extends StatelessWidget {
+class ParentWorkspaceScreen extends ConsumerWidget {
   const ParentWorkspaceScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -29,7 +31,12 @@ class ParentWorkspaceScreen extends StatelessWidget {
         ),
         actions: [
           const Center(child: SyncStatusPill()),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.logout, size: 20, color: AppColors.textMuted),
+            tooltip: 'Sign Out',
+            onPressed: () => ref.read(authProvider.notifier).logout(),
+          ),
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.tune, color: AppColors.primaryEmerald),

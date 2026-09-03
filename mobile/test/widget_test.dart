@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zentra_mobile/main.dart';
 
 void main() {
-  testWidgets('Zentra mobile app loads successfully', (WidgetTester tester) async {
+  testWidgets('Zentra mobile app loads login screen successfully', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: ZentraMobileApp(),
@@ -12,6 +12,6 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Zentra Teacher Workspace'), findsOneWidget);
+    expect(find.text('Zentra Mobile'), findsOneWidget);
   });
 }

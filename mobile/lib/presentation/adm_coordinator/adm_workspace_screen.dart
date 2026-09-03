@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../shared/widgets/sync_status_pill.dart';
 import '../shared/dev_offline_drawer.dart';
 import 'widgets/adm_kanban_board.dart';
 import 'widgets/adm_device_tracker.dart';
 
-class AdmWorkspaceScreen extends StatefulWidget {
+class AdmWorkspaceScreen extends ConsumerStatefulWidget {
   const AdmWorkspaceScreen({super.key});
 
   @override
-  State<AdmWorkspaceScreen> createState() => _AdmWorkspaceScreenState();
+  ConsumerState<AdmWorkspaceScreen> createState() => _AdmWorkspaceScreenState();
 }
 
-class _AdmWorkspaceScreenState extends State<AdmWorkspaceScreen> with SingleTickerProviderStateMixin {
+class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -47,7 +49,12 @@ class _AdmWorkspaceScreenState extends State<AdmWorkspaceScreen> with SingleTick
         ),
         actions: [
           const Center(child: SyncStatusPill()),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.logout, size: 20, color: AppColors.textMuted),
+            tooltip: 'Sign Out',
+            onPressed: () => ref.read(authProvider.notifier).logout(),
+          ),
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.tune, color: AppColors.primaryEmerald),
