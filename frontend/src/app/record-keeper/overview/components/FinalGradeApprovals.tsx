@@ -41,12 +41,12 @@ interface FinalGradesResponse {
 
 function fetchViewableFinals() {
   return apiClient
-    .get<FinalGradesResponse>("/api/registrar/final-grades", {
+    .get<FinalGradesResponse>("/api/record-keeper/final-grades", {
       params: { page: 1, pageSize: FETCH_PAGE_SIZE },
     })
     .then((res) => res.data)
     .catch((err) => {
-      console.error("[/api/registrar/final-grades] fetch failed:", err);
+      console.error("[/api/record-keeper/final-grades] fetch failed:", err);
       throw err;
     });
 }

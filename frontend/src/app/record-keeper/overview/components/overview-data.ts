@@ -51,6 +51,6 @@ export interface RecordKeeperOverviewData {
 }
 
 export async function fetchRecordKeeperOverview(): Promise<RecordKeeperOverviewData> {
-  const { data } = await apiClient.get<RecordKeeperOverviewData>("/api/registrar/overview");
+  const { data } = await apiClient.get<RecordKeeperOverviewData>("/api/record-keeper/overview");
   return data;
 }

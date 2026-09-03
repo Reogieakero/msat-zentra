@@ -39,10 +39,10 @@ interface BreakdownResponse {
 
 function fetchBreakdown() {
   return apiClient
-    .get<BreakdownResponse>("/api/registrar/account-breakdown")
+    .get<BreakdownResponse>("/api/record-keeper/account-breakdown")
     .then((res) => res.data)
     .catch((err) => {
-      console.error("[/api/registrar/account-breakdown] fetch failed:", err);
+      console.error("[/api/record-keeper/account-breakdown] fetch failed:", err);
       throw err;
     });
 }
