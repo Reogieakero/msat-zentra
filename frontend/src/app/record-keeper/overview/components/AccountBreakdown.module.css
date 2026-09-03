@@ -1,0 +1,248 @@
+.card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.pendingBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1rem 1rem;
+}
+
+.skelWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skelTiles {
+  height: 4.5rem;
+  border-radius: var(--radius-lg);
+}
+
+.skelGrade {
+  height: 22rem;
+  border-radius: var(--radius-lg);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tileLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.tileValue {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.gradeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.gradeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.gradeHead {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.gradeIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background-color: color-mix(in oklch, var(--foreground), transparent 96%);
+  color: var(--foreground);
+}
+
+.gradeIconSvg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.gradeBody {
+  min-width: 0;
+}
+
+.gradeTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  line-height: 1.3;
+}
+
+.gradeMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gradeMetaItem {
+  position: relative;
+  display: inline-flex;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.gradeMetaItem:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -0.875rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--foreground), transparent 80%);
+  transform: translateY(-50%);
+}
+
+.gauge {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+
+.gaugeWrap {
+  height: 250px;
+  width: 100%;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.legendEntry {
+  display: flex;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.legendSwatch {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: 0.375rem;
+  border-radius: 9999px;
+}
+
+.legendBody {
+  min-width: 0;
+}
+
+.legendLine {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legendPercent {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.legendLabel {
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.legendCount {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.footnote {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 640px) {
+  .gauge {
+    grid-template-columns: 1fr;
+  }
+
+  .gaugeWrap {
+    height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gaugeWrap {
+    height: 200px;
+  }
+}

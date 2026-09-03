@@ -26,6 +26,16 @@ function gradeLabel(gradeLevel: string): string {
   return GRADE_LABELS[gradeLevel] ?? gradeLevel;
 }
 
+const GRADE_BAND_7_10: GradeLevel[] = ["G7", "G8", "G9", "G10"];
+const GRADE_BAND_11_12: GradeLevel[] = ["G11", "G12"];
+
+// Authority is grade-banded by role: Record Keeper owns junior high (7–10),
+// Registrar owns senior high (11–12). Same shape for both so one endpoint
+// serves each role with data scoped to its own band.
+function roleGradeBand(role?: string): GradeLevel[] {
+  return role === "record_keeper" ? GRADE_BAND_7_10 : GRADE_BAND_11_12;
+}
+
 // Registrar overview (G11–G12 authority only). Every query is scoped to the
 // registrar grade band so counts/lists never leak lower-grade data. All values
 // are computed live from the database — no mocked data.
@@ -34,9 +44,9 @@ router.get(
   requireAuth,
   requireRole("registrar", "record_keeper"),
   cache({ tags: ["registrar", "overview"] }),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
+      const GRADE_BAND = roleGradeBand(req.user?.role);
 
       // pendingAdviserAccess: adviser staff accounts whose User is still pending.
       const pendingAdviserAccess = await prisma.staffProfile.count({
@@ -281,7 +291,7 @@ router.get(
   cache({ tags: ["registrar", "academics", "overview"] }),
   async (req, res, next) => {
     try {
-      const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
+      const GRADE_BAND = roleGradeBand(req.user?.role);
 
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
@@ -428,9 +438,9 @@ router.get(
   requireAuth,
   requireRole("registrar", "record_keeper"),
   cache({ tags: ["registrar", "accounts"] }),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      const GRADE_BAND: GradeLevel[] = ["G11", "G12"];
+      const GRADE_BAND = roleGradeBand(req.user?.role);
 
       const activeYear = await prisma.schoolYear.findFirst({
         where: { isActive: true },
