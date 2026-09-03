@@ -129,11 +129,7 @@ function SidebarNav({ nav }: { nav: NavGroup[] }) {
 
   return (
     <ul className={styles.menu}>
-      {nav.map((group) => (
-        <React.Fragment key={group.label}>
-          {group.items.map((item) => renderItem(item))}
-        </React.Fragment>
-      ))}
+      {nav.flatMap((group) => group.items.map((item) => renderItem(item)))}
     </ul>
   );
 }
