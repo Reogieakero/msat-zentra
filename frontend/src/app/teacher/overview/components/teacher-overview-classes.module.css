@@ -1,0 +1,13 @@
+.content {
+  padding: 0;
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.cellSubject {
+  font-weight: 500;
+}
