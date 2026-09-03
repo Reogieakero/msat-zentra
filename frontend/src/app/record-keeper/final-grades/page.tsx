@@ -17,12 +17,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import styles from "./final-grades.module.css";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { GradePipeline } from "./GradePipeline";
+import styles from "./final-grades.module.css";
 
 interface SubjectRow {
   id: string;
   subject: string;
+  teacher: string;
   computedAverage: number;
   transmutedGrade: number;
   remarks: string;
@@ -41,16 +43,20 @@ interface StudentRow {
   status: "approved";
 }
 
-interface GradesResponse {
+interface RecordKeeperFinalGradesResponse {
   students: StudentRow[];
-  total: number;
-  ready: number;
-  complete: number;
-  locked: number;
-  adviserApproved: number;
-  page: number;
-  pageSize: number;
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    readyCount: number;
+    completeCount: number;
+    lockedCount: number;
+    adviserApprovedCount: number;
+  };
 }
+
 function Stat({
   value,
   label,
@@ -69,23 +75,26 @@ function Stat({
   );
 }
 
-export default function FinalGradeApprovalsPage() {
+export default function RecordKeeperFinalGradesPage() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
 
   const { data, isPending } = useQuery({
-    queryKey: ["registrar-final-grades"],
+    queryKey: ["record-keeper-final-grades"],
     queryFn: () =>
       apiClient
-        .get<GradesResponse>("/api/registrar/final-grades", { params: { pageSize: 100 } })
+        .get<RecordKeeperFinalGradesResponse>("/api/record-keeper/final-grades", {
+          params: { page, pageSize: 20 },
+        })
         .then((res) => res.data),
   });
 
+  const meta = data?.meta;
   const stats = {
-    ready: data?.ready ?? 0,
-    complete: data?.complete ?? 0,
-    total: data?.total ?? 0,
+    ready: meta?.readyCount ?? 0,
+    complete: meta?.completeCount ?? 0,
+    total: meta?.total ?? 0,
   };
 
   const allStudents = React.useMemo(() => data?.students ?? [], [data]);
@@ -131,7 +140,7 @@ export default function FinalGradeApprovalsPage() {
               label="Complete sets"
               hint="Students with a fully approved term"
             />
-            <Stat value={stats.total} label="Total rows" hint="G11–12 grade entries" />
+            <Stat value={stats.total} label="Total rows" hint="G7–10 grade entries" />
           </>
         )}
       </div>
@@ -140,9 +149,9 @@ export default function FinalGradeApprovalsPage() {
 
       <GradePipeline
         counts={{
-          locked: data?.locked,
-          adviserApproved: data?.adviserApproved,
-          complete: data?.complete,
+          locked: meta?.lockedCount,
+          adviserApproved: meta?.adviserApprovedCount,
+          complete: meta?.completeCount,
         }}
         isLoading={isPending}
       />
@@ -189,46 +198,46 @@ export default function FinalGradeApprovalsPage() {
           </div>
         </div>
 
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Section</th>
-              <th>Term</th>
-              <th>Overall Avg</th>
-              <th>Status</th>
-              <th className={styles.thAction} />
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Student</TableHead>
+              <TableHead>Section</TableHead>
+              <TableHead>Term</TableHead>
+              <TableHead>Overall Avg</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {isPending ? (
               <SkeletonRows />
             ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className={styles.empty}>
+              <TableRow>
+                <TableCell colSpan={6} className={styles.empty}>
                   {query.trim()
                     ? `No complete grade sets match "${query}".`
                     : "No complete grade sets yet. Students appear once every subject is adviser-approved."}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               pageRows.map((s) => (
-                <tr key={s.id} className={styles.tableRow}>
-                  <td>
+                <TableRow key={s.id} className={styles.tableRow}>
+                  <TableCell>
                     <div className={styles.studentCell}>
                       <span className={styles.studentName}>{s.name}</span>
                       <span className={styles.studentLrn}>{s.lrn}</span>
                     </div>
-                  </td>
-                  <td className={styles.cell}>{formatSection(s.section)}</td>
-                  <td className={styles.cell}>{s.term}</td>
-                   <td className={styles.leftCell}>{s.overall}</td>
-                  <td>
+                  </TableCell>
+                  <TableCell className={styles.cell}>{formatSection(s.section)}</TableCell>
+                  <TableCell className={styles.cell}>{s.term}</TableCell>
+                  <TableCell className={styles.leftCell}>{s.overall}</TableCell>
+                  <TableCell>
                     <Badge variant="default" className={styles.statusBadge}>
                       Complete
                     </Badge>
-                  </td>
-                  <td className={styles.actionCell}>
+                  </TableCell>
+                  <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="size-8">
@@ -236,20 +245,20 @@ export default function FinalGradeApprovalsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/registrar/final-grades/${s.id}`)}>
+                        <DropdownMenuItem onClick={() => router.push(`/record-keeper/final-grades/${encodeURIComponent(s.id)}`)}>
                           <Eye aria-hidden />
                           View grade details
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem disabled>Registrar approval is not required</DropdownMenuItem>
+                        <DropdownMenuItem disabled>Record keeper view is read-only</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         <div className={styles.footer}>
           <span className={styles.footerInfo}>
@@ -285,27 +294,27 @@ function SkeletonRows() {
   return (
     <>
       {Array.from({ length: 6 }).map((_, i) => (
-        <tr key={i}>
-          <td>
+        <TableRow key={i}>
+          <TableCell>
             <div className={styles.studentCell}>
               <Skeleton className={styles.skelName} />
               <Skeleton className={styles.skelLrn} />
             </div>
-          </td>
-          <td>
+          </TableCell>
+          <TableCell>
             <Skeleton className={styles.skelCell} style={{ width: "60%" }} />
-          </td>
-          <td>
+          </TableCell>
+          <TableCell>
             <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </td>
-          <td>
+          </TableCell>
+          <TableCell>
             <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </td>
-          <td>
+          </TableCell>
+          <TableCell>
             <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </td>
-          <td />
-        </tr>
+          </TableCell>
+          <TableCell />
+        </TableRow>
       ))}
     </>
   );

@@ -64,7 +64,7 @@ export default function AccountApprovalsPage() {
     queryFn: () =>
       apiClient
         .get<{ data: AccountBreakdown[] }>("/api/record-keeper/account-breakdown")
-        .then((res) => res.data.data),
+        .then((res) => Array.isArray(res.data?.data) ? res.data.data : []),
     enabled: true,
   });
 
@@ -104,6 +104,8 @@ export default function AccountApprovalsPage() {
   return (
     <section className={styles.page}>
       <AccountsHeader />
+
+      <hr className={styles.divider} />
 
       <Card className={styles.card}>
         <CardHeader className={styles.header}>

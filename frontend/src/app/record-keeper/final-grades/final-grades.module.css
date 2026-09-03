@@ -1,0 +1,296 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0.25rem 0.25rem;
+  min-width: 0;
+}
+
+/* Stats row */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.stat:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.statHint {
+  margin: -0.125rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  opacity: 0.75;
+}
+
+.statSkel {
+  height: 4.75rem;
+  border-radius: var(--radius-md);
+}
+
+.divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border, #e7e5e4);
+}
+
+/* List card */
+.listCard {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.listHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.listHeadText {
+  min-width: 0;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.listDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.search {
+  width: 200px;
+  height: 2rem;
+  padding-left: 2rem;
+}
+
+.clearBtn {
+  height: 2rem;
+  color: var(--muted-foreground);
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.footerInfo {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  margin-right: auto;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Table */
+.table {
+  width: 100%;
+  font-size: 0.8125rem;
+  border-collapse: collapse;
+}
+
+.table :global(th) {
+  height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+}
+
+.table :global(td) {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  vertical-align: middle;
+}
+
+.table :global(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.table :global(th:first-child),
+.table :global(td:first-child) {
+  padding-left: 1rem;
+}
+
+.table :global(th:last-child),
+.table :global(td:last-child) {
+  padding-right: 1rem;
+}
+
+.tableRow {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.tableRow:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 94%);
+}
+
+.studentCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.studentName {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+
+.studentLrn {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cell {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.centerCell {
+  text-align: center;
+}
+
+.leftCell {
+  text-align: left;
+}
+
+.statusBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.thAction {
+  width: 3rem;
+}
+
+.actionCell {
+  text-align: right;
+  padding-right: 1rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.skelName {
+  width: 55%;
+  height: 0.875rem;
+}
+
+.skelLrn {
+  width: 35%;
+  height: 0.625rem;
+  margin-top: 0.125rem;
+}
+
+.skelCell {
+  height: 0.75rem;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .stat:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

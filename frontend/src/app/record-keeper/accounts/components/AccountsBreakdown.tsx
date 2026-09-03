@@ -51,7 +51,7 @@ export function AccountsBreakdown({
       </header>
 
       <div className={styles.grid}>
-        {data.map((d) => {
+        {(Array.isArray(data) ? data : []).map((d) => {
           const total = d.withAccount + d.pending;
           return (
             <article key={d.id} className={styles.card}>
