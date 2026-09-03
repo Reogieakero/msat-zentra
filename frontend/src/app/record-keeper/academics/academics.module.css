@@ -1,0 +1,118 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 0 1.5rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.375rem;
+  margin-top: 2.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  max-width: 42rem;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--destructive);
+  background: color-mix(in oklch, var(--destructive) 10%, transparent);
+  border: 1px solid color-mix(in oklch, var(--destructive) 25%, transparent);
+  border-radius: var(--radius, 0.5rem);
+  padding: 0.75rem 1rem;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  appearance: none;
+  border: 1px solid color-mix(in oklch, var(--destructive) 30%, transparent);
+  background: var(--card);
+  color: var(--destructive);
+  border-radius: var(--radius, 0.5rem);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: color-mix(in oklch, var(--destructive) 10%, transparent);
+}
+
+.retryIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.panel {
+  min-width: 0;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 240px;
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  text-align: center;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
+}
+
+.emptyIconSvg {
+  width: 20px;
+  height: 20px;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}

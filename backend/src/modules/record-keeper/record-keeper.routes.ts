@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { GradeLevel } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { cache } from "../../lib/cache.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { AppError } from "../../lib/errors.js";
@@ -667,7 +667,7 @@ router.get(
         select: {
           lrn: true,
           user: { select: { fullName: true } },
-          sf10Records: { select: { status: true, source: true, uploadedFileUrl: true, verifiedAt: true, validatedAt: true, currentVersion: true } },
+          sf10Records: { select: { id: true, status: true, source: true, uploadedFileUrl: true, verifiedAt: true, validatedAt: true, currentVersion: true } },
         },
         orderBy: { lrn: "asc" },
       });

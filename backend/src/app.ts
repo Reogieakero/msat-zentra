@@ -20,6 +20,7 @@ import reportsRoutes from "./modules/reports/reports.routes.js";
 import registrarRoutes from "./modules/registrar/registrar.routes.js";
 import registrarAcademicsRoutes from "./modules/registrar/academics.routes.js";
 import recordKeeperRoutes from "./modules/record-keeper/record-keeper.routes.js";
+import recordKeeperAcademicsRoutes from "./modules/record-keeper/academics.routes.js";
 
 export function createApp() {
   const env = getEnv();
@@ -45,6 +46,7 @@ export function createApp() {
 app.use("/api/registrar", registrarRoutes);
 app.use("/api/registrar/academics", registrarAcademicsRoutes);
 app.use("/api/record-keeper", recordKeeperRoutes);
+app.use("/api/record-keeper/academics", recordKeeperAcademicsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
