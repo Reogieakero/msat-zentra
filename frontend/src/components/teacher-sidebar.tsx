@@ -38,11 +38,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-type TeacherNavInput = {
-  isAdviser: boolean;
-};
-
-const SUBJECT_NAV: NavGroup[] = [
+const NAV: NavGroup[] = [
   {
     label: "Main",
     items: [
@@ -52,15 +48,6 @@ const SUBJECT_NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Account",
-    items: [
-      { title: "Settings", href: "/teacher/settings", icon: Settings },
-    ],
-  },
-];
-
-const ADVISER_NAV: NavGroup[] = [
-  {
     label: "Advisory",
     items: [
       { title: "Students", href: "/teacher/advisory/students", icon: CalendarClock },
@@ -69,6 +56,12 @@ const ADVISER_NAV: NavGroup[] = [
       { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
       { title: "ADM Cases", href: "/teacher/advisory/adm-cases", icon: ClipboardList },
       { title: "Modules (SF10)", href: "/teacher/modules/sf10", icon: BookPlus },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { title: "Settings", href: "/teacher/settings", icon: Settings },
     ],
   },
 ];
@@ -84,7 +77,7 @@ function useIsActive() {
   );
 }
 
-function SidebarNav({ nav }: { nav: NavGroup[] }) {
+function SidebarNav() {
   const isActive = useIsActive();
   const router = useRouter();
 
@@ -129,18 +122,18 @@ function SidebarNav({ nav }: { nav: NavGroup[] }) {
 
   return (
     <ul className={styles.menu}>
-      {nav.flatMap((group) => group.items.map((item) => renderItem(item)))}
+      {NAV.flatMap((group) => group.items.map((item) => renderItem(item)))}
     </ul>
   );
 }
 
-function SidebarShell({ nav }: { nav: NavGroup[] }) {
+function SidebarShell() {
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
 
   const aside = (
     <aside className={styles.sidebar}>
       <nav className={styles.content}>
-        <SidebarNav nav={nav} />
+        <SidebarNav />
       </nav>
     </aside>
   );
@@ -162,7 +155,6 @@ function SidebarShell({ nav }: { nav: NavGroup[] }) {
   return aside;
 }
 
-export function TeacherSidebar({ isAdviser }: TeacherNavInput) {
-  const nav = isAdviser ? [...SUBJECT_NAV, ...ADVISER_NAV] : SUBJECT_NAV;
-  return <SidebarShell nav={nav} />;
+export function TeacherSidebar() {
+  return <SidebarShell />;
 }

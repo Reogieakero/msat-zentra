@@ -1,13 +1,26 @@
 "use client";
 
 import * as React from "react";
+import { Search, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
+  CardAction,
   CardContent,
+  CardFooter,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -17,8 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { AdvisoryStatusRow, AdvisoryReferralRow, AdvisoryAdmRow } from "./teacher-overview-data";
+import type { AdvisoryStatusRow } from "./teacher-overview-data";
 import styles from "./teacher-overview-advisory.module.css";
+
+const PAGE_SIZE = 5;
 
 interface StatusBadgeProps {
   level: AdvisoryStatusRow["riskLevel"];
@@ -33,46 +48,80 @@ interface FlagBadgeProps {
   flag: AdvisoryStatusRow["flag"];
 }
 
-function FlagBadge({ flag }: FlagBadgeProps) {
-  if (flag === "none") return null;
-  const label = flag.charAt(0).toUpperCase() + flag.slice(1);
-  return <Badge variant="outline">{label}</Badge>;
+interface FlagBadgeProps {
+  flag: AdvisoryStatusRow["flag"];
+  flags?: AdvisoryStatusRow["flags"];
 }
 
-interface StageLabelProps {
-  stage: AdvisoryAdmRow["stage"];
-}
-
-function StageLabel({ stage }: StageLabelProps) {
-  const label = stage.replace(/_/g, " ");
-  return <span className={styles.stageLabel}>{label}</span>;
+function FlagBadge({ flag, flags }: FlagBadgeProps) {
+  const active = flags && flags.length > 0 ? flags : flag === "none" ? [] : [flag];
+  if (active.length === 0) return null;
+  return (
+    <span className={styles.flagList}>
+      {active.map((f) => (
+        <span key={f} className={styles.flagBadge}>
+          {f.charAt(0).toUpperCase() + f.slice(1)}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 interface TeacherOverviewAdvisoryProps {
   students: AdvisoryStatusRow[];
-  referrals: AdvisoryReferralRow[];
-  admCases: AdvisoryAdmRow[];
 }
 
-export function TeacherOverviewAdvisory({
-  students,
-  referrals,
-  admCases,
-}: TeacherOverviewAdvisoryProps) {
+export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryProps) {
   const statusCounts = React.useMemo(() => {
     const counts = { Low: 0, Moderate: 0, High: 0 };
     students.forEach((s) => { counts[s.riskLevel] += 1; });
     return counts;
   }, [students]);
 
+  const [query, setQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.section.toLowerCase().includes(q)
+    );
+  }, [students, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
+
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Advisory Students</CardTitle>
-          <CardDescription>
-            Status breakdown for your advisees. You see the category only, never the private write-up.
-          </CardDescription>
+      <Card className={styles.card}>
+        <CardHeader className={styles.header}>
+          <div className={styles.headerText}>
+            <CardTitle>Advisory Students</CardTitle>
+            <CardDescription>
+              Status breakdown for your advisees. You see the category only, never the private write-up.
+            </CardDescription>
+          </div>
+          <CardAction className={styles.headerActions}>
+            <div className={styles.searchWrap}>
+              <Search className={styles.searchIcon} aria-hidden />
+              <Input
+                className={styles.search}
+                placeholder="Search student…"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+                aria-label="Search advisory students"
+              />
+            </div>
+          </CardAction>
         </CardHeader>
         <CardContent className={styles.content}>
           <div className={styles.statusGrid}>
@@ -96,93 +145,74 @@ export function TeacherOverviewAdvisory({
                 <TableHead>Section</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Flag</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((s) => (
-                <TableRow key={s.studentId}>
-                  <TableCell className={styles.cellSubject}>{s.name}</TableCell>
-                  <TableCell>{s.section}</TableCell>
-                  <TableCell><StatusBadge level={s.riskLevel} /></TableCell>
-                  <TableCell><FlagBadge flag={s.flag} /></TableCell>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className={styles.empty}>
+                    {query.trim()
+                      ? `No students match "${query}".`
+                      : "No advisory students."}
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                pageRows.map((s) => (
+                  <TableRow key={s.studentId}>
+                    <TableCell className={styles.cellSubject}>{s.name}</TableCell>
+                    <TableCell className={styles.section}>{s.section}</TableCell>
+                    <TableCell><StatusBadge level={s.riskLevel} /></TableCell>
+                    <TableCell><FlagBadge flag={s.flag} flags={s.flags} /></TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontal aria-hidden />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>{s.name}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setQuery(s.name)}>
+                            Filter by name
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled>View student profile</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
+        <CardFooter className={styles.footer}>
+          <span className={styles.footerInfo}>
+            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
+          </span>
+          <div className={styles.footerActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || filtered.length === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft aria-hidden />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || filtered.length === 0}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+              <ChevronRight aria-hidden />
+            </Button>
+          </div>
+        </CardFooter>
       </Card>
-
-      <div className={styles.twoCol}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Referrals</CardTitle>
-            <CardDescription>
-              Referrals you&apos;ve sent that are still open.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className={styles.content}>
-            {referrals.length === 0 ? (
-              <p className={styles.empty}>No pending referrals.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {referrals.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className={styles.cellSubject}>{r.studentName}</TableCell>
-                      <TableCell>{r.targetRole}</TableCell>
-                      <TableCell>
-                        <Badge variant={r.status === "pending" ? "warning" : r.status === "in_progress" ? "default" : "outline"}>
-                          {r.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>ADM Cases</CardTitle>
-            <CardDescription>
-              Advisees in the Alternative Delivery Mode pipeline.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className={styles.content}>
-            {admCases.length === 0 ? (
-              <p className={styles.empty}>No ADM cases yet.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Stage</TableHead>
-                    <TableHead>Updated</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {admCases.map((c, i) => (
-                    <TableRow key={i}>
-                      <TableCell className={styles.cellSubject}>{c.studentName}</TableCell>
-                      <TableCell><StageLabel stage={c.stage} /></TableCell>
-                      <TableCell>{c.updatedAt}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </>
   );
 }

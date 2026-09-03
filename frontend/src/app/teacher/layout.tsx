@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme, useFont } from "@/components/providers";
-import { useSession } from "@/lib/auth/useSession";
 import { TeacherSidebar } from "@/components/teacher-sidebar";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,14 +24,12 @@ import styles from "./record-teacher.module.css";
 
 function TeacherShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const session = useSession();
   const { openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
 
   const isDark = resolvedTheme === "dark";
-  const isAdviser = session?.role === "adviser";
 
   const handleLogout = () => {
     Object.keys(window.localStorage)
@@ -171,7 +168,7 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <TeacherSidebar isAdviser={isAdviser} />
+      <TeacherSidebar />
       <div className={styles.shell}>
         <main className={styles.main}>{children}</main>
       </div>

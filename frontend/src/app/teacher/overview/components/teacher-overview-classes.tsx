@@ -8,14 +8,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Users } from "lucide-react";
 import type { TeacherClassRow } from "./teacher-overview-data";
 import styles from "./teacher-overview-classes.module.css";
 
@@ -27,37 +20,31 @@ export function TeacherOverviewClasses({ classes }: TeacherOverviewClassesProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Today&apos;s Classes</CardTitle>
+        <CardTitle>My Classes</CardTitle>
         <CardDescription>
-          Scheduled sessions for today, ordered by period.
+          The class sections assigned to you this term.
         </CardDescription>
       </CardHeader>
       <CardContent className={styles.content}>
         {classes.length === 0 ? (
-          <p className={styles.empty}>No classes scheduled for today.</p>
+          <p className={styles.empty}>No classes assigned yet.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Subject</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Section</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Students</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {classes.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className={styles.cellSubject}>{c.subject}</TableCell>
-                  <TableCell>{c.gradeLevel}</TableCell>
-                  <TableCell>{c.section}</TableCell>
-                  <TableCell>{c.schedule}</TableCell>
-                  <TableCell>{c.studentCount}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className={styles.grid}>
+            {classes.map((c) => (
+              <div key={c.id} className={styles.classCard}>
+                <span className={styles.classSubject}>{c.subject}</span>
+                <span className={styles.classMeta}>
+                  {c.gradeLevel} · {c.section}
+                </span>
+                <div className={styles.classFoot}>
+                  <span className={styles.classMeta}>
+                    <Users className={styles.metaIcon} aria-hidden />
+                    {c.studentCount} students
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

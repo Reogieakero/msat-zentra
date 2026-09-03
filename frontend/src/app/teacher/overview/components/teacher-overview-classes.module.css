@@ -4,10 +4,60 @@
 
 .empty {
   margin: 0;
+  padding: 0.25rem 1rem 1rem;
   font-size: 0.875rem;
   color: var(--muted-foreground);
 }
 
-.cellSubject {
-  font-weight: 500;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.625rem;
+  padding: 0 1rem 1rem;
+}
+
+.classCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 96px;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border, #e7e5e4);
+  border-left: 3px solid var(--primary, #2563eb);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.classSubject {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.classMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.classFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.classTime {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.metaIcon {
+  width: 12px;
+  height: 12px;
 }
