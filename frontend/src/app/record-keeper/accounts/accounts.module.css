@@ -1,0 +1,209 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0.25rem 0.25rem;
+  min-width: 0;
+}
+
+.card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.countBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.search {
+  width: 220px;
+  height: 2rem;
+  padding-left: 2rem;
+}
+
+.clearBtn {
+  height: 2rem;
+  color: var(--muted-foreground);
+}
+
+.content {
+  overflow: hidden;
+  padding: 0;
+}
+
+.studentCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.studentName {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  letter-spacing: -0.005em;
+}
+
+.studentLrn {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.section {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.requested {
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.row:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 94%);
+}
+
+/* Flush table — no gutters */
+.content :global(table) {
+  font-size: 0.8125rem;
+  border-collapse: collapse;
+}
+
+.content :global(thead th) {
+  height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+}
+
+.content :global(tbody td) {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
+  vertical-align: middle;
+}
+
+.content :global(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.content :global(thead th:first-child),
+.content :global(tbody td:first-child) {
+  padding-left: 1rem;
+}
+
+.content :global(thead th:last-child),
+.content :global(tbody td:last-child) {
+  padding-right: 1rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.footerInfo {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skelName {
+  width: 55%;
+  height: 0.875rem;
+}
+
+.skelLrn {
+  width: 35%;
+  height: 0.625rem;
+}
+
+.skelCell {
+  height: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .search {
+    width: 100%;
+  }
+}

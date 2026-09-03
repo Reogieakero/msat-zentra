@@ -480,4 +480,82 @@ router.get(
   }
 );
 
+// Record Keeper accounts audit (G7–10 band only). Shows approval/rejection history
+// for student accounts in the record keeper's grade band. No cache — live state.
+router.get(
+  "/accounts-audit",
+  requireAuth,
+  requireRole("record_keeper"),
+  async (req, res, next) => {
+    try {
+      const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
+      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "10"), 10) || 10, 1), 50);
+      const skip = (page - 1) * pageSize;
+
+      // Affected users that belong to the record keeper band (G7–G10).
+      const bandProfiles = await prisma.studentProfile.findMany({
+        where: { gradeLevel: { in: GRADE_BAND_7_10 } },
+        select: { userId: true },
+      });
+      const bandUserIds = bandProfiles.map((p) => p.userId);
+
+      const where: any = {
+        actionType: "account_approval",
+        sourceTable: "users",
+        sourceId: { in: bandUserIds },
+      };
+
+      const [rows, total] = await Promise.all([
+        prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: pageSize,
+          include: {
+            user: { select: { email: true, role: true, fullName: true } },
+          },
+        }),
+        prisma.auditLog.count({ where }),
+      ]);
+
+      // Resolve the affected student's details from the source user id.
+      const affectedIds = rows
+        .map((r) => r.sourceId)
+        .filter((id): id is string => Boolean(id));
+      const affected = await prisma.user.findMany({
+        where: { id: { in: affectedIds } },
+        select: {
+          id: true,
+          fullName: true,
+          status: true,
+          studentProfile: { select: { lrn: true, gradeLevel: true, section: { select: { name: true } } } },
+        },
+      });
+      const affectedByUserId = new Map(affected.map((u) => [u.id, u]));
+
+      const entries = rows.map((r) => {
+        const a = affectedByUserId.get(r.sourceId ?? "");
+        const approved = (r.newValue as { status?: string } | null)?.status === "active"
+          || (a?.status === "active");
+        return {
+          id: r.id,
+          timestamp: r.createdAt.toISOString(),
+          actor: r.user?.fullName ?? r.user?.email ?? "system",
+          actorRole: r.user?.role ?? "system",
+          studentName: a?.fullName ?? (r.reason || "Student"),
+          lrn: a?.studentProfile?.lrn ?? null,
+          gradeLevel: a?.studentProfile?.gradeLevel ?? null,
+          section: a?.studentProfile?.section?.name ?? null,
+          action: approved ? "approve" : "reject",
+          reason: approved ? "Account activated" : (r.reason ?? "Account rejected"),
+        };
+      });
+
+      res.json({ entries, total, page, pageSize });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 export default router;

@@ -1,0 +1,184 @@
+.wrap {
+  overflow-x: auto;
+}
+
+.headRow {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.expandCol {
+  width: 2rem;
+  min-width: 2rem;
+  padding: 0;
+}
+
+.colStudent {
+  min-width: 180px;
+}
+
+.colSection {
+  min-width: 140px;
+}
+
+.colAction {
+  min-width: 120px;
+}
+
+.colActor {
+  min-width: 160px;
+}
+
+.colWhen {
+  min-width: 180px;
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.row {
+  transition: background-color 120ms ease;
+}
+
+.row:hover {
+  background-color: color-mix(in oklch, var(--primary), transparent 94%);
+}
+
+.chevron {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  transition: transform 150ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.studentName {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.studentLrn {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.section {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.actionBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.actorName {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.actorRole {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.detailRow {
+  background-color: color-mix(in oklch, var(--foreground), transparent 96%);
+}
+
+.detail {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--foreground), transparent 97%);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.diffSummary {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.diffCards {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.diffCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diffLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.diffFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+}
+
+.diffField {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--card);
+  border: 1px solid var(--border);
+}
+
+.diffFieldLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.diffFieldValue {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.diffArrow {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.reasonLine {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .chevron {
+    transition: none;
+  }
+}
