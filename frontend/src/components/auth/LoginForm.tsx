@@ -73,6 +73,7 @@ export function LoginForm({
         (data.role === "principal" && "/principal/overview") ||
         (data.role === "registrar" && "/registrar/overview") ||
         (data.role === "record_keeper" && "/record-keeper/overview") ||
+        ((data.role === "subject_teacher" || data.role === "adviser") && "/teacher/overview") ||
         `/${role}`;
       router.push(home);
     } catch (err) {
