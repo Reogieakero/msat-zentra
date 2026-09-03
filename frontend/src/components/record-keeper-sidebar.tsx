@@ -3,7 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard } from "lucide-react";
+import {
+  LayoutDashboard,
+  UserCheck,
+  Award,
+  ShieldQuestion,
+  GraduationCap,
+  FileBarChart,
+  FileText,
+} from "lucide-react";
 
 import { useSidebar } from "@/components/ui/sidebar";
 import styles from "./record-keeper-sidebar.module.css";
@@ -17,6 +25,12 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { title: "Overview", href: "/record-keeper/overview", icon: LayoutDashboard },
+  { title: "Account Approvals", href: "/record-keeper/accounts", icon: UserCheck },
+  { title: "Final Grades", href: "/record-keeper/final-grades", icon: Award },
+  { title: "Adviser Access Requests", href: "/record-keeper/adviser-access", icon: ShieldQuestion },
+  { title: "Sections & Subjects", href: "/record-keeper/academics", icon: GraduationCap },
+  { title: "Report Cards", href: "/record-keeper/report-cards", icon: FileBarChart },
+  { title: "SF10 Records", href: "/record-keeper/sf10", icon: FileText },
 ];
 
 function useIsActive() {
