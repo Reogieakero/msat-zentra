@@ -22,6 +22,7 @@ import registrarAcademicsRoutes from "./modules/registrar/academics.routes.js";
 import recordKeeperRoutes from "./modules/record-keeper/record-keeper.routes.js";
 import recordKeeperAcademicsRoutes from "./modules/record-keeper/academics.routes.js";
 import teacherRoutes from "./modules/teacher/teacher.routes.js";
+import gradeFlagsRoutes from "./modules/teacher/grade-flags.routes.js";
 
 export function createApp() {
   const env = getEnv();
@@ -49,6 +50,7 @@ app.use("/api/registrar/academics", registrarAcademicsRoutes);
 app.use("/api/record-keeper", recordKeeperRoutes);
 app.use("/api/record-keeper/academics", recordKeeperAcademicsRoutes);
 app.use("/api/teacher", teacherRoutes);
+app.use("/api/teacher/grade-flags", gradeFlagsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

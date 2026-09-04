@@ -412,6 +412,7 @@ export const ModelName = {
   Assessment: 'Assessment',
   StudentGrade: 'StudentGrade',
   FinalGrade: 'FinalGrade',
+  GradeFlag: 'GradeFlag',
   AttendanceRecord: 'AttendanceRecord',
   AnecdotalRecord: 'AnecdotalRecord',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
@@ -447,7 +448,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "attendanceRecord" | "anecdotalRecord" | "anecdotalRecordFollowup" | "referral" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalRecordFollowup" | "referral" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1558,6 +1559,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.FinalGradeCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.FinalGradeCountAggregateOutputType> | number
+        }
+      }
+    }
+    GradeFlag: {
+      payload: Prisma.$GradeFlagPayload<ExtArgs>
+      fields: Prisma.GradeFlagFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GradeFlagFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GradeFlagFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>
+        }
+        findFirst: {
+          args: Prisma.GradeFlagFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GradeFlagFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>
+        }
+        findMany: {
+          args: Prisma.GradeFlagFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>[]
+        }
+        create: {
+          args: Prisma.GradeFlagCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>
+        }
+        createMany: {
+          args: Prisma.GradeFlagCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GradeFlagCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>[]
+        }
+        delete: {
+          args: Prisma.GradeFlagDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>
+        }
+        update: {
+          args: Prisma.GradeFlagUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>
+        }
+        deleteMany: {
+          args: Prisma.GradeFlagDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GradeFlagUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GradeFlagUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>[]
+        }
+        upsert: {
+          args: Prisma.GradeFlagUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GradeFlagPayload>
+        }
+        aggregate: {
+          args: Prisma.GradeFlagAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGradeFlag>
+        }
+        groupBy: {
+          args: Prisma.GradeFlagGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GradeFlagGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GradeFlagCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GradeFlagCountAggregateOutputType> | number
         }
       }
     }
@@ -3267,6 +3342,28 @@ export const FinalGradeScalarFieldEnum = {
 export type FinalGradeScalarFieldEnum = (typeof FinalGradeScalarFieldEnum)[keyof typeof FinalGradeScalarFieldEnum]
 
 
+export const GradeFlagScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  subjectId: 'subjectId',
+  sectionId: 'sectionId',
+  termId: 'termId',
+  reason: 'reason',
+  note: 'note',
+  status: 'status',
+  raisedBy: 'raisedBy',
+  ownerId: 'ownerId',
+  resolvedBy: 'resolvedBy',
+  resolvedAt: 'resolvedAt',
+  resolutionNote: 'resolutionNote',
+  escalatedAt: 'escalatedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GradeFlagScalarFieldEnum = (typeof GradeFlagScalarFieldEnum)[keyof typeof GradeFlagScalarFieldEnum]
+
+
 export const AttendanceRecordScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
@@ -3783,6 +3880,34 @@ export type ListEnumLockStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
+ * Reference to a field of type 'GradeFlagReason'
+ */
+export type EnumGradeFlagReasonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GradeFlagReason'>
+    
+
+
+/**
+ * Reference to a field of type 'GradeFlagReason[]'
+ */
+export type ListEnumGradeFlagReasonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GradeFlagReason[]'>
+    
+
+
+/**
+ * Reference to a field of type 'GradeFlagStatus'
+ */
+export type EnumGradeFlagStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GradeFlagStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'GradeFlagStatus[]'
+ */
+export type ListEnumGradeFlagStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GradeFlagStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Session'
  */
 export type EnumSessionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Session'>
@@ -4199,6 +4324,7 @@ export type GlobalOmitConfig = {
   assessment?: Prisma.AssessmentOmit
   studentGrade?: Prisma.StudentGradeOmit
   finalGrade?: Prisma.FinalGradeOmit
+  gradeFlag?: Prisma.GradeFlagOmit
   attendanceRecord?: Prisma.AttendanceRecordOmit
   anecdotalRecord?: Prisma.AnecdotalRecordOmit
   anecdotalRecordFollowup?: Prisma.AnecdotalRecordFollowupOmit

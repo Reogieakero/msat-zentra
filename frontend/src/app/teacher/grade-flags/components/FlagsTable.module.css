@@ -1,0 +1,52 @@
+.card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.header {
+  padding: 1rem 1rem 0.75rem;
+}
+
+.content {
+  padding: 0 1rem 1rem;
+}
+
+.empty {
+  margin: 0;
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.student {
+  display: block;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.lrn {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.age {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.actionHead {
+  text-align: right;
+}

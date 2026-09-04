@@ -103,6 +103,20 @@ enum ReferralStatus {
   resolved
 }
 
+enum GradeFlagReason {
+  wrong_score
+  missing_assessment
+  transmutation_error
+  late_submission
+  other
+}
+
+enum GradeFlagStatus {
+  open
+  resolved
+  escalated
+}
+
 enum ApprovalStatus {
   pending
   approved
@@ -175,6 +189,8 @@ enum ActionType {
   principal_password_change
   sf10_access_grant
   sf10_access_deny
+  grade_flag_raise
+  grade_flag_resolve
   create
   update
   delete
@@ -233,6 +249,9 @@ model User {
   sf10AccessRequests  AdviserSf10AccessRequest[] @relation("Sf10AccessAdviser")
   sf10AccessDecided   AdviserSf10AccessRequest[] @relation("Sf10AccessDecidedBy")
   teacherAssignments  TeacherSubjectAssignment[]
+  gradeFlagsRaised    GradeFlag[]            @relation("FlagRaisedBy")
+  gradeFlagsOwned     GradeFlag[]            @relation("FlagOwner")
+  gradeFlagsResolved  GradeFlag[]            @relation("FlagResolvedBy")
 }
 
 model StudentProfile {
@@ -261,6 +280,7 @@ model StudentProfile {
   parentLinks       ParentStudentLink[] @relation("PSL_student")
   riskSnapshots     RiskSnapshot[]
   sf10Records       Sf10Record[]
+  gradeFlags        GradeFlag[]
 }
 
 model ParentProfile {
@@ -326,6 +346,7 @@ model Term {
   riskSnapshots RiskSnapshot[]
   reportSnapshots ReportSnapshot[]
   teacherAssignments TeacherSubjectAssignment[]
+  gradeFlags GradeFlag[]
   @@unique([schoolYearId, termNumber])
 }
 
@@ -341,6 +362,7 @@ model Section {
   attendanceRecords AttendanceRecord[]
   anecdotalRecords AnecdotalRecord[]
   teacherAssignments TeacherSubjectAssignment[]
+  gradeFlags GradeFlag[]
   rosterEntries StudentRoster[]
   sf10AccessRequests AdviserSf10AccessRequest[]
 }
@@ -372,6 +394,7 @@ model Subject {
   gradeComponents GradeComponent[]
   finalGrades FinalGrade[]
   assignments TeacherSubjectAssignment[]
+  gradeFlags GradeFlag[]
 }
 
 model TeacherSubjectAssignment {
@@ -443,6 +466,40 @@ model FinalGrade {
   subject           Subject        @relation(fields: [subjectId], references: [id])
   term              Term           @relation(fields: [termId], references: [id])
   @@unique([studentId, subjectId, termId])
+}
+
+// Teacher-raised flags on student grades. Any teacher may raise a flag on any
+// grade; only the gradebook owner (resolved from TeacherSubjectAssignment)
+// may resolve. Overdue open flags flip to escalated for the Principal
+// dashboard. Editing the underlying grade never auto-resolves a flag.
+model GradeFlag {
+  id             String          @id @default(uuid())
+  studentId      String
+  subjectId      String
+  sectionId      String
+  termId         String
+  reason         GradeFlagReason
+  note           String?
+  status         GradeFlagStatus @default(open)
+  raisedBy       String
+  ownerId        String?
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  resolutionNote String?
+  escalatedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  student        StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  subject        Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  section        Section         @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  term           Term            @relation(fields: [termId], references: [id], onDelete: Cascade)
+  raisedByUser   User            @relation("FlagRaisedBy", fields: [raisedBy], references: [id], onDelete: Cascade)
+  owner          User?           @relation("FlagOwner", fields: [ownerId], references: [id])
+  resolvedByUser User?           @relation("FlagResolvedBy", fields: [resolvedBy], references: [id])
+  @@index([status, ownerId])
+  @@index([raisedBy])
+  @@index([studentId])
+  @@index([status])
 }
 
 // ---------------------------------------------------------------------------

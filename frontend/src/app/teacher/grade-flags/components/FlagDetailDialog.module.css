@@ -1,0 +1,147 @@
+.dialog {
+  max-width: 26rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title {
+  font-size: 1rem;
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+}
+
+.reasonRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.raisedOn {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  font-style: italic;
+  padding: 0.625rem 0.75rem;
+  border-left: 3px solid var(--border);
+  background-color: var(--muted);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.metaRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+}
+
+.metaRow dt {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.metaRow dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: right;
+}
+
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  position: relative;
+  padding-bottom: 0.875rem;
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+.step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 0.4375rem;
+  top: 1.125rem;
+  bottom: 0.125rem;
+  width: 2px;
+  background-color: var(--border);
+}
+
+.stepDone:not(:last-child)::before {
+  background-color: var(--primary);
+}
+
+.stepDot {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  background-color: var(--card);
+  margin-top: 0.125rem;
+}
+
+.stepDone .stepDot {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.stepIcon {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.stepText {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.stepTodo .stepText {
+  color: var(--muted-foreground);
+}
+
+.resolveBtn {
+  width: 100%;
+}

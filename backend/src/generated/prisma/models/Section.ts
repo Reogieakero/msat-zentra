@@ -188,6 +188,7 @@ export type SectionWhereInput = {
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
   teacherAssignments?: Prisma.TeacherSubjectAssignmentListRelationFilter
+  gradeFlags?: Prisma.GradeFlagListRelationFilter
   rosterEntries?: Prisma.StudentRosterListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
 }
@@ -204,6 +205,7 @@ export type SectionOrderByWithRelationInput = {
   attendanceRecords?: Prisma.AttendanceRecordOrderByRelationAggregateInput
   anecdotalRecords?: Prisma.AnecdotalRecordOrderByRelationAggregateInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentOrderByRelationAggregateInput
+  gradeFlags?: Prisma.GradeFlagOrderByRelationAggregateInput
   rosterEntries?: Prisma.StudentRosterOrderByRelationAggregateInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestOrderByRelationAggregateInput
 }
@@ -223,6 +225,7 @@ export type SectionWhereUniqueInput = Prisma.AtLeast<{
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
   teacherAssignments?: Prisma.TeacherSubjectAssignmentListRelationFilter
+  gradeFlags?: Prisma.GradeFlagListRelationFilter
   rosterEntries?: Prisma.StudentRosterListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
 }, "id">
@@ -259,6 +262,7 @@ export type SectionCreateInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -273,6 +277,7 @@ export type SectionUncheckedCreateInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -287,6 +292,7 @@ export type SectionUpdateInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -301,6 +307,7 @@ export type SectionUncheckedUpdateInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -499,6 +506,20 @@ export type SectionUpdateOneRequiredWithoutTeacherAssignmentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SectionUpdateToOneWithWhereWithoutTeacherAssignmentsInput, Prisma.SectionUpdateWithoutTeacherAssignmentsInput>, Prisma.SectionUncheckedUpdateWithoutTeacherAssignmentsInput>
 }
 
+export type SectionCreateNestedOneWithoutGradeFlagsInput = {
+  create?: Prisma.XOR<Prisma.SectionCreateWithoutGradeFlagsInput, Prisma.SectionUncheckedCreateWithoutGradeFlagsInput>
+  connectOrCreate?: Prisma.SectionCreateOrConnectWithoutGradeFlagsInput
+  connect?: Prisma.SectionWhereUniqueInput
+}
+
+export type SectionUpdateOneRequiredWithoutGradeFlagsNestedInput = {
+  create?: Prisma.XOR<Prisma.SectionCreateWithoutGradeFlagsInput, Prisma.SectionUncheckedCreateWithoutGradeFlagsInput>
+  connectOrCreate?: Prisma.SectionCreateOrConnectWithoutGradeFlagsInput
+  upsert?: Prisma.SectionUpsertWithoutGradeFlagsInput
+  connect?: Prisma.SectionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SectionUpdateToOneWithWhereWithoutGradeFlagsInput, Prisma.SectionUpdateWithoutGradeFlagsInput>, Prisma.SectionUncheckedUpdateWithoutGradeFlagsInput>
+}
+
 export type SectionCreateNestedOneWithoutAttendanceRecordsInput = {
   create?: Prisma.XOR<Prisma.SectionCreateWithoutAttendanceRecordsInput, Prisma.SectionUncheckedCreateWithoutAttendanceRecordsInput>
   connectOrCreate?: Prisma.SectionCreateOrConnectWithoutAttendanceRecordsInput
@@ -550,6 +571,7 @@ export type SectionCreateWithoutAdviserInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -563,6 +585,7 @@ export type SectionUncheckedCreateWithoutAdviserInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -613,6 +636,7 @@ export type SectionCreateWithoutStudentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -626,6 +650,7 @@ export type SectionUncheckedCreateWithoutStudentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -655,6 +680,7 @@ export type SectionUpdateWithoutStudentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -668,6 +694,7 @@ export type SectionUncheckedUpdateWithoutStudentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -681,6 +708,7 @@ export type SectionCreateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -694,6 +722,7 @@ export type SectionUncheckedCreateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -734,6 +763,7 @@ export type SectionCreateWithoutRosterEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
 
@@ -747,6 +777,7 @@ export type SectionUncheckedCreateWithoutRosterEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -776,6 +807,7 @@ export type SectionUpdateWithoutRosterEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
 
@@ -789,6 +821,7 @@ export type SectionUncheckedUpdateWithoutRosterEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -801,6 +834,7 @@ export type SectionCreateWithoutTeacherAssignmentsInput = {
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -814,6 +848,7 @@ export type SectionUncheckedCreateWithoutTeacherAssignmentsInput = {
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -843,6 +878,7 @@ export type SectionUpdateWithoutTeacherAssignmentsInput = {
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -856,6 +892,79 @@ export type SectionUncheckedUpdateWithoutTeacherAssignmentsInput = {
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
+  rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
+}
+
+export type SectionCreateWithoutGradeFlagsInput = {
+  id?: string
+  name: string
+  gradeLevel: $Enums.GradeLevel
+  schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
+  adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
+  students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
+}
+
+export type SectionUncheckedCreateWithoutGradeFlagsInput = {
+  id?: string
+  name: string
+  gradeLevel: $Enums.GradeLevel
+  schoolYearId: string
+  adviserId?: string | null
+  students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
+}
+
+export type SectionCreateOrConnectWithoutGradeFlagsInput = {
+  where: Prisma.SectionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SectionCreateWithoutGradeFlagsInput, Prisma.SectionUncheckedCreateWithoutGradeFlagsInput>
+}
+
+export type SectionUpsertWithoutGradeFlagsInput = {
+  update: Prisma.XOR<Prisma.SectionUpdateWithoutGradeFlagsInput, Prisma.SectionUncheckedUpdateWithoutGradeFlagsInput>
+  create: Prisma.XOR<Prisma.SectionCreateWithoutGradeFlagsInput, Prisma.SectionUncheckedCreateWithoutGradeFlagsInput>
+  where?: Prisma.SectionWhereInput
+}
+
+export type SectionUpdateToOneWithWhereWithoutGradeFlagsInput = {
+  where?: Prisma.SectionWhereInput
+  data: Prisma.XOR<Prisma.SectionUpdateWithoutGradeFlagsInput, Prisma.SectionUncheckedUpdateWithoutGradeFlagsInput>
+}
+
+export type SectionUpdateWithoutGradeFlagsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
+  adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
+  students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
+}
+
+export type SectionUncheckedUpdateWithoutGradeFlagsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -869,6 +978,7 @@ export type SectionCreateWithoutAttendanceRecordsInput = {
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -882,6 +992,7 @@ export type SectionUncheckedCreateWithoutAttendanceRecordsInput = {
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -911,6 +1022,7 @@ export type SectionUpdateWithoutAttendanceRecordsInput = {
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -924,6 +1036,7 @@ export type SectionUncheckedUpdateWithoutAttendanceRecordsInput = {
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -937,6 +1050,7 @@ export type SectionCreateWithoutAnecdotalRecordsInput = {
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutSectionInput
 }
@@ -950,6 +1064,7 @@ export type SectionUncheckedCreateWithoutAnecdotalRecordsInput = {
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutSectionInput
 }
@@ -979,6 +1094,7 @@ export type SectionUpdateWithoutAnecdotalRecordsInput = {
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -992,6 +1108,7 @@ export type SectionUncheckedUpdateWithoutAnecdotalRecordsInput = {
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -1006,6 +1123,7 @@ export type SectionCreateWithoutSf10AccessRequestsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterCreateNestedManyWithoutSectionInput
 }
 
@@ -1019,6 +1137,7 @@ export type SectionUncheckedCreateWithoutSf10AccessRequestsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSectionInput
   rosterEntries?: Prisma.StudentRosterUncheckedCreateNestedManyWithoutSectionInput
 }
 
@@ -1048,6 +1167,7 @@ export type SectionUpdateWithoutSf10AccessRequestsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
 }
 
@@ -1061,6 +1181,7 @@ export type SectionUncheckedUpdateWithoutSf10AccessRequestsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
 }
 
@@ -1080,6 +1201,7 @@ export type SectionUpdateWithoutAdviserInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -1093,6 +1215,7 @@ export type SectionUncheckedUpdateWithoutAdviserInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -1120,6 +1243,7 @@ export type SectionUpdateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutSectionNestedInput
 }
@@ -1133,6 +1257,7 @@ export type SectionUncheckedUpdateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSectionNestedInput
   rosterEntries?: Prisma.StudentRosterUncheckedUpdateManyWithoutSectionNestedInput
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutSectionNestedInput
 }
@@ -1154,6 +1279,7 @@ export type SectionCountOutputType = {
   attendanceRecords: number
   anecdotalRecords: number
   teacherAssignments: number
+  gradeFlags: number
   rosterEntries: number
   sf10AccessRequests: number
 }
@@ -1163,6 +1289,7 @@ export type SectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   attendanceRecords?: boolean | SectionCountOutputTypeCountAttendanceRecordsArgs
   anecdotalRecords?: boolean | SectionCountOutputTypeCountAnecdotalRecordsArgs
   teacherAssignments?: boolean | SectionCountOutputTypeCountTeacherAssignmentsArgs
+  gradeFlags?: boolean | SectionCountOutputTypeCountGradeFlagsArgs
   rosterEntries?: boolean | SectionCountOutputTypeCountRosterEntriesArgs
   sf10AccessRequests?: boolean | SectionCountOutputTypeCountSf10AccessRequestsArgs
 }
@@ -1208,6 +1335,13 @@ export type SectionCountOutputTypeCountTeacherAssignmentsArgs<ExtArgs extends ru
 /**
  * SectionCountOutputType without action
  */
+export type SectionCountOutputTypeCountGradeFlagsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GradeFlagWhereInput
+}
+
+/**
+ * SectionCountOutputType without action
+ */
 export type SectionCountOutputTypeCountRosterEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.StudentRosterWhereInput
 }
@@ -1232,6 +1366,7 @@ export type SectionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   attendanceRecords?: boolean | Prisma.Section$attendanceRecordsArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.Section$anecdotalRecordsArgs<ExtArgs>
   teacherAssignments?: boolean | Prisma.Section$teacherAssignmentsArgs<ExtArgs>
+  gradeFlags?: boolean | Prisma.Section$gradeFlagsArgs<ExtArgs>
   rosterEntries?: boolean | Prisma.Section$rosterEntriesArgs<ExtArgs>
   sf10AccessRequests?: boolean | Prisma.Section$sf10AccessRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.SectionCountOutputTypeDefaultArgs<ExtArgs>
@@ -1273,6 +1408,7 @@ export type SectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   attendanceRecords?: boolean | Prisma.Section$attendanceRecordsArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.Section$anecdotalRecordsArgs<ExtArgs>
   teacherAssignments?: boolean | Prisma.Section$teacherAssignmentsArgs<ExtArgs>
+  gradeFlags?: boolean | Prisma.Section$gradeFlagsArgs<ExtArgs>
   rosterEntries?: boolean | Prisma.Section$rosterEntriesArgs<ExtArgs>
   sf10AccessRequests?: boolean | Prisma.Section$sf10AccessRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.SectionCountOutputTypeDefaultArgs<ExtArgs>
@@ -1295,6 +1431,7 @@ export type $SectionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     attendanceRecords: Prisma.$AttendanceRecordPayload<ExtArgs>[]
     anecdotalRecords: Prisma.$AnecdotalRecordPayload<ExtArgs>[]
     teacherAssignments: Prisma.$TeacherSubjectAssignmentPayload<ExtArgs>[]
+    gradeFlags: Prisma.$GradeFlagPayload<ExtArgs>[]
     rosterEntries: Prisma.$StudentRosterPayload<ExtArgs>[]
     sf10AccessRequests: Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>[]
   }
@@ -1704,6 +1841,7 @@ export interface Prisma__SectionClient<T, Null = never, ExtArgs extends runtime.
   attendanceRecords<T extends Prisma.Section$attendanceRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$attendanceRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttendanceRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   anecdotalRecords<T extends Prisma.Section$anecdotalRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$anecdotalRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   teacherAssignments<T extends Prisma.Section$teacherAssignmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$teacherAssignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeacherSubjectAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  gradeFlags<T extends Prisma.Section$gradeFlagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$gradeFlagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   rosterEntries<T extends Prisma.Section$rosterEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$rosterEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sf10AccessRequests<T extends Prisma.Section$sf10AccessRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Section$sf10AccessRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdviserSf10AccessRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -2253,6 +2391,30 @@ export type Section$teacherAssignmentsArgs<ExtArgs extends runtime.Types.Extensi
   take?: number
   skip?: number
   distinct?: Prisma.TeacherSubjectAssignmentScalarFieldEnum | Prisma.TeacherSubjectAssignmentScalarFieldEnum[]
+}
+
+/**
+ * Section.gradeFlags
+ */
+export type Section$gradeFlagsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GradeFlag
+   */
+  select?: Prisma.GradeFlagSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GradeFlag
+   */
+  omit?: Prisma.GradeFlagOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GradeFlagInclude<ExtArgs> | null
+  where?: Prisma.GradeFlagWhereInput
+  orderBy?: Prisma.GradeFlagOrderByWithRelationInput | Prisma.GradeFlagOrderByWithRelationInput[]
+  cursor?: Prisma.GradeFlagWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GradeFlagScalarFieldEnum | Prisma.GradeFlagScalarFieldEnum[]
 }
 
 /**

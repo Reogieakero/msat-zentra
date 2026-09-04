@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus } from "../src/generated/prisma/client.js";
+import { PrismaClient, Role, GradeLevel, ComponentType, AttendanceStatus, Session, Remarks, RiskLevel, Confidentiality, ReferralTarget, ReferralStatus, ApprovalStatus, OutcomeStatus, AdmEligibility, AdmFormType, AdmFormStatus, Sf10Source, ActionType, NotifChannel, LockStatus, GradeFlagReason, GradeFlagStatus } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import { recomputeRisk, evaluateRisk } from "../src/services/risk.js";
 import argon2 from "argon2";
@@ -341,6 +341,70 @@ async function main() {
     });
   });
   await prisma.anecdotalRecord.createMany({ data: subjAnecdotals, skipDuplicates: true });
+
+  // Grade flags (G7-A English — the adviser is the sole gradebook owner, so
+  // resolution ownership is deterministic for smoke tests).
+  const flagSection = sections.find((s) => s.id === "sec-G7-A")!;
+  const flagSubjectId = subjectIds["G7:ENG7"];
+  const flagStudents = allStudents.filter((st) => st.sectionId === flagSection.id).slice(0, 4);
+  const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000);
+  await prisma.gradeFlag.createMany({
+    data: [
+      {
+        id: keyId("gf", "g7a-open-mine"),
+        studentId: flagStudents[0].userId,
+        subjectId: flagSubjectId,
+        sectionId: flagSection.id,
+        termId: term.id,
+        reason: "wrong_score" as GradeFlagReason,
+        note: "Transmuted grade does not match the class record.",
+        status: "open" as GradeFlagStatus,
+        raisedBy: flagSection.adviserId,
+        ownerId: flagSection.adviserId,
+      },
+      {
+        id: keyId("gf", "g7a-open-against"),
+        studentId: flagStudents[1].userId,
+        subjectId: flagSubjectId,
+        sectionId: flagSection.id,
+        termId: term.id,
+        reason: "missing_assessment" as GradeFlagReason,
+        note: "Quiz 3 score missing from the gradebook.",
+        status: "open" as GradeFlagStatus,
+        raisedBy: subjTeacher.id,
+        ownerId: flagSection.adviserId,
+      },
+      {
+        id: keyId("gf", "g7a-old-open"),
+        studentId: flagStudents[2].userId,
+        subjectId: flagSubjectId,
+        sectionId: flagSection.id,
+        termId: term.id,
+        reason: "late_submission" as GradeFlagReason,
+        note: "Late PT accepted but grade not updated.",
+        status: "open" as GradeFlagStatus,
+        raisedBy: subjTeacher.id,
+        ownerId: flagSection.adviserId,
+        createdAt: tenDaysAgo,
+      },
+      {
+        id: keyId("gf", "g7a-resolved"),
+        studentId: flagStudents[3].userId,
+        subjectId: flagSubjectId,
+        sectionId: flagSection.id,
+        termId: term.id,
+        reason: "transmutation_error" as GradeFlagReason,
+        note: "Transmutation used the wrong table.",
+        status: "resolved" as GradeFlagStatus,
+        raisedBy: subjTeacher.id,
+        ownerId: flagSection.adviserId,
+        resolvedBy: flagSection.adviserId,
+        resolvedAt: new Date(),
+        resolutionNote: "Corrected transmuted grade and re-locked.",
+      },
+    ],
+    skipDuplicates: true,
+  });
 
   // Referrals (>=20)
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));

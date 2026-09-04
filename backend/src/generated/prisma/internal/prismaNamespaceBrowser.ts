@@ -66,6 +66,7 @@ export const ModelName = {
   Assessment: 'Assessment',
   StudentGrade: 'StudentGrade',
   FinalGrade: 'FinalGrade',
+  GradeFlag: 'GradeFlag',
   AttendanceRecord: 'AttendanceRecord',
   AnecdotalRecord: 'AnecdotalRecord',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
@@ -289,6 +290,28 @@ export const FinalGradeScalarFieldEnum = {
 } as const
 
 export type FinalGradeScalarFieldEnum = (typeof FinalGradeScalarFieldEnum)[keyof typeof FinalGradeScalarFieldEnum]
+
+
+export const GradeFlagScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  subjectId: 'subjectId',
+  sectionId: 'sectionId',
+  termId: 'termId',
+  reason: 'reason',
+  note: 'note',
+  status: 'status',
+  raisedBy: 'raisedBy',
+  ownerId: 'ownerId',
+  resolvedBy: 'resolvedBy',
+  resolvedAt: 'resolvedAt',
+  resolutionNote: 'resolutionNote',
+  escalatedAt: 'escalatedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GradeFlagScalarFieldEnum = (typeof GradeFlagScalarFieldEnum)[keyof typeof GradeFlagScalarFieldEnum]
 
 
 export const AttendanceRecordScalarFieldEnum = {

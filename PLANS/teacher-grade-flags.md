@@ -139,9 +139,13 @@
   defaults; template work later).
 - Mobile teacher screens.
 
-## Decisions log (to fill as they are answered)
+## Decisions log (answered 2026-09-04 — implemented as decided)
 
-- [ ] Flag reasons: enum + note vs free-text.
-- [ ] Auto-resolution on grade edit (yes/no).
-- [ ] `escalation_threshold_days` value + storage + runner (cron vs lazy).
-- [ ] Adviser read scope on others' flag notes (full text vs reason-only).
+- [x] Flag reasons: **enum + note** (`GradeFlagReason`: wrong_score,
+  missing_assessment, transmutation_error, late_submission, other).
+- [x] Auto-resolution on grade edit: **no** — resolution is always explicit via
+  `POST /:id/resolve` with a required note.
+- [x] `escalation_threshold_days`: **`GRADE_FLAG_ESCALATION_DAYS` env (default
+  7)** + **hourly sweep in `index.ts` with lazy escalation on every
+  grade-flags read** (backstop, not source of truth).
+- [x] Adviser read scope on others' flag notes: **full text** for advisee flags.

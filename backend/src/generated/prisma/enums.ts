@@ -137,6 +137,26 @@ export const ReferralStatus = {
 export type ReferralStatus = (typeof ReferralStatus)[keyof typeof ReferralStatus]
 
 
+export const GradeFlagReason = {
+  wrong_score: 'wrong_score',
+  missing_assessment: 'missing_assessment',
+  transmutation_error: 'transmutation_error',
+  late_submission: 'late_submission',
+  other: 'other'
+} as const
+
+export type GradeFlagReason = (typeof GradeFlagReason)[keyof typeof GradeFlagReason]
+
+
+export const GradeFlagStatus = {
+  open: 'open',
+  resolved: 'resolved',
+  escalated: 'escalated'
+} as const
+
+export type GradeFlagStatus = (typeof GradeFlagStatus)[keyof typeof GradeFlagStatus]
+
+
 export const ApprovalStatus = {
   pending: 'pending',
   approved: 'approved',
@@ -231,6 +251,8 @@ export const ActionType = {
   principal_password_change: 'principal_password_change',
   sf10_access_grant: 'sf10_access_grant',
   sf10_access_deny: 'sf10_access_deny',
+  grade_flag_raise: 'grade_flag_raise',
+  grade_flag_resolve: 'grade_flag_resolve',
   create: 'create',
   update: 'update',
   delete: 'delete'

@@ -22,6 +22,7 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+  GRADE_FLAG_ESCALATION_DAYS: z.coerce.number().default(7),
 });
 
 export type Env = z.infer<typeof envSchema>;

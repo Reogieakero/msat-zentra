@@ -348,6 +348,40 @@ export type EnumLockStatusWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumLockStatusFilter<$PrismaModel>
 }
 
+export type EnumGradeFlagReasonFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagReason | Prisma.EnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagReasonFilter<$PrismaModel> | $Enums.GradeFlagReason
+}
+
+export type EnumGradeFlagStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagStatus | Prisma.EnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagStatusFilter<$PrismaModel> | $Enums.GradeFlagStatus
+}
+
+export type EnumGradeFlagReasonWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagReason | Prisma.EnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagReasonWithAggregatesFilter<$PrismaModel> | $Enums.GradeFlagReason
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGradeFlagReasonFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGradeFlagReasonFilter<$PrismaModel>
+}
+
+export type EnumGradeFlagStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagStatus | Prisma.EnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagStatusWithAggregatesFilter<$PrismaModel> | $Enums.GradeFlagStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGradeFlagStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGradeFlagStatusFilter<$PrismaModel>
+}
+
 export type EnumSessionFilter<$PrismaModel = never> = {
   equals?: $Enums.Session | Prisma.EnumSessionFieldRefInput<$PrismaModel>
   in?: $Enums.Session[] | Prisma.ListEnumSessionFieldRefInput<$PrismaModel>
@@ -1056,6 +1090,40 @@ export type NestedEnumLockStatusWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumLockStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumLockStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumGradeFlagReasonFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagReason | Prisma.EnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagReasonFilter<$PrismaModel> | $Enums.GradeFlagReason
+}
+
+export type NestedEnumGradeFlagStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagStatus | Prisma.EnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagStatusFilter<$PrismaModel> | $Enums.GradeFlagStatus
+}
+
+export type NestedEnumGradeFlagReasonWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagReason | Prisma.EnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagReason[] | Prisma.ListEnumGradeFlagReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagReasonWithAggregatesFilter<$PrismaModel> | $Enums.GradeFlagReason
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGradeFlagReasonFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGradeFlagReasonFilter<$PrismaModel>
+}
+
+export type NestedEnumGradeFlagStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GradeFlagStatus | Prisma.EnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GradeFlagStatus[] | Prisma.ListEnumGradeFlagStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGradeFlagStatusWithAggregatesFilter<$PrismaModel> | $Enums.GradeFlagStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGradeFlagStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGradeFlagStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumSessionFilter<$PrismaModel = never> = {

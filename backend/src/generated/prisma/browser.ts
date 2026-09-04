@@ -93,6 +93,11 @@ export type StudentGrade = Prisma.StudentGradeModel
  */
 export type FinalGrade = Prisma.FinalGradeModel
 /**
+ * Model GradeFlag
+ * 
+ */
+export type GradeFlag = Prisma.GradeFlagModel
+/**
  * Model AttendanceRecord
  * 
  */
