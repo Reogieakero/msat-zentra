@@ -126,3 +126,11 @@ export function initialsOf(name: string): string {
     .join("")
     .toUpperCase();
 }
+
+// "in_progress" -> "In Progress", "guidance_counselor" -> "Guidance Counselor".
+export function humanize(value: string): string {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}

@@ -4,17 +4,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AdvisoryStudentsHeader } from "./components/AdvisoryStudentsHeader";
 import { StudentTable } from "./components/StudentTable";
-import { StudentDrawer } from "./components/StudentDrawer";
 import { AddStudentDialog } from "./components/AddStudentDialog";
-import {
-  fetchAdvisoryRoster,
-  type DrawerSection,
-} from "./components/advisory-students-data";
+import { fetchAdvisoryRoster } from "./components/advisory-students-data";
 import styles from "./components/advisory-students.module.css";
 
 export default function TeacherAdvisoryStudentsPage() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [focus, setFocus] = useState<DrawerSection | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const rosterQuery = useQuery({
@@ -24,7 +18,6 @@ export default function TeacherAdvisoryStudentsPage() {
   });
   const students = rosterQuery.data?.students ?? [];
   const sectionName = rosterQuery.data?.advisorySections[0]?.name ?? "";
-  const rosterRow = students.find((s) => s.studentId === selectedId) ?? null;
 
   return (
     <section className={styles.page}>
@@ -38,26 +31,10 @@ export default function TeacherAdvisoryStudentsPage() {
             office.
           </p>
         ) : (
-          <StudentTable
-            students={students}
-            loading={rosterQuery.isPending}
-            onSelect={(studentId, section) => {
-              setSelectedId(studentId);
-              setFocus(section);
-            }}
-          />
+          <StudentTable students={students} loading={rosterQuery.isPending} />
         )}
       </div>
 
-      <StudentDrawer
-        studentId={selectedId}
-        rosterRow={rosterRow}
-        focus={focus}
-        onClose={() => {
-          setSelectedId(null);
-          setFocus(null);
-        }}
-      />
       <AddStudentDialog
         open={addOpen}
         sectionName={sectionName}

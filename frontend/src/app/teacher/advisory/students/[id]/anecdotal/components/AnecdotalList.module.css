@@ -1,0 +1,158 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--record, var(--primary));
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.categoryBadge {
+  color: var(--record, var(--primary));
+  border-color: color-mix(in oklch, var(--record), transparent 55%);
+  background-color: color-mix(in oklch, var(--record), transparent 88%);
+}
+
+.date {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.recordBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.location {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.incident {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--foreground);
+}
+
+.notes {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--foreground);
+  padding: 0.625rem 0.75rem;
+  border-left: 3px solid var(--border);
+  background-color: var(--muted);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.detail {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.detailLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.followups {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+}
+
+.followup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.8125rem;
+}
+
+.followupHead {
+  font-weight: 600;
+  color: var(--foreground);
+  font-size: 0.75rem;
+}
+
+.followupNotes {
+  color: var(--muted-foreground);
+}
+
+.restricted {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.lockIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.empty {
+  margin: 0;
+  text-align: center;
+  padding: 2.5rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.skelBadge {
+  height: 1.25rem;
+  width: 5rem;
+  border-radius: 999px;
+}
+
+.skelDate {
+  height: 0.75rem;
+  width: 6rem;
+  margin-left: auto;
+}
+
+.skelLine {
+  height: 0.875rem;
+  width: 100%;
+}
+
+.skelLineShort {
+  height: 0.875rem;
+  width: 55%;
+}

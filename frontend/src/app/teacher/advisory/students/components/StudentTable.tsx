@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -44,7 +45,6 @@ import {
   initialsOf,
   type AdviseeRiskLevel,
   type AdviseeRow,
-  type DrawerSection,
 } from "./advisory-students-data";
 import styles from "./StudentTable.module.css";
 
@@ -61,10 +61,10 @@ const RISK_VARIANTS = {
 interface StudentTableProps {
   students: AdviseeRow[];
   loading: boolean;
-  onSelect: (studentId: string, section: DrawerSection | null) => void;
 }
 
-export function StudentTable({ students, loading, onSelect }: StudentTableProps) {
+export function StudentTable({ students, loading }: StudentTableProps) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -213,7 +213,7 @@ export function StudentTable({ students, loading, onSelect }: StudentTableProps)
                 <TableRow
                   key={s.studentId}
                   className={styles.clickableRow}
-                  onClick={() => onSelect(s.studentId, null)}
+                  onClick={() => router.push(`/teacher/advisory/students/${s.studentId}/anecdotal`)}
                 >
                   <TableCell>
                     <span className={styles.student}>
@@ -255,7 +255,7 @@ export function StudentTable({ students, loading, onSelect }: StudentTableProps)
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelect(s.studentId, "anecdotal");
+                            router.push(`/teacher/advisory/students/${s.studentId}/anecdotal`);
                           }}
                         >
                           View anecdotal
@@ -263,7 +263,7 @@ export function StudentTable({ students, loading, onSelect }: StudentTableProps)
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelect(s.studentId, "attendance");
+                            router.push(`/teacher/advisory/students/${s.studentId}/attendance`);
                           }}
                         >
                           View attendance
@@ -271,7 +271,7 @@ export function StudentTable({ students, loading, onSelect }: StudentTableProps)
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelect(s.studentId, "grades");
+                            router.push(`/teacher/advisory/students/${s.studentId}/academic`);
                           }}
                         >
                           View academic

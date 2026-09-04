@@ -1,0 +1,172 @@
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.chartCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.chartWrap {
+  position: relative;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1.15;
+}
+
+.centerValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.centerLabel {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.375rem 0.75rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+
+.swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendValue {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.messageCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  padding-left: 1.5rem;
+}
+
+.messageHead {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.messageIcon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--primary);
+}
+
+.messageList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.messageLine {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--border);
+}
+
+.messageLine:first-child {
+  color: var(--foreground);
+  font-weight: 600;
+  border-left-color: var(--primary);
+}
+
+.statusBadge {
+  align-self: flex-start;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.skelDonut {
+  height: 150px;
+  border-radius: 999px;
+  max-width: 150px;
+}
+
+.skelMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skelLine {
+  height: 0.875rem;
+  width: 100%;
+}
+
+.skelLineShort {
+  height: 0.875rem;
+  width: 60%;
+}
+
+@media (max-width: 720px) {
+  .panel {
+    grid-template-columns: 1fr;
+  }
+
+  .messageCol {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 1rem;
+  }
+}

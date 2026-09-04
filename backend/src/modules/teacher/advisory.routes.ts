@@ -10,6 +10,7 @@ import {
   levelFromFlags,
   resolveActiveTermId,
 } from "../../services/risk.js";
+import { buildDayAxis, isWeekendKey, schoolDaysToDate } from "../../services/attendance.js";
 
 const router = Router();
 
@@ -230,6 +231,278 @@ router.post(
         hasOpenFlag: false,
         openFlagCount: 0,
         hasAccount: false,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Shared advisee check: returns the profile when the student sits in one of
+// the caller's advisory sections, otherwise throws 404 (uniform, no probing).
+async function assertAdvisee(teacherId: string, studentId: string) {
+  const student = await prisma.studentProfile.findUnique({
+    where: { userId: studentId },
+    include: {
+      user: { select: { fullName: true } },
+      section: { select: { id: true, name: true, adviserId: true } },
+    },
+  });
+  if (!student || student.section?.adviserId !== teacherId) {
+    throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+  }
+  return student;
+}
+
+// GET /api/teacher/advisory/students/:id/anecdotal — anecdotal records for one
+// advisee (active term). Own records come back in full; anyone else's come back
+// metadata-only (date, category, tier, follow-up count) — never the write-up.
+router.get(
+  "/students/:id/anecdotal",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const studentId = String(req.params.id);
+      const termId = await resolveActiveTermId();
+      if (!termId) {
+        throw new AppError(404, "NO_ACTIVE_TERM", "No active term");
+      }
+      const student = await assertAdvisee(teacherId, studentId);
+
+      const records = await prisma.anecdotalRecord.findMany({
+        where: { studentId, termId },
+        include: {
+          observer: { select: { id: true, fullName: true } },
+          followups: {
+            include: { followupUser: { select: { id: true, fullName: true } } },
+            orderBy: { followupDate: "asc" },
+          },
+        },
+        orderBy: { observationDatetime: "desc" },
+      });
+
+      res.json({
+        student: {
+          studentId: student.userId,
+          name: student.user.fullName,
+          lrn: student.lrn,
+          section: student.section?.name ?? "",
+        },
+        records: records.map((r) => {
+          const base = {
+            id: r.id,
+            observationDatetime: r.observationDatetime,
+            category: r.category,
+            confidentialityLevel: r.confidentialityLevel,
+            mine: r.observerId === teacherId,
+          };
+          if (r.observerId !== teacherId) {
+            return { ...base, followupCount: r.followups.length };
+          }
+          return {
+            ...base,
+            location: r.descriptionOfLocation,
+            incident: r.descriptionOfIncident,
+            notes: r.notesRecommendationsActions,
+            classPerformance: r.classPerformance,
+            attendanceSummary: r.attendanceSummary,
+            followups: r.followups.map((f) => ({
+              id: f.id,
+              by: f.followupUser.fullName,
+              date: f.followupDate,
+              notes: f.notes,
+            })),
+          };
+        }),
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// GET /api/teacher/advisory/students/:id/attendance — attendance for one
+// advisee (active term): summary rate plus per-day AM/PM sessions.
+router.get(
+  "/students/:id/attendance",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const studentId = String(req.params.id);
+      const termId = await resolveActiveTermId();
+      if (!termId) {
+        throw new AppError(404, "NO_ACTIVE_TERM", "No active term");
+      }
+      const student = await assertAdvisee(teacherId, studentId);
+
+      const [records, term] = await Promise.all([
+        prisma.attendanceRecord.findMany({
+          where: { studentId, termId },
+          select: { date: true, session: true, status: true },
+          orderBy: [{ date: "desc" }, { session: "asc" }],
+        }),
+        prisma.term.findUnique({ where: { id: termId }, select: { startDate: true } }),
+      ]);
+
+      // Denominator = every school-day session since term start (AM + PM per
+      // weekday). There is no "unmarked" state on this surface: a school-day
+      // session with no submitted record reads as absent — the only statuses
+      // are present, absent, late, and excused.
+      const schoolDays = schoolDaysToDate(term?.startDate ?? null);
+      const possible = schoolDays * 2;
+      const counts = { present: 0, absent: 0, late: 0, excused: 0 };
+      for (const r of records) counts[r.status]++;
+      const unrecorded = Math.max(0, possible - records.length);
+      const absent = counts.absent + unrecorded;
+      const rate = possible === 0 ? 1 : counts.present / possible;
+      const summary = {
+        present: counts.present,
+        absent,
+        late: counts.late,
+        excused: counts.excused,
+        total: possible,
+        schoolDays,
+        rate,
+        isRisk: rate < 0.8,
+      };
+
+      // Full school-day axis from term start through today (weekdays only):
+      // days without records render as unmarked, so gaps are visible instead
+      // of silently collapsing the timeline.
+      const byDate = new Map<string, Record<string, string>>();
+      for (const r of records) {
+        const key = r.date.toISOString().slice(0, 10);
+        const sessions = byDate.get(key) ?? {};
+        sessions[r.session] = r.status;
+        byDate.set(key, sessions);
+      }
+      const days = buildDayAxis(term?.startDate ?? null)
+        .filter((key) => !isWeekendKey(key))
+        .reverse()
+        .map((key) => {
+          const sessions = byDate.get(key) ?? {};
+          return {
+            date: key,
+            sessions: {
+              AM: sessions.AM ?? "absent",
+              PM: sessions.PM ?? "absent",
+            },
+          };
+        });
+
+      res.json({
+        student: {
+          studentId: student.userId,
+          name: student.user.fullName,
+          lrn: student.lrn,
+          section: student.section?.name ?? "",
+        },
+        summary,
+        termStart: term?.startDate ?? null,
+        days,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// GET /api/teacher/advisory/students/:id/academic — subject grades for one
+// advisee (active term), read-only. Includes a passed/failed summary.
+router.get(
+  "/students/:id/academic",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const studentId = String(req.params.id);
+      const termId = await resolveActiveTermId();
+      if (!termId) {
+        throw new AppError(404, "NO_ACTIVE_TERM", "No active term");
+      }
+      const student = await assertAdvisee(teacherId, studentId);
+
+      const [grades, sectionSubjects] = await Promise.all([
+        prisma.finalGrade.findMany({
+          where: { studentId, termId },
+          include: { subject: { select: { id: true, name: true } } },
+        }),
+        // Every subject offered in the student's section — so subjects with
+        // no encoded grade yet still display (as ungraded raw rows).
+        prisma.teacherSubjectAssignment.findMany({
+          where: { sectionId: student.section!.id },
+          select: { subject: { select: { id: true, name: true } } },
+          distinct: ["subjectId"],
+        }),
+      ]);
+
+      const bySubjectId = new Map(grades.map((g) => [g.subject.id, g]));
+      const subjectIds = new Set<string>([
+        ...grades.map((g) => g.subject.id),
+        ...sectionSubjects.map((a) => a.subject.id),
+      ]);
+      const subjectNames = new Map<string, string>([
+        ...grades.map((g) => [g.subject.id, g.subject.name] as const),
+        ...sectionSubjects.map((a) => [a.subject.id, a.subject.name] as const),
+      ]);
+
+      interface GradeRow {
+        subject: string;
+        computedAverage: number | null;
+        transmutedGrade: number | null;
+        remarks: string | null;
+        lockStatus: string | null;
+      }
+      const rows: GradeRow[] = Array.from(subjectIds)
+        .map((subjectId) => {
+          const g = bySubjectId.get(subjectId);
+          if (!g) {
+            return {
+              subject: subjectNames.get(subjectId) ?? "",
+              computedAverage: null,
+              transmutedGrade: null,
+              remarks: null,
+              lockStatus: null,
+            };
+          }
+          return {
+            subject: g.subject.name,
+            computedAverage: g.computedAverage,
+            transmutedGrade: g.transmutedGrade,
+            remarks: g.remarks,
+            lockStatus: g.lockStatus,
+          };
+        })
+        .sort((a, b) => a.subject.localeCompare(b.subject));
+
+      const gradedRows = rows.filter((g) => g.computedAverage !== null);
+      const passed = rows.filter((g) => g.remarks === "Passed").length;
+      const failed = rows.filter((g) => g.remarks === "Failed").length;
+
+      res.json({
+        student: {
+          studentId: student.userId,
+          name: student.user.fullName,
+          lrn: student.lrn,
+          section: student.section?.name ?? "",
+        },
+        grades: rows,
+        summary: {
+          subjects: rows.length,
+          graded: gradedRows.length,
+          passed,
+          failed,
+          average:
+            gradedRows.length === 0
+              ? null
+              : gradedRows.reduce((sum, g) => sum + (g.computedAverage ?? 0), 0) /
+                gradedRows.length,
+        },
       });
     } catch (e) {
       next(e);
