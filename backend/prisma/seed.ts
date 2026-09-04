@@ -16,13 +16,22 @@ const STUDENTS_PER_SECTION = 20;
 const MIN_RECORDS = 20;
 
 const SUBJECT_NAMES: Record<GradeLevel, { name: string; code: string }[]> = {
-  G7: [{ name: "Math 7", code: "MATH7" }, { name: "English 7", code: "ENG7" }, { name: "Science 7", code: "SCI7" }],
+  G7: [{ name: "Math 7", code: "MATH7" }, { name: "English 7", code: "ENG7" }, { name: "Science 7", code: "SCI7" }, { name: "Filipino 7", code: "FIL7" }, { name: "Araling Panlipunan 7", code: "AP7" }, { name: "MAPEH 7", code: "MAPEH7" }],
   G8: [{ name: "Math 8", code: "MATH8" }, { name: "English 8", code: "ENG8" }, { name: "Science 8", code: "SCI8" }],
   G9: [{ name: "Math 9", code: "MATH9" }, { name: "English 9", code: "ENG9" }, { name: "Science 9", code: "SCI9" }],
   G10: [{ name: "Math 10", code: "MATH10" }, { name: "English 10", code: "ENG10" }, { name: "Science 10", code: "SCI10" }],
   G11: [{ name: "Gen Math 11", code: "GMM11" }, { name: "Purposive Comm 11", code: "PC11" }, { name: "Earth Sci 11", code: "ES11" }],
   G12: [{ name: "Calc 12", code: "CALC12" }, { name: "Research 12", code: "RES12" }, { name: "Physics 12", code: "PHY12" }],
 };
+
+// Dedicated subject teachers who SOLELY own their subject's gradebooks
+// (advisers are not assigned to these subjects, so flag resolution ownership
+// is deterministic).
+const SUBJECT_TEACHERS: { email: string; fullName: string; employeeId: string; grade: GradeLevel; code: string }[] = [
+  { email: "teacher.filipino@zentra.test", fullName: "Ms. Filipino Teacher", employeeId: "TCH002", grade: "G7", code: "FIL7" },
+  { email: "teacher.ap@zentra.test", fullName: "Mr. AP Teacher", employeeId: "TCH003", grade: "G7", code: "AP7" },
+  { email: "teacher.mapeh@zentra.test", fullName: "Ms. MAPEH Teacher", employeeId: "TCH004", grade: "G7", code: "MAPEH7" },
+];
 
 const FIRST_NAMES = ["Maria", "Juan", "Ana", "Pedro", "Sofia", "Lucas", "Elena", "Miguel", "Rosa", "Jose", "Carmen", "Antonio", "Lucia", "Diego", "Gabriela", "Andres", "Isabella", "Rafael", "Paula", "Manuel", "Teresa", "Francisco", "Liza", "Carlos"];
 const LAST_NAMES = ["Santos", "Reyes", "Cruz", "Garcia", "Mendoza", "Torres", "Flores", "Ramos", "Diaz", "Castillo", "Manalo", "Bautista", "Villanueva", "Ocampo", "Aquino", "Delos Reyes", "Gonzales", "Ferrer", "Tanjuan", "Salazar"];
@@ -231,8 +240,10 @@ async function main() {
   }
 
   // 2) Teacher assignments per section/subject, and grades for every student in that grade.
+  const soleOwned = new Set(SUBJECT_TEACHERS.map((t) => `${t.grade}:${t.code}`));
   for (const section of sections) {
     for (const s of SUBJECT_NAMES[section.gradeLevel]) {
+      if (soleOwned.has(`${section.gradeLevel}:${s.code}`)) continue;
       const subjectId = subjectIds[`${section.gradeLevel}:${s.code}`];
       teacherAssignments.push({ id: id("tsa"), teacherId: section.adviserId, subjectId, sectionId: section.id, termId: term.id });
     }
@@ -341,6 +352,29 @@ async function main() {
     });
   });
   await prisma.anecdotalRecord.createMany({ data: subjAnecdotals, skipDuplicates: true });
+
+  // Dedicated subject teachers: sole owners of their subject's gradebooks in
+  // every section of their grade.
+  for (const t of SUBJECT_TEACHERS) {
+    const teacher = await prisma.user.upsert({
+      where: { email: t.email },
+      update: { fullName: t.fullName, role: "subject_teacher" as Role, passwordHash: staffHash, status: "active" },
+      create: { email: t.email, fullName: t.fullName, role: "subject_teacher" as Role, passwordHash: staffHash, status: "active" },
+    });
+    await prisma.staffProfile.upsert({
+      where: { userId: teacher.id },
+      update: { employeeId: t.employeeId, isAdviser: false, department: "Academic" },
+      create: { userId: teacher.id, employeeId: t.employeeId, isAdviser: false, department: "Academic" },
+    });
+    const subjectId = subjectIds[`${t.grade}:${t.code}`];
+    for (const section of sections.filter((s) => s.gradeLevel === t.grade)) {
+      await prisma.teacherSubjectAssignment.upsert({
+        where: { teacherId_subjectId_sectionId_termId: { teacherId: teacher.id, subjectId, sectionId: section.id, termId: term.id } },
+        update: {},
+        create: { teacherId: teacher.id, subjectId, sectionId: section.id, termId: term.id },
+      });
+    }
+  }
 
   // Grade flags (G7-A English — the adviser is the sole gradebook owner, so
   // resolution ownership is deterministic for smoke tests).
