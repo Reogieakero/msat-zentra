@@ -21,7 +21,7 @@ const SUBJECT_NAMES: Record<GradeLevel, { name: string; code: string }[]> = {
   G9: [{ name: "Math 9", code: "MATH9" }, { name: "English 9", code: "ENG9" }, { name: "Science 9", code: "SCI9" }],
   G10: [{ name: "Math 10", code: "MATH10" }, { name: "English 10", code: "ENG10" }, { name: "Science 10", code: "SCI10" }],
   G11: [{ name: "Gen Math 11", code: "GMM11" }, { name: "Purposive Comm 11", code: "PC11" }, { name: "Earth Sci 11", code: "ES11" }],
-  G12: [{ name: "Calc 12", code: "CALC12" }, { name: "Research 12", code: "RES12" }, { name: "Physics 12", code: "PHY12" }],
+  G12: [{ name: "Calc 12", code: "CALC12" }, { name: "Research 12", code: "RES12" }, { name: "Physics 12", code: "PHY12" }, { name: "Filipino 12", code: "FIL12" }, { name: "Contemporary Arts 12", code: "ARTS12" }, { name: "Entrepreneurship 12", code: "ENTREP12" }],
 };
 
 // Dedicated subject teachers who SOLELY own their subject's gradebooks
@@ -31,6 +31,9 @@ const SUBJECT_TEACHERS: { email: string; fullName: string; employeeId: string; g
   { email: "teacher.filipino@zentra.test", fullName: "Ms. Filipino Teacher", employeeId: "TCH002", grade: "G7", code: "FIL7" },
   { email: "teacher.ap@zentra.test", fullName: "Mr. AP Teacher", employeeId: "TCH003", grade: "G7", code: "AP7" },
   { email: "teacher.mapeh@zentra.test", fullName: "Ms. MAPEH Teacher", employeeId: "TCH004", grade: "G7", code: "MAPEH7" },
+  { email: "teacher.filipino12@zentra.test", fullName: "Ms. Filipino 12 Teacher", employeeId: "TCH005", grade: "G12", code: "FIL12" },
+  { email: "teacher.arts12@zentra.test", fullName: "Mr. Arts Teacher", employeeId: "TCH006", grade: "G12", code: "ARTS12" },
+  { email: "teacher.entrep12@zentra.test", fullName: "Ms. Entrep Teacher", employeeId: "TCH007", grade: "G12", code: "ENTREP12" },
 ];
 
 const FIRST_NAMES = ["Maria", "Juan", "Ana", "Pedro", "Sofia", "Lucas", "Elena", "Miguel", "Rosa", "Jose", "Carmen", "Antonio", "Lucia", "Diego", "Gabriela", "Andres", "Isabella", "Rafael", "Paula", "Manuel", "Teresa", "Francisco", "Liza", "Carlos"];
