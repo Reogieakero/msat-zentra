@@ -25,7 +25,7 @@ export function requireAdvisorySections<T extends { id: string }>(sections: T[])
   return sections;
 }
 
-async function adviserSectionsOr404(teacherId: string) {
+export async function adviserSectionsOr404(teacherId: string) {
   const sections = await prisma.section.findMany({
     where: { adviserId: teacherId },
     select: { id: true, name: true, gradeLevel: true },
@@ -354,8 +354,13 @@ router.get(
       // are present, absent, late, and excused.
       const schoolDays = schoolDaysToDate(term?.startDate ?? null);
       const possible = schoolDays * 2;
+      // Weekday-only counts so the summary matches the calendar axis:
+      // legacy seed rows exist on weekends and must not inflate the total.
+      const weekdayRecords = records.filter(
+        (r) => !isWeekendKey(r.date.toISOString().slice(0, 10))
+      );
       const counts = { present: 0, absent: 0, late: 0, excused: 0 };
-      for (const r of records) counts[r.status]++;
+      for (const r of weekdayRecords) counts[r.status]++;
       const unrecorded = Math.max(0, possible - records.length);
       const absent = counts.absent + unrecorded;
       const rate = possible === 0 ? 1 : counts.present / possible;
@@ -503,6 +508,50 @@ router.get(
               : gradedRows.reduce((sum, g) => sum + (g.computedAverage ?? 0), 0) /
                 gradedRows.length,
         },
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// GET /api/teacher/advisory/attendance — submitted marks for one date +
+// session across the caller's advisory sections (sheet prefill).
+// Query: ?date=ISO-datetime & session=AM|PM. Adviser-only (404 otherwise).
+router.get(
+  "/attendance",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const sections = await adviserSectionsOr404(teacherId);
+      const sectionIds = sections.map((s) => s.id);
+      const session = String(req.query.session ?? "");
+      if (session !== "AM" && session !== "PM") {
+        throw new AppError(400, "BAD_SESSION", "session must be AM or PM");
+      }
+      const date = new Date(String(req.query.date ?? ""));
+      if (Number.isNaN(date.getTime())) {
+        throw new AppError(400, "BAD_DATE", "date must be an ISO datetime");
+      }
+      const dayKey = date.toISOString().slice(0, 10);
+      const dayStart = new Date(`${dayKey}T00:00:00Z`);
+      const nextDay = new Date(dayStart.getTime() + 86_400_000);
+      // Day-bounded match covers both UTC-midnight rows (new takes) and
+      // local-noon rows (seed backfill) falling on the same UTC calendar day.
+      const records = await prisma.attendanceRecord.findMany({
+        where: {
+          sectionId: { in: sectionIds },
+          session: session as "AM" | "PM",
+          date: { gte: dayStart, lt: nextDay },
+        },
+        select: { studentId: true, status: true },
+      });
+      res.json({
+        date: dayKey,
+        session,
+        marks: records.map((r) => ({ studentId: r.studentId, status: r.status })),
       });
     } catch (e) {
       next(e);

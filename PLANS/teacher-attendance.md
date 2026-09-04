@@ -113,9 +113,11 @@
 - Class-level (subject teacher) attendance — advisers only per spec.
 - Mobile attendance screens.
 
-## Decisions log (to fill before Phase 1)
+## Decisions log (answered during build — implemented as decided)
 
-- [ ] EOD lock clock (local fixed vs server-local).
-- [ ] Admin override shape (roles + fields).
-- [ ] Untouched-row default (pre-select Present vs explicit choice).
-- [ ] Weekend/holiday taking (hard-block vs override).
+- [x] EOD lock clock → **same-week grace instead of strict EOD**: days earlier
+  in the current Mon–Sun week (Philippines day) stay editable; older days 403.
+- [x] Admin override shape → **deferred**: no override in v1 (past-week days
+  simply reject); revisit if registrars request it.
+- [x] Untouched-row default → **pre-select Present**.
+- [x] Weekend/holiday taking → **hard-block weekends (422)**; future dates 422.

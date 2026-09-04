@@ -4,6 +4,9 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { writeAudit } from "../../lib/audit.js";
+import { fanoutNotification } from "../../lib/notify.js";
+import { adviserSectionsOr404 } from "../teacher/advisory.routes.js";
 import {
   computeAttendanceRate,
   buildDayAxis,
@@ -28,6 +31,21 @@ const bulkSchema = z.object({
   session: z.enum(["AM", "PM"]),
   records: z.array(z.object({ studentId: z.string().min(1), status: z.enum(["present", "absent", "late", "excused"]) })).min(1),
 });
+
+// Philippines calendar day (school operates on local time).
+function phDayKey(d: Date): string {
+  return new Date(d.getTime() + 8 * 3_600_000).toISOString().slice(0, 10);
+}
+function phWeekday(dayKey: string): number {
+  return new Date(`${dayKey}T00:00:00Z`).getUTCDay();
+}
+// Monday (PH) starting the week containing the given PH day key.
+function mondayOf(dayKey: string): string {
+  const d = new Date(`${dayKey}T00:00:00Z`);
+  const back = (d.getUTCDay() + 6) % 7;
+  return new Date(d.getTime() - back * 86_400_000).toISOString().slice(0, 10);
+}
+
 router.post(
   "/bulk",
   requireAuth,
@@ -35,19 +53,125 @@ router.post(
   validate("body", bulkSchema),
   async (req, res, next) => {
     try {
-      const { sectionId, termId, date, session, records } = req.body;
-      const parsedDate = new Date(date);
-      const created = await prisma.$transaction(
-        records.map((r: any) =>
-          prisma.attendanceRecord.upsert({
-            where: { studentId_date_session: { studentId: r.studentId, date: parsedDate, session } },
-            create: { studentId: r.studentId, sectionId, termId, date: parsedDate, session, status: r.status, recordedBy: req.user!.id },
-            update: { status: r.status, sectionId, recordedBy: req.user!.id },
+      const { sectionId, termId, date, session, records } = req.body as z.infer<typeof bulkSchema>;
+      const teacherId = req.user!.id;
+
+      // 1. The section must be one of the caller's advisory sections.
+      const sections = await adviserSectionsOr404(teacherId);
+      if (!sections.some((s) => s.id === sectionId)) {
+        throw new AppError(403, "FORBIDDEN", "Section is not in your advisory");
+      }
+
+      // 2. Date rules (Philippines calendar day): no future, no weekends,
+      //    past days locked (EOD lock — no override in v1).
+      const recordDay = phDayKey(new Date(date));
+      const todayKey = phDayKey(new Date());
+      if (recordDay > todayKey) {
+        throw new AppError(422, "FUTURE_DATE", "Cannot take attendance for a future date");
+      }
+      if (phWeekday(recordDay) === 0 || phWeekday(recordDay) === 6) {
+        throw new AppError(422, "WEEKEND", "Cannot take attendance on a weekend");
+      }
+      if (recordDay < todayKey) {
+        // Same-week grace: days earlier this week (Mon–Sun) stay editable;
+        // anything older is locked.
+        if (mondayOf(recordDay) !== mondayOf(todayKey)) {
+          throw new AppError(403, "PAST_LOCKED", "Days before this week are locked");
+        }
+      }
+      const normalizedDate = new Date(`${recordDay}T00:00:00Z`);
+      const dayStart = normalizedDate;
+      const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+
+      // 3. Every student must be enrolled in the section.
+      const studentIds = Array.from(new Set(records.map((r: { studentId: string }) => r.studentId)));
+      const enrolled = await prisma.studentProfile.count({
+        where: { userId: { in: studentIds }, sectionId },
+      });
+      if (enrolled !== studentIds.length) {
+        throw new AppError(422, "STUDENT_NOT_IN_SECTION", "One or more students are not in this section");
+      }
+
+      // 4. Previous marks (same calendar day) — notifications fire only when
+      //    a status newly becomes absent/late, never on plain resubmits.
+      const previous = await prisma.attendanceRecord.findMany({
+        where: {
+          studentId: { in: studentIds },
+          session,
+          date: {
+            gte: new Date(`${recordDay}T00:00:00Z`),
+            lt: new Date(new Date(`${recordDay}T00:00:00Z`).getTime() + 86_400_000),
+          },
+        },
+        select: { id: true, studentId: true, status: true },
+      });
+      const prevByStudent = new Map(previous.map((p) => [p.studentId, p]));
+      // Snapshot of pre-write statuses for the notification check below —
+      // prevByStudent gets overwritten with fresh writes in the write loop.
+      const prevStatus = new Map(previous.map((p) => [p.studentId, p.status]));
+      const names = new Map(
+        (
+          await prisma.user.findMany({
+            where: { id: { in: studentIds } },
+            select: { id: true, fullName: true },
           })
-        )
+        ).map((u) => [u.id, u.fullName])
       );
-      for (const r of records) await recomputeRisk(r.studentId, termId);
-      res.status(201).json({ count: created.length });
+
+      // Day-scoped write (not raw timestamp upsert): legacy rows may carry
+      // non-midnight timestamps, so match by calendar day to avoid stacking
+      // two rows for one student/day/session.
+      const written: { id: string; studentId: string }[] = [];
+      for (const r of records) {
+        const existing = prevByStudent.get(r.studentId);
+        const row = existing
+          ? await prisma.attendanceRecord.update({
+              where: { id: existing.id },
+              data: { status: r.status, sectionId, recordedBy: teacherId, date: normalizedDate },
+            })
+          : await prisma.attendanceRecord.create({
+              data: { studentId: r.studentId, sectionId, termId, date: normalizedDate, session, status: r.status, recordedBy: teacherId },
+            });
+        written.push({ id: row.id, studentId: r.studentId });
+        // Later duplicates in the same payload see the fresh write.
+        prevByStudent.set(r.studentId, { id: row.id, studentId: r.studentId, status: r.status });
+      }
+      const byStudent = new Map(written.map((w) => [`${w.studentId}|${session}`, w]));
+
+      for (const r of records) {
+        await recomputeRisk(r.studentId, termId);
+        const prev = prevStatus.get(r.studentId);
+        const newlyFlagged =
+          (r.status === "absent" || r.status === "late") &&
+          prev !== "absent" &&
+          prev !== "late";
+        if (newlyFlagged) {
+          const parents = await prisma.parentStudentLink.findMany({
+            where: { studentId: r.studentId },
+            select: { parentId: true },
+          });
+          const record = byStudent.get(`${r.studentId}|${session}`);
+          for (const p of parents) {
+            await fanoutNotification({
+              userId: p.parentId,
+              sourceTable: "attendance_records",
+              action: "create",
+              sourceId: record?.id ?? r.studentId,
+              message: `${names.get(r.studentId) ?? "Your child"} was marked ${r.status} for the ${session} session on ${recordDay}.`,
+            });
+          }
+        }
+      }
+
+      await writeAudit({
+        userId: teacherId,
+        actionType: "attendance_submit",
+        sourceTable: "attendance_records",
+        sourceId: `${sectionId}|${recordDay}|${session}`,
+        reason: `Bulk attendance: ${written.length} marks (${session} ${recordDay})`,
+      });
+
+      res.status(201).json({ count: written.length });
     } catch (e) { next(e); }
   }
 );

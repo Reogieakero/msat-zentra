@@ -45,13 +45,13 @@ const NAV: NavGroup[] = [
       { title: "Overview", href: "/teacher/overview", icon: LayoutDashboard },
       { title: "My Classes", href: "/teacher/classes", icon: BookOpen },
       { title: "Grade Flags", href: "/teacher/grade-flags", icon: Flag },
+      { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
     ],
   },
   {
     label: "Advisory",
     items: [
       { title: "Students", href: "/teacher/advisory/students", icon: CalendarClock },
-      { title: "Attendance", href: "/teacher/advisory/attendance", icon: CalendarClock },
       { title: "Anecdotal", href: "/teacher/advisory/anecdotal", icon: FilePenLine },
       { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
       { title: "ADM Cases", href: "/teacher/advisory/adm-cases", icon: ClipboardList },

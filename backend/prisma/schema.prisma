@@ -191,6 +191,7 @@ enum ActionType {
   sf10_access_deny
   grade_flag_raise
   grade_flag_resolve
+  attendance_submit
   create
   update
   delete

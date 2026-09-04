@@ -253,6 +253,7 @@ export const ActionType = {
   sf10_access_deny: 'sf10_access_deny',
   grade_flag_raise: 'grade_flag_raise',
   grade_flag_resolve: 'grade_flag_resolve',
+  attendance_submit: 'attendance_submit',
   create: 'create',
   update: 'update',
   delete: 'delete'
