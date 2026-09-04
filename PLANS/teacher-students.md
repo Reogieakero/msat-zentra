@@ -140,3 +140,7 @@
   + `GET /api/teacher/advisory/students/:id`, all mock files deleted.
 - [x] Gender has no backend field → added nullable `StudentProfile.gender` +
   migration `20260904010000_student_gender`, seed assignment, live backfill.
+- [x] Adviser add-student → **enlist to section roster** (`POST
+  /api/teacher/advisory/roster`, LRN + name, 409 on duplicate/registered,
+  audited): appears in roster with a "No account" badge; full records unlock
+  on registration + approval. No mock append.

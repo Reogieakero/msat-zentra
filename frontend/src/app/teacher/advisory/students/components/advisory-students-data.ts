@@ -24,6 +24,7 @@ export interface AdviseeRow {
   confidentialityTiers: string[];
   hasOpenFlag: boolean;
   openFlagCount: number;
+  hasAccount: boolean;
 }
 
 export interface AdvisoryRoster {
@@ -100,6 +101,11 @@ export async function fetchAdviseeDetail(studentId: string): Promise<AdviseeDeta
   const { data } = await apiClient.get<AdviseeDetail>(
     `/api/teacher/advisory/students/${studentId}`
   );
+  return data;
+}
+
+export async function enlistStudent(payload: { fullName: string; lrn: string }): Promise<AdviseeRow> {
+  const { data } = await apiClient.post<AdviseeRow>("/api/teacher/advisory/roster", payload);
   return data;
 }
 

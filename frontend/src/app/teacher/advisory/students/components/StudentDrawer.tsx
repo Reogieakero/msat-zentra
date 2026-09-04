@@ -16,6 +16,7 @@ import {
   fetchAdviseeDetail,
   formatBirthdate,
   initialsOf,
+  type AdviseeRow,
   type DrawerSection,
 } from "./advisory-students-data";
 import styles from "./StudentDrawer.module.css";
@@ -30,11 +31,13 @@ const FLAG_STATUS_VARIANTS = {
 
 interface StudentDrawerProps {
   studentId: string | null;
+  rosterRow: AdviseeRow | null;
   focus: DrawerSection | null;
   onClose: () => void;
 }
 
-export function StudentDrawer({ studentId, focus, onClose }: StudentDrawerProps) {
+export function StudentDrawer({ studentId, rosterRow, focus, onClose }: StudentDrawerProps) {
+  const isRosterOnly = rosterRow !== null && !rosterRow.hasAccount;
   const gradesRef = useRef<HTMLDivElement>(null);
   const attendanceRef = useRef<HTMLDivElement>(null);
   const anecdotalRef = useRef<HTMLDivElement>(null);
@@ -42,7 +45,7 @@ export function StudentDrawer({ studentId, focus, onClose }: StudentDrawerProps)
   const detailQuery = useQuery({
     queryKey: ["advisee-detail", studentId],
     queryFn: () => fetchAdviseeDetail(studentId!),
-    enabled: studentId !== null,
+    enabled: studentId !== null && !isRosterOnly,
     retry: false,
   });
   const student = detailQuery.data ?? null;
@@ -70,7 +73,29 @@ export function StudentDrawer({ studentId, focus, onClose }: StudentDrawerProps)
       }}
     >
       <DialogContent className={styles.dialog}>
-        {detailQuery.isPending || !student ? (
+        {isRosterOnly && rosterRow ? (
+          <>
+            <DialogHeader className={styles.header}>
+              <span className={styles.avatar} aria-hidden>
+                {initialsOf(rosterRow.name)}
+              </span>
+              <div className={styles.titleWrap}>
+                <div className={styles.titleRow}>
+                  <DialogTitle className={styles.title}>{rosterRow.name}</DialogTitle>
+                  <Badge variant="outline">No account</Badge>
+                </div>
+                <DialogDescription className={styles.subtitle}>
+                  {rosterRow.lrn} · {rosterRow.section}
+                </DialogDescription>
+              </div>
+            </DialogHeader>
+            <p className={styles.notice}>
+              Enlisted in the section roster — no login account yet. Grades,
+              attendance, and case records appear here once the student registers
+              and the account is approved.
+            </p>
+          </>
+        ) : detailQuery.isPending || !student ? (
           <div className={styles.loading} aria-busy="true" aria-label="Loading student details">
             <div className={styles.loadingHead}>
               <Skeleton className={styles.skelAvatar} />

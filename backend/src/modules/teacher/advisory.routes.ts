@@ -1,7 +1,10 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { writeAudit } from "../../lib/audit.js";
 import {
   computeRiskFactors,
   levelFromFlags,
@@ -46,7 +49,7 @@ router.get(
       }
 
       const sectionIds = sections.map((s) => s.id);
-      const [counts, advisees] = await Promise.all([
+      const [counts, advisees, rosterEntries] = await Promise.all([
         prisma.studentProfile.groupBy({
           by: ["sectionId"],
           where: { sectionId: { in: sectionIds } },
@@ -70,44 +73,164 @@ router.get(
           },
           orderBy: { user: { fullName: "asc" } },
         }),
+        // Enlisted but not yet registered: roster rows with no login account.
+        prisma.studentRoster.findMany({
+          where: { sectionId: { in: sectionIds } },
+          include: { section: { select: { name: true } } },
+          orderBy: { fullName: "asc" },
+        }),
       ]);
       const enrolledBySection = new Map(counts.map((c) => [c.sectionId, c._count._all]));
+      const registeredLrns = new Set(advisees.map((s) => s.lrn));
 
-      const students = advisees.map((s) => {
-        const enrolled = enrolledBySection.get(s.sectionId!) ?? 0;
-        const factors = computeRiskFactors({
-          finalGrades: s.finalGrades,
-          attendance: s.attendanceRecords,
-          anecdotalCount: s.anecdotalRecords.length,
-          enrolled,
-        });
-        const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];
-        if (factors.academicFlag) activeFlags.push("academic");
-        if (factors.attendanceFlag) activeFlags.push("attendance");
-        if (factors.behavioralFlag) activeFlags.push("behavioral");
-        const present = s.attendanceRecords.filter((r) => r.status === "present").length;
-        const total = s.attendanceRecords.length;
-        const openFlags = s.gradeFlags.filter((g) => g.status !== "resolved").length;
-        return {
-          studentId: s.userId,
-          name: s.user.fullName,
-          lrn: s.lrn,
-          birthdate: s.birthdate,
-          gender: s.gender,
-          section: s.section?.name ?? "",
-          riskLevel: levelFromFlags(factors),
-          flags: activeFlags,
-          attendanceRate: total === 0 ? 1 : present / total,
-          anecdotalCount: s.anecdotalRecords.length,
-          confidentialityTiers: Array.from(
-            new Set(s.anecdotalRecords.map((a) => a.confidentialityLevel))
-          ),
-          hasOpenFlag: openFlags > 0,
-          openFlagCount: openFlags,
-        };
-      });
+      const students = [
+        ...advisees.map((s) => {
+          const enrolled = enrolledBySection.get(s.sectionId!) ?? 0;
+          const factors = computeRiskFactors({
+            finalGrades: s.finalGrades,
+            attendance: s.attendanceRecords,
+            anecdotalCount: s.anecdotalRecords.length,
+            enrolled,
+          });
+          const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];
+          if (factors.academicFlag) activeFlags.push("academic");
+          if (factors.attendanceFlag) activeFlags.push("attendance");
+          if (factors.behavioralFlag) activeFlags.push("behavioral");
+          const present = s.attendanceRecords.filter((r) => r.status === "present").length;
+          const total = s.attendanceRecords.length;
+          const openFlags = s.gradeFlags.filter((g) => g.status !== "resolved").length;
+          return {
+            studentId: s.userId,
+            name: s.user.fullName,
+            lrn: s.lrn,
+            birthdate: s.birthdate,
+            gender: s.gender,
+            section: s.section?.name ?? "",
+            riskLevel: levelFromFlags(factors),
+            flags: activeFlags,
+            attendanceRate: total === 0 ? 1 : present / total,
+            anecdotalCount: s.anecdotalRecords.length,
+            confidentialityTiers: Array.from(
+              new Set(s.anecdotalRecords.map((a) => a.confidentialityLevel))
+            ),
+            hasOpenFlag: openFlags > 0,
+            openFlagCount: openFlags,
+            hasAccount: true,
+          };
+        }),
+        // Roster-only enlistments (no login account yet) — never duplicated
+        // with registered profiles (matched by LRN).
+        ...rosterEntries
+          .filter((r) => !registeredLrns.has(r.lrn))
+          .map((r) => ({
+            studentId: `roster:${r.id}`,
+            name: r.fullName,
+            lrn: r.lrn,
+            birthdate: null,
+            gender: null,
+            section: r.section.name,
+            riskLevel: "Low" as const,
+            flags: [] as ("academic" | "attendance" | "behavioral")[],
+            attendanceRate: 1,
+            anecdotalCount: 0,
+            confidentialityTiers: [] as string[],
+            hasOpenFlag: false,
+            openFlagCount: 0,
+            hasAccount: false,
+          })),
+      ];
 
       res.json({ advisorySections: sections, termId, students });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/teacher/advisory/roster — enlist a student into the adviser's
+// section roster (enrolled, no login account yet). When the student later
+// registers with the same LRN, the registrar's breakdown links them.
+// Adviser-only (404 otherwise).
+const rosterSchema = z.object({
+  fullName: z.string().trim().min(1).max(120),
+  lrn: z.string().trim().min(1).max(32),
+  sectionId: z.string().min(1).optional(),
+});
+
+router.post(
+  "/roster",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  validate("body", rosterSchema),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const body = req.body as z.infer<typeof rosterSchema>;
+      const sections = await adviserSectionsOr404(teacherId);
+      const section = body.sectionId
+        ? sections.find((s) => s.id === body.sectionId)
+        : sections[0];
+      if (!section) {
+        throw new AppError(404, "SECTION_NOT_FOUND", "Section is not in your advisory");
+      }
+
+      const activeYear = await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      if (!activeYear) {
+        throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
+      }
+
+      const existing = await prisma.studentRoster.findUnique({
+        where: { lrn_schoolYearId: { lrn: body.lrn, schoolYearId: activeYear.id } },
+      });
+      if (existing) {
+        throw new AppError(409, "LRN_ENLISTED", "This LRN is already enlisted");
+      }
+      const alreadyRegistered = await prisma.studentProfile.findUnique({
+        where: { lrn: body.lrn },
+        select: { userId: true },
+      });
+      if (alreadyRegistered) {
+        throw new AppError(409, "LRN_REGISTERED", "This LRN already has an account");
+      }
+
+      const entry = await prisma.studentRoster.create({
+        data: {
+          lrn: body.lrn,
+          fullName: body.fullName,
+          gradeLevel: section.gradeLevel,
+          sectionId: section.id,
+          schoolYearId: activeYear.id,
+        },
+        include: { section: { select: { name: true } } },
+      });
+
+      await writeAudit({
+        userId: teacherId,
+        actionType: "create",
+        sourceTable: "student_roster",
+        sourceId: entry.id,
+        reason: `Enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}`,
+      });
+
+      res.status(201).json({
+        studentId: `roster:${entry.id}`,
+        name: entry.fullName,
+        lrn: entry.lrn,
+        birthdate: null,
+        gender: null,
+        section: entry.section.name,
+        riskLevel: "Low",
+        flags: [],
+        attendanceRate: 1,
+        anecdotalCount: 0,
+        confidentialityTiers: [],
+        hasOpenFlag: false,
+        openFlagCount: 0,
+        hasAccount: false,
+      });
     } catch (e) {
       next(e);
     }

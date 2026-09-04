@@ -5,6 +5,7 @@ import {
   TriangleAlert,
   Clock,
   FileText,
+  Plus,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -13,9 +14,10 @@ import styles from "./AdvisoryStudentsHeader.module.css";
 
 interface AdvisoryStudentsHeaderProps {
   students: AdviseeRow[];
+  onAdd: () => void;
 }
 
-export function AdvisoryStudentsHeader({ students }: AdvisoryStudentsHeaderProps) {
+export function AdvisoryStudentsHeader({ students, onAdd }: AdvisoryStudentsHeaderProps) {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
   const highRisk = students.filter((s) => s.riskLevel === "High").length;
@@ -41,6 +43,18 @@ export function AdvisoryStudentsHeader({ students }: AdvisoryStudentsHeaderProps
         <div className={styles.carousel}>
           <div className={styles.scroller} ref={scrollerRef}>
             <div className={styles.row}>
+              <button
+                type="button"
+                className={`${styles.card} ${styles.addCard}`}
+                onClick={onAdd}
+                aria-label="Enlist a student"
+              >
+                <span className={styles.heading}>
+                  <Plus className={styles.icon} aria-hidden />
+                  <span className={styles.title}>Add Students</span>
+                </span>
+                <span className={styles.body}>Enlist a new advisee to this section.</span>
+              </button>
               <article className={styles.card}>
                 <div className={styles.heading}>
                   <TriangleAlert className={styles.icon} aria-hidden />

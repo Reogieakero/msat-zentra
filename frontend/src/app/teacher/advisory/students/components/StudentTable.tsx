@@ -220,7 +220,14 @@ export function StudentTable({ students, loading, onSelect }: StudentTableProps)
                       <span className={styles.avatar} aria-hidden>
                         {initialsOf(s.name)}
                       </span>
-                      <span className={styles.name}>{s.name}</span>
+                      <span className={styles.nameRow}>
+                        <span className={styles.name}>{s.name}</span>
+                        {!s.hasAccount ? (
+                          <Badge variant="outline" className={styles.noAccount}>
+                            No account
+                          </Badge>
+                        ) : null}
+                      </span>
                     </span>
                   </TableCell>
                   <TableCell className={styles.lrn}>{s.lrn}</TableCell>

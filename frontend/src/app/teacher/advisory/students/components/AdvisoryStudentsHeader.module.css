@@ -122,8 +122,21 @@
   text-align: left;
 }
 
-.nav {
-  display: flex;
+.addCard {
+  border-style: dashed;
+  border-color: color-mix(in oklch, var(--primary), transparent 50%);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.addCard:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.nav {  display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 0.375rem;
