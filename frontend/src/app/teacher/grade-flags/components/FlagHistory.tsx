@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, MessageSquare, Paperclip } from "lucide-react";
 import { FlagDetailDialog } from "./FlagDetailDialog";
 import { ResolveFlagDialog } from "./ResolveFlagDialog";
@@ -26,23 +27,10 @@ const STATUS_VARIANTS = {
   resolved: "success",
 } as const;
 
-const STATUS_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "open", label: "Open" },
-  { value: "escalated", label: "Escalated" },
-  { value: "resolved", label: "Resolved" },
-] as const;
-
 const STATUS_PROGRESS: Record<FlagStatus, number> = {
   open: 33,
   escalated: 67,
   resolved: 100,
-};
-
-const MODE_HINTS: Record<Mode, string> = {
-  "raised-by-me": "Flags you filed, grouped by the teacher you filed each one against.",
-  "against-me": "Flags others filed on your gradebook — only you can resolve these.",
-  advisees: "Flags on your advisees' grades, including gradebooks owned by other teachers.",
 };
 
 interface FlagHistoryProps {
@@ -60,6 +48,7 @@ function groupFlags(rows: GradeFlagRow[], by: "owner" | "raiser") {
   return Array.from(groups.entries()).map(([teacher, flags], i) => ({
     id: `col-${i}`,
     teacher,
+    subjects: Array.from(new Set(flags.map((f) => f.subject.name))),
     flags,
   }));
 }
@@ -117,22 +106,17 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
 
   return (
     <div className={styles.board}>
-      <header className={styles.header}>
+      <div className={styles.toolbar}>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className={styles.backBtn}
           onClick={onBack}
           aria-label="Back to raise"
         >
           <ChevronLeft aria-hidden />
           Back
         </Button>
-        <h2 className={styles.boardTitle}>Flag history</h2>
-        <p className={styles.boardCount}>
-          {loading ? "Loading…" : shown === total ? `${total} flags` : `${shown} of ${total} flags`}
-        </p>
         <div className={styles.filters}>
           <div className={styles.modeToggle} role="group" aria-label="History scope">
             <Button
@@ -163,7 +147,14 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
             ) : null}
           </div>
           <div className={styles.statusFilter} role="group" aria-label="Filter by status">
-            {STATUS_FILTERS.map((f) => (
+            {(
+              [
+                { value: "all", label: "All" },
+                { value: "open", label: "Open" },
+                { value: "escalated", label: "Escalated" },
+                { value: "resolved", label: "Resolved" },
+              ] as const
+            ).map((f) => (
               <Button
                 key={f.value}
                 type="button"
@@ -176,12 +167,35 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
             ))}
           </div>
         </div>
-        <p className={styles.modeHint}>{MODE_HINTS[mode]}</p>
-      </header>
-      <hr className={styles.divider} />
+        <span className={styles.boardCount}>
+          {loading ? "…" : shown === total ? `${total}` : `${shown}/${total}`}
+        </span>
+      </div>
 
       {loading ? (
-        <p className={styles.empty}>Loading flag history…</p>
+        <div className={styles.columns} aria-busy="true" aria-label="Loading flag history">
+          {[0, 1, 2].map((col) => (
+            <section key={col} className={styles.column} aria-hidden>
+              <div className={styles.columnHead}>
+                <Skeleton className={styles.skelAvatar} />
+                <div className={styles.skelColTitle}>
+                  <Skeleton className={styles.skelLine} />
+                  <Skeleton className={styles.skelLineShort} />
+                </div>
+                <Skeleton className={styles.skelCount} />
+              </div>
+              {[0, 1].map((card) => (
+                <div key={card} className={styles.skelCard}>
+                  <Skeleton className={styles.skelCardTitle} />
+                  <Skeleton className={styles.skelLine} />
+                  <Skeleton className={styles.skelCardNote} />
+                  <Skeleton className={styles.skelProgress} />
+                  <Skeleton className={styles.skelLineShort} />
+                </div>
+              ))}
+            </section>
+          ))}
+        </div>
       ) : loadError ? (
         <p className={styles.empty}>Could not load flag history. Try again.</p>
       ) : rows.length === 0 ? (
@@ -196,7 +210,10 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
                 <span className={styles.teacherAvatar} aria-hidden>
                   {initialsOfTeacher(col.teacher)}
                 </span>
-                <span className={styles.teacherName}>{col.teacher}</span>
+                <span className={styles.teacherText}>
+                  <span className={styles.teacherName}>{col.teacher}</span>
+                  <span className={styles.teacherSubjects}>{col.subjects.join(" · ")}</span>
+                </span>
                 <span className={styles.columnCount}>{col.flags.length}</span>
               </header>
 
@@ -218,12 +235,14 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
                       <span className={styles.cardSub}>
                         {f.subject.name} · {f.section.name} · Term {f.term.termNumber}
                       </span>
-                      <span className={styles.cardRaiser}>
-                        <span className={styles.raiserAvatar} aria-hidden>
-                          {initialsOfTeacher(f.raisedBy.fullName)}
+                      {mode !== "raised-by-me" ? (
+                        <span className={styles.cardRaiser}>
+                          <span className={styles.raiserAvatar} aria-hidden>
+                            {initialsOfTeacher(f.raisedBy.fullName)}
+                          </span>
+                          Raised by {f.raisedBy.fullName}
                         </span>
-                        Raised by {f.raisedBy.fullName}
-                      </span>
+                      ) : null}
                       {f.note ? <span className={styles.cardNote}>{f.note}</span> : null}
                       <span
                         className={styles.cardProgress}

@@ -4,6 +4,8 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .chatBody {
@@ -11,13 +13,16 @@
   flex-direction: column;
   gap: 0.75rem;
   padding: 0.5rem 0 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .messages {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  max-height: 22rem;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -73,6 +78,109 @@
   line-height: 1.5;
   color: var(--primary-foreground);
   background-color: var(--primary);
+}
+
+.detailWrap {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detailCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detailHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.detailSub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.detailReasonRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.detailFiledOn {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.detailNote {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  font-style: italic;
+  padding: 0.625rem 0.75rem;
+  border-left: 3px solid var(--border);
+  background-color: var(--muted);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.detailMeta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.detailMetaRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+}
+
+.detailMetaRow dt {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.detailMetaRow dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: right;
+}
+
+.endMark {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border);
 }
 
 .suggestions {
@@ -251,8 +359,19 @@
   height: 1rem;
 }
 
-.srOnly {
-  position: absolute;
+.dropSkelRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.375rem 0;
+}
+
+.dropSkel {
+  height: 2rem;
+  width: 100%;
+}
+
+.srOnly {  position: absolute;
   width: 1px;
   height: 1px;
   padding: 0;
@@ -266,6 +385,11 @@
 .sendBtn {
   flex-shrink: 0;
   border-radius: 999px;
+}
+
+.historyBtn {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .hint {

@@ -442,6 +442,15 @@ async function main() {
     ],
     skipDuplicates: true,
   });
+  // Audit trail for the seeded flags (mirrors what the raise/resolve routes write).
+  const seedFlagAudits = [
+    { id: id("al"), userId: flagSection.adviserId, actionType: "grade_flag_raise" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-open-mine"), reason: "wrong_score — English 7 / G7-A" },
+    { id: id("al"), userId: subjTeacher.id, actionType: "grade_flag_raise" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-open-against"), reason: "missing_assessment — English 7 / G7-A" },
+    { id: id("al"), userId: subjTeacher.id, actionType: "grade_flag_raise" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-old-open"), reason: "late_submission — English 7 / G7-A" },
+    { id: id("al"), userId: subjTeacher.id, actionType: "grade_flag_raise" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-resolved"), reason: "transmutation_error — English 7 / G7-A" },
+    { id: id("al"), userId: flagSection.adviserId, actionType: "grade_flag_resolve" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-resolved"), reason: "Corrected transmuted grade and re-locked." },
+  ];
+  await prisma.auditLog.createMany({ data: seedFlagAudits, skipDuplicates: true });
 
   // Referrals (>=20)
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));

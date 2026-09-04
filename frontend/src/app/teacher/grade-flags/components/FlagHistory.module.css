@@ -12,43 +12,28 @@
   gap: 0.625rem;
 }
 
-.header {
-  position: relative;
+.toolbar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: 0.5rem;
-}
-
-.backBtn {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.boardTitle {
-  margin: 0;
-  font-size: clamp(1.5rem, 2.5vw, 2.25rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
-}
-
-.boardCount {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .filters {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.boardCount {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .modeToggle {
@@ -86,6 +71,64 @@
   padding: 2.5rem 0;
   color: var(--muted-foreground);
   font-size: 0.875rem;
+}
+
+.skelAvatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.skelColTitle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.skelLine {
+  height: 0.75rem;
+  width: 70%;
+}
+
+.skelLineShort {
+  height: 0.625rem;
+  width: 40%;
+}
+
+.skelCount {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.skelCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skelCardTitle {
+  height: 0.875rem;
+  width: 55%;
+}
+
+.skelCardNote {
+  height: 2.25rem;
+  width: 100%;
+}
+
+.skelProgress {
+  height: 0.375rem;
+  width: 100%;
+  border-radius: 999px;
 }
 
 .columns {
@@ -129,11 +172,26 @@
 }
 
 .teacherName {
-  flex: 1;
-  min-width: 0;
+  display: block;
   font-weight: 700;
   font-size: 0.875rem;
   color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teacherText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.teacherSubjects {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

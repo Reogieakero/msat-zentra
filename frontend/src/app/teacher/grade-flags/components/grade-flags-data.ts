@@ -56,11 +56,13 @@ export interface FlagClassOption {
   sectionName: string;
   termId: string;
   termNumber: number;
+  ownerName?: string;
 }
 
 export interface FlagOptions {
   students: FlagStudent[];
   classes: FlagClassOption[];
+  sectionClasses: FlagClassOption[];
 }
 
 export async function fetchFlags(

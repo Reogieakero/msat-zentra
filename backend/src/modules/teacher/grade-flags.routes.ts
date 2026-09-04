@@ -185,7 +185,7 @@ router.get(
       const { assignedSectionIds, advisedSectionIds } = await teacherScope(teacherId);
       const sectionIds = Array.from(new Set([...assignedSectionIds, ...advisedSectionIds]));
 
-      const [students, assignments] = await Promise.all([
+      const [students, assignments, sectionClasses] = await Promise.all([
         prisma.studentProfile.findMany({
           where: { sectionId: { in: sectionIds } },
           select: {
@@ -204,6 +204,19 @@ router.get(
             term: { select: { id: true, termNumber: true } },
           },
         }),
+        // Every gradebook in the teacher's sections (whoever owns it) — so a
+        // flag can target any of the student's subjects, not just the
+        // teacher's own assignments.
+        prisma.teacherSubjectAssignment.findMany({
+          where: { sectionId: { in: sectionIds } },
+          include: {
+            subject: { select: { id: true, name: true } },
+            section: { select: { id: true, name: true } },
+            term: { select: { id: true, termNumber: true } },
+            teacher: { select: { id: true, fullName: true } },
+          },
+          orderBy: [{ sectionId: "asc" }, { subject: { name: "asc" } }],
+        }),
       ]);
 
       res.json({
@@ -220,6 +233,15 @@ router.get(
           sectionName: a.section.name,
           termId: a.term.id,
           termNumber: a.term.termNumber,
+        })),
+        sectionClasses: sectionClasses.map((a) => ({
+          subjectId: a.subject.id,
+          subjectName: a.subject.name,
+          sectionId: a.section.id,
+          sectionName: a.section.name,
+          termId: a.term.id,
+          termNumber: a.term.termNumber,
+          ownerName: a.teacher.fullName,
         })),
       });
     } catch (e) {
