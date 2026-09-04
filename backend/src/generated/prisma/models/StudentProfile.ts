@@ -40,6 +40,7 @@ export type StudentProfileMinAggregateOutputType = {
   gradeLevel: $Enums.GradeLevel | null
   sectionId: string | null
   birthdate: Date | null
+  gender: string | null
   address: string | null
   photoUrl: string | null
   riskCount: number | null
@@ -53,6 +54,7 @@ export type StudentProfileMaxAggregateOutputType = {
   gradeLevel: $Enums.GradeLevel | null
   sectionId: string | null
   birthdate: Date | null
+  gender: string | null
   address: string | null
   photoUrl: string | null
   riskCount: number | null
@@ -66,6 +68,7 @@ export type StudentProfileCountAggregateOutputType = {
   gradeLevel: number
   sectionId: number
   birthdate: number
+  gender: number
   address: number
   photoUrl: number
   riskCount: number
@@ -89,6 +92,7 @@ export type StudentProfileMinAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   birthdate?: true
+  gender?: true
   address?: true
   photoUrl?: true
   riskCount?: true
@@ -102,6 +106,7 @@ export type StudentProfileMaxAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   birthdate?: true
+  gender?: true
   address?: true
   photoUrl?: true
   riskCount?: true
@@ -115,6 +120,7 @@ export type StudentProfileCountAggregateInputType = {
   gradeLevel?: true
   sectionId?: true
   birthdate?: true
+  gender?: true
   address?: true
   photoUrl?: true
   riskCount?: true
@@ -215,6 +221,7 @@ export type StudentProfileGroupByOutputType = {
   gradeLevel: $Enums.GradeLevel
   sectionId: string | null
   birthdate: Date | null
+  gender: string | null
   address: string | null
   photoUrl: string | null
   riskCount: number
@@ -251,6 +258,7 @@ export type StudentProfileWhereInput = {
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentProfile"> | $Enums.GradeLevel
   sectionId?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   birthdate?: Prisma.DateTimeNullableFilter<"StudentProfile"> | Date | string | null
+  gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
@@ -279,6 +287,7 @@ export type StudentProfileOrderByWithRelationInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   birthdate?: Prisma.SortOrderInput | Prisma.SortOrder
+  gender?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
@@ -310,6 +319,7 @@ export type StudentProfileWhereUniqueInput = Prisma.AtLeast<{
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentProfile"> | $Enums.GradeLevel
   sectionId?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   birthdate?: Prisma.DateTimeNullableFilter<"StudentProfile"> | Date | string | null
+  gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
@@ -338,6 +348,7 @@ export type StudentProfileOrderByWithAggregationInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   birthdate?: Prisma.SortOrderInput | Prisma.SortOrder
+  gender?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   riskCount?: Prisma.SortOrder
@@ -359,6 +370,7 @@ export type StudentProfileScalarWhereWithAggregatesInput = {
   gradeLevel?: Prisma.EnumGradeLevelWithAggregatesFilter<"StudentProfile"> | $Enums.GradeLevel
   sectionId?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   birthdate?: Prisma.DateTimeNullableWithAggregatesFilter<"StudentProfile"> | Date | string | null
+  gender?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableWithAggregatesFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntWithAggregatesFilter<"StudentProfile"> | number
@@ -370,6 +382,7 @@ export type StudentProfileCreateInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -398,6 +411,7 @@ export type StudentProfileUncheckedCreateInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -422,6 +436,7 @@ export type StudentProfileUpdateInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -450,6 +465,7 @@ export type StudentProfileUncheckedUpdateInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -476,6 +492,7 @@ export type StudentProfileCreateManyInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -487,6 +504,7 @@ export type StudentProfileUpdateManyMutationInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -500,6 +518,7 @@ export type StudentProfileUncheckedUpdateManyInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -518,6 +537,7 @@ export type StudentProfileCountOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   birthdate?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
@@ -535,6 +555,7 @@ export type StudentProfileMaxOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   birthdate?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
@@ -548,6 +569,7 @@ export type StudentProfileMinOrderByAggregateInput = {
   gradeLevel?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   birthdate?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
   address?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
@@ -850,6 +872,7 @@ export type StudentProfileCreateWithoutUserInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -876,6 +899,7 @@ export type StudentProfileUncheckedCreateWithoutUserInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -916,6 +940,7 @@ export type StudentProfileUpdateWithoutUserInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -942,6 +967,7 @@ export type StudentProfileUncheckedUpdateWithoutUserInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -966,6 +992,7 @@ export type StudentProfileCreateWithoutParentLinksInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -993,6 +1020,7 @@ export type StudentProfileUncheckedCreateWithoutParentLinksInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1032,6 +1060,7 @@ export type StudentProfileUpdateWithoutParentLinksInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1059,6 +1088,7 @@ export type StudentProfileUncheckedUpdateWithoutParentLinksInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1082,6 +1112,7 @@ export type StudentProfileCreateWithoutSectionInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1108,6 +1139,7 @@ export type StudentProfileUncheckedCreateWithoutSectionInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1163,6 +1195,7 @@ export type StudentProfileScalarWhereInput = {
   gradeLevel?: Prisma.EnumGradeLevelFilter<"StudentProfile"> | $Enums.GradeLevel
   sectionId?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   birthdate?: Prisma.DateTimeNullableFilter<"StudentProfile"> | Date | string | null
+  gender?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   address?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"StudentProfile"> | string | null
   riskCount?: Prisma.IntFilter<"StudentProfile"> | number
@@ -1174,6 +1207,7 @@ export type StudentProfileCreateWithoutStudentGradesInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1201,6 +1235,7 @@ export type StudentProfileUncheckedCreateWithoutStudentGradesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1240,6 +1275,7 @@ export type StudentProfileUpdateWithoutStudentGradesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1267,6 +1303,7 @@ export type StudentProfileUncheckedUpdateWithoutStudentGradesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1290,6 +1327,7 @@ export type StudentProfileCreateWithoutFinalGradesInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1317,6 +1355,7 @@ export type StudentProfileUncheckedCreateWithoutFinalGradesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1356,6 +1395,7 @@ export type StudentProfileUpdateWithoutFinalGradesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1383,6 +1423,7 @@ export type StudentProfileUncheckedUpdateWithoutFinalGradesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1406,6 +1447,7 @@ export type StudentProfileCreateWithoutGradeFlagsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1433,6 +1475,7 @@ export type StudentProfileUncheckedCreateWithoutGradeFlagsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1472,6 +1515,7 @@ export type StudentProfileUpdateWithoutGradeFlagsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1499,6 +1543,7 @@ export type StudentProfileUncheckedUpdateWithoutGradeFlagsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1522,6 +1567,7 @@ export type StudentProfileCreateWithoutAttendanceRecordsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1549,6 +1595,7 @@ export type StudentProfileUncheckedCreateWithoutAttendanceRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1588,6 +1635,7 @@ export type StudentProfileUpdateWithoutAttendanceRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1615,6 +1663,7 @@ export type StudentProfileUncheckedUpdateWithoutAttendanceRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1638,6 +1687,7 @@ export type StudentProfileCreateWithoutAnecdotalRecordsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1665,6 +1715,7 @@ export type StudentProfileUncheckedCreateWithoutAnecdotalRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1704,6 +1755,7 @@ export type StudentProfileUpdateWithoutAnecdotalRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1731,6 +1783,7 @@ export type StudentProfileUncheckedUpdateWithoutAnecdotalRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1754,6 +1807,7 @@ export type StudentProfileCreateWithoutReferralsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1781,6 +1835,7 @@ export type StudentProfileUncheckedCreateWithoutReferralsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1820,6 +1875,7 @@ export type StudentProfileUpdateWithoutReferralsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1847,6 +1903,7 @@ export type StudentProfileUncheckedUpdateWithoutReferralsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1870,6 +1927,7 @@ export type StudentProfileCreateWithoutInterventionsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1897,6 +1955,7 @@ export type StudentProfileUncheckedCreateWithoutInterventionsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -1936,6 +1995,7 @@ export type StudentProfileUpdateWithoutInterventionsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1963,6 +2023,7 @@ export type StudentProfileUncheckedUpdateWithoutInterventionsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1986,6 +2047,7 @@ export type StudentProfileCreateWithoutHealthRecordsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2013,6 +2075,7 @@ export type StudentProfileUncheckedCreateWithoutHealthRecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2052,6 +2115,7 @@ export type StudentProfileUpdateWithoutHealthRecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2079,6 +2143,7 @@ export type StudentProfileUncheckedUpdateWithoutHealthRecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2102,6 +2167,7 @@ export type StudentProfileCreateWithoutHomeVisitationsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2129,6 +2195,7 @@ export type StudentProfileUncheckedCreateWithoutHomeVisitationsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2168,6 +2235,7 @@ export type StudentProfileUpdateWithoutHomeVisitationsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2195,6 +2263,7 @@ export type StudentProfileUncheckedUpdateWithoutHomeVisitationsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2218,6 +2287,7 @@ export type StudentProfileCreateWithoutAdmProfilesInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2245,6 +2315,7 @@ export type StudentProfileUncheckedCreateWithoutAdmProfilesInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2284,6 +2355,7 @@ export type StudentProfileUpdateWithoutAdmProfilesInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2311,6 +2383,7 @@ export type StudentProfileUncheckedUpdateWithoutAdmProfilesInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2334,6 +2407,7 @@ export type StudentProfileCreateWithoutSf10RecordsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2361,6 +2435,7 @@ export type StudentProfileUncheckedCreateWithoutSf10RecordsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2400,6 +2475,7 @@ export type StudentProfileUpdateWithoutSf10RecordsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2427,6 +2503,7 @@ export type StudentProfileUncheckedUpdateWithoutSf10RecordsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2450,6 +2527,7 @@ export type StudentProfileCreateWithoutRiskSnapshotsInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2477,6 +2555,7 @@ export type StudentProfileUncheckedCreateWithoutRiskSnapshotsInput = {
   gradeLevel: $Enums.GradeLevel
   sectionId?: string | null
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2516,6 +2595,7 @@ export type StudentProfileUpdateWithoutRiskSnapshotsInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2543,6 +2623,7 @@ export type StudentProfileUncheckedUpdateWithoutRiskSnapshotsInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   sectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2567,6 +2648,7 @@ export type StudentProfileCreateManySectionInput = {
   lrn: string
   gradeLevel: $Enums.GradeLevel
   birthdate?: Date | string | null
+  gender?: string | null
   address?: string | null
   photoUrl?: string | null
   riskCount?: number
@@ -2578,6 +2660,7 @@ export type StudentProfileUpdateWithoutSectionInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2604,6 +2687,7 @@ export type StudentProfileUncheckedUpdateWithoutSectionInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2629,6 +2713,7 @@ export type StudentProfileUncheckedUpdateManyWithoutSectionInput = {
   lrn?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   birthdate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2781,6 +2866,7 @@ export type StudentProfileSelect<ExtArgs extends runtime.Types.Extensions.Intern
   gradeLevel?: boolean
   sectionId?: boolean
   birthdate?: boolean
+  gender?: boolean
   address?: boolean
   photoUrl?: boolean
   riskCount?: boolean
@@ -2810,6 +2896,7 @@ export type StudentProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   gradeLevel?: boolean
   sectionId?: boolean
   birthdate?: boolean
+  gender?: boolean
   address?: boolean
   photoUrl?: boolean
   riskCount?: boolean
@@ -2825,6 +2912,7 @@ export type StudentProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   gradeLevel?: boolean
   sectionId?: boolean
   birthdate?: boolean
+  gender?: boolean
   address?: boolean
   photoUrl?: boolean
   riskCount?: boolean
@@ -2840,6 +2928,7 @@ export type StudentProfileSelectScalar = {
   gradeLevel?: boolean
   sectionId?: boolean
   birthdate?: boolean
+  gender?: boolean
   address?: boolean
   photoUrl?: boolean
   riskCount?: boolean
@@ -2847,7 +2936,7 @@ export type StudentProfileSelectScalar = {
   createdAt?: boolean
 }
 
-export type StudentProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "lrn" | "gradeLevel" | "sectionId" | "birthdate" | "address" | "photoUrl" | "riskCount" | "riskLevel" | "createdAt", ExtArgs["result"]["studentProfile"]>
+export type StudentProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "lrn" | "gradeLevel" | "sectionId" | "birthdate" | "gender" | "address" | "photoUrl" | "riskCount" | "riskLevel" | "createdAt", ExtArgs["result"]["studentProfile"]>
 export type StudentProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.StudentProfile$sectionArgs<ExtArgs>
@@ -2900,6 +2989,7 @@ export type $StudentProfilePayload<ExtArgs extends runtime.Types.Extensions.Inte
     gradeLevel: $Enums.GradeLevel
     sectionId: string | null
     birthdate: Date | null
+    gender: string | null
     address: string | null
     photoUrl: string | null
     riskCount: number
@@ -3348,6 +3438,7 @@ export interface StudentProfileFieldRefs {
   readonly gradeLevel: Prisma.FieldRef<"StudentProfile", 'GradeLevel'>
   readonly sectionId: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly birthdate: Prisma.FieldRef<"StudentProfile", 'DateTime'>
+  readonly gender: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly address: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly photoUrl: Prisma.FieldRef<"StudentProfile", 'String'>
   readonly riskCount: Prisma.FieldRef<"StudentProfile", 'Int'>

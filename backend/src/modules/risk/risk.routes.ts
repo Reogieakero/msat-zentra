@@ -136,6 +136,17 @@ router.get(
       if (!isSelf && !isPrincipal && !isStaff) {
         return res.status(403).json({ error: { code: "FORBIDDEN", message: "Limited view only" } });
       }
+      // Advisers are staff, but scoped to their own advisees — never the
+      // whole school. Other staff roles keep their broad read.
+      if (req.user!.role === "adviser" && !isSelf && !isPrincipal) {
+        const advisee = await prisma.studentProfile.findUnique({
+          where: { userId: String(req.params.id) },
+          select: { section: { select: { adviserId: true } } },
+        });
+        if (!advisee || advisee.section?.adviserId !== req.user!.id) {
+          return res.status(403).json({ error: { code: "FORBIDDEN", message: "Not your advisee" } });
+        }
+      }
       const limited = { lrn: profile.lrn, riskLevel: profile.riskLevel };
       res.json(limited);
     } catch (e) { next(e); }

@@ -128,6 +128,7 @@ export const StudentProfileScalarFieldEnum = {
   gradeLevel: 'gradeLevel',
   sectionId: 'sectionId',
   birthdate: 'birthdate',
+  gender: 'gender',
   address: 'address',
   photoUrl: 'photoUrl',
   riskCount: 'riskCount',

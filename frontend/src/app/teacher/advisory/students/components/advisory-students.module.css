@@ -1,0 +1,27 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border, #e7e5e4);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.pageError {
+  margin: 0;
+  text-align: center;
+  padding: 2.5rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}

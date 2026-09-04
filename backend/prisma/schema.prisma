@@ -260,6 +260,7 @@ model StudentProfile {
   gradeLevel   GradeLevel
   sectionId    String?
   birthdate    DateTime?
+  gender       String?
   address      String?
   photoUrl     String?
   riskCount    Int        @default(0)

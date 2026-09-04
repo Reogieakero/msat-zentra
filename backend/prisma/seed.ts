@@ -114,7 +114,7 @@ async function main() {
 
   // Sections + advisers + students + parents + sf10. Users created individually to capture real ids.
   const sections: { id: string; gradeLevel: GradeLevel; name: string; adviserId: string }[] = [];
-  const studentProfiles: { userId: string; lrn: string; gradeLevel: GradeLevel; sectionId: string; birthdate: Date; address: string }[] = [];
+  const studentProfiles: { userId: string; lrn: string; gradeLevel: GradeLevel; sectionId: string; birthdate: Date; gender: string; address: string }[] = [];
   const parentProfiles: { userId: string; address: string; occupation: string }[] = [];
   const parentLinks: { id: string; parentId: string; studentId: string; relationship: string; approvedBy: string }[] = [];
   const sf10: { id: string; studentId: string; source: Sf10Source; verifiedBy: string; validatedBy: string; currentVersion: number }[] = [];
@@ -145,7 +145,7 @@ async function main() {
           create: { email: sEmail, fullName, role: "student" as Role, passwordHash: studentHash, status: "active" },
         });
         const lrn = `20${String(randInt(100000000, 999999999)).padStart(9, "0")}`;
-        studentProfiles.push({ userId: student.id, lrn, gradeLevel: grade, sectionId, birthdate: pickDate(2010, 1, 12), address: `${randInt(1, 999)} ${rand(LAST_NAMES)} St., Quezon City` });
+        studentProfiles.push({ userId: student.id, lrn, gradeLevel: grade, sectionId, birthdate: pickDate(2010, 1, 12), gender: i % 2 === 1 ? "Female" : "Male", address: `${randInt(1, 999)} ${rand(LAST_NAMES)} St., Quezon City` });
 
         const pEmail = `parent.${grade.toLowerCase()}.${secName.toLowerCase()}.${i}@zentra.test`;
         const parent = await prisma.user.upsert({

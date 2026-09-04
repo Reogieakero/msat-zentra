@@ -126,8 +126,17 @@
 - Changing the approved §4.1 spec (this plan is build order only).
 - Mobile teacher screens.
 
-## Decisions log (to fill before Phase 1)
+## Decisions log (answered during build — implemented as decided)
 
-- [ ] Roster layout (cards vs table).
-- [ ] Drawer v1 scope (read-only vs with action entry points).
-- [ ] Data strategy (wired-first vs mock-first).
+- [x] Roster layout: **dense table** (not spec cards) — Student · LRN ·
+  Birthday · Gender · At-Risk Level + 3-dots menu, mirroring the
+  principal interventions list-table (search + Risk checkbox dropdown + Clear,
+  clickable rows, 15/page pagination, skeleton rows).
+- [x] Drawer v1 scope: **read-only** — grades, attendance breakdown, anecdotal
+  count + tiers, referrals (target + status), ADM stage, grade flags; 3-dots
+  menu deep-links into drawer sections (anecdotal / attendance / academic)
+  with scroll + highlight. No write actions.
+- [x] Data strategy: **wired-from-start** — `GET /api/teacher/advisory/students`
+  + `GET /api/teacher/advisory/students/:id`, all mock files deleted.
+- [x] Gender has no backend field → added nullable `StudentProfile.gender` +
+  migration `20260904010000_student_gender`, seed assignment, live backfill.
