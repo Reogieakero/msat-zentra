@@ -5,6 +5,7 @@ import '../../app/constants/app_colors.dart';
 import '../../data/models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/sync_provider.dart';
+import 'widgets/sync_status_pill.dart';
 
 class ZentraHamburgerDrawer extends ConsumerWidget {
   const ZentraHamburgerDrawer({super.key});
@@ -28,61 +29,75 @@ class ZentraHamburgerDrawer extends ConsumerWidget {
                 color: AppColors.surfaceElevated,
                 border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.primaryEmerald.withOpacity(0.2),
-                    child: Text(
-                      user?.fullName.isNotEmpty == true ? user!.fullName.substring(0, 1) : 'Z',
-                      style: GoogleFonts.inter(
-                        color: AppColors.primaryEmerald,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user?.fullName ?? 'Zentra User',
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: AppColors.primaryEmerald.withOpacity(0.2),
+                        child: Text(
+                          user?.fullName.isNotEmpty == true ? user!.fullName.substring(0, 1) : 'Z',
                           style: GoogleFonts.inter(
-                            color: AppColors.textPrimary,
+                            color: AppColors.primaryEmerald,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 16,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          user?.email ?? '',
-                          style: GoogleFonts.robotoMono(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryEmerald.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            user?.role.displayName ?? 'Account',
-                            style: GoogleFonts.robotoMono(
-                              color: AppColors.primaryEmerald,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.fullName ?? 'Zentra User',
+                              style: GoogleFonts.inter(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              user?.email ?? '',
+                              style: GoogleFonts.robotoMono(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // User Role Badge & Sync Status Pill below role
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryEmerald.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.4)),
+                        ),
+                        child: Text(
+                          user != null ? user.role.displayName : 'Account',
+                          style: GoogleFonts.robotoMono(
+                            color: AppColors.primaryEmerald,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Network / Sync Status Pill directly below user role in hamburger menu
+                      const SyncStatusPill(),
+                    ],
                   ),
                 ],
               ),

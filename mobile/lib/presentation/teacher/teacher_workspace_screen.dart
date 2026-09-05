@@ -6,7 +6,6 @@ import '../../data/mock/mock_data.dart';
 import '../../data/models/teacher_class_model.dart';
 import '../../providers/sync_provider.dart';
 import '../shared/widgets/custom_card.dart';
-import '../shared/widgets/sync_status_pill.dart';
 import '../shared/zentra_hamburger_drawer.dart';
 import 'widgets/class_selector_view.dart';
 import 'widgets/attendance_roster_view.dart';
@@ -93,8 +92,6 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
                 ],
               ),
         actions: [
-          const Center(child: SyncStatusPill()),
-          const SizedBox(width: 4),
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu, color: AppColors.textPrimary),
