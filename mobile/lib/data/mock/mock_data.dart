@@ -4,6 +4,7 @@ import '../models/grade_model.dart';
 import '../models/attendance_model.dart';
 import '../models/adm_model.dart';
 import '../models/anecdotal_model.dart';
+import '../models/teacher_class_model.dart';
 
 class MockData {
   MockData._();
@@ -41,6 +42,66 @@ class MockData {
     sectionName: 'G10 - Emerald',
     gradeLevel: 'G10',
   );
+
+  // Assigned Classes for Adviser Maria Santos
+  static final List<TeacherClassModel> teacherClasses = [
+    const TeacherClassModel(
+      id: 'cls_01',
+      sectionId: 'sec_g10_emerald',
+      sectionName: 'G10 - Emerald',
+      gradeLevel: 'Grade 10',
+      subjectName: 'Mathematics 10',
+      subjectCode: 'MATH10',
+      scheduleTime: '07:30 AM - 08:30 AM',
+      room: 'Room 204',
+      studentCount: 42,
+      isAdviser: true,
+      isAttendanceMarkedToday: true,
+      isGradesLocked: false,
+    ),
+    const TeacherClassModel(
+      id: 'cls_02',
+      sectionId: 'sec_g9_sapphire',
+      sectionName: 'G9 - Sapphire',
+      gradeLevel: 'Grade 9',
+      subjectName: 'Mathematics 9',
+      subjectCode: 'MATH09',
+      scheduleTime: '08:30 AM - 09:30 AM',
+      room: 'Room 102',
+      studentCount: 38,
+      isAdviser: false,
+      isAttendanceMarkedToday: false,
+      isGradesLocked: false,
+    ),
+    const TeacherClassModel(
+      id: 'cls_03',
+      sectionId: 'sec_g11_stem_a',
+      sectionName: 'G11 - STEM A',
+      gradeLevel: 'Grade 11',
+      subjectName: 'General Mathematics 11',
+      subjectCode: 'GENMATH11',
+      scheduleTime: '10:00 AM - 11:00 AM',
+      room: 'Science Lab B',
+      studentCount: 35,
+      isAdviser: false,
+      isAttendanceMarkedToday: true,
+      isGradesLocked: true,
+    ),
+    const TeacherClassModel(
+      id: 'cls_04',
+      sectionId: 'sec_g10_emerald',
+      sectionName: 'G10 - Emerald',
+      gradeLevel: 'Grade 10',
+      subjectName: 'Advisory Homeroom',
+      subjectCode: 'ADV10',
+      scheduleTime: '01:00 PM - 02:00 PM',
+      room: 'Room 204',
+      studentCount: 42,
+      isAdviser: true,
+      isAttendanceMarkedToday: false,
+      isGradesLocked: false,
+    ),
+  ];
 
   // Section Students
   static final List<StudentModel> students = [

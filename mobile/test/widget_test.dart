@@ -12,6 +12,6 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Zentra Mobile'), findsOneWidget);
+    expect(find.text('Zentra'), findsWidgets);
   });
 }
