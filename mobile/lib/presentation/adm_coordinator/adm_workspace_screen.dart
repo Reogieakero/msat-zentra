@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../data/mock/mock_data.dart';
+import '../../data/models/adm_model.dart';
 import '../shared/widgets/custom_card.dart';
-import '../shared/widgets/status_badge.dart';
 import '../shared/zentra_hamburger_drawer.dart';
 import 'widgets/adm_kanban_board.dart';
 import 'widgets/adm_device_tracker.dart';
@@ -76,8 +77,8 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
         index: _currentIndex,
         children: [
           _buildOverviewTab(),
-          _buildCasesTab(),
-          _buildDirectoryTab(),
+          _buildReferredTab(),
+          _buildEnrolledDirectoryTab(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -89,12 +90,12 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
             label: 'Overview',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.view_kanban_outlined),
-            label: 'Cases',
+            icon: Icon(Icons.assignment_ind_outlined),
+            label: 'Referred',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.group_outlined),
-            label: 'Directory',
+            icon: Icon(Icons.view_kanban_outlined),
+            label: 'Enrolled & Directory',
           ),
         ],
       ),
@@ -111,36 +112,36 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'KPI Metrics Summary',
+            'ADM KPI Metrics',
             style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: _metricCard('Active Cases', '12', AppColors.primaryEmerald, Icons.pending_actions),
+                child: _metricCard('Enrolled', '14', AppColors.primaryEmerald, Icons.check_circle_outline),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _metricCard('Evaluations', '4', AppColors.riskModerate, Icons.assignment_ind),
+                child: _metricCard('Referred', '6', AppColors.riskHigh, Icons.assignment_late_outlined),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _metricCard('Resolved', '28', AppColors.riskLow, Icons.check_circle_outline),
+                child: _metricCard('Pending Ev', '4', AppColors.riskModerate, Icons.pending_actions),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'Alert Feed — Newly Flagged Students',
+            'Alert Feed — Newly Referred Students',
             style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 8),
-          _alertFeedItem('Mark Tan', 'G10 - Emerald', 'High Risk: 4 consecutive absences', 'Action Required'),
+          _alertFeedItem('Mark Tan', 'G10 - Emerald', 'Referred by Maria Santos (4 unexcused absences)', 'Referred'),
           const SizedBox(height: 6),
-          _alertFeedItem('Carlos Reyes', 'G10 - Emerald', 'Moderate Risk: Math transmuted grade < 75', 'Assigned to Teacher'),
+          _alertFeedItem('Gabriel Aquino', 'G9 - Sapphire', 'Referred by Jose Rizal (Transmuted grade < 75)', 'Pending Approval'),
           const SizedBox(height: 6),
-          _alertFeedItem('Gabriel Aquino', 'G9 - Sapphire', 'ADM Stage 7 Monitoring', 'Ongoing Evaluation'),
+          _alertFeedItem('Carlos Reyes', 'G10 - Emerald', 'Active Module Delivery (Stage 4)', 'Enrolled'),
         ],
       ),
     );
@@ -220,22 +221,110 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // 2. CASES TAB (Kanban Pipeline)
+  // 2. REFERRED TAB (Triage List for Coordinator Action)
   // ---------------------------------------------------------------------------
-  Widget _buildCasesTab() {
-    return const Padding(
-      padding: EdgeInsets.all(12.0),
-      child: AdmKanbanBoard(),
+  Widget _buildReferredTab() {
+    final referredLearners = MockData.admLearners.where((l) => l.status == AdmStatus.referred || l.status == AdmStatus.pendingApproval).toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Referred Students Triage List',
+            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Review teacher referrals and evaluate for official ADM enrollment.',
+            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          ...referredLearners.map((learner) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: CustomCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            learner.studentName,
+                            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.riskHigh.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
+                            ),
+                            child: Text(
+                              learner.status.label.toUpperCase(),
+                              style: GoogleFonts.robotoMono(color: AppColors.riskHigh, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${learner.sectionName} | LRN: ${learner.lrn}',
+                        style: GoogleFonts.robotoMono(color: AppColors.textMuted, fontSize: 11),
+                      ),
+                      Text(
+                        'Referred by: ${learner.referredByTeacher ?? "Subject Teacher"}',
+                        style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Requested parent conference for ${learner.studentName}')),
+                                );
+                              },
+                              child: const Text('Parent Meeting'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Enrolled ${learner.studentName} into ADM intervention!')),
+                                );
+                              },
+                              child: const Text('Approve Enrollment'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+        ],
+      ),
     );
   }
 
   // ---------------------------------------------------------------------------
-  // 3. DIRECTORY TAB (Searchable ADM Student Roster & Devices)
+  // 3. ENROLLED & DIRECTORY TAB (Kanban Pipeline & Devices)
   // ---------------------------------------------------------------------------
-  Widget _buildDirectoryTab() {
+  Widget _buildEnrolledDirectoryTab() {
     return const Padding(
       padding: EdgeInsets.all(12.0),
-      child: AdmDeviceTracker(),
+      child: Column(
+        children: [
+          Expanded(child: AdmKanbanBoard()),
+          SizedBox(height: 12),
+          Expanded(child: AdmDeviceTracker()),
+        ],
+      ),
     );
   }
 

@@ -218,6 +218,40 @@ class MockData {
     'std_05_asm_qe1': 45.0,
   };
 
+  // Mock ADM Subject Modules
+  static final List<AdmSubjectModuleModel> admModules = [
+    AdmSubjectModuleModel(
+      id: 'mod_01',
+      subjectName: 'Mathematics 10',
+      moduleTitle: 'Module 3: Polynomial Functions & Sequences',
+      fileName: 'Math10_Mod3_Polynomials.pdf',
+      fileSize: '2.4 MB',
+      assignedTeacher: 'Maria Santos',
+      dueDate: DateTime.now().add(const Duration(days: 5)),
+      isSubmitted: false,
+    ),
+    AdmSubjectModuleModel(
+      id: 'mod_02',
+      subjectName: 'Science 10',
+      moduleTitle: 'Module 2: Plate Tectonics & Earth Structure',
+      fileName: 'Sci10_Mod2_Tectonics.pdf',
+      fileSize: '3.1 MB',
+      assignedTeacher: 'Jose Rizal',
+      dueDate: DateTime.now().add(const Duration(days: 9)),
+      isSubmitted: false,
+    ),
+    AdmSubjectModuleModel(
+      id: 'mod_03',
+      subjectName: 'English 10',
+      moduleTitle: 'Module 1: Persuasive Writing & Rhetoric',
+      fileName: 'Eng10_Mod1_Rhetoric.pdf',
+      fileSize: '1.8 MB',
+      assignedTeacher: 'Clara Bonifacio',
+      dueDate: DateTime.now().subtract(const Duration(days: 2)),
+      isSubmitted: true,
+    ),
+  ];
+
   // Mock ADM Learners
   static final List<AdmLearnerModel> admLearners = [
     AdmLearnerModel(
@@ -227,6 +261,8 @@ class MockData {
       lrn: '109283746503',
       sectionName: 'G10 - Emerald',
       stage: AdmStage.meeting_parents,
+      status: AdmStatus.referred,
+      referredByTeacher: 'Maria Santos',
       createdAt: DateTime.now().subtract(const Duration(days: 15)),
       pendingModulesCount: 3,
       completedModulesCount: 1,
@@ -239,6 +275,8 @@ class MockData {
       lrn: '109283746501',
       sectionName: 'G10 - Emerald',
       stage: AdmStage.consultation,
+      status: AdmStatus.enrolled,
+      referredByTeacher: 'Maria Santos',
       createdAt: DateTime.now().subtract(const Duration(days: 7)),
       pendingModulesCount: 2,
       completedModulesCount: 2,
@@ -251,6 +289,8 @@ class MockData {
       lrn: '109283746509',
       sectionName: 'G9 - Sapphire',
       stage: AdmStage.enrollment_monitoring,
+      status: AdmStatus.pendingApproval,
+      referredByTeacher: 'Jose Rizal',
       createdAt: DateTime.now().subtract(const Duration(days: 30)),
       pendingModulesCount: 0,
       completedModulesCount: 5,

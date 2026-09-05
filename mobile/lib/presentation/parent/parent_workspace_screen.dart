@@ -295,7 +295,7 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // 4. ADM TAB (View Only)
+  // 4. ADM TAB (Parent View Only - Live Status & Retrieval Schedule)
   // ---------------------------------------------------------------------------
   Widget _buildAdmTab() {
     return SingleChildScrollView(
@@ -305,6 +305,72 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
         children: [
           _childSelectorBar(),
           const SizedBox(height: 12),
+
+          // Live ADM Status Banner for Parent
+          CustomCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Child ADM Status',
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryEmerald.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        'ENROLLED & ACTIVE',
+                        style: GoogleFonts.robotoMono(
+                          color: AppColors.primaryEmerald,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Stage 4: Active Module Delivery & Monitoring',
+                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Issued Device: Samsung Galaxy Tab A8 (#MSAT-T-104)',
+                  style: GoogleFonts.robotoMono(color: AppColors.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Module Retrieval Schedule for Parent
+          CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Module Retrieval & Return Schedule',
+                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 10),
+                _scheduleRow('Math Module 3', 'Sept 10, 2026', 'Return to School Gate 2'),
+                const SizedBox(height: 6),
+                _scheduleRow('Science Module 2', 'Sept 14, 2026', 'Return to Adviser Santos'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Read-Only Intervention Timeline
           CustomCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +379,7 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'ADM Intervention Timeline (Read-Only)',
+                      'Intervention History & Timeline',
                       style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     Container(
@@ -337,6 +403,30 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scheduleRow(String module, String date, String note) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(module, style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(note, style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11)),
+            ],
+          ),
+          Text(date, style: GoogleFonts.robotoMono(color: AppColors.primaryEmerald, fontWeight: FontWeight.bold, fontSize: 12)),
         ],
       ),
     );

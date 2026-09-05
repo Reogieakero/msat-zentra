@@ -367,54 +367,144 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
   // ---------------------------------------------------------------------------
   // 4. ADM TAB (Task Manager View)
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // 4. ADM TAB (Task Manager & Live Status View)
+  // ---------------------------------------------------------------------------
   Widget _buildAdmTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Live ADM Status Banner
+          CustomCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'ADM Enrollment Status',
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryEmerald.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        'ENROLLED & ACTIVE',
+                        style: GoogleFonts.robotoMono(
+                          color: AppColors.primaryEmerald,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Stage 4: Active Module Delivery & Monitoring',
+                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Issued Device: Samsung Galaxy Tab A8 (#MSAT-T-104)',
+                  style: GoogleFonts.robotoMono(color: AppColors.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
           Text(
-            'Active ADM Modules & Submissions',
+            'Assigned Self-Learning Modules',
             style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 8),
-          _taskItem('Math Module 3: Polynomial Functions', 'Faculty: Ms. Santos', 'Due: Sept 10', false),
+          _moduleCard('Mathematics 10', 'Module 3: Polynomial Functions & Sequences', 'Math10_Mod3_Polynomials.pdf (2.4 MB)', 'Maria Santos', 'Due: Sept 10', false),
           const SizedBox(height: 8),
-          _taskItem('Science Module 2: Plate Tectonics', 'Faculty: Mr. Rizal', 'Due: Sept 14', false),
+          _moduleCard('Science 10', 'Module 2: Plate Tectonics & Earth Structure', 'Sci10_Mod2_Tectonics.pdf (3.1 MB)', 'Jose Rizal', 'Due: Sept 14', false),
           const SizedBox(height: 8),
-          _taskItem('English Module 1: Persuasive Writing', 'Faculty: Ms. Bonifacio', 'Submitted', true),
+          _moduleCard('English 10', 'Module 1: Persuasive Writing & Rhetoric', 'Eng10_Mod1_Rhetoric.pdf (1.8 MB)', 'Clara Bonifacio', 'Submitted', true),
         ],
       ),
     );
   }
 
-  Widget _taskItem(String title, String teacher, String statusText, bool isDone) {
+  Widget _moduleCard(String subject, String title, String fileInfo, String teacher, String statusText, bool isSubmitted) {
     return CustomCard(
       padding: const EdgeInsets.all(12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isDone ? Icons.check_circle : Icons.pending_actions,
-            color: isDone ? AppColors.primaryEmerald : AppColors.riskModerate,
-            size: 20,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  subject,
+                  style: GoogleFonts.robotoMono(color: AppColors.primaryEmerald, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Text(
+                statusText,
+                style: GoogleFonts.robotoMono(
+                  color: isSubmitted ? AppColors.primaryEmerald : AppColors.riskModerate,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(teacher, style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11)),
-              ],
-            ),
-          ),
+          const SizedBox(height: 8),
           Text(
-            statusText,
-            style: GoogleFonts.robotoMono(
-              color: isDone ? AppColors.primaryEmerald : AppColors.riskModerate,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
+            title,
+            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Teacher: $teacher • $fileInfo',
+            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Downloading $fileInfo...')),
+                    );
+                  },
+                  icon: const Icon(Icons.download, size: 14),
+                  label: const Text('Download PDF'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (!isSubmitted)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Submitted $title to $teacher!')),
+                      );
+                    },
+                    icon: const Icon(Icons.upload_file, size: 14),
+                    label: const Text('Submit Module'),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

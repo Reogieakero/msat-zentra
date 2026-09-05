@@ -11,6 +11,7 @@ import 'widgets/class_selector_view.dart';
 import 'widgets/attendance_roster_view.dart';
 import 'widgets/grade_matrix_spreadsheet.dart';
 import 'widgets/anecdotal_logger_view.dart';
+import 'widgets/faculty_adm_view.dart';
 
 class TeacherWorkspaceScreen extends ConsumerStatefulWidget {
   const TeacherWorkspaceScreen({super.key});
@@ -382,7 +383,7 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
   Widget _buildAdmTab() {
     return const Padding(
       padding: EdgeInsets.all(12.0),
-      child: AnecdotalLoggerView(),
+      child: FacultyAdmView(),
     );
   }
 }

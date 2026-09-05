@@ -34,6 +34,53 @@ extension AdmStageExtension on AdmStage {
   int get stageIndex => index + 1;
 }
 
+enum AdmStatus {
+  referred('Referred for ADM'),
+  pendingApproval('Pending Evaluation'),
+  enrolled('Officially Enrolled'),
+  completed('Intervention Completed');
+
+  final String label;
+  const AdmStatus(this.label);
+}
+
+class AdmSubjectModuleModel {
+  final String id;
+  final String subjectName;
+  final String moduleTitle;
+  final String fileName;
+  final String fileSize;
+  final String assignedTeacher;
+  final DateTime dueDate;
+  final bool isSubmitted;
+
+  const AdmSubjectModuleModel({
+    required this.id,
+    required this.subjectName,
+    required this.moduleTitle,
+    required this.fileName,
+    required this.fileSize,
+    required this.assignedTeacher,
+    required this.dueDate,
+    this.isSubmitted = false,
+  });
+
+  AdmSubjectModuleModel copyWith({
+    bool? isSubmitted,
+  }) {
+    return AdmSubjectModuleModel(
+      id: id,
+      subjectName: subjectName,
+      moduleTitle: moduleTitle,
+      fileName: fileName,
+      fileSize: fileSize,
+      assignedTeacher: assignedTeacher,
+      dueDate: dueDate,
+      isSubmitted: isSubmitted ?? this.isSubmitted,
+    );
+  }
+}
+
 class AdmLearnerModel {
   final String id;
   final String studentId;
@@ -41,10 +88,12 @@ class AdmLearnerModel {
   final String lrn;
   final String sectionName;
   final AdmStage stage;
+  final AdmStatus status;
   final DateTime createdAt;
   final int pendingModulesCount;
   final int completedModulesCount;
   final String? issuedDevice;
+  final String? referredByTeacher;
 
   const AdmLearnerModel({
     required this.id,
@@ -53,17 +102,21 @@ class AdmLearnerModel {
     required this.lrn,
     required this.sectionName,
     required this.stage,
+    this.status = AdmStatus.enrolled,
     required this.createdAt,
     this.pendingModulesCount = 0,
     this.completedModulesCount = 0,
     this.issuedDevice,
+    this.referredByTeacher,
   });
 
   AdmLearnerModel copyWith({
     AdmStage? stage,
+    AdmStatus? status,
     int? pendingModulesCount,
     int? completedModulesCount,
     String? issuedDevice,
+    String? referredByTeacher,
   }) {
     return AdmLearnerModel(
       id: id,
@@ -72,10 +125,12 @@ class AdmLearnerModel {
       lrn: lrn,
       sectionName: sectionName,
       stage: stage ?? this.stage,
+      status: status ?? this.status,
       createdAt: createdAt,
       pendingModulesCount: pendingModulesCount ?? this.pendingModulesCount,
       completedModulesCount: completedModulesCount ?? this.completedModulesCount,
       issuedDevice: issuedDevice ?? this.issuedDevice,
+      referredByTeacher: referredByTeacher ?? this.referredByTeacher,
     );
   }
 }
