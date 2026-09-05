@@ -18,6 +18,10 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
   DateTime _selectedDate = DateTime.now(); // Defaults to Today's date
   Session _selectedSession = Session.AM;
 
+  // Pagination state for Recent Attendance Logs
+  int _currentPage = 1;
+  static const int _pageSize = 4;
+
   // Set of day numbers in September 2026 where attendance was completed
   final Set<int> _completedDays = {1, 2, 3, 4, 5};
 
@@ -27,6 +31,10 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
 
     final now = DateTime.now();
     final todayDay = now.day; // 5
+
+    // Only past school days & today (most recent day first)
+    final pastAndTodayDays = List.generate(todayDay, (i) => todayDay - i); // [5, 4, 3, 2, 1]
+    final totalPages = (pastAndTodayDays.length / _pageSize).ceil().clamp(1, 99);
 
     return SingleChildScrollView(
       child: Column(
@@ -41,29 +49,34 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Selected Date Context',
-                          style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 14, color: AppColors.primaryEmerald),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}${_selectedDate.day == todayDay ? " (Today)" : ""}',
-                              style: GoogleFonts.robotoMono(
-                                color: AppColors.primaryEmerald,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Selected Date Context',
+                            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 14, color: AppColors.primaryEmerald),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}${_selectedDate.day == todayDay ? " (Today)" : ""}',
+                                  style: GoogleFonts.robotoMono(
+                                    color: AppColors.primaryEmerald,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.date_range, color: AppColors.textPrimary),
@@ -102,14 +115,18 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'September 2026 Attendance Map',
-                      style: GoogleFonts.inter(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    Expanded(
+                      child: Text(
+                        'September 2026 Attendance Map',
+                        style: GoogleFonts.inter(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
@@ -117,10 +134,10 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${_completedDays.length}/22 School Days Done',
+                        '${_completedDays.length}/22 Days Done',
                         style: GoogleFonts.robotoMono(
                           color: AppColors.primaryEmerald,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -196,12 +213,12 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                       borderTileColor = AppColors.attendancePresent.withOpacity(0.6);
                       textTileColor = AppColors.attendancePresent;
                     } else if (isPastDay) {
-                      // Unrecorded Past School Day -> Red alert (#EF4444)
+                      // Unrecorded Past Day -> Red alert (#EF4444)
                       bgTileColor = AppColors.attendanceAbsent.withOpacity(0.18);
                       borderTileColor = AppColors.attendanceAbsent.withOpacity(0.6);
                       textTileColor = AppColors.attendanceAbsent;
                     } else {
-                      // Upcoming / Future Pending School Day -> Amber / Yellow (#F59E0B)
+                      // Future Day -> Amber (#F59E0B)
                       bgTileColor = AppColors.riskModerate.withOpacity(0.15);
                       borderTileColor = AppColors.riskModerate.withOpacity(0.4);
                       textTileColor = AppColors.riskModerate;
@@ -242,68 +259,142 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
           ),
           const SizedBox(height: 14),
 
-          // 3. Chronological Attendance Log History
-          Text(
-            'Recent Daily Attendance Status',
-            style: GoogleFonts.inter(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+          // 3. Paginated Attendance Logs (Past & Today Only, Page 1 = Most Recent First)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Attendance Logs',
+                  style: GoogleFonts.inter(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Compact Pagination Controls
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Page $_currentPage of $totalPages',
+                    style: GoogleFonts.robotoMono(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                    color: _currentPage > 1 ? AppColors.primaryEmerald : AppColors.textMuted,
+                    onPressed: _currentPage > 1
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                    color: _currentPage < totalPages ? AppColors.primaryEmerald : AppColors.textMuted,
+                    onPressed: _currentPage < totalPages
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                  ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 8),
 
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              final dayNum = 5 - index;
-              final logDate = DateTime(2026, 9, dayNum);
-              final isDone = _completedDays.contains(dayNum);
+          // Paginated Logs List for Past & Today Only
+          Builder(
+            builder: (context) {
+              final startIndex = (_currentPage - 1) * _pageSize;
+              final endIndex = (startIndex + _pageSize).clamp(0, pastAndTodayDays.length);
+              final pageDays = pastAndTodayDays.sublist(startIndex, endIndex);
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: CustomCard(
-                  onTap: () {
-                    setState(() => _selectedDate = logDate);
-                    _openRosterMarkingSheet(context, logDate, attendanceNotifier);
-                  },
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Sept $dayNum, 2026',
-                        style: GoogleFonts.robotoMono(
-                          color: AppColors.textPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: (isDone ? AppColors.attendancePresent : AppColors.attendanceAbsent).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: (isDone ? AppColors.attendancePresent : AppColors.attendanceAbsent).withOpacity(0.4),
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: pageDays.length,
+                itemBuilder: (context, index) {
+                  final dayNum = pageDays[index];
+                  final logDate = DateTime(2026, 9, dayNum);
+                  final isDone = _completedDays.contains(dayNum);
+                  final isToday = (dayNum == todayDay);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: CustomCard(
+                      onTap: () {
+                        setState(() => _selectedDate = logDate);
+                        _openRosterMarkingSheet(context, logDate, attendanceNotifier);
+                      },
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Sept ${dayNum.toString().padLeft(2, '0')}, 2026',
+                                  style: GoogleFonts.robotoMono(
+                                    color: isToday ? AppColors.primaryEmerald : AppColors.textPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (isToday) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryEmerald.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: Text(
+                                      'TODAY',
+                                      style: GoogleFonts.robotoMono(
+                                        color: AppColors.primaryEmerald,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          isDone ? 'COMPLETED' : 'NOT DONE',
-                          style: GoogleFonts.robotoMono(
-                            color: isDone ? AppColors.attendancePresent : AppColors.attendanceAbsent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (isDone ? AppColors.attendancePresent : AppColors.attendanceAbsent).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: (isDone ? AppColors.attendancePresent : AppColors.attendanceAbsent).withOpacity(0.4),
+                              ),
+                            ),
+                            child: Text(
+                              isDone ? 'DONE' : 'UNRECORDED',
+                              style: GoogleFonts.robotoMono(
+                                color: isDone ? AppColors.attendancePresent : AppColors.attendanceAbsent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -395,25 +486,27 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Mark Attendance',
-                                style: GoogleFonts.inter(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mark Attendance',
+                                  style: GoogleFonts.inter(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'G10 - Emerald | ${date.month}/${date.day}/${date.year}',
-                                style: GoogleFonts.robotoMono(
-                                  color: AppColors.primaryEmerald,
-                                  fontSize: 12,
+                                Text(
+                                  'G10 - Emerald | ${date.month}/${date.day}/${date.year}',
+                                  style: GoogleFonts.robotoMono(
+                                    color: AppColors.primaryEmerald,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close, color: AppColors.textMuted),
@@ -427,6 +520,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                       CustomCard(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
                               decoration: BoxDecoration(
@@ -443,7 +537,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                                       notifier.loadAttendance('sec_g10_emerald', date, session);
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
                                         color: isSelected ? AppColors.primaryEmerald : Colors.transparent,
                                         borderRadius: BorderRadius.circular(4),
@@ -461,16 +555,21 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                                 }).toList(),
                               ),
                             ),
-                            const Spacer(),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                notifier.markAllPresent('sec_g10_emerald');
-                              },
-                              icon: const Icon(Icons.done_all, size: 14),
-                              label: const Text('Mark All Present'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    notifier.markAllPresent('sec_g10_emerald');
+                                  },
+                                  icon: const Icon(Icons.done_all, size: 14),
+                                  label: const Text('Mark All Present'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -492,7 +591,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                               itemBuilder: (context, index) {
                                 final record = records[index];
                                 return CustomCard(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   child: Row(
                                     children: [
                                       CircleAvatar(
@@ -507,7 +606,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
+                                      const SizedBox(width: 8),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,20 +618,23 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 13,
                                               ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 2),
                                             StatusBadge.attendance(record.status),
                                           ],
                                         ),
                                       ),
+                                      const SizedBox(width: 6),
                                       Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           _statusChip(record, AttendanceStatus.present, 'P', AppColors.attendancePresent, notifier),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: 3),
                                           _statusChip(record, AttendanceStatus.absent, 'A', AppColors.attendanceAbsent, notifier),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: 3),
                                           _statusChip(record, AttendanceStatus.late, 'L', AppColors.attendanceLate, notifier),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: 3),
                                           _statusChip(record, AttendanceStatus.excused, 'E', AppColors.attendanceExcused, notifier),
                                         ],
                                       ),
