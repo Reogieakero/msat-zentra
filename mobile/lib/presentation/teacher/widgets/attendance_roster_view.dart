@@ -131,11 +131,12 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
 
                 // Color Coding Legend
                 Wrap(
-                  spacing: 12,
+                  spacing: 10,
                   runSpacing: 6,
                   children: [
                     _legendPill('Completed', AppColors.attendancePresent),
-                    _legendPill('Not Done / Pending', AppColors.attendanceAbsent),
+                    _legendPill('Unrecorded (Past)', AppColors.attendanceAbsent),
+                    _legendPill('Pending (Future)', AppColors.riskModerate),
                     _legendPill('Today', AppColors.primaryEmerald, isToday: true),
                     _legendPill('Weekend', AppColors.surfaceElevated),
                   ],
@@ -176,6 +177,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                     final isWeekend = (dayNum % 7 == 6) || (dayNum % 7 == 0);
                     final isDone = _completedDays.contains(dayNum);
                     final isToday = (dayNum == todayDay);
+                    final isPastDay = dayNum < todayDay;
 
                     Color bgTileColor;
                     Color borderTileColor;
@@ -193,11 +195,16 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                       bgTileColor = AppColors.attendancePresent.withOpacity(0.2);
                       borderTileColor = AppColors.attendancePresent.withOpacity(0.6);
                       textTileColor = AppColors.attendancePresent;
-                    } else {
-                      // Missed / Pending past or future school day
-                      bgTileColor = AppColors.attendanceAbsent.withOpacity(0.15);
-                      borderTileColor = AppColors.attendanceAbsent.withOpacity(0.4);
+                    } else if (isPastDay) {
+                      // Unrecorded Past School Day -> Red alert (#EF4444)
+                      bgTileColor = AppColors.attendanceAbsent.withOpacity(0.18);
+                      borderTileColor = AppColors.attendanceAbsent.withOpacity(0.6);
                       textTileColor = AppColors.attendanceAbsent;
+                    } else {
+                      // Upcoming / Future Pending School Day -> Amber / Yellow (#F59E0B)
+                      bgTileColor = AppColors.riskModerate.withOpacity(0.15);
+                      borderTileColor = AppColors.riskModerate.withOpacity(0.4);
+                      textTileColor = AppColors.riskModerate;
                     }
 
                     return GestureDetector(
