@@ -23,12 +23,13 @@ class GradeMatrixState {
   });
 
   GradeMatrixState copyWith({
+    List<AssessmentModel>? assessments,
     Map<String, double>? rawScores,
     LockStatus? lockStatus,
   }) {
     return GradeMatrixState(
       students: students,
-      assessments: assessments,
+      assessments: assessments ?? this.assessments,
       rawScores: rawScores ?? this.rawScores,
       lockStatus: lockStatus ?? this.lockStatus,
     );
@@ -59,6 +60,36 @@ class GradesNotifier extends StateNotifier<AsyncValue<GradeMatrixState>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  Future<void> addAssessment(AssessmentModel newAssessment) async {
+    final currentState = state.value;
+    if (currentState == null || currentState.lockStatus != LockStatus.unlocked) return;
+
+    final updatedAssessments = [...currentState.assessments, newAssessment];
+    final updatedScores = Map<String, double>.from(currentState.rawScores);
+
+    // Initialize default scores for all students for this new assessment (e.g. 0.0 or default score)
+    for (final student in currentState.students) {
+      final key = '${student.id}_${newAssessment.id}';
+      updatedScores[key] = newAssessment.maxScore * 0.8; // Default 80% initial score
+    }
+
+    state = AsyncValue.data(currentState.copyWith(
+      assessments: updatedAssessments,
+      rawScores: updatedScores,
+    ));
+
+    _ref.read(syncProvider.notifier).registerMutation(
+      'POST',
+      '/api/grades/assessments',
+      {
+        'id': newAssessment.id,
+        'title': newAssessment.title,
+        'componentType': newAssessment.componentType.name,
+        'maxScore': newAssessment.maxScore,
+      },
+    );
   }
 
   Future<void> updateScore(String studentId, String assessmentId, double newScore) async {

@@ -10,6 +10,19 @@ import '../../../providers/grades_provider.dart';
 import '../../shared/widgets/custom_card.dart';
 import '../../shared/widgets/status_badge.dart';
 
+enum AssessmentCategoryType {
+  ww('WW', 'Oral / Written Works (WWs)', ComponentType.WRITTEN_WORK),
+  pt('PT', 'Product / Performance Task (PTs)', ComponentType.PERFORMANCE_TASK),
+  st('ST', 'Summative Test (ST)', ComponentType.WRITTEN_WORK),
+  te('TE', 'Term Exam (TE)', ComponentType.QUARTERLY_EXAM);
+
+  final String prefix;
+  final String label;
+  final ComponentType componentType;
+
+  const AssessmentCategoryType(this.prefix, this.label, this.componentType);
+}
+
 class GradeMatrixSpreadsheet extends ConsumerWidget {
   const GradeMatrixSpreadsheet({super.key});
 
@@ -26,74 +39,96 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
 
         return Column(
           children: [
-            // Header Action Bar: Subject Info + Lock Status
+            // Header Action Bar: Subject Info + Add Assessment + Lock Status
             CustomCard(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Mathematics G10 — Term 1',
-                        style: GoogleFonts.inter(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mathematics G10 — Term 1',
+                              style: GoogleFonts.inter(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  'Status: ',
+                                  style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                                ),
+                                StatusBadge.lockStatus(matrixState.lockStatus),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            'Status: ',
-                            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                      const SizedBox(width: 8),
+                      if (!isLocked) ...[
+                        ElevatedButton.icon(
+                          onPressed: () => _showAddAssessmentModal(context, matrixState.assessments, gradesNotifier),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('+ Add'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryEmerald,
+                            foregroundColor: const Color(0xFF0C1612),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                           ),
-                          StatusBadge.lockStatus(matrixState.lockStatus),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 6),
+                        ElevatedButton.icon(
+                          onPressed: () => _showLockConfirmationModal(context, ref),
+                          icon: const Icon(Icons.lock_outline, size: 16),
+                          label: const Text('Lock'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.riskHigh,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ] else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.riskHigh.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.lock, size: 14, color: AppColors.riskHigh),
+                              const SizedBox(width: 4),
+                              Text(
+                                'LOCKED',
+                                style: GoogleFonts.robotoMono(
+                                  color: AppColors.riskHigh,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
-                  const Spacer(),
-                  if (!isLocked)
-                    ElevatedButton.icon(
-                      onPressed: () => _showLockConfirmationModal(context, ref),
-                      icon: const Icon(Icons.lock_outline, size: 16),
-                      label: const Text('Lock Grades'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.riskHigh,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.riskHigh.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lock, size: 14, color: AppColors.riskHigh),
-                          const SizedBox(width: 4),
-                          Text(
-                            'LOCKED',
-                            style: GoogleFonts.robotoMono(
-                              color: AppColors.riskHigh,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
+
             // Horizontally Scrollable Grade Matrix Data Table
             Expanded(
               child: CustomCard(
@@ -106,7 +141,7 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                       headingRowColor: WidgetStateProperty.all(AppColors.surfaceElevated),
                       dataRowMinHeight: 44,
                       dataRowMaxHeight: 48,
-                      columnSpacing: 20,
+                      columnSpacing: 18,
                       horizontalMargin: 12,
                       border: const TableBorder(
                         horizontalInside: BorderSide(color: AppColors.borderSubtle, width: 1),
@@ -168,7 +203,6 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                         ),
                       ],
                       rows: matrixState.students.map((student) {
-                        // Calculate total percentage for student across assessments
                         double totalPercentSum = 0;
                         int count = 0;
 
@@ -269,6 +303,199 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Add Assessment Modal with Auto Increment Logic
+  // ---------------------------------------------------------------------------
+  void _showAddAssessmentModal(
+    BuildContext context,
+    List<AssessmentModel> existingAssessments,
+    GradesNotifier notifier,
+  ) {
+    AssessmentCategoryType selectedCategory = AssessmentCategoryType.ww;
+
+    String computeAutoIncrementTitle(AssessmentCategoryType category) {
+      int maxNum = 0;
+      for (final asm in existingAssessments) {
+        final titleUpper = asm.title.toUpperCase();
+        if (titleUpper.startsWith(category.prefix)) {
+          final match = RegExp('^${category.prefix}\\s*(\\d+)').firstMatch(titleUpper);
+          if (match != null) {
+            final num = int.tryParse(match.group(1) ?? '0') ?? 0;
+            if (num > maxNum) maxNum = num;
+          } else {
+            if (maxNum == 0) maxNum = 1;
+          }
+        }
+      }
+      return '${category.prefix}${maxNum + 1}';
+    }
+
+    final titleController = TextEditingController(text: computeAutoIncrementTitle(selectedCategory));
+    final maxScoreController = TextEditingController(text: '50');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Add New Assessment Column',
+                        style: GoogleFonts.inter(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.textMuted),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Category Selector Options
+                  Text(
+                    'Assessment Category',
+                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+
+                  Column(
+                    children: AssessmentCategoryType.values.map((cat) {
+                      final isSelected = selectedCategory == cat;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primaryEmerald.withOpacity(0.12) : AppColors.surfaceCard,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primaryEmerald : AppColors.borderSubtle,
+                          ),
+                        ),
+                        child: RadioListTile<AssessmentCategoryType>(
+                          value: cat,
+                          groupValue: selectedCategory,
+                          activeColor: AppColors.primaryEmerald,
+                          dense: true,
+                          title: Text(
+                            cat.label,
+                            style: GoogleFonts.inter(
+                              color: isSelected ? AppColors.primaryEmerald : AppColors.textPrimary,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              fontSize: 13,
+                            ),
+                          ),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                selectedCategory = val;
+                                titleController.text = computeAutoIncrementTitle(val);
+                              });
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Auto-Incremented Title Input
+                  Text(
+                    'Assessment Title (Auto-Incremented)',
+                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: titleController,
+                    style: GoogleFonts.robotoMono(color: AppColors.textPrimary, fontSize: 14),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. WW3, PT2, ST1, TE1',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Max Score Input
+                  Text(
+                    'Highest Possible / Max Score',
+                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: maxScoreController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: GoogleFonts.robotoMono(color: AppColors.textPrimary, fontSize: 14),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. 50',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Add Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final title = titleController.text.trim();
+                        final maxScore = double.tryParse(maxScoreController.text.trim());
+
+                        if (title.isNotEmpty && maxScore != null && maxScore > 0) {
+                          final newAsm = AssessmentModel(
+                            id: 'asm_${DateTime.now().millisecondsSinceEpoch}',
+                            title: title,
+                            componentType: selectedCategory.componentType,
+                            maxScore: maxScore,
+                            dateGiven: DateTime.now(),
+                          );
+
+                          notifier.addAssessment(newAsm);
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.surfaceElevated,
+                              content: Text(
+                                'Added $title (Max: ${maxScore.toInt()}) to grade matrix.',
+                                style: GoogleFonts.inter(color: AppColors.primaryEmerald),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Text(
+                        'Add Assessment Column',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
