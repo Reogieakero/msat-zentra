@@ -39,6 +39,10 @@ export type AnecdotalRecordMinAggregateOutputType = {
   termId: string | null
   category: $Enums.AnecdotalCategory | null
   confidentialityLevel: $Enums.Confidentiality | null
+  folderId: string | null
+  signedBy: string | null
+  signedAt: Date | null
+  signatureImageUrl: string | null
 }
 
 export type AnecdotalRecordMaxAggregateOutputType = {
@@ -56,6 +60,10 @@ export type AnecdotalRecordMaxAggregateOutputType = {
   termId: string | null
   category: $Enums.AnecdotalCategory | null
   confidentialityLevel: $Enums.Confidentiality | null
+  folderId: string | null
+  signedBy: string | null
+  signedAt: Date | null
+  signatureImageUrl: string | null
 }
 
 export type AnecdotalRecordCountAggregateOutputType = {
@@ -73,6 +81,10 @@ export type AnecdotalRecordCountAggregateOutputType = {
   termId: number
   category: number
   confidentialityLevel: number
+  folderId: number
+  signedBy: number
+  signedAt: number
+  signatureImageUrl: number
   _all: number
 }
 
@@ -92,6 +104,10 @@ export type AnecdotalRecordMinAggregateInputType = {
   termId?: true
   category?: true
   confidentialityLevel?: true
+  folderId?: true
+  signedBy?: true
+  signedAt?: true
+  signatureImageUrl?: true
 }
 
 export type AnecdotalRecordMaxAggregateInputType = {
@@ -109,6 +125,10 @@ export type AnecdotalRecordMaxAggregateInputType = {
   termId?: true
   category?: true
   confidentialityLevel?: true
+  folderId?: true
+  signedBy?: true
+  signedAt?: true
+  signatureImageUrl?: true
 }
 
 export type AnecdotalRecordCountAggregateInputType = {
@@ -126,6 +146,10 @@ export type AnecdotalRecordCountAggregateInputType = {
   termId?: true
   category?: true
   confidentialityLevel?: true
+  folderId?: true
+  signedBy?: true
+  signedAt?: true
+  signatureImageUrl?: true
   _all?: true
 }
 
@@ -216,6 +240,10 @@ export type AnecdotalRecordGroupByOutputType = {
   termId: string
   category: $Enums.AnecdotalCategory
   confidentialityLevel: $Enums.Confidentiality
+  folderId: string | null
+  signedBy: string | null
+  signedAt: Date | null
+  signatureImageUrl: string | null
   _count: AnecdotalRecordCountAggregateOutputType | null
   _min: AnecdotalRecordMinAggregateOutputType | null
   _max: AnecdotalRecordMaxAggregateOutputType | null
@@ -254,10 +282,15 @@ export type AnecdotalRecordWhereInput = {
   termId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   category?: Prisma.EnumAnecdotalCategoryFilter<"AnecdotalRecord"> | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFilter<"AnecdotalRecord"> | $Enums.Confidentiality
+  folderId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
+  signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
   observer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
+  folder?: Prisma.XOR<Prisma.AnecdotalFolderNullableScalarRelationFilter, Prisma.AnecdotalFolderWhereInput> | null
   followups?: Prisma.AnecdotalRecordFollowupListRelationFilter
   referrals?: Prisma.ReferralListRelationFilter
 }
@@ -277,10 +310,15 @@ export type AnecdotalRecordOrderByWithRelationInput = {
   termId?: Prisma.SortOrder
   category?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
+  folderId?: Prisma.SortOrderInput | Prisma.SortOrder
+  signedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  signedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   student?: Prisma.StudentProfileOrderByWithRelationInput
   observer?: Prisma.UserOrderByWithRelationInput
   section?: Prisma.SectionOrderByWithRelationInput
   term?: Prisma.TermOrderByWithRelationInput
+  folder?: Prisma.AnecdotalFolderOrderByWithRelationInput
   followups?: Prisma.AnecdotalRecordFollowupOrderByRelationAggregateInput
   referrals?: Prisma.ReferralOrderByRelationAggregateInput
 }
@@ -303,10 +341,15 @@ export type AnecdotalRecordWhereUniqueInput = Prisma.AtLeast<{
   termId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   category?: Prisma.EnumAnecdotalCategoryFilter<"AnecdotalRecord"> | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFilter<"AnecdotalRecord"> | $Enums.Confidentiality
+  folderId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
+  signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
   observer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
+  folder?: Prisma.XOR<Prisma.AnecdotalFolderNullableScalarRelationFilter, Prisma.AnecdotalFolderWhereInput> | null
   followups?: Prisma.AnecdotalRecordFollowupListRelationFilter
   referrals?: Prisma.ReferralListRelationFilter
 }, "id">
@@ -326,6 +369,10 @@ export type AnecdotalRecordOrderByWithAggregationInput = {
   termId?: Prisma.SortOrder
   category?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
+  folderId?: Prisma.SortOrderInput | Prisma.SortOrder
+  signedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  signedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.AnecdotalRecordCountOrderByAggregateInput
   _max?: Prisma.AnecdotalRecordMaxOrderByAggregateInput
   _min?: Prisma.AnecdotalRecordMinOrderByAggregateInput
@@ -349,6 +396,10 @@ export type AnecdotalRecordScalarWhereWithAggregatesInput = {
   termId?: Prisma.StringWithAggregatesFilter<"AnecdotalRecord"> | string
   category?: Prisma.EnumAnecdotalCategoryWithAggregatesFilter<"AnecdotalRecord"> | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityWithAggregatesFilter<"AnecdotalRecord"> | $Enums.Confidentiality
+  folderId?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
+  signedBy?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
+  signedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AnecdotalRecord"> | Date | string | null
+  signatureImageUrl?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
 }
 
 export type AnecdotalRecordCreateInput = {
@@ -362,10 +413,14 @@ export type AnecdotalRecordCreateInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -385,6 +440,10 @@ export type AnecdotalRecordUncheckedCreateInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -400,10 +459,14 @@ export type AnecdotalRecordUpdateInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -423,6 +486,10 @@ export type AnecdotalRecordUncheckedUpdateInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -442,6 +509,10 @@ export type AnecdotalRecordCreateManyInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
 }
 
 export type AnecdotalRecordUpdateManyMutationInput = {
@@ -455,6 +526,9 @@ export type AnecdotalRecordUpdateManyMutationInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordUncheckedUpdateManyInput = {
@@ -472,6 +546,10 @@ export type AnecdotalRecordUncheckedUpdateManyInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordListRelationFilter = {
@@ -499,6 +577,10 @@ export type AnecdotalRecordCountOrderByAggregateInput = {
   termId?: Prisma.SortOrder
   category?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
+  folderId?: Prisma.SortOrder
+  signedBy?: Prisma.SortOrder
+  signedAt?: Prisma.SortOrder
+  signatureImageUrl?: Prisma.SortOrder
 }
 
 export type AnecdotalRecordMaxOrderByAggregateInput = {
@@ -516,6 +598,10 @@ export type AnecdotalRecordMaxOrderByAggregateInput = {
   termId?: Prisma.SortOrder
   category?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
+  folderId?: Prisma.SortOrder
+  signedBy?: Prisma.SortOrder
+  signedAt?: Prisma.SortOrder
+  signatureImageUrl?: Prisma.SortOrder
 }
 
 export type AnecdotalRecordMinOrderByAggregateInput = {
@@ -533,6 +619,10 @@ export type AnecdotalRecordMinOrderByAggregateInput = {
   termId?: Prisma.SortOrder
   category?: Prisma.SortOrder
   confidentialityLevel?: Prisma.SortOrder
+  folderId?: Prisma.SortOrder
+  signedBy?: Prisma.SortOrder
+  signedAt?: Prisma.SortOrder
+  signatureImageUrl?: Prisma.SortOrder
 }
 
 export type AnecdotalRecordScalarRelationFilter = {
@@ -716,6 +806,48 @@ export type EnumConfidentialityFieldUpdateOperationsInput = {
   set?: $Enums.Confidentiality
 }
 
+export type AnecdotalRecordCreateNestedManyWithoutFolderInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput> | Prisma.AnecdotalRecordCreateWithoutFolderInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput | Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyFolderInputEnvelope
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+}
+
+export type AnecdotalRecordUncheckedCreateNestedManyWithoutFolderInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput> | Prisma.AnecdotalRecordCreateWithoutFolderInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput | Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyFolderInputEnvelope
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+}
+
+export type AnecdotalRecordUpdateManyWithoutFolderNestedInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput> | Prisma.AnecdotalRecordCreateWithoutFolderInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput | Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput[]
+  upsert?: Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutFolderInput | Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutFolderInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyFolderInputEnvelope
+  set?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  disconnect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  delete?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  update?: Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutFolderInput | Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutFolderInput[]
+  updateMany?: Prisma.AnecdotalRecordUpdateManyWithWhereWithoutFolderInput | Prisma.AnecdotalRecordUpdateManyWithWhereWithoutFolderInput[]
+  deleteMany?: Prisma.AnecdotalRecordScalarWhereInput | Prisma.AnecdotalRecordScalarWhereInput[]
+}
+
+export type AnecdotalRecordUncheckedUpdateManyWithoutFolderNestedInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput> | Prisma.AnecdotalRecordCreateWithoutFolderInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput | Prisma.AnecdotalRecordCreateOrConnectWithoutFolderInput[]
+  upsert?: Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutFolderInput | Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutFolderInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyFolderInputEnvelope
+  set?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  disconnect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  delete?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  update?: Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutFolderInput | Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutFolderInput[]
+  updateMany?: Prisma.AnecdotalRecordUpdateManyWithWhereWithoutFolderInput | Prisma.AnecdotalRecordUpdateManyWithWhereWithoutFolderInput[]
+  deleteMany?: Prisma.AnecdotalRecordScalarWhereInput | Prisma.AnecdotalRecordScalarWhereInput[]
+}
+
 export type AnecdotalRecordCreateNestedOneWithoutFollowupsInput = {
   create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFollowupsInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFollowupsInput>
   connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutFollowupsInput
@@ -755,9 +887,13 @@ export type AnecdotalRecordCreateWithoutObserverInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -776,6 +912,10 @@ export type AnecdotalRecordUncheckedCreateWithoutObserverInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -824,6 +964,10 @@ export type AnecdotalRecordScalarWhereInput = {
   termId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   category?: Prisma.EnumAnecdotalCategoryFilter<"AnecdotalRecord"> | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFilter<"AnecdotalRecord"> | $Enums.Confidentiality
+  folderId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
+  signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
 }
 
 export type AnecdotalRecordCreateWithoutStudentInput = {
@@ -837,9 +981,13 @@ export type AnecdotalRecordCreateWithoutStudentInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -858,6 +1006,10 @@ export type AnecdotalRecordUncheckedCreateWithoutStudentInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -899,9 +1051,13 @@ export type AnecdotalRecordCreateWithoutTermInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -920,6 +1076,10 @@ export type AnecdotalRecordUncheckedCreateWithoutTermInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -961,9 +1121,13 @@ export type AnecdotalRecordCreateWithoutSectionInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -982,6 +1146,10 @@ export type AnecdotalRecordUncheckedCreateWithoutSectionInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
@@ -1012,6 +1180,76 @@ export type AnecdotalRecordUpdateManyWithWhereWithoutSectionInput = {
   data: Prisma.XOR<Prisma.AnecdotalRecordUpdateManyMutationInput, Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionInput>
 }
 
+export type AnecdotalRecordCreateWithoutFolderInput = {
+  id?: string
+  observationDatetime: Date | string
+  descriptionOfIncident: string
+  descriptionOfLocation?: string | null
+  notesRecommendationsActions?: string | null
+  classPerformance?: string | null
+  attendanceSummary?: string | null
+  attachmentUrl?: string | null
+  category?: $Enums.AnecdotalCategory
+  confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
+  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
+  section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
+  term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
+}
+
+export type AnecdotalRecordUncheckedCreateWithoutFolderInput = {
+  id?: string
+  studentId: string
+  observerId: string
+  sectionId: string
+  observationDatetime: Date | string
+  descriptionOfIncident: string
+  descriptionOfLocation?: string | null
+  notesRecommendationsActions?: string | null
+  classPerformance?: string | null
+  attendanceSummary?: string | null
+  attachmentUrl?: string | null
+  termId: string
+  category?: $Enums.AnecdotalCategory
+  confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
+  followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
+}
+
+export type AnecdotalRecordCreateOrConnectWithoutFolderInput = {
+  where: Prisma.AnecdotalRecordWhereUniqueInput
+  create: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput>
+}
+
+export type AnecdotalRecordCreateManyFolderInputEnvelope = {
+  data: Prisma.AnecdotalRecordCreateManyFolderInput | Prisma.AnecdotalRecordCreateManyFolderInput[]
+  skipDuplicates?: boolean
+}
+
+export type AnecdotalRecordUpsertWithWhereUniqueWithoutFolderInput = {
+  where: Prisma.AnecdotalRecordWhereUniqueInput
+  update: Prisma.XOR<Prisma.AnecdotalRecordUpdateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedUpdateWithoutFolderInput>
+  create: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedCreateWithoutFolderInput>
+}
+
+export type AnecdotalRecordUpdateWithWhereUniqueWithoutFolderInput = {
+  where: Prisma.AnecdotalRecordWhereUniqueInput
+  data: Prisma.XOR<Prisma.AnecdotalRecordUpdateWithoutFolderInput, Prisma.AnecdotalRecordUncheckedUpdateWithoutFolderInput>
+}
+
+export type AnecdotalRecordUpdateManyWithWhereWithoutFolderInput = {
+  where: Prisma.AnecdotalRecordScalarWhereInput
+  data: Prisma.XOR<Prisma.AnecdotalRecordUpdateManyMutationInput, Prisma.AnecdotalRecordUncheckedUpdateManyWithoutFolderInput>
+}
+
 export type AnecdotalRecordCreateWithoutFollowupsInput = {
   id?: string
   observationDatetime: Date | string
@@ -1023,10 +1261,14 @@ export type AnecdotalRecordCreateWithoutFollowupsInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
 }
 
@@ -1045,6 +1287,10 @@ export type AnecdotalRecordUncheckedCreateWithoutFollowupsInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
 
@@ -1075,10 +1321,14 @@ export type AnecdotalRecordUpdateWithoutFollowupsInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
 }
 
@@ -1097,6 +1347,10 @@ export type AnecdotalRecordUncheckedUpdateWithoutFollowupsInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
 
@@ -1111,10 +1365,14 @@ export type AnecdotalRecordCreateWithoutReferralsInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
   followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
 }
 
@@ -1133,6 +1391,10 @@ export type AnecdotalRecordUncheckedCreateWithoutReferralsInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
 }
 
@@ -1163,10 +1425,14 @@ export type AnecdotalRecordUpdateWithoutReferralsInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
 }
 
@@ -1185,6 +1451,10 @@ export type AnecdotalRecordUncheckedUpdateWithoutReferralsInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
 
@@ -1202,6 +1472,10 @@ export type AnecdotalRecordCreateManyObserverInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutObserverInput = {
@@ -1215,9 +1489,13 @@ export type AnecdotalRecordUpdateWithoutObserverInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1236,6 +1514,10 @@ export type AnecdotalRecordUncheckedUpdateWithoutObserverInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1254,6 +1536,10 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutObserverInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManyStudentInput = {
@@ -1270,6 +1556,10 @@ export type AnecdotalRecordCreateManyStudentInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutStudentInput = {
@@ -1283,9 +1573,13 @@ export type AnecdotalRecordUpdateWithoutStudentInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1304,6 +1598,10 @@ export type AnecdotalRecordUncheckedUpdateWithoutStudentInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1322,6 +1620,10 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutStudentInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManyTermInput = {
@@ -1338,6 +1640,10 @@ export type AnecdotalRecordCreateManyTermInput = {
   attachmentUrl?: string | null
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutTermInput = {
@@ -1351,9 +1657,13 @@ export type AnecdotalRecordUpdateWithoutTermInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1372,6 +1682,10 @@ export type AnecdotalRecordUncheckedUpdateWithoutTermInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1390,6 +1704,10 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutTermInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AnecdotalRecordCreateManySectionInput = {
@@ -1406,6 +1724,10 @@ export type AnecdotalRecordCreateManySectionInput = {
   termId: string
   category?: $Enums.AnecdotalCategory
   confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
 }
 
 export type AnecdotalRecordUpdateWithoutSectionInput = {
@@ -1419,9 +1741,13 @@ export type AnecdotalRecordUpdateWithoutSectionInput = {
   attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
   followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1440,6 +1766,10 @@ export type AnecdotalRecordUncheckedUpdateWithoutSectionInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
 }
@@ -1458,6 +1788,94 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutSectionInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
   confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type AnecdotalRecordCreateManyFolderInput = {
+  id?: string
+  studentId: string
+  observerId: string
+  sectionId: string
+  observationDatetime: Date | string
+  descriptionOfIncident: string
+  descriptionOfLocation?: string | null
+  notesRecommendationsActions?: string | null
+  classPerformance?: string | null
+  attendanceSummary?: string | null
+  attachmentUrl?: string | null
+  termId: string
+  category?: $Enums.AnecdotalCategory
+  confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
+}
+
+export type AnecdotalRecordUpdateWithoutFolderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
+  descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notesRecommendationsActions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  classPerformance?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
+  confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
+}
+
+export type AnecdotalRecordUncheckedUpdateWithoutFolderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  observerId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
+  descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notesRecommendationsActions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  classPerformance?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
+  confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
+}
+
+export type AnecdotalRecordUncheckedUpdateManyWithoutFolderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  observerId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
+  descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notesRecommendationsActions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  classPerformance?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
+  confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -1515,10 +1933,15 @@ export type AnecdotalRecordSelect<ExtArgs extends runtime.Types.Extensions.Inter
   termId?: boolean
   category?: boolean
   confidentialityLevel?: boolean
+  folderId?: boolean
+  signedBy?: boolean
+  signedAt?: boolean
+  signatureImageUrl?: boolean
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
+  folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
   followups?: boolean | Prisma.AnecdotalRecord$followupsArgs<ExtArgs>
   referrals?: boolean | Prisma.AnecdotalRecord$referralsArgs<ExtArgs>
   _count?: boolean | Prisma.AnecdotalRecordCountOutputTypeDefaultArgs<ExtArgs>
@@ -1539,10 +1962,15 @@ export type AnecdotalRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   termId?: boolean
   category?: boolean
   confidentialityLevel?: boolean
+  folderId?: boolean
+  signedBy?: boolean
+  signedAt?: boolean
+  signatureImageUrl?: boolean
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
+  folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
 }, ExtArgs["result"]["anecdotalRecord"]>
 
 export type AnecdotalRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1560,10 +1988,15 @@ export type AnecdotalRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   termId?: boolean
   category?: boolean
   confidentialityLevel?: boolean
+  folderId?: boolean
+  signedBy?: boolean
+  signedAt?: boolean
+  signatureImageUrl?: boolean
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
+  folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
 }, ExtArgs["result"]["anecdotalRecord"]>
 
 export type AnecdotalRecordSelectScalar = {
@@ -1581,14 +2014,19 @@ export type AnecdotalRecordSelectScalar = {
   termId?: boolean
   category?: boolean
   confidentialityLevel?: boolean
+  folderId?: boolean
+  signedBy?: boolean
+  signedAt?: boolean
+  signatureImageUrl?: boolean
 }
 
-export type AnecdotalRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "observerId" | "sectionId" | "observationDatetime" | "descriptionOfIncident" | "descriptionOfLocation" | "notesRecommendationsActions" | "classPerformance" | "attendanceSummary" | "attachmentUrl" | "termId" | "category" | "confidentialityLevel", ExtArgs["result"]["anecdotalRecord"]>
+export type AnecdotalRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "observerId" | "sectionId" | "observationDatetime" | "descriptionOfIncident" | "descriptionOfLocation" | "notesRecommendationsActions" | "classPerformance" | "attendanceSummary" | "attachmentUrl" | "termId" | "category" | "confidentialityLevel" | "folderId" | "signedBy" | "signedAt" | "signatureImageUrl", ExtArgs["result"]["anecdotalRecord"]>
 export type AnecdotalRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
+  folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
   followups?: boolean | Prisma.AnecdotalRecord$followupsArgs<ExtArgs>
   referrals?: boolean | Prisma.AnecdotalRecord$referralsArgs<ExtArgs>
   _count?: boolean | Prisma.AnecdotalRecordCountOutputTypeDefaultArgs<ExtArgs>
@@ -1598,12 +2036,14 @@ export type AnecdotalRecordIncludeCreateManyAndReturn<ExtArgs extends runtime.Ty
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
+  folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
 }
 export type AnecdotalRecordIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
+  folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
 }
 
 export type $AnecdotalRecordPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1613,6 +2053,7 @@ export type $AnecdotalRecordPayload<ExtArgs extends runtime.Types.Extensions.Int
     observer: Prisma.$UserPayload<ExtArgs>
     section: Prisma.$SectionPayload<ExtArgs>
     term: Prisma.$TermPayload<ExtArgs>
+    folder: Prisma.$AnecdotalFolderPayload<ExtArgs> | null
     followups: Prisma.$AnecdotalRecordFollowupPayload<ExtArgs>[]
     referrals: Prisma.$ReferralPayload<ExtArgs>[]
   }
@@ -1631,6 +2072,10 @@ export type $AnecdotalRecordPayload<ExtArgs extends runtime.Types.Extensions.Int
     termId: string
     category: $Enums.AnecdotalCategory
     confidentialityLevel: $Enums.Confidentiality
+    folderId: string | null
+    signedBy: string | null
+    signedAt: Date | null
+    signatureImageUrl: string | null
   }, ExtArgs["result"]["anecdotalRecord"]>
   composites: {}
 }
@@ -2029,6 +2474,7 @@ export interface Prisma__AnecdotalRecordClient<T, Null = never, ExtArgs extends 
   observer<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   section<T extends Prisma.SectionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SectionDefaultArgs<ExtArgs>>): Prisma.Prisma__SectionClient<runtime.Types.Result.GetResult<Prisma.$SectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   term<T extends Prisma.TermDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TermDefaultArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  folder<T extends Prisma.AnecdotalRecord$folderArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AnecdotalRecord$folderArgs<ExtArgs>>): Prisma.Prisma__AnecdotalFolderClient<runtime.Types.Result.GetResult<Prisma.$AnecdotalFolderPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   followups<T extends Prisma.AnecdotalRecord$followupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AnecdotalRecord$followupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordFollowupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referrals<T extends Prisma.AnecdotalRecord$referralsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AnecdotalRecord$referralsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -2074,6 +2520,10 @@ export interface AnecdotalRecordFieldRefs {
   readonly termId: Prisma.FieldRef<"AnecdotalRecord", 'String'>
   readonly category: Prisma.FieldRef<"AnecdotalRecord", 'AnecdotalCategory'>
   readonly confidentialityLevel: Prisma.FieldRef<"AnecdotalRecord", 'Confidentiality'>
+  readonly folderId: Prisma.FieldRef<"AnecdotalRecord", 'String'>
+  readonly signedBy: Prisma.FieldRef<"AnecdotalRecord", 'String'>
+  readonly signedAt: Prisma.FieldRef<"AnecdotalRecord", 'DateTime'>
+  readonly signatureImageUrl: Prisma.FieldRef<"AnecdotalRecord", 'String'>
 }
     
 
@@ -2472,6 +2922,25 @@ export type AnecdotalRecordDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many AnecdotalRecords to delete.
    */
   limit?: number
+}
+
+/**
+ * AnecdotalRecord.folder
+ */
+export type AnecdotalRecord$folderArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AnecdotalFolder
+   */
+  select?: Prisma.AnecdotalFolderSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AnecdotalFolder
+   */
+  omit?: Prisma.AnecdotalFolderOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AnecdotalFolderInclude<ExtArgs> | null
+  where?: Prisma.AnecdotalFolderWhereInput
 }
 
 /**

@@ -132,6 +132,11 @@ export type AttendanceRecord = Prisma.AttendanceRecordModel
  */
 export type AnecdotalRecord = Prisma.AnecdotalRecordModel
 /**
+ * Model AnecdotalFolder
+ * 
+ */
+export type AnecdotalFolder = Prisma.AnecdotalFolderModel
+/**
  * Model AnecdotalRecordFollowup
  * 
  */

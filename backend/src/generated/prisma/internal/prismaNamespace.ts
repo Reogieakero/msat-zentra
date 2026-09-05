@@ -415,6 +415,7 @@ export const ModelName = {
   GradeFlag: 'GradeFlag',
   AttendanceRecord: 'AttendanceRecord',
   AnecdotalRecord: 'AnecdotalRecord',
+  AnecdotalFolder: 'AnecdotalFolder',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
   Referral: 'Referral',
   Intervention: 'Intervention',
@@ -448,7 +449,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalRecordFollowup" | "referral" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1781,6 +1782,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.AnecdotalRecordCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.AnecdotalRecordCountAggregateOutputType> | number
+        }
+      }
+    }
+    AnecdotalFolder: {
+      payload: Prisma.$AnecdotalFolderPayload<ExtArgs>
+      fields: Prisma.AnecdotalFolderFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AnecdotalFolderFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AnecdotalFolderFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>
+        }
+        findFirst: {
+          args: Prisma.AnecdotalFolderFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AnecdotalFolderFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>
+        }
+        findMany: {
+          args: Prisma.AnecdotalFolderFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>[]
+        }
+        create: {
+          args: Prisma.AnecdotalFolderCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>
+        }
+        createMany: {
+          args: Prisma.AnecdotalFolderCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AnecdotalFolderCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>[]
+        }
+        delete: {
+          args: Prisma.AnecdotalFolderDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>
+        }
+        update: {
+          args: Prisma.AnecdotalFolderUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>
+        }
+        deleteMany: {
+          args: Prisma.AnecdotalFolderDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AnecdotalFolderUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AnecdotalFolderUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>[]
+        }
+        upsert: {
+          args: Prisma.AnecdotalFolderUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnecdotalFolderPayload>
+        }
+        aggregate: {
+          args: Prisma.AnecdotalFolderAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAnecdotalFolder>
+        }
+        groupBy: {
+          args: Prisma.AnecdotalFolderGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AnecdotalFolderGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AnecdotalFolderCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AnecdotalFolderCountAggregateOutputType> | number
         }
       }
     }
@@ -3215,7 +3290,8 @@ export const StaffProfileScalarFieldEnum = {
   employeeId: 'employeeId',
   department: 'department',
   isAdviser: 'isAdviser',
-  handledGradeLevels: 'handledGradeLevels'
+  handledGradeLevels: 'handledGradeLevels',
+  signatureImageUrl: 'signatureImageUrl'
 } as const
 
 export type StaffProfileScalarFieldEnum = (typeof StaffProfileScalarFieldEnum)[keyof typeof StaffProfileScalarFieldEnum]
@@ -3393,10 +3469,24 @@ export const AnecdotalRecordScalarFieldEnum = {
   attachmentUrl: 'attachmentUrl',
   termId: 'termId',
   category: 'category',
-  confidentialityLevel: 'confidentialityLevel'
+  confidentialityLevel: 'confidentialityLevel',
+  folderId: 'folderId',
+  signedBy: 'signedBy',
+  signedAt: 'signedAt',
+  signatureImageUrl: 'signatureImageUrl'
 } as const
 
 export type AnecdotalRecordScalarFieldEnum = (typeof AnecdotalRecordScalarFieldEnum)[keyof typeof AnecdotalRecordScalarFieldEnum]
+
+
+export const AnecdotalFolderScalarFieldEnum = {
+  id: 'id',
+  ownerId: 'ownerId',
+  name: 'name',
+  createdAt: 'createdAt'
+} as const
+
+export type AnecdotalFolderScalarFieldEnum = (typeof AnecdotalFolderScalarFieldEnum)[keyof typeof AnecdotalFolderScalarFieldEnum]
 
 
 export const AnecdotalRecordFollowupScalarFieldEnum = {
@@ -4328,6 +4418,7 @@ export type GlobalOmitConfig = {
   gradeFlag?: Prisma.GradeFlagOmit
   attendanceRecord?: Prisma.AttendanceRecordOmit
   anecdotalRecord?: Prisma.AnecdotalRecordOmit
+  anecdotalFolder?: Prisma.AnecdotalFolderOmit
   anecdotalRecordFollowup?: Prisma.AnecdotalRecordFollowupOmit
   referral?: Prisma.ReferralOmit
   intervention?: Prisma.InterventionOmit

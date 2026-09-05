@@ -1,0 +1,24 @@
+/* Shared OCForm-01 preview overlay. Scrollbars stay hidden (content still
+   scrolls) to match the chat and folder surfaces. */
+
+.dialog {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dialog::-webkit-scrollbar {
+  display: none;
+}
+
+.signedLine {
+  margin: 0 0 0.625rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.dangerBtn {
+  color: var(--destructive);
+}

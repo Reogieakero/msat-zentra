@@ -234,6 +234,7 @@ export type UserWhereInput = {
   parentProfile?: Prisma.XOR<Prisma.ParentProfileNullableScalarRelationFilter, Prisma.ParentProfileWhereInput> | null
   staffProfile?: Prisma.XOR<Prisma.StaffProfileNullableScalarRelationFilter, Prisma.StaffProfileWhereInput> | null
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
+  anecdotalFolders?: Prisma.AnecdotalFolderListRelationFilter
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupListRelationFilter
   referralsMade?: Prisma.ReferralListRelationFilter
   assignedInterventions?: Prisma.InterventionListRelationFilter
@@ -276,6 +277,7 @@ export type UserOrderByWithRelationInput = {
   parentProfile?: Prisma.ParentProfileOrderByWithRelationInput
   staffProfile?: Prisma.StaffProfileOrderByWithRelationInput
   anecdotalRecords?: Prisma.AnecdotalRecordOrderByRelationAggregateInput
+  anecdotalFolders?: Prisma.AnecdotalFolderOrderByRelationAggregateInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupOrderByRelationAggregateInput
   referralsMade?: Prisma.ReferralOrderByRelationAggregateInput
   assignedInterventions?: Prisma.InterventionOrderByRelationAggregateInput
@@ -321,6 +323,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   parentProfile?: Prisma.XOR<Prisma.ParentProfileNullableScalarRelationFilter, Prisma.ParentProfileWhereInput> | null
   staffProfile?: Prisma.XOR<Prisma.StaffProfileNullableScalarRelationFilter, Prisma.StaffProfileWhereInput> | null
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
+  anecdotalFolders?: Prisma.AnecdotalFolderListRelationFilter
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupListRelationFilter
   referralsMade?: Prisma.ReferralListRelationFilter
   assignedInterventions?: Prisma.InterventionListRelationFilter
@@ -397,6 +400,7 @@ export type UserCreateInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -439,6 +443,7 @@ export type UserUncheckedCreateInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -481,6 +486,7 @@ export type UserUpdateInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -523,6 +529,7 @@ export type UserUncheckedUpdateInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -797,6 +804,20 @@ export type UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput = {
   upsert?: Prisma.UserUpsertWithoutAnecdotalRecordsInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAnecdotalRecordsInput, Prisma.UserUpdateWithoutAnecdotalRecordsInput>, Prisma.UserUncheckedUpdateWithoutAnecdotalRecordsInput>
+}
+
+export type UserCreateNestedOneWithoutAnecdotalFoldersInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAnecdotalFoldersInput, Prisma.UserUncheckedCreateWithoutAnecdotalFoldersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAnecdotalFoldersInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAnecdotalFoldersNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAnecdotalFoldersInput, Prisma.UserUncheckedCreateWithoutAnecdotalFoldersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAnecdotalFoldersInput
+  upsert?: Prisma.UserUpsertWithoutAnecdotalFoldersInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAnecdotalFoldersInput, Prisma.UserUpdateWithoutAnecdotalFoldersInput>, Prisma.UserUncheckedUpdateWithoutAnecdotalFoldersInput>
 }
 
 export type UserCreateNestedOneWithoutAnecdotalFollowupsInput = {
@@ -1090,6 +1111,7 @@ export type UserCreateWithoutStudentProfileInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -1131,6 +1153,7 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1188,6 +1211,7 @@ export type UserUpdateWithoutStudentProfileInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -1229,6 +1253,7 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1270,6 +1295,7 @@ export type UserCreateWithoutParentProfileInput = {
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -1311,6 +1337,7 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1368,6 +1395,7 @@ export type UserUpdateWithoutParentProfileInput = {
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -1409,6 +1437,7 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1450,6 +1479,7 @@ export type UserCreateWithoutStaffProfileInput = {
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -1491,6 +1521,7 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1548,6 +1579,7 @@ export type UserUpdateWithoutStaffProfileInput = {
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -1589,6 +1621,7 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1631,6 +1664,7 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -1672,6 +1706,7 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1729,6 +1764,7 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -1770,6 +1806,7 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1811,6 +1848,7 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -1852,6 +1890,7 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1909,6 +1948,7 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -1950,6 +1990,7 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1991,6 +2032,7 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -2032,6 +2074,7 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -2078,6 +2121,7 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -2119,6 +2163,7 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -2165,6 +2210,7 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -2206,6 +2252,7 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -2263,6 +2310,7 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -2304,6 +2352,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2356,6 +2405,7 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -2397,6 +2447,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2449,6 +2500,7 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -2490,6 +2542,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2530,6 +2583,7 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -2571,6 +2625,7 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -2628,6 +2683,7 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -2669,6 +2725,191 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutAnecdotalFoldersInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutAnecdotalFoldersInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAnecdotalFoldersInput, Prisma.UserUncheckedCreateWithoutAnecdotalFoldersInput>
+}
+
+export type UserUpsertWithoutAnecdotalFoldersInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAnecdotalFoldersInput, Prisma.UserUncheckedUpdateWithoutAnecdotalFoldersInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAnecdotalFoldersInput, Prisma.UserUncheckedCreateWithoutAnecdotalFoldersInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAnecdotalFoldersInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAnecdotalFoldersInput, Prisma.UserUncheckedUpdateWithoutAnecdotalFoldersInput>
+}
+
+export type UserUpdateWithoutAnecdotalFoldersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2711,6 +2952,7 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
@@ -2752,6 +2994,7 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
@@ -2809,6 +3052,7 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
@@ -2850,6 +3094,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
@@ -2891,6 +3136,7 @@ export type UserCreateWithoutReferralsMadeInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
@@ -2932,6 +3178,7 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
@@ -2989,6 +3236,7 @@ export type UserUpdateWithoutReferralsMadeInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
@@ -3030,6 +3278,7 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
@@ -3071,6 +3320,7 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
@@ -3112,6 +3362,7 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
@@ -3169,6 +3420,7 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
@@ -3210,6 +3462,7 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
@@ -3251,6 +3504,7 @@ export type UserCreateWithoutHealthRecordsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -3292,6 +3546,7 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -3349,6 +3604,7 @@ export type UserUpdateWithoutHealthRecordsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -3390,6 +3646,7 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -3431,6 +3688,7 @@ export type UserCreateWithoutHomeVisitationsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -3472,6 +3730,7 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -3529,6 +3788,7 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -3570,6 +3830,7 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -3611,6 +3872,7 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -3652,6 +3914,7 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -3698,6 +3961,7 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -3739,6 +4003,7 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -3796,6 +4061,7 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -3837,6 +4103,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -3889,6 +4156,7 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -3930,6 +4198,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -3971,6 +4240,7 @@ export type UserCreateWithoutAdmMeetingsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -4012,6 +4282,7 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -4069,6 +4340,7 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -4110,6 +4382,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -4151,6 +4424,7 @@ export type UserCreateWithoutAdmModulesInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -4192,6 +4466,7 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -4249,6 +4524,7 @@ export type UserUpdateWithoutAdmModulesInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -4290,6 +4566,7 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -4331,6 +4608,7 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -4372,6 +4650,7 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -4429,6 +4708,7 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -4470,6 +4750,7 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -4511,6 +4792,7 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -4552,6 +4834,7 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -4609,6 +4892,7 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -4650,6 +4934,7 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -4691,6 +4976,7 @@ export type UserCreateWithoutSf10RecordsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -4732,6 +5018,7 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -4778,6 +5065,7 @@ export type UserCreateWithoutSf10ValidatedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -4819,6 +5107,7 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -4876,6 +5165,7 @@ export type UserUpdateWithoutSf10RecordsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -4917,6 +5207,7 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -4969,6 +5260,7 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -5010,6 +5302,7 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -5051,6 +5344,7 @@ export type UserCreateWithoutSf10VersionsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -5092,6 +5386,7 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -5149,6 +5444,7 @@ export type UserUpdateWithoutSf10VersionsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -5190,6 +5486,7 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -5231,6 +5528,7 @@ export type UserCreateWithoutAuditLogsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -5272,6 +5570,7 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -5329,6 +5628,7 @@ export type UserUpdateWithoutAuditLogsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -5370,6 +5670,7 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -5411,6 +5712,7 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -5452,6 +5754,7 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -5498,6 +5801,7 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -5539,6 +5843,7 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -5596,6 +5901,7 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -5637,6 +5943,7 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -5689,6 +5996,7 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -5730,6 +6038,7 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -5771,6 +6080,7 @@ export type UserCreateWithoutNotificationsInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -5812,6 +6122,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -5869,6 +6180,7 @@ export type UserUpdateWithoutNotificationsInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -5910,6 +6222,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -5951,6 +6264,7 @@ export type UserCreateWithoutRefreshTokensInput = {
   parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
@@ -5992,6 +6306,7 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
   staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
@@ -6049,6 +6364,7 @@ export type UserUpdateWithoutRefreshTokensInput = {
   parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
@@ -6090,6 +6406,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
   staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -6122,6 +6439,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
 
 export type UserCountOutputType = {
   anecdotalRecords: number
+  anecdotalFolders: number
   anecdotalFollowups: number
   referralsMade: number
   assignedInterventions: number
@@ -6150,6 +6468,7 @@ export type UserCountOutputType = {
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   anecdotalRecords?: boolean | UserCountOutputTypeCountAnecdotalRecordsArgs
+  anecdotalFolders?: boolean | UserCountOutputTypeCountAnecdotalFoldersArgs
   anecdotalFollowups?: boolean | UserCountOutputTypeCountAnecdotalFollowupsArgs
   referralsMade?: boolean | UserCountOutputTypeCountReferralsMadeArgs
   assignedInterventions?: boolean | UserCountOutputTypeCountAssignedInterventionsArgs
@@ -6191,6 +6510,13 @@ export type UserCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
  */
 export type UserCountOutputTypeCountAnecdotalRecordsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AnecdotalRecordWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAnecdotalFoldersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AnecdotalFolderWhereInput
 }
 
 /**
@@ -6378,6 +6704,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   parentProfile?: boolean | Prisma.User$parentProfileArgs<ExtArgs>
   staffProfile?: boolean | Prisma.User$staffProfileArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.User$anecdotalRecordsArgs<ExtArgs>
+  anecdotalFolders?: boolean | Prisma.User$anecdotalFoldersArgs<ExtArgs>
   anecdotalFollowups?: boolean | Prisma.User$anecdotalFollowupsArgs<ExtArgs>
   referralsMade?: boolean | Prisma.User$referralsMadeArgs<ExtArgs>
   assignedInterventions?: boolean | Prisma.User$assignedInterventionsArgs<ExtArgs>
@@ -6453,6 +6780,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   parentProfile?: boolean | Prisma.User$parentProfileArgs<ExtArgs>
   staffProfile?: boolean | Prisma.User$staffProfileArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.User$anecdotalRecordsArgs<ExtArgs>
+  anecdotalFolders?: boolean | Prisma.User$anecdotalFoldersArgs<ExtArgs>
   anecdotalFollowups?: boolean | Prisma.User$anecdotalFollowupsArgs<ExtArgs>
   referralsMade?: boolean | Prisma.User$referralsMadeArgs<ExtArgs>
   assignedInterventions?: boolean | Prisma.User$assignedInterventionsArgs<ExtArgs>
@@ -6489,6 +6817,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     parentProfile: Prisma.$ParentProfilePayload<ExtArgs> | null
     staffProfile: Prisma.$StaffProfilePayload<ExtArgs> | null
     anecdotalRecords: Prisma.$AnecdotalRecordPayload<ExtArgs>[]
+    anecdotalFolders: Prisma.$AnecdotalFolderPayload<ExtArgs>[]
     anecdotalFollowups: Prisma.$AnecdotalRecordFollowupPayload<ExtArgs>[]
     referralsMade: Prisma.$ReferralPayload<ExtArgs>[]
     assignedInterventions: Prisma.$InterventionPayload<ExtArgs>[]
@@ -6924,6 +7253,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   parentProfile<T extends Prisma.User$parentProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$parentProfileArgs<ExtArgs>>): Prisma.Prisma__ParentProfileClient<runtime.Types.Result.GetResult<Prisma.$ParentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   staffProfile<T extends Prisma.User$staffProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$staffProfileArgs<ExtArgs>>): Prisma.Prisma__StaffProfileClient<runtime.Types.Result.GetResult<Prisma.$StaffProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   anecdotalRecords<T extends Prisma.User$anecdotalRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$anecdotalRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  anecdotalFolders<T extends Prisma.User$anecdotalFoldersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$anecdotalFoldersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalFolderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   anecdotalFollowups<T extends Prisma.User$anecdotalFollowupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$anecdotalFollowupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordFollowupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referralsMade<T extends Prisma.User$referralsMadeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$referralsMadeArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assignedInterventions<T extends Prisma.User$assignedInterventionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedInterventionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterventionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -7459,6 +7789,30 @@ export type User$anecdotalRecordsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.AnecdotalRecordScalarFieldEnum | Prisma.AnecdotalRecordScalarFieldEnum[]
+}
+
+/**
+ * User.anecdotalFolders
+ */
+export type User$anecdotalFoldersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AnecdotalFolder
+   */
+  select?: Prisma.AnecdotalFolderSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AnecdotalFolder
+   */
+  omit?: Prisma.AnecdotalFolderOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AnecdotalFolderInclude<ExtArgs> | null
+  where?: Prisma.AnecdotalFolderWhereInput
+  orderBy?: Prisma.AnecdotalFolderOrderByWithRelationInput | Prisma.AnecdotalFolderOrderByWithRelationInput[]
+  cursor?: Prisma.AnecdotalFolderWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AnecdotalFolderScalarFieldEnum | Prisma.AnecdotalFolderScalarFieldEnum[]
 }
 
 /**

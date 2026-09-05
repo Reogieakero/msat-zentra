@@ -69,6 +69,7 @@ export const ModelName = {
   GradeFlag: 'GradeFlag',
   AttendanceRecord: 'AttendanceRecord',
   AnecdotalRecord: 'AnecdotalRecord',
+  AnecdotalFolder: 'AnecdotalFolder',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
   Referral: 'Referral',
   Intervention: 'Intervention',
@@ -165,7 +166,8 @@ export const StaffProfileScalarFieldEnum = {
   employeeId: 'employeeId',
   department: 'department',
   isAdviser: 'isAdviser',
-  handledGradeLevels: 'handledGradeLevels'
+  handledGradeLevels: 'handledGradeLevels',
+  signatureImageUrl: 'signatureImageUrl'
 } as const
 
 export type StaffProfileScalarFieldEnum = (typeof StaffProfileScalarFieldEnum)[keyof typeof StaffProfileScalarFieldEnum]
@@ -343,10 +345,24 @@ export const AnecdotalRecordScalarFieldEnum = {
   attachmentUrl: 'attachmentUrl',
   termId: 'termId',
   category: 'category',
-  confidentialityLevel: 'confidentialityLevel'
+  confidentialityLevel: 'confidentialityLevel',
+  folderId: 'folderId',
+  signedBy: 'signedBy',
+  signedAt: 'signedAt',
+  signatureImageUrl: 'signatureImageUrl'
 } as const
 
 export type AnecdotalRecordScalarFieldEnum = (typeof AnecdotalRecordScalarFieldEnum)[keyof typeof AnecdotalRecordScalarFieldEnum]
+
+
+export const AnecdotalFolderScalarFieldEnum = {
+  id: 'id',
+  ownerId: 'ownerId',
+  name: 'name',
+  createdAt: 'createdAt'
+} as const
+
+export type AnecdotalFolderScalarFieldEnum = (typeof AnecdotalFolderScalarFieldEnum)[keyof typeof AnecdotalFolderScalarFieldEnum]
 
 
 export const AnecdotalRecordFollowupScalarFieldEnum = {

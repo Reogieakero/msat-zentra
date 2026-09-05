@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,8 +30,6 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search,
   MoreHorizontal,
@@ -41,62 +39,48 @@ import {
   X,
 } from "lucide-react";
 import {
-  formatBirthdate,
-  initialsOf,
-  type AdviseeRiskLevel,
-  type AdviseeRow,
-} from "./advisory-students-data";
-import styles from "./StudentTable.module.css";
+  CATEGORY_COLORS,
+  humanize,
+  type MockAnecdotalCategory,
+  type MockAnecdotalRecord,
+} from "./anecdotal-workspace-mock";
+import styles from "./AnecdotalList.module.css";
 
 const PAGE_SIZE = 15;
 
-type Filter = "all" | AdviseeRiskLevel;
+const CATEGORIES: MockAnecdotalCategory[] = [
+  "behavioral",
+  "bullying",
+  "academic",
+  "attendance",
+  "health",
+];
 
-const RISK_VARIANTS = {
-  Low: "outline",
-  Moderate: "warning",
-  High: "destructive",
-} as const;
-
-interface StudentTableProps {
-  students: AdviseeRow[];
-  loading: boolean;
+interface AnecdotalListProps {
+  records: MockAnecdotalRecord[];
+  onSelect: (record: MockAnecdotalRecord) => void;
 }
 
-export function StudentTable({ students, loading }: StudentTableProps) {
-  const router = useRouter();
-  const [filter, setFilter] = useState<Filter>("all");
+export function AnecdotalList({ records, onSelect }: AnecdotalListProps) {
+  const [category, setCategory] = useState<"all" | MockAnecdotalCategory>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-
-  const counts = useMemo(() => {
-    const c: Record<Filter, number> = {
-      all: students.length,
-      Low: 0,
-      Moderate: 0,
-      High: 0,
-    };
-    for (const s of students) c[s.riskLevel] += 1;
-    return c;
-  }, [students]);
 
   const needle = query.trim().toLowerCase();
   const filtered = useMemo(
     () =>
-      students.filter((s) => {
-        if (filter !== "all" && s.riskLevel !== filter) return false;
+      records.filter((r) => {
+        if (category !== "all" && r.category !== category) return false;
         if (!needle) return true;
         return (
-          s.name.toLowerCase().includes(needle) ||
-          s.lrn.includes(needle) ||
-          s.section.toLowerCase().includes(needle)
+          r.studentName.toLowerCase().includes(needle) ||
+          r.incident.toLowerCase().includes(needle)
         );
       }),
-    [students, filter, needle]
+    [records, category, needle]
   );
 
-  const hasActiveFilters = filter !== "all";
-  const sectionName = students[0]?.section ?? "";
+  const hasActiveFilters = category !== "all";
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -108,9 +92,9 @@ export function StudentTable({ students, loading }: StudentTableProps) {
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>{sectionName ? `${sectionName} · Advisory` : "Advisory"}</CardTitle>
+          <CardTitle>My records</CardTitle>
           <CardDescription>
-            Students in your advisory section. Click a row for details.
+            {records.length} record{records.length === 1 ? "" : "s"} filed by you this term.
           </CardDescription>
         </div>
         <CardAction className={styles.headerActions}>
@@ -118,13 +102,13 @@ export function StudentTable({ students, loading }: StudentTableProps) {
             <Search className={styles.searchIcon} aria-hidden />
             <Input
               className={styles.search}
-              placeholder="Search name or LRN…"
+              placeholder="Search student or incident…"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(1);
               }}
-              aria-label="Search advisory students"
+              aria-label="Search anecdotal records"
             />
           </div>
 
@@ -133,34 +117,34 @@ export function StudentTable({ students, loading }: StudentTableProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className={`${styles.filterBtn} ${filter !== "all" ? styles.filterActive : ""}`}
+                className={`${styles.filterBtn} ${category !== "all" ? styles.filterActive : ""}`}
               >
-                Risk
-                {filter !== "all" && <span className={styles.filterDot} aria-hidden />}
+                Category
+                {category !== "all" && <span className={styles.filterDot} aria-hidden />}
                 <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.filterMenu}>
               <DropdownMenuCheckboxItem
-                checked={filter === "all"}
+                checked={category === "all"}
                 onCheckedChange={() => {
-                  setFilter("all");
+                  setCategory("all");
                   setPage(1);
                 }}
               >
-                All levels ({counts.all})
+                All categories
               </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
-              {(["High", "Moderate", "Low"] as AdviseeRiskLevel[]).map((lvl) => (
+              {CATEGORIES.map((c) => (
                 <DropdownMenuCheckboxItem
-                  key={lvl}
-                  checked={filter === lvl}
+                  key={c}
+                  checked={category === c}
                   onCheckedChange={() => {
-                    setFilter(lvl);
+                    setCategory(c);
                     setPage(1);
                   }}
                 >
-                  {lvl} ({counts[lvl]})
+                  {humanize(c)}
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuContent>
@@ -172,7 +156,7 @@ export function StudentTable({ students, loading }: StudentTableProps) {
               size="sm"
               className={styles.clearBtn}
               onClick={() => {
-                setFilter("all");
+                setCategory("all");
                 setPage(1);
               }}
             >
@@ -187,54 +171,52 @@ export function StudentTable({ students, loading }: StudentTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Date</TableHead>
               <TableHead>Student</TableHead>
-              <TableHead>LRN</TableHead>
-              <TableHead>Birthday</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead>At-Risk Level</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Tier</TableHead>
+              <TableHead>Follow-ups</TableHead>
+              <TableHead>Referral</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <SkeletonRows />
-            ) : pageRows.length === 0 ? (
+            {pageRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className={styles.empty}>
+                <TableCell colSpan={7} className={styles.empty}>
                   {needle
-                    ? `No students match "${query}".`
+                    ? `No records match "${query}".`
                     : hasActiveFilters
-                      ? "No students match the selected filters."
-                      : "No advisory students."}
+                      ? "No records match the selected filters."
+                      : "No anecdotal records yet — file the first one."}
                 </TableCell>
               </TableRow>
             ) : (
-              pageRows.map((s) => (
+              pageRows.map((r) => (
                 <TableRow
-                  key={s.studentId}
+                  key={r.id}
                   className={styles.clickableRow}
-                  onClick={() => router.push(`/teacher/anecdotal/folders/student/${s.studentId}`)}
+                  onClick={() => onSelect(r)}
                 >
+                  <TableCell className={styles.date}>{r.observationDate}</TableCell>
+                  <TableCell className={styles.student}>{r.studentName}</TableCell>
                   <TableCell>
-                    <span className={styles.student}>
-                      <span className={styles.avatar} aria-hidden>
-                        {initialsOf(s.name)}
-                      </span>
-                      <span className={styles.nameRow}>
-                        <span className={styles.name}>{s.name}</span>
-                        {!s.hasAccount ? (
-                          <Badge variant="outline" className={styles.noAccount}>
-                            No account
-                          </Badge>
-                        ) : null}
-                      </span>
-                    </span>
+                    <Badge
+                      variant="outline"
+                      className={styles.categoryBadge}
+                      style={{ "--record": CATEGORY_COLORS[r.category] } as React.CSSProperties}
+                    >
+                      {humanize(r.category)}
+                    </Badge>
                   </TableCell>
-                  <TableCell className={styles.lrn}>{s.lrn}</TableCell>
-                  <TableCell className={styles.lrn}>{formatBirthdate(s.birthdate)}</TableCell>
-                  <TableCell>{s.gender ?? "—"}</TableCell>
                   <TableCell>
-                    <Badge variant={RISK_VARIANTS[s.riskLevel]}>{s.riskLevel}</Badge>
+                    <Badge variant={r.tier === "Confidential" ? "destructive" : "secondary"}>
+                      {r.tier}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className={styles.dim}>{r.followups.length}</TableCell>
+                  <TableCell className={styles.dim}>
+                    {r.referred ? (r.referralTarget ?? "Referred") : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -243,38 +225,22 @@ export function StudentTable({ students, loading }: StudentTableProps) {
                           variant="ghost"
                           size="icon"
                           className="size-8"
-                          aria-label={`Actions for ${s.name}`}
+                          aria-label={`Actions for record on ${r.studentName}`}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal aria-hidden />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>{s.name}</DropdownMenuLabel>
+                        <DropdownMenuLabel>{r.studentName}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/teacher/anecdotal/folders/student/${s.studentId}`);
+                            onSelect(r);
                           }}
                         >
-                          View anecdotal
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/teacher/advisory/students/${s.studentId}/attendance`);
-                          }}
-                        >
-                          View attendance
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/teacher/advisory/students/${s.studentId}/academic`);
-                          }}
-                        >
-                          View academic
+                          View details
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -312,35 +278,5 @@ export function StudentTable({ students, loading }: StudentTableProps) {
         </div>
       </CardFooter>
     </Card>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <span className={styles.student}>
-              <Skeleton className={styles.skelAvatar} />
-              <Skeleton className={styles.skelName} />
-            </span>
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "60%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "40%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "45%" }} />
-          </TableCell>
-          <TableCell />
-        </TableRow>
-      ))}
-    </>
   );
 }

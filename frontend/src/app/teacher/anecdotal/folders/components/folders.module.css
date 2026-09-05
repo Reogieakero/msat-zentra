@@ -1,0 +1,130 @@
+/* Anecdotal record-folder pages (student hub + student repository). */
+
+.page {
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 0 2rem;
+}
+
+/* Gutters stay exactly 16px: the shell already provides 1rem on desktop,
+   so only the 0.5rem mobile shell needs topping up. */
+@media (max-width: 767px) {
+  .page {
+    padding-inline: 0.5rem;
+  }
+}
+
+.studentGrid {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.875rem;
+}
+
+.studentLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-md);
+  transition: transform 120ms ease-out;
+  min-width: 0;
+}
+
+.studentLink:hover {
+  transform: translateY(-2px);
+}
+
+.studentLink:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.recordFolderBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: transform 120ms ease-out;
+  color: inherit;
+}
+
+.recordFolderBtn:hover {
+  transform: translateY(-2px);
+}
+
+.recordFolderBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.skelFolder {
+  height: 9rem;
+  width: 100%;
+}
+
+.backBtn {
+  width: fit-content;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.empty {
+  margin: 0;
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.skelTitle {
+  height: 1.75rem;
+  width: 14rem;
+  max-width: 100%;
+}
+
+.skelSub {
+  height: 0.875rem;
+  width: 18rem;
+  max-width: 100%;
+  margin-top: 0.5rem;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--destructive);
+}

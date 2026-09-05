@@ -1,0 +1,25 @@
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  min-height: calc(100vh - 5rem);
+}
+
+.divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border, #e7e5e4);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  min-height: 0;
+  height: calc(100vh - 5rem);
+  margin-bottom: -1rem;
+}

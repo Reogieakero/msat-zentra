@@ -229,6 +229,7 @@ model User {
   parentProfile       ParentProfile?
   staffProfile        StaffProfile?
   anecdotalRecords    AnecdotalRecord[]      @relation("ObserverAnecdotals")
+  anecdotalFolders    AnecdotalFolder[]      @relation("FolderOwner")
   anecdotalFollowups  AnecdotalRecordFollowup[]
   referralsMade       Referral[]             @relation("ReferredBy")
   assignedInterventions Intervention[]         @relation("InterventionAssignee")
@@ -311,6 +312,9 @@ model StaffProfile {
   department   String?
   isAdviser    Boolean @default(false)
   handledGradeLevels GradeLevel[]
+  // The teacher's one reusable drawn signature (PNG data URL), stamped onto
+  // records via POST /api/anecdotal/:id/apply-signature.
+  signatureImageUrl String?
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -540,12 +544,33 @@ model AnecdotalRecord {
   termId                 String
   category               AnecdotalCategory @default(behavioral)
   confidentialityLevel   Confidentiality  @default(restricted)
+  folderId               String?
+  // Per-record adviser sign-off: drawn signature PNG in Storage, applied
+  // once via POST /:id/sign. Null trio = unsigned (blank line on the form).
+  signedBy               String?
+  signedAt               DateTime?
+  signatureImageUrl      String?
   student                StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   observer               User            @relation("ObserverAnecdotals", fields: [observerId], references: [id])
   section                Section         @relation(fields: [sectionId], references: [id])
   term                   Term            @relation(fields: [termId], references: [id])
+  folder                 AnecdotalFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   followups              AnecdotalRecordFollowup[]
   referrals              Referral[]      @relation("AnecdotalReferral")
+  @@index([folderId])
+}
+
+// Teacher-owned collections of filed anecdotal records. Folders organize
+// records only (chat threads stay local) and are always scoped to the
+// owning teacher — every folder endpoint filters by ownerId.
+model AnecdotalFolder {
+  id        String   @id @default(uuid())
+  ownerId   String
+  name      String
+  createdAt DateTime @default(now())
+  owner     User     @relation("FolderOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  records   AnecdotalRecord[]
+  @@index([ownerId])
 }
 
 model AnecdotalRecordFollowup {
