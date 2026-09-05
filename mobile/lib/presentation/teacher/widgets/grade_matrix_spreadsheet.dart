@@ -23,11 +23,45 @@ enum AssessmentCategoryType {
   const AssessmentCategoryType(this.prefix, this.label, this.componentType);
 }
 
-class GradeMatrixSpreadsheet extends ConsumerWidget {
+enum GradeSortOption {
+  nameAsc('Name (A – Z)', Icons.sort_by_alpha),
+  nameDesc('Name (Z – A)', Icons.sort_by_alpha),
+  transmutedDesc('Transmuted (High to Low)', Icons.arrow_downward),
+  transmutedAsc('Transmuted (Low to High)', Icons.arrow_upward),
+  rawAvgDesc('Raw Avg (High to Low)', Icons.trending_down),
+  rawAvgAsc('Raw Avg (Low to High)', Icons.trending_up);
+
+  final String label;
+  final IconData icon;
+  const GradeSortOption(this.label, this.icon);
+}
+
+class StudentRowData {
+  final StudentModel student;
+  final double rawAvgPercentage;
+  final int transmutedGrade;
+  final List<double> scoreList;
+
+  StudentRowData({
+    required this.student,
+    required this.rawAvgPercentage,
+    required this.transmutedGrade,
+    required this.scoreList,
+  });
+}
+
+class GradeMatrixSpreadsheet extends ConsumerStatefulWidget {
   const GradeMatrixSpreadsheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GradeMatrixSpreadsheet> createState() => _GradeMatrixSpreadsheetState();
+}
+
+class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet> {
+  GradeSortOption _sortOption = GradeSortOption.nameAsc;
+
+  @override
+  Widget build(BuildContext context) {
     final gradesAsync = ref.watch(gradesProvider);
     final gradesNotifier = ref.read(gradesProvider.notifier);
 
@@ -36,6 +70,51 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
       error: (err, stack) => Center(child: Text('Error loading grade matrix: $err')),
       data: (matrixState) {
         final isLocked = matrixState.lockStatus != LockStatus.unlocked;
+
+        // Build & Sort Student Row Data
+        final studentRows = matrixState.students.map((student) {
+          double totalPercentSum = 0;
+          int count = 0;
+          final List<double> scores = [];
+
+          for (final asm in matrixState.assessments) {
+            final key = '${student.id}_${asm.id}';
+            final currentScore = matrixState.rawScores[key] ?? 0.0;
+            final scorePercent = (currentScore / asm.maxScore) * 100.0;
+
+            totalPercentSum += scorePercent;
+            count++;
+            scores.add(currentScore);
+          }
+
+          final avgPercent = count > 0 ? (totalPercentSum / count) : 0.0;
+          final transmuted = MockGradesRepository.computeDepEdTransmutedGrade(avgPercent).toInt();
+
+          return StudentRowData(
+            student: student,
+            rawAvgPercentage: avgPercent,
+            transmutedGrade: transmuted,
+            scoreList: scores,
+          );
+        }).toList();
+
+        // Apply selected sort option
+        studentRows.sort((a, b) {
+          switch (_sortOption) {
+            case GradeSortOption.nameAsc:
+              return a.student.fullName.compareTo(b.student.fullName);
+            case GradeSortOption.nameDesc:
+              return b.student.fullName.compareTo(a.student.fullName);
+            case GradeSortOption.transmutedDesc:
+              return b.transmutedGrade.compareTo(a.transmutedGrade);
+            case GradeSortOption.transmutedAsc:
+              return a.transmutedGrade.compareTo(b.transmutedGrade);
+            case GradeSortOption.rawAvgDesc:
+              return b.rawAvgPercentage.compareTo(a.rawAvgPercentage);
+            case GradeSortOption.rawAvgAsc:
+              return a.rawAvgPercentage.compareTo(b.rawAvgPercentage);
+          }
+        });
 
         return Column(
           children: [
@@ -74,11 +153,11 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       if (!isLocked) ...[
                         ElevatedButton.icon(
                           onPressed: () => _showAddAssessmentModal(context, matrixState.assessments, gradesNotifier),
-                          icon: const Icon(Icons.add, size: 16),
+                          icon: const Icon(Icons.add, size: 14),
                           label: const Text('+ Add'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryEmerald,
@@ -90,7 +169,7 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                         const SizedBox(width: 6),
                         ElevatedButton.icon(
                           onPressed: () => _showLockConfirmationModal(context, ref),
-                          icon: const Icon(Icons.lock_outline, size: 16),
+                          icon: const Icon(Icons.lock_outline, size: 14),
                           label: const Text('Lock'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.riskHigh,
@@ -101,27 +180,73 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                         ),
                       ] else
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColors.riskHigh.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.lock, size: 14, color: AppColors.riskHigh),
-                              const SizedBox(width: 4),
-                              Text(
-                                'LOCKED',
-                                style: GoogleFonts.robotoMono(
-                                  color: AppColors.riskHigh,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            'LOCKED',
+                            style: GoogleFonts.robotoMono(
+                              color: AppColors.riskHigh,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Sorting Selector Toolbar Pill
+                  Row(
+                    children: [
+                      const Icon(Icons.sort, size: 16, color: AppColors.primaryEmerald),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Sort Matrix:',
+                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: AppColors.borderSubtle),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<GradeSortOption>(
+                              value: _sortOption,
+                              isDense: true,
+                              dropdownColor: AppColors.surfaceDark,
+                              icon: const Icon(Icons.arrow_drop_down, color: AppColors.primaryEmerald),
+                              style: GoogleFonts.robotoMono(
+                                color: AppColors.primaryEmerald,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              items: GradeSortOption.values.map((opt) {
+                                return DropdownMenuItem<GradeSortOption>(
+                                  value: opt,
+                                  child: Row(
+                                    children: [
+                                      Icon(opt.icon, size: 14, color: AppColors.primaryEmerald),
+                                      const SizedBox(width: 6),
+                                      Text(opt.label),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) setState(() => _sortOption = val);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -148,16 +273,35 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                         verticalInside: BorderSide(color: AppColors.borderSubtle, width: 1),
                       ),
                       columns: [
+                        // Interactive Column 1: Student Name
                         DataColumn(
-                          label: Text(
-                            'STUDENT NAME',
-                            style: GoogleFonts.inter(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          onSort: (_, __) {
+                            setState(() {
+                              _sortOption = _sortOption == GradeSortOption.nameAsc
+                                  ? GradeSortOption.nameDesc
+                                  : GradeSortOption.nameAsc;
+                            });
+                          },
+                          label: Row(
+                            children: [
+                              Text(
+                                'STUDENT NAME',
+                                style: GoogleFonts.inter(
+                                  color: (_sortOption == GradeSortOption.nameAsc || _sortOption == GradeSortOption.nameDesc)
+                                      ? AppColors.primaryEmerald
+                                      : AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_sortOption == GradeSortOption.nameAsc)
+                                const Icon(Icons.arrow_drop_up, size: 16, color: AppColors.primaryEmerald),
+                              if (_sortOption == GradeSortOption.nameDesc)
+                                const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.primaryEmerald),
+                            ],
                           ),
                         ),
+                        // Assessment Columns
                         ...matrixState.assessments.map((asm) => DataColumn(
                               label: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -181,38 +325,71 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                                 ],
                               ),
                             )),
+                        // Interactive Column: RAW AVG %
                         DataColumn(
-                          label: Text(
-                            'RAW AVG %',
-                            style: GoogleFonts.inter(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          onSort: (_, __) {
+                            setState(() {
+                              _sortOption = _sortOption == GradeSortOption.rawAvgDesc
+                                  ? GradeSortOption.rawAvgAsc
+                                  : GradeSortOption.rawAvgDesc;
+                            });
+                          },
+                          label: Row(
+                            children: [
+                              Text(
+                                'RAW AVG %',
+                                style: GoogleFonts.inter(
+                                  color: (_sortOption == GradeSortOption.rawAvgDesc || _sortOption == GradeSortOption.rawAvgAsc)
+                                      ? AppColors.primaryEmerald
+                                      : AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_sortOption == GradeSortOption.rawAvgAsc)
+                                const Icon(Icons.arrow_drop_up, size: 16, color: AppColors.primaryEmerald),
+                              if (_sortOption == GradeSortOption.rawAvgDesc)
+                                const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.primaryEmerald),
+                            ],
                           ),
                         ),
+                        // Interactive Column: TRANSMUTED
                         DataColumn(
-                          label: Text(
-                            'TRANSMUTED',
-                            style: GoogleFonts.inter(
-                              color: AppColors.primaryEmerald,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          onSort: (_, __) {
+                            setState(() {
+                              _sortOption = _sortOption == GradeSortOption.transmutedDesc
+                                  ? GradeSortOption.transmutedAsc
+                                  : GradeSortOption.transmutedDesc;
+                            });
+                          },
+                          label: Row(
+                            children: [
+                              Text(
+                                'TRANSMUTED',
+                                style: GoogleFonts.inter(
+                                  color: (_sortOption == GradeSortOption.transmutedDesc || _sortOption == GradeSortOption.transmutedAsc)
+                                      ? AppColors.primaryEmerald
+                                      : AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_sortOption == GradeSortOption.transmutedAsc)
+                                const Icon(Icons.arrow_drop_up, size: 16, color: AppColors.primaryEmerald),
+                              if (_sortOption == GradeSortOption.transmutedDesc)
+                                const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.primaryEmerald),
+                            ],
                           ),
                         ),
                       ],
-                      rows: matrixState.students.map((student) {
-                        double totalPercentSum = 0;
-                        int count = 0;
+                      rows: studentRows.map((rowData) {
+                        final student = rowData.student;
+                        final isPassing = rowData.transmutedGrade >= 75;
 
-                        final scoreCells = matrixState.assessments.map((asm) {
-                          final key = '${student.id}_${asm.id}';
-                          final currentScore = matrixState.rawScores[key] ?? 0.0;
-                          final scorePercent = (currentScore / asm.maxScore) * 100.0;
-
-                          totalPercentSum += scorePercent;
-                          count++;
+                        final scoreCells = matrixState.assessments.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final asm = entry.value;
+                          final currentScore = idx < rowData.scoreList.length ? rowData.scoreList[idx] : 0.0;
 
                           return DataCell(
                             GestureDetector(
@@ -237,10 +414,6 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                             ),
                           );
                         }).toList();
-
-                        final avgPercentage = count > 0 ? (totalPercentSum / count) : 0.0;
-                        final transmutedGrade = MockGradesRepository.computeDepEdTransmutedGrade(avgPercentage);
-                        final isPassing = transmutedGrade >= 75.0;
 
                         return DataRow(
                           cells: [
@@ -270,7 +443,7 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                             ...scoreCells,
                             DataCell(
                               Text(
-                                '${avgPercentage.toStringAsFixed(1)}%',
+                                '${rowData.rawAvgPercentage.toStringAsFixed(1)}%',
                                 style: AppTheme.mono(color: AppColors.textSecondary, fontSize: 12),
                               ),
                             ),
@@ -285,7 +458,7 @@ class GradeMatrixSpreadsheet extends ConsumerWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  transmutedGrade.toInt().toString(),
+                                  '${rowData.transmutedGrade}',
                                   style: AppTheme.mono(
                                     color: isPassing ? AppColors.primaryEmerald : AppColors.riskHigh,
                                     fontWeight: FontWeight.bold,
