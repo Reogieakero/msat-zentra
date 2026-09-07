@@ -1,0 +1,322 @@
+.canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  min-height: 22rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 1.25rem 1.25rem;
+}
+
+.canvasEmpty {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.emptyBody {
+  margin: 0;
+  max-width: 44ch;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.canvasHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.canvasId {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.canvasTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.canvasSub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.canvasBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.scroll {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0.125rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 4px 12px -6px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+  transition: color 150ms ease-out, background-color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.arrow:hover {
+  color: var(--foreground);
+  background-color: color-mix(in oklch, var(--primary), transparent 90%);
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+}
+
+.arrow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring, var(--primary));
+}
+
+.arrowIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.nodes {
+  margin: auto;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  min-width: 100%;
+}
+
+.nodeItem {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 12.5rem;
+}
+
+.edgeItem {
+  display: flex;
+  align-items: center;
+  min-width: 1.5rem;
+  flex: 1 1 1.5rem;
+  list-style: none;
+}
+
+.wire {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background-color: var(--border);
+}
+
+.wireLit {
+  background-color: color-mix(in oklch, var(--primary), transparent 25%);
+}
+
+.head {
+  width: 0;
+  height: 0;
+  flex-shrink: 0;
+  margin-left: -1px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--border);
+}
+
+.headLit {
+  border-left-color: color-mix(in oklch, var(--primary), transparent 25%);
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.375rem);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.nodeTodo {
+  opacity: 0.8;
+}
+
+.nodeCurrent {
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+}
+
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md, 0.375rem);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.tile svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.tileDone {
+  background-color: color-mix(in oklch, var(--primary), transparent 85%);
+  color: var(--primary);
+}
+
+.tileCurrent {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.nodeText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.nodeLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opt {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.nodeSub {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currentTag {
+  flex-shrink: 0;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 560px) {
+  .nodeItem {
+    flex-basis: 10.5rem;
+  }
+
+  .node {
+    gap: 0.4375rem;
+    padding: 0.5625rem;
+  }
+
+  .tile {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.caseFile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.375rem);
+  background-color: var(--card);
+}
+
+.caseRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.caseLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.caseText {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--foreground);
+}
+
+.caseDate {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+

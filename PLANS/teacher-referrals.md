@@ -143,11 +143,14 @@
   divider (workspace pattern); shadcn `Card`/`Dialog`/`Badge`/`Select` for UI
   primitives only; React Query with invalidation on create.
 - Components: `ReferralsHeader` (title + New-referral button), `ReferralFilters`
-  (status chips + target-role picker + student search), `ReferralBoard`
-  (grouped columns/sections + cards + skeleton rows), `ReferralDetailDrawer`
-  (summary + timeline + stage labels), `NewReferralDialog` (own-anecdotal
-  picker → reason + target role), `referrals-data.ts` (types + api fns, wired
-  from the start — no mocks).
+  (status chips + target-role picker + student search), `ReferralLibrary`
+  (node-library rail of originated referrals grouped by status),
+  `ReferralCanvas` (selected referral as connected stage nodes on a dotted
+  workflow canvas), `ReferralInspector` (selected-node detail + case file:
+  reason, source excerpt, downstream labels, timeline), `NewReferralDialog`
+  (own-anecdotal picker → reason + target role), `referrals-mock.ts`
+  (`stagesOf` derivation + mock rows, wired from the start — no mocks at
+  wiring time).
 - Sidebar link `teacher-sidebar.tsx:56` already points here — no nav change;
   verify active-state highlight for the new route.
 - Drawer confidentiality: stage labels only; grep the drawer for clinical
@@ -185,4 +188,6 @@
 - [ ] Kanban columns: derived from downstream rows vs extended status enum.
 - [ ] Participant visibility: originated-only v1 vs `referral_participants` table now.
 - [ ] Meeting-outcome / home-visit-request: follow-up-note v1 vs new endpoints.
-- [ ] Board layout: status-grouped columns vs dense table.
+- [x] Board layout: **workflow-automation canvas** (library rail + connected
+  stage nodes + inspector), not kanban columns — decided during mock build
+  2026-09-05.

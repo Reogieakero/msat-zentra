@@ -15,7 +15,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Zentra â€” Student Information System",
+  title: "Zentra - Student Information System",
   description:
     "Zentra SIS for Mati School of Arts and Trades â€” learner records, grading, attendance, and early intervention.",
 };

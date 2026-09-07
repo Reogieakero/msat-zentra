@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { resolveActiveTermId } from "../../services/risk.js";
 import {
   buildOcForm01Buffer,
   ocForm01Filename,
@@ -80,23 +81,38 @@ router.post(
 const referSchema = z.object({
   referredToRole: z.enum(["nurse", "guidance_counselor", "adm_coordinator", "principal"]),
   reason: z.string().min(1),
-  termId: z.string().min(1),
-});
+}).strict();
 router.post(
   "/:id/refer",
   requireAuth,
-  requireRole("adviser"),
+  requireRole("adviser", "subject_teacher"),
   validate("body", referSchema),
   async (req, res, next) => {
     try {
-      const record = await prisma.anecdotalRecord.findUnique({ where: { id: String(req.params.id) } });
+      const record = await prisma.anecdotalRecord.findUnique({
+        where: { id: String(req.params.id) },
+        select: { id: true, studentId: true, sectionId: true },
+      });
       if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
+      const section = await prisma.section.findUnique({
+        where: { id: record.sectionId },
+        select: { adviserId: true, teacherAssignments: { select: { teacherId: true } } },
+      });
+      const isAdviser = section?.adviserId === req.user!.id;
+      const isSubjectTeacher = section?.teacherAssignments.some((a) => a.teacherId === req.user!.id);
+      if (!isAdviser && !isSubjectTeacher) {
+        throw new AppError(403, "FORBIDDEN", "Only the observer or a teacher in this section may refer from this record");
+      }
+      const termId = await resolveActiveTermId();
+      if (!termId) {
+        throw new AppError(409, "NO_ACTIVE_TERM", "No active term");
+      }
       const referral = await prisma.referral.create({
-        data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, termId: req.body.termId },
+        data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, termId },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}` });
       res.status(201).json(referral);
-    }   catch (e) { next(e); }
+    } catch (e) { next(e); }
   }
 );
 
@@ -487,6 +503,92 @@ router.get(
           section: r.student.section?.name ?? r.section.name,
           folderId: r.folderId,
           folderName: r.folder?.name ?? null,
+        }))
+      );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// All eligible anecdotal records for the referrals composer, grouped by the
+// frontend into one folder per student. Each record carries hasReferral so
+// already-referred reports render disabled instead of disappearing (which
+// previously left only e.g. one student visible). For advisers, includes
+// records created by subject teachers about students in the adviser's
+// sections. Subject teachers only see their own records.
+router.get(
+  "/referable",
+  requireAuth,
+  requireRole(...FILER_ROLES),
+  async (req, res, next) => {
+    try {
+      const isAdviser = req.user!.role === "adviser";
+      let sectionIds: string[] = [];
+      if (isAdviser) {
+        const sections = await prisma.section.findMany({
+          where: { adviserId: req.user!.id },
+          select: { id: true },
+        });
+        sectionIds = sections.map((s) => s.id);
+      }
+
+      let where: {
+        observerId?: string;
+        OR?: any[];
+      } = {};
+
+      if (isAdviser && sectionIds.length > 0) {
+        // Advisers see records for students in their advisory sections.
+        // Students can be linked to sections via StudentProfile.sectionId
+        // or via the AnecdotalRecord.sectionId (which may differ from
+        // StudentProfile.sectionId at creation time).
+        where.OR = [
+          { observerId: req.user!.id },
+          { student: { sectionId: { in: sectionIds } } },
+          { sectionId: { in: sectionIds } },
+        ];
+      } else {
+        where.observerId = req.user!.id;
+      }
+
+      const records = await prisma.anecdotalRecord.findMany({
+        where,
+        orderBy: { observationDatetime: "desc" },
+        select: {
+          id: true,
+          observationDatetime: true,
+          category: true,
+          confidentialityLevel: true,
+          descriptionOfIncident: true,
+          notesRecommendationsActions: true,
+          referrals: { select: { id: true } },
+          student: {
+            select: {
+              userId: true,
+              lrn: true,
+              user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          section: { select: { name: true } },
+        },
+      });
+      res.json(
+        records.map((r) => ({
+          id: r.id,
+          observationDatetime: r.observationDatetime,
+          observationDate: r.observationDatetime.toISOString().slice(0, 10),
+          category: r.category,
+          confidentialityLevel: r.confidentialityLevel,
+          incident: r.descriptionOfIncident,
+          studentId: r.student.userId,
+          studentName: r.student.user.fullName,
+          lrn: r.student.lrn,
+          section: r.student.section?.name ?? r.section.name,
+          excerpt: r.descriptionOfIncident?.slice(0, 120) ?? "",
+          hasReferral: r.referrals.length > 0,
+          referralCount: r.referrals.length,
         }))
       );
     } catch (e) {
