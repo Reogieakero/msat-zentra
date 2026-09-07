@@ -335,6 +335,103 @@ router.get(
   }
 );
 
+// Teacher-scoped ADM cases (read-only): every ADM case for the teacher's
+// advisory students, newest first. Status-only — stage labels, eligibility,
+// principal-approval flag and evidence counts only; never certification
+// details, recommendation text, meeting minutes, or home-visit notes.
+router.get(
+  "/my-cases",
+  requireAuth,
+  requireRole("adviser", "subject_teacher"),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const sections = await prisma.section.findMany({
+        where: { adviserId: teacherId },
+        select: { id: true },
+      });
+      if (sections.length === 0 && req.user!.role === "adviser") {
+        throw new AppError(404, "NOT_ADVISER", "No advisory section assigned");
+      }
+      const sectionIds = sections.map((s) => s.id);
+      const where: Prisma.AdmLearnerProfileWhereInput =
+        sectionIds.length > 0
+          ? { student: { sectionId: { in: sectionIds } } }
+          : { referral: { referredBy: teacherId } };
+
+      const profiles = await prisma.admLearnerProfile.findMany({
+        where,
+        select: {
+          id: true,
+          stage: true,
+          eligibilityStatus: true,
+          approvedBy: true,
+          approvedAt: true,
+          createdAt: true,
+          referralId: true,
+          student: {
+            select: {
+              userId: true,
+              lrn: true,
+              gradeLevel: true,
+              photoUrl: true,
+              user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          referral: {
+            select: {
+              id: true,
+              status: true,
+              homeVisitations: { select: { id: true } },
+            },
+          },
+          parentMeetings: { select: { attended: true } },
+          modules: { select: { id: true, submitted: true } },
+          devices: { select: { id: true, returnedDate: true } },
+          forms: { select: { formType: true, status: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const stageLabel = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));
+      res.json(
+        profiles.map((p) => {
+          const meetings = p.parentMeetings ?? [];
+          return {
+            id: p.id,
+            studentId: p.student.userId,
+            studentName: p.student.user.fullName,
+            lrn: p.student.lrn,
+            gradeLevel: p.student.gradeLevel,
+            section: p.student.section?.name ?? "",
+            photoUrl: p.student.photoUrl ?? null,
+            referralId: p.referralId,
+            referralStatus: p.referral.status,
+            stage: p.stage,
+            stageLabel: stageLabel.get(p.stage) ?? p.stage,
+            eligibilityStatus: p.eligibilityStatus,
+            approved: !!p.approvedBy,
+            approvedAt: p.approvedAt ? p.approvedAt.toISOString() : null,
+            datePrepared: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : null,
+            meetingAttended: meetings.length > 0 ? meetings.some((m) => m.attended) : null,
+            hasHomeVisit: p.referral.homeVisitations.length > 0,
+            modulesSubmitted: p.modules.filter((m) => m.submitted).length,
+            modulesTotal: p.modules.length,
+            devicesIssued: p.devices.length,
+            devicesReturned: p.devices.filter((d) => d.returnedDate !== null).length,
+            certificationIssued: p.forms.some(
+              (f) => f.formType === "CERTIFICATION" && f.status === "verified"
+            ),
+          };
+        })
+      );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 const profileSchema = z.object({
   studentId: z.string().min(1),
   referralId: z.string().min(1),

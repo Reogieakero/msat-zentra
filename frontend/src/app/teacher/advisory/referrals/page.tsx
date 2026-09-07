@@ -13,6 +13,7 @@ import { ReferralFilters } from "./components/ReferralFilters";
 import { ReferralLibrary } from "./components/ReferralLibrary";
 import { ReferralCanvas } from "./components/ReferralCanvas";
 import { ReferralComposer } from "./components/ReferralComposer";
+import { readLastViewedReferralId, writeLastViewedReferralId } from "./last-viewed";
 import styles from "./components/referrals.module.css";
 
 interface ReferralData {
@@ -66,19 +67,6 @@ function useReferableAnecdotal() {
   });
 }
 
-// Local persistence for the workflow card: the canvas reopens on the last
-// student referral the teacher viewed, even after reload/navigation.
-const LAST_VIEWED_KEY = "teacher-advisory-referrals:lastViewedId";
-
-function readLastViewedId(): string | null {
-  try {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem(LAST_VIEWED_KEY);
-  } catch {
-    return null;
-  }
-}
-
 export default function TeacherAdvisoryReferralsPage() {
   const queryClient = useQueryClient();
   const { data: referralsDataRaw, isPending: referralsPending } = useTeacherReferrals();
@@ -88,16 +76,12 @@ export default function TeacherAdvisoryReferralsPage() {
   const isLoading = referralsPending;
   const isComposerLoading = referablesPending;
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(() => readLastViewedId());
+  const [selectedId, setSelectedId] = useState<string | null>(() => readLastViewedReferralId());
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    try {
-      if (selectedId) window.localStorage.setItem(LAST_VIEWED_KEY, selectedId);
-    } catch {
-      // Private-mode storage failures must never break the page.
-    }
+    if (selectedId) writeLastViewedReferralId(selectedId);
   }, [selectedId]);
 
   const needle = query.trim().toLowerCase();
