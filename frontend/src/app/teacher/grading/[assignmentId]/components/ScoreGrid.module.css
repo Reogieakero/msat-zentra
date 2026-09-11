@@ -16,7 +16,7 @@
 }
 
 .cardSub {
-  margin: -0.5rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
 }
@@ -26,6 +26,13 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .cardActions {

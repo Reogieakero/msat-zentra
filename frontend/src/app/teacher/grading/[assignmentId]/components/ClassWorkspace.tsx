@@ -9,7 +9,6 @@ import { AddAssessmentDialog } from "./AddAssessmentDialog";
 import { ScoreGrid } from "./ScoreGrid";
 import { FinalsCard } from "./FinalsCard";
 import { WeightsDialog } from "./WeightsDialog";
-import { SolutionDialog } from "./SolutionDialog";
 import styles from "./ClassWorkspace.module.css";
 
 type Props = {
@@ -22,7 +21,6 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
   const refreshAcademic = useRefreshAcademic();
   const [weightsOpen, setWeightsOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
-  const [solutionStudentId, setSolutionStudentId] = React.useState<string | null>(null);
 
   return (
     <section className={styles.page}>
@@ -45,9 +43,9 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
       />
 
       <FinalsCard
+        assignmentId={assignment.id}
         students={students}
         onChanged={onMutated}
-        onShowSolution={setSolutionStudentId}
       />
 
       {weightsOpen ? (
@@ -76,13 +74,6 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
         />
       ) : null}
 
-      {solutionStudentId ? (
-        <SolutionDialog
-          detail={detail}
-          studentId={solutionStudentId}
-          onClose={() => setSolutionStudentId(null)}
-        />
-      ) : null}
     </section>
   );
 }

@@ -111,7 +111,7 @@ export function ScoreGrid({ students, components, onChanged }: Props) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHeadRow}>
-        <div>
+        <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>Encode scores</h2>
           <p className={styles.cardSub}>
             Pick the category, then the assessment — enter raw scores and save them all at once.

@@ -6,12 +6,19 @@ import { lockFinalGrade, useRefreshAcademic, type ClassStudent } from "../../com
 import styles from "./FinalsCard.module.css";
 
 type Props = {
+  assignmentId: string;
   students: ClassStudent[];
   onChanged: () => void;
-  onShowSolution: (studentId: string) => void;
 };
 
-export function FinalsCard({ students, onChanged, onShowSolution }: Props) {
+function lockLabel(lockStatus: string | null): string {
+  if (lockStatus === "adviser_approved") return "Adviser approved";
+  if (lockStatus === "locked") return "Locked";
+  if (lockStatus === "unlocked") return "Unlocked";
+  return "—";
+}
+
+export function FinalsCard({ assignmentId, students, onChanged }: Props) {
   const refreshAcademic = useRefreshAcademic();
   const [lockingIds, setLockingIds] = React.useState<Record<string, boolean>>({});
   const [error, setError] = React.useState<string | null>(null);
@@ -31,10 +38,12 @@ export function FinalsCard({ students, onChanged, onShowSolution }: Props) {
 
   return (
     <div className={styles.card}>
-      <h2 className={styles.cardTitle}>Final grades</h2>
-      <p className={styles.cardSub}>
-        Recomputed automatically on every saved score. Lock a row to submit it for adviser approval.
-      </p>
+      <div className={styles.cardHead}>
+        <h2 className={styles.cardTitle}>Final grades</h2>
+        <p className={styles.cardSub}>
+          Recomputed automatically on every saved score. Lock a row to submit it for adviser approval.
+        </p>
+      </div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -59,7 +68,7 @@ export function FinalsCard({ students, onChanged, onShowSolution }: Props) {
                   <td>{f?.computedAverage != null ? f.computedAverage.toFixed(2) : "—"}</td>
                   <td>{f?.transmutedGrade != null ? f.transmutedGrade.toFixed(0) : "—"}</td>
                   <td>{f?.remarks ?? "—"}</td>
-                  <td>{f?.lockStatus ?? "—"}</td>
+                  <td>{lockLabel(f?.lockStatus ?? null)}</td>
                   <td>
                     <div className={styles.row}>
                       {f && f.lockStatus === "unlocked" ? (
@@ -72,8 +81,14 @@ export function FinalsCard({ students, onChanged, onShowSolution }: Props) {
                           {lockingIds[f.id] ? "Locking…" : "Lock"}
                         </Button>
                       ) : null}
-                      <Button size="xs" variant="ghost" onClick={() => onShowSolution(s.id)}>
-                        Solution
+                      <Button size="xs" variant="ghost" asChild>
+                        <a
+                          href={`/record/${assignmentId}/solution/${encodeURIComponent(s.id)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Solution
+                        </a>
                       </Button>
                     </div>
                   </td>
