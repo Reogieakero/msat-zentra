@@ -28,14 +28,15 @@ export async function fetchSheetContext(): Promise<SheetContext> {
     sectionId: section.id,
     sectionName: section.name,
     termId: roster.termId,
-    students: roster.students
-      .filter((s) => s.hasAccount)
-      .map((s) => ({
-        studentId: s.studentId,
-        name: s.name,
-        lrn: s.lrn,
-        attendanceRate: s.attendanceRate,
-      })),
+    // Account status never excludes anyone: enlisted students without logins
+    // take attendance under their `roster:<id>` key, which the backend
+    // persists against the roster entry.
+    students: roster.students.map((s) => ({
+      studentId: s.studentId,
+      name: s.name,
+      lrn: s.lrn,
+      attendanceRate: s.attendanceRate,
+    })),
   };
 }
 

@@ -240,6 +240,9 @@ router.get(
       const enrolled = students.length;
       const attByStudent = new Map<string, { present: number }>();
       for (const a of attendance) {
+        // Roster marks (no account) carry no grade/risk identity — the
+        // section headcount already accounts for those students.
+        if (!a.studentId) continue;
         const cur = attByStudent.get(a.studentId) ?? { present: 0 };
         if (a.status === "present") cur.present++;
         attByStudent.set(a.studentId, cur);

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
 import {
   computeRiskFactors,
   levelFromFlags,
@@ -102,9 +103,14 @@ router.get(
         }),
       ]);
 
+      // Roster-aware class sizes: enlisted students without accounts count
+      // too. (The scorable-student list below stays account-based — only
+      // registered students can receive encoded scores.)
+      const headcounts = await sectionHeadcounts(sectionIds);
       const countBySection = new Map(
         sectionCounts.map((s) => [s.sectionId, s._count._all])
       );
+      for (const [id, n] of headcounts) countBySection.set(id, n);
       const studentSecById = new Map(
         sectionStudents.map((s) => [s.userId, s.sectionId])
       );

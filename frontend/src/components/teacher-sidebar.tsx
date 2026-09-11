@@ -2,17 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   BookOpen,
-  Flag,
   CalendarClock,
+  Flag,
   FilePenLine,
+  Users,
   Send,
   ClipboardList,
-  BookPlus,
-  Settings,
   ChevronDown,
 } from "lucide-react";
 
@@ -40,28 +39,38 @@ type NavGroup = {
 
 const NAV: NavGroup[] = [
   {
-    label: "Main",
+    label: "Overview",
     items: [
       { title: "Overview", href: "/teacher/overview", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Classroom",
+    items: [
       { title: "My Classes", href: "/teacher/classes", icon: BookOpen },
-      { title: "Grade Flags", href: "/teacher/grade-flags", icon: Flag },
       { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
-      { title: "Anecdotal", href: "/teacher/anecdotal", icon: FilePenLine },
+      { title: "Grade Flags", href: "/teacher/grade-flags", icon: Flag },
     ],
   },
   {
     label: "Advisory",
     items: [
-      { title: "Students", href: "/teacher/advisory/students", icon: CalendarClock },
+      { title: "Students", href: "/teacher/advisory/students", icon: Users },
       { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
       { title: "ADM Cases", href: "/teacher/advisory/adm-cases", icon: ClipboardList },
-      { title: "Modules (SF10)", href: "/teacher/modules/sf10", icon: BookPlus },
     ],
   },
   {
-    label: "Account",
+    label: "Anecdotal",
     items: [
-      { title: "Settings", href: "/teacher/settings", icon: Settings },
+      {
+        title: "Records",
+        href: "/teacher/anecdotal",
+        icon: FilePenLine,
+        subItems: [
+          { title: "Folders", href: "/teacher/anecdotal/folders" },
+        ],
+      },
     ],
   },
 ];
@@ -79,26 +88,75 @@ function useIsActive() {
 
 function SidebarNav() {
   const isActive = useIsActive();
-  const router = useRouter();
+  const pathname = usePathname();
+  // Manual expand/collapse overrides. Otherwise a parent auto-opens whenever
+  // the route sits on one of its sublinks.
+  const [manual, setManual] = React.useState<Record<string, boolean>>({});
 
-  const renderItem = (item: NavItem, nested = false) => {
+  const isSubActive = (sub: NavSubItem) =>
+    pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+
+  const isExpanded = (item: NavItem) => {
+    if (manual[item.href] !== undefined) return manual[item.href];
+    return item.subItems?.some(isSubActive) ?? false;
+  };
+
+  const toggle = (item: NavItem) => {
+    const next = !isExpanded(item);
+    setManual((prev) => ({ ...prev, [item.href]: next }));
+  };
+
+  const renderSubItem = (sub: NavSubItem) => {
+    const active = isActive(sub.href);
+    return (
+      <li key={sub.href}>
+        <Link
+          href={sub.href}
+          className={`${styles.item} ${styles.subitem} ${active ? styles.itemActive : ""}`}
+          aria-current={active ? "page" : undefined}
+        >
+          <span className={styles.itemLabel}>{sub.title}</span>
+          {sub.badge ? <span className={styles.badge}>{sub.badge}</span> : null}
+        </Link>
+      </li>
+    );
+  };
+
+  const renderItem = (item: NavItem) => {
     const active = isActive(item.href);
     const hasSub = !!item.subItems?.length;
+    const expanded = isExpanded(item);
 
-    if (hasSub && !nested) {
+    if (hasSub) {
       return (
         <li key={item.href}>
-          <button
-            type="button"
-            className={`${styles.item} ${active ? styles.itemActive : ""}`}
-            onClick={() => router.push(item.href)}
-            aria-expanded={false}
-          >
-            <item.icon className={styles.itemIcon} />
-            <span className={styles.itemLabel}>{item.title}</span>
+          <div className={`${styles.item} ${active ? styles.itemActive : ""}`}>
+            <Link
+              href={item.href}
+              className={styles.parentLink}
+              aria-current={active ? "page" : undefined}
+            >
+              <item.icon className={styles.itemIcon} />
+              <span className={styles.itemLabel}>{item.title}</span>
+            </Link>
             {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
-            <ChevronDown className={styles.itemChevron} />
-          </button>
+            <button
+              type="button"
+              className={styles.chevronButton}
+              onClick={() => toggle(item)}
+              aria-expanded={expanded}
+              aria-label={`${expanded ? "Collapse" : "Expand"} ${item.title} submenu`}
+            >
+              <ChevronDown
+                className={`${styles.itemChevron} ${expanded ? styles.itemChevronOpen : ""}`}
+              />
+            </button>
+          </div>
+          {expanded ? (
+            <ul className={styles.submenu}>
+              {item.subItems!.map((sub) => renderSubItem(sub))}
+            </ul>
+          ) : null}
         </li>
       );
     }
@@ -107,9 +165,7 @@ function SidebarNav() {
       <li key={item.href}>
         <Link
           href={item.href}
-          className={`${styles.item} ${nested ? styles.subitem : ""} ${
-            active ? styles.itemActive : ""
-          }`}
+          className={`${styles.item} ${active ? styles.itemActive : ""}`}
           aria-current={active ? "page" : undefined}
         >
           <item.icon className={styles.itemIcon} />
@@ -121,9 +177,16 @@ function SidebarNav() {
   };
 
   return (
-    <ul className={styles.menu}>
-      {NAV.flatMap((group) => group.items.map((item) => renderItem(item)))}
-    </ul>
+    <>
+      {NAV.map((group) => (
+        <div key={group.label} className={styles.group}>
+          <p className={styles.groupLabel}>{group.label}</p>
+          <ul className={styles.menu}>
+            {group.items.map((item) => renderItem(item))}
+          </ul>
+        </div>
+      ))}
+    </>
   );
 }
 

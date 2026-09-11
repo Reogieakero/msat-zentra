@@ -5,40 +5,79 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownSelect } from "./DropdownSelect";
 import {
-  SCHOOL_YEARS,
-  ACTIVE_SCHOOL_YEAR,
-  type Assignment,
   type GradeLevel,
   type Section,
-  type Subject,
   type Teacher,
 } from "../data";
-import { createSection, updateSection } from "../api";
+import {
+  createSection,
+  fetchSchoolYears,
+  updateSection,
+  type SchoolYearOption,
+} from "../api";
 import { toast } from "@/components/ui/sonner";
-import { SectionAssignments } from "./SectionAssignments";
 import styles from "./form.module.css";
 import stepper from "./section-form.module.css";
 
 type Props = {
   open: boolean;
   section: Section | null;
-  subjects: Subject[];
   teachers: Teacher[];
+  // When omitted, the dialog loads the year list from the database itself.
+  schoolYears?: SchoolYearOption[];
   onOpenChange: (open: boolean) => void;
   onSave: (section: Section) => void;
 };
 
 const GRADES: GradeLevel[] = [11, 12];
 
-export function SectionFormDialog({ open, section, subjects, teachers, onOpenChange, onSave }: Props) {
+// Backend errors arrive as { error: { code, message } } — surface the real
+// message (e.g. duplicate section, missing adviser) instead of a generic one.
+function getErrorMessage(err: unknown, fallback: string): string {
+  const data = (err as { response?: { data?: { error?: { message?: string }; message?: string } } })
+    ?.response?.data;
+  return data?.error?.message ?? data?.message ?? fallback;
+}
+
+export function SectionFormDialog({
+  open,
+  section,
+  teachers,
+  schoolYears: schoolYearsProp,
+  onOpenChange,
+  onSave,
+}: Props) {
   const isEdit = !!section;
   const [name, setName] = React.useState(section?.name ?? "");
   const [gradeLevel, setGradeLevel] = React.useState<GradeLevel>(section?.gradeLevel ?? 11);
-  const [schoolYear, setSchoolYear] = React.useState<string>(section?.schoolYear ?? ACTIVE_SCHOOL_YEAR);
+  const [schoolYear, setSchoolYear] = React.useState<string>(section?.schoolYear ?? "");
   const [adviserId, setAdviserId] = React.useState<string>(section?.adviserId ?? "");
-  const [assignments, setAssignments] = React.useState<Assignment[]>(section?.assignments ?? []);
+  const [years, setYears] = React.useState<SchoolYearOption[]>(schoolYearsProp ?? []);
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+
+  // Reset the form every time the dialog opens so edits never leak into "new".
+  // Subject assignment lives in the separate "Assign Subjects" dialog, not here.
+  React.useEffect(() => {
+    if (!open) return;
+    setName(section?.name ?? "");
+    setGradeLevel(section?.gradeLevel ?? 11);
+    setSchoolYear(section?.schoolYear ?? "");
+    setAdviserId(section?.adviserId ?? "");
+    setError(null);
+    if (schoolYearsProp) setYears(schoolYearsProp);
+    else {
+      const ctrl = new AbortController();
+      fetchSchoolYears(ctrl.signal)
+        .then((list) => setYears(list))
+        .catch(() => setYears([]));
+      return () => ctrl.abort();
+    }
+  }, [open, section, schoolYearsProp]);
+
+  // Default the year picker to the section's year, then the active DB year.
+  const effectiveYear =
+    schoolYear || years.find((y) => y.isActive)?.name || years[0]?.name || "";
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -49,27 +88,36 @@ export function SectionFormDialog({ open, section, subjects, teachers, onOpenCha
       setError("Select an adviser.");
       return;
     }
+    if (!isEdit && !effectiveYear) {
+      setError("No school year available. Ask your admin to add one first.");
+      return;
+    }
     setError(null);
     setSaving(true);
     try {
-      const payload = { name: name.trim(), adviserId };
-      const saved = isEdit
-        ? await updateSection(section!.id, payload)
-        : await createSection({
-            name: name.trim(),
-            gradeLevel,
-            schoolYear,
-            adviserId,
-          });
-      onSave({ ...saved, assignments });
+      if (isEdit) {
+        const saved = await updateSection(section!.id, { name: name.trim(), adviserId });
+        onSave({ ...saved, assignments: section?.assignments ?? [] });
+        toast.success({
+          title: "Section updated",
+          description: `${saved.name} has been saved successfully.`,
+        });
+      } else {
+        const saved = await createSection({
+          name: name.trim(),
+          gradeLevel,
+          schoolYear: effectiveYear,
+          adviserId,
+        });
+        onSave({ ...saved, assignments: [] });
+        toast.success({
+          title: "Section created",
+          description: `${saved.name} has been saved successfully.`,
+        });
+      }
       onOpenChange(false);
-      toast.success({
-        title: isEdit ? "Section updated" : "Section created",
-        description: `${saved.name} has been saved successfully.`,
-      });
     } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      const detail = msg ?? "Failed to save section.";
+      const detail = getErrorMessage(err, "Failed to save section.");
       setError(detail);
       toast.error({ title: isEdit ? "Update failed" : "Creation failed", description: detail });
     } finally {
@@ -83,7 +131,7 @@ export function SectionFormDialog({ open, section, subjects, teachers, onOpenCha
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Section" : "New Section"}</DialogTitle>
           <DialogDescription>
-            Create a class section for grades 11–12 within a school year and assign its subject teachers.
+            Create a class section for grades 11–12 within a school year.
           </DialogDescription>
         </DialogHeader>
 
@@ -122,10 +170,10 @@ export function SectionFormDialog({ open, section, subjects, teachers, onOpenCha
               <DropdownSelect
                 id="section-year"
                 ariaLabel="School year"
-                value={schoolYear}
+                value={effectiveYear}
                 onValueChange={setSchoolYear}
-                options={SCHOOL_YEARS.map((y) => ({ value: y, label: y }))}
-                placeholder="Select year"
+                options={years.map((y) => ({ value: y.name, label: y.name }))}
+                placeholder={years.length === 0 ? "No school years found" : "Select year"}
               />
             </div>
           </div>
@@ -145,26 +193,6 @@ export function SectionFormDialog({ open, section, subjects, teachers, onOpenCha
           </div>
         </div>
 
-        <div className={stepper.assignWrap}>
-          <SectionAssignments
-            section={
-              section ?? {
-                id: "draft",
-                name: "",
-                gradeLevel: 11,
-                schoolYear: ACTIVE_SCHOOL_YEAR,
-                adviserId: "",
-                adviserName: "",
-                assignments,
-              }
-            }
-            subjects={subjects}
-            teachers={teachers}
-            sectionId={section?.id}
-            onChange={setAssignments}
-          />
-        </div>
-
         {error ? <p className={styles.errorText}>{error}</p> : null}
 
         <div className={styles.dialogFooter}>
@@ -172,7 +200,7 @@ export function SectionFormDialog({ open, section, subjects, teachers, onOpenCha
             Cancel
           </Button>
           <Button onClick={() => void handleSave()} disabled={saving}>
-            {isEdit ? "Save Changes" : "Create Section"}
+            {saving ? "Saving…" : isEdit ? "Save Changes" : "Create Section"}
           </Button>
         </div>
       </DialogContent>

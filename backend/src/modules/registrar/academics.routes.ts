@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { GradeLevel } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
+import { rosterCountsByGrade, rosterCountsBySection } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
@@ -14,6 +15,21 @@ function toGradeLevel(n: number): GradeLevel {
   if (n === 11) return "G11";
   if (n === 12) return "G12";
   throw new AppError(400, "INVALID_GRADE_LEVEL", "Grade level must be 11 or 12");
+}
+
+type SubjectCategoryLabel = "Core" | "Elective";
+
+function toCategoryLabel(category: string): SubjectCategoryLabel {
+  return category === "ELECTIVE" ? "Elective" : "Core";
+}
+
+// Accepts "Core"/"Elective" (any casing); defaults to CORE when omitted.
+function parseCategory(raw: unknown): "CORE" | "ELECTIVE" {
+  if (raw == null || String(raw).trim() === "") return "CORE";
+  const norm = String(raw).trim().toLowerCase();
+  if (norm === "core") return "CORE";
+  if (norm === "elective") return "ELECTIVE";
+  throw new AppError(400, "INVALID_CATEGORY", "Category must be Core or Elective");
 }
 
 // ---------------------------------------------------------------------------
@@ -34,21 +50,30 @@ router.get(
         orderBy: [{ gradeLevel: "asc" }, { code: "asc" }],
       });
 
+      // Roster-aware enrollment: registered profiles plus enlisted roster
+      // students with no account yet (they count regardless of account
+      // status). Failed counts only explicit Failed remarks so ungraded
+      // students are never misreported as failed.
+      const rosterByGrade = await rosterCountsByGrade([...GRADE_BAND]);
       const result = await Promise.all(
         subjects.map(async (s) => {
           // enrolled = every student in the grade level (they all take the subject)
-          const [enrolled, passed] = await Promise.all([
+          const [profiles, passed, failed] = await Promise.all([
             prisma.studentProfile.count({ where: { gradeLevel: s.gradeLevel } }),
             prisma.finalGrade.count({
               where: { subjectId: s.id, remarks: "Passed" },
             }),
+            prisma.finalGrade.count({
+              where: { subjectId: s.id, remarks: "Failed" },
+            }),
           ]);
-          const failed = enrolled - passed;
+          const enrolled = profiles + (rosterByGrade.get(s.gradeLevel) ?? 0);
           return {
             id: s.id,
             code: s.code,
             name: s.name,
             gradeLevel: s.gradeLevel === "G11" ? 11 : 12,
+            category: toCategoryLabel(s.category),
             active: true,
             enrolled,
             passed,
@@ -93,25 +118,45 @@ router.get(
       });
 
       // Per-grade section breakdown so we only query each grade once.
+      // Roster-aware: enlisted students without accounts count too, including
+      // sections that currently hold only roster students.
       const enrollmentsByGrade = await Promise.all(
         GRADE_BAND.map(async (gl) => {
-          const rows = await prisma.studentProfile.groupBy({
-            by: ["sectionId"],
-            where: { gradeLevel: gl },
-            _count: { _all: true },
-          });
-          const sections = await prisma.section.findMany({
-            where: { id: { in: rows.map((r) => r.sectionId).filter(Boolean) as string[] } },
-            select: { id: true, name: true, gradeLevel: true },
-          });
+          const [rows, yearSections] = await Promise.all([
+            prisma.studentProfile.groupBy({
+              by: ["sectionId"],
+              where: { gradeLevel: gl },
+              _count: { _all: true },
+            }),
+            prisma.section.findMany({
+              where: { gradeLevel: gl, schoolYear: { isActive: true } },
+              select: { id: true },
+            }),
+          ]);
+          const sectionIds = Array.from(
+            new Set([
+              ...rows.map((r) => r.sectionId).filter(Boolean),
+              ...yearSections.map((s) => s.id),
+            ]),
+          ) as string[];
+          const [sections, rosterCounts] = await Promise.all([
+            prisma.section.findMany({
+              where: { id: { in: sectionIds } },
+              select: { id: true, name: true, gradeLevel: true },
+            }),
+            rosterCountsBySection(sectionIds),
+          ]);
           const map = new Map(rows.map((r) => [r.sectionId, r._count._all]));
+          const total =
+            rows.reduce((s, r) => s + r._count._all, 0) +
+            Array.from(rosterCounts.values()).reduce((s, n) => s + n, 0);
           return {
             gl,
-            total: rows.reduce((s, r) => s + r._count._all, 0),
+            total,
             sections: sections.map((sec) => ({
               id: sec.id,
               name: sec.name,
-              count: map.get(sec.id) ?? 0,
+              count: (map.get(sec.id) ?? 0) + (rosterCounts.get(sec.id) ?? 0),
             })),
           };
         }),
@@ -127,6 +172,7 @@ router.get(
           code: s.code,
           name: s.name,
           gradeLevel: grade,
+          category: toCategoryLabel(s.category),
           active: true,
           enrolled: e?.total ?? 0,
           enrollments: e?.sections ?? [],
@@ -145,33 +191,44 @@ router.get(
   }
 );
 
-// Create a G11–G12 subject.
+// Create a G11–G12 subject. Codes are unique per grade level, so the same
+// code may exist in both Grade 11 and Grade 12 as separate rows.
 router.post(
   "/subjects",
   requireAuth,
   requireRole("registrar", "record_keeper"),
   async (req, res, next) => {
     try {
-      const { code, name, gradeLevel } = req.body as {
+      const { code, name, gradeLevel, category } = req.body as {
         code?: string;
         name?: string;
         gradeLevel?: number;
+        category?: string;
       };
       if (!code?.trim() || !name?.trim()) {
         throw new AppError(400, "MISSING_FIELDS", "Code and name are required");
       }
       const gl = toGradeLevel(Number(gradeLevel));
+      const cat = parseCategory(category);
 
-      const existing = await prisma.subject.findUnique({ where: { code: code.trim().toUpperCase() } });
+      const normalizedCode = code.trim().toUpperCase();
+      const existing = await prisma.subject.findFirst({
+        where: { code: normalizedCode, gradeLevel: gl },
+      });
       if (existing) {
-        throw new AppError(409, "DUPLICATE_CODE", "Subject code already exists");
+        throw new AppError(
+          409,
+          "DUPLICATE_CODE",
+          `Subject code already exists for Grade ${gl === "G11" ? 11 : 12}`
+        );
       }
 
       const subject = await prisma.subject.create({
         data: {
-          code: code.trim().toUpperCase(),
+          code: normalizedCode,
           name: name.trim(),
           gradeLevel: gl,
+          category: cat,
         },
       });
 
@@ -186,13 +243,19 @@ router.post(
 
       // "enrolled" reflects the students in this grade level who take the
       // subject — derived from student enrollment, not final-grade rows.
-      const enrolled = await prisma.studentProfile.count({ where: { gradeLevel: gl } });
+      // Roster-enlisted students without accounts count too.
+      const [profiles, rosterByGrade] = await Promise.all([
+        prisma.studentProfile.count({ where: { gradeLevel: gl } }),
+        rosterCountsByGrade([gl]),
+      ]);
+      const enrolled = profiles + (rosterByGrade.get(gl) ?? 0);
 
       res.status(201).json({
         id: subject.id,
         code: subject.code,
         name: subject.name,
         gradeLevel: subject.gradeLevel === "G11" ? 11 : 12,
+        category: toCategoryLabel(subject.category),
         active: true,
         enrolled,
         passed: 0,
@@ -204,7 +267,7 @@ router.post(
   }
 );
 
-// Update a subject (name only; code is immutable identity, gradeLevel fixed).
+// Update a subject (name + category; code is immutable identity, gradeLevel fixed).
 router.patch(
   "/subjects/:id",
   requireAuth,
@@ -212,13 +275,16 @@ router.patch(
   async (req, res, next) => {
     try {
       const id = String(req.params.id);
-      const { name } = req.body as { name?: string };
+      const { name, category } = req.body as { name?: string; category?: string };
       const existing = await prisma.subject.findUnique({ where: { id } });
       if (!existing) throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
 
       const updated = await prisma.subject.update({
         where: { id },
-        data: { name: name?.trim() ?? existing.name },
+        data: {
+          name: name?.trim() ? name.trim() : existing.name,
+          category: category === undefined ? existing.category : parseCategory(category),
+        },
       });
 
       await writeAudit({
@@ -235,8 +301,31 @@ router.patch(
         code: updated.code,
         name: updated.name,
         gradeLevel: updated.gradeLevel === "G11" ? 11 : 12,
+        category: toCategoryLabel(updated.category),
         active: true,
       });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// School years (DB-driven; no hardcoded year lists on the client)
+// ---------------------------------------------------------------------------
+
+router.get(
+  "/school-years",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "academics"] }),
+  async (_req, res, next) => {
+    try {
+      const years = await prisma.schoolYear.findMany({
+        orderBy: { name: "desc" },
+        select: { id: true, name: true, isActive: true },
+      });
+      res.json({ schoolYears: years });
     } catch (e) {
       next(e);
     }
@@ -252,20 +341,35 @@ router.get(
   requireAuth,
   requireRole("registrar", "record_keeper"),
   cache({ tags: ["registrar", "academics"] }),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      const activeYear = await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true, name: true },
-      });
-      const schoolYearId = activeYear?.id ?? "__none__";
+      // Optional ?schoolYearId= lets callers (e.g. Assign Subjects) list
+      // sections for any year. Defaults to the active year.
+      const requestedYearId =
+        typeof req.query.schoolYearId === "string" && req.query.schoolYearId.trim()
+          ? req.query.schoolYearId.trim()
+          : null;
+      let targetYear: { id: string; name: string } | null = null;
+      if (requestedYearId) {
+        targetYear = await prisma.schoolYear.findUnique({
+          where: { id: requestedYearId },
+          select: { id: true, name: true },
+        });
+        if (!targetYear) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "School year not found");
+      } else {
+        targetYear = await prisma.schoolYear.findFirst({
+          where: { isActive: true },
+          select: { id: true, name: true },
+        });
+      }
+      const schoolYearId = targetYear?.id ?? "__none__";
 
       const sections = await prisma.section.findMany({
         where: { gradeLevel: { in: GRADE_BAND }, schoolYearId },
         orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
         include: {
           adviser: { select: { id: true, fullName: true } },
-          schoolYear: { select: { name: true } },
+          schoolYear: { select: { id: true, name: true } },
           teacherAssignments: {
             include: {
               subject: { select: { id: true, code: true, name: true } },
@@ -280,7 +384,8 @@ router.get(
         id: s.id,
         name: s.name,
         gradeLevel: s.gradeLevel === "G11" ? 11 : 12,
-        schoolYear: s.schoolYear?.name ?? activeYear?.name ?? "",
+        schoolYear: s.schoolYear?.name ?? targetYear?.name ?? "",
+        schoolYearId: s.schoolYearId,
         adviserId: s.adviserId ?? "",
         adviserName: s.adviser?.fullName ?? "",
         assignments: s.teacherAssignments.map((a) => ({
@@ -301,6 +406,128 @@ router.get(
   }
 );
 
+// Terms for a school year, straight from the database — the Assign Subjects
+// dialog populates its Term picker from here instead of a hardcoded list.
+// Missing term rows (1–3) are backfilled so every year always offers Term 1–3.
+router.get(
+  "/terms",
+  requireAuth,
+  requireRole("registrar", "record_keeper"),
+  cache({ tags: ["registrar", "academics"] }),
+  async (req, res, next) => {
+    try {
+      const requestedYearId =
+        typeof req.query.schoolYearId === "string" && req.query.schoolYearId.trim()
+          ? req.query.schoolYearId.trim()
+          : null;
+      let targetYear: { id: string; name: string } | null = null;
+      if (requestedYearId) {
+        targetYear = await prisma.schoolYear.findUnique({
+          where: { id: requestedYearId },
+          select: { id: true, name: true },
+        });
+        if (!targetYear) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "School year not found");
+      } else {
+        targetYear = await prisma.schoolYear.findFirst({
+          where: { isActive: true },
+          select: { id: true, name: true },
+        });
+      }
+      if (!targetYear) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "No school year found");
+
+      let terms = await prisma.term.findMany({
+        where: { schoolYearId: targetYear.id },
+        orderBy: { termNumber: "asc" },
+        select: { id: true, termNumber: true },
+      });
+
+      // Backfill Terms 1–3 when a year is missing any of them, so every
+      // school year always offers the full Term 1–3 set.
+      const have = new Set(terms.map((t) => t.termNumber));
+      if (!have.has(1) || !have.has(2) || !have.has(3)) {
+        await prisma.term.createMany({
+          data: [1, 2, 3]
+            .filter((n) => !have.has(n))
+            .map((termNumber) => ({ schoolYearId: targetYear!.id, termNumber })),
+          skipDuplicates: true,
+        });
+        await invalidateTags(["registrar", "academics"]);
+        terms = await prisma.term.findMany({
+          where: { schoolYearId: targetYear.id },
+          orderBy: { termNumber: "asc" },
+          select: { id: true, termNumber: true },
+        });
+      }
+
+      res.json({ schoolYearId: targetYear.id, terms });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Normalize a school-year label so frontend values like "2026–2027" (en dash,
+// no prefix) match stored rows like "SY 2026-2027".
+function normalizeYearLabel(raw: string): string {
+  return raw.trim().replace(/[–—]/g, "-").replace(/\s+/g, " ");
+}
+
+function yearCandidates(raw: string): string[] {
+  const norm = normalizeYearLabel(raw);
+  const withoutPrefix = norm.replace(/^SY\s+/i, "");
+  return [norm, `SY ${withoutPrefix}`, withoutPrefix];
+}
+
+async function resolveSchoolYear(requested?: string) {
+  const activeYear = await prisma.schoolYear.findFirst({
+    where: { isActive: true },
+    select: { id: true, name: true },
+  });
+
+  // Try to match the requested label (exact + prefix variants).
+  if (requested?.trim()) {
+    for (const candidate of yearCandidates(requested)) {
+      const found = await prisma.schoolYear.findFirst({ where: { name: candidate } });
+      if (found) return found;
+    }
+  } else if (activeYear) {
+    return activeYear;
+  }
+
+  // No match: auto-provision instead of 409 so section creation never fails
+  // just because the year table is empty or uses a different label format.
+  const baseLabel = requested?.trim() ? normalizeYearLabel(requested) : activeYear?.name;
+  const name = baseLabel
+    ? baseLabel.match(/^\d{4}-\d{4}$/)
+      ? `SY ${baseLabel}`
+      : baseLabel
+    : `SY ${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+  if (activeYear && !requested?.trim()) return activeYear;
+
+  const existing = await prisma.schoolYear.findFirst({ where: { name } });
+  if (existing) return existing;
+
+  const yearMatch = name.match(/(\d{4})\D(\d{4})/);
+  const startY = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
+  const endY = yearMatch ? Number(yearMatch[2]) : startY + 1;
+  const created = await prisma.schoolYear.create({
+    data: {
+      name,
+      startDate: new Date(`${startY}-06-15T00:00:00Z`),
+      endDate: new Date(`${endY}-03-31T00:00:00Z`),
+      isActive: activeYear ? false : true,
+      createdBy: "system",
+    },
+    select: { id: true, name: true },
+  });
+  // Every school year needs terms 1-3 or later assignment creation 404s.
+  await prisma.term.createMany({
+    data: [1, 2, 3].map((termNumber) => ({ schoolYearId: created.id, termNumber })),
+    skipDuplicates: true,
+  });
+  return created;
+}
+
 router.post(
   "/sections",
   requireAuth,
@@ -316,15 +543,23 @@ router.post(
       if (!name?.trim()) throw new AppError(400, "MISSING_NAME", "Section name is required");
       const gl = toGradeLevel(Number(gradeLevel));
 
-      const activeYear = await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true, name: true },
-      });
-      if (!activeYear) throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
+      const schoolYearRow = await resolveSchoolYear(schoolYear);
 
-      const yearName = schoolYear?.trim() || activeYear.name;
-      const schoolYearRow =
-        (await prisma.schoolYear.findFirst({ where: { name: yearName } })) ?? activeYear;
+      const duplicate = await prisma.section.findFirst({
+        where: {
+          name: name.trim(),
+          gradeLevel: gl,
+          schoolYearId: schoolYearRow.id,
+        },
+        select: { id: true },
+      });
+      if (duplicate) {
+        throw new AppError(
+          409,
+          "DUPLICATE_SECTION",
+          `Section "${name.trim()}" already exists for this grade level and school year`
+        );
+      }
 
       if (adviserId) {
         const adv = await prisma.user.findUnique({ where: { id: adviserId } });
@@ -357,7 +592,8 @@ router.post(
         id: section.id,
         name: section.name,
         gradeLevel: section.gradeLevel === "G11" ? 11 : 12,
-        schoolYear: section.schoolYear?.name ?? yearName,
+        schoolYear: section.schoolYear?.name ?? schoolYearRow.name,
+        schoolYearId: section.schoolYearId,
         adviserId: section.adviserId ?? "",
         adviserName: section.adviser?.fullName ?? "",
         assignments: [],
@@ -410,6 +646,7 @@ router.patch(
         name: updated.name,
         gradeLevel: updated.gradeLevel === "G11" ? 11 : 12,
         schoolYear: updated.schoolYear?.name ?? "",
+        schoolYearId: updated.schoolYearId,
         adviserId: updated.adviserId ?? "",
         adviserName: updated.adviser?.fullName ?? "",
       });
@@ -685,7 +922,7 @@ router.get(
       const id = String(req.params.id);
       const subject = await prisma.subject.findUnique({
         where: { id },
-        select: { id: true, code: true, name: true, gradeLevel: true },
+        select: { id: true, code: true, name: true, gradeLevel: true, category: true },
       });
       if (!subject) throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
       if (!GRADE_BAND.includes(subject.gradeLevel)) {
@@ -740,6 +977,7 @@ router.get(
           code: subject.code,
           name: subject.name,
           gradeLevel: subject.gradeLevel === "G11" ? 11 : 12,
+          category: toCategoryLabel(subject.category),
         },
         students: result,
       });

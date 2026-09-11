@@ -386,21 +386,31 @@ model StudentRoster {
   schoolYearId String
   section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+  anecdotalRecords AnecdotalRecord[]
+  referrals Referral[]
   @@unique([lrn, schoolYearId])
   @@index([gradeLevel])
   @@index([sectionId])
   @@index([schoolYearId])
 }
 
+enum SubjectCategory {
+  CORE
+  ELECTIVE
+}
+
 model Subject {
-  id         String      @id @default(uuid())
+  id         String          @id @default(uuid())
   name       String
-  code       String      @unique
+  code       String
   gradeLevel GradeLevel
+  category   SubjectCategory @default(CORE)
   gradeComponents GradeComponent[]
   finalGrades FinalGrade[]
   assignments TeacherSubjectAssignment[]
   gradeFlags GradeFlag[]
+  @@unique([code, gradeLevel])
 }
 
 model TeacherSubjectAssignment {
@@ -513,17 +523,23 @@ model GradeFlag {
 // ---------------------------------------------------------------------------
 model AttendanceRecord {
   id         String           @id @default(uuid())
-  studentId  String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId  String?
+  rosterId   String?
   sectionId  String
   date       DateTime
   session    Session
   status     AttendanceStatus
   recordedBy String
   termId     String
-  student    StudentProfile   @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  student    StudentProfile?  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster     StudentRoster?   @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   section    Section          @relation(fields: [sectionId], references: [id])
   term       Term             @relation(fields: [termId], references: [id])
   @@unique([studentId, date, session])
+  @@unique([rosterId, date, session])
+  @@index([rosterId])
 }
 
 // ---------------------------------------------------------------------------
@@ -531,7 +547,10 @@ model AttendanceRecord {
 // ---------------------------------------------------------------------------
 model AnecdotalRecord {
   id                     String          @id @default(uuid())
-  studentId              String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId              String?
+  rosterId               String?
   observerId             String
   sectionId              String
   observationDatetime    DateTime
@@ -550,7 +569,8 @@ model AnecdotalRecord {
   signedBy               String?
   signedAt               DateTime?
   signatureImageUrl      String?
-  student                StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  student                StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster                 StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   observer               User            @relation("ObserverAnecdotals", fields: [observerId], references: [id])
   section                Section         @relation(fields: [sectionId], references: [id])
   term                   Term            @relation(fields: [termId], references: [id])
@@ -590,11 +610,15 @@ model Referral {
   referredBy        String
   reason            String
   status            ReferralStatus  @default(pending)
-  studentId         String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId         String?
+  rosterId          String?
   termId            String
   anecdotalRecord   AnecdotalRecord @relation("AnecdotalReferral", fields: [anecdotalRecordId], references: [id], onDelete: Cascade)
   referredByUser    User            @relation("ReferredBy", fields: [referredBy], references: [id])
-  student           StudentProfile  @relation("StudentReferrals", fields: [studentId], references: [userId], onDelete: Cascade)
+  student           StudentProfile? @relation("StudentReferrals", fields: [studentId], references: [userId], onDelete: Cascade)
+  roster            StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   term              Term            @relation(fields: [termId], references: [id])
   healthRecords     HealthRecord[]
   homeVisitations   HomeVisitationRecord[]

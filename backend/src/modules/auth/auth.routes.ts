@@ -9,6 +9,7 @@ import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { writeAudit } from "../../lib/audit.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
 import type { Role, GradeLevel } from "../../generated/prisma/client.js";
 
@@ -141,10 +142,49 @@ router.post(
         where: { id: target.id },
         data: { status: "active", approvedBy: req.user!.id, approvedAt: new Date() },
       });
+
+      // Auto-provision the student profile from the official roster so an
+      // approved student immediately lands in their section — and therefore in
+      // section counts, subject lists, and gradebooks — instead of remaining
+      // invisible until a profile exists. Roster is the canonical source for
+      // grade level + section, matching the pending list.
+      if (target.role === "student" && target.lrn) {
+        const existingProfile = await prisma.studentProfile.findUnique({
+          where: { userId: target.id },
+          select: { userId: true },
+        });
+        if (!existingProfile) {
+          const roster = await prisma.studentRoster.findFirst({
+            where: { lrn: target.lrn },
+            orderBy: { schoolYearId: "desc" },
+            select: { gradeLevel: true, sectionId: true },
+          });
+          if (roster) {
+            await prisma.studentProfile.create({
+              data: {
+                userId: target.id,
+                lrn: target.lrn,
+                gradeLevel: roster.gradeLevel,
+                sectionId: roster.sectionId,
+              },
+            });
+          }
+        }
+      }
+
       await writeAudit({
         userId: req.user!.id, actionType: "account_approval",
         sourceTable: "users", sourceId: updated.id, reason: "Account activation",
       });
+      // Approvals change enrollment composition — refresh cached headcounts.
+      await invalidateTags([
+        "registrar",
+        "record-keeper",
+        "academics",
+        "overview",
+        "principal",
+        "teacher",
+      ]);
       await fanoutNotification({
         userId: updated.id, sourceTable: "users", action: "approve",
         message: "Your account has been approved.",

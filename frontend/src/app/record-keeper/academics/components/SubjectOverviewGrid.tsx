@@ -173,7 +173,7 @@ export function SubjectOverviewGrid({
                 </div>
                 <div className={styles.cardTitleBlock}>
                   <h3 className={styles.cardTitle}>{s.name}</h3>
-                  <span className={styles.gradeTag}>Grade {s.gradeLevel}</span>
+                  <span className={styles.gradeTag}>Grade {s.gradeLevel} · {s.category}</span>
                 </div>
               </header>
 

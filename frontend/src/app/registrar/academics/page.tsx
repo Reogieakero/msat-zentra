@@ -1,23 +1,25 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { LayoutGrid, RefreshCw } from "lucide-react";
 import { AcademicsHeader } from "./components/AcademicsHeader";
 import { ConfigureSection } from "./components/ConfigureSection";
 import { SubjectOverviewGrid } from "./components/SubjectOverviewGrid";
 import { SubjectFormDialog } from "./components/SubjectFormDialog";
 import { SectionFormDialog } from "./components/SectionFormDialog";
-import { fetchAcademicsOverview, fetchTeachers, fetchTeachersWithLoads } from "./api";
+import {
+  fetchAcademicsOverview,
+  fetchTeachers,
+  fetchTeachersWithLoads,
+} from "./api";
 import type { AcademicsOverview, SubjectOverview, TeacherWithLoads } from "./api";
-import type { Subject, Teacher } from "./data";
+import type { Teacher } from "./data";
 import { TeachersSection } from "./components/TeachersSection";
 import styles from "./academics.module.css";
 
-function toSubjectShape(s: SubjectOverview): Subject {
-  return { id: s.id, code: s.code, name: s.name, gradeLevel: s.gradeLevel, active: s.active, enrolled: s.enrolled, passed: 0, failed: 0 };
-}
-
 export default function RegistrarAcademicsPage() {
+  const router = useRouter();
   const [overview, setOverview] = React.useState<AcademicsOverview | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -102,6 +104,7 @@ export default function RegistrarAcademicsPage() {
       <ConfigureSection
         onAddSubject={() => setSubjectDialogOpen(true)}
         onAddSection={() => void openSectionDialog()}
+        onAssignSubjects={() => router.push("/registrar/academics/assign")}
       />
 
       {error ? (
@@ -142,7 +145,6 @@ export default function RegistrarAcademicsPage() {
       <SectionFormDialog
         open={sectionDialogOpen}
         section={null}
-        subjects={subjects.map(toSubjectShape)}
         teachers={teachers}
         onOpenChange={setSectionDialogOpen}
         onSave={() => {

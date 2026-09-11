@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import type { Assignment, Section, Subject, Teacher } from "./data";
+import type { Assignment, Section, Subject, SubjectCategory, Teacher } from "./data";
 import { isCancel, type AxiosError } from "axios";
 
 function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -36,6 +36,22 @@ export interface TeachersResponse {
   teachers: Teacher[];
 }
 
+export interface SchoolYearOption {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+export async function fetchSchoolYears(signal?: AbortSignal): Promise<SchoolYearOption[]> {
+  const res = await withAbort(
+    apiClient.get<{ schoolYears: SchoolYearOption[] }>("/api/record-keeper/academics/school-years", {
+      signal,
+    }),
+    signal,
+  );
+  return res.data.schoolYears;
+}
+
 export async function fetchSubjects(signal?: AbortSignal): Promise<Subject[]> {
   const res = await withAbort(
     apiClient.get<SubjectsResponse>("/api/record-keeper/academics/subjects", { signal }),
@@ -48,22 +64,45 @@ export async function createSubject(input: {
   code: string;
   name: string;
   gradeLevel: 7 | 8 | 9 | 10;
+  category?: SubjectCategory;
 }): Promise<Subject> {
   const res = await apiClient.post<Subject>("/api/record-keeper/academics/subjects", input);
   return res.data;
 }
 
-export async function updateSubject(id: string, name: string): Promise<Subject> {
-  const res = await apiClient.patch<Subject>(`/api/record-keeper/academics/subjects/${id}`, { name });
+export async function updateSubject(
+  id: string,
+  input: { name?: string; category?: SubjectCategory },
+): Promise<Subject> {
+  const res = await apiClient.patch<Subject>(`/api/record-keeper/academics/subjects/${id}`, input);
   return res.data;
 }
 
-export async function fetchSections(signal?: AbortSignal): Promise<Section[]> {
+export async function fetchSections(signal?: AbortSignal, schoolYearId?: string): Promise<Section[]> {
   const res = await withAbort(
-    apiClient.get<SectionsResponse>("/api/record-keeper/academics/sections", { signal }),
+    apiClient.get<SectionsResponse>("/api/record-keeper/academics/sections", {
+      signal,
+      params: schoolYearId ? { schoolYearId } : undefined,
+    }),
     signal,
   );
   return res.data.sections;
+}
+
+export interface TermOption {
+  id: string;
+  termNumber: number;
+}
+
+export async function fetchTerms(schoolYearId?: string, signal?: AbortSignal): Promise<TermOption[]> {
+  const res = await withAbort(
+    apiClient.get<{ schoolYearId: string | null; terms: TermOption[] }>(
+      "/api/record-keeper/academics/terms",
+      { signal, params: schoolYearId ? { schoolYearId } : undefined },
+    ),
+    signal,
+  );
+  return res.data.terms;
 }
 
 export async function createSection(input: {
@@ -179,7 +218,7 @@ export interface SubjectStudent {
 }
 
 export interface SubjectStudentsResponse {
-  subject: { id: string; code: string; name: string; gradeLevel: 7 | 8 | 9 | 10 };
+  subject: { id: string; code: string; name: string; gradeLevel: 7 | 8 | 9 | 10; category: SubjectCategory };
   students: SubjectStudent[];
 }
 
@@ -208,6 +247,7 @@ export interface SubjectOverview {
   code: string;
   name: string;
   gradeLevel: 7 | 8 | 9 | 10;
+  category: SubjectCategory;
   active: boolean;
   enrolled: number;
   enrollments: SectionEnrollment[];

@@ -394,9 +394,82 @@ router.get(
         orderBy: { createdAt: "desc" },
       });
 
+      // ADM-track referrals that the coordinator hasn't built a learner
+      // profile for yet — these are still the teacher's cases (sitting at the
+      // consultation stage). Roster enlistments without accounts count too.
+      const earlyWhere: Prisma.ReferralWhereInput =
+        sectionIds.length > 0
+          ? {
+              referredToRole: "adm_coordinator",
+              admProfiles: { none: {} },
+              OR: [
+                { student: { sectionId: { in: sectionIds } } },
+                { roster: { sectionId: { in: sectionIds } } },
+              ],
+            }
+          : {
+              referredBy: teacherId,
+              referredToRole: "adm_coordinator",
+              admProfiles: { none: {} },
+            };
+      const earlyReferrals = await prisma.referral.findMany({
+        where: earlyWhere,
+        select: {
+          id: true,
+          status: true,
+          student: {
+            select: {
+              userId: true,
+              lrn: true,
+              gradeLevel: true,
+              photoUrl: true,
+              user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          roster: {
+            select: {
+              id: true,
+              lrn: true,
+              fullName: true,
+              gradeLevel: true,
+              section: { select: { name: true } },
+            },
+          },
+          anecdotalRecord: { select: { observationDatetime: true } },
+          homeVisitations: { select: { id: true } },
+        },
+        orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
+      });
+
       const stageLabel = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));
-      res.json(
-        profiles.map((p) => {
+      const earlyCases = earlyReferrals.map((r) => ({
+        id: `referral:${r.id}`,
+        studentId: r.student?.userId ?? `roster:${r.roster!.id}`,
+        studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+        lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+        gradeLevel: r.student?.gradeLevel ?? r.roster?.gradeLevel ?? "",
+        section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
+        photoUrl: r.student?.photoUrl ?? null,
+        referralId: r.id,
+        referralStatus: r.status,
+        stage: "consultation",
+        stageLabel: stageLabel.get("consultation") ?? "Consultation & Referral",
+        eligibilityStatus: "pending" as const,
+        approved: false,
+        approvedAt: null as string | null,
+        datePrepared: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
+        meetingAttended: null as boolean | null,
+        hasHomeVisit: r.homeVisitations.length > 0,
+        modulesSubmitted: 0,
+        modulesTotal: 0,
+        devicesIssued: 0,
+        devicesReturned: 0,
+        certificationIssued: false,
+      }));
+
+      res.json([
+        ...profiles.map((p) => {
           const meetings = p.parentMeetings ?? [];
           return {
             id: p.id,
@@ -424,8 +497,9 @@ router.get(
               (f) => f.formType === "CERTIFICATION" && f.status === "verified"
             ),
           };
-        })
-      );
+        }),
+        ...earlyCases,
+      ]);
     } catch (e) {
       next(e);
     }

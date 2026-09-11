@@ -280,6 +280,14 @@ export const NotifChannel = {
 export type NotifChannel = (typeof NotifChannel)[keyof typeof NotifChannel]
 
 
+export const SubjectCategory = {
+  CORE: 'CORE',
+  ELECTIVE: 'ELECTIVE'
+} as const
+
+export type SubjectCategory = (typeof SubjectCategory)[keyof typeof SubjectCategory]
+
+
 export const AdmFormStatus = {
   pending: 'pending',
   submitted: 'submitted',

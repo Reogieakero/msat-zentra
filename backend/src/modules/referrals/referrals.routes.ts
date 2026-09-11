@@ -36,7 +36,7 @@ router.get(
   requireRole("guidance_counselor", "nurse", "adm_coordinator", "principal"),
   async (req, res, next) => {
     try {
-      const referrals = await prisma.referral.findMany({ include: { anecdotalRecord: true, student: true }, orderBy: { id: "asc" } });
+      const referrals = await prisma.referral.findMany({ include: { anecdotalRecord: true, student: true, roster: true }, orderBy: { id: "asc" } });
       res.json(referrals);
     } catch (e) { next(e); }
   }
@@ -64,7 +64,12 @@ router.get(
       const referralWhere = {
         referredBy: teacherId,
         ...(sectionIds.length > 0
-          ? { student: { sectionId: { in: sectionIds } } }
+          ? {
+              OR: [
+                { student: { sectionId: { in: sectionIds } } },
+                { roster: { sectionId: { in: sectionIds } } },
+              ],
+            }
           : {}),
       };
       const referrals = await prisma.referral.findMany({
@@ -74,6 +79,13 @@ router.get(
             select: {
               lrn: true,
               user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          roster: {
+            select: {
+              lrn: true,
+              fullName: true,
               section: { select: { name: true } },
             },
           },
@@ -166,9 +178,9 @@ router.get(
 
         return {
           id: r.id,
-          studentName: r.student.user.fullName,
-          lrn: r.student.lrn,
-          section: r.student.section?.name ?? "",
+          studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+          lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+          section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
           targetRole: r.referredToRole,
           referredBy: r.referredBy,
           reason: r.reason,

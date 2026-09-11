@@ -51,9 +51,11 @@ async function resolveSourceLabel(
       case "anecdotal_records": {
         const r = await prisma.anecdotalRecord.findUnique({
           where: { id: sourceId },
-          select: { studentId: true },
+          select: { studentId: true, roster: { select: { fullName: true } } },
         });
-        const n = r ? await studentName(r.studentId) : null;
+        const n = r?.studentId
+          ? await studentName(r.studentId)
+          : (r?.roster?.fullName ?? null);
         return n ? `Anecdotal · ${n}` : `Anecdotal #${sourceId}`;
       }
       case "interventions": {
@@ -67,9 +69,11 @@ async function resolveSourceLabel(
       case "referrals": {
         const r = await prisma.referral.findUnique({
           where: { id: sourceId },
-          select: { studentId: true },
+          select: { studentId: true, roster: { select: { fullName: true } } },
         });
-        const n = r ? await studentName(r.studentId) : null;
+        const n = r?.studentId
+          ? await studentName(r.studentId)
+          : (r?.roster?.fullName ?? null);
         return n ? `Referral · ${n}` : `Referral #${sourceId}`;
       }
       case "sf10_records": {

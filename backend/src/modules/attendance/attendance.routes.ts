@@ -5,6 +5,7 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { adviserSectionsOr404 } from "../teacher/advisory.routes.js";
 import {
@@ -21,6 +22,8 @@ import {
   type DayAgg,
 } from "../../services/attendance.js";
 import { recomputeRisk } from "../../services/risk.js";
+import { rosterCountsByGrade, sectionHeadcounts } from "../../services/enrollment.js";
+import type { GradeLevel } from "../../generated/prisma/client.js";
 
 const router = Router();
 
@@ -83,36 +86,54 @@ router.post(
       const dayStart = normalizedDate;
       const dayEnd = new Date(dayStart.getTime() + 86_400_000);
 
-      // 3. Every student must be enrolled in the section.
+      // 3. Every student must be enrolled in the section — registered
+      // profiles, or roster enlistments (`roster:<id>`, no account needed).
       const studentIds = Array.from(new Set(records.map((r: { studentId: string }) => r.studentId)));
-      const enrolled = await prisma.studentProfile.count({
-        where: { userId: { in: studentIds }, sectionId },
-      });
-      if (enrolled !== studentIds.length) {
+      const rosterIds = studentIds
+        .filter((id) => id.startsWith("roster:"))
+        .map((id) => id.slice("roster:".length));
+      const profileIds = studentIds.filter((id) => !id.startsWith("roster:"));
+      const [enrolledProfiles, rosterEntries] = await Promise.all([
+        profileIds.length > 0
+          ? prisma.studentProfile.count({ where: { userId: { in: profileIds }, sectionId } })
+          : Promise.resolve(0),
+        rosterIds.length > 0
+          ? prisma.studentRoster.findMany({
+              where: { id: { in: rosterIds }, sectionId },
+              select: { id: true },
+            })
+          : Promise.resolve([]),
+      ]);
+      if (enrolledProfiles !== profileIds.length || rosterEntries.length !== rosterIds.length) {
         throw new AppError(422, "STUDENT_NOT_IN_SECTION", "One or more students are not in this section");
       }
+      const keyOf = (studentId: string | null, rosterId: string | null) =>
+        rosterId ? `roster:${rosterId}` : (studentId as string);
 
       // 4. Previous marks (same calendar day) — notifications fire only when
       //    a status newly becomes absent/late, never on plain resubmits.
       const previous = await prisma.attendanceRecord.findMany({
         where: {
-          studentId: { in: studentIds },
+          OR: [
+            ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
+            ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+          ],
           session,
           date: {
             gte: new Date(`${recordDay}T00:00:00Z`),
             lt: new Date(new Date(`${recordDay}T00:00:00Z`).getTime() + 86_400_000),
           },
         },
-        select: { id: true, studentId: true, status: true },
+        select: { id: true, studentId: true, rosterId: true, status: true },
       });
-      const prevByStudent = new Map(previous.map((p) => [p.studentId, p]));
+      const prevByStudent = new Map(previous.map((p) => [keyOf(p.studentId, p.rosterId), p]));
       // Snapshot of pre-write statuses for the notification check below —
       // prevByStudent gets overwritten with fresh writes in the write loop.
-      const prevStatus = new Map(previous.map((p) => [p.studentId, p.status]));
+      const prevStatus = new Map(previous.map((p) => [keyOf(p.studentId, p.rosterId), p.status]));
       const names = new Map(
         (
           await prisma.user.findMany({
-            where: { id: { in: studentIds } },
+            where: { id: { in: profileIds } },
             select: { id: true, fullName: true },
           })
         ).map((u) => [u.id, u.fullName])
@@ -124,22 +145,42 @@ router.post(
       const written: { id: string; studentId: string }[] = [];
       for (const r of records) {
         const existing = prevByStudent.get(r.studentId);
+        const isRoster = r.studentId.startsWith("roster:");
+        const rosterId = isRoster ? r.studentId.slice("roster:".length) : null;
         const row = existing
           ? await prisma.attendanceRecord.update({
               where: { id: existing.id },
               data: { status: r.status, sectionId, recordedBy: teacherId, date: normalizedDate },
             })
           : await prisma.attendanceRecord.create({
-              data: { studentId: r.studentId, sectionId, termId, date: normalizedDate, session, status: r.status, recordedBy: teacherId },
+              data: {
+                studentId: isRoster ? null : r.studentId,
+                rosterId,
+                sectionId,
+                termId,
+                date: normalizedDate,
+                session,
+                status: r.status,
+                recordedBy: teacherId,
+              },
             });
         written.push({ id: row.id, studentId: r.studentId });
         // Later duplicates in the same payload see the fresh write.
-        prevByStudent.set(r.studentId, { id: row.id, studentId: r.studentId, status: r.status });
+        prevByStudent.set(r.studentId, {
+          id: row.id,
+          studentId: isRoster ? null : r.studentId,
+          rosterId,
+          status: r.status,
+        });
       }
       const byStudent = new Map(written.map((w) => [`${w.studentId}|${session}`, w]));
 
       for (const r of records) {
-        await recomputeRisk(r.studentId, termId);
+        // Risk + parent notifications only apply to registered profiles —
+        // roster enlistments have no risk record or linked parents (yet).
+        if (!r.studentId.startsWith("roster:")) {
+          await recomputeRisk(r.studentId, termId);
+        }
         const prev = prevStatus.get(r.studentId);
         const newlyFlagged =
           (r.status === "absent" || r.status === "late") &&
@@ -170,6 +211,8 @@ router.post(
         sourceId: `${sectionId}|${recordDay}|${session}`,
         reason: `Bulk attendance: ${written.length} marks (${session} ${recordDay})`,
       });
+      // Attendance stats feed cached overview/teacher pages.
+      await invalidateTags(["overview", "principal", "teacher"]);
 
       res.status(201).json({ count: written.length });
     } catch (e) { next(e); }
@@ -210,17 +253,25 @@ router.get(
 
       const records = await prisma.attendanceRecord.findMany({
         where,
-        include: { student: { select: { gradeLevel: true } } },
+        include: {
+          student: { select: { gradeLevel: true } },
+          roster: { select: { gradeLevel: true } },
+        },
         orderBy: { date: "asc" },
       });
 
-      // Authoritative denominator: number of enrolled students per year level.
+      // Authoritative denominator: number of enrolled students per year level
+      // (roster-aware — enlisted students without accounts count too).
       const enrolledByGrade: Record<string, number> = {};
-      const enrollCounts = await prisma.studentProfile.groupBy({
-        by: ["gradeLevel"],
-        _count: { _all: true },
-      });
+      const [enrollCounts, rosterByGrade] = await Promise.all([
+        prisma.studentProfile.groupBy({
+          by: ["gradeLevel"],
+          _count: { _all: true },
+        }),
+        rosterCountsByGrade([...GRADE_ORDER] as GradeLevel[]),
+      ]);
       for (const e of enrollCounts) enrolledByGrade[e.gradeLevel] = e._count._all;
+      for (const [gl, n] of rosterByGrade) enrolledByGrade[gl] = (enrolledByGrade[gl] ?? 0) + n;
 
       // Build a continuous date axis from the term start date to today so every
       // grade card shows the same number of blocks aligned to the same dates.
@@ -238,7 +289,9 @@ router.get(
       // enrolled student is accounted for even when a record was never submitted.
       const gradeDayStatus: Record<string, Map<string, { present: number; late: number; excused: number }>> = {};
       for (const r of records) {
-        const grade = r.student.gradeLevel;
+        // Roster-marked rows (no account yet) carry the grade from the roster entry.
+        const grade = r.student?.gradeLevel ?? r.roster?.gradeLevel;
+        if (!grade) continue;
         const key = r.date.toISOString().slice(0, 10);
         if (!gradeDayStatus[grade]) gradeDayStatus[grade] = new Map();
         if (!gradeDayStatus[grade].has(key)) {
@@ -320,6 +373,7 @@ router.get(
           date: true,
           status: true,
           student: { select: { gradeLevel: true } },
+          roster: { select: { gradeLevel: true } },
         },
       });
 
@@ -334,7 +388,9 @@ router.get(
         agg.total += 1;
         if (r.status === "present") agg.present += 1;
 
-        const grade = r.student.gradeLevel;
+        // Roster-marked rows (no account yet) carry the grade from the roster entry.
+        const grade = r.student?.gradeLevel ?? r.roster?.gradeLevel;
+        if (!grade) continue;
         if (!gradeDayAgg[grade]) gradeDayAgg[grade] = new Map();
         if (!gradeDayAgg[grade].has(key)) gradeDayAgg[grade].set(key, { present: 0, total: 0 });
         const gAgg = gradeDayAgg[grade].get(key)!;
@@ -418,12 +474,13 @@ router.get(
           id: true,
           name: true,
           gradeLevel: true,
-          students: { select: { userId: true } },
         },
         orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
       });
+      // Roster-aware headcount: enlisted students without accounts count too.
+      const headcounts = await sectionHeadcounts(sections.map((s) => s.id));
       const enrolledBySection: Record<string, number> = {};
-      for (const s of sections) enrolledBySection[s.id] = s.students.length;
+      for (const s of sections) enrolledBySection[s.id] = headcounts.get(s.id) ?? 0;
 
       // Continuous date axis: term start -> today (shared engine).
       const dayKeys = buildDayAxis(activeTerm?.startDate);
@@ -538,11 +595,13 @@ router.get(
 
       const sections = await prisma.section.findMany({
         where: { schoolYear: { isActive: true } },
-        select: { id: true, name: true, gradeLevel: true, students: { select: { userId: true } } },
+        select: { id: true, name: true, gradeLevel: true },
         orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
       });
+      // Roster-aware headcount: enlisted students without accounts count too.
+      const headcounts = await sectionHeadcounts(sections.map((s) => s.id));
       const enrolledBySection: Record<string, number> = {};
-      for (const s of sections) enrolledBySection[s.id] = s.students.length;
+      for (const s of sections) enrolledBySection[s.id] = headcounts.get(s.id) ?? 0;
       const totalEnrolled = Object.values(enrolledBySection).reduce((a, b) => a + b, 0);
 
       // Shared engine: date axis + weekday count from the single source of truth.
@@ -732,10 +791,12 @@ router.get(
 
       const sections = await prisma.section.findMany({
         where: { schoolYear: { isActive: true } },
-        select: { id: true, students: { select: { userId: true } } },
+        select: { id: true },
       });
+      // Roster-aware headcount: enlisted students without accounts count too.
+      const headcounts = await sectionHeadcounts(sections.map((s) => s.id));
       const enrolledBySection: Record<string, number> = {};
-      for (const s of sections) enrolledBySection[s.id] = s.students.length;
+      for (const s of sections) enrolledBySection[s.id] = headcounts.get(s.id) ?? 0;
       const totalEnrolled = Object.values(enrolledBySection).reduce((a, b) => a + b, 0);
 
       const records = await prisma.attendanceRecord.findMany({

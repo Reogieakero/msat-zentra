@@ -1,13 +1,14 @@
 import * as React from "react";
-import { BookOpen, Columns3 } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Columns3 } from "lucide-react";
 import styles from "./configure-section.module.css";
 
 type Props = {
   onAddSubject: () => void;
   onAddSection: () => void;
+  onAssignSubjects: () => void;
 };
 
-export function ConfigureSection({ onAddSubject, onAddSection }: Props) {
+export function ConfigureSection({ onAddSubject, onAddSection, onAssignSubjects }: Props) {
   return (
     <div className={styles.grid}>
       <button type="button" className={styles.card} onClick={onAddSubject}>
@@ -27,6 +28,16 @@ export function ConfigureSection({ onAddSubject, onAddSection }: Props) {
         <span className={styles.cardBody}>
           <span className={styles.cardTitle}>Add Section</span>
           <span className={styles.cardHint}>Create a class section with an adviser</span>
+        </span>
+      </button>
+
+      <button type="button" className={styles.card} onClick={onAssignSubjects}>
+        <span className={styles.iconWrap}>
+          <ArrowLeftRight className={styles.icon} />
+        </span>
+        <span className={styles.cardBody}>
+          <span className={styles.cardTitle}>Assign Subjects</span>
+          <span className={styles.cardHint}>Assign subjects + teachers to a section</span>
         </span>
       </button>
     </div>

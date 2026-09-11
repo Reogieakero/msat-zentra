@@ -2,9 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  ArrowRight,
   ClipboardList,
-  Eye,
   Landmark,
   MessagesSquare,
   Stethoscope,
@@ -90,6 +88,7 @@ interface AnecdotalRecord {
   excerpt: string;
   hasReferral?: boolean;
   referralCount?: number;
+  hasAccount?: boolean;
 }
 
 interface ReferralComposerProps {
@@ -196,6 +195,8 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
     }
     // Open the view-or-continue modal instead of selecting immediately so
     // the teacher can preview the anecdotal before committing to it.
+    // Records for students without accounts can still be previewed —
+    // only continuing to a referral requires an account.
     setPendingRecord(record);
     setError(null);
   }
@@ -296,8 +297,13 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
       <div className={styles.body}>
         {step === 1 && (
           <fieldset className={styles.question}>
-            <legend className={styles.prompt}>
-              Which student and anecdotal record is this referral from?
+            <legend className={`${styles.prompt} ${styles.promptRow}`}>
+              <span>Which student and anecdotal record is this referral from?</span>
+              {activeFolder ? (
+                <Button type="button" variant="outline" size="sm" onClick={handleBackToStudents}>
+                  Back to students
+                </Button>
+              ) : null}
             </legend>
             {referables.length === 0 ? (
               <p className={styles.empty}>
@@ -377,13 +383,6 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
                   </>
                 ) : (
                   <div className={styles.recordGrid}>
-                    <button
-                      type="button"
-                      className={styles.backToStudents}
-                      onClick={handleBackToStudents}
-                    >
-                      ← Back to students
-                    </button>
                     <p className={styles.recordHeading}>
                       {activeFolder.studentName} · LRN {activeFolder.lrn} — pick which report to
                       refer ({activeFolder.referableCount} of {activeFolder.records.length}{" "}
@@ -398,7 +397,11 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
                       })
                       .map((r) => {
                         const selected = r.id === anecdotalId;
+                        // Already-referred reports stay unclickable.
                         const disabled = !!r.hasReferral;
+                        const title = r.hasReferral
+                          ? "This report already has a referral"
+                          : `Refer this ${CATEGORY_LABELS[r.category] ?? r.category} report`;
                         return (
                           <button
                             key={r.id}
@@ -406,7 +409,7 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
                             aria-pressed={selected}
                             disabled={disabled}
                             aria-disabled={disabled}
-                            title={disabled ? "This report already has a referral" : `Refer this ${CATEGORY_LABELS[r.category] ?? r.category} report`}
+                            title={title}
                             className={`${styles.folderPick} ${selected ? styles.folderPickSelected : ""} ${disabled ? styles.folderPickDisabled : ""}`}
                             onClick={() => handleRecordSelect(r)}
                           >
@@ -606,12 +609,10 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleModalView}>
-              <Eye aria-hidden />
               View anecdotal
             </Button>
             <Button type="button" onClick={handleModalContinue}>
               Continue
-              <ArrowRight aria-hidden />
             </Button>
           </DialogFooter>
         </DialogContent>

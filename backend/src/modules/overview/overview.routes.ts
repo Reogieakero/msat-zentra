@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
+import { sectionHeadcounts, totalRosterHeadcount } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
 import {
@@ -32,9 +33,11 @@ router.get(
       // Overview's live recompute matches the board/heatmap/students exactly.
       const termId = await resolveActiveTermId();
 
-      const [enrollment, activeSections, teachers, anecdotals, students, admPending, accountApprovals, sectionPopulations] =
+      const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, admPending, accountApprovals, sectionPopulations] =
         await Promise.all([
           prisma.studentProfile.count(),
+          // Enlisted students without accounts count toward enrollment too.
+          totalRosterHeadcount(),
           prisma.section.count({ where: { adviserId: { not: null } } }),
           prisma.staffProfile.count(),
           prisma.anecdotalRecord.count(termId ? { where: { termId } } : undefined),
@@ -42,7 +45,7 @@ router.get(
             where: schoolYearId ? { section: { schoolYearId } } : undefined,
             select: {
               gradeLevel: true,
-              section: { select: { _count: { select: { students: true } } } },
+              section: { select: { id: true, _count: { select: { students: true } } } },
               finalGrades: { where: termId ? { termId } : undefined, select: { computedAverage: true, transmutedGrade: true, lockStatus: true, finalizedAt: true } },
               attendanceRecords: {
                 where: termId ? { termId } : undefined,
@@ -60,10 +63,16 @@ router.get(
           prisma.user.count({ where: { status: "pending" } }),
           prisma.section.findMany({
             where: schoolYearId ? { schoolYearId } : undefined,
-            select: { name: true, gradeLevel: true, _count: { select: { students: true } } },
+            select: { id: true, name: true, gradeLevel: true, _count: { select: { students: true } } },
             orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
           }),
         ]);
+
+      const enrollment = profiles + rosterExtra;
+
+      // Roster-aware section headcounts (registered + enlisted, no double
+      // count) for populations and attendance denominators below.
+      const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
 
       // Live risk recompute via the shared engine so the Overview agrees with
       // the Risk board/students pages (stored riskLevel column is NOT trusted).
@@ -79,7 +88,7 @@ router.get(
           finalGrades: s.finalGrades,
           attendance: s.attendanceRecords,
           anecdotalCount: s.anecdotalRecords.length,
-          enrolled: s.section?._count.students ?? 0,
+          enrolled: headcounts.get(s.section?.id ?? "") ?? s.section?._count.students ?? 0,
         });
         if (flags.attendanceFlag) attendance++;
         if (flags.academicFlag) grades++;
@@ -132,12 +141,13 @@ router.get(
         count: riskByGrade.get(g) ?? 0,
       }));
 
-      // Per-section population (enrolled students) for the active school year,
-      // labelled by grade and ordered G7 -> G12 then section name.
+      // Per-section population (enrolled students, roster-aware) for the
+      // active school year, labelled by grade and ordered G7 -> G12 then
+      // section name.
       const sectionPopulationRows = sectionPopulations.map((s) => ({
         grade: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
         section: s.name,
-        count: s._count.students,
+        count: headcounts.get(s.id) ?? s._count.students,
       }));
 
       // Sections with attendance below 80% (attendance watch).

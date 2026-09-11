@@ -47,8 +47,28 @@ router.post(
           throw new AppError(404, "FOLDER_NOT_FOUND", "Folder not found");
         }
       }
+      // Enlisted students without accounts file under `roster:<id>` — the
+      // roster entry must belong to the record's section.
+      const rawStudentId = String(req.body.studentId);
+      const isRoster = rawStudentId.startsWith("roster:");
+      const rosterId = isRoster ? rawStudentId.slice("roster:".length) : null;
+      if (isRoster) {
+        const entry = await prisma.studentRoster.findUnique({
+          where: { id: rosterId as string },
+          select: { sectionId: true },
+        });
+        if (!entry || entry.sectionId !== String(req.body.sectionId)) {
+          throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found in this section");
+        }
+      }
       const record = await prisma.anecdotalRecord.create({
-        data: { ...req.body, observationDatetime: new Date(req.body.observationDatetime), observerId: req.user!.id },
+        data: {
+          ...req.body,
+          studentId: isRoster ? null : rawStudentId,
+          rosterId,
+          observationDatetime: new Date(req.body.observationDatetime),
+          observerId: req.user!.id,
+        },
       });
       await writeAudit({ userId: req.user!.id, actionType: "anecdotal_edit", sourceTable: "anecdotal_records", sourceId: record.id, reason: "Anecdotal record created" });
       res.status(201).json(record);
@@ -91,7 +111,7 @@ router.post(
     try {
       const record = await prisma.anecdotalRecord.findUnique({
         where: { id: String(req.params.id) },
-        select: { id: true, studentId: true, sectionId: true },
+        select: { id: true, studentId: true, rosterId: true, sectionId: true },
       });
       if (!record) throw new AppError(404, "NOT_FOUND", "Anecdotal record not found");
       const section = await prisma.section.findUnique({
@@ -107,8 +127,10 @@ router.post(
       if (!termId) {
         throw new AppError(409, "NO_ACTIVE_TERM", "No active term");
       }
+      // The referral carries whichever student identity the record holds —
+      // registered profile or roster enlistment (no account needed to file).
       const referral = await prisma.referral.create({
-        data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, termId },
+        data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, rosterId: record.rosterId, termId },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}` });
       res.status(201).json(referral);
@@ -152,7 +174,7 @@ router.get(
         : "";
       const where = termId ? { termId } : {};
 
-      const [sections, records, followups, referrals] = await Promise.all([
+      const [sections, rosterEntries, records, followups, referrals] = await Promise.all([
         prisma.section.findMany({
           where: termId ? { schoolYearId: activeTerm!.schoolYearId } : {},
           orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
@@ -169,11 +191,17 @@ router.get(
             },
           },
         }),
+        // Enlisted students without accounts — shown with their records too.
+        prisma.studentRoster.findMany({
+          where: termId ? { schoolYearId: activeTerm!.schoolYearId } : {},
+          select: { id: true, lrn: true, fullName: true, sectionId: true },
+        }),
         prisma.anecdotalRecord.findMany({
           where,
           select: {
             id: true,
             studentId: true,
+            rosterId: true,
             sectionId: true,
             observationDatetime: true,
             descriptionOfIncident: true,
@@ -205,16 +233,49 @@ router.get(
         followups.map((f) => f.anecdotalRecordId)
       );
 
+      const keyOf = (r: { studentId: string | null; rosterId: string | null }) =>
+        r.rosterId ? `roster:${r.rosterId}` : (r.studentId as string);
       const recordByStudent = new Map<string, typeof records>();
       for (const r of records) {
-        const arr = recordByStudent.get(r.studentId) ?? [];
+        const key = keyOf(r);
+        const arr = recordByStudent.get(key) ?? [];
         arr.push(r);
-        recordByStudent.set(r.studentId, arr);
+        recordByStudent.set(key, arr);
       }
+      const rosterBySection = new Map<string, typeof rosterEntries>();
+      for (const r of rosterEntries) {
+        const arr = rosterBySection.get(r.sectionId) ?? [];
+        arr.push(r);
+        rosterBySection.set(r.sectionId, arr);
+      }
+
+      const toBehavioral = (recs: typeof records) =>
+        recs.map((r) => {
+          const referral = latestReferral.get(r.id);
+          return {
+            id: r.id,
+            date: r.observationDatetime.toISOString().slice(0, 10),
+            category: r.category,
+            description: r.descriptionOfIncident,
+            severity:
+              referral?.status === "resolved"
+                ? "Low"
+                : r.confidentialityLevel === "confidential"
+                  ? "High"
+                  : "Moderate",
+            staff: r.observer.fullName,
+            resolution: r.notesRecommendationsActions ?? "",
+            followUp: referral?.status === "resolved"
+              ? "Resolved"
+              : hasFollowup.has(r.id)
+                ? "Monitoring"
+                : "Pending",
+          };
+        });
 
       const dataSections = sections
         .map((section) => {
-          const students = section.students
+          const profileRows = section.students
             .map((st) => {
               const recs = recordByStudent.get(st.userId);
               if (!recs || recs.length === 0) return null;
@@ -225,31 +286,27 @@ router.get(
                 gradeLevel: section.gradeLevel,
                 section: section.name,
                 sectionId: section.id,
-                behavioral: recs.map((r) => {
-                  const referral = latestReferral.get(r.id);
-                  return {
-                    id: r.id,
-                    date: r.observationDatetime.toISOString().slice(0, 10),
-                    category: r.category,
-                    description: r.descriptionOfIncident,
-                    severity:
-                      referral?.status === "resolved"
-                        ? "Low"
-                        : r.confidentialityLevel === "confidential"
-                          ? "High"
-                          : "Moderate",
-                    staff: r.observer.fullName,
-                    resolution: r.notesRecommendationsActions ?? "",
-                    followUp: referral?.status === "resolved"
-                      ? "Resolved"
-                      : hasFollowup.has(r.id)
-                        ? "Monitoring"
-                        : "Pending",
-                  };
-                }),
+                behavioral: toBehavioral(recs),
               };
             })
             .filter((s): s is NonNullable<typeof s> => s !== null);
+          // Roster-enlisted students without accounts, with records.
+          const rosterRows = (rosterBySection.get(section.id) ?? [])
+            .map((st) => {
+              const recs = recordByStudent.get(`roster:${st.id}`);
+              if (!recs || recs.length === 0) return null;
+              return {
+                lrn: st.lrn,
+                name: st.fullName,
+                status: "Enlisted",
+                gradeLevel: section.gradeLevel,
+                section: section.name,
+                sectionId: section.id,
+                behavioral: toBehavioral(recs),
+              };
+            })
+            .filter((s): s is NonNullable<typeof s> => s !== null);
+          const students = [...profileRows, ...rosterRows];
           if (students.length === 0) return null;
           return {
             sectionId: section.id,
@@ -306,6 +363,14 @@ router.get(
                 user: { select: { fullName: true } },
               },
             },
+            roster: {
+              select: {
+                lrn: true,
+                fullName: true,
+                gradeLevel: true,
+                section: { select: { name: true } },
+              },
+            },
             observer: { select: { fullName: true } },
           },
         }),
@@ -331,9 +396,9 @@ router.get(
 
       const students = recent.map((r) => ({
         id: r.id,
-        lrn: r.student.lrn,
-        section: r.student.section?.name ?? "",
-        year: GRADE_LABEL[r.student.gradeLevel] ?? r.student.gradeLevel,
+        lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+        section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
+        year: GRADE_LABEL[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
         dateAdded: r.observationDatetime.toISOString().slice(0, 10),
         adviser: r.observer.fullName,
       }));
@@ -486,6 +551,14 @@ router.get(
               section: { select: { name: true } },
             },
           },
+          roster: {
+            select: {
+              id: true,
+              lrn: true,
+              fullName: true,
+              section: { select: { name: true } },
+            },
+          },
           section: { select: { name: true } },
           folder: { select: { id: true, name: true } },
         },
@@ -497,10 +570,10 @@ router.get(
           category: r.category,
           confidentialityLevel: r.confidentialityLevel,
           incident: r.descriptionOfIncident,
-          studentId: r.student.userId,
-          studentName: r.student.user.fullName,
-          lrn: r.student.lrn,
-          section: r.student.section?.name ?? r.section.name,
+          studentId: r.student?.userId ?? (r.roster ? `roster:${r.roster.id}` : ""),
+          studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+          lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+          section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
           folderId: r.folderId,
           folderName: r.folder?.name ?? null,
         }))
@@ -571,10 +644,20 @@ router.get(
               section: { select: { name: true } },
             },
           },
+          roster: {
+            select: {
+              id: true,
+              lrn: true,
+              fullName: true,
+              section: { select: { name: true } },
+            },
+          },
           section: { select: { name: true } },
         },
       });
       res.json(
+        // Roster-only records carry no account: they show for profiling
+        // context but cannot be referred until the student registers.
         records.map((r) => ({
           id: r.id,
           observationDatetime: r.observationDatetime,
@@ -582,13 +665,14 @@ router.get(
           category: r.category,
           confidentialityLevel: r.confidentialityLevel,
           incident: r.descriptionOfIncident,
-          studentId: r.student.userId,
-          studentName: r.student.user.fullName,
-          lrn: r.student.lrn,
-          section: r.student.section?.name ?? r.section.name,
+          studentId: r.student?.userId ?? (r.roster ? `roster:${r.roster.id}` : ""),
+          studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+          lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+          section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
           excerpt: r.descriptionOfIncident?.slice(0, 120) ?? "",
           hasReferral: r.referrals.length > 0,
           referralCount: r.referrals.length,
+          hasAccount: r.student != null,
         }))
       );
     } catch (e) {
@@ -675,6 +759,12 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
           user: { select: { fullName: true } },
         },
       },
+      roster: {
+        select: {
+          gradeLevel: true,
+          fullName: true,
+        },
+      },
       section: {
         select: {
           name: true,
@@ -694,7 +784,8 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
     throw new AppError(403, "FORBIDDEN", "Only the observer, section adviser, principal, or guidance counselor may open the official form");
   }
 
-  const gradeLabel = GRADE_LABEL_OC[record.student.gradeLevel] ?? record.student.gradeLevel;
+  const studentGrade = record.student?.gradeLevel ?? record.roster?.gradeLevel;
+  const gradeLabel = (studentGrade && GRADE_LABEL_OC[studentGrade]) ?? studentGrade ?? "";
   const gradeSection = `${gradeLabel} - ${record.section.name}`;
   const when = record.observationDatetime;
 
@@ -727,7 +818,7 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
       minute: "2-digit",
       timeZone: "Asia/Manila",
     }),
-    studentName: record.student.user.fullName,
+    studentName: record.student?.user.fullName ?? record.roster?.fullName ?? "",
     descriptionOfIncident: record.descriptionOfIncident,
     descriptionOfLocation: record.descriptionOfLocation ?? "",
     notesRecommendationsActions: record.notesRecommendationsActions ?? "",

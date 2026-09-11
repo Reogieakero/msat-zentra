@@ -1,10 +1,15 @@
 export type GradeLevel = 7 | 8 | 9 | 10;
 
+export type SubjectCategory = "Core" | "Elective";
+
+export const SUBJECT_CATEGORIES: SubjectCategory[] = ["Core", "Elective"];
+
 export type Subject = {
   id: string;
   code: string;
   name: string;
   gradeLevel: GradeLevel;
+  category: SubjectCategory;
   active: boolean;
   enrolled: number;
   passed: number;
@@ -31,6 +36,7 @@ export type Section = {
   name: string;
   gradeLevel: GradeLevel;
   schoolYear: string;
+  schoolYearId: string;
   adviserId: string;
   adviserName: string;
   assignments: Assignment[];
@@ -49,6 +55,10 @@ export type Student = {
   status: StudentStatus;
 };
 
-export const SCHOOL_YEARS = ["2026–2027", "2025–2026", "2024–2025"] as const;
-export const ACTIVE_SCHOOL_YEAR = "2026–2027";
+// Labels must match the backend `SchoolYear.name` format ("SY 2026-2027").
+// The old values used an en dash without the "SY " prefix, which never matched
+// any stored row and forced the API to fall back to (or fail on) the active year.
+// School-year options come from the database (GET …/academics/school-years).
+// Nothing here is hardcoded: the dialog falls back to the section's year,
+// then the active year, then the first available year.
 export const TERMS = ["Term 1", "Term 2", "Term 3"] as const;

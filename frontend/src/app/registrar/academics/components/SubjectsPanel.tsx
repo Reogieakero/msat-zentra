@@ -118,6 +118,7 @@ export function SubjectsPanel({ subjects, loading, onUpsert }: Props) {
                 <h3 className={styles.tileName}>{s.name}</h3>
                 <div className={styles.tileFoot}>
                   <span className={styles.gradeTag}>Grade {s.gradeLevel as GradeLevel}</span>
+                  <Badge variant={s.category === "Elective" ? "outline" : "secondary"}>{s.category}</Badge>
                   {s.active ? (
                     <Badge variant="secondary">Active</Badge>
                   ) : (

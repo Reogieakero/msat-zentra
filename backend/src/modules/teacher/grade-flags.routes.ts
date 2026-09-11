@@ -185,7 +185,7 @@ router.get(
       const { assignedSectionIds, advisedSectionIds } = await teacherScope(teacherId);
       const sectionIds = Array.from(new Set([...assignedSectionIds, ...advisedSectionIds]));
 
-      const [students, assignments, sectionClasses] = await Promise.all([
+      const [profiles, rosterEntries, assignments, sectionClasses] = await Promise.all([
         prisma.studentProfile.findMany({
           where: { sectionId: { in: sectionIds } },
           select: {
@@ -195,6 +195,14 @@ router.get(
             user: { select: { fullName: true } },
           },
           orderBy: { user: { fullName: "asc" } },
+        }),
+        // Enlisted students without accounts (no login yet) — keyed
+        // `roster:<id>`. Grade-flag raising stays profile-only; the
+        // anecdotal composer accepts both.
+        prisma.studentRoster.findMany({
+          where: { sectionId: { in: sectionIds } },
+          select: { id: true, lrn: true, fullName: true, sectionId: true },
+          orderBy: { fullName: "asc" },
         }),
         prisma.teacherSubjectAssignment.findMany({
           where: { teacherId },
@@ -219,13 +227,26 @@ router.get(
         }),
       ]);
 
+      const registeredLrns = new Set(profiles.map((s) => s.lrn));
       res.json({
-        students: students.map((s) => ({
-          id: s.userId,
-          name: s.user.fullName,
-          lrn: s.lrn,
-          sectionId: s.sectionId,
-        })),
+        students: [
+          ...profiles.map((s) => ({
+            id: s.userId,
+            name: s.user.fullName,
+            lrn: s.lrn,
+            sectionId: s.sectionId,
+            hasAccount: true as const,
+          })),
+          ...rosterEntries
+            .filter((r) => !registeredLrns.has(r.lrn))
+            .map((r) => ({
+              id: `roster:${r.id}`,
+              name: r.fullName,
+              lrn: r.lrn,
+              sectionId: r.sectionId,
+              hasAccount: false as const,
+            })),
+        ],
         classes: assignments.map((a) => ({
           subjectId: a.subject.id,
           subjectName: a.subject.name,

@@ -54,7 +54,9 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
 
   const students = useMemo(() => {
     if (!options || !selectedClass) return [];
-    return options.students.filter((s) => s.sectionId === selectedClass.sectionId);
+    // Grade flags attach to registered profiles only — roster enlistments
+    // (`roster:<id>`, no account yet) are excluded.
+    return options.students.filter((s) => s.sectionId === selectedClass.sectionId && !s.id.startsWith("roster:"));
   }, [options, selectedClass]);
 
   function reset() {

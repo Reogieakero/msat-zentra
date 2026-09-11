@@ -27,6 +27,7 @@ export type AggregateAnecdotalRecord = {
 export type AnecdotalRecordMinAggregateOutputType = {
   id: string | null
   studentId: string | null
+  rosterId: string | null
   observerId: string | null
   sectionId: string | null
   observationDatetime: Date | null
@@ -48,6 +49,7 @@ export type AnecdotalRecordMinAggregateOutputType = {
 export type AnecdotalRecordMaxAggregateOutputType = {
   id: string | null
   studentId: string | null
+  rosterId: string | null
   observerId: string | null
   sectionId: string | null
   observationDatetime: Date | null
@@ -69,6 +71,7 @@ export type AnecdotalRecordMaxAggregateOutputType = {
 export type AnecdotalRecordCountAggregateOutputType = {
   id: number
   studentId: number
+  rosterId: number
   observerId: number
   sectionId: number
   observationDatetime: number
@@ -92,6 +95,7 @@ export type AnecdotalRecordCountAggregateOutputType = {
 export type AnecdotalRecordMinAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   observerId?: true
   sectionId?: true
   observationDatetime?: true
@@ -113,6 +117,7 @@ export type AnecdotalRecordMinAggregateInputType = {
 export type AnecdotalRecordMaxAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   observerId?: true
   sectionId?: true
   observationDatetime?: true
@@ -134,6 +139,7 @@ export type AnecdotalRecordMaxAggregateInputType = {
 export type AnecdotalRecordCountAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   observerId?: true
   sectionId?: true
   observationDatetime?: true
@@ -227,7 +233,8 @@ export type AnecdotalRecordGroupByArgs<ExtArgs extends runtime.Types.Extensions.
 
 export type AnecdotalRecordGroupByOutputType = {
   id: string
-  studentId: string
+  studentId: string | null
+  rosterId: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date
@@ -269,7 +276,8 @@ export type AnecdotalRecordWhereInput = {
   OR?: Prisma.AnecdotalRecordWhereInput[]
   NOT?: Prisma.AnecdotalRecordWhereInput | Prisma.AnecdotalRecordWhereInput[]
   id?: Prisma.StringFilter<"AnecdotalRecord"> | string
-  studentId?: Prisma.StringFilter<"AnecdotalRecord"> | string
+  studentId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   observerId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   sectionId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   observationDatetime?: Prisma.DateTimeFilter<"AnecdotalRecord"> | Date | string
@@ -286,7 +294,8 @@ export type AnecdotalRecordWhereInput = {
   signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
   signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   observer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
@@ -297,7 +306,8 @@ export type AnecdotalRecordWhereInput = {
 
 export type AnecdotalRecordOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   observerId?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   observationDatetime?: Prisma.SortOrder
@@ -315,6 +325,7 @@ export type AnecdotalRecordOrderByWithRelationInput = {
   signedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   student?: Prisma.StudentProfileOrderByWithRelationInput
+  roster?: Prisma.StudentRosterOrderByWithRelationInput
   observer?: Prisma.UserOrderByWithRelationInput
   section?: Prisma.SectionOrderByWithRelationInput
   term?: Prisma.TermOrderByWithRelationInput
@@ -328,7 +339,8 @@ export type AnecdotalRecordWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.AnecdotalRecordWhereInput | Prisma.AnecdotalRecordWhereInput[]
   OR?: Prisma.AnecdotalRecordWhereInput[]
   NOT?: Prisma.AnecdotalRecordWhereInput | Prisma.AnecdotalRecordWhereInput[]
-  studentId?: Prisma.StringFilter<"AnecdotalRecord"> | string
+  studentId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   observerId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   sectionId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   observationDatetime?: Prisma.DateTimeFilter<"AnecdotalRecord"> | Date | string
@@ -345,7 +357,8 @@ export type AnecdotalRecordWhereUniqueInput = Prisma.AtLeast<{
   signedBy?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   signedAt?: Prisma.DateTimeNullableFilter<"AnecdotalRecord"> | Date | string | null
   signatureImageUrl?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   observer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   section?: Prisma.XOR<Prisma.SectionScalarRelationFilter, Prisma.SectionWhereInput>
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
@@ -356,7 +369,8 @@ export type AnecdotalRecordWhereUniqueInput = Prisma.AtLeast<{
 
 export type AnecdotalRecordOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   observerId?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   observationDatetime?: Prisma.SortOrder
@@ -383,7 +397,8 @@ export type AnecdotalRecordScalarWhereWithAggregatesInput = {
   OR?: Prisma.AnecdotalRecordScalarWhereWithAggregatesInput[]
   NOT?: Prisma.AnecdotalRecordScalarWhereWithAggregatesInput | Prisma.AnecdotalRecordScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AnecdotalRecord"> | string
-  studentId?: Prisma.StringWithAggregatesFilter<"AnecdotalRecord"> | string
+  studentId?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
+  rosterId?: Prisma.StringNullableWithAggregatesFilter<"AnecdotalRecord"> | string | null
   observerId?: Prisma.StringWithAggregatesFilter<"AnecdotalRecord"> | string
   sectionId?: Prisma.StringWithAggregatesFilter<"AnecdotalRecord"> | string
   observationDatetime?: Prisma.DateTimeWithAggregatesFilter<"AnecdotalRecord"> | Date | string
@@ -416,7 +431,8 @@ export type AnecdotalRecordCreateInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
@@ -427,7 +443,8 @@ export type AnecdotalRecordCreateInput = {
 
 export type AnecdotalRecordUncheckedCreateInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -462,7 +479,8 @@ export type AnecdotalRecordUpdateInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -473,7 +491,8 @@ export type AnecdotalRecordUpdateInput = {
 
 export type AnecdotalRecordUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -496,7 +515,8 @@ export type AnecdotalRecordUncheckedUpdateInput = {
 
 export type AnecdotalRecordCreateManyInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -533,7 +553,8 @@ export type AnecdotalRecordUpdateManyMutationInput = {
 
 export type AnecdotalRecordUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -565,6 +586,7 @@ export type AnecdotalRecordOrderByRelationAggregateInput = {
 export type AnecdotalRecordCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   observerId?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   observationDatetime?: Prisma.SortOrder
@@ -586,6 +608,7 @@ export type AnecdotalRecordCountOrderByAggregateInput = {
 export type AnecdotalRecordMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   observerId?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   observationDatetime?: Prisma.SortOrder
@@ -607,6 +630,7 @@ export type AnecdotalRecordMaxOrderByAggregateInput = {
 export type AnecdotalRecordMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   observerId?: Prisma.SortOrder
   sectionId?: Prisma.SortOrder
   observationDatetime?: Prisma.SortOrder
@@ -798,6 +822,48 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput = {
   deleteMany?: Prisma.AnecdotalRecordScalarWhereInput | Prisma.AnecdotalRecordScalarWhereInput[]
 }
 
+export type AnecdotalRecordCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput> | Prisma.AnecdotalRecordCreateWithoutRosterInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput | Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyRosterInputEnvelope
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+}
+
+export type AnecdotalRecordUncheckedCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput> | Prisma.AnecdotalRecordCreateWithoutRosterInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput | Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyRosterInputEnvelope
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+}
+
+export type AnecdotalRecordUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput> | Prisma.AnecdotalRecordCreateWithoutRosterInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput | Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutRosterInput | Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyRosterInputEnvelope
+  set?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  disconnect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  delete?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  update?: Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutRosterInput | Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.AnecdotalRecordUpdateManyWithWhereWithoutRosterInput | Prisma.AnecdotalRecordUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.AnecdotalRecordScalarWhereInput | Prisma.AnecdotalRecordScalarWhereInput[]
+}
+
+export type AnecdotalRecordUncheckedUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput> | Prisma.AnecdotalRecordCreateWithoutRosterInput[] | Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput | Prisma.AnecdotalRecordCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutRosterInput | Prisma.AnecdotalRecordUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.AnecdotalRecordCreateManyRosterInputEnvelope
+  set?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  disconnect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  delete?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  connect?: Prisma.AnecdotalRecordWhereUniqueInput | Prisma.AnecdotalRecordWhereUniqueInput[]
+  update?: Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutRosterInput | Prisma.AnecdotalRecordUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.AnecdotalRecordUpdateManyWithWhereWithoutRosterInput | Prisma.AnecdotalRecordUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.AnecdotalRecordScalarWhereInput | Prisma.AnecdotalRecordScalarWhereInput[]
+}
+
 export type EnumAnecdotalCategoryFieldUpdateOperationsInput = {
   set?: $Enums.AnecdotalCategory
 }
@@ -890,7 +956,8 @@ export type AnecdotalRecordCreateWithoutObserverInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
   folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
@@ -900,7 +967,8 @@ export type AnecdotalRecordCreateWithoutObserverInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutObserverInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   sectionId: string
   observationDatetime: Date | string
   descriptionOfIncident: string
@@ -951,7 +1019,8 @@ export type AnecdotalRecordScalarWhereInput = {
   OR?: Prisma.AnecdotalRecordScalarWhereInput[]
   NOT?: Prisma.AnecdotalRecordScalarWhereInput | Prisma.AnecdotalRecordScalarWhereInput[]
   id?: Prisma.StringFilter<"AnecdotalRecord"> | string
-  studentId?: Prisma.StringFilter<"AnecdotalRecord"> | string
+  studentId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"AnecdotalRecord"> | string | null
   observerId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   sectionId?: Prisma.StringFilter<"AnecdotalRecord"> | string
   observationDatetime?: Prisma.DateTimeFilter<"AnecdotalRecord"> | Date | string
@@ -984,6 +1053,7 @@ export type AnecdotalRecordCreateWithoutStudentInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
@@ -994,6 +1064,7 @@ export type AnecdotalRecordCreateWithoutStudentInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutStudentInput = {
   id?: string
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1054,7 +1125,8 @@ export type AnecdotalRecordCreateWithoutTermInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
@@ -1064,7 +1136,8 @@ export type AnecdotalRecordCreateWithoutTermInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutTermInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1124,7 +1197,8 @@ export type AnecdotalRecordCreateWithoutSectionInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
   folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
@@ -1134,7 +1208,8 @@ export type AnecdotalRecordCreateWithoutSectionInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutSectionInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   observationDatetime: Date | string
   descriptionOfIncident: string
@@ -1180,6 +1255,78 @@ export type AnecdotalRecordUpdateManyWithWhereWithoutSectionInput = {
   data: Prisma.XOR<Prisma.AnecdotalRecordUpdateManyMutationInput, Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionInput>
 }
 
+export type AnecdotalRecordCreateWithoutRosterInput = {
+  id?: string
+  observationDatetime: Date | string
+  descriptionOfIncident: string
+  descriptionOfLocation?: string | null
+  notesRecommendationsActions?: string | null
+  classPerformance?: string | null
+  attendanceSummary?: string | null
+  attachmentUrl?: string | null
+  category?: $Enums.AnecdotalCategory
+  confidentialityLevel?: $Enums.Confidentiality
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
+  section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
+  term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
+  folder?: Prisma.AnecdotalFolderCreateNestedOneWithoutRecordsInput
+  followups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutAnecdotalRecordInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutAnecdotalRecordInput
+}
+
+export type AnecdotalRecordUncheckedCreateWithoutRosterInput = {
+  id?: string
+  studentId?: string | null
+  observerId: string
+  sectionId: string
+  observationDatetime: Date | string
+  descriptionOfIncident: string
+  descriptionOfLocation?: string | null
+  notesRecommendationsActions?: string | null
+  classPerformance?: string | null
+  attendanceSummary?: string | null
+  attachmentUrl?: string | null
+  termId: string
+  category?: $Enums.AnecdotalCategory
+  confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
+  followups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutAnecdotalRecordInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutAnecdotalRecordInput
+}
+
+export type AnecdotalRecordCreateOrConnectWithoutRosterInput = {
+  where: Prisma.AnecdotalRecordWhereUniqueInput
+  create: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput>
+}
+
+export type AnecdotalRecordCreateManyRosterInputEnvelope = {
+  data: Prisma.AnecdotalRecordCreateManyRosterInput | Prisma.AnecdotalRecordCreateManyRosterInput[]
+  skipDuplicates?: boolean
+}
+
+export type AnecdotalRecordUpsertWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.AnecdotalRecordWhereUniqueInput
+  update: Prisma.XOR<Prisma.AnecdotalRecordUpdateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedUpdateWithoutRosterInput>
+  create: Prisma.XOR<Prisma.AnecdotalRecordCreateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedCreateWithoutRosterInput>
+}
+
+export type AnecdotalRecordUpdateWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.AnecdotalRecordWhereUniqueInput
+  data: Prisma.XOR<Prisma.AnecdotalRecordUpdateWithoutRosterInput, Prisma.AnecdotalRecordUncheckedUpdateWithoutRosterInput>
+}
+
+export type AnecdotalRecordUpdateManyWithWhereWithoutRosterInput = {
+  where: Prisma.AnecdotalRecordScalarWhereInput
+  data: Prisma.XOR<Prisma.AnecdotalRecordUpdateManyMutationInput, Prisma.AnecdotalRecordUncheckedUpdateManyWithoutRosterInput>
+}
+
 export type AnecdotalRecordCreateWithoutFolderInput = {
   id?: string
   observationDatetime: Date | string
@@ -1194,7 +1341,8 @@ export type AnecdotalRecordCreateWithoutFolderInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1204,7 +1352,8 @@ export type AnecdotalRecordCreateWithoutFolderInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutFolderInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1264,7 +1413,8 @@ export type AnecdotalRecordCreateWithoutFollowupsInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1274,7 +1424,8 @@ export type AnecdotalRecordCreateWithoutFollowupsInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutFollowupsInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1324,7 +1475,8 @@ export type AnecdotalRecordUpdateWithoutFollowupsInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1334,7 +1486,8 @@ export type AnecdotalRecordUpdateWithoutFollowupsInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutFollowupsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1368,7 +1521,8 @@ export type AnecdotalRecordCreateWithoutReferralsInput = {
   signedBy?: string | null
   signedAt?: Date | string | null
   signatureImageUrl?: string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutAnecdotalRecordsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutAnecdotalRecordsInput
   observer: Prisma.UserCreateNestedOneWithoutAnecdotalRecordsInput
   section: Prisma.SectionCreateNestedOneWithoutAnecdotalRecordsInput
   term: Prisma.TermCreateNestedOneWithoutAnecdotalRecordsInput
@@ -1378,7 +1532,8 @@ export type AnecdotalRecordCreateWithoutReferralsInput = {
 
 export type AnecdotalRecordUncheckedCreateWithoutReferralsInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1428,7 +1583,8 @@ export type AnecdotalRecordUpdateWithoutReferralsInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1438,7 +1594,8 @@ export type AnecdotalRecordUpdateWithoutReferralsInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutReferralsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1460,7 +1617,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutReferralsInput = {
 
 export type AnecdotalRecordCreateManyObserverInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   sectionId: string
   observationDatetime: Date | string
   descriptionOfIncident: string
@@ -1492,7 +1650,8 @@ export type AnecdotalRecordUpdateWithoutObserverInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
@@ -1502,7 +1661,8 @@ export type AnecdotalRecordUpdateWithoutObserverInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutObserverInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1524,7 +1684,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutObserverInput = {
 
 export type AnecdotalRecordUncheckedUpdateManyWithoutObserverInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1544,6 +1705,7 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutObserverInput = {
 
 export type AnecdotalRecordCreateManyStudentInput = {
   id?: string
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1576,6 +1738,7 @@ export type AnecdotalRecordUpdateWithoutStudentInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1586,6 +1749,7 @@ export type AnecdotalRecordUpdateWithoutStudentInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1608,6 +1772,7 @@ export type AnecdotalRecordUncheckedUpdateWithoutStudentInput = {
 
 export type AnecdotalRecordUncheckedUpdateManyWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1628,7 +1793,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutStudentInput = {
 
 export type AnecdotalRecordCreateManyTermInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1660,7 +1826,8 @@ export type AnecdotalRecordUpdateWithoutTermInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
@@ -1670,7 +1837,8 @@ export type AnecdotalRecordUpdateWithoutTermInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1692,7 +1860,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutTermInput = {
 
 export type AnecdotalRecordUncheckedUpdateManyWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1712,7 +1881,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutTermInput = {
 
 export type AnecdotalRecordCreateManySectionInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   observationDatetime: Date | string
   descriptionOfIncident: string
@@ -1744,7 +1914,8 @@ export type AnecdotalRecordUpdateWithoutSectionInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
@@ -1754,7 +1925,8 @@ export type AnecdotalRecordUpdateWithoutSectionInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutSectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1776,8 +1948,97 @@ export type AnecdotalRecordUncheckedUpdateWithoutSectionInput = {
 
 export type AnecdotalRecordUncheckedUpdateManyWithoutSectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
+  observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
+  descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notesRecommendationsActions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  classPerformance?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
+  confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type AnecdotalRecordCreateManyRosterInput = {
+  id?: string
+  studentId?: string | null
+  observerId: string
+  sectionId: string
+  observationDatetime: Date | string
+  descriptionOfIncident: string
+  descriptionOfLocation?: string | null
+  notesRecommendationsActions?: string | null
+  classPerformance?: string | null
+  attendanceSummary?: string | null
+  attachmentUrl?: string | null
+  termId: string
+  category?: $Enums.AnecdotalCategory
+  confidentialityLevel?: $Enums.Confidentiality
+  folderId?: string | null
+  signedBy?: string | null
+  signedAt?: Date | string | null
+  signatureImageUrl?: string | null
+}
+
+export type AnecdotalRecordUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
+  descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notesRecommendationsActions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  classPerformance?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
+  confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  folder?: Prisma.AnecdotalFolderUpdateOneWithoutRecordsNestedInput
+  followups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutAnecdotalRecordNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutAnecdotalRecordNestedInput
+}
+
+export type AnecdotalRecordUncheckedUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  observerId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
+  descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notesRecommendationsActions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  classPerformance?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachmentUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumAnecdotalCategoryFieldUpdateOperationsInput | $Enums.AnecdotalCategory
+  confidentialityLevel?: Prisma.EnumConfidentialityFieldUpdateOperationsInput | $Enums.Confidentiality
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  followups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutAnecdotalRecordNestedInput
+}
+
+export type AnecdotalRecordUncheckedUpdateManyWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  observerId?: Prisma.StringFieldUpdateOperationsInput | string
+  sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   descriptionOfIncident?: Prisma.StringFieldUpdateOperationsInput | string
   descriptionOfLocation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1796,7 +2057,8 @@ export type AnecdotalRecordUncheckedUpdateManyWithoutSectionInput = {
 
 export type AnecdotalRecordCreateManyFolderInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   observerId: string
   sectionId: string
   observationDatetime: Date | string
@@ -1828,7 +2090,8 @@ export type AnecdotalRecordUpdateWithoutFolderInput = {
   signedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   signedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutAnecdotalRecordsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutAnecdotalRecordsNestedInput
   observer?: Prisma.UserUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   section?: Prisma.SectionUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutAnecdotalRecordsNestedInput
@@ -1838,7 +2101,8 @@ export type AnecdotalRecordUpdateWithoutFolderInput = {
 
 export type AnecdotalRecordUncheckedUpdateWithoutFolderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1860,7 +2124,8 @@ export type AnecdotalRecordUncheckedUpdateWithoutFolderInput = {
 
 export type AnecdotalRecordUncheckedUpdateManyWithoutFolderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observerId?: Prisma.StringFieldUpdateOperationsInput | string
   sectionId?: Prisma.StringFieldUpdateOperationsInput | string
   observationDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1921,6 +2186,7 @@ export type AnecdotalRecordCountOutputTypeCountReferralsArgs<ExtArgs extends run
 export type AnecdotalRecordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   observerId?: boolean
   sectionId?: boolean
   observationDatetime?: boolean
@@ -1937,7 +2203,8 @@ export type AnecdotalRecordSelect<ExtArgs extends runtime.Types.Extensions.Inter
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
@@ -1950,6 +2217,7 @@ export type AnecdotalRecordSelect<ExtArgs extends runtime.Types.Extensions.Inter
 export type AnecdotalRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   observerId?: boolean
   sectionId?: boolean
   observationDatetime?: boolean
@@ -1966,7 +2234,8 @@ export type AnecdotalRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
@@ -1976,6 +2245,7 @@ export type AnecdotalRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
 export type AnecdotalRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   observerId?: boolean
   sectionId?: boolean
   observationDatetime?: boolean
@@ -1992,7 +2262,8 @@ export type AnecdotalRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   signedBy?: boolean
   signedAt?: boolean
   signatureImageUrl?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
@@ -2002,6 +2273,7 @@ export type AnecdotalRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
 export type AnecdotalRecordSelectScalar = {
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   observerId?: boolean
   sectionId?: boolean
   observationDatetime?: boolean
@@ -2020,9 +2292,10 @@ export type AnecdotalRecordSelectScalar = {
   signatureImageUrl?: boolean
 }
 
-export type AnecdotalRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "observerId" | "sectionId" | "observationDatetime" | "descriptionOfIncident" | "descriptionOfLocation" | "notesRecommendationsActions" | "classPerformance" | "attendanceSummary" | "attachmentUrl" | "termId" | "category" | "confidentialityLevel" | "folderId" | "signedBy" | "signedAt" | "signatureImageUrl", ExtArgs["result"]["anecdotalRecord"]>
+export type AnecdotalRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "observerId" | "sectionId" | "observationDatetime" | "descriptionOfIncident" | "descriptionOfLocation" | "notesRecommendationsActions" | "classPerformance" | "attendanceSummary" | "attachmentUrl" | "termId" | "category" | "confidentialityLevel" | "folderId" | "signedBy" | "signedAt" | "signatureImageUrl", ExtArgs["result"]["anecdotalRecord"]>
 export type AnecdotalRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
@@ -2032,14 +2305,16 @@ export type AnecdotalRecordInclude<ExtArgs extends runtime.Types.Extensions.Inte
   _count?: boolean | Prisma.AnecdotalRecordCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AnecdotalRecordIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   folder?: boolean | Prisma.AnecdotalRecord$folderArgs<ExtArgs>
 }
 export type AnecdotalRecordIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.AnecdotalRecord$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.AnecdotalRecord$rosterArgs<ExtArgs>
   observer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   section?: boolean | Prisma.SectionDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
@@ -2049,7 +2324,8 @@ export type AnecdotalRecordIncludeUpdateManyAndReturn<ExtArgs extends runtime.Ty
 export type $AnecdotalRecordPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "AnecdotalRecord"
   objects: {
-    student: Prisma.$StudentProfilePayload<ExtArgs>
+    student: Prisma.$StudentProfilePayload<ExtArgs> | null
+    roster: Prisma.$StudentRosterPayload<ExtArgs> | null
     observer: Prisma.$UserPayload<ExtArgs>
     section: Prisma.$SectionPayload<ExtArgs>
     term: Prisma.$TermPayload<ExtArgs>
@@ -2059,7 +2335,8 @@ export type $AnecdotalRecordPayload<ExtArgs extends runtime.Types.Extensions.Int
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    studentId: string
+    studentId: string | null
+    rosterId: string | null
     observerId: string
     sectionId: string
     observationDatetime: Date
@@ -2470,7 +2747,8 @@ readonly fields: AnecdotalRecordFieldRefs;
  */
 export interface Prisma__AnecdotalRecordClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  student<T extends Prisma.StudentProfileDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfileDefaultArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  student<T extends Prisma.AnecdotalRecord$studentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AnecdotalRecord$studentArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  roster<T extends Prisma.AnecdotalRecord$rosterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AnecdotalRecord$rosterArgs<ExtArgs>>): Prisma.Prisma__StudentRosterClient<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   observer<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   section<T extends Prisma.SectionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SectionDefaultArgs<ExtArgs>>): Prisma.Prisma__SectionClient<runtime.Types.Result.GetResult<Prisma.$SectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   term<T extends Prisma.TermDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TermDefaultArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
@@ -2508,6 +2786,7 @@ export interface Prisma__AnecdotalRecordClient<T, Null = never, ExtArgs extends 
 export interface AnecdotalRecordFieldRefs {
   readonly id: Prisma.FieldRef<"AnecdotalRecord", 'String'>
   readonly studentId: Prisma.FieldRef<"AnecdotalRecord", 'String'>
+  readonly rosterId: Prisma.FieldRef<"AnecdotalRecord", 'String'>
   readonly observerId: Prisma.FieldRef<"AnecdotalRecord", 'String'>
   readonly sectionId: Prisma.FieldRef<"AnecdotalRecord", 'String'>
   readonly observationDatetime: Prisma.FieldRef<"AnecdotalRecord", 'DateTime'>
@@ -2922,6 +3201,44 @@ export type AnecdotalRecordDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many AnecdotalRecords to delete.
    */
   limit?: number
+}
+
+/**
+ * AnecdotalRecord.student
+ */
+export type AnecdotalRecord$studentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentProfile
+   */
+  select?: Prisma.StudentProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentProfile
+   */
+  omit?: Prisma.StudentProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentProfileInclude<ExtArgs> | null
+  where?: Prisma.StudentProfileWhereInput
+}
+
+/**
+ * AnecdotalRecord.roster
+ */
+export type AnecdotalRecord$rosterArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentRoster
+   */
+  select?: Prisma.StudentRosterSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentRoster
+   */
+  omit?: Prisma.StudentRosterOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentRosterInclude<ExtArgs> | null
+  where?: Prisma.StudentRosterWhereInput
 }
 
 /**

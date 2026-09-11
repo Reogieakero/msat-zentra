@@ -154,7 +154,6 @@ export function SectionsPanel({ sections, subjects, teachers, loading, onUpsert,
         key={editKey}
         open={dialogOpen}
         section={editing}
-        subjects={subjects}
         teachers={teachers}
         onOpenChange={setDialogOpen}
         onSave={onUpsert}

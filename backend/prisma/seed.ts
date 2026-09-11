@@ -93,8 +93,35 @@ async function main() {
   const guidance = await prisma.user.findUniqueOrThrow({ where: { email: "guidance@zentra.test" } });
   const admCoord = await prisma.user.findUniqueOrThrow({ where: { email: "adm@zentra.test" } });
 
-  let schoolYear = await prisma.schoolYear.findFirst({ where: { name: "SY 2026-2027" } });
-  if (!schoolYear) schoolYear = await prisma.schoolYear.create({ data: { name: "SY 2026-2027", startDate: new Date("2026-06-15"), endDate: new Date("2027-03-31"), isActive: true, createdBy: principal.id } });
+  // School years SY 2026-2027 through SY 2049-2050 (idempotent upserts).
+  // SY 2026-2027 is the active year; every year gets terms 1-3.
+  for (let y = 2026; y <= 2049; y++) {
+    const yearName = `SY ${y}-${y + 1}`;
+    let row = await prisma.schoolYear.findFirst({ where: { name: yearName } });
+    if (!row) {
+      row = await prisma.schoolYear.create({
+        data: {
+          name: yearName,
+          startDate: new Date(`${y}-06-15`),
+          endDate: new Date(`${y + 1}-03-31`),
+          isActive: y === 2026,
+          createdBy: principal.id,
+        },
+      });
+    } else if (y === 2026 && !row.isActive) {
+      const anyActive = await prisma.schoolYear.findFirst({ where: { isActive: true } });
+      if (!anyActive) await prisma.schoolYear.update({ where: { id: row.id }, data: { isActive: true } });
+    }
+    for (const termNumber of [1, 2, 3]) {
+      await prisma.term.upsert({
+        where: { schoolYearId_termNumber: { schoolYearId: row.id, termNumber } },
+        update: {},
+        create: { schoolYearId: row.id, termNumber },
+      });
+    }
+  }
+
+  const schoolYear = await prisma.schoolYear.findFirstOrThrow({ where: { name: "SY 2026-2027" } });
 
   const term = await prisma.term.upsert({
     where: { schoolYearId_termNumber: { schoolYearId: schoolYear.id, termNumber: 1 } },
@@ -108,7 +135,9 @@ async function main() {
   for (const grade of GRADE_LEVELS) for (const s of SUBJECT_NAMES[grade]) subjectData.push({ id: id("subj"), name: s.name, code: s.code, gradeLevel: grade });
   await prisma.subject.createMany({ data: subjectData, skipDuplicates: true });
   for (const grade of GRADE_LEVELS) for (const s of SUBJECT_NAMES[grade]) {
-    const rec = await prisma.subject.findUniqueOrThrow({ where: { code: s.code } });
+    const rec = await prisma.subject.findUniqueOrThrow({
+      where: { code_gradeLevel: { code: s.code, gradeLevel: grade } },
+    });
     subjectIds[`${grade}:${s.code}`] = rec.id;
   }
 

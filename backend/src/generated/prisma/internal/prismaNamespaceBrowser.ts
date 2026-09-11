@@ -224,7 +224,8 @@ export const SubjectScalarFieldEnum = {
   id: 'id',
   name: 'name',
   code: 'code',
-  gradeLevel: 'gradeLevel'
+  gradeLevel: 'gradeLevel',
+  category: 'category'
 } as const
 
 export type SubjectScalarFieldEnum = (typeof SubjectScalarFieldEnum)[keyof typeof SubjectScalarFieldEnum]
@@ -320,6 +321,7 @@ export type GradeFlagScalarFieldEnum = (typeof GradeFlagScalarFieldEnum)[keyof t
 export const AttendanceRecordScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   sectionId: 'sectionId',
   date: 'date',
   session: 'session',
@@ -334,6 +336,7 @@ export type AttendanceRecordScalarFieldEnum = (typeof AttendanceRecordScalarFiel
 export const AnecdotalRecordScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   observerId: 'observerId',
   sectionId: 'sectionId',
   observationDatetime: 'observationDatetime',
@@ -384,6 +387,7 @@ export const ReferralScalarFieldEnum = {
   reason: 'reason',
   status: 'status',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   termId: 'termId'
 } as const
 

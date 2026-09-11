@@ -5,12 +5,14 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
+import { invalidateTags } from "../../lib/cache.js";
 import {
   computeRiskFactors,
   levelFromFlags,
   resolveActiveTermId,
 } from "../../services/risk.js";
 import { buildDayAxis, isWeekendKey, schoolDaysToDate } from "../../services/attendance.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
 
 const router = Router();
 
@@ -82,6 +84,10 @@ router.get(
         }),
       ]);
       const enrolledBySection = new Map(counts.map((c) => [c.sectionId, c._count._all]));
+      // Roster-aware attendance denominators: enlisted students without
+      // accounts count toward the section headcount too.
+      const headcounts = await sectionHeadcounts(sectionIds);
+      for (const [id, n] of headcounts) enrolledBySection.set(id, n);
       const registeredLrns = new Set(advisees.map((s) => s.lrn));
 
       const students = [
@@ -215,6 +221,16 @@ router.post(
         sourceId: entry.id,
         reason: `Enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}`,
       });
+      // Enrollment headcounts are cached — a new enlistment must refresh
+      // academics, overview, and teacher caches immediately.
+      await invalidateTags([
+        "registrar",
+        "record-keeper",
+        "academics",
+        "overview",
+        "principal",
+        "teacher",
+      ]);
 
       res.status(201).json({
         studentId: `roster:${entry.id}`,
@@ -546,12 +562,15 @@ router.get(
           session: session as "AM" | "PM",
           date: { gte: dayStart, lt: nextDay },
         },
-        select: { studentId: true, status: true },
+        select: { studentId: true, rosterId: true, status: true },
       });
       res.json({
         date: dayKey,
         session,
-        marks: records.map((r) => ({ studentId: r.studentId, status: r.status })),
+        marks: records.map((r) => ({
+          studentId: r.rosterId ? `roster:${r.rosterId}` : (r.studentId as string),
+          status: r.status,
+        })),
       });
     } catch (e) {
       next(e);

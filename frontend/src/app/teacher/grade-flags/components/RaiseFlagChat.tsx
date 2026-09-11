@@ -108,7 +108,12 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
     queryKey: ["grade-flags", "options"],
     queryFn: fetchFlagOptions,
   });
-  const students = useMemo(() => optionsQuery.data?.students ?? [], [optionsQuery.data]);
+  // Grade flags attach to registered profiles only — roster enlistments
+  // (`roster:<id>`, no account yet) are excluded.
+  const students = useMemo(
+    () => (optionsQuery.data?.students ?? []).filter((s) => !s.id.startsWith("roster:")),
+    [optionsQuery.data]
+  );
   // The class picker lists the SELECTED student's subjects (every gradebook in
   // their section, whoever owns it) — not the teacher's own assignments.
   const sectionClasses = useMemo(

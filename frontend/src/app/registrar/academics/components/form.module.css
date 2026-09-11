@@ -50,6 +50,37 @@
   gap: 0.875rem;
 }
 
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 28px;
+}
+
+.checkLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.checkLabel input {
+  width: 0.9375rem;
+  height: 0.9375rem;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.staticValue {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Select trigger — matches /registrar/final-grades status dropdown */
 .selectTrigger {
   display: inline-flex;

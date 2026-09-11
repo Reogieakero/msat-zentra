@@ -32,6 +32,7 @@ export type ReferralMinAggregateOutputType = {
   reason: string | null
   status: $Enums.ReferralStatus | null
   studentId: string | null
+  rosterId: string | null
   termId: string | null
 }
 
@@ -43,6 +44,7 @@ export type ReferralMaxAggregateOutputType = {
   reason: string | null
   status: $Enums.ReferralStatus | null
   studentId: string | null
+  rosterId: string | null
   termId: string | null
 }
 
@@ -54,6 +56,7 @@ export type ReferralCountAggregateOutputType = {
   reason: number
   status: number
   studentId: number
+  rosterId: number
   termId: number
   _all: number
 }
@@ -67,6 +70,7 @@ export type ReferralMinAggregateInputType = {
   reason?: true
   status?: true
   studentId?: true
+  rosterId?: true
   termId?: true
 }
 
@@ -78,6 +82,7 @@ export type ReferralMaxAggregateInputType = {
   reason?: true
   status?: true
   studentId?: true
+  rosterId?: true
   termId?: true
 }
 
@@ -89,6 +94,7 @@ export type ReferralCountAggregateInputType = {
   reason?: true
   status?: true
   studentId?: true
+  rosterId?: true
   termId?: true
   _all?: true
 }
@@ -172,7 +178,8 @@ export type ReferralGroupByOutputType = {
   referredBy: string
   reason: string
   status: $Enums.ReferralStatus
-  studentId: string
+  studentId: string | null
+  rosterId: string | null
   termId: string
   _count: ReferralCountAggregateOutputType | null
   _min: ReferralMinAggregateOutputType | null
@@ -204,11 +211,13 @@ export type ReferralWhereInput = {
   referredBy?: Prisma.StringFilter<"Referral"> | string
   reason?: Prisma.StringFilter<"Referral"> | string
   status?: Prisma.EnumReferralStatusFilter<"Referral"> | $Enums.ReferralStatus
-  studentId?: Prisma.StringFilter<"Referral"> | string
+  studentId?: Prisma.StringNullableFilter<"Referral"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"Referral"> | string | null
   termId?: Prisma.StringFilter<"Referral"> | string
   anecdotalRecord?: Prisma.XOR<Prisma.AnecdotalRecordScalarRelationFilter, Prisma.AnecdotalRecordWhereInput>
   referredByUser?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
@@ -222,11 +231,13 @@ export type ReferralOrderByWithRelationInput = {
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   termId?: Prisma.SortOrder
   anecdotalRecord?: Prisma.AnecdotalRecordOrderByWithRelationInput
   referredByUser?: Prisma.UserOrderByWithRelationInput
   student?: Prisma.StudentProfileOrderByWithRelationInput
+  roster?: Prisma.StudentRosterOrderByWithRelationInput
   term?: Prisma.TermOrderByWithRelationInput
   healthRecords?: Prisma.HealthRecordOrderByRelationAggregateInput
   homeVisitations?: Prisma.HomeVisitationRecordOrderByRelationAggregateInput
@@ -243,11 +254,13 @@ export type ReferralWhereUniqueInput = Prisma.AtLeast<{
   referredBy?: Prisma.StringFilter<"Referral"> | string
   reason?: Prisma.StringFilter<"Referral"> | string
   status?: Prisma.EnumReferralStatusFilter<"Referral"> | $Enums.ReferralStatus
-  studentId?: Prisma.StringFilter<"Referral"> | string
+  studentId?: Prisma.StringNullableFilter<"Referral"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"Referral"> | string | null
   termId?: Prisma.StringFilter<"Referral"> | string
   anecdotalRecord?: Prisma.XOR<Prisma.AnecdotalRecordScalarRelationFilter, Prisma.AnecdotalRecordWhereInput>
   referredByUser?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
@@ -261,7 +274,8 @@ export type ReferralOrderByWithAggregationInput = {
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   termId?: Prisma.SortOrder
   _count?: Prisma.ReferralCountOrderByAggregateInput
   _max?: Prisma.ReferralMaxOrderByAggregateInput
@@ -278,7 +292,8 @@ export type ReferralScalarWhereWithAggregatesInput = {
   referredBy?: Prisma.StringWithAggregatesFilter<"Referral"> | string
   reason?: Prisma.StringWithAggregatesFilter<"Referral"> | string
   status?: Prisma.EnumReferralStatusWithAggregatesFilter<"Referral"> | $Enums.ReferralStatus
-  studentId?: Prisma.StringWithAggregatesFilter<"Referral"> | string
+  studentId?: Prisma.StringNullableWithAggregatesFilter<"Referral"> | string | null
+  rosterId?: Prisma.StringNullableWithAggregatesFilter<"Referral"> | string | null
   termId?: Prisma.StringWithAggregatesFilter<"Referral"> | string
 }
 
@@ -289,7 +304,8 @@ export type ReferralCreateInput = {
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
@@ -303,7 +319,8 @@ export type ReferralUncheckedCreateInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
@@ -317,7 +334,8 @@ export type ReferralUpdateInput = {
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
@@ -331,7 +349,8 @@ export type ReferralUncheckedUpdateInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
@@ -345,7 +364,8 @@ export type ReferralCreateManyInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
 }
 
@@ -363,7 +383,8 @@ export type ReferralUncheckedUpdateManyInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
@@ -385,6 +406,7 @@ export type ReferralCountOrderByAggregateInput = {
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
 }
 
@@ -396,6 +418,7 @@ export type ReferralMaxOrderByAggregateInput = {
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
 }
 
@@ -407,6 +430,7 @@ export type ReferralMinOrderByAggregateInput = {
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
 }
 
@@ -546,6 +570,48 @@ export type ReferralUncheckedUpdateManyWithoutTermNestedInput = {
   deleteMany?: Prisma.ReferralScalarWhereInput | Prisma.ReferralScalarWhereInput[]
 }
 
+export type ReferralCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.ReferralCreateWithoutRosterInput, Prisma.ReferralUncheckedCreateWithoutRosterInput> | Prisma.ReferralCreateWithoutRosterInput[] | Prisma.ReferralUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutRosterInput | Prisma.ReferralCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.ReferralCreateManyRosterInputEnvelope
+  connect?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+}
+
+export type ReferralUncheckedCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.ReferralCreateWithoutRosterInput, Prisma.ReferralUncheckedCreateWithoutRosterInput> | Prisma.ReferralCreateWithoutRosterInput[] | Prisma.ReferralUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutRosterInput | Prisma.ReferralCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.ReferralCreateManyRosterInputEnvelope
+  connect?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+}
+
+export type ReferralUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.ReferralCreateWithoutRosterInput, Prisma.ReferralUncheckedCreateWithoutRosterInput> | Prisma.ReferralCreateWithoutRosterInput[] | Prisma.ReferralUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutRosterInput | Prisma.ReferralCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.ReferralUpsertWithWhereUniqueWithoutRosterInput | Prisma.ReferralUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.ReferralCreateManyRosterInputEnvelope
+  set?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  disconnect?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  delete?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  connect?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  update?: Prisma.ReferralUpdateWithWhereUniqueWithoutRosterInput | Prisma.ReferralUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.ReferralUpdateManyWithWhereWithoutRosterInput | Prisma.ReferralUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.ReferralScalarWhereInput | Prisma.ReferralScalarWhereInput[]
+}
+
+export type ReferralUncheckedUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.ReferralCreateWithoutRosterInput, Prisma.ReferralUncheckedCreateWithoutRosterInput> | Prisma.ReferralCreateWithoutRosterInput[] | Prisma.ReferralUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutRosterInput | Prisma.ReferralCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.ReferralUpsertWithWhereUniqueWithoutRosterInput | Prisma.ReferralUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.ReferralCreateManyRosterInputEnvelope
+  set?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  disconnect?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  delete?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  connect?: Prisma.ReferralWhereUniqueInput | Prisma.ReferralWhereUniqueInput[]
+  update?: Prisma.ReferralUpdateWithWhereUniqueWithoutRosterInput | Prisma.ReferralUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.ReferralUpdateManyWithWhereWithoutRosterInput | Prisma.ReferralUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.ReferralScalarWhereInput | Prisma.ReferralScalarWhereInput[]
+}
+
 export type ReferralCreateNestedManyWithoutAnecdotalRecordInput = {
   create?: Prisma.XOR<Prisma.ReferralCreateWithoutAnecdotalRecordInput, Prisma.ReferralUncheckedCreateWithoutAnecdotalRecordInput> | Prisma.ReferralCreateWithoutAnecdotalRecordInput[] | Prisma.ReferralUncheckedCreateWithoutAnecdotalRecordInput[]
   connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutAnecdotalRecordInput | Prisma.ReferralCreateOrConnectWithoutAnecdotalRecordInput[]
@@ -648,7 +714,8 @@ export type ReferralCreateWithoutReferredByUserInput = {
   reason: string
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
@@ -661,7 +728,8 @@ export type ReferralUncheckedCreateWithoutReferredByUserInput = {
   referredToRole: $Enums.ReferralTarget
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
@@ -704,7 +772,8 @@ export type ReferralScalarWhereInput = {
   referredBy?: Prisma.StringFilter<"Referral"> | string
   reason?: Prisma.StringFilter<"Referral"> | string
   status?: Prisma.EnumReferralStatusFilter<"Referral"> | $Enums.ReferralStatus
-  studentId?: Prisma.StringFilter<"Referral"> | string
+  studentId?: Prisma.StringNullableFilter<"Referral"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"Referral"> | string | null
   termId?: Prisma.StringFilter<"Referral"> | string
 }
 
@@ -715,6 +784,7 @@ export type ReferralCreateWithoutStudentInput = {
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
@@ -728,6 +798,7 @@ export type ReferralUncheckedCreateWithoutStudentInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
+  rosterId?: string | null
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
@@ -767,7 +838,8 @@ export type ReferralCreateWithoutTermInput = {
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
@@ -780,7 +852,8 @@ export type ReferralUncheckedCreateWithoutTermInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
@@ -812,13 +885,68 @@ export type ReferralUpdateManyWithWhereWithoutTermInput = {
   data: Prisma.XOR<Prisma.ReferralUpdateManyMutationInput, Prisma.ReferralUncheckedUpdateManyWithoutTermInput>
 }
 
+export type ReferralCreateWithoutRosterInput = {
+  id?: string
+  referredToRole: $Enums.ReferralTarget
+  reason: string
+  status?: $Enums.ReferralStatus
+  anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
+  referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  term: Prisma.TermCreateNestedOneWithoutReferralsInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
+  admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+}
+
+export type ReferralUncheckedCreateWithoutRosterInput = {
+  id?: string
+  anecdotalRecordId: string
+  referredToRole: $Enums.ReferralTarget
+  referredBy: string
+  reason: string
+  status?: $Enums.ReferralStatus
+  studentId?: string | null
+  termId: string
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+}
+
+export type ReferralCreateOrConnectWithoutRosterInput = {
+  where: Prisma.ReferralWhereUniqueInput
+  create: Prisma.XOR<Prisma.ReferralCreateWithoutRosterInput, Prisma.ReferralUncheckedCreateWithoutRosterInput>
+}
+
+export type ReferralCreateManyRosterInputEnvelope = {
+  data: Prisma.ReferralCreateManyRosterInput | Prisma.ReferralCreateManyRosterInput[]
+  skipDuplicates?: boolean
+}
+
+export type ReferralUpsertWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.ReferralWhereUniqueInput
+  update: Prisma.XOR<Prisma.ReferralUpdateWithoutRosterInput, Prisma.ReferralUncheckedUpdateWithoutRosterInput>
+  create: Prisma.XOR<Prisma.ReferralCreateWithoutRosterInput, Prisma.ReferralUncheckedCreateWithoutRosterInput>
+}
+
+export type ReferralUpdateWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.ReferralWhereUniqueInput
+  data: Prisma.XOR<Prisma.ReferralUpdateWithoutRosterInput, Prisma.ReferralUncheckedUpdateWithoutRosterInput>
+}
+
+export type ReferralUpdateManyWithWhereWithoutRosterInput = {
+  where: Prisma.ReferralScalarWhereInput
+  data: Prisma.XOR<Prisma.ReferralUpdateManyMutationInput, Prisma.ReferralUncheckedUpdateManyWithoutRosterInput>
+}
+
 export type ReferralCreateWithoutAnecdotalRecordInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
   status?: $Enums.ReferralStatus
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
@@ -831,7 +959,8 @@ export type ReferralUncheckedCreateWithoutAnecdotalRecordInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
@@ -871,7 +1000,8 @@ export type ReferralCreateWithoutHealthRecordsInput = {
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
@@ -884,7 +1014,8 @@ export type ReferralUncheckedCreateWithoutHealthRecordsInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
@@ -913,7 +1044,8 @@ export type ReferralUpdateWithoutHealthRecordsInput = {
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
@@ -926,7 +1058,8 @@ export type ReferralUncheckedUpdateWithoutHealthRecordsInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
@@ -939,7 +1072,8 @@ export type ReferralCreateWithoutHomeVisitationsInput = {
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
@@ -952,7 +1086,8 @@ export type ReferralUncheckedCreateWithoutHomeVisitationsInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
@@ -981,7 +1116,8 @@ export type ReferralUpdateWithoutHomeVisitationsInput = {
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
@@ -994,7 +1130,8 @@ export type ReferralUncheckedUpdateWithoutHomeVisitationsInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
@@ -1007,7 +1144,8 @@ export type ReferralCreateWithoutAdmProfilesInput = {
   status?: $Enums.ReferralStatus
   anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
   referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
-  student: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
@@ -1020,7 +1158,8 @@ export type ReferralUncheckedCreateWithoutAdmProfilesInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
@@ -1049,7 +1188,8 @@ export type ReferralUpdateWithoutAdmProfilesInput = {
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
@@ -1062,7 +1202,8 @@ export type ReferralUncheckedUpdateWithoutAdmProfilesInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
@@ -1074,7 +1215,8 @@ export type ReferralCreateManyReferredByUserInput = {
   referredToRole: $Enums.ReferralTarget
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
 }
 
@@ -1084,7 +1226,8 @@ export type ReferralUpdateWithoutReferredByUserInput = {
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
@@ -1097,7 +1240,8 @@ export type ReferralUncheckedUpdateWithoutReferredByUserInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
@@ -1110,7 +1254,8 @@ export type ReferralUncheckedUpdateManyWithoutReferredByUserInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
@@ -1121,6 +1266,7 @@ export type ReferralCreateManyStudentInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
+  rosterId?: string | null
   termId: string
 }
 
@@ -1131,6 +1277,7 @@ export type ReferralUpdateWithoutStudentInput = {
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
@@ -1144,6 +1291,7 @@ export type ReferralUncheckedUpdateWithoutStudentInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
@@ -1157,6 +1305,7 @@ export type ReferralUncheckedUpdateManyWithoutStudentInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
@@ -1167,7 +1316,8 @@ export type ReferralCreateManyTermInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
 }
 
 export type ReferralUpdateWithoutTermInput = {
@@ -1177,7 +1327,8 @@ export type ReferralUpdateWithoutTermInput = {
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
@@ -1190,7 +1341,8 @@ export type ReferralUncheckedUpdateWithoutTermInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
@@ -1203,7 +1355,58 @@ export type ReferralUncheckedUpdateManyWithoutTermInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ReferralCreateManyRosterInput = {
+  id?: string
+  anecdotalRecordId: string
+  referredToRole: $Enums.ReferralTarget
+  referredBy: string
+  reason: string
+  status?: $Enums.ReferralStatus
+  studentId?: string | null
+  termId: string
+}
+
+export type ReferralUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
+  reason?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
+  referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+}
+
+export type ReferralUncheckedUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anecdotalRecordId?: Prisma.StringFieldUpdateOperationsInput | string
+  referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
+  referredBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reason?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+}
+
+export type ReferralUncheckedUpdateManyWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anecdotalRecordId?: Prisma.StringFieldUpdateOperationsInput | string
+  referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
+  referredBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reason?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type ReferralCreateManyAnecdotalRecordInput = {
@@ -1212,7 +1415,8 @@ export type ReferralCreateManyAnecdotalRecordInput = {
   referredBy: string
   reason: string
   status?: $Enums.ReferralStatus
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
 }
 
@@ -1222,7 +1426,8 @@ export type ReferralUpdateWithoutAnecdotalRecordInput = {
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutReferralsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
@@ -1235,7 +1440,8 @@ export type ReferralUncheckedUpdateWithoutAnecdotalRecordInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
@@ -1248,7 +1454,8 @@ export type ReferralUncheckedUpdateManyWithoutAnecdotalRecordInput = {
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
@@ -1309,10 +1516,12 @@ export type ReferralSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   reason?: boolean
   status?: boolean
   studentId?: boolean
+  rosterId?: boolean
   termId?: boolean
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.Referral$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.Referral$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   healthRecords?: boolean | Prisma.Referral$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.Referral$homeVisitationsArgs<ExtArgs>
@@ -1328,10 +1537,12 @@ export type ReferralSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   reason?: boolean
   status?: boolean
   studentId?: boolean
+  rosterId?: boolean
   termId?: boolean
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.Referral$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.Referral$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["referral"]>
 
@@ -1343,10 +1554,12 @@ export type ReferralSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   reason?: boolean
   status?: boolean
   studentId?: boolean
+  rosterId?: boolean
   termId?: boolean
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.Referral$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.Referral$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["referral"]>
 
@@ -1358,14 +1571,16 @@ export type ReferralSelectScalar = {
   reason?: boolean
   status?: boolean
   studentId?: boolean
+  rosterId?: boolean
   termId?: boolean
 }
 
-export type ReferralOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anecdotalRecordId" | "referredToRole" | "referredBy" | "reason" | "status" | "studentId" | "termId", ExtArgs["result"]["referral"]>
+export type ReferralOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anecdotalRecordId" | "referredToRole" | "referredBy" | "reason" | "status" | "studentId" | "rosterId" | "termId", ExtArgs["result"]["referral"]>
 export type ReferralInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.Referral$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.Referral$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   healthRecords?: boolean | Prisma.Referral$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.Referral$homeVisitationsArgs<ExtArgs>
@@ -1375,13 +1590,15 @@ export type ReferralInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type ReferralIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.Referral$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.Referral$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 export type ReferralIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.Referral$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.Referral$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 
@@ -1390,7 +1607,8 @@ export type $ReferralPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     anecdotalRecord: Prisma.$AnecdotalRecordPayload<ExtArgs>
     referredByUser: Prisma.$UserPayload<ExtArgs>
-    student: Prisma.$StudentProfilePayload<ExtArgs>
+    student: Prisma.$StudentProfilePayload<ExtArgs> | null
+    roster: Prisma.$StudentRosterPayload<ExtArgs> | null
     term: Prisma.$TermPayload<ExtArgs>
     healthRecords: Prisma.$HealthRecordPayload<ExtArgs>[]
     homeVisitations: Prisma.$HomeVisitationRecordPayload<ExtArgs>[]
@@ -1403,7 +1621,8 @@ export type $ReferralPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     referredBy: string
     reason: string
     status: $Enums.ReferralStatus
-    studentId: string
+    studentId: string | null
+    rosterId: string | null
     termId: string
   }, ExtArgs["result"]["referral"]>
   composites: {}
@@ -1801,7 +2020,8 @@ export interface Prisma__ReferralClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   anecdotalRecord<T extends Prisma.AnecdotalRecordDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AnecdotalRecordDefaultArgs<ExtArgs>>): Prisma.Prisma__AnecdotalRecordClient<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   referredByUser<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  student<T extends Prisma.StudentProfileDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfileDefaultArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  student<T extends Prisma.Referral$studentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$studentArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  roster<T extends Prisma.Referral$rosterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$rosterArgs<ExtArgs>>): Prisma.Prisma__StudentRosterClient<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   term<T extends Prisma.TermDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TermDefaultArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   healthRecords<T extends Prisma.Referral$healthRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$healthRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HealthRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   homeVisitations<T extends Prisma.Referral$homeVisitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$homeVisitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HomeVisitationRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1842,6 +2062,7 @@ export interface ReferralFieldRefs {
   readonly reason: Prisma.FieldRef<"Referral", 'String'>
   readonly status: Prisma.FieldRef<"Referral", 'ReferralStatus'>
   readonly studentId: Prisma.FieldRef<"Referral", 'String'>
+  readonly rosterId: Prisma.FieldRef<"Referral", 'String'>
   readonly termId: Prisma.FieldRef<"Referral", 'String'>
 }
     
@@ -2241,6 +2462,44 @@ export type ReferralDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Limit how many Referrals to delete.
    */
   limit?: number
+}
+
+/**
+ * Referral.student
+ */
+export type Referral$studentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentProfile
+   */
+  select?: Prisma.StudentProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentProfile
+   */
+  omit?: Prisma.StudentProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentProfileInclude<ExtArgs> | null
+  where?: Prisma.StudentProfileWhereInput
+}
+
+/**
+ * Referral.roster
+ */
+export type Referral$rosterArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentRoster
+   */
+  select?: Prisma.StudentRosterSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentRoster
+   */
+  omit?: Prisma.StudentRosterOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentRosterInclude<ExtArgs> | null
+  where?: Prisma.StudentRosterWhereInput
 }
 
 /**
