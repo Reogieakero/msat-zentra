@@ -5,6 +5,7 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { ADM_STAGE_FLOW } from "../../services/adm.js";
 
 const router = Router();
@@ -25,6 +26,7 @@ router.post(
         data: { status: req.body.status },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Status → ${req.body.status}`, oldValue: { status: referral.status }, newValue: { status: req.body.status } });
+      await invalidateTags(["guidance", "overview", "adm", "teacher"]);
       res.json(updated);
     } catch (e) { next(e); }
   }

@@ -25,6 +25,7 @@ import teacherRoutes from "./modules/teacher/teacher.routes.js";
 import gradeFlagsRoutes from "./modules/teacher/grade-flags.routes.js";
 import advisoryRoutes from "./modules/teacher/advisory.routes.js";
 import gradingRoutes from "./modules/teacher/grading.routes.js";
+import guidanceRoutes from "./modules/guidance/guidance.routes.js";
 
 export function createApp() {
   const env = getEnv();
@@ -55,6 +56,7 @@ app.use("/api/teacher", teacherRoutes);
 app.use("/api/teacher/grade-flags", gradeFlagsRoutes);
 app.use("/api/teacher/advisory", advisoryRoutes);
 app.use("/api/teacher/grading", gradingRoutes);
+app.use("/api/guidance", guidanceRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

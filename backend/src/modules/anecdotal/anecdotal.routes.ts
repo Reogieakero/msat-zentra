@@ -140,8 +140,10 @@ router.post(
       const referral = await prisma.referral.create({
         data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, rosterId: record.rosterId, termId },
       });
-      // A new referral must surface on the ADM board + teacher cases at once.
-      await invalidateTags(["adm", "teacher"]);
+      // A new referral must surface on the ADM board + teacher cases +
+      // guidance overview at once (otherwise the guidance page serves a stale
+      // cached empty response right after an adviser refers).
+      await invalidateTags(["adm", "teacher", "guidance", "overview"]);
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}` });
       res.status(201).json(referral);
     } catch (e) { next(e); }
