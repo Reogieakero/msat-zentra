@@ -1,0 +1,55 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+}
+
+.error {
+  margin: 0;
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--destructive);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+}
+
+.skelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+.skelCard {
+  height: 12rem;
+  border-radius: var(--radius-lg, 0.75rem);
+}

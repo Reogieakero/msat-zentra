@@ -1,10 +1,10 @@
 .alertSign {
-  background: var(--primary, #166534);
+  background: var(--primary, #171717);
   color: var(--primary-foreground, #ffffff);
 }
 
 .alertReturn {
-  background: var(--destructive, #b91c1c);
+  background: var(--destructive, #171717);
   color: var(--destructive-foreground, #ffffff);
 }
 

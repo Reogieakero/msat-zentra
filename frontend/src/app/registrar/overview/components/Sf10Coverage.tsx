@@ -30,9 +30,9 @@ import styles from "./Sf10Coverage.module.css";
 const LIST_LIMIT = 6;
 
 const CUSTODY_SEGMENTS = [
-  { key: "released", label: "Released", color: "#16a34a" },
-  { key: "available", label: "Available", color: "#2563eb" },
-  { key: "attach", label: "Attach", color: "#cbd5e1" },
+  { key: "released", label: "Released", color: "#171717" },
+  { key: "available", label: "Available", color: "#737373" },
+  { key: "attach", label: "Attach", color: "#d4d4d4" },
 ] as const;
 
 export function Sf10Coverage() {
@@ -122,7 +122,7 @@ export function Sf10Coverage() {
                     })}
                     <li className={styles.legendItem}>
                       <span className={styles.legendLabel}>
-                        <span className={styles.legendDot} style={{ backgroundColor: "#dc2626" }} aria-hidden />
+                        <span className={styles.legendDot} style={{ backgroundColor: "#404040" }} aria-hidden />
                         Missing
                       </span>
                       <span className={styles.legendCount}>{missing.length}</span>

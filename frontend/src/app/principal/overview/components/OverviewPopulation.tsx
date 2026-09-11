@@ -22,24 +22,17 @@ import { fetchOverview, type OverviewSectionRow } from "./overview-data";
 import styles from "./OverviewPopulation.module.css";
 
 const chartConfig = {
-  value: { label: "Students", color: "#2563eb" },
+  value: { label: "Students", color: "#171717" },
 } satisfies ChartConfig;
 
 const GRADE_ORDER = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 
-const GRADE_HUES: Record<string, number> = {
-  "Grade 7": 215,
-  "Grade 8": 150,
-  "Grade 9": 38,
-  "Grade 10": 275,
-  "Grade 11": 8,
-  "Grade 12": 190,
-};
+// Monochrome ramp: sections within a grade step from ink to light gray.
+const GRADE_LIGHTNESS = [22, 42, 62];
 
-function colorFor(grade: string, index: number): string {
-  const hue = GRADE_HUES[grade] ?? 215;
-  const light = index === 0 ? 62 : index === 1 ? 50 : 38;
-  return `hsl(${hue}, 60%, ${light}%)`;
+function colorFor(_grade: string, index: number): string {
+  const light = GRADE_LIGHTNESS[index % GRADE_LIGHTNESS.length];
+  return `hsl(0, 0%, ${light}%)`;
 }
 
 interface GradeGroup {

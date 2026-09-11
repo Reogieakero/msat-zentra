@@ -226,15 +226,15 @@
 }
 
 .studentDot[data-level="High"] {
-  background-color: #b91c1c;
+  background-color: #171717;
 }
 
 .studentDot[data-level="Moderate"] {
-  background-color: #d97706;
+  background-color: #737373;
 }
 
 .studentDot[data-level="Low"] {
-  background-color: #15803d;
+  background-color: #d4d4d4;
 }
 
 .studentLrn {

@@ -910,8 +910,9 @@ router.delete(
 );
 
 // Students in the subject's grade level. Every student in the grade level takes
-// the subject, so this lists ALL of them — including those who do not yet have a
-// final grade recorded. Live data; final grade / remarks are shown when present.
+// the subject, so this lists ALL of them — including enlisted students without
+// accounts and those who do not yet have a final grade recorded. Live data;
+// final grade / remarks are shown when present.
 router.get(
   "/subjects/:id/students",
   requireAuth,
@@ -929,47 +930,96 @@ router.get(
         throw new AppError(403, "BAND_SCOPE", "Subject is outside registrar grade band");
       }
 
-      const students = await prisma.studentProfile.findMany({
-        where: { gradeLevel: subject.gradeLevel },
-        select: {
-          userId: true,
-          lrn: true,
-          user: { select: { fullName: true, status: true } },
-          section: { select: { name: true } },
-          finalGrades: {
-            where: { subjectId: id },
-            select: {
-              transmutedGrade: true,
-              remarks: true,
+      // Roster scope: the active school year, so last years' enlistments
+      // don't duplicate current ones.
+      const activeYear = await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      const [students, rosterEntries] = await Promise.all([
+        prisma.studentProfile.findMany({
+          where: { gradeLevel: subject.gradeLevel },
+          select: {
+            userId: true,
+            lrn: true,
+            user: { select: { fullName: true, status: true } },
+            section: { select: { name: true } },
+            finalGrades: {
+              where: { subjectId: id },
+              select: {
+                transmutedGrade: true,
+                remarks: true,
+              },
             },
           },
-        },
-        orderBy: { lrn: "asc" },
-      });
+          orderBy: { lrn: "asc" },
+        }),
+        prisma.studentRoster.findMany({
+          where: {
+            gradeLevel: subject.gradeLevel,
+            ...(activeYear ? { schoolYearId: activeYear.id } : {}),
+          },
+          select: {
+            id: true,
+            lrn: true,
+            fullName: true,
+            section: { select: { name: true } },
+            finalGrades: {
+              where: { subjectId: id },
+              select: {
+                transmutedGrade: true,
+                remarks: true,
+              },
+            },
+          },
+          orderBy: { lrn: "asc" },
+        }),
+      ]);
+      const registeredLrns = new Set(students.map((s) => s.lrn));
 
-      const result = students.map((s) => {
-        const fg = s.finalGrades[0];
-        const hasGrade = fg != null && fg.transmutedGrade != null;
+      const toRow = (
+        grade: { transmutedGrade: number | null; remarks: unknown } | undefined,
+      ) => {
+        const hasGrade = grade != null && grade.transmutedGrade != null;
         return {
+          finalGrade: hasGrade ? (grade!.transmutedGrade as number) : 0,
+          remarks: hasGrade
+            ? grade!.remarks === "Failed"
+              ? ("Failed" as const)
+              : ("Passed" as const)
+            : ("No grade yet" as const),
+        };
+      };
+
+      const result = [
+        ...students.map((s) => ({
           id: s.userId,
           lrn: s.lrn,
           name: s.user.fullName,
           gradeLevel: subject.gradeLevel === "G11" ? 11 : 12,
           section: s.section?.name ?? "—",
-          finalGrade: hasGrade ? (fg!.transmutedGrade as number) : 0,
-          remarks: hasGrade
-            ? fg!.remarks === "Failed"
-              ? "Failed"
-              : "Passed"
-            : ("No grade yet" as const),
+          ...toRow(s.finalGrades[0]),
+          hasAccount: true as const,
           status:
             s.user.status === "active"
-              ? "active"
+              ? ("active" as const)
               : s.user.status === "pending"
-                ? "pending"
-                : "suspended",
-        };
-      });
+                ? ("pending" as const)
+                : ("suspended" as const),
+        })),
+        ...rosterEntries
+          .filter((r) => !registeredLrns.has(r.lrn))
+          .map((r) => ({
+            id: `roster:${r.id}`,
+            lrn: r.lrn,
+            name: r.fullName,
+            gradeLevel: subject.gradeLevel === "G11" ? 11 : 12,
+            section: r.section?.name ?? "—",
+            ...toRow(r.finalGrades[0]),
+            hasAccount: false as const,
+            status: "pending" as const,
+          })),
+      ];
 
       res.json({
         subject: {

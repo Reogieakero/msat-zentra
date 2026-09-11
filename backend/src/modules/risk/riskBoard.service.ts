@@ -51,17 +51,38 @@ export async function getRiskBoard(
   // truth as the heatmap/students endpoints) so the board never drifts.
   const activeTermId = await resolveActiveTermId();
 
-  const Students = await prisma.studentProfile.findMany({
-    where: schoolYearId ? { section: { schoolYearId } } : undefined,
-    select: {
-      finalGrades: {
-        where: { termId: activeTermId ?? undefined },
-        select: { computedAverage: true, transmutedGrade: true },
+  const [profileStudents, rosterStudents] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: schoolYearId ? { section: { schoolYearId } } : undefined,
+      select: {
+        lrn: true,
+        finalGrades: {
+          where: { termId: activeTermId ?? undefined },
+          select: { computedAverage: true, transmutedGrade: true },
+        },
+        attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
+        anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
       },
-      attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
-      anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
-    },
-  });
+    }),
+    // Enlisted students without accounts count on equal footing.
+    prisma.studentRoster.findMany({
+      where: schoolYearId ? { schoolYearId } : undefined,
+      select: {
+        lrn: true,
+        finalGrades: {
+          where: { termId: activeTermId ?? undefined },
+          select: { computedAverage: true, transmutedGrade: true },
+        },
+        attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
+        anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
+      },
+    }),
+  ]);
+  const registeredLrns = new Set(profileStudents.map((s) => s.lrn));
+  const Students = [
+    ...profileStudents,
+    ...rosterStudents.filter((r) => !registeredLrns.has(r.lrn)),
+  ];
 
   const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
     gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;

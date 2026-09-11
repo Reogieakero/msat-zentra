@@ -86,8 +86,8 @@
 }
 
 .cardGood {
-  border-color: color-mix(in oklch, #22c55e, transparent 60%);
-  background-color: color-mix(in oklch, #22c55e, transparent 96%);
+  border-color: color-mix(in oklch, var(--foreground), transparent 60%);
+  background-color: color-mix(in oklch, var(--foreground), transparent 96%);
 }
 
 .cardTitle {
@@ -113,8 +113,8 @@
 }
 
 .cardGood .cardIcon {
-  background-color: color-mix(in oklch, #22c55e, transparent 90%);
-  color: #15803d;
+  background-color: color-mix(in oklch, var(--foreground), transparent 90%);
+  color: var(--foreground);
 }
 
 .cardValue {

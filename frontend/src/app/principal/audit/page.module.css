@@ -69,30 +69,30 @@
 
 .subtitle {
   font-size: 13.5px;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
   margin: 0;
   max-width: 60ch;
 }
 
 .empty {
-  border: 1px dashed var(--border, #e7e5e4);
+  border: 1px dashed var(--border, #e5e5e5);
   border-radius: var(--radius-md, 6px);
   padding: 48px 16px;
   text-align: center;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
   font-size: 14px;
 }
 
 .error {
-  border: 1px solid var(--destructive, #b91c1c);
-  background: color-mix(in srgb, var(--destructive, #b91c1c) 6%, transparent);
+  border: 1px solid var(--destructive, #171717);
+  background: color-mix(in srgb, var(--destructive, #171717) 6%, transparent);
   border-radius: var(--radius-md, 6px);
   padding: 20px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: var(--foreground, #1c1917);
+  color: var(--foreground, #171717);
   font-size: 14px;
 }
 
@@ -101,13 +101,13 @@
   font-weight: 500;
   padding: 6px 14px;
   border-radius: var(--radius-md, 6px);
-  border: 1px solid var(--border, #e7e5e4);
+  border: 1px solid var(--border, #e5e5e5);
   background: var(--card, #fff);
   cursor: pointer;
 }
 
 .retry:hover {
-  background: var(--muted, #f5f5f4);
+  background: var(--muted, #f5f5f5);
 }
 
 .footer {
@@ -120,7 +120,7 @@
 
 .count {
   font-size: 13px;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
 }
 
 @keyframes shimmer {

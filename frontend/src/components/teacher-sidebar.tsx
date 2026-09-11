@@ -8,6 +8,7 @@ import {
   BookOpen,
   CalendarClock,
   Flag,
+  ClipboardCheck,
   FilePenLine,
   Users,
   Send,
@@ -50,6 +51,12 @@ const NAV: NavGroup[] = [
       { title: "My Classes", href: "/teacher/classes", icon: BookOpen },
       { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
       { title: "Grade Flags", href: "/teacher/grade-flags", icon: Flag },
+    ],
+  },
+  {
+    label: "Grading",
+    items: [
+      { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },
     ],
   },
   {

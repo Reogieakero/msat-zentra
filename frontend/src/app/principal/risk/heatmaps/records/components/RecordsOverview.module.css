@@ -189,21 +189,21 @@
 }
 
 .sevHigh {
-  color: #b91c1c;
-  background-color: color-mix(in oklch, #ef4444, transparent 90%);
-  border-color: color-mix(in oklch, #ef4444, transparent 50%);
+  color: #fff;
+  background-color: #171717;
+  border-color: #171717;
 }
 
 .sevModerate {
-  color: #b45309;
-  background-color: color-mix(in oklch, #f59e0b, transparent 90%);
-  border-color: color-mix(in oklch, #f59e0b, transparent 50%);
+  color: #374151;
+  background-color: #e5e5e5;
+  border-color: #d4d4d4;
 }
 
 .sevLow {
-  color: #15803d;
-  background-color: color-mix(in oklch, #16a34a, transparent 90%);
-  border-color: color-mix(in oklch, #16a34a, transparent 50%);
+  color: var(--muted-foreground);
+  background-color: transparent;
+  border-color: var(--border);
 }
 
 /* ---- Student timeline ---- */
@@ -295,15 +295,15 @@
 }
 
 .followResolved {
-  color: #15803d;
-  background-color: color-mix(in oklch, #16a34a, transparent 90%);
-  border-color: color-mix(in oklch, #16a34a, transparent 50%);
+  color: #fff;
+  background-color: #171717;
+  border-color: #171717;
 }
 
 .followMonitoring {
-  color: #1d4ed8;
-  background-color: color-mix(in oklch, #2563eb, transparent 90%);
-  border-color: color-mix(in oklch, #2563eb, transparent 50%);
+  color: #374151;
+  background-color: #e5e5e5;
+  border-color: #d4d4d4;
 }
 
 .followPending {

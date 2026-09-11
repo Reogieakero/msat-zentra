@@ -38,10 +38,16 @@ router.get(
         orderBy: { id: "desc" },
       });
 
+      // Filed referrals awaiting a learner profile sit at consultation.
+      const earlyConsultation = await prisma.referral.count({
+        where: { referredToRole: "adm_coordinator", admProfiles: { none: {} } },
+      });
       const stageBreakdown = ADM_STAGE_FLOW.map((s) => ({
         stage: s.stage,
         short: s.label,
-        count: profiles.filter((p) => p.stage === s.stage).length,
+        count:
+          profiles.filter((p) => p.stage === s.stage).length +
+          (s.stage === "consultation" ? earlyConsultation : 0),
       }));
 
       // Gate matches isAwaitingSignature() on the frontend so the KPI only
@@ -131,7 +137,6 @@ router.get(
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
       const limit = PAGE_SIZE;
-      const skip = (page - 1) * limit;
       const q =
         typeof req.query.q === "string" && req.query.q.trim()
           ? req.query.q.trim().toLowerCase()
@@ -140,13 +145,18 @@ router.get(
         typeof req.query.stage === "string" && req.query.stage.trim()
           ? req.query.stage.trim()
           : "";
+      const ACTIVE_STAGES: AdmStage[] = [...REFERRAL_STAGES, "consultation"];
       const stageFilter: AdmStage | "" =
-        stageParam && REFERRAL_STAGES.includes(stageParam as AdmStage)
+        stageParam && (ACTIVE_STAGES as string[]).includes(stageParam)
           ? (stageParam as AdmStage)
           : "";
 
       const where: Prisma.AdmLearnerProfileWhereInput = {
-        ...(stageFilter ? { stage: stageFilter } : { stage: { in: REFERRAL_STAGES } }),
+        ...(stageFilter && stageFilter !== "consultation"
+          ? { stage: stageFilter }
+          : stageFilter === ""
+            ? { stage: { in: REFERRAL_STAGES } }
+            : { id: "__none__" }),
         ...(q
           ? {
               OR: [
@@ -158,8 +168,28 @@ router.get(
           : {}),
       };
 
+      // Filed ADM referrals the coordinator hasn't built a learner profile
+      // for yet — visible here at the consultation stage instead of vanishing.
+      // Roster enlistments without accounts count too.
+      const includeEarly = !stageFilter || stageFilter === "consultation";
+      const earlyWhere = {
+        referredToRole: "adm_coordinator" as const,
+        admProfiles: { none: {} },
+        ...(q
+          ? {
+              OR: [
+                { student: { user: { fullName: { contains: q, mode: "insensitive" as const } } } },
+                { student: { lrn: { contains: q } } },
+                { roster: { fullName: { contains: q, mode: "insensitive" as const } } },
+                { roster: { lrn: { contains: q } } },
+                { id: { contains: q } },
+              ],
+            }
+          : {}),
+      };
+
       const referredWhere: Prisma.AdmLearnerProfileWhereInput = { stage: { in: REFERRAL_STAGES } };
-      const [pageItems, total, stageGroups, totalReferred] = await Promise.all([
+      const [profileItems, stageGroups, totalReferredProfiles, earlyItems] = await Promise.all([
         prisma.admLearnerProfile.findMany({
           where,
           include: {
@@ -167,23 +197,46 @@ router.get(
             preparedByUser: true,
             forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
           },
-          orderBy: { id: "desc" },
-          skip,
-          take: limit,
+          orderBy: { createdAt: "desc" },
         }),
-        prisma.admLearnerProfile.count({ where }),
         prisma.admLearnerProfile.groupBy({
           by: ["stage"],
           where: referredWhere,
           _count: { _all: true },
         }),
         prisma.admLearnerProfile.count({ where: referredWhere }),
+        includeEarly
+          ? prisma.referral.findMany({
+              where: earlyWhere,
+              include: {
+                student: {
+                  select: {
+                    lrn: true,
+                    gradeLevel: true,
+                    user: { select: { fullName: true } },
+                  },
+                },
+                roster: {
+                  select: {
+                    lrn: true,
+                    fullName: true,
+                    gradeLevel: true,
+                  },
+                },
+                referredByUser: { select: { fullName: true } },
+                anecdotalRecord: { select: { observationDatetime: true } },
+              },
+              orderBy: { id: "desc" },
+            })
+          : Promise.resolve([]),
       ]);
 
       const countsByStage: Record<string, number> = {};
       for (const g of stageGroups) countsByStage[g.stage] = g._count?._all ?? 0;
+      countsByStage.consultation = (countsByStage.consultation ?? 0) + earlyItems.length;
+      const totalReferred = totalReferredProfiles + earlyItems.length;
 
-      const out = pageItems.map((p) => {
+      const profileRows = profileItems.map((p) => {
         const stage = p.stage;
         const base = {
           id: p.id,
@@ -212,13 +265,40 @@ router.get(
         return req.user!.role === "principal" ? base : { ...base, studentId: p.studentId };
       });
 
+      // Early referrals sit at consultation until the coordinator builds the
+      // learner profile. Newest first, then paged in memory.
+      const earlyRows = earlyItems.map((r) => {
+        const base = {
+          id: `referral:${r.id}`,
+          lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+          student: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+          grade: GRADE_LABEL[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+          stage: "consultation" as const,
+          eligibilityStatus: "pending" as const,
+          preparedBy: r.referredByUser.fullName,
+          datePrepared: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
+          approvedBy: null as string | null,
+          approvalDate: null as string | null,
+          forms: [] as { id: string; formType: string; title: string; status: string }[],
+        };
+        return req.user!.role === "principal" ? base : { ...base, studentId: "" };
+      });
+
+      const merged = [...profileRows, ...earlyRows].sort((a, b) =>
+        (b.datePrepared ?? "").localeCompare(a.datePrepared ?? ""),
+      );
+      const total = merged.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const clampedPage = Math.min(page, totalPages);
+      const slice = merged.slice((clampedPage - 1) * limit, clampedPage * limit);
+
       res.json({
-        rows: out,
+        rows: slice,
         total,
         totalReferred,
         stageCounts: countsByStage,
-        page,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
+        page: clampedPage,
+        totalPages,
         limit,
       });
     } catch (e) { next(e); }

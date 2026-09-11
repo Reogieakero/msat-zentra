@@ -126,15 +126,15 @@
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background-color: #ff5f57;
+  background-color: #e5e5e5;
 }
 
 .dot:nth-child(2) {
-  background-color: #febc2e;
+  background-color: #d4d4d4;
 }
 
 .dot:nth-child(3) {
-  background-color: #28c840;
+  background-color: #a3a3a3;
 }
 
 .browserUrl {

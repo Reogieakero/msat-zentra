@@ -234,15 +234,15 @@
 }
 
 .dot[data-tone="red"] {
-  background: oklch(0.62 0.2 25);
+  background: oklch(0.205 0 0);
 }
 
 .dot[data-tone="amber"] {
-  background: oklch(0.78 0.16 75);
+  background: oklch(0.556 0 0);
 }
 
 .dot[data-tone="green"] {
-  background: oklch(0.7 0.16 145);
+  background: oklch(0.87 0 0);
 }
 
 .panelAddress {
@@ -303,11 +303,11 @@
 }
 
 .tone_high {
-  color: oklch(0.5 0.18 25);
+  color: oklch(0.205 0 0);
 }
 
 .tone_mod {
-  color: oklch(0.6 0.14 70);
+  color: oklch(0.439 0 0);
 }
 
 .tone_low {

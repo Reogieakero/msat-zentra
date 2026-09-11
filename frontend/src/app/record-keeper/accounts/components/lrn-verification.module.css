@@ -84,21 +84,21 @@
 }
 
 .verdictMatch {
-  background-color: color-mix(in oklch, #16a34a, transparent 88%);
-  color: #16a34a;
-  border: 1px solid color-mix(in oklch, #16a34a, transparent 40%);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid var(--primary);
 }
 
 .verdictMismatch {
-  background-color: color-mix(in oklch, #d97706, transparent 88%);
-  color: #d97706;
-  border: 1px solid color-mix(in oklch, #d97706, transparent 40%);
+  background-color: var(--muted);
+  color: var(--foreground);
+  border: 1px solid var(--border);
 }
 
 .verdictNotFound {
-  background-color: color-mix(in oklch, #dc2626, transparent 88%);
-  color: #dc2626;
-  border: 1px solid color-mix(in oklch, #dc2626, transparent 40%);
+  background-color: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--foreground);
 }
 
 .sectionLabel {
@@ -155,13 +155,15 @@
 }
 
 .ok {
-  color: #16a34a;
+  color: var(--foreground);
   font-weight: 600;
 }
 
 .bad {
-  color: #dc2626;
+  color: var(--foreground);
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 @media (max-width: 480px) {

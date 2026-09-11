@@ -61,9 +61,11 @@ async function resolveSourceLabel(
       case "interventions": {
         const r = await prisma.intervention.findUnique({
           where: { id: sourceId },
-          select: { studentId: true },
+          select: { studentId: true, roster: { select: { fullName: true } } },
         });
-        const n = r ? await studentName(r.studentId) : null;
+        const n = r?.studentId
+          ? await studentName(r.studentId)
+          : (r?.roster?.fullName ?? null);
         return n ? `Intervention · ${n}` : `Intervention #${sourceId}`;
       }
       case "referrals": {
@@ -87,9 +89,11 @@ async function resolveSourceLabel(
       case "final_grades": {
         const r = await prisma.finalGrade.findUnique({
           where: { id: sourceId },
-          select: { studentId: true },
+          select: { studentId: true, roster: { select: { fullName: true } } },
         });
-        const n = r ? await studentName(r.studentId) : null;
+        const n = r?.studentId
+          ? await studentName(r.studentId)
+          : (r?.roster?.fullName ?? null);
         return n ? `Final Grade · ${n}` : `Final Grade #${sourceId}`;
       }
       case "student_profiles":

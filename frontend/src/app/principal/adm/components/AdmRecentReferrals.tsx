@@ -27,14 +27,14 @@ import { ADM_PIPELINE } from "../adm";
 import styles from "./AdmRecentReferrals.module.css";
 
 const STAGE_COLORS: Record<string, string> = {
-  anecdotal: "#a8a29e",
-  consultation: "#f59e0b",
-  meeting_parents: "#3b82f6",
-  home_visitation: "#8b5cf6",
-  certification: "#0ea5e9",
-  principal_approval: "#166534",
-  enrollment_monitoring: "#10b981",
-  completion: "#64748b",
+  anecdotal: "#d4d4d4",
+  consultation: "#a3a3a3",
+  meeting_parents: "#737373",
+  home_visitation: "#525252",
+  certification: "#404040",
+  principal_approval: "#262626",
+  enrollment_monitoring: "#171717",
+  completion: "#000000",
 };
 
 function stageLabel(stage: string): string {

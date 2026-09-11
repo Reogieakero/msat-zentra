@@ -1,0 +1,32 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+  align-self: flex-start;
+}
+
+.back:hover {
+  color: var(--foreground);
+}
+
+.backIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--destructive);
+}

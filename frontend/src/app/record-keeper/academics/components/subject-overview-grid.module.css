@@ -3,14 +3,14 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  --donut-0: #2563eb;
-  --donut-1: #0d9488;
-  --donut-2: #d97706;
-  --donut-3: #7c3aed;
-  --donut-4: #db2777;
-  --donut-5: #16a34a;
-  --donut-6: #dc2626;
-  --donut-7: #64748b;
+  --donut-0: #171717;
+  --donut-1: #404040;
+  --donut-2: #525252;
+  --donut-3: #737373;
+  --donut-4: #8a8a8a;
+  --donut-5: #a3a3a3;
+  --donut-6: #d4d4d4;
+  --donut-7: #e5e5e5;
 }
 
 .topBar {

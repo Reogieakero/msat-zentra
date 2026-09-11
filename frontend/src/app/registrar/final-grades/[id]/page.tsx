@@ -359,7 +359,7 @@ function RiskBadge({
     return (
       <Badge
         variant="outline"
-        className="rounded-4xl border-green-500/30 bg-green-500/10 text-green-600 text-xs font-semibold"
+        className="rounded-4xl border-border bg-transparent text-muted-foreground text-xs font-semibold"
       >
         <Check className="mr-1 size-3.5" aria-hidden />
         Not at risk
@@ -373,8 +373,8 @@ function RiskBadge({
       variant="outline"
       className={`rounded-4xl text-xs font-semibold ${
         high
-          ? "border-destructive/30 bg-destructive/10 text-destructive"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-600"
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-muted text-foreground"
       }`}
     >
       <AlertTriangle className="mr-1 size-3.5" aria-hidden />

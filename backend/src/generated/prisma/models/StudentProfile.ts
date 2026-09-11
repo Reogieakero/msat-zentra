@@ -706,10 +706,12 @@ export type StudentProfileCreateNestedOneWithoutStudentGradesInput = {
   connect?: Prisma.StudentProfileWhereUniqueInput
 }
 
-export type StudentProfileUpdateOneRequiredWithoutStudentGradesNestedInput = {
+export type StudentProfileUpdateOneWithoutStudentGradesNestedInput = {
   create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutStudentGradesInput, Prisma.StudentProfileUncheckedCreateWithoutStudentGradesInput>
   connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutStudentGradesInput
   upsert?: Prisma.StudentProfileUpsertWithoutStudentGradesInput
+  disconnect?: Prisma.StudentProfileWhereInput | boolean
+  delete?: Prisma.StudentProfileWhereInput | boolean
   connect?: Prisma.StudentProfileWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentProfileUpdateToOneWithWhereWithoutStudentGradesInput, Prisma.StudentProfileUpdateWithoutStudentGradesInput>, Prisma.StudentProfileUncheckedUpdateWithoutStudentGradesInput>
 }
@@ -720,10 +722,12 @@ export type StudentProfileCreateNestedOneWithoutFinalGradesInput = {
   connect?: Prisma.StudentProfileWhereUniqueInput
 }
 
-export type StudentProfileUpdateOneRequiredWithoutFinalGradesNestedInput = {
+export type StudentProfileUpdateOneWithoutFinalGradesNestedInput = {
   create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutFinalGradesInput, Prisma.StudentProfileUncheckedCreateWithoutFinalGradesInput>
   connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutFinalGradesInput
   upsert?: Prisma.StudentProfileUpsertWithoutFinalGradesInput
+  disconnect?: Prisma.StudentProfileWhereInput | boolean
+  delete?: Prisma.StudentProfileWhereInput | boolean
   connect?: Prisma.StudentProfileWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentProfileUpdateToOneWithWhereWithoutFinalGradesInput, Prisma.StudentProfileUpdateWithoutFinalGradesInput>, Prisma.StudentProfileUncheckedUpdateWithoutFinalGradesInput>
 }
@@ -796,10 +800,12 @@ export type StudentProfileCreateNestedOneWithoutInterventionsInput = {
   connect?: Prisma.StudentProfileWhereUniqueInput
 }
 
-export type StudentProfileUpdateOneRequiredWithoutInterventionsNestedInput = {
+export type StudentProfileUpdateOneWithoutInterventionsNestedInput = {
   create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutInterventionsInput, Prisma.StudentProfileUncheckedCreateWithoutInterventionsInput>
   connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutInterventionsInput
   upsert?: Prisma.StudentProfileUpsertWithoutInterventionsInput
+  disconnect?: Prisma.StudentProfileWhereInput | boolean
+  delete?: Prisma.StudentProfileWhereInput | boolean
   connect?: Prisma.StudentProfileWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentProfileUpdateToOneWithWhereWithoutInterventionsInput, Prisma.StudentProfileUpdateWithoutInterventionsInput>, Prisma.StudentProfileUncheckedUpdateWithoutInterventionsInput>
 }
@@ -866,10 +872,12 @@ export type StudentProfileCreateNestedOneWithoutRiskSnapshotsInput = {
   connect?: Prisma.StudentProfileWhereUniqueInput
 }
 
-export type StudentProfileUpdateOneRequiredWithoutRiskSnapshotsNestedInput = {
+export type StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput = {
   create?: Prisma.XOR<Prisma.StudentProfileCreateWithoutRiskSnapshotsInput, Prisma.StudentProfileUncheckedCreateWithoutRiskSnapshotsInput>
   connectOrCreate?: Prisma.StudentProfileCreateOrConnectWithoutRiskSnapshotsInput
   upsert?: Prisma.StudentProfileUpsertWithoutRiskSnapshotsInput
+  disconnect?: Prisma.StudentProfileWhereInput | boolean
+  delete?: Prisma.StudentProfileWhereInput | boolean
   connect?: Prisma.StudentProfileWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudentProfileUpdateToOneWithWhereWithoutRiskSnapshotsInput, Prisma.StudentProfileUpdateWithoutRiskSnapshotsInput>, Prisma.StudentProfileUncheckedUpdateWithoutRiskSnapshotsInput>
 }

@@ -121,7 +121,7 @@
 
 .tone_good .kpiIcon {
   background-color: color-mix(in oklch, var(--primary), transparent 88%);
-  color: #15803d;
+  color: var(--muted-foreground);
 }
 
 .tone_default .kpiIcon {

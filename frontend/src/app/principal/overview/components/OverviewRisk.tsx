@@ -23,15 +23,15 @@ import { fetchOverview } from "./overview-data";
 import styles from "./OverviewRisk.module.css";
 
 const chartConfig = {
-  value: { label: "Students", color: "#2563eb" },
+  value: { label: "Students", color: "#171717" },
 } satisfies ChartConfig;
 
 type FactorKey = "attendance" | "grades" | "behavior";
 
 const FACTOR_COLORS: Record<FactorKey, string> = {
-  attendance: "#f59e0b",
-  grades: "#3b82f6",
-  behavior: "#ef4444",
+  attendance: "#171717",
+  grades: "#525252",
+  behavior: "#a3a3a3",
 };
 
 interface FactorRow {
@@ -44,9 +44,9 @@ interface FactorRow {
 type LevelKey = "high" | "moderate" | "low";
 
 const LEVEL_COLORS: Record<LevelKey, string> = {
-  high: "#ef4444",
-  moderate: "#f59e0b",
-  low: "#16a34a",
+  high: "#171717",
+  moderate: "#6b7280",
+  low: "#d1d5db",
 };
 
 interface LevelRow {
@@ -360,7 +360,7 @@ export function OverviewRisk() {
                       />
                       <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                         {gradeRows.map((r) => (
-                          <Cell key={r.grade} fill="#2563eb" />
+                          <Cell key={r.grade} fill="#171717" />
                         ))}
                       </Bar>
                     </BarChart>

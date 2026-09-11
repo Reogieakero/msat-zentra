@@ -66,6 +66,7 @@ export interface TeacherOverviewData {
     attendance: number;
     behavioral: number;
   };
+  atRiskStudents: number;
   classes: TeacherClassRow[];
   recentActivity: TeacherActivityRow[];
   advisory: {

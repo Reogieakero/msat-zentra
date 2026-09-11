@@ -41,6 +41,7 @@ const EMPTY_RESPONSE = {
   advisorySection: null,
   kpi: { classCount: 0, pendingAssessments: 0, openFlags: 0, studentCount: 0 },
   atRiskFactors: { academic: 0, attendance: 0, behavioral: 0 },
+  atRiskStudents: 0,
   classes: [],
   recentActivity: [],
   advisory: { students: [] },
@@ -103,9 +104,7 @@ router.get(
         }),
       ]);
 
-      // Roster-aware class sizes: enlisted students without accounts count
-      // too. (The scorable-student list below stays account-based — only
-      // registered students can receive encoded scores.)
+      // Roster-aware headcounts: enlisted students without accounts count too.
       const headcounts = await sectionHeadcounts(sectionIds);
       const countBySection = new Map(
         sectionCounts.map((s) => [s.sectionId, s._count._all])
@@ -137,11 +136,11 @@ router.get(
           studentCount: countBySection.get(a.section.id) ?? 0,
         };
       });
-      const studentCount = sectionCounts.reduce((sum, s) => sum + s._count._all, 0);
+      const studentCount = Array.from(countBySection.values()).reduce((sum, n) => sum + n, 0);
 
       const subjectIds = Array.from(new Set(assignments.map((a) => a.subject.id)));
 
-      const [assessments, finals] = await Promise.all([
+      const [assessments, finals, rosterSections] = await Promise.all([
         prisma.assessment.findMany({
           where: { gradeComponent: { subjectId: { in: subjectIds }, termId } },
           include: {
@@ -150,11 +149,18 @@ router.get(
           },
         }),
         prisma.finalGrade.groupBy({
-          by: ["subjectId", "studentId"],
+          by: ["subjectId", "studentId", "rosterId"],
           where: { termId, subjectId: { in: subjectIds }, computedAverage: { not: null } },
           _avg: { computedAverage: true },
         }),
+        prisma.studentRoster.findMany({
+          where: { sectionId: { in: sectionIds } },
+          select: { id: true, sectionId: true },
+        }),
       ]);
+      // Roster finals attribute to their enlistment section so encoded
+      // account-less students count in class standings too.
+      const rosterSecById = new Map(rosterSections.map((s) => [`roster:${s.id}`, s.sectionId]));
 
       const assessmentsPayload = assessments.map((as) => {
         const secIds = subjectSectionIds.get(as.gradeComponent.subjectId);
@@ -212,7 +218,9 @@ router.get(
         aggMap.set(`${a.subjectId}::${secId}`, { sum: 0, count: 0, meta: entryMeta });
       }
       for (const f of finals) {
-        const stSec = studentSecById.get(f.studentId);
+        const stSec = f.studentId
+          ? studentSecById.get(f.studentId)
+          : rosterSecById.get(`roster:${f.rosterId}`);
         if (!stSec) continue;
         const entry = aggMap.get(`${f.subjectId}::${stSec}`);
         if (!entry) continue;
@@ -250,41 +258,172 @@ router.get(
         flags: ("academic" | "attendance" | "behavioral")[];
       }[] = [];
       if (advisorySection) {
-        const advisees = await prisma.studentProfile.findMany({
-          where: { sectionId: advisorySection.id },
-          include: {
-            user: { select: { fullName: true } },
-            finalGrades: {
-              where: { termId },
-              select: { computedAverage: true, transmutedGrade: true },
+        const [advisees, rosterEntries] = await Promise.all([
+          prisma.studentProfile.findMany({
+            where: { sectionId: advisorySection.id },
+            include: {
+              user: { select: { fullName: true } },
+              finalGrades: {
+                where: { termId },
+                select: { computedAverage: true, transmutedGrade: true },
+              },
+              attendanceRecords: { where: { termId }, select: { status: true } },
+              _count: { select: { anecdotalRecords: { where: { termId } } } },
             },
-            attendanceRecords: { where: { termId }, select: { status: true } },
-            _count: { select: { anecdotalRecords: { where: { termId } } } },
-          },
-        });
-        const enrolled = countBySection.get(advisorySection.id) ?? 0;
-        advisoryStudents = advisees.map((s) => {
-        const flags = computeRiskFactors({
-          finalGrades: s.finalGrades,
-          attendance: s.attendanceRecords,
-          anecdotalCount: s._count.anecdotalRecords,
-          enrolled,
-        });
-        const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];
-        if (flags.academicFlag) activeFlags.push("academic");
-        if (flags.attendanceFlag) activeFlags.push("attendance");
-        if (flags.behavioralFlag) activeFlags.push("behavioral");
-        const flag: "academic" | "attendance" | "behavioral" | "none" =
-          activeFlags[0] ?? "none";
-        return {
-          studentId: s.userId,
-          name: s.user.fullName,
-          section: advisorySection.name,
-          riskLevel: levelFromFlags(flags),
-          flag,
-          flags: activeFlags,
+          }),
+          // Enlisted students without accounts — account status never hides
+          // anyone from risk detection.
+          prisma.studentRoster.findMany({
+            where: { sectionId: advisorySection.id },
+            select: { id: true, lrn: true, fullName: true },
+          }),
+        ]);
+        const registeredLrns = new Set(advisees.map((s) => s.lrn));
+        const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
+        const rosterIds = rosterOnly.map((r) => r.id);
+        const profileIds = advisees.map((s) => s.userId);
+
+        // Raw assessment means per student per subject (unweighted) for the
+        // raw-grade academic check, plus roster finals/attendance/anecdotal.
+        const [rawRows, rosterFinals, rosterAttendance, rosterAnecdotal] = await Promise.all([
+          prisma.studentGrade.findMany({
+            where: {
+              assessment: { gradeComponent: { termId } },
+              OR: [
+                ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
+                ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
+              ],
+            },
+            select: {
+              studentId: true,
+              rosterId: true,
+              percentageScore: true,
+              assessment: { select: { gradeComponent: { select: { subjectId: true } } } },
+            },
+          }),
+          rosterIds.length > 0
+            ? prisma.finalGrade.findMany({
+                where: { rosterId: { in: rosterIds }, termId },
+                select: {
+                  rosterId: true,
+                  computedAverage: true,
+                  transmutedGrade: true,
+                  lockStatus: true,
+                  finalizedAt: true,
+                },
+              })
+            : Promise.resolve([]),
+          rosterIds.length > 0
+            ? prisma.attendanceRecord.findMany({
+                where: { rosterId: { in: rosterIds }, termId },
+                select: { rosterId: true, status: true },
+              })
+            : Promise.resolve([]),
+          rosterIds.length > 0
+            ? prisma.anecdotalRecord.findMany({
+                where: { rosterId: { in: rosterIds }, termId },
+                select: { rosterId: true },
+              })
+            : Promise.resolve([]),
+        ]);
+
+        // Per-student raw subject means: mean of recorded percentages per
+        // subject, then averaged across subjects by the engine.
+        const rawBySubject = new Map<string, Map<string, { sum: number; count: number }>>();
+        for (const row of rawRows) {
+          const key = row.studentId ?? `roster:${row.rosterId}`;
+          const subjectId = row.assessment.gradeComponent.subjectId;
+          if (!rawBySubject.has(key)) rawBySubject.set(key, new Map());
+          const perSubject = rawBySubject.get(key)!;
+          const cell = perSubject.get(subjectId) ?? { sum: 0, count: 0 };
+          cell.sum += row.percentageScore;
+          cell.count += 1;
+          perSubject.set(subjectId, cell);
+        }
+        const rawAveragesFor = (key: string): number[] =>
+          Array.from((rawBySubject.get(key) ?? new Map()).values()).map(
+            (cell) => cell.sum / cell.count,
+          );
+
+        const finalsByRoster = new Map<string, typeof rosterFinals>();
+        for (const f of rosterFinals) {
+          const arr = finalsByRoster.get(`roster:${f.rosterId}`) ?? [];
+          arr.push(f);
+          finalsByRoster.set(`roster:${f.rosterId}`, arr);
+        }
+        const attendanceByRoster = new Map<string, { status: string }[]>();
+        for (const r of rosterAttendance) {
+          const arr = attendanceByRoster.get(`roster:${r.rosterId}`) ?? [];
+          arr.push({ status: r.status });
+          attendanceByRoster.set(`roster:${r.rosterId}`, arr);
+        }
+        const anecdotalByRoster = new Map<string, number>();
+        for (const r of rosterAnecdotal) {
+          anecdotalByRoster.set(`roster:${r.rosterId}`, (anecdotalByRoster.get(`roster:${r.rosterId}`) ?? 0) + 1);
+        }
+
+        const toFlags = (
+          finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[],
+          key: string,
+          attendance: { status: string }[],
+          anecdotalCount: number,
+          enrolled: number,
+        ) => {
+          const flags = computeRiskFactors({
+            finalGrades,
+            rawAverages: rawAveragesFor(key),
+            attendance,
+            anecdotalCount,
+            enrolled,
+          });
+          const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];
+          if (flags.academicFlag) activeFlags.push("academic");
+          if (flags.attendanceFlag) activeFlags.push("attendance");
+          if (flags.behavioralFlag) activeFlags.push("behavioral");
+          return { flags, activeFlags, flag: activeFlags[0] ?? ("none" as const) };
         };
-        });
+
+        const enrolled = countBySection.get(advisorySection.id) ?? 0;
+        advisoryStudents = [
+          ...advisees.map((s) => {
+            const { flags, activeFlags, flag } = toFlags(
+              s.finalGrades,
+              s.userId,
+              s.attendanceRecords,
+              s._count.anecdotalRecords,
+              enrolled,
+            );
+            return {
+              studentId: s.userId,
+              name: s.user.fullName,
+              section: advisorySection.name,
+              riskLevel: levelFromFlags(flags),
+              flag,
+              flags: activeFlags,
+            };
+          }),
+          ...rosterOnly.map((r) => {
+            const key = `roster:${r.id}`;
+            const { flags, activeFlags, flag } = toFlags(
+              (finalsByRoster.get(key) ?? []).map((f) => ({
+                computedAverage: f.computedAverage,
+                transmutedGrade: f.transmutedGrade,
+              })),
+              key,
+              attendanceByRoster.get(key) ?? [],
+              anecdotalByRoster.get(key) ?? 0,
+              enrolled,
+            );
+            return {
+              studentId: key,
+              name: r.fullName,
+              section: advisorySection.name,
+              riskLevel: levelFromFlags(flags),
+              flag,
+              flags: activeFlags,
+            };
+          }),
+        ];
       }
 
       const atRiskFactors = {
@@ -292,6 +431,10 @@ router.get(
         attendance: advisoryStudents.filter((s) => s.flags.includes("attendance")).length,
         behavioral: advisoryStudents.filter((s) => s.flags.includes("behavioral")).length,
       };
+      // Unique at-risk advisees — the population share. Factor counts above
+      // can exceed this (one student may trip several factors) and must never
+      // be summed into a percentage.
+      const atRiskStudents = advisoryStudents.filter((s) => s.flag !== "none").length;
 
       res.json({
         teacherName: user?.fullName ?? "",
@@ -311,6 +454,7 @@ router.get(
           studentCount,
         },
         atRiskFactors,
+        atRiskStudents,
         classes,
         recentActivity,
         advisory: { students: advisoryStudents },

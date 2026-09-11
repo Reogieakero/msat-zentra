@@ -62,16 +62,27 @@ router.get(
         byGrade[g][r.status] += 1;
       }
 
-      // Students with no SF10 record at all are "missing" for their grade.
-      const studentsWithoutRecord = await prisma.studentProfile.groupBy({
-        by: ["gradeLevel"],
-        where: { sf10Records: { none: {} } },
-        _count: { _all: true },
-      });
+      // Students with no SF10 record at all are "missing" for their grade —
+      // enlisted students without accounts included (they hold no SF10 yet).
+      const [studentsWithoutRecord, rosterLrns, profileLrns] = await Promise.all([
+        prisma.studentProfile.groupBy({
+          by: ["gradeLevel"],
+          where: { sf10Records: { none: {} } },
+          _count: { _all: true },
+        }),
+        prisma.studentRoster.findMany({ select: { lrn: true, gradeLevel: true } }),
+        prisma.studentProfile.findMany({ select: { lrn: true } }),
+      ]);
       for (const s of studentsWithoutRecord) {
         const g = s.gradeLevel;
         if (!byGrade[g]) byGrade[g] = { attach: 0, available: 0, missing: 0, released: 0 };
         byGrade[g].missing += s._count._all;
+      }
+      const registeredLrns = new Set(profileLrns.map((p) => p.lrn));
+      for (const r of rosterLrns) {
+        if (registeredLrns.has(r.lrn)) continue;
+        if (!byGrade[r.gradeLevel]) byGrade[r.gradeLevel] = { attach: 0, available: 0, missing: 0, released: 0 };
+        byGrade[r.gradeLevel].missing += 1;
       }
 
       const levels = GRADE_ORDER.map((g) => ({ grade: GRADE_LABEL[g], ...byGrade[g] }));

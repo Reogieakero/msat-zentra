@@ -130,16 +130,16 @@ export function stageLabel(stage: AdmPipelineStage): string {
   );
 }
 
-/** Brand-consistent dot colors for each ADM pipeline stage, used in legends. */
+/** Monochrome dot colors for each ADM pipeline stage, used in legends. */
 export const STAGE_COLORS: Record<AdmPipelineStage, string> = {
-  anecdotal: "#a8a29e",
-  consultation: "#f59e0b",
-  meeting_parents: "#3b82f6",
-  home_visitation: "#8b5cf6",
-  certification: "#0ea5e9",
-  principal_approval: "#166534",
-  enrollment_monitoring: "#10b981",
-  completion: "#64748b",
+  anecdotal: "#d4d4d4",
+  consultation: "#a3a3a3",
+  meeting_parents: "#737373",
+  home_visitation: "#525252",
+  certification: "#404040",
+  principal_approval: "#262626",
+  enrollment_monitoring: "#171717",
+  completion: "#000000",
 };
 
 export type AdmDocument = {
@@ -157,35 +157,35 @@ export const ADM_DOCUMENTS: AdmDocument[] = [
     name: "Referral_Form.pdf",
     type: "PDF",
     size: "1.1 MB",
-    color: "#ffc371",
+    color: "#d4d4d4",
     icon: "pdf",
   },
   {
     name: "Anecdotal_Report.pdf",
     type: "PDF",
     size: "0.8 MB",
-    color: "#4facfe",
+    color: "#a3a3a3",
     icon: "pdf",
   },
   {
     name: "Certification.pdf",
     type: "PDF",
     size: "0.6 MB",
-    color: "#00f2fe",
+    color: "#525252",
     icon: "pdf",
   },
   {
     name: "Minutes_of_Meeting.pdf",
     type: "PDF",
     size: "0.9 MB",
-    color: "#a18cd1",
+    color: "#737373",
     icon: "pdf",
   },
   {
     name: "HV_Form.pdf",
     type: "PDF",
     size: "0.7 MB",
-    color: "#ff5f6d",
+    color: "#404040",
     icon: "pdf",
   },
 ];

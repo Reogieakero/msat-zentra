@@ -21,7 +21,7 @@ import {
   attendanceTrend,
   type DayAgg,
 } from "../../services/attendance.js";
-import { recomputeRisk } from "../../services/risk.js";
+import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import { rosterCountsByGrade, sectionHeadcounts } from "../../services/enrollment.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 
@@ -176,10 +176,13 @@ router.post(
       const byStudent = new Map(written.map((w) => [`${w.studentId}|${session}`, w]));
 
       for (const r of records) {
-        // Risk + parent notifications only apply to registered profiles —
-        // roster enlistments have no risk record or linked parents (yet).
+        // Risk + parent notifications only apply to registered profiles.
+        // Roster enlistments get the roster risk path (snapshot +
+        // auto-intervention, no parent links).
         if (!r.studentId.startsWith("roster:")) {
           await recomputeRisk(r.studentId, termId);
+        } else {
+          await recomputeRosterRisk(r.studentId.slice("roster:".length), termId);
         }
         const prev = prevStatus.get(r.studentId);
         const newlyFlagged =
@@ -707,44 +710,76 @@ router.get(
         throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
       }
 
-      const students = await prisma.studentProfile.findMany({
-        where: { sectionId },
-        select: {
-          userId: true,
-          lrn: true,
-          user: { select: { fullName: true } },
-          attendanceRecords: {
-            where: { termId, session },
-            select: { status: true },
+      const [students, rosterEntries] = await Promise.all([
+        prisma.studentProfile.findMany({
+          where: { sectionId },
+          select: {
+            userId: true,
+            lrn: true,
+            user: { select: { fullName: true } },
+            attendanceRecords: {
+              where: { termId, session },
+              select: { status: true },
+            },
           },
-        },
-        orderBy: { user: { fullName: "asc" } },
-      });
+          orderBy: { user: { fullName: "asc" } },
+        }),
+        // Enlisted students without accounts — zero-record rows included.
+        prisma.studentRoster.findMany({
+          where: { sectionId },
+          select: {
+            id: true,
+            lrn: true,
+            fullName: true,
+            attendanceRecords: {
+              where: { termId, session },
+              select: { status: true },
+            },
+          },
+          orderBy: { fullName: "asc" },
+        }),
+      ]);
+      const registeredLrns = new Set(students.map((st) => st.lrn));
 
-      const result = students.map((st) => {
+      const toRow = (
+        id: string,
+        lrn: string,
+        name: string,
+        records: { status: string }[],
+        hasAccount: boolean,
+      ) => {
         const counts = { present: 0, late: 0, absent: 0, excused: 0 };
-        for (const r of st.attendanceRecords) {
+        for (const r of records) {
           if (r.status === "present") counts.present++;
           else if (r.status === "late") counts.late++;
           else if (r.status === "absent") counts.absent++;
           else if (r.status === "excused") counts.excused++;
         }
-        const total = st.attendanceRecords.length;
         const rate =
           totalSchoolDays > 0
             ? Math.round((counts.present / totalSchoolDays) * 1000) / 10
             : 0;
         return {
-          id: st.userId,
-          lrn: st.lrn,
-          name: st.user.fullName,
+          id,
+          lrn,
+          name,
           present: counts.present,
           late: counts.late,
           absent: counts.absent,
           excused: counts.excused,
           rate,
+          hasAccount,
         };
-      });
+      };
+
+      const result = [
+        ...students.map((st) =>
+          toRow(st.userId, st.lrn, st.user.fullName, st.attendanceRecords, true),
+        ),
+        ...rosterEntries
+          .filter((r) => !registeredLrns.has(r.lrn))
+          .map((r) => toRow(`roster:${r.id}`, r.lrn, r.fullName, r.attendanceRecords, false)),
+      ];
 
       res.json({
         sectionId,

@@ -9,21 +9,21 @@ const STAGES = [
     order: 1,
     label: "Final Grade Locked",
     owner: "Subject Teacher",
-    color: "#f59e0b",
+    color: "#a3a3a3",
   },
   {
     key: "adviserApproved",
     order: 2,
     label: "Adviser Approved",
     owner: "Class Adviser",
-    color: "#3b82f6",
+    color: "#525252",
   },
   {
     key: "complete",
     order: 3,
     label: "Complete Set Ready",
     owner: "Record Keeper",
-    color: "#10b981",
+    color: "#171717",
   },
 ] as const;
 

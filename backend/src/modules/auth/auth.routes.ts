@@ -168,6 +168,40 @@ router.post(
                 sectionId: roster.sectionId,
               },
             });
+            // Carry over everything recorded under roster enlistments for this
+            // LRN (scores, finals, attendance, anecdotal, referrals) onto the
+            // new profile. The profile is brand-new so no unique conflicts
+            // are possible.
+            const rosterIds = (
+              await prisma.studentRoster.findMany({
+                where: { lrn: target.lrn },
+                select: { id: true },
+              })
+            ).map((r) => r.id);
+            if (rosterIds.length > 0) {
+              await prisma.$transaction([
+                prisma.studentGrade.updateMany({
+                  where: { rosterId: { in: rosterIds } },
+                  data: { studentId: target.id, rosterId: null },
+                }),
+                prisma.finalGrade.updateMany({
+                  where: { rosterId: { in: rosterIds } },
+                  data: { studentId: target.id, rosterId: null },
+                }),
+                prisma.attendanceRecord.updateMany({
+                  where: { rosterId: { in: rosterIds } },
+                  data: { studentId: target.id, rosterId: null },
+                }),
+                prisma.anecdotalRecord.updateMany({
+                  where: { rosterId: { in: rosterIds } },
+                  data: { studentId: target.id, rosterId: null },
+                }),
+                prisma.referral.updateMany({
+                  where: { rosterId: { in: rosterIds } },
+                  data: { studentId: target.id, rosterId: null },
+                }),
+              ]);
+            }
           }
         }
       }

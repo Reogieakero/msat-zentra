@@ -65,6 +65,7 @@ const PAGE_SIZE = 20;
 
 const STAGE_FILTERS: { id: string; label: string }[] = [
   { id: "all", label: "All stages" },
+  { id: "consultation", label: "Consultation & Referral" },
   { id: "meeting_parents", label: "Meeting with Parents/Guardians" },
   { id: "home_visitation", label: "Home Visitation" },
   { id: "certification", label: "Recommendation & Certification" },

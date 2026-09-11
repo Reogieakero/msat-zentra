@@ -91,6 +91,7 @@ export default function TeacherOverviewPage() {
         classCount={data.kpi.classCount}
         studentCount={data.kpi.studentCount}
         atRiskFactors={data.atRiskFactors}
+        atRiskStudents={data.atRiskStudents}
       />
 
       <hr className={styles.divider} />

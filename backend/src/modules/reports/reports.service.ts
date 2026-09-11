@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { GradeLevel } from "../../generated/prisma/client.js";
 import { classifyHonorRoll } from "../../services/grading.js";
 
 const GRADE_LABELS: Record<string, string> = {
@@ -148,6 +149,23 @@ export async function getReports(params: {
             where: studentWhere,
             select: {
               userId: true,
+              lrn: true,
+              finalGrades: {
+                where: termId ? { termId } : undefined,
+                select: { transmutedGrade: true, computedAverage: true, lockStatus: true, finalizedAt: true },
+              },
+              attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
+              anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
+            },
+          },
+          // Enlisted students without accounts — same grade scope when set.
+          rosterEntries: {
+            where:
+              typeof studentWhere.gradeLevel === "string"
+                ? { gradeLevel: studentWhere.gradeLevel as GradeLevel }
+                : undefined,
+            select: {
+              lrn: true,
               finalGrades: {
                 where: termId ? { termId } : undefined,
                 select: { transmutedGrade: true, computedAverage: true, lockStatus: true, finalizedAt: true },
@@ -181,7 +199,15 @@ export async function getReports(params: {
 
   for (const section of sections) {
     const grade = gradeLabel(section.gradeLevel);
-    for (const student of section.students) {
+    // Registered profiles plus unregistered enlistments (matched by LRN).
+    const registeredLrns = new Set(section.students.map((s) => s.lrn));
+    const cohort = [
+      ...section.students,
+      ...section.rosterEntries
+        .filter((r) => !registeredLrns.has(r.lrn))
+        .map((r) => ({ userId: "", ...r })),
+    ];
+    for (const student of cohort) {
       const finals = (student.finalGrades ?? []).filter(
         (f) => f.transmutedGrade != null && f.computedAverage != null
       );
@@ -363,6 +389,16 @@ async function buildTrends(
         id: true,
         students: {
           select: {
+            lrn: true,
+            finalGrades: {
+              where: { termId: t.id },
+              select: { transmutedGrade: true },
+            },
+          },
+        },
+        rosterEntries: {
+          select: {
+            lrn: true,
             finalGrades: {
               where: { termId: t.id },
               select: { transmutedGrade: true },
@@ -373,14 +409,19 @@ async function buildTrends(
     });
     let sum = 0;
     let count = 0;
-    for (const s of sections) {
-      for (const st of s.students) {
-        for (const g of st.finalGrades) {
-          if (g.transmutedGrade != null) {
-            sum += g.transmutedGrade as number;
-            count += 1;
-          }
+    const tally = (grades: { transmutedGrade: number | null }[]) => {
+      for (const g of grades) {
+        if (g.transmutedGrade != null) {
+          sum += g.transmutedGrade as number;
+          count += 1;
         }
+      }
+    };
+    for (const s of sections) {
+      const registeredLrns = new Set(s.students.map((st) => st.lrn));
+      for (const st of s.students) tally(st.finalGrades);
+      for (const r of s.rosterEntries) {
+        if (!registeredLrns.has(r.lrn)) tally(r.finalGrades);
       }
     }
     const avg = count > 0 ? round1(sum / count) : 0;

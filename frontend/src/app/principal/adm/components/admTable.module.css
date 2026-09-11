@@ -18,7 +18,7 @@
   letter-spacing: 0.06em;
   color: var(--muted-foreground);
   background: var(--card, #ffffff);
-  border-bottom: 1px solid var(--border, #e7e5e4);
+  border-bottom: 1px solid var(--border, #e5e5e5);
   padding: 0.625rem 0.875rem;
   white-space: nowrap;
 }
@@ -77,82 +77,82 @@
 }
 
 .stage_anecdotal {
-  color: #57534e;
-  background: color-mix(in oklch, #a8a29e, transparent 88%);
-  border-color: color-mix(in oklch, #a8a29e, transparent 70%);
+  color: #6b7280;
+  background: #f5f5f5;
+  border-color: #e5e5e5;
 }
 
 .stage_consultation {
-  color: #b45309;
-  background: color-mix(in oklch, #f59e0b, transparent 86%);
-  border-color: color-mix(in oklch, #f59e0b, transparent 70%);
+  color: #525252;
+  background: #e5e5e5;
+  border-color: #d4d4d4;
 }
 
 .stage_referred {
-  color: #1d4ed8;
-  background: color-mix(in oklch, #3b82f6, transparent 88%);
-  border-color: color-mix(in oklch, #3b82f6, transparent 70%);
+  color: #404040;
+  background: #d4d4d4;
+  border-color: #a3a3a3;
 }
 
 .stage_eligibility {
-  color: #7c3aed;
-  background: color-mix(in oklch, #8b5cf6, transparent 88%);
-  border-color: color-mix(in oklch, #8b5cf6, transparent 70%);
+  color: #374151;
+  background: transparent;
+  border-color: #374151;
 }
 
 .stage_principal_approval {
-  color: #b91c1c;
-  background: color-mix(in oklch, #ef4444, transparent 88%);
-  border-color: color-mix(in oklch, #ef4444, transparent 70%);
+  color: #111827;
+  background: transparent;
+  border-color: #111827;
 }
 
 .stage_certification {
-  color: #0c4a6e;
-  background: color-mix(in oklch, #0ea5e9, transparent 88%);
-  border-color: color-mix(in oklch, #0ea5e9, transparent 70%);
+  color: #fff;
+  background: #404040;
+  border-color: #404040;
 }
 
 .stage_enrollment_monitoring {
-  color: #0e7490;
-  background: color-mix(in oklch, #06b6d4, transparent 88%);
-  border-color: color-mix(in oklch, #06b6d4, transparent 70%);
+  color: #fff;
+  background: #1f2937;
+  border-color: #1f2937;
 }
 
 .stage_completion {
-  color: #166534;
-  background: color-mix(in oklch, #22c55e, transparent 88%);
-  border-color: color-mix(in oklch, #22c55e, transparent 70%);
+  color: #fff;
+  background: #000;
+  border-color: #000;
 }
 
 .elig_eligible {
-  color: #166534;
-  background: color-mix(in oklch, #22c55e, transparent 88%);
-  border-color: color-mix(in oklch, #22c55e, transparent 70%);
+  color: #fff;
+  background: #171717;
+  border-color: #171717;
 }
 
 .elig_pending {
-  color: #b45309;
-  background: color-mix(in oklch, #f59e0b, transparent 86%);
-  border-color: color-mix(in oklch, #f59e0b, transparent 70%);
+  color: #525252;
+  background: #e5e5e5;
+  border-color: #d4d4d4;
 }
 
 .elig_ineligible {
-  color: #b91c1c;
-  background: color-mix(in oklch, #ef4444, transparent 88%);
-  border-color: color-mix(in oklch, #ef4444, transparent 70%);
+  color: #171717;
+  background: transparent;
+  border-color: #171717;
 }
 
 .tickYes {
   width: 1rem;
   height: 1rem;
-  color: var(--primary, #166534);
+  color: var(--primary);
   margin: 0 auto;
 }
 
 .tickNo {
   width: 1rem;
   height: 1rem;
-  color: #b91c1c;
+  color: #171717;
   margin: 0 auto;
 }
 
@@ -162,7 +162,7 @@
   gap: 0.25rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--primary, #166534);
+  color: var(--primary, #171717);
 }
 
 .signedIcon {
@@ -173,7 +173,7 @@
 .pendingSign {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #b91c1c;
+  color: #171717;
 }
 
 .neutralSign {
@@ -297,7 +297,7 @@
   letter-spacing: 0.06em;
   color: var(--muted-foreground);
   background: var(--card, #ffffff);
-  border-bottom: 1px solid var(--border, #e7e5e4);
+  border-bottom: 1px solid var(--border, #e5e5e5);
   padding: 0.625rem 0.875rem;
   white-space: nowrap;
 }

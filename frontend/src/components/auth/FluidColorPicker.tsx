@@ -6,9 +6,9 @@ import type { FluidHue } from "@/components/auth/FluidBackground";
 import styles from "./FluidColorPicker.module.css";
 
 const OPTIONS: { value: FluidHue; label: string; color: string }[] = [
-  { value: "green", label: "Green", color: "oklch(0.83 0.24 142)" },
-  { value: "blue", label: "Blue", color: "oklch(0.55 0.13 230)" },
-  { value: "amber", label: "Amber", color: "oklch(0.7 0.14 70)" },
+  { value: "green", label: "Onyx", color: "oklch(0.205 0 0)" },
+  { value: "blue", label: "Graphite", color: "oklch(0.439 0 0)" },
+  { value: "amber", label: "Fog", color: "oklch(0.87 0 0)" },
 ];
 
 export function FluidColorPicker({

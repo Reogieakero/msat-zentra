@@ -9,9 +9,9 @@ import { GRADE_LABEL, SF10_SOURCE_LABEL, type Sf10Record } from "../types";
 import styles from "../sf10.module.css";
 
 const STATUS_FOLDER_COLOR: Record<Sf10Record["status"], string> = {
-  attach: "rgba(217, 119, 6, 0.7)",
-  available: "rgba(0, 123, 255, 0.65)",
-  released: "rgba(22, 163, 74, 0.65)",
+  attach: "rgba(115, 115, 115, 0.7)",
+  available: "rgba(64, 64, 64, 0.65)",
+  released: "rgba(23, 23, 23, 0.65)",
 };
 
 function toFolderFiles(record: Sf10Record): FolderFile[] {
@@ -20,7 +20,7 @@ function toFolderFiles(record: Sf10Record): FolderFile[] {
       name: `${record.fullName.replace(/\s+/g, "_")}_SF10.pdf`,
       type: "PDF",
       size: "1.4 MB",
-      color: "#4facfe",
+      color: "#737373",
       icon: "pdf",
     },
   ];

@@ -140,6 +140,35 @@ export async function getAcademicsSummary(
           },
         },
       },
+      // Enlisted students without accounts — account status never excludes
+      // anyone from academics or risk. Same shape as profiles below.
+      rosterEntries: {
+        select: {
+          id: true,
+          lrn: true,
+          fullName: true,
+          finalGrades: {
+            where: { termId },
+            select: {
+              termId: true,
+              transmutedGrade: true,
+              computedAverage: true,
+              remarks: true,
+              lockStatus: true,
+              finalizedAt: true,
+              subject: { select: { name: true } },
+            },
+          },
+          attendanceRecords: {
+            where: { termId },
+            select: { status: true, session: true, date: true },
+          },
+          anecdotalRecords: {
+            where: { termId },
+            select: { id: true },
+          },
+        },
+      },
     },
   });
 
@@ -152,8 +181,48 @@ export async function getAcademicsSummary(
     const grade = gradeLabel(section.gradeLevel);
     const gradeAcc = passFailMap.get(grade) ?? { passed: 0, failed: 0 };
 
+    // Registered profiles plus unregistered enlistments (matched by LRN so
+    // nobody counts twice once they register), normalized to one shape.
+    const registeredLrns = new Set(section.students.map((s) => s.lrn));
+    const enrolledStudents: {
+      userId: string;
+      lrn: string;
+      fullName: string;
+      finalGrades: {
+        termId: string | null;
+        transmutedGrade: number | null;
+        computedAverage: number | null;
+        remarks: string | null;
+        lockStatus: string;
+        finalizedAt: Date | null;
+        subject: { name: string };
+      }[];
+      attendanceRecords: { status: string; session: string; date: Date }[];
+      anecdotalCount: number;
+    }[] = [
+      ...section.students.map((s) => ({
+        userId: s.userId,
+        lrn: s.lrn,
+        fullName: s.user.fullName,
+        finalGrades: s.finalGrades,
+        attendanceRecords: s.attendanceRecords,
+        anecdotalCount: s.anecdotalRecords.length,
+      })),
+      ...section.rosterEntries
+        .filter((r) => !registeredLrns.has(r.lrn))
+        .map((r) => ({
+          userId: `roster:${r.id}`,
+          lrn: r.lrn,
+          fullName: r.fullName,
+          finalGrades: r.finalGrades,
+          attendanceRecords: r.attendanceRecords,
+          anecdotalCount: r.anecdotalRecords.length,
+        })),
+    ];
+    const enrolled = enrolledStudents.length;
+
     const students: StudentRowDTO[] = [];
-    for (const student of section.students) {
+    for (const student of enrolledStudents) {
       const finals = (student.finalGrades ?? [])
         .filter((f) => f.termId === termId)
         .filter((f) =>
@@ -192,8 +261,8 @@ export async function getAcademicsSummary(
             transmutedGrade: f.transmutedGrade,
           })),
           attendance: student.attendanceRecords,
-          anecdotalCount: student.anecdotalRecords.length,
-          enrolled: section.students.length,
+          anecdotalCount: student.anecdotalCount,
+          enrolled,
         })
       );
       const atRisk = liveLevel === "High" || liveLevel === "Moderate";
@@ -210,7 +279,7 @@ export async function getAcademicsSummary(
       students.push({
         studentId: student.userId,
         lrn: student.lrn,
-        name: student.user.fullName,
+        name: student.fullName,
         riskLevel: liveLevel,
         overallAverage,
         attendanceRatePct,
@@ -234,7 +303,7 @@ export async function getAcademicsSummary(
         if (tier) {
           honorRollPool.push({
             studentId: student.userId,
-            name: student.user.fullName,
+            name: student.fullName,
             overallAverage,
             tier,
           });
@@ -256,7 +325,7 @@ export async function getAcademicsSummary(
           ).length;
           potentialPool.push({
             studentId: student.userId,
-            name: student.user.fullName,
+            name: student.fullName,
             overallAverage,
             tier,
             unlockedSubjects,

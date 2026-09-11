@@ -5,9 +5,9 @@ import type { RiskBoardData } from "../riskBoard";
 import styles from "./outcome-summary.module.css";
 
 const OUTCOME_META = [
-  { key: "ongoing", label: "Ongoing", color: "#d97706" },
-  { key: "resolved", label: "Resolved", color: "#15803d" },
-  { key: "unresolved", label: "Unresolved", color: "#b91c1c" },
+  { key: "ongoing", label: "Ongoing", color: "#737373" },
+  { key: "resolved", label: "Resolved", color: "#171717" },
+  { key: "unresolved", label: "Unresolved", color: "#404040" },
 ] as const;
 
 type OutcomeKey = keyof RiskBoardData["interventionOutcome"];

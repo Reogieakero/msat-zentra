@@ -14,11 +14,11 @@ import styles from "./admFormIcon.module.css";
 type FormKind = "REFERRAL_FORM" | "ANECDOTAL_REPORT" | "CERTIFICATION" | "MINUTES_OF_MEETING" | "HV_FORM";
 
 const FORM_META: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
-  REFERRAL_FORM: { label: "Referral", color: "#ffc371", Icon: FileText },
-  ANECDOTAL_REPORT: { label: "Anecdotal", color: "#4facfe", Icon: ScrollText },
-  CERTIFICATION: { label: "Certification", color: "#00f2fe", Icon: Award },
-  MINUTES_OF_MEETING: { label: "Minutes", color: "#a18cd1", Icon: ClipboardList },
-  HV_FORM: { label: "Home Visit", color: "#ff5f6d", Icon: Home },
+  REFERRAL_FORM: { label: "Referral", color: "#d4d4d4", Icon: FileText },
+  ANECDOTAL_REPORT: { label: "Anecdotal", color: "#a3a3a3", Icon: ScrollText },
+  CERTIFICATION: { label: "Certification", color: "#525252", Icon: Award },
+  MINUTES_OF_MEETING: { label: "Minutes", color: "#737373", Icon: ClipboardList },
+  HV_FORM: { label: "Home Visit", color: "#404040", Icon: Home },
 };
 
 const STATUS: Record<string, { label: string; cls: string; Icon: LucideIcon; show: boolean }> = {

@@ -7,6 +7,7 @@ import {
   levelFromFlags,
   type GradeMode,
 } from "../../services/risk.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
 
 export type ApprovalStatusValue = "pending" | "approved" | "rejected" | "modified";
 export type OutcomeStatusValue = "ongoing" | "resolved" | "unresolved";
@@ -42,7 +43,7 @@ export interface RiskSnapshotStudent {
   studentName: string;
   section: string;
   gradeLevel: string;
-  riskLevel: RiskLevelValue;
+  riskLevel: string;
   riskCount: number;
   snapshotDate: string | null;
   factors: RiskFactors;
@@ -72,6 +73,8 @@ export interface StudentFilters {
 // Principal: list of at-risk students from RiskSnapshot (engine-flagged) for the
 // active term, scoped to the principal's school year. Each student carries their
 // latest Intervention (if any) so the principal can decide/assign/track.
+// Enlisted students without accounts merge in on equal footing (matched by LRN
+// so nobody appears twice after registering).
 export async function getInterventionStudents(
   filters: StudentFilters
 ): Promise<InterventionStudentsResult> {
@@ -103,75 +106,209 @@ export async function getInterventionStudents(
     ...(Object.keys(studentWhere).length ? { student: studentWhere } : {}),
   };
 
+  // Roster twin of the filter above (roster relation instead of profile).
+  const rosterWhere: Record<string, unknown> = {};
+  if (schoolYearId) rosterWhere.section = { schoolYearId };
+  if (filters.hasIntervention === true) rosterWhere.interventions = { some: {} };
+  if (filters.hasIntervention === false) rosterWhere.interventions = { none: {} };
+
+  const rosterSnapWhere = {
+    termId,
+    riskLevel: { in: ["High", "Moderate"] as RiskLevel[] },
+    ...(filters.riskLevel ? { riskLevel: filters.riskLevel } : {}),
+    ...(Object.keys(rosterWhere).length ? { roster: rosterWhere } : {}),
+    // Only snapshots actually keyed to a roster entry (never profile rows).
+    rosterId: { not: null },
+  };
+
   // Fetch the full at-risk cohort for the scope (small: ≤ a few hundred). We
   // compute the per-factor breakdown live from the engine rule so the principal
   // can filter by factor and inspect the academic subject grades. Pagination is
   // applied in memory after factor/filter computation to keep counts correct.
-  const snaps = await prisma.riskSnapshot.findMany({
-    where,
-    orderBy: [{ riskLevel: "desc" }, { riskCount: "desc" }, { student: { lrn: "asc" } }],
-    select: {
-      id: true,
-      riskLevel: true,
-      riskCount: true,
-      snapshotDate: true,
-      student: {
-        select: {
-          userId: true,
-          lrn: true,
-          gradeLevel: true,
-          section: { select: { name: true, _count: { select: { students: true } } } },
-          user: { select: { fullName: true } },
-          finalGrades: {
-            where: { termId },
-            select: {
-              computedAverage: true,
-              transmutedGrade: true,
-              subject: { select: { name: true, code: true } },
+  const [snaps, rosterSnaps] = await Promise.all([
+    prisma.riskSnapshot.findMany({
+      where,
+      orderBy: [{ riskLevel: "desc" }, { riskCount: "desc" }, { student: { lrn: "asc" } }],
+      select: {
+        id: true,
+        riskLevel: true,
+        riskCount: true,
+        snapshotDate: true,
+        student: {
+          select: {
+            userId: true,
+            lrn: true,
+            gradeLevel: true,
+            section: { select: { id: true, name: true, _count: { select: { students: true } } } },
+            user: { select: { fullName: true } },
+            finalGrades: {
+              where: { termId },
+              select: {
+                computedAverage: true,
+                transmutedGrade: true,
+                subject: { select: { name: true, code: true } },
+              },
             },
-          },
-          attendanceRecords: { where: { termId }, select: { status: true } },
-          anecdotalRecords: { where: { termId }, select: { id: true } },
-          interventions: {
-            orderBy: { id: "desc" },
-            take: 1,
-            select: {
-              id: true,
-              recommendedAction: true,
-              assignedTo: true,
-              approvalStatus: true,
-              outcomeStatus: true,
-              assignedAt: true,
-              assignee: { select: { fullName: true } },
+            attendanceRecords: { where: { termId }, select: { status: true } },
+            anecdotalRecords: { where: { termId }, select: { id: true } },
+            interventions: {
+              orderBy: { id: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                recommendedAction: true,
+                assignedTo: true,
+                approvalStatus: true,
+                outcomeStatus: true,
+                assignedAt: true,
+                assignee: { select: { fullName: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.riskSnapshot.findMany({
+      where: rosterSnapWhere,
+      orderBy: [{ riskLevel: "desc" }, { riskCount: "desc" }],
+      select: {
+        id: true,
+        riskLevel: true,
+        riskCount: true,
+        snapshotDate: true,
+        rosterId: true,
+        roster: {
+          select: {
+            id: true,
+            lrn: true,
+            fullName: true,
+            gradeLevel: true,
+            section: { select: { id: true, name: true } },
+            finalGrades: {
+              where: { termId },
+              select: {
+                computedAverage: true,
+                transmutedGrade: true,
+                subject: { select: { name: true, code: true } },
+              },
+            },
+            attendanceRecords: { where: { termId }, select: { status: true } },
+            anecdotalRecords: { where: { termId }, select: { id: true } },
+            interventions: {
+              orderBy: { id: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                recommendedAction: true,
+                assignedTo: true,
+                approvalStatus: true,
+                outcomeStatus: true,
+                assignedAt: true,
+                assignee: { select: { fullName: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
 
   // A student can have more than one RiskSnapshot row for a term (engine
-  // re-runs append new snapshots). Collapse to one row per student, keeping
-  // the most recent snapshot, so the principal sees each at-risk student once.
-  const byStudent = new Map<string, (typeof snaps)[number]>();
-  for (const s of snaps) {
-    const id = s.student.userId;
-    const prev = byStudent.get(id);
-    if (!prev) {
-      byStudent.set(id, s);
-      continue;
+  // re-runs append new snapshots). Collapse to one row per student (matched by
+  // LRN so profile + roster rows for the same learner merge, profile wins),
+  // keeping the most recent snapshot, so the principal sees each at-risk
+  // student once.
+  type SnapRow = {
+    snapshotDate: Date | null;
+    studentId: string;
+    lrn: string;
+    studentName: string;
+    section: string;
+    sectionId: string;
+    enrolledFallback: number;
+    gradeLevel: string;
+    finalGrades: { computedAverage: number | null; transmutedGrade: number | null; subject: { name: string; code: string } }[];
+    attendanceRecords: { status: string }[];
+    anecdotalCount: number;
+    intervention: InterventionLink | null;
+  };
+  const toLink = (iv: {
+    id: string;
+    recommendedAction: string;
+    assignedTo: string | null;
+    approvalStatus: ApprovalStatusValue;
+    outcomeStatus: OutcomeStatusValue;
+    assignedAt: Date | null;
+    assignee: { fullName: string } | null;
+  } | undefined): InterventionLink | null =>
+    iv
+      ? {
+          id: iv.id,
+          recommendedAction: iv.recommendedAction,
+          assignedTo: iv.assignedTo,
+          assignedStaffName: iv.assignee?.fullName ?? null,
+          approvalStatus: iv.approvalStatus,
+          outcomeStatus: iv.outcomeStatus,
+          createdAt: iv.assignedAt ? iv.assignedAt.toISOString() : null,
+        }
+      : null;
+
+  const byStudent = new Map<string, { date: number; row: SnapRow; profile: boolean }>();
+  const consider = (lrn: string, date: Date | null, row: SnapRow, profile: boolean) => {
+    const prev = byStudent.get(lrn);
+    const when = date?.getTime() ?? 0;
+    // Latest snapshot wins; profiles win ties so a registered student never
+    // renders under a `roster:` key.
+    if (!prev || when > prev.date || (when === prev.date && profile && !prev.profile)) {
+      byStudent.set(lrn, { date: when, row, profile });
     }
-    const prevDate = prev.snapshotDate?.getTime() ?? 0;
-    const curDate = s.snapshotDate?.getTime() ?? 0;
-    if (curDate >= prevDate) byStudent.set(id, s);
+  };
+  for (const s of snaps) {
+    const st = s.student;
+    // Roster-keyed snapshots are covered by the roster query below.
+    if (!st) continue;
+    consider(st.lrn, s.snapshotDate, {
+      snapshotDate: s.snapshotDate,
+      studentId: st.userId,
+      lrn: st.lrn,
+      studentName: st.user.fullName,
+      section: st.section?.name ?? "—",
+      sectionId: st.section?.id ?? "",
+      enrolledFallback: st.section?._count.students ?? 0,
+      gradeLevel: st.gradeLevel,
+      finalGrades: st.finalGrades,
+      attendanceRecords: st.attendanceRecords,
+      anecdotalCount: st.anecdotalRecords.length,
+      intervention: toLink(st.interventions[0]),
+    }, true);
   }
-  const deduped = [...byStudent.values()];
+  for (const s of rosterSnaps) {
+    const r = s.roster;
+    if (!r) continue;
+    consider(r.lrn, s.snapshotDate, {
+      snapshotDate: s.snapshotDate,
+      studentId: `roster:${r.id}`,
+      lrn: r.lrn,
+      studentName: r.fullName,
+      section: r.section?.name ?? "—",
+      sectionId: r.section?.id ?? "",
+      enrolledFallback: 0,
+      gradeLevel: r.gradeLevel,
+      finalGrades: r.finalGrades,
+      attendanceRecords: r.attendanceRecords,
+      anecdotalCount: r.anecdotalRecords.length,
+      intervention: toLink(r.interventions[0]),
+    }, false);
+  }
+  const deduped = [...byStudent.values()].map((v) => v.row);
+
+  const sectionIds = Array.from(new Set(deduped.map((r) => r.sectionId).filter(Boolean)));
+  const headcounts = await sectionHeadcounts(sectionIds);
 
   const highModerate = deduped.length;
 
-  const mapped: RiskSnapshotStudent[] = deduped.map((s) => {
-    const st = s.student;
-    const enrolled = st.section?._count.students ?? 0;
+  const mapped: RiskSnapshotStudent[] = deduped.map((st) => {
+    const enrolled = headcounts.get(st.sectionId) ?? st.enrolledFallback;
     const flags = computeRiskFactors({
       finalGrades: st.finalGrades.map((g) => ({
         computedAverage: g.computedAverage,
@@ -179,7 +316,7 @@ export async function getInterventionStudents(
       })),
       gradeMode: filters.gradeMode ?? "final",
       attendance: st.attendanceRecords.map((a) => ({ status: a.status })),
-      anecdotalCount: st.anecdotalRecords.length,
+      anecdotalCount: st.anecdotalCount,
       enrolled,
     });
     const level = levelFromFlags(flags);
@@ -192,38 +329,25 @@ export async function getInterventionStudents(
       belowThreshold: (g.transmutedGrade ?? 100) < 75,
     }));
 
-    const iv = st.interventions[0];
-    const intervention: InterventionLink | null = iv
-      ? {
-          id: iv.id,
-          recommendedAction: iv.recommendedAction,
-          assignedTo: iv.assignedTo,
-          assignedStaffName: iv.assignee?.fullName ?? null,
-          approvalStatus: iv.approvalStatus,
-          outcomeStatus: iv.outcomeStatus,
-          createdAt: iv.assignedAt ? iv.assignedAt.toISOString() : null,
-        }
-      : null;
-
     return {
-      studentId: st.userId,
+      studentId: st.studentId,
       lrn: st.lrn,
-      studentName: st.user.fullName,
-      section: st.section?.name ?? "—",
+      studentName: st.studentName,
+      section: st.section,
       gradeLevel: st.gradeLevel,
       riskLevel: level,
       riskCount:
         (flags.academicFlag ? 1 : 0) +
         (flags.attendanceFlag ? 1 : 0) +
         (flags.behavioralFlag ? 1 : 0),
-      snapshotDate: s.snapshotDate ? s.snapshotDate.toISOString() : null,
+      snapshotDate: st.snapshotDate ? st.snapshotDate.toISOString() : null,
       factors: {
         academic: flags.academicFlag,
         attendance: flags.attendanceFlag,
         behavioral: flags.behavioralFlag,
       },
       subjectGrades,
-      intervention,
+      intervention: st.intervention,
     };
   });
 

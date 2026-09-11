@@ -170,7 +170,7 @@
 .successIcon {
   width: 2.5rem;
   height: 2.5rem;
-  color: var(--success, #16a34a);
+  color: var(--foreground);
 }
 
 .successTitle {

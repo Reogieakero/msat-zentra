@@ -22,8 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import styles from "./AccountBreakdown.module.css";
 
-const ACTIVE_COLOR = "#16a34a";
-const PENDING_COLOR = "#f59e0b";
+  const ACTIVE_COLOR = "#171717";
+  const PENDING_COLOR = "#a3a3a3";
 
 interface BreakdownGroup {
   id: string;

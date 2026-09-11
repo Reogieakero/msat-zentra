@@ -3393,6 +3393,7 @@ export const StudentGradeScalarFieldEnum = {
   id: 'id',
   assessmentId: 'assessmentId',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   rawScore: 'rawScore',
   percentageScore: 'percentageScore'
 } as const
@@ -3403,6 +3404,7 @@ export type StudentGradeScalarFieldEnum = (typeof StudentGradeScalarFieldEnum)[k
 export const FinalGradeScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   subjectId: 'subjectId',
   termId: 'termId',
   computedAverage: 'computedAverage',
@@ -3521,6 +3523,7 @@ export type ReferralScalarFieldEnum = (typeof ReferralScalarFieldEnum)[keyof typ
 export const InterventionScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   riskLevelAtFlag: 'riskLevelAtFlag',
   recommendedAction: 'recommendedAction',
   assignedTo: 'assignedTo',
@@ -3694,6 +3697,7 @@ export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typ
 export const RiskSnapshotScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
+  rosterId: 'rosterId',
   riskLevel: 'riskLevel',
   riskCount: 'riskCount',
   snapshotDate: 'snapshotDate',

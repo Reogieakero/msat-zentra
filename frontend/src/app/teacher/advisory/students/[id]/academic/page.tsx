@@ -15,6 +15,9 @@ export default function StudentAcademicPage() {
     queryKey: ["advisee-academic", studentId],
     queryFn: () => fetchStudentAcademic(studentId),
     retry: false,
+    // Academic data must read live on every visit — grades change constantly.
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const student = academicQuery.data?.student ?? null;
 

@@ -27,7 +27,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 1px solid var(--border, #e7e5e4);
+  border: 1px solid var(--border, #e5e5e5);
   background: var(--card, #ffffff);
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.875rem;
@@ -39,7 +39,7 @@
 .markerIcon {
   width: 1.1rem;
   height: 1.1rem;
-  color: var(--primary, #166534);
+  color: var(--primary, #171717);
 }
 
 .markerNum {
@@ -50,7 +50,7 @@
   flex: 1 1 auto;
   width: 2px;
   margin: 0.375rem 0;
-  background: var(--border, #e7e5e4);
+  background: var(--border, #e5e5e5);
   border-radius: 999px;
 }
 
@@ -98,19 +98,19 @@
   letter-spacing: 0.05em;
   padding: 0.0625rem 0.4375rem;
   border-radius: 999px;
-  color: var(--primary-foreground, #166534);
-  background: color-mix(in oklch, var(--primary, #22c55e), transparent 86%);
-  border: 1px solid color-mix(in oklch, var(--primary, #22c55e), transparent 65%);
+  color: var(--primary-foreground, #ffffff);
+  background: color-mix(in oklch, var(--primary, #171717), transparent 86%);
+  border: 1px solid color-mix(in oklch, var(--primary, #171717), transparent 65%);
 }
 
 /* Done state */
 .done .marker {
-  border-color: color-mix(in oklch, var(--primary, #22c55e), transparent 55%);
-  background: color-mix(in oklch, var(--primary, #22c55e), transparent 90%);
+  border-color: color-mix(in oklch, var(--primary, #171717), transparent 55%);
+  background: color-mix(in oklch, var(--primary, #171717), transparent 90%);
 }
 
 .done .connector {
-  background: color-mix(in oklch, var(--primary, #22c55e), transparent 55%);
+  background: color-mix(in oklch, var(--primary, #171717), transparent 55%);
 }
 
 .done .label {
@@ -119,24 +119,24 @@
 
 /* Active state */
 .active .marker {
-  border-color: var(--primary, #166534);
-  background: var(--primary, #166534);
+  border-color: var(--primary, #171717);
+  background: var(--primary, #171717);
   color: var(--primary-foreground, #ffffff);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary, #166534), transparent 80%);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary, #171717), transparent 80%);
 }
 
 .active .label {
-  color: var(--primary, #166534);
+  color: var(--primary, #171717);
 }
 
 /* Principal action state */
 .principal .marker {
   border-style: dashed;
-  border-color: color-mix(in oklch, var(--primary, #7c3aed), transparent 50%);
+  border-color: color-mix(in oklch, var(--primary, #171717), transparent 50%);
 }
 
 .principal .badge {
-  color: var(--primary-foreground, #6d28d9);
-  background: color-mix(in oklch, var(--primary, #7c3aed), transparent 90%);
-  border-color: color-mix(in oklch, var(--primary, #7c3aed), transparent 70%);
+  color: var(--primary-foreground, #ffffff);
+  background: color-mix(in oklch, var(--primary, #171717), transparent 90%);
+  border-color: color-mix(in oklch, var(--primary, #171717), transparent 70%);
 }

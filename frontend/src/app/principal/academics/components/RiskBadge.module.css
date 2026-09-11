@@ -13,19 +13,19 @@
 }
 
 .riskHigh {
-  background-color: var(--destructive);
+  background-color: #171717;
   color: #fff;
-  border-color: var(--destructive);
+  border-color: #171717;
 }
 
 .riskModerate {
-  background-color: oklch(0.6 0.16 65);
+  background-color: #525252;
   color: #fff;
-  border-color: oklch(0.6 0.16 65);
+  border-color: #525252;
 }
 
 .riskLow {
-  background-color: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
+  background-color: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
 }

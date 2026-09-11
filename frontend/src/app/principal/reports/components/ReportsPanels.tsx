@@ -162,9 +162,9 @@ function StackedMini({
 }
 
 const RISK_COLORS: Record<string, string> = {
-  High: "#b91c1c",
-  Moderate: "#d97706",
-  Low: "#15803d",
+  High: "#171717",
+  Moderate: "#6b7280",
+  Low: "#d1d5db",
 };
 
 function Donut({

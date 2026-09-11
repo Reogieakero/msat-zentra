@@ -240,21 +240,21 @@
 
 /* Approval badges */
 .approvalPending {
-  background-color: color-mix(in oklch, #d97706, transparent 86%);
-  color: #92400e;
-  border-color: color-mix(in oklch, #d97706, transparent 60%);
+  background-color: color-mix(in oklch, #737373, transparent 86%);
+  color: #525252;
+  border-color: color-mix(in oklch, #737373, transparent 60%);
 }
 
 .approvalApproved {
-  background-color: color-mix(in oklch, #15803d, transparent 86%);
-  color: #166534;
-  border-color: color-mix(in oklch, #15803d, transparent 60%);
+  background-color: color-mix(in oklch, #6b7280, transparent 86%);
+  color: #525252;
+  border-color: color-mix(in oklch, #6b7280, transparent 60%);
 }
 
 .approvalRejected {
-  background-color: color-mix(in oklch, #b91c1c, transparent 86%);
-  color: #991b1b;
-  border-color: color-mix(in oklch, #b91c1c, transparent 60%);
+  background-color: color-mix(in oklch, #171717, transparent 86%);
+  color: #171717;
+  border-color: color-mix(in oklch, #171717, transparent 60%);
 }
 
 .approvalModified {
@@ -265,21 +265,21 @@
 
 /* Outcome badges */
 .outcomeOngoing {
-  background-color: color-mix(in oklch, #d97706, transparent 86%);
-  color: #92400e;
-  border-color: color-mix(in oklch, #d97706, transparent 60%);
+  background-color: color-mix(in oklch, #737373, transparent 86%);
+  color: #525252;
+  border-color: color-mix(in oklch, #737373, transparent 60%);
 }
 
 .outcomeResolved {
-  background-color: color-mix(in oklch, #15803d, transparent 86%);
-  color: #166534;
-  border-color: color-mix(in oklch, #15803d, transparent 60%);
+  background-color: color-mix(in oklch, #6b7280, transparent 86%);
+  color: #525252;
+  border-color: color-mix(in oklch, #6b7280, transparent 60%);
 }
 
 .outcomeUnresolved {
-  background-color: color-mix(in oklch, #b91c1c, transparent 86%);
-  color: #991b1b;
-  border-color: color-mix(in oklch, #b91c1c, transparent 60%);
+  background-color: color-mix(in oklch, #171717, transparent 86%);
+  color: #171717;
+  border-color: color-mix(in oklch, #171717, transparent 60%);
 }
 
 /* Risk level dot */
@@ -298,22 +298,22 @@
 }
 
 .riskHigh {
-  color: #b91c1c;
+  color: #171717;
 }
 .riskHigh .riskDot {
-  background-color: #ef4444;
+  background-color: #262626;
 }
 .riskModerate {
-  color: #b45309;
+  color: #525252;
 }
 .riskModerate .riskDot {
-  background-color: #f59e0b;
+  background-color: #9ca3af;
 }
 .riskLow {
-  color: #15803d;
+  color: #6b7280;
 }
 .riskLow .riskDot {
-  background-color: #22c55e;
+  background-color: #a3a3a3;
 }
 
 /* ---- Filters ---- */
@@ -525,19 +525,19 @@
 }
 
 .riskBadge.riskHigh {
-  background-color: color-mix(in oklch, #ef4444, transparent 90%);
-  color: #b91c1c;
-  border-color: color-mix(in oklch, #ef4444, transparent 55%);
+  background-color: color-mix(in oklch, #262626, transparent 90%);
+  color: #171717;
+  border-color: color-mix(in oklch, #262626, transparent 55%);
 }
 .riskBadge.riskModerate {
-  background-color: color-mix(in oklch, #f59e0b, transparent 90%);
-  color: #b45309;
-  border-color: color-mix(in oklch, #f59e0b, transparent 55%);
+  background-color: color-mix(in oklch, #9ca3af, transparent 90%);
+  color: #525252;
+  border-color: color-mix(in oklch, #9ca3af, transparent 55%);
 }
 .riskBadge.riskLow {
-  background-color: color-mix(in oklch, #22c55e, transparent 90%);
-  color: #15803d;
-  border-color: color-mix(in oklch, #22c55e, transparent 55%);
+  background-color: color-mix(in oklch, #a3a3a3, transparent 90%);
+  color: #6b7280;
+  border-color: color-mix(in oklch, #a3a3a3, transparent 55%);
 }
 
 .section {
@@ -580,19 +580,19 @@
 }
 
 .statusOngoing {
-  background-color: color-mix(in oklch, #f59e0b, transparent 90%);
-  color: #b45309;
-  border-color: color-mix(in oklch, #f59e0b, transparent 60%);
+  background-color: color-mix(in oklch, #9ca3af, transparent 90%);
+  color: #525252;
+  border-color: color-mix(in oklch, #9ca3af, transparent 60%);
 }
 .statusResolved {
-  background-color: color-mix(in oklch, #22c55e, transparent 90%);
-  color: #15803d;
-  border-color: color-mix(in oklch, #22c55e, transparent 60%);
+  background-color: color-mix(in oklch, #a3a3a3, transparent 90%);
+  color: #6b7280;
+  border-color: color-mix(in oklch, #a3a3a3, transparent 60%);
 }
 .statusUnresolved {
-  background-color: color-mix(in oklch, #ef4444, transparent 90%);
-  color: #b91c1c;
-  border-color: color-mix(in oklch, #ef4444, transparent 60%);
+  background-color: color-mix(in oklch, #262626, transparent 90%);
+  color: #171717;
+  border-color: color-mix(in oklch, #262626, transparent 60%);
 }
 
 .card {
@@ -874,30 +874,30 @@
 }
 
 .factorAcademic {
-  background-color: color-mix(in oklch, #f59e0b, transparent 88%);
-  color: #b45309;
-  border-color: color-mix(in oklch, #f59e0b, transparent 60%);
+  background-color: color-mix(in oklch, #9ca3af, transparent 88%);
+  color: #525252;
+  border-color: color-mix(in oklch, #9ca3af, transparent 60%);
 }
 .factorAcademic .factorDot {
-  background-color: #fbbf24;
+  background-color: #d1d5db;
 }
 
 .factorAttendance {
-  background-color: color-mix(in oklch, #0ea5e9, transparent 90%);
-  color: #0369a1;
-  border-color: color-mix(in oklch, #0ea5e9, transparent 60%);
+  background-color: color-mix(in oklch, #737373, transparent 90%);
+  color: #404040;
+  border-color: color-mix(in oklch, #737373, transparent 60%);
 }
 .factorAttendance .factorDot {
-  background-color: #38bdf8;
+  background-color: #a3a3a3;
 }
 
 .factorBehavioral {
-  background-color: color-mix(in oklch, #f43f5e, transparent 90%);
-  color: #be123c;
-  border-color: color-mix(in oklch, #f43f5e, transparent 60%);
+  background-color: color-mix(in oklch, #404040, transparent 90%);
+  color: #262626;
+  border-color: color-mix(in oklch, #404040, transparent 60%);
 }
 .factorBehavioral .factorDot {
-  background-color: #fb7185;
+  background-color: #737373;
 }
 
 /* ---- Risk breakdown (drawer) ---- */
@@ -925,19 +925,19 @@
 }
 
 .factorTagOn.factorAcademic {
-  background-color: color-mix(in oklch, #f59e0b, transparent 88%);
-  color: #b45309;
-  border-color: color-mix(in oklch, #f59e0b, transparent 60%);
+  background-color: color-mix(in oklch, #9ca3af, transparent 88%);
+  color: #525252;
+  border-color: color-mix(in oklch, #9ca3af, transparent 60%);
 }
 .factorTagOn.factorAttendance {
-  background-color: color-mix(in oklch, #0ea5e9, transparent 90%);
-  color: #0369a1;
-  border-color: color-mix(in oklch, #0ea5e9, transparent 60%);
+  background-color: color-mix(in oklch, #737373, transparent 90%);
+  color: #404040;
+  border-color: color-mix(in oklch, #737373, transparent 60%);
 }
 .factorTagOn.factorBehavioral {
-  background-color: color-mix(in oklch, #f43f5e, transparent 90%);
-  color: #be123c;
-  border-color: color-mix(in oklch, #f43f5e, transparent 60%);
+  background-color: color-mix(in oklch, #404040, transparent 90%);
+  color: #262626;
+  border-color: color-mix(in oklch, #404040, transparent 60%);
 }
 .factorTagOn .factorDot {
   width: 6px;
@@ -1000,7 +1000,7 @@
 }
 
 .gradeLow {
-  color: #e11d48;
+  color: #171717;
 }
 
 @media (prefers-reduced-motion: reduce) {

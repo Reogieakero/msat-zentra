@@ -6,8 +6,8 @@ import { requireAuth, requireRole, requireOwnershipOrRole } from "../../middlewa
 import { invalidateTags } from "../../lib/cache.js";
 import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
-import { computeFinalGrade } from "../../services/grading.js";
-import { recomputeRisk } from "../../services/risk.js";
+import { recomputeSubjectFinal } from "../../services/grading.js";
+import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 
@@ -30,34 +30,68 @@ router.post(
       });
       if (!assessment) throw new AppError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found");
 
-      const percentage = (req.body.rawScore / assessment.maxScore) * 100;
-      await prisma.studentGrade.upsert({
-        where: { assessmentId_studentId: { assessmentId: assessment.id, studentId: req.body.studentId } },
-        create: { assessmentId: assessment.id, studentId: req.body.studentId, rawScore: req.body.rawScore, percentageScore: percentage },
-        update: { rawScore: req.body.rawScore, percentageScore: percentage },
-      });
-
-      // Recompute final grade for this student/subject/term
+      // Enlisted students without accounts score under `roster:<id>`. The
+      // roster entry must sit in a section where the caller teaches this
+      // subject + term.
+      const rawStudentId = String(req.body.studentId);
+      const isRoster = rawStudentId.startsWith("roster:");
+      const rosterId = isRoster ? rawStudentId.slice("roster:".length) : null;
+      const rosterEntry = isRoster
+        ? await prisma.studentRoster.findUnique({
+            where: { id: rosterId as string },
+            select: { id: true, sectionId: true },
+          })
+        : null;
+      if (isRoster && !rosterEntry) {
+        throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+      }
       const gc = assessment.gradeComponent;
-      const components = await prisma.gradeComponent.findMany({
-        where: { subjectId: gc.subjectId, termId: gc.termId },
-        include: { assessments: { include: { studentGrades: { where: { studentId: req.body.studentId } } } } },
-      });
-      const componentAverages = components.map((c) => {
-        const grades = c.assessments.flatMap((a) => a.studentGrades);
-        const avg = grades.length ? grades.reduce((s, g) => s + g.percentageScore, 0) / grades.length : 0;
-        return { weightPercentage: c.weightPercentage, average: avg };
-      });
-      const { computedAverage, transmutedGrade, remarks } = computeFinalGrade(componentAverages);
+      if (isRoster) {
+        const coverage = await prisma.teacherSubjectAssignment.findFirst({
+          where: {
+            teacherId: req.user!.id,
+            subjectId: gc.subjectId,
+            termId: gc.termId,
+            sectionId: rosterEntry!.sectionId,
+          },
+          select: { id: true },
+        });
+        if (!coverage) {
+          throw new AppError(403, "FORBIDDEN", "Student is not in your class for this subject");
+        }
+      }
 
-      await prisma.finalGrade.upsert({
-        where: { studentId_subjectId_termId: { studentId: req.body.studentId, subjectId: gc.subjectId, termId: gc.termId } },
-        create: { studentId: req.body.studentId, subjectId: gc.subjectId, termId: gc.termId, computedAverage, transmutedGrade, remarks },
-        update: { computedAverage, transmutedGrade, remarks },
-      });
+      const percentage = (req.body.rawScore / assessment.maxScore) * 100;
+      if (isRoster) {
+        await prisma.studentGrade.upsert({
+          where: { assessmentId_rosterId: { assessmentId: assessment.id, rosterId: rosterId as string } },
+          create: { assessmentId: assessment.id, studentId: null, rosterId: rosterId as string, rawScore: req.body.rawScore, percentageScore: percentage },
+          update: { rawScore: req.body.rawScore, percentageScore: percentage },
+        });
+      } else {
+        await prisma.studentGrade.upsert({
+          where: { assessmentId_studentId: { assessmentId: assessment.id, studentId: rawStudentId } },
+          create: { assessmentId: assessment.id, studentId: rawStudentId, rawScore: req.body.rawScore, percentageScore: percentage },
+          update: { rawScore: req.body.rawScore, percentageScore: percentage },
+        });
+      }
 
-      const term = await prisma.term.findFirst({ where: { id: gc.termId } });
-      if (term) await recomputeRisk(req.body.studentId, term.id);
+      // Recompute final grade for this student/subject/term (shared helper —
+      // identical math everywhere finals are recomputed).
+      const key = isRoster ? { rosterId: rosterId as string } : { studentId: rawStudentId };
+      const final = await recomputeSubjectFinal(key, gc.subjectId, gc.termId);
+      const { computedAverage, transmutedGrade, remarks } = final;
+
+      // Risk + parent notifications only apply to registered profiles.
+      // Roster students get the roster risk path (snapshot + auto-intervention).
+      if (!isRoster) {
+        const term = await prisma.term.findFirst({ where: { id: gc.termId } });
+        if (term) await recomputeRisk(rawStudentId, term.id);
+      } else {
+        await recomputeRosterRisk(rosterId as string, gc.termId);
+      }
+      // Finals feed cached teacher / registrar / principal views.
+      await invalidateTags(["teacher", "registrar", "academics", "overview", "principal"]);
 
       res.json({ computedAverage, transmutedGrade, remarks });
     } catch (e) { next(e); }
@@ -108,9 +142,9 @@ router.post(
   requireAuth,
   requireRole("adviser"),
   gradeBandGuard(async (req) => {
-    const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) }, select: { studentId: true } });
+    const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) }, select: { studentId: true, rosterId: true } });
     if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
-    return fg.studentId;
+    return fg.studentId ?? (fg.rosterId ? `roster:${fg.rosterId}` : "");
   }),
   async (req, res, next) => {
     try {

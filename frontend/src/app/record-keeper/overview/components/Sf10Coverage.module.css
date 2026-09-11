@@ -117,15 +117,15 @@
   flex-wrap: wrap;
   margin-top: 0.25rem;
   padding: 0.625rem 0.75rem;
-  border: 1px solid color-mix(in oklch, #dc2626, transparent 70%);
+  border: 1px solid var(--foreground);
   border-radius: var(--radius-md);
-  background-color: color-mix(in oklch, #dc2626, transparent 93%);
+  background-color: color-mix(in oklch, var(--foreground), transparent 93%);
 }
 
 .alertIcon {
   width: 0.875rem;
   height: 0.875rem;
-  color: #dc2626;
+  color: var(--foreground);
   flex-shrink: 0;
 }
 
@@ -138,7 +138,7 @@
 }
 
 .alertText strong {
-  color: #dc2626;
+  color: var(--foreground);
 }
 
 .alertBtn {

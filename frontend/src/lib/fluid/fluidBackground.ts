@@ -1270,7 +1270,9 @@ export function startFluidBackground(
       c.b *= 0.15;
       return c;
     } else {
-      const c = HSVtoRGB(config.SPLAT_HUE, 0.9, 1.0);
+      // Monochrome theme: zero saturation so splats render as neutral
+      // white/gray smoke regardless of the selected hue.
+      const c = HSVtoRGB(config.SPLAT_HUE, 0, 1.0);
       c.r *= 0.6;
       c.g *= 0.6;
       c.b *= 0.6;

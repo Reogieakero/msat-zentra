@@ -59,7 +59,7 @@
 .divider {
   margin: 0;
   border: none;
-  border-top: 1px solid var(--border, #e7e5e4);
+  border-top: 1px solid var(--border, #e5e5e5);
 }
 
 /* List card — matches principal interventions table structure */

@@ -24,23 +24,23 @@ import { fetchAdmApprovals, type AdmApprovalRow } from "../../../adm/api";
 import styles from "./all.module.css";
 
 const GRADE_COLORS: Record<string, string> = {
-  "Grade 7": "#14532d",
-  "Grade 8": "#166534",
-  "Grade 9": "#15803d",
-  "Grade 10": "#16a34a",
-  "Grade 11": "#22c55e",
-  "Grade 12": "#4ade80",
+  "Grade 7": "#d4d4d4",
+  "Grade 8": "#a3a3a3",
+  "Grade 9": "#737373",
+  "Grade 10": "#525252",
+  "Grade 11": "#262626",
+  "Grade 12": "#171717",
 };
 
 const GRADE_FALLBACK_PALETTE = [
-  "#14532d",
-  "#166534",
-  "#15803d",
-  "#16a34a",
-  "#22c55e",
-  "#4ade80",
-  "#86efac",
-  "#bbf7d0",
+  "#171717",
+  "#404040",
+  "#525252",
+  "#737373",
+  "#a3a3a3",
+  "#d4d4d4",
+  "#e5e5e5",
+  "#f5f5f5",
 ];
 
 export default function PrincipalAdmApprovalsAllPage() {

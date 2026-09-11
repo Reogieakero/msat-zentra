@@ -60,7 +60,7 @@ export type FolderFile = {
  */
 export function FolderCard({
   files,
-  folderColor = "rgba(0, 123, 255, 0.65)",
+  folderColor = "rgba(64, 64, 64, 0.65)",
   label,
   onOpen,
 }: {

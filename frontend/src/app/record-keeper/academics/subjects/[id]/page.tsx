@@ -163,7 +163,9 @@ export default function SubjectStudentsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {st.status === "active" ? (
+                          {st.hasAccount === false ? (
+                            <Badge variant="outline">No account</Badge>
+                          ) : st.status === "active" ? (
                             <Badge variant="outline">Active</Badge>
                           ) : st.status === "pending" ? (
                             <Badge variant="warning">Pending</Badge>

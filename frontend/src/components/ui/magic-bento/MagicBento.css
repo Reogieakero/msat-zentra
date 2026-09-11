@@ -1,12 +1,12 @@
 :root {
-  --hue: 142;
-  --sat: 80%;
+  --hue: 0;
+  --sat: 0%;
   --white: hsl(0, 0%, 100%);
-  --green-primary: rgba(46, 234, 46, 1);
-  --green-glow: rgba(46, 234, 46, 0.2);
-  --green-border: rgba(46, 234, 46, 0.8);
-  --border-color: #2F293A;
-  --background-dark: #120F17;
+  --green-primary: rgba(255, 255, 255, 1);
+  --green-glow: rgba(255, 255, 255, 0.2);
+  --green-border: rgba(255, 255, 255, 0.8);
+  --border-color: #3f3f46;
+  --background-dark: #09090b;
   color-scheme: light dark;
 }
 
@@ -150,8 +150,8 @@
   padding: 6px;
   background: radial-gradient(
     var(--glow-radius) circle at var(--glow-x) var(--glow-y),
-    rgba(46, 234, 46, calc(var(--glow-intensity) * 0.8)) 0%,
-    rgba(46, 234, 46, calc(var(--glow-intensity) * 0.4)) 30%,
+    rgba(255, 255, 255, calc(var(--glow-intensity) * 0.8)) 0%,
+    rgba(255, 255, 255, calc(var(--glow-intensity) * 0.4)) 30%,
     transparent 60%
   );
   border-radius: inherit;
@@ -175,7 +175,7 @@
 
 .magic-bento-card--border-glow:hover {
   box-shadow:
-    0 4px 20px rgba(18, 60, 30, 0.4),
+    0 4px 20px rgba(0, 0, 0, 0.4),
     0 0 30px var(--green-glow);
 }
 
@@ -191,14 +191,14 @@
   left: -2px;
   right: -2px;
   bottom: -2px;
-  background: rgba(46, 234, 46, 0.2);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   z-index: -1;
 }
 
 .particle-container:hover {
   box-shadow:
-    0 4px 20px rgba(18, 60, 30, 0.2),
+    0 4px 20px rgba(0, 0, 0, 0.2),
     0 0 30px var(--green-glow);
 }
 

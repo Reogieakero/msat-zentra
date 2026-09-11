@@ -25,8 +25,8 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   boxShadow: "0 4px 12px -6px rgb(0 0 0 / 0.25)",
 };
 
-const BAR_COLOR = "#2563eb";
-const BAR_ALT_COLOR = "#38bdf8";
+const BAR_COLOR = "#171717";
+const BAR_ALT_COLOR = "#a3a3a3";
 
 interface Slice {
   label: string;
@@ -187,17 +187,17 @@ export function OverviewHeader() {
 
   const finalsSlices: Slice[] = finals
     ? [
-        { label: "Finalized", value: finals.finalized, color: "#2563eb" },
-        { label: "Awaiting approval", value: finals.awaiting, color: "#f59e0b" },
-        { label: "In draft", value: finals.draft, color: "#cbd5e1" },
+        { label: "Finalized", value: finals.finalized, color: "#171717" },
+        { label: "Awaiting approval", value: finals.awaiting, color: "#737373" },
+        { label: "In draft", value: finals.draft, color: "#d4d4d4" },
       ]
     : [];
 
   const sf10Slices: Slice[] = sf10
     ? [
-        { label: "Released", value: sf10.released, color: "#16a34a" },
-        { label: "Available", value: sf10.available, color: "#2563eb" },
-        { label: "Attach", value: sf10.attach, color: "#cbd5e1" },
+        { label: "Released", value: sf10.released, color: "#171717" },
+        { label: "Available", value: sf10.available, color: "#737373" },
+        { label: "Attach", value: sf10.attach, color: "#d4d4d4" },
       ]
     : [];
 

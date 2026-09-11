@@ -1,0 +1,121 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 19rem;
+  padding: 1rem;
+  border: none;
+  border-radius: var(--radius-lg, 0.75rem);
+  overflow: hidden;
+  background: var(--muted);
+  isolation: isolate;
+}
+
+.bannerImg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  object-fit: cover;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.45) 55%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+.cardBody {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.cardSubject {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.cardMeta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.statValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.progress {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: 999px;
+  background: #fff;
+  transition: width 200ms ease-out;
+}
+
+.progressLabel {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.openBtn {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+}

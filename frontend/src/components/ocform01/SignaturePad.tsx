@@ -12,7 +12,7 @@ interface SignaturePadProps {
   error: string | null;
 }
 
-const INK = "#1a237e";
+const INK = "#111111";
 const PAD_HEIGHT = 160;
 
 /**

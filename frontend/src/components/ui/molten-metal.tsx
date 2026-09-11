@@ -158,8 +158,8 @@ type MoltenMetalCtx = {
 const ctxMap = new WeakMap<HTMLDivElement, MoltenMetalCtx>();
 
 const MoltenMetal: React.FC<MoltenMetalProps> = ({
-  color1 = "#1f4d3a",
-  color2 = "#2f8f63",
+  color1 = "#171717",
+  color2 = "#525252",
   color3 = "#fafaf9",
   speed = 0.35,
   scale = 4,

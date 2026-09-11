@@ -9,9 +9,9 @@ import type { RiskFactor } from "../api";
 import styles from "./StudentsKpiRail.module.css";
 
 const FACTOR_META: Record<RiskFactor, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
-  Academic: { icon: BookOpen, color: "#b91c1c" },
-  Attendance: { icon: CalendarDays, color: "#2563eb" },
-  Behavioral: { icon: MessageSquareWarning, color: "#7c3aed" },
+  Academic: { icon: BookOpen, color: "#171717" },
+  Attendance: { icon: CalendarDays, color: "#525252" },
+  Behavioral: { icon: MessageSquareWarning, color: "#a3a3a3" },
 };
 
 type Board = {

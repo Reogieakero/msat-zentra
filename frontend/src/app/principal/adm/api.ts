@@ -26,7 +26,7 @@ export interface AdmLatestReferred {
   lrn: string;
   student: string;
   grade: string;
-  stage: "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
+  stage: "consultation" | "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: string;
   preparedBy: string;
   approvedBy: string | null;
@@ -44,7 +44,7 @@ export interface AdmReferralRow {
   lrn: string;
   student: string;
   grade: string;
-  stage: "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
+  stage: "consultation" | "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   preparedBy: string;
   datePrepared: string;

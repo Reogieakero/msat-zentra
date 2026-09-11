@@ -389,6 +389,10 @@ model StudentRoster {
   attendanceRecords AttendanceRecord[]
   anecdotalRecords AnecdotalRecord[]
   referrals Referral[]
+  studentGrades StudentGrade[]
+  finalGrades FinalGrade[]
+  riskSnapshots RiskSnapshot[]
+  interventions Intervention[]
   @@unique([lrn, schoolYearId])
   @@index([gradeLevel])
   @@index([sectionId])
@@ -455,17 +459,26 @@ model Assessment {
 model StudentGrade {
   id               String     @id @default(uuid())
   assessmentId     String
-  studentId        String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId        String?
+  rosterId         String?
   rawScore         Float
   percentageScore  Float // computed
   assessment       Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  student          StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  student          StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster           StudentRoster? @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   @@unique([assessmentId, studentId])
+  @@unique([assessmentId, rosterId])
+  @@index([rosterId])
 }
 
 model FinalGrade {
   id                String       @id @default(uuid())
-  studentId         String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId         String?
+  rosterId          String?
   subjectId         String
   termId            String
   computedAverage   Float?
@@ -478,10 +491,13 @@ model FinalGrade {
   adviserApprovedAt DateTime?
   finalizedBy       String?
   finalizedAt       DateTime?
-  student           StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  student           StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster            StudentRoster? @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   subject           Subject        @relation(fields: [subjectId], references: [id])
   term              Term           @relation(fields: [termId], references: [id])
   @@unique([studentId, subjectId, termId])
+  @@unique([rosterId, subjectId, termId])
+  @@index([rosterId])
 }
 
 // Teacher-raised flags on student grades. Any teacher may raise a flag on any
@@ -627,7 +643,10 @@ model Referral {
 
 model Intervention {
   id                String          @id @default(uuid())
-  studentId         String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId         String?
+  rosterId          String?
   riskLevelAtFlag   RiskLevel
   recommendedAction String
   assignedTo        String?
@@ -635,8 +654,10 @@ model Intervention {
   approvalStatus    ApprovalStatus  @default(pending)
   outcomeStatus     OutcomeStatus   @default(ongoing)
   outcomeNotes      String?
-  student           StudentProfile  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  student           StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster            StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   assignee          User?           @relation("InterventionAssignee", fields: [assignedTo], references: [id])
+  @@index([rosterId])
 }
 // ---------------------------------------------------------------------------
 // 3.6 Specialist modules
@@ -812,13 +833,18 @@ model AuditLog {
 
 model RiskSnapshot {
   id          String    @id @default(uuid())
-  studentId   String
+  // Exactly one of studentId (registered profile) / rosterId (enlisted, no
+  // account yet) is set — enforced by a CHECK constraint in the migration.
+  studentId   String?
+  rosterId    String?
   riskLevel   RiskLevel
   riskCount   Int
   snapshotDate DateTime @default(now())
   termId      String
-  student     StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  student     StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  roster      StudentRoster? @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   term        Term          @relation(fields: [termId], references: [id])
+  @@index([rosterId])
 }
 
 model ReportSnapshot {

@@ -31,11 +31,11 @@ export function DocumentCard({
 }
 
 export const DOC_LEGEND: { color: string; label: string }[] = [
-  { color: "#ffc371", label: "Referral" },
-  { color: "#4facfe", label: "Anecdotal" },
-  { color: "#00f2fe", label: "Certification" },
-  { color: "#a18cd1", label: "Minutes" },
-  { color: "#ff5f6d", label: "Home Visit" },
+  { color: "#d4d4d4", label: "Referral" },
+  { color: "#a3a3a3", label: "Anecdotal" },
+  { color: "#525252", label: "Certification" },
+  { color: "#737373", label: "Minutes" },
+  { color: "#404040", label: "Home Visit" },
 ];
 
 export function DocumentsPanel({ caseLabel }: { caseLabel: string }) {

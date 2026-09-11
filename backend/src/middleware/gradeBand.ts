@@ -19,6 +19,25 @@ export function gradeBandGuard(resolveStudentId: (req: Request) => string | Prom
 
     try {
       const studentId = await resolveStudentId(req);
+
+      // Roster enlistments (`roster:<id>`, no account yet) resolve their band
+      // straight from the roster entry.
+      if (studentId.startsWith("roster:")) {
+        const entry = await prisma.studentRoster.findUnique({
+          where: { id: studentId.slice("roster:".length) },
+          select: { gradeLevel: true },
+        });
+        if (!entry) return next(new AppError(404, "STUDENT_NOT_FOUND", "Student profile not found"));
+        const band = bandFor(entry.gradeLevel);
+        const allowed =
+          (req.user.role === "record_keeper" && band === "7-10") ||
+          (req.user.role === "registrar" && band === "11-12");
+        if (!allowed) {
+          return next(new AppError(403, "GRADE_BAND_FORBIDDEN", `Role not authorized for grade band ${band}`));
+        }
+        return next();
+      }
+
       const profile = await prisma.studentProfile.findUnique({
         where: { userId: studentId },
         select: { gradeLevel: true },

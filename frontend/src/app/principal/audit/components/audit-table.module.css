@@ -1,5 +1,5 @@
 .wrap {
-  border: 1px solid var(--border, #e7e5e4);
+  border: 1px solid var(--border, #e5e5e5);
   border-radius: var(--radius-md, 6px);
   background: var(--card, #fff);
   overflow: hidden;
@@ -45,7 +45,7 @@
 }
 
 .headRow {
-  background: var(--muted, #f5f5f4);
+  background: var(--muted, #f5f5f5);
 }
 
 .headRow th,
@@ -62,7 +62,7 @@
 .chevron {
   width: 16px;
   height: 16px;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
   transition: transform 150ms ease-out;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .row:hover {
-  background: var(--muted, #f5f5f4);
+  background: var(--muted, #f5f5f5);
 }
 
 .mono {
@@ -80,7 +80,7 @@
 }
 
 .sourceId {
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
   margin-left: 4px;
 }
 
@@ -103,7 +103,7 @@
 }
 
 .detailRow {
-  background: var(--muted, #f5f5f4);
+  background: var(--muted, #f5f5f5);
 }
 
 .detail {
@@ -123,7 +123,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  color: var(--foreground, #1c1917);
+  color: var(--foreground, #171717);
 }
 
 .diffCards {
@@ -138,7 +138,7 @@
   min-width: 0;
   padding: 12px;
   background: var(--card, #fff);
-  border: 1px solid var(--border, #e7e5e4);
+  border: 1px solid var(--border, #e5e5e5);
   border-radius: var(--radius-md, 6px);
 }
 
@@ -148,14 +148,14 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
   margin-bottom: 8px;
 }
 
 .diffEmpty {
   margin: 0;
   font-size: 13px;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
 }
 
 .diffFields {
@@ -174,7 +174,7 @@
 
 .diffFieldLabel {
   font-size: 12px;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
 }
 
 .diffFieldValue {
@@ -186,7 +186,7 @@
 
 .diffArrow {
   align-self: center;
-  color: var(--muted-foreground, #78716c);
+  color: var(--muted-foreground, #737373);
   font-size: 18px;
 }
 
@@ -197,7 +197,7 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--primary, #15803d);
+  color: var(--primary, #171717);
   background: none;
   border: none;
   padding: 4px 0;
@@ -236,7 +236,7 @@
   .row,
   .detailRow {
     display: block;
-    border-bottom: 1px solid var(--border, #e7e5e4);
+    border-bottom: 1px solid var(--border, #e5e5e5);
     padding: 8px 12px;
   }
 
@@ -272,7 +272,7 @@
     flex-shrink: 0;
     font-size: 12px;
     font-weight: 600;
-    color: var(--muted-foreground, #78716c);
+    color: var(--muted-foreground, #737373);
     text-align: left;
   }
 

@@ -37,6 +37,7 @@ export type RiskSnapshotSumAggregateOutputType = {
 export type RiskSnapshotMinAggregateOutputType = {
   id: string | null
   studentId: string | null
+  rosterId: string | null
   riskLevel: $Enums.RiskLevel | null
   riskCount: number | null
   snapshotDate: Date | null
@@ -46,6 +47,7 @@ export type RiskSnapshotMinAggregateOutputType = {
 export type RiskSnapshotMaxAggregateOutputType = {
   id: string | null
   studentId: string | null
+  rosterId: string | null
   riskLevel: $Enums.RiskLevel | null
   riskCount: number | null
   snapshotDate: Date | null
@@ -55,6 +57,7 @@ export type RiskSnapshotMaxAggregateOutputType = {
 export type RiskSnapshotCountAggregateOutputType = {
   id: number
   studentId: number
+  rosterId: number
   riskLevel: number
   riskCount: number
   snapshotDate: number
@@ -74,6 +77,7 @@ export type RiskSnapshotSumAggregateInputType = {
 export type RiskSnapshotMinAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   riskLevel?: true
   riskCount?: true
   snapshotDate?: true
@@ -83,6 +87,7 @@ export type RiskSnapshotMinAggregateInputType = {
 export type RiskSnapshotMaxAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   riskLevel?: true
   riskCount?: true
   snapshotDate?: true
@@ -92,6 +97,7 @@ export type RiskSnapshotMaxAggregateInputType = {
 export type RiskSnapshotCountAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   riskLevel?: true
   riskCount?: true
   snapshotDate?: true
@@ -187,7 +193,8 @@ export type RiskSnapshotGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
 
 export type RiskSnapshotGroupByOutputType = {
   id: string
-  studentId: string
+  studentId: string | null
+  rosterId: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate: Date
@@ -219,23 +226,27 @@ export type RiskSnapshotWhereInput = {
   OR?: Prisma.RiskSnapshotWhereInput[]
   NOT?: Prisma.RiskSnapshotWhereInput | Prisma.RiskSnapshotWhereInput[]
   id?: Prisma.StringFilter<"RiskSnapshot"> | string
-  studentId?: Prisma.StringFilter<"RiskSnapshot"> | string
+  studentId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"RiskSnapshot"> | $Enums.RiskLevel
   riskCount?: Prisma.IntFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeFilter<"RiskSnapshot"> | Date | string
   termId?: Prisma.StringFilter<"RiskSnapshot"> | string
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
 }
 
 export type RiskSnapshotOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   student?: Prisma.StudentProfileOrderByWithRelationInput
+  roster?: Prisma.StudentRosterOrderByWithRelationInput
   term?: Prisma.TermOrderByWithRelationInput
 }
 
@@ -244,18 +255,21 @@ export type RiskSnapshotWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.RiskSnapshotWhereInput | Prisma.RiskSnapshotWhereInput[]
   OR?: Prisma.RiskSnapshotWhereInput[]
   NOT?: Prisma.RiskSnapshotWhereInput | Prisma.RiskSnapshotWhereInput[]
-  studentId?: Prisma.StringFilter<"RiskSnapshot"> | string
+  studentId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"RiskSnapshot"> | $Enums.RiskLevel
   riskCount?: Prisma.IntFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeFilter<"RiskSnapshot"> | Date | string
   termId?: Prisma.StringFilter<"RiskSnapshot"> | string
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
 }, "id">
 
 export type RiskSnapshotOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
@@ -272,7 +286,8 @@ export type RiskSnapshotScalarWhereWithAggregatesInput = {
   OR?: Prisma.RiskSnapshotScalarWhereWithAggregatesInput[]
   NOT?: Prisma.RiskSnapshotScalarWhereWithAggregatesInput | Prisma.RiskSnapshotScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"RiskSnapshot"> | string
-  studentId?: Prisma.StringWithAggregatesFilter<"RiskSnapshot"> | string
+  studentId?: Prisma.StringNullableWithAggregatesFilter<"RiskSnapshot"> | string | null
+  rosterId?: Prisma.StringNullableWithAggregatesFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelWithAggregatesFilter<"RiskSnapshot"> | $Enums.RiskLevel
   riskCount?: Prisma.IntWithAggregatesFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeWithAggregatesFilter<"RiskSnapshot"> | Date | string
@@ -284,13 +299,15 @@ export type RiskSnapshotCreateInput = {
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
-  student: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutRiskSnapshotsInput
   term: Prisma.TermCreateNestedOneWithoutRiskSnapshotsInput
 }
 
 export type RiskSnapshotUncheckedCreateInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
@@ -302,13 +319,15 @@ export type RiskSnapshotUpdateInput = {
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutRiskSnapshotsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutRiskSnapshotsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutRiskSnapshotsNestedInput
 }
 
 export type RiskSnapshotUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -317,7 +336,8 @@ export type RiskSnapshotUncheckedUpdateInput = {
 
 export type RiskSnapshotCreateManyInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
@@ -333,7 +353,8 @@ export type RiskSnapshotUpdateManyMutationInput = {
 
 export type RiskSnapshotUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -353,6 +374,7 @@ export type RiskSnapshotOrderByRelationAggregateInput = {
 export type RiskSnapshotCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
@@ -366,6 +388,7 @@ export type RiskSnapshotAvgOrderByAggregateInput = {
 export type RiskSnapshotMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
@@ -375,6 +398,7 @@ export type RiskSnapshotMaxOrderByAggregateInput = {
 export type RiskSnapshotMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   riskLevel?: Prisma.SortOrder
   riskCount?: Prisma.SortOrder
   snapshotDate?: Prisma.SortOrder
@@ -469,16 +493,60 @@ export type RiskSnapshotUncheckedUpdateManyWithoutTermNestedInput = {
   deleteMany?: Prisma.RiskSnapshotScalarWhereInput | Prisma.RiskSnapshotScalarWhereInput[]
 }
 
+export type RiskSnapshotCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.RiskSnapshotCreateWithoutRosterInput, Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput> | Prisma.RiskSnapshotCreateWithoutRosterInput[] | Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput | Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.RiskSnapshotCreateManyRosterInputEnvelope
+  connect?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+}
+
+export type RiskSnapshotUncheckedCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.RiskSnapshotCreateWithoutRosterInput, Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput> | Prisma.RiskSnapshotCreateWithoutRosterInput[] | Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput | Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.RiskSnapshotCreateManyRosterInputEnvelope
+  connect?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+}
+
+export type RiskSnapshotUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.RiskSnapshotCreateWithoutRosterInput, Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput> | Prisma.RiskSnapshotCreateWithoutRosterInput[] | Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput | Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.RiskSnapshotUpsertWithWhereUniqueWithoutRosterInput | Prisma.RiskSnapshotUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.RiskSnapshotCreateManyRosterInputEnvelope
+  set?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  disconnect?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  delete?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  connect?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  update?: Prisma.RiskSnapshotUpdateWithWhereUniqueWithoutRosterInput | Prisma.RiskSnapshotUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.RiskSnapshotUpdateManyWithWhereWithoutRosterInput | Prisma.RiskSnapshotUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.RiskSnapshotScalarWhereInput | Prisma.RiskSnapshotScalarWhereInput[]
+}
+
+export type RiskSnapshotUncheckedUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.RiskSnapshotCreateWithoutRosterInput, Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput> | Prisma.RiskSnapshotCreateWithoutRosterInput[] | Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput | Prisma.RiskSnapshotCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.RiskSnapshotUpsertWithWhereUniqueWithoutRosterInput | Prisma.RiskSnapshotUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.RiskSnapshotCreateManyRosterInputEnvelope
+  set?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  disconnect?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  delete?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  connect?: Prisma.RiskSnapshotWhereUniqueInput | Prisma.RiskSnapshotWhereUniqueInput[]
+  update?: Prisma.RiskSnapshotUpdateWithWhereUniqueWithoutRosterInput | Prisma.RiskSnapshotUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.RiskSnapshotUpdateManyWithWhereWithoutRosterInput | Prisma.RiskSnapshotUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.RiskSnapshotScalarWhereInput | Prisma.RiskSnapshotScalarWhereInput[]
+}
+
 export type RiskSnapshotCreateWithoutStudentInput = {
   id?: string
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutRiskSnapshotsInput
   term: Prisma.TermCreateNestedOneWithoutRiskSnapshotsInput
 }
 
 export type RiskSnapshotUncheckedCreateWithoutStudentInput = {
   id?: string
+  rosterId?: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
@@ -516,7 +584,8 @@ export type RiskSnapshotScalarWhereInput = {
   OR?: Prisma.RiskSnapshotScalarWhereInput[]
   NOT?: Prisma.RiskSnapshotScalarWhereInput | Prisma.RiskSnapshotScalarWhereInput[]
   id?: Prisma.StringFilter<"RiskSnapshot"> | string
-  studentId?: Prisma.StringFilter<"RiskSnapshot"> | string
+  studentId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"RiskSnapshot"> | string | null
   riskLevel?: Prisma.EnumRiskLevelFilter<"RiskSnapshot"> | $Enums.RiskLevel
   riskCount?: Prisma.IntFilter<"RiskSnapshot"> | number
   snapshotDate?: Prisma.DateTimeFilter<"RiskSnapshot"> | Date | string
@@ -528,12 +597,14 @@ export type RiskSnapshotCreateWithoutTermInput = {
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
-  student: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutRiskSnapshotsInput
 }
 
 export type RiskSnapshotUncheckedCreateWithoutTermInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
@@ -565,8 +636,53 @@ export type RiskSnapshotUpdateManyWithWhereWithoutTermInput = {
   data: Prisma.XOR<Prisma.RiskSnapshotUpdateManyMutationInput, Prisma.RiskSnapshotUncheckedUpdateManyWithoutTermInput>
 }
 
+export type RiskSnapshotCreateWithoutRosterInput = {
+  id?: string
+  riskLevel: $Enums.RiskLevel
+  riskCount: number
+  snapshotDate?: Date | string
+  student?: Prisma.StudentProfileCreateNestedOneWithoutRiskSnapshotsInput
+  term: Prisma.TermCreateNestedOneWithoutRiskSnapshotsInput
+}
+
+export type RiskSnapshotUncheckedCreateWithoutRosterInput = {
+  id?: string
+  studentId?: string | null
+  riskLevel: $Enums.RiskLevel
+  riskCount: number
+  snapshotDate?: Date | string
+  termId: string
+}
+
+export type RiskSnapshotCreateOrConnectWithoutRosterInput = {
+  where: Prisma.RiskSnapshotWhereUniqueInput
+  create: Prisma.XOR<Prisma.RiskSnapshotCreateWithoutRosterInput, Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput>
+}
+
+export type RiskSnapshotCreateManyRosterInputEnvelope = {
+  data: Prisma.RiskSnapshotCreateManyRosterInput | Prisma.RiskSnapshotCreateManyRosterInput[]
+  skipDuplicates?: boolean
+}
+
+export type RiskSnapshotUpsertWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.RiskSnapshotWhereUniqueInput
+  update: Prisma.XOR<Prisma.RiskSnapshotUpdateWithoutRosterInput, Prisma.RiskSnapshotUncheckedUpdateWithoutRosterInput>
+  create: Prisma.XOR<Prisma.RiskSnapshotCreateWithoutRosterInput, Prisma.RiskSnapshotUncheckedCreateWithoutRosterInput>
+}
+
+export type RiskSnapshotUpdateWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.RiskSnapshotWhereUniqueInput
+  data: Prisma.XOR<Prisma.RiskSnapshotUpdateWithoutRosterInput, Prisma.RiskSnapshotUncheckedUpdateWithoutRosterInput>
+}
+
+export type RiskSnapshotUpdateManyWithWhereWithoutRosterInput = {
+  where: Prisma.RiskSnapshotScalarWhereInput
+  data: Prisma.XOR<Prisma.RiskSnapshotUpdateManyMutationInput, Prisma.RiskSnapshotUncheckedUpdateManyWithoutRosterInput>
+}
+
 export type RiskSnapshotCreateManyStudentInput = {
   id?: string
+  rosterId?: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
@@ -578,11 +694,13 @@ export type RiskSnapshotUpdateWithoutStudentInput = {
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  roster?: Prisma.StudentRosterUpdateOneWithoutRiskSnapshotsNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutRiskSnapshotsNestedInput
 }
 
 export type RiskSnapshotUncheckedUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -591,6 +709,7 @@ export type RiskSnapshotUncheckedUpdateWithoutStudentInput = {
 
 export type RiskSnapshotUncheckedUpdateManyWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -599,7 +718,8 @@ export type RiskSnapshotUncheckedUpdateManyWithoutStudentInput = {
 
 export type RiskSnapshotCreateManyTermInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   riskLevel: $Enums.RiskLevel
   riskCount: number
   snapshotDate?: Date | string
@@ -610,12 +730,14 @@ export type RiskSnapshotUpdateWithoutTermInput = {
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutRiskSnapshotsNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutRiskSnapshotsNestedInput
 }
 
 export type RiskSnapshotUncheckedUpdateWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -623,10 +745,47 @@ export type RiskSnapshotUncheckedUpdateWithoutTermInput = {
 
 export type RiskSnapshotUncheckedUpdateManyWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   riskCount?: Prisma.IntFieldUpdateOperationsInput | number
   snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type RiskSnapshotCreateManyRosterInput = {
+  id?: string
+  studentId?: string | null
+  riskLevel: $Enums.RiskLevel
+  riskCount: number
+  snapshotDate?: Date | string
+  termId: string
+}
+
+export type RiskSnapshotUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  student?: Prisma.StudentProfileUpdateOneWithoutRiskSnapshotsNestedInput
+  term?: Prisma.TermUpdateOneRequiredWithoutRiskSnapshotsNestedInput
+}
+
+export type RiskSnapshotUncheckedUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type RiskSnapshotUncheckedUpdateManyWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevel?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  riskCount?: Prisma.IntFieldUpdateOperationsInput | number
+  snapshotDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -634,68 +793,80 @@ export type RiskSnapshotUncheckedUpdateManyWithoutTermInput = {
 export type RiskSnapshotSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   riskLevel?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["riskSnapshot"]>
 
 export type RiskSnapshotSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   riskLevel?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["riskSnapshot"]>
 
 export type RiskSnapshotSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   riskLevel?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["riskSnapshot"]>
 
 export type RiskSnapshotSelectScalar = {
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   riskLevel?: boolean
   riskCount?: boolean
   snapshotDate?: boolean
   termId?: boolean
 }
 
-export type RiskSnapshotOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "riskLevel" | "riskCount" | "snapshotDate" | "termId", ExtArgs["result"]["riskSnapshot"]>
+export type RiskSnapshotOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "riskLevel" | "riskCount" | "snapshotDate" | "termId", ExtArgs["result"]["riskSnapshot"]>
 export type RiskSnapshotInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 export type RiskSnapshotIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 export type RiskSnapshotIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.RiskSnapshot$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.RiskSnapshot$rosterArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 
 export type $RiskSnapshotPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "RiskSnapshot"
   objects: {
-    student: Prisma.$StudentProfilePayload<ExtArgs>
+    student: Prisma.$StudentProfilePayload<ExtArgs> | null
+    roster: Prisma.$StudentRosterPayload<ExtArgs> | null
     term: Prisma.$TermPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    studentId: string
+    studentId: string | null
+    rosterId: string | null
     riskLevel: $Enums.RiskLevel
     riskCount: number
     snapshotDate: Date
@@ -1094,7 +1265,8 @@ readonly fields: RiskSnapshotFieldRefs;
  */
 export interface Prisma__RiskSnapshotClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  student<T extends Prisma.StudentProfileDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfileDefaultArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  student<T extends Prisma.RiskSnapshot$studentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RiskSnapshot$studentArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  roster<T extends Prisma.RiskSnapshot$rosterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RiskSnapshot$rosterArgs<ExtArgs>>): Prisma.Prisma__StudentRosterClient<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   term<T extends Prisma.TermDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TermDefaultArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1127,6 +1299,7 @@ export interface Prisma__RiskSnapshotClient<T, Null = never, ExtArgs extends run
 export interface RiskSnapshotFieldRefs {
   readonly id: Prisma.FieldRef<"RiskSnapshot", 'String'>
   readonly studentId: Prisma.FieldRef<"RiskSnapshot", 'String'>
+  readonly rosterId: Prisma.FieldRef<"RiskSnapshot", 'String'>
   readonly riskLevel: Prisma.FieldRef<"RiskSnapshot", 'RiskLevel'>
   readonly riskCount: Prisma.FieldRef<"RiskSnapshot", 'Int'>
   readonly snapshotDate: Prisma.FieldRef<"RiskSnapshot", 'DateTime'>
@@ -1529,6 +1702,44 @@ export type RiskSnapshotDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many RiskSnapshots to delete.
    */
   limit?: number
+}
+
+/**
+ * RiskSnapshot.student
+ */
+export type RiskSnapshot$studentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentProfile
+   */
+  select?: Prisma.StudentProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentProfile
+   */
+  omit?: Prisma.StudentProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentProfileInclude<ExtArgs> | null
+  where?: Prisma.StudentProfileWhereInput
+}
+
+/**
+ * RiskSnapshot.roster
+ */
+export type RiskSnapshot$rosterArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentRoster
+   */
+  select?: Prisma.StudentRosterSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentRoster
+   */
+  omit?: Prisma.StudentRosterOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentRosterInclude<ExtArgs> | null
+  where?: Prisma.StudentRosterWhereInput
 }
 
 /**

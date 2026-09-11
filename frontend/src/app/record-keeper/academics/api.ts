@@ -215,6 +215,7 @@ export interface SubjectStudent {
   finalGrade: number;
   remarks: "Passed" | "Failed" | "No grade yet";
   status: "active" | "pending" | "suspended";
+  hasAccount: boolean;
 }
 
 export interface SubjectStudentsResponse {

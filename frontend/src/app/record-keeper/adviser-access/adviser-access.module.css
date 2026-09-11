@@ -65,21 +65,13 @@
 }
 
 .sectionCount[data-status="pending"] {
-  background: color-mix(in oklch, #f59e0b, transparent 88%);
-  color: #b45309;
-}
-
-:global(.dark) .sectionCount[data-status="pending"] {
-  color: #fbbf24;
+  background: color-mix(in oklch, var(--foreground), transparent 85%);
+  color: var(--foreground);
 }
 
 .sectionCount[data-status="approved"] {
-  background: color-mix(in oklch, #10b981, transparent 88%);
-  color: #047857;
-}
-
-:global(.dark) .sectionCount[data-status="approved"] {
-  color: #34d399;
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .sectionCount[data-status="denied"] {

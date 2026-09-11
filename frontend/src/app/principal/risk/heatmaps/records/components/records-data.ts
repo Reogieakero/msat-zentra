@@ -9,11 +9,11 @@ import type {
 // Canonical backend anecdotal categories (mirror of the AnecdotalCategory enum
 // + CATEGORY_META in backend/src/modules/anecdotal/anecdotal.routes.ts).
 export const CATEGORY_META: Record<BehavioralCategory, { label: string; color: string }> = {
-  behavioral: { label: "Behavioral", color: "#166534" },
-  bullying: { label: "Bullying", color: "#b91c1c" },
-  academic: { label: "Academic", color: "#1d4ed8" },
-  attendance: { label: "Attendance", color: "#c2410c" },
-  health: { label: "Health", color: "#7c3aed" },
+  behavioral: { label: "Behavioral", color: "#171717" },
+  bullying: { label: "Bullying", color: "#404040" },
+  academic: { label: "Academic", color: "#525252" },
+  attendance: { label: "Attendance", color: "#737373" },
+  health: { label: "Health", color: "#a3a3a3" },
 };
 
 export const CATEGORY_KEYS = Object.keys(CATEGORY_META) as BehavioralCategory[];

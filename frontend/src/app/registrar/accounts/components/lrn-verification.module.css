@@ -102,13 +102,14 @@
 }
 
 .pillOk {
-  background-color: color-mix(in oklch, #16a34a, transparent 88%);
-  color: #15803d;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .pillBad {
-  background-color: color-mix(in oklch, #dc2626, transparent 88%);
-  color: #b91c1c;
+  background-color: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--foreground);
 }
 
 .compareRow {
@@ -138,11 +139,15 @@
 }
 
 .ok {
-  color: #15803d;
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 .bad {
-  color: #b91c1c;
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .verdict {
@@ -156,25 +161,26 @@
 }
 
 .verdictMatch {
-  background-color: color-mix(in oklch, #16a34a, transparent 88%);
-  color: #15803d;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .verdictMismatch {
-  background-color: color-mix(in oklch, #d97706, transparent 86%);
-  color: #b45309;
+  background-color: var(--muted);
+  color: var(--foreground);
 }
 
 .verdictNotFound {
-  background-color: color-mix(in oklch, #dc2626, transparent 88%);
-  color: #b91c1c;
+  background-color: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--foreground);
 }
 
 .hint {
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
-  border-left: 2px solid #d97706;
+  border-left: 2px solid var(--muted-foreground);
   padding-left: 0.5rem;
 }
 

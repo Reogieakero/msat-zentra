@@ -478,11 +478,11 @@
 }
 
 .stuDot[data-level="High"] {
-  background-color: #ef4444;
+  background-color: #171717;
 }
 
 .stuDot[data-level="Moderate"] {
-  background-color: #f59e0b;
+  background-color: #737373;
 }
 
 .stuName {
@@ -899,7 +899,7 @@
   margin-left: auto;
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #ef4444;
+  color: #171717;
   font-variant-numeric: tabular-nums;
 }
 

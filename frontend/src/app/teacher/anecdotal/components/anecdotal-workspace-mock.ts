@@ -44,11 +44,11 @@ export const MOCK_ANECDOTAL_STUDENTS: MockAnecdotalStudent[] = [
 ];
 
 export const CATEGORY_COLORS: Record<MockAnecdotalCategory, string> = {
-  behavioral: "#166534",
-  bullying: "#b91c1c",
-  academic: "#1d4ed8",
-  attendance: "#c2410c",
-  health: "#7c3aed",
+  behavioral: "#171717",
+  bullying: "#404040",
+  academic: "#525252",
+  attendance: "#737373",
+  health: "#a3a3a3",
 };
 
 export function humanize(value: string): string {

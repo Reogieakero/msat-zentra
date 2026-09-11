@@ -257,7 +257,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-top: 1px solid var(--border, #e7e5e4);
+  border-top: 1px solid var(--border, #e5e5e5);
 }
 
 .answerRow {
@@ -468,11 +468,11 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 0;
-  border-top: 1px solid var(--border, #e7e5e4);
+  border-top: 1px solid var(--border, #e5e5e5);
 }
 
 .dropPageBtn {
-  border: 1px solid var(--border, #e7e5e4);
+  border: 1px solid var(--border, #e5e5e5);
   background-color: var(--card);
   border-radius: var(--radius-md);
   padding: 0.25rem 0.625rem;

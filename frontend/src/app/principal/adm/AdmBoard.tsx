@@ -46,14 +46,14 @@ export { CaseTable } from "./components/CaseTable";
 const STAGES: AdmPipelineStage[] = ADM_PIPELINE.map((s) => s.stage);
 
 const SYSTEM_CHART_COLORS: Record<AdmPipelineStage, string> = {
-  anecdotal: "#a8a29e",
-  consultation: "#f59e0b",
-  meeting_parents: "#3b82f6",
-  home_visitation: "#8b5cf6",
-  certification: "#0ea5e9",
-  principal_approval: "#ef4444",
-  enrollment_monitoring: "#06b6d4",
-  completion: "#22c55e",
+  anecdotal: "#d4d4d4",
+  consultation: "#a3a3a3",
+  meeting_parents: "#737373",
+  home_visitation: "#525252",
+  certification: "#404040",
+  principal_approval: "#262626",
+  enrollment_monitoring: "#171717",
+  completion: "#000000",
 };
 
 function stageSystemColor(stage: AdmPipelineStage): string {

@@ -110,7 +110,7 @@ export function LrnVerifyButton({ student, onApprove, approving }: Props) {
               </span>
             </div>
           ) : state.status === "error" ? (
-            <p className={styles.hint} style={{ borderColor: "#dc2626", color: "#b91c1c" }}>
+            <p className={styles.hint} style={{ borderColor: "#171717", color: "#171717" }}>
               {state.message}
             </p>
           ) : (
@@ -310,7 +310,7 @@ function CompareRow({
         {record}
         <span className="block pt-0.5">
           {ok ? (
-            <Badge variant="outline" className="gap-1 border-green-500/30 bg-green-500/10 text-green-600 text-[10px] font-semibold">
+            <Badge variant="outline" className="gap-1 border-primary bg-primary text-primary-foreground text-[10px] font-semibold">
               <CircleCheck className="size-3" aria-hidden />
               Match
             </Badge>

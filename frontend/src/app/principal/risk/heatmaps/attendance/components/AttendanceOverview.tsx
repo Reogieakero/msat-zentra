@@ -63,7 +63,7 @@ interface Kpi {
 }
 
 const chartConfig = {
-  rate: { label: "Attendance %", color: "#2563eb" },
+  rate: { label: "Attendance %", color: "#171717" },
 } satisfies ChartConfig;
 
 export function AttendanceOverview({
@@ -362,8 +362,8 @@ export function AttendanceOverview({
               >
                 <defs>
                   <linearGradient id="attTrend" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#171717" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#171717" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
@@ -388,7 +388,7 @@ export function AttendanceOverview({
                 <Area
                   type="monotone"
                   dataKey="rate"
-                  stroke="#2563eb"
+                  stroke="#171717"
                   strokeWidth={2}
                   fill="url(#attTrend)"
                   dot={false}

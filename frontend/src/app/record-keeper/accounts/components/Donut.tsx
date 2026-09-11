@@ -8,7 +8,7 @@ type Props = {
 
 const COLORS = {
   withAccount: "var(--primary)",
-  pending: "var(--warn, #d97706)",
+  pending: "var(--muted-foreground)",
 };
 
 export function Donut({ withAccount, pending }: Props) {

@@ -235,18 +235,34 @@ async function main() {
   const componentTypes: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"];
 
   // 1) Grade components per subject+term (school-wide). Unique (subjectId, termId, componentType).
+  // Weights follow DepEd Order No. 8, s. 2015: SHS uses WW 25 / PT 45 / QA 30
+  // for every subject; JHS varies by learning area.
+  const seedWeights = (
+    grade: GradeLevel,
+    code: string,
+  ): { WRITTEN_WORK: number; PERFORMANCE_TASK: number; QUARTERLY_EXAM: number } => {
+    if (grade === "G11" || grade === "G12") {
+      return { WRITTEN_WORK: 25, PERFORMANCE_TASK: 45, QUARTERLY_EXAM: 30 };
+    }
+    if (/^(MATH|SCI)/.test(code)) {
+      return { WRITTEN_WORK: 40, PERFORMANCE_TASK: 40, QUARTERLY_EXAM: 20 };
+    }
+    if (/^MAPEH/.test(code)) {
+      return { WRITTEN_WORK: 20, PERFORMANCE_TASK: 60, QUARTERLY_EXAM: 20 };
+    }
+    return { WRITTEN_WORK: 30, PERFORMANCE_TASK: 50, QUARTERLY_EXAM: 20 };
+  };
   for (const grade of GRADE_LEVELS) {
     for (const s of SUBJECT_NAMES[grade]) {
       const subjectId = subjectIds[`${grade}:${s.code}`];
-      let weight = 30;
+      const weights = seedWeights(grade, s.code);
       for (const ct of componentTypes) {
-        const compWeight = ct === "QUARTERLY_EXAM" ? 40 : weight;
+        const compWeight = weights[ct];
         await prisma.gradeComponent.upsert({
           where: { subjectId_termId_componentType: { subjectId, termId: term.id, componentType: ct } },
           update: { weightPercentage: compWeight },
           create: { subjectId, termId: term.id, componentType: ct, weightPercentage: compWeight },
         });
-        weight += 15;
       }
     }
   }

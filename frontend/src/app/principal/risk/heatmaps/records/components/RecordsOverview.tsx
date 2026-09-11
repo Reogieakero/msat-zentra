@@ -37,7 +37,7 @@ import {
 import styles from "./RecordsOverview.module.css";
 
 const chartConfig = {
-  value: { label: "Records", color: "#2563eb" },
+  value: { label: "Records", color: "#171717" },
 } satisfies ChartConfig;
 
 type Severity = "Low" | "Moderate" | "High";

@@ -1,0 +1,51 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.stepBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--muted), transparent 60%);
+}
+
+.stepTitle {
+  margin: 0 0 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.workLine {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  color: var(--foreground);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.workLine b {
+  font-weight: 700;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}

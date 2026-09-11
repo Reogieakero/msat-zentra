@@ -54,7 +54,7 @@
 }
 
 .tone_good {
-  color: #15803d;
+  color: #737373;
 }
 
 .tone_warn {
@@ -207,7 +207,7 @@
 }
 
 .rate[data-low="false"] {
-  color: #15803d;
+  color: #737373;
 }
 
 .rateSub {
@@ -341,7 +341,7 @@
 }
 
 .trendUp {
-  color: #15803d;
+  color: #737373;
 }
 
 .trendDown {

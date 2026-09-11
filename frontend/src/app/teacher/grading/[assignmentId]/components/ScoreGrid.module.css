@@ -1,0 +1,192 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--card);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.cardSub {
+  margin: -0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.cardHeadRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.pickerRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 12rem;
+}
+
+.fieldLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.filterBtn {
+  gap: 0.375rem;
+  max-width: 16rem;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.filterChevron {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.filterActive {
+  border-color: var(--ring);
+}
+
+.filterDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background-color: var(--primary);
+}
+
+.filterMenu {
+  min-width: 12rem;
+}
+
+.filterValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead th {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted), transparent 55%);
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stickyCol {
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  min-width: 10rem;
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.scoreCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scoreInput {
+  width: 5rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.scoreValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.scorePct {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--destructive);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}

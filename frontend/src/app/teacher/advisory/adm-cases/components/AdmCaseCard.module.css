@@ -59,11 +59,11 @@
   background-color: var(--primary);
 }
 
-.tone1 .miniAvatar { background: linear-gradient(135deg, #166534, #22c55e); }
-.tone2 .miniAvatar { background: linear-gradient(135deg, #b91c1c, #f97316); }
-.tone3 .miniAvatar { background: linear-gradient(135deg, #1d4ed8, #06b6d4); }
-.tone4 .miniAvatar { background: linear-gradient(135deg, #c2410c, #eab308); }
-.tone5 .miniAvatar { background: linear-gradient(135deg, #7c3aed, #ec4899); }
+.tone1 .miniAvatar { background: linear-gradient(135deg, #171717, #404040); }
+.tone2 .miniAvatar { background: linear-gradient(135deg, #262626, #525252); }
+.tone3 .miniAvatar { background: linear-gradient(135deg, #404040, #737373); }
+.tone4 .miniAvatar { background: linear-gradient(135deg, #525252, #a3a3a3); }
+.tone5 .miniAvatar { background: linear-gradient(135deg, #737373, #d4d4d4); }
 
 .handle {
   display: flex;
@@ -98,13 +98,13 @@
 }
 
 .dotPending {
-  background-color: var(--warning, #f59e0b);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--warning, #f59e0b), transparent 80%);
+  background-color: #a3a3a3;
+  box-shadow: 0 0 0 3px color-mix(in oklch, #a3a3a3, transparent 80%);
 }
 
 .dotApproved {
-  background-color: #16a34a;
-  box-shadow: 0 0 0 3px color-mix(in oklch, #16a34a, transparent 80%);
+  background-color: #171717;
+  box-shadow: 0 0 0 3px color-mix(in oklch, #171717, transparent 80%);
 }
 
 .srOnly {
@@ -138,11 +138,11 @@
   border: 4px solid transparent;
 }
 
-.tone1 .avatar { background: linear-gradient(135deg, #166534, #22c55e) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
-.tone2 .avatar { background: linear-gradient(135deg, #b91c1c, #f97316) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
-.tone3 .avatar { background: linear-gradient(135deg, #1d4ed8, #06b6d4) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
-.tone4 .avatar { background: linear-gradient(135deg, #c2410c, #eab308) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
-.tone5 .avatar { background: linear-gradient(135deg, #7c3aed, #ec4899) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
+.tone1 .avatar { background: linear-gradient(135deg, #171717, #404040) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
+.tone2 .avatar { background: linear-gradient(135deg, #262626, #525252) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
+.tone3 .avatar { background: linear-gradient(135deg, #404040, #737373) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
+.tone4 .avatar { background: linear-gradient(135deg, #525252, #a3a3a3) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
+.tone5 .avatar { background: linear-gradient(135deg, #737373, #d4d4d4) padding-box, conic-gradient(var(--primary) var(--progress, 12%), var(--border) 0) border-box; }
 
 .name {
   margin: 0.25rem 0 0;

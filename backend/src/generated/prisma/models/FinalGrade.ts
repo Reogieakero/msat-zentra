@@ -39,6 +39,7 @@ export type FinalGradeSumAggregateOutputType = {
 export type FinalGradeMinAggregateOutputType = {
   id: string | null
   studentId: string | null
+  rosterId: string | null
   subjectId: string | null
   termId: string | null
   computedAverage: number | null
@@ -56,6 +57,7 @@ export type FinalGradeMinAggregateOutputType = {
 export type FinalGradeMaxAggregateOutputType = {
   id: string | null
   studentId: string | null
+  rosterId: string | null
   subjectId: string | null
   termId: string | null
   computedAverage: number | null
@@ -73,6 +75,7 @@ export type FinalGradeMaxAggregateOutputType = {
 export type FinalGradeCountAggregateOutputType = {
   id: number
   studentId: number
+  rosterId: number
   subjectId: number
   termId: number
   computedAverage: number
@@ -102,6 +105,7 @@ export type FinalGradeSumAggregateInputType = {
 export type FinalGradeMinAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   subjectId?: true
   termId?: true
   computedAverage?: true
@@ -119,6 +123,7 @@ export type FinalGradeMinAggregateInputType = {
 export type FinalGradeMaxAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   subjectId?: true
   termId?: true
   computedAverage?: true
@@ -136,6 +141,7 @@ export type FinalGradeMaxAggregateInputType = {
 export type FinalGradeCountAggregateInputType = {
   id?: true
   studentId?: true
+  rosterId?: true
   subjectId?: true
   termId?: true
   computedAverage?: true
@@ -239,7 +245,8 @@ export type FinalGradeGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 
 export type FinalGradeGroupByOutputType = {
   id: string
-  studentId: string
+  studentId: string | null
+  rosterId: string | null
   subjectId: string
   termId: string
   computedAverage: number | null
@@ -279,7 +286,8 @@ export type FinalGradeWhereInput = {
   OR?: Prisma.FinalGradeWhereInput[]
   NOT?: Prisma.FinalGradeWhereInput | Prisma.FinalGradeWhereInput[]
   id?: Prisma.StringFilter<"FinalGrade"> | string
-  studentId?: Prisma.StringFilter<"FinalGrade"> | string
+  studentId?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
   subjectId?: Prisma.StringFilter<"FinalGrade"> | string
   termId?: Prisma.StringFilter<"FinalGrade"> | string
   computedAverage?: Prisma.FloatNullableFilter<"FinalGrade"> | number | null
@@ -292,14 +300,16 @@ export type FinalGradeWhereInput = {
   adviserApprovedAt?: Prisma.DateTimeNullableFilter<"FinalGrade"> | Date | string | null
   finalizedBy?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
   finalizedAt?: Prisma.DateTimeNullableFilter<"FinalGrade"> | Date | string | null
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   subject?: Prisma.XOR<Prisma.SubjectScalarRelationFilter, Prisma.SubjectWhereInput>
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
 }
 
 export type FinalGradeOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   subjectId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   computedAverage?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -313,6 +323,7 @@ export type FinalGradeOrderByWithRelationInput = {
   finalizedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   finalizedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   student?: Prisma.StudentProfileOrderByWithRelationInput
+  roster?: Prisma.StudentRosterOrderByWithRelationInput
   subject?: Prisma.SubjectOrderByWithRelationInput
   term?: Prisma.TermOrderByWithRelationInput
 }
@@ -320,10 +331,12 @@ export type FinalGradeOrderByWithRelationInput = {
 export type FinalGradeWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   studentId_subjectId_termId?: Prisma.FinalGradeStudentIdSubjectIdTermIdCompoundUniqueInput
+  rosterId_subjectId_termId?: Prisma.FinalGradeRosterIdSubjectIdTermIdCompoundUniqueInput
   AND?: Prisma.FinalGradeWhereInput | Prisma.FinalGradeWhereInput[]
   OR?: Prisma.FinalGradeWhereInput[]
   NOT?: Prisma.FinalGradeWhereInput | Prisma.FinalGradeWhereInput[]
-  studentId?: Prisma.StringFilter<"FinalGrade"> | string
+  studentId?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
   subjectId?: Prisma.StringFilter<"FinalGrade"> | string
   termId?: Prisma.StringFilter<"FinalGrade"> | string
   computedAverage?: Prisma.FloatNullableFilter<"FinalGrade"> | number | null
@@ -336,14 +349,16 @@ export type FinalGradeWhereUniqueInput = Prisma.AtLeast<{
   adviserApprovedAt?: Prisma.DateTimeNullableFilter<"FinalGrade"> | Date | string | null
   finalizedBy?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
   finalizedAt?: Prisma.DateTimeNullableFilter<"FinalGrade"> | Date | string | null
-  student?: Prisma.XOR<Prisma.StudentProfileScalarRelationFilter, Prisma.StudentProfileWhereInput>
+  student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   subject?: Prisma.XOR<Prisma.SubjectScalarRelationFilter, Prisma.SubjectWhereInput>
   term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
-}, "id" | "studentId_subjectId_termId">
+}, "id" | "studentId_subjectId_termId" | "rosterId_subjectId_termId">
 
 export type FinalGradeOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  studentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  rosterId?: Prisma.SortOrderInput | Prisma.SortOrder
   subjectId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   computedAverage?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -368,7 +383,8 @@ export type FinalGradeScalarWhereWithAggregatesInput = {
   OR?: Prisma.FinalGradeScalarWhereWithAggregatesInput[]
   NOT?: Prisma.FinalGradeScalarWhereWithAggregatesInput | Prisma.FinalGradeScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"FinalGrade"> | string
-  studentId?: Prisma.StringWithAggregatesFilter<"FinalGrade"> | string
+  studentId?: Prisma.StringNullableWithAggregatesFilter<"FinalGrade"> | string | null
+  rosterId?: Prisma.StringNullableWithAggregatesFilter<"FinalGrade"> | string | null
   subjectId?: Prisma.StringWithAggregatesFilter<"FinalGrade"> | string
   termId?: Prisma.StringWithAggregatesFilter<"FinalGrade"> | string
   computedAverage?: Prisma.FloatNullableWithAggregatesFilter<"FinalGrade"> | number | null
@@ -395,14 +411,16 @@ export type FinalGradeCreateInput = {
   adviserApprovedAt?: Date | string | null
   finalizedBy?: string | null
   finalizedAt?: Date | string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutFinalGradesInput
   subject: Prisma.SubjectCreateNestedOneWithoutFinalGradesInput
   term: Prisma.TermCreateNestedOneWithoutFinalGradesInput
 }
 
 export type FinalGradeUncheckedCreateInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   subjectId: string
   termId: string
   computedAverage?: number | null
@@ -429,14 +447,16 @@ export type FinalGradeUpdateInput = {
   adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutFinalGradesNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutFinalGradesNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutFinalGradesNestedInput
   subject?: Prisma.SubjectUpdateOneRequiredWithoutFinalGradesNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutFinalGradesNestedInput
 }
 
 export type FinalGradeUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subjectId?: Prisma.StringFieldUpdateOperationsInput | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -453,7 +473,8 @@ export type FinalGradeUncheckedUpdateInput = {
 
 export type FinalGradeCreateManyInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   subjectId: string
   termId: string
   computedAverage?: number | null
@@ -484,7 +505,8 @@ export type FinalGradeUpdateManyMutationInput = {
 
 export type FinalGradeUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subjectId?: Prisma.StringFieldUpdateOperationsInput | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -515,9 +537,16 @@ export type FinalGradeStudentIdSubjectIdTermIdCompoundUniqueInput = {
   termId: string
 }
 
+export type FinalGradeRosterIdSubjectIdTermIdCompoundUniqueInput = {
+  rosterId: string
+  subjectId: string
+  termId: string
+}
+
 export type FinalGradeCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   subjectId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   computedAverage?: Prisma.SortOrder
@@ -540,6 +569,7 @@ export type FinalGradeAvgOrderByAggregateInput = {
 export type FinalGradeMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   subjectId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   computedAverage?: Prisma.SortOrder
@@ -557,6 +587,7 @@ export type FinalGradeMaxOrderByAggregateInput = {
 export type FinalGradeMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   studentId?: Prisma.SortOrder
+  rosterId?: Prisma.SortOrder
   subjectId?: Prisma.SortOrder
   termId?: Prisma.SortOrder
   computedAverage?: Prisma.SortOrder
@@ -660,6 +691,48 @@ export type FinalGradeUncheckedUpdateManyWithoutTermNestedInput = {
   deleteMany?: Prisma.FinalGradeScalarWhereInput | Prisma.FinalGradeScalarWhereInput[]
 }
 
+export type FinalGradeCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.FinalGradeCreateWithoutRosterInput, Prisma.FinalGradeUncheckedCreateWithoutRosterInput> | Prisma.FinalGradeCreateWithoutRosterInput[] | Prisma.FinalGradeUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.FinalGradeCreateOrConnectWithoutRosterInput | Prisma.FinalGradeCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.FinalGradeCreateManyRosterInputEnvelope
+  connect?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+}
+
+export type FinalGradeUncheckedCreateNestedManyWithoutRosterInput = {
+  create?: Prisma.XOR<Prisma.FinalGradeCreateWithoutRosterInput, Prisma.FinalGradeUncheckedCreateWithoutRosterInput> | Prisma.FinalGradeCreateWithoutRosterInput[] | Prisma.FinalGradeUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.FinalGradeCreateOrConnectWithoutRosterInput | Prisma.FinalGradeCreateOrConnectWithoutRosterInput[]
+  createMany?: Prisma.FinalGradeCreateManyRosterInputEnvelope
+  connect?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+}
+
+export type FinalGradeUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.FinalGradeCreateWithoutRosterInput, Prisma.FinalGradeUncheckedCreateWithoutRosterInput> | Prisma.FinalGradeCreateWithoutRosterInput[] | Prisma.FinalGradeUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.FinalGradeCreateOrConnectWithoutRosterInput | Prisma.FinalGradeCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.FinalGradeUpsertWithWhereUniqueWithoutRosterInput | Prisma.FinalGradeUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.FinalGradeCreateManyRosterInputEnvelope
+  set?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  disconnect?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  delete?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  connect?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  update?: Prisma.FinalGradeUpdateWithWhereUniqueWithoutRosterInput | Prisma.FinalGradeUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.FinalGradeUpdateManyWithWhereWithoutRosterInput | Prisma.FinalGradeUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.FinalGradeScalarWhereInput | Prisma.FinalGradeScalarWhereInput[]
+}
+
+export type FinalGradeUncheckedUpdateManyWithoutRosterNestedInput = {
+  create?: Prisma.XOR<Prisma.FinalGradeCreateWithoutRosterInput, Prisma.FinalGradeUncheckedCreateWithoutRosterInput> | Prisma.FinalGradeCreateWithoutRosterInput[] | Prisma.FinalGradeUncheckedCreateWithoutRosterInput[]
+  connectOrCreate?: Prisma.FinalGradeCreateOrConnectWithoutRosterInput | Prisma.FinalGradeCreateOrConnectWithoutRosterInput[]
+  upsert?: Prisma.FinalGradeUpsertWithWhereUniqueWithoutRosterInput | Prisma.FinalGradeUpsertWithWhereUniqueWithoutRosterInput[]
+  createMany?: Prisma.FinalGradeCreateManyRosterInputEnvelope
+  set?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  disconnect?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  delete?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  connect?: Prisma.FinalGradeWhereUniqueInput | Prisma.FinalGradeWhereUniqueInput[]
+  update?: Prisma.FinalGradeUpdateWithWhereUniqueWithoutRosterInput | Prisma.FinalGradeUpdateWithWhereUniqueWithoutRosterInput[]
+  updateMany?: Prisma.FinalGradeUpdateManyWithWhereWithoutRosterInput | Prisma.FinalGradeUpdateManyWithWhereWithoutRosterInput[]
+  deleteMany?: Prisma.FinalGradeScalarWhereInput | Prisma.FinalGradeScalarWhereInput[]
+}
+
 export type FinalGradeCreateNestedManyWithoutSubjectInput = {
   create?: Prisma.XOR<Prisma.FinalGradeCreateWithoutSubjectInput, Prisma.FinalGradeUncheckedCreateWithoutSubjectInput> | Prisma.FinalGradeCreateWithoutSubjectInput[] | Prisma.FinalGradeUncheckedCreateWithoutSubjectInput[]
   connectOrCreate?: Prisma.FinalGradeCreateOrConnectWithoutSubjectInput | Prisma.FinalGradeCreateOrConnectWithoutSubjectInput[]
@@ -730,12 +803,14 @@ export type FinalGradeCreateWithoutStudentInput = {
   adviserApprovedAt?: Date | string | null
   finalizedBy?: string | null
   finalizedAt?: Date | string | null
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutFinalGradesInput
   subject: Prisma.SubjectCreateNestedOneWithoutFinalGradesInput
   term: Prisma.TermCreateNestedOneWithoutFinalGradesInput
 }
 
 export type FinalGradeUncheckedCreateWithoutStudentInput = {
   id?: string
+  rosterId?: string | null
   subjectId: string
   termId: string
   computedAverage?: number | null
@@ -781,7 +856,8 @@ export type FinalGradeScalarWhereInput = {
   OR?: Prisma.FinalGradeScalarWhereInput[]
   NOT?: Prisma.FinalGradeScalarWhereInput | Prisma.FinalGradeScalarWhereInput[]
   id?: Prisma.StringFilter<"FinalGrade"> | string
-  studentId?: Prisma.StringFilter<"FinalGrade"> | string
+  studentId?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
+  rosterId?: Prisma.StringNullableFilter<"FinalGrade"> | string | null
   subjectId?: Prisma.StringFilter<"FinalGrade"> | string
   termId?: Prisma.StringFilter<"FinalGrade"> | string
   computedAverage?: Prisma.FloatNullableFilter<"FinalGrade"> | number | null
@@ -808,13 +884,15 @@ export type FinalGradeCreateWithoutTermInput = {
   adviserApprovedAt?: Date | string | null
   finalizedBy?: string | null
   finalizedAt?: Date | string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutFinalGradesInput
   subject: Prisma.SubjectCreateNestedOneWithoutFinalGradesInput
 }
 
 export type FinalGradeUncheckedCreateWithoutTermInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   subjectId: string
   computedAverage?: number | null
   transmutedGrade?: number | null
@@ -854,6 +932,66 @@ export type FinalGradeUpdateManyWithWhereWithoutTermInput = {
   data: Prisma.XOR<Prisma.FinalGradeUpdateManyMutationInput, Prisma.FinalGradeUncheckedUpdateManyWithoutTermInput>
 }
 
+export type FinalGradeCreateWithoutRosterInput = {
+  id?: string
+  computedAverage?: number | null
+  transmutedGrade?: number | null
+  remarks?: $Enums.Remarks | null
+  lockStatus?: $Enums.LockStatus
+  lockedBy?: string | null
+  lockedAt?: Date | string | null
+  adviserApprovedBy?: string | null
+  adviserApprovedAt?: Date | string | null
+  finalizedBy?: string | null
+  finalizedAt?: Date | string | null
+  student?: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  subject: Prisma.SubjectCreateNestedOneWithoutFinalGradesInput
+  term: Prisma.TermCreateNestedOneWithoutFinalGradesInput
+}
+
+export type FinalGradeUncheckedCreateWithoutRosterInput = {
+  id?: string
+  studentId?: string | null
+  subjectId: string
+  termId: string
+  computedAverage?: number | null
+  transmutedGrade?: number | null
+  remarks?: $Enums.Remarks | null
+  lockStatus?: $Enums.LockStatus
+  lockedBy?: string | null
+  lockedAt?: Date | string | null
+  adviserApprovedBy?: string | null
+  adviserApprovedAt?: Date | string | null
+  finalizedBy?: string | null
+  finalizedAt?: Date | string | null
+}
+
+export type FinalGradeCreateOrConnectWithoutRosterInput = {
+  where: Prisma.FinalGradeWhereUniqueInput
+  create: Prisma.XOR<Prisma.FinalGradeCreateWithoutRosterInput, Prisma.FinalGradeUncheckedCreateWithoutRosterInput>
+}
+
+export type FinalGradeCreateManyRosterInputEnvelope = {
+  data: Prisma.FinalGradeCreateManyRosterInput | Prisma.FinalGradeCreateManyRosterInput[]
+  skipDuplicates?: boolean
+}
+
+export type FinalGradeUpsertWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.FinalGradeWhereUniqueInput
+  update: Prisma.XOR<Prisma.FinalGradeUpdateWithoutRosterInput, Prisma.FinalGradeUncheckedUpdateWithoutRosterInput>
+  create: Prisma.XOR<Prisma.FinalGradeCreateWithoutRosterInput, Prisma.FinalGradeUncheckedCreateWithoutRosterInput>
+}
+
+export type FinalGradeUpdateWithWhereUniqueWithoutRosterInput = {
+  where: Prisma.FinalGradeWhereUniqueInput
+  data: Prisma.XOR<Prisma.FinalGradeUpdateWithoutRosterInput, Prisma.FinalGradeUncheckedUpdateWithoutRosterInput>
+}
+
+export type FinalGradeUpdateManyWithWhereWithoutRosterInput = {
+  where: Prisma.FinalGradeScalarWhereInput
+  data: Prisma.XOR<Prisma.FinalGradeUpdateManyMutationInput, Prisma.FinalGradeUncheckedUpdateManyWithoutRosterInput>
+}
+
 export type FinalGradeCreateWithoutSubjectInput = {
   id?: string
   computedAverage?: number | null
@@ -866,13 +1004,15 @@ export type FinalGradeCreateWithoutSubjectInput = {
   adviserApprovedAt?: Date | string | null
   finalizedBy?: string | null
   finalizedAt?: Date | string | null
-  student: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutFinalGradesInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutFinalGradesInput
   term: Prisma.TermCreateNestedOneWithoutFinalGradesInput
 }
 
 export type FinalGradeUncheckedCreateWithoutSubjectInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   computedAverage?: number | null
   transmutedGrade?: number | null
@@ -914,6 +1054,7 @@ export type FinalGradeUpdateManyWithWhereWithoutSubjectInput = {
 
 export type FinalGradeCreateManyStudentInput = {
   id?: string
+  rosterId?: string | null
   subjectId: string
   termId: string
   computedAverage?: number | null
@@ -940,12 +1081,14 @@ export type FinalGradeUpdateWithoutStudentInput = {
   adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  roster?: Prisma.StudentRosterUpdateOneWithoutFinalGradesNestedInput
   subject?: Prisma.SubjectUpdateOneRequiredWithoutFinalGradesNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutFinalGradesNestedInput
 }
 
 export type FinalGradeUncheckedUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subjectId?: Prisma.StringFieldUpdateOperationsInput | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -962,6 +1105,7 @@ export type FinalGradeUncheckedUpdateWithoutStudentInput = {
 
 export type FinalGradeUncheckedUpdateManyWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subjectId?: Prisma.StringFieldUpdateOperationsInput | string
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -978,7 +1122,8 @@ export type FinalGradeUncheckedUpdateManyWithoutStudentInput = {
 
 export type FinalGradeCreateManyTermInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   subjectId: string
   computedAverage?: number | null
   transmutedGrade?: number | null
@@ -1004,13 +1149,15 @@ export type FinalGradeUpdateWithoutTermInput = {
   adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutFinalGradesNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutFinalGradesNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutFinalGradesNestedInput
   subject?: Prisma.SubjectUpdateOneRequiredWithoutFinalGradesNestedInput
 }
 
 export type FinalGradeUncheckedUpdateWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subjectId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1026,8 +1173,77 @@ export type FinalGradeUncheckedUpdateWithoutTermInput = {
 
 export type FinalGradeUncheckedUpdateManyWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  remarks?: Prisma.NullableEnumRemarksFieldUpdateOperationsInput | $Enums.Remarks | null
+  lockStatus?: Prisma.EnumLockStatusFieldUpdateOperationsInput | $Enums.LockStatus
+  lockedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lockedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  adviserApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type FinalGradeCreateManyRosterInput = {
+  id?: string
+  studentId?: string | null
+  subjectId: string
+  termId: string
+  computedAverage?: number | null
+  transmutedGrade?: number | null
+  remarks?: $Enums.Remarks | null
+  lockStatus?: $Enums.LockStatus
+  lockedBy?: string | null
+  lockedAt?: Date | string | null
+  adviserApprovedBy?: string | null
+  adviserApprovedAt?: Date | string | null
+  finalizedBy?: string | null
+  finalizedAt?: Date | string | null
+}
+
+export type FinalGradeUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  remarks?: Prisma.NullableEnumRemarksFieldUpdateOperationsInput | $Enums.Remarks | null
+  lockStatus?: Prisma.EnumLockStatusFieldUpdateOperationsInput | $Enums.LockStatus
+  lockedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lockedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  adviserApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  student?: Prisma.StudentProfileUpdateOneWithoutFinalGradesNestedInput
+  subject?: Prisma.SubjectUpdateOneRequiredWithoutFinalGradesNestedInput
+  term?: Prisma.TermUpdateOneRequiredWithoutFinalGradesNestedInput
+}
+
+export type FinalGradeUncheckedUpdateWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  remarks?: Prisma.NullableEnumRemarksFieldUpdateOperationsInput | $Enums.Remarks | null
+  lockStatus?: Prisma.EnumLockStatusFieldUpdateOperationsInput | $Enums.LockStatus
+  lockedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lockedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  adviserApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type FinalGradeUncheckedUpdateManyWithoutRosterInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   remarks?: Prisma.NullableEnumRemarksFieldUpdateOperationsInput | $Enums.Remarks | null
@@ -1042,7 +1258,8 @@ export type FinalGradeUncheckedUpdateManyWithoutTermInput = {
 
 export type FinalGradeCreateManySubjectInput = {
   id?: string
-  studentId: string
+  studentId?: string | null
+  rosterId?: string | null
   termId: string
   computedAverage?: number | null
   transmutedGrade?: number | null
@@ -1068,13 +1285,15 @@ export type FinalGradeUpdateWithoutSubjectInput = {
   adviserApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finalizedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   finalizedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  student?: Prisma.StudentProfileUpdateOneRequiredWithoutFinalGradesNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutFinalGradesNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutFinalGradesNestedInput
   term?: Prisma.TermUpdateOneRequiredWithoutFinalGradesNestedInput
 }
 
 export type FinalGradeUncheckedUpdateWithoutSubjectInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1090,7 +1309,8 @@ export type FinalGradeUncheckedUpdateWithoutSubjectInput = {
 
 export type FinalGradeUncheckedUpdateManyWithoutSubjectInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   computedAverage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   transmutedGrade?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1109,6 +1329,7 @@ export type FinalGradeUncheckedUpdateManyWithoutSubjectInput = {
 export type FinalGradeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   subjectId?: boolean
   termId?: boolean
   computedAverage?: boolean
@@ -1121,7 +1342,8 @@ export type FinalGradeSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   adviserApprovedAt?: boolean
   finalizedBy?: boolean
   finalizedAt?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.FinalGrade$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.FinalGrade$rosterArgs<ExtArgs>
   subject?: boolean | Prisma.SubjectDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["finalGrade"]>
@@ -1129,6 +1351,7 @@ export type FinalGradeSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type FinalGradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   subjectId?: boolean
   termId?: boolean
   computedAverage?: boolean
@@ -1141,7 +1364,8 @@ export type FinalGradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   adviserApprovedAt?: boolean
   finalizedBy?: boolean
   finalizedAt?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.FinalGrade$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.FinalGrade$rosterArgs<ExtArgs>
   subject?: boolean | Prisma.SubjectDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["finalGrade"]>
@@ -1149,6 +1373,7 @@ export type FinalGradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type FinalGradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   subjectId?: boolean
   termId?: boolean
   computedAverage?: boolean
@@ -1161,7 +1386,8 @@ export type FinalGradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   adviserApprovedAt?: boolean
   finalizedBy?: boolean
   finalizedAt?: boolean
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.FinalGrade$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.FinalGrade$rosterArgs<ExtArgs>
   subject?: boolean | Prisma.SubjectDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["finalGrade"]>
@@ -1169,6 +1395,7 @@ export type FinalGradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type FinalGradeSelectScalar = {
   id?: boolean
   studentId?: boolean
+  rosterId?: boolean
   subjectId?: boolean
   termId?: boolean
   computedAverage?: boolean
@@ -1183,19 +1410,22 @@ export type FinalGradeSelectScalar = {
   finalizedAt?: boolean
 }
 
-export type FinalGradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "subjectId" | "termId" | "computedAverage" | "transmutedGrade" | "remarks" | "lockStatus" | "lockedBy" | "lockedAt" | "adviserApprovedBy" | "adviserApprovedAt" | "finalizedBy" | "finalizedAt", ExtArgs["result"]["finalGrade"]>
+export type FinalGradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "subjectId" | "termId" | "computedAverage" | "transmutedGrade" | "remarks" | "lockStatus" | "lockedBy" | "lockedAt" | "adviserApprovedBy" | "adviserApprovedAt" | "finalizedBy" | "finalizedAt", ExtArgs["result"]["finalGrade"]>
 export type FinalGradeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.FinalGrade$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.FinalGrade$rosterArgs<ExtArgs>
   subject?: boolean | Prisma.SubjectDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 export type FinalGradeIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.FinalGrade$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.FinalGrade$rosterArgs<ExtArgs>
   subject?: boolean | Prisma.SubjectDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
 export type FinalGradeIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  student?: boolean | Prisma.StudentProfileDefaultArgs<ExtArgs>
+  student?: boolean | Prisma.FinalGrade$studentArgs<ExtArgs>
+  roster?: boolean | Prisma.FinalGrade$rosterArgs<ExtArgs>
   subject?: boolean | Prisma.SubjectDefaultArgs<ExtArgs>
   term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
 }
@@ -1203,13 +1433,15 @@ export type FinalGradeIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.E
 export type $FinalGradePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "FinalGrade"
   objects: {
-    student: Prisma.$StudentProfilePayload<ExtArgs>
+    student: Prisma.$StudentProfilePayload<ExtArgs> | null
+    roster: Prisma.$StudentRosterPayload<ExtArgs> | null
     subject: Prisma.$SubjectPayload<ExtArgs>
     term: Prisma.$TermPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    studentId: string
+    studentId: string | null
+    rosterId: string | null
     subjectId: string
     termId: string
     computedAverage: number | null
@@ -1616,7 +1848,8 @@ readonly fields: FinalGradeFieldRefs;
  */
 export interface Prisma__FinalGradeClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  student<T extends Prisma.StudentProfileDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudentProfileDefaultArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  student<T extends Prisma.FinalGrade$studentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FinalGrade$studentArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  roster<T extends Prisma.FinalGrade$rosterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FinalGrade$rosterArgs<ExtArgs>>): Prisma.Prisma__StudentRosterClient<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   subject<T extends Prisma.SubjectDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubjectDefaultArgs<ExtArgs>>): Prisma.Prisma__SubjectClient<runtime.Types.Result.GetResult<Prisma.$SubjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   term<T extends Prisma.TermDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TermDefaultArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
@@ -1650,6 +1883,7 @@ export interface Prisma__FinalGradeClient<T, Null = never, ExtArgs extends runti
 export interface FinalGradeFieldRefs {
   readonly id: Prisma.FieldRef<"FinalGrade", 'String'>
   readonly studentId: Prisma.FieldRef<"FinalGrade", 'String'>
+  readonly rosterId: Prisma.FieldRef<"FinalGrade", 'String'>
   readonly subjectId: Prisma.FieldRef<"FinalGrade", 'String'>
   readonly termId: Prisma.FieldRef<"FinalGrade", 'String'>
   readonly computedAverage: Prisma.FieldRef<"FinalGrade", 'Float'>
@@ -2060,6 +2294,44 @@ export type FinalGradeDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Limit how many FinalGrades to delete.
    */
   limit?: number
+}
+
+/**
+ * FinalGrade.student
+ */
+export type FinalGrade$studentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentProfile
+   */
+  select?: Prisma.StudentProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentProfile
+   */
+  omit?: Prisma.StudentProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentProfileInclude<ExtArgs> | null
+  where?: Prisma.StudentProfileWhereInput
+}
+
+/**
+ * FinalGrade.roster
+ */
+export type FinalGrade$rosterArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentRoster
+   */
+  select?: Prisma.StudentRosterSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentRoster
+   */
+  omit?: Prisma.StudentRosterOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentRosterInclude<ExtArgs> | null
+  where?: Prisma.StudentRosterWhereInput
 }
 
 /**

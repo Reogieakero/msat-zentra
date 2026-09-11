@@ -5,8 +5,9 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
-import { resolveActiveTermId } from "../../services/risk.js";
+import { resolveActiveTermId, recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import {
   buildOcForm01Buffer,
   ocForm01Filename,
@@ -71,7 +72,14 @@ router.post(
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "anecdotal_edit", sourceTable: "anecdotal_records", sourceId: record.id, reason: "Anecdotal record created" });
-      res.status(201).json(record);
+      // A new behavioral record can flip risk on its own — recompute now so
+      // snapshots (and therefore the interventions queue) stay live.
+      if (isRoster && rosterId) {
+        await recomputeRosterRisk(rosterId, record.termId);
+      } else {
+        await recomputeRisk(rawStudentId, record.termId);
+      }
+      await invalidateTags(["risk", "principal", "teacher", "overview"]);
     } catch (e) { next(e); }
   }
 );
@@ -132,6 +140,8 @@ router.post(
       const referral = await prisma.referral.create({
         data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, rosterId: record.rosterId, termId },
       });
+      // A new referral must surface on the ADM board + teacher cases at once.
+      await invalidateTags(["adm", "teacher"]);
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}` });
       res.status(201).json(referral);
     } catch (e) { next(e); }

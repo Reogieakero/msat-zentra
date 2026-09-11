@@ -20,9 +20,10 @@ interface TeacherOverviewHeaderProps {
     attendance: number;
     behavioral: number;
   };
+  atRiskStudents?: number;
 }
 
-const RISK_COLORS = ["#f59e0b", "#2563eb", "#ef4444"];
+const RISK_COLORS = ["#171717", "#525252", "#a3a3a3"];
 
 function StatChip({
   icon: Icon,
@@ -47,20 +48,22 @@ function StatChip({
 function AtRiskRadial({
   factors,
   total,
+  atRisk,
 }: {
   factors: { academic: number; attendance: number; behavioral: number };
   total: number;
+  atRisk: number;
 }) {
   const safeTotal = total > 0 ? total : 1;
   const data = [
-    { name: "Academic", value: (factors.academic / safeTotal) * 100, count: factors.academic, fill: RISK_COLORS[0] },
-    { name: "Attendance", value: (factors.attendance / safeTotal) * 100, count: factors.attendance, fill: RISK_COLORS[1] },
-    { name: "Behavioral", value: (factors.behavioral / safeTotal) * 100, count: factors.behavioral, fill: RISK_COLORS[2] },
+    { name: "Academic", value: Math.min(100, (factors.academic / safeTotal) * 100), count: factors.academic, fill: RISK_COLORS[0] },
+    { name: "Attendance", value: Math.min(100, (factors.attendance / safeTotal) * 100), count: factors.attendance, fill: RISK_COLORS[1] },
+    { name: "Behavioral", value: Math.min(100, (factors.behavioral / safeTotal) * 100), count: factors.behavioral, fill: RISK_COLORS[2] },
   ];
+  // Unique at-risk students over the section population — never the sum of
+  // factor hits (one student can trip several factors), capped at 100%.
   const pct =
-    total > 0
-      ? Math.round(((factors.academic + factors.attendance + factors.behavioral) / total) * 100)
-      : 0;
+    total > 0 ? Math.min(100, Math.round((atRisk / safeTotal) * 100)) : 0;
 
   return (
     <div className={styles.riskBlock}>
@@ -127,6 +130,7 @@ export function TeacherOverviewHeader({
   classCount = 0,
   studentCount = 0,
   atRiskFactors,
+  atRiskStudents = 0,
 }: TeacherOverviewHeaderProps) {
   const isAdviser = Boolean(advisorySection);
   const initials = React.useMemo(() => {
@@ -141,8 +145,6 @@ export function TeacherOverviewHeader({
   }, [teacherName]);
 
   const riskFactors = atRiskFactors ?? { academic: 0, attendance: 0, behavioral: 0 };
-  const riskTotal =
-    riskFactors.academic + riskFactors.attendance + riskFactors.behavioral;
 
   return (
     <article className={styles.profile}>
@@ -205,10 +207,10 @@ export function TeacherOverviewHeader({
               <header className={styles.sectionHead}>
                 <h2 className={styles.sectionTitle}>At-Risk Factors</h2>
                 <span className={styles.sectionMeta}>
-                  {riskTotal} of {studentCount}
+                  {atRiskStudents} of {studentCount}
                 </span>
               </header>
-              <AtRiskRadial factors={riskFactors} total={studentCount} />
+              <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} />
             </section>
           </div>
         </aside>

@@ -4,15 +4,15 @@ export type RiskLevelKey = "High" | "Moderate" | "Low";
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
 export const RISK_LEVEL_COLORS: Record<RiskLevelKey, string> = {
-  High: "#b91c1c",
-  Moderate: "#d97706",
-  Low: "#15803d",
+  High: "#171717",
+  Moderate: "#6b7280",
+  Low: "#d1d5db",
 };
 
 export const FACTOR_CHIP: Record<RiskFactor, string> = {
-  Academic: "#b91c1c",
-  Attendance: "#2563eb",
-  Behavioral: "#7c3aed",
+  Academic: "#171717",
+  Attendance: "#525252",
+  Behavioral: "#a3a3a3",
 };
 
 export const FACTOR_LABELS: Record<RiskFactor, string> = {

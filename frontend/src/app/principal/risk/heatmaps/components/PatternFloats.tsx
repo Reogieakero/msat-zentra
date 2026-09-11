@@ -73,7 +73,7 @@ export function PatternFloats({ onClose }: { onClose: () => void }) {
                 <span className={styles.sessionBar}>
                   <span
                     className={styles.sessionFill}
-                    style={{ width: `${pattern.amRate}%`, background: "#15803d" }}
+                    style={{ width: `${pattern.amRate}%`, background: "#171717" }}
                   />
                 </span>
                 <span className={styles.sessionVal}>{pattern.amRate}%</span>
@@ -83,7 +83,7 @@ export function PatternFloats({ onClose }: { onClose: () => void }) {
                 <span className={styles.sessionBar}>
                   <span
                     className={styles.sessionFill}
-                    style={{ width: `${pattern.pmRate}%`, background: "#d97706" }}
+                    style={{ width: `${pattern.pmRate}%`, background: "#737373" }}
                   />
                 </span>
                 <span className={styles.sessionVal}>{pattern.pmRate}%</span>
@@ -107,7 +107,7 @@ export function PatternFloats({ onClose }: { onClose: () => void }) {
                     style={{
                       height: `${d.rate}%`,
                       background:
-                        d.rate < 80 ? "#ef4444" : d.rate < 90 ? "#f59e0b" : "#15803d",
+                        d.rate < 80 ? "#171717" : d.rate < 90 ? "#737373" : "#d4d4d4",
                     }}
                   />
                   <span className={styles.dayLabel}>{d.day}</span>

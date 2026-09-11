@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../../lib/prisma.js";
-import { sectionHeadcounts, totalRosterHeadcount } from "../../services/enrollment.js";
+import {
+  sectionHeadcounts,
+  totalRosterHeadcount,
+} from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
 import {
@@ -33,7 +36,7 @@ router.get(
       // Overview's live recompute matches the board/heatmap/students exactly.
       const termId = await resolveActiveTermId();
 
-      const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, admPending, accountApprovals, sectionPopulations] =
+      const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
         await Promise.all([
           prisma.studentProfile.count(),
           // Enlisted students without accounts count toward enrollment too.
@@ -44,8 +47,28 @@ router.get(
           prisma.studentProfile.findMany({
             where: schoolYearId ? { section: { schoolYearId } } : undefined,
             select: {
+              lrn: true,
               gradeLevel: true,
               section: { select: { id: true, _count: { select: { students: true } } } },
+              finalGrades: { where: termId ? { termId } : undefined, select: { computedAverage: true, transmutedGrade: true, lockStatus: true, finalizedAt: true } },
+              attendanceRecords: {
+                where: termId ? { termId } : undefined,
+                select: { status: true },
+              },
+              anecdotalRecords: {
+                where: termId ? { termId } : undefined,
+                select: { id: true },
+              },
+            },
+          }),
+          // Same cohort without accounts — account status never excludes anyone
+          // from risk, honor, or ADM visibility.
+          prisma.studentRoster.findMany({
+            where: schoolYearId ? { schoolYearId } : undefined,
+            select: {
+              lrn: true,
+              gradeLevel: true,
+              sectionId: true,
               finalGrades: { where: termId ? { termId } : undefined, select: { computedAverage: true, transmutedGrade: true, lockStatus: true, finalizedAt: true } },
               attendanceRecords: {
                 where: termId ? { termId } : undefined,
@@ -60,6 +83,15 @@ router.get(
           prisma.admLearnerProfile.count({
             where: { stage: { in: ["meeting_parents", "home_visitation", "certification", "principal_approval"] } },
           }),
+          // ADM-track referrals with no learner profile yet — still pending
+          // ADM cases from the principal's view.
+          prisma.referral.count({
+            where: {
+              referredToRole: "adm_coordinator",
+              status: { in: ["pending", "in_progress"] },
+              admProfiles: { none: {} },
+            },
+          }),
           prisma.user.count({ where: { status: "pending" } }),
           prisma.section.findMany({
             where: schoolYearId ? { schoolYearId } : undefined,
@@ -67,12 +99,49 @@ router.get(
             orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
           }),
         ]);
+      const admPending = admPipeline + admReferrals;
 
       const enrollment = profiles + rosterExtra;
 
       // Roster-aware section headcounts (registered + enlisted, no double
       // count) for populations and attendance denominators below.
       const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
+
+      // Risk cohort: registered profiles plus unregistered enlistments
+      // (matched by LRN so nobody counts twice once they register).
+      const registeredLrns = new Set(students.map((s) => s.lrn));
+      const riskCohort: {
+        gradeLevel: string;
+        sectionId: string;
+        enrolledFallback: number;
+        finalGrades: {
+          computedAverage: number | null;
+          transmutedGrade: number | null;
+          lockStatus: string;
+          finalizedAt: Date | null;
+        }[];
+        attendanceRecords: { status: string }[];
+        anecdotalCount: number;
+      }[] = [
+        ...students.map((s) => ({
+          gradeLevel: s.gradeLevel,
+          sectionId: s.section?.id ?? "",
+          enrolledFallback: s.section?._count.students ?? 0,
+          finalGrades: s.finalGrades,
+          attendanceRecords: s.attendanceRecords,
+          anecdotalCount: s.anecdotalRecords.length,
+        })),
+        ...rosterCohort
+          .filter((r) => !registeredLrns.has(r.lrn))
+          .map((r) => ({
+            gradeLevel: r.gradeLevel,
+            sectionId: r.sectionId,
+            enrolledFallback: 0,
+            finalGrades: r.finalGrades,
+            attendanceRecords: r.attendanceRecords,
+            anecdotalCount: r.anecdotalRecords.length,
+          })),
+      ];
 
       // Live risk recompute via the shared engine so the Overview agrees with
       // the Risk board/students pages (stored riskLevel column is NOT trusted).
@@ -83,12 +152,12 @@ router.get(
       let honorRoll = 0;
       const riskByLevel = { high: 0, moderate: 0, low: 0 };
       const riskByGrade = new Map<string, number>();
-      for (const s of students) {
+      for (const s of riskCohort) {
         const flags = computeRiskFactors({
           finalGrades: s.finalGrades,
           attendance: s.attendanceRecords,
-          anecdotalCount: s.anecdotalRecords.length,
-          enrolled: headcounts.get(s.section?.id ?? "") ?? s.section?._count.students ?? 0,
+          anecdotalCount: s.anecdotalCount,
+          enrolled: headcounts.get(s.sectionId) ?? s.enrolledFallback,
         });
         if (flags.attendanceFlag) attendance++;
         if (flags.academicFlag) grades++;

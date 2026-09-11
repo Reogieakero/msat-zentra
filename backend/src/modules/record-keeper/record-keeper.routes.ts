@@ -42,24 +42,31 @@ router.get(
 
       // Report cards: every final-grade row for G7–10 students (one row ≈ one
       // report-card subject entry). Used as a proxy since there is no dedicated
-      // "report card" model.
+      // "report card" model. Roster-enlisted students without accounts count too.
+      const inBand = {
+        OR: [
+          { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+          { roster: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+        ],
+      };
       const reportCards = await prisma.finalGrade.count({
-        where: { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+        where: inBand,
       });
 
       // The record keeper is view-only in the grade pipeline: a student's term grades
       const viewableFinalRows = await prisma.finalGrade.findMany({
-        where: { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+        where: inBand,
         select: {
           lockStatus: true,
           studentId: true,
+          rosterId: true,
           termId: true,
           subjectId: true,
         },
       });
       const byStudentTerm = new Map<string, typeof viewableFinalRows>();
       for (const r of viewableFinalRows) {
-        const key = `${r.studentId}|${r.termId}`;
+        const key = `${r.studentId ?? `roster:${r.rosterId}`}|${r.termId}`;
         if (!byStudentTerm.has(key)) byStudentTerm.set(key, []);
         byStudentTerm.get(key)!.push(r);
       }
@@ -280,9 +287,15 @@ router.get(
       const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
 
       // Every final-grade row for the record keeper band, with the info needed to
-      // decide which students have a fully adviser-approved term.
+      // decide which students have a fully adviser-approved term. Roster rows
+      // resolve names/sections from the enlistment instead of a profile.
       const rows = await prisma.finalGrade.findMany({
-        where: { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+        where: {
+          OR: [
+            { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+            { roster: { gradeLevel: { in: GRADE_BAND_7_10 } } },
+          ],
+        },
         select: {
           id: true,
           lockStatus: true,
@@ -300,17 +313,33 @@ router.get(
               user: { select: { fullName: true } },
             },
           },
+          roster: {
+            select: {
+              lrn: true,
+              fullName: true,
+              gradeLevel: true,
+              sectionId: true,
+              section: { select: { name: true } },
+            },
+          },
           subject: { select: { name: true } },
           term: { select: { id: true, termNumber: true, schoolYear: { select: { name: true } } } },
         },
         orderBy: [{ termId: "asc" }, { student: { user: { fullName: "asc" } } }, { subject: { name: "asc" } }],
       });
 
+      const lrnOf = (r: (typeof rows)[number]) => r.student?.lrn ?? r.roster?.lrn ?? "";
+      const nameOf = (r: (typeof rows)[number]) =>
+        r.student?.user.fullName ?? r.roster?.fullName ?? "";
+      const sectionIdOf = (r: (typeof rows)[number]) =>
+        r.student?.sectionId ?? r.roster?.sectionId ?? "";
+
       // Batch-fetch teacher assignments for all unique (subject, section, term)
       // combinations present in the result set.
       const teacherKeys = new Set<string>();
       for (const r of rows) {
-        if (r.student.sectionId) teacherKeys.add(`${r.subjectId}|${r.student.sectionId}|${r.termId}`);
+        const sectionId = sectionIdOf(r);
+        if (sectionId) teacherKeys.add(`${r.subjectId}|${sectionId}|${r.termId}`);
       }
       const teacherAssignments = await prisma.teacherSubjectAssignment.findMany({
         where: {
@@ -334,7 +363,7 @@ router.get(
       // Group rows by (studentId, termId).
       const byKey = new Map<string, typeof rows>();
       for (const r of rows) {
-        const key = `${r.student.lrn}|${r.term.id}`;
+        const key = `${lrnOf(r)}|${r.term.id}`;
         if (!byKey.has(key)) byKey.set(key, []);
         byKey.get(key)!.push(r);
       }
@@ -351,9 +380,7 @@ router.get(
 
       // Order complete students by name (the rows within a group are already
       // ordered by term + name + subject).
-      viewableGroups.sort((a, b) =>
-        a[0].student.user.fullName.localeCompare(b[0].student.user.fullName)
-      );
+      viewableGroups.sort((a, b) => nameOf(a[0]).localeCompare(nameOf(b[0])));
 
       const totalStudents = viewableGroups.length;
       const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize));
@@ -371,17 +398,18 @@ router.get(
       const students = slice.map((group) => {
         const r0 = group[0];
         return {
-          id: `${r0.student.lrn}|${r0.term.id}`,
-          lrn: r0.student.lrn,
-          name: r0.student.user.fullName,
-          gradeLevel: r0.student.gradeLevel,
-          section: r0.student.section?.name ?? "—",
+          id: `${lrnOf(r0)}|${r0.term.id}`,
+          lrn: lrnOf(r0),
+          name: nameOf(r0),
+          gradeLevel: r0.student?.gradeLevel ?? r0.roster?.gradeLevel ?? "",
+          section: r0.student?.section?.name ?? r0.roster?.section?.name ?? "—",
+          hasAccount: r0.student != null,
           term: `${r0.term.schoolYear.name.split(" ")[0]} T${r0.term.termNumber}`,
           overall: Math.round(
             (group.reduce((sum, r) => sum + (r.transmutedGrade ?? 0), 0) / group.length) * 100
           ) / 100,
           subjects: group.map((r) => {
-            const teacherKey = `${r.subjectId}|${r.student.sectionId}|${r.termId}`;
+            const teacherKey = `${r.subjectId}|${sectionIdOf(r)}|${r.termId}`;
             return {
               id: r.id,
               subject: r.subject.name,
