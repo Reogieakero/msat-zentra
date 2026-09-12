@@ -8,6 +8,7 @@ import '../../data/mock/mock_data.dart';
 import '../../data/models/teacher_class_model.dart';
 import '../../providers/sync_provider.dart';
 import '../shared/widgets/custom_card.dart';
+import '../shared/widgets/sync_status_pill.dart';
 import '../shared/zentra_hamburger_drawer.dart';
 import 'widgets/class_selector_view.dart';
 import 'widgets/attendance_roster_view.dart';
@@ -188,76 +189,64 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
   // 1. HOME TAB
   // ---------------------------------------------------------------------------
   Widget _buildHomeTab() {
-    final syncState = ref.watch(syncProvider);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Quick Actions',
-            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CustomCard(
-                  onTap: () {
-                    setState(() {
-                      _currentIndex = 1;
-                      _selectedClass = MockData.teacherClasses.first;
-                      _classSubTab = 0; // Attendance
-                    });
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.check_circle_outline, color: AppColors.primaryEmerald, size: 24),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Mark Today\'s Attendance',
-                        style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+          // Greeting Card
+          CustomCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppColors.primaryEmerald.withOpacity(0.2),
+                            child: const Icon(Icons.waving_hand, color: AppColors.primaryEmerald, size: 18),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Good day, Teacher Maria! 👋',
+                                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Faculty • MSAT Zentra Portal',
+                                  style: GoogleFonts.robotoMono(color: AppColors.textMuted, fontSize: 10),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        'G10 - Emerald Roster',
-                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    const SyncStatusPill(),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CustomCard(
-                  onTap: () {
-                    setState(() {
-                      _currentIndex = 1;
-                      _selectedClass = MockData.teacherClasses.first;
-                      _classSubTab = 1; // Grades
-                    });
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.table_chart_outlined, color: AppColors.primaryEmerald, size: 24),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Resume Grading',
-                        style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      Text(
-                        'Math 10 — Term 1 Grid',
-                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 12),
+                Text(
+                  'Welcome to your daily workspace. You have ${MockData.teacherClasses.length} active subject classes scheduled for instruction today.',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 16),
+
+          // Today's Teaching Schedule
           Text(
             'Today\'s Teaching Schedule',
             style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
@@ -300,48 +289,6 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
                   ),
                 ),
               )),
-          const SizedBox(height: 16),
-
-          // Monospaced Outbox Terminal Log
-          Text(
-            'Outbox Sync Terminal',
-            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          CustomCard(
-            backgroundColor: const Color(0xFF101010),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.terminal, color: AppColors.primaryEmerald, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      'LOCAL HIVE OUTBOX STATUS',
-                      style: GoogleFonts.robotoMono(
-                        color: AppColors.primaryEmerald,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  syncState.lastSyncMessage ?? '[10:42 AM] Synced 45 attendance records to Express API',
-                  style: GoogleFonts.robotoMono(color: AppColors.textPrimary, fontSize: 11),
-                ),
-                if (syncState.pendingQueue.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '[QUEUE] ${syncState.pendingQueue.length} offline operations buffered in sync_queue_box',
-                    style: GoogleFonts.robotoMono(color: AppColors.riskModerate, fontSize: 11),
-                  ),
-                ],
-              ],
-            ),
-          ),
         ],
       ),
     );
