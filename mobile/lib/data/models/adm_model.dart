@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum AdmStage {
   anecdotal,
   consultation,
@@ -152,3 +154,73 @@ class AdmDeviceModel {
     this.isReturned = false,
   });
 }
+
+enum AdmClassworkType {
+  assignment('Assignment', Icons.assignment_outlined),
+  quiz('Quiz / Assessment', Icons.quiz_outlined),
+  activitySheet('Activity Sheet', Icons.description_outlined),
+  project('Intervention Project', Icons.architecture_outlined);
+
+  final String label;
+  final IconData icon;
+  const AdmClassworkType(this.label, this.icon);
+}
+
+class AdmClassworkModel {
+  final String id;
+  final String subjectName;
+  final String title;
+  final String topic;
+  final AdmClassworkType type;
+  final int totalPoints;
+  final DateTime dueDate;
+  final int assignedCount;
+  final int submittedCount;
+  final int gradedCount;
+  final String instructions;
+  final bool isSubmitted;
+
+  const AdmClassworkModel({
+    required this.id,
+    required this.subjectName,
+    required this.title,
+    required this.topic,
+    required this.type,
+    required this.totalPoints,
+    required this.dueDate,
+    this.assignedCount = 0,
+    this.submittedCount = 0,
+    this.gradedCount = 0,
+    required this.instructions,
+    this.isSubmitted = false,
+  });
+
+  AdmClassworkModel copyWith({
+    String? title,
+    String? topic,
+    AdmClassworkType? type,
+    int? totalPoints,
+    DateTime? dueDate,
+    int? assignedCount,
+    int? submittedCount,
+    int? gradedCount,
+    String? instructions,
+    bool? isSubmitted,
+  }) {
+    return AdmClassworkModel(
+      id: id,
+      subjectName: subjectName,
+      title: title ?? this.title,
+      topic: topic ?? this.topic,
+      type: type ?? this.type,
+      totalPoints: totalPoints ?? this.totalPoints,
+      dueDate: dueDate ?? this.dueDate,
+      assignedCount: assignedCount ?? this.assignedCount,
+      submittedCount: submittedCount ?? this.submittedCount,
+      gradedCount: gradedCount ?? this.gradedCount,
+      instructions: instructions ?? this.instructions,
+      isSubmitted: isSubmitted ?? this.isSubmitted,
+    );
+  }
+}
+

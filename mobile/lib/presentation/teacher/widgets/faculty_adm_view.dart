@@ -16,9 +16,24 @@ class FacultyAdmView extends StatefulWidget {
 
 class _FacultyAdmViewState extends State<FacultyAdmView> {
   final List<AdmLearnerModel> _referredLearners = List.from(MockData.admLearners);
+  String? _selectedSubjectTitle;
+  String? _selectedSubjectSection;
 
   @override
   Widget build(BuildContext context) {
+    if (_selectedSubjectTitle != null && _selectedSubjectSection != null) {
+      return FacultyAdmSubjectDetailScreen(
+        subjectName: _selectedSubjectTitle!,
+        sectionName: _selectedSubjectSection!,
+        onBack: () {
+          setState(() {
+            _selectedSubjectTitle = null;
+            _selectedSubjectSection = null;
+          });
+        },
+      );
+    }
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,15 +255,10 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
   }) {
     return CustomCard(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FacultyAdmSubjectDetailScreen(
-              subjectName: title,
-              sectionName: section,
-            ),
-          ),
-        );
+        setState(() {
+          _selectedSubjectTitle = title;
+          _selectedSubjectSection = section;
+        });
       },
       padding: const EdgeInsets.all(12),
       child: Column(

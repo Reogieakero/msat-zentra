@@ -18,7 +18,7 @@ void main() {
     expect(find.text('Zentra'), findsWidgets);
   });
 
-  testWidgets('Faculty ADM View opens subject classroom detail screen on subject tap', (WidgetTester tester) async {
+  testWidgets('Faculty ADM View opens subject classroom detail screen with Classwork tab on subject tap', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -36,10 +36,20 @@ void main() {
     await tester.tap(find.text('Mathematics 10'));
     await tester.pumpAndSettle();
 
-    // Verify navigation to Google Classroom Subject Detail Screen
+    // Verify navigation to Google Classroom Subject Detail Screen with 3 tabs
     expect(find.byType(FacultyAdmSubjectDetailScreen), findsOneWidget);
     expect(find.text('+ Upload Module'), findsWidgets);
     expect(find.text('Modules & Stream'), findsOneWidget);
+    expect(find.text('Classwork'), findsOneWidget);
     expect(find.text('ADM Students'), findsOneWidget);
+
+    // Switch to Classwork tab
+    await tester.tap(find.text('Classwork'));
+    await tester.pumpAndSettle();
+
+    // Verify Classwork content & mock data
+    expect(find.text('Classwork & Activities'), findsOneWidget);
+    expect(find.text('+ Classwork'), findsOneWidget);
+    expect(find.text('Intervention & Remediation'), findsOneWidget);
   });
 }

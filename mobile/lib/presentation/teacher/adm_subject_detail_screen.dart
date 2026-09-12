@@ -8,11 +8,13 @@ import '../shared/widgets/custom_card.dart';
 class FacultyAdmSubjectDetailScreen extends StatefulWidget {
   final String subjectName;
   final String sectionName;
+  final VoidCallback? onBack;
 
   const FacultyAdmSubjectDetailScreen({
     super.key,
     required this.subjectName,
     required this.sectionName,
+    this.onBack,
   });
 
   @override
@@ -22,12 +24,13 @@ class FacultyAdmSubjectDetailScreen extends StatefulWidget {
 class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late List<AdmSubjectModuleModel> _subjectModules;
+  late List<AdmClassworkModel> _subjectClasswork;
   late List<AdmLearnerModel> _enrolledLearners;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
 
     // Filter modules for this subject or supply realistic defaults
     _subjectModules = MockData.admModules
@@ -49,6 +52,30 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
       ];
     }
 
+    // Filter classwork items for this subject or supply realistic defaults
+    _subjectClasswork = MockData.admClasswork
+        .where((cw) => cw.subjectName.toLowerCase().contains(widget.subjectName.toLowerCase()) ||
+            widget.subjectName.toLowerCase().contains(cw.subjectName.toLowerCase()))
+        .toList();
+
+    if (_subjectClasswork.isEmpty) {
+      _subjectClasswork = [
+        AdmClassworkModel(
+          id: 'cw_def_01',
+          subjectName: widget.subjectName,
+          title: 'Activity Sheet 1: Diagnostic Assessment',
+          topic: 'Intervention & Remediation',
+          type: AdmClassworkType.activitySheet,
+          totalPoints: 20,
+          dueDate: DateTime.now().add(const Duration(days: 5)),
+          assignedCount: 3,
+          submittedCount: 1,
+          gradedCount: 1,
+          instructions: 'Complete foundational exercises for ${widget.subjectName}.',
+        ),
+      ];
+    }
+
     // Filter learners enrolled in ADM
     _enrolledLearners = List.from(MockData.admLearners);
   }
@@ -65,7 +92,13 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryEmerald),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else {
+              Navigator.maybePop(context);
+            }
+          },
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,19 +185,24 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
                     style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _metricBadge(Icons.picture_as_pdf, '${_subjectModules.length} Active Modules'),
-                      const SizedBox(width: 8),
-                      _metricBadge(Icons.people_alt, '${_enrolledLearners.length} Students Enrolled'),
-                    ],
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _metricBadge(Icons.picture_as_pdf, '${_subjectModules.length} Modules'),
+                        const SizedBox(width: 8),
+                        _metricBadge(Icons.assignment_outlined, '${_subjectClasswork.length} Classwork'),
+                        const SizedBox(width: 8),
+                        _metricBadge(Icons.people_alt, '${_enrolledLearners.length} Students'),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Tab Navigation Bar (Google Classroom style: Modules / Students)
+          // Tab Navigation Bar (Google Classroom style: Modules / Classwork / Students)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -178,15 +216,15 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: AppColors.primaryEmerald,
               unselectedLabelColor: AppColors.textMuted,
-              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
+              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11),
               tabs: const [
                 Tab(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.folder_outlined, size: 16),
-                      SizedBox(width: 6),
-                      Text('Modules & Stream'),
+                      Icon(Icons.folder_outlined, size: 15),
+                      SizedBox(width: 4),
+                      Text('Modules & Stream', overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
@@ -194,9 +232,19 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_outline, size: 16),
-                      SizedBox(width: 6),
-                      Text('ADM Students'),
+                      Icon(Icons.assignment_outlined, size: 15),
+                      SizedBox(width: 4),
+                      Text('Classwork', overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.people_outline, size: 15),
+                      SizedBox(width: 4),
+                      Text('ADM Students', overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
@@ -210,6 +258,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
               controller: _tabController,
               children: [
                 _buildModulesTab(),
+                _buildClassworkTab(),
                 _buildStudentsTab(),
               ],
             ),
@@ -367,7 +416,458 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 2: ADM Students Enrolled
+  // Tab 2: Classwork & Activities
+  // ---------------------------------------------------------------------------
+  Widget _buildClassworkTab() {
+    final topics = _subjectClasswork.map((c) => c.topic).toSet().toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Classwork & Activities',
+                style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showCreateClassworkModal(context),
+                icon: const Icon(Icons.add, size: 14),
+                label: const Text('+ Classwork'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryEmerald,
+                  foregroundColor: const Color(0xFF0C1612),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_subjectClasswork.isEmpty)
+            CustomCard(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Icon(Icons.assignment_outlined, color: AppColors.textMuted, size: 36),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No Classwork Assigned Yet',
+                      style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap "+ Classwork" to assign activities, quizzes, or intervention projects.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...topics.map((topic) {
+              final itemsInTopic = _subjectClasswork.where((c) => c.topic == topic).toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bookmark_outline, size: 16, color: AppColors.primaryEmerald),
+                        const SizedBox(width: 6),
+                        Text(
+                          topic,
+                          style: GoogleFonts.inter(
+                            color: AppColors.primaryEmerald,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Divider(color: AppColors.borderSubtle),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ...itemsInTopic.map((item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: CustomCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryEmerald.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(item.type.icon, size: 12, color: AppColors.primaryEmerald),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          item.type.label,
+                                          style: GoogleFonts.robotoMono(
+                                            color: AppColors.primaryEmerald,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Due: ${item.dueDate.month}/${item.dueDate.day}/${item.dueDate.year}',
+                                    style: GoogleFonts.robotoMono(color: AppColors.riskModerate, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                item.title,
+                                style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item.instructions,
+                                style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      _classworkStatBadge('${item.assignedCount}', 'Assigned'),
+                                      const SizedBox(width: 8),
+                                      _classworkStatBadge('${item.submittedCount}', 'Turned In', highlight: item.submittedCount > 0),
+                                      const SizedBox(width: 8),
+                                      _classworkStatBadge('${item.gradedCount}', 'Graded'),
+                                    ],
+                                  ),
+                                  Text(
+                                    '${item.totalPoints} pts',
+                                    style: GoogleFonts.robotoMono(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showGradeClassworkSubmissionsModal(context, item),
+                                  icon: const Icon(Icons.assignment_turned_in, size: 14),
+                                  label: const Text('View & Grade Submissions'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.surfaceElevated,
+                                    foregroundColor: AppColors.textPrimary,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )),
+                ],
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _classworkStatBadge(String count, String label, {bool highlight = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: highlight ? AppColors.primaryEmerald.withOpacity(0.15) : AppColors.surfaceDark,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: highlight ? AppColors.primaryEmerald.withOpacity(0.4) : AppColors.borderSubtle,
+        ),
+      ),
+      child: Text(
+        '$count $label',
+        style: GoogleFonts.robotoMono(
+          color: highlight ? AppColors.primaryEmerald : AppColors.textMuted,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  void _showCreateClassworkModal(BuildContext context) {
+    final titleController = TextEditingController();
+    final instructionsController = TextEditingController();
+    final pointsController = TextEditingController(text: '50');
+    AdmClassworkType selectedType = AdmClassworkType.assignment;
+    String selectedTopic = 'Quarter 1 - Core Competencies';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Create Classwork for ${widget.subjectName}',
+                          style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.textMuted),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Classwork Title', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: titleController,
+                    style: GoogleFonts.inter(color: AppColors.textPrimary),
+                    decoration: const InputDecoration(hintText: 'e.g. Activity Sheet 2: Quadratic Equations'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Type', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            DropdownButtonFormField<AdmClassworkType>(
+                              value: selectedType,
+                              dropdownColor: AppColors.surfaceElevated,
+                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 12),
+                              items: AdmClassworkType.values.map((t) {
+                                return DropdownMenuItem(
+                                  value: t,
+                                  child: Text(t.label, overflow: TextOverflow.ellipsis),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => selectedType = val);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Points', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            TextField(
+                              controller: pointsController,
+                              keyboardType: TextInputType.number,
+                              style: GoogleFonts.inter(color: AppColors.textPrimary),
+                              decoration: const InputDecoration(hintText: '50'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Topic / Category', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    value: selectedTopic,
+                    dropdownColor: AppColors.surfaceElevated,
+                    style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 12),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Intervention & Remediation',
+                        child: Text('Intervention & Remediation'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Quarter 1 - Core Competencies',
+                        child: Text('Quarter 1 - Core Competencies'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Performance Tasks & Projects',
+                        child: Text('Performance Tasks & Projects'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedTopic = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Instructions & Details', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: instructionsController,
+                    maxLines: 2,
+                    style: GoogleFonts.inter(color: AppColors.textPrimary),
+                    decoration: const InputDecoration(hintText: 'Enter instructions for ADM students...'),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final title = titleController.text.trim();
+                        if (title.isNotEmpty) {
+                          setState(() {
+                            _subjectClasswork.add(AdmClassworkModel(
+                              id: 'cw_${DateTime.now().millisecondsSinceEpoch}',
+                              subjectName: widget.subjectName,
+                              title: title,
+                              topic: selectedTopic,
+                              type: selectedType,
+                              totalPoints: int.tryParse(pointsController.text) ?? 50,
+                              dueDate: DateTime.now().add(const Duration(days: 7)),
+                              assignedCount: _enrolledLearners.length,
+                              submittedCount: 0,
+                              gradedCount: 0,
+                              instructions: instructionsController.text.trim().isNotEmpty
+                                  ? instructionsController.text.trim()
+                                  : 'Complete and submit assignment before due date.',
+                            ));
+                          });
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Classwork "$title" assigned!')),
+                          );
+                        }
+                      },
+                      child: const Text('Assign Classwork', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showGradeClassworkSubmissionsModal(BuildContext context, AdmClassworkModel item) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${item.topic} • ${item.totalPoints} pts max',
+                          style: GoogleFonts.robotoMono(color: AppColors.primaryEmerald, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.textMuted),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primaryEmerald.withOpacity(0.2),
+                  child: const Text('CR', style: TextStyle(color: AppColors.primaryEmerald, fontWeight: FontWeight.bold)),
+                ),
+                title: Text('Carlos Reyes (G10 - Emerald)', style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 13)),
+                subtitle: Text('Status: Turned In • ${item.totalPoints - 4}/${item.totalPoints} Graded', style: GoogleFonts.robotoMono(color: AppColors.primaryEmerald, fontSize: 11)),
+                trailing: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Grade saved for Carlos Reyes (${item.totalPoints - 4}/${item.totalPoints})')),
+                    );
+                  },
+                  child: const Text('Update Grade'),
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primaryEmerald.withOpacity(0.2),
+                  child: const Text('MT', style: TextStyle(color: AppColors.primaryEmerald, fontWeight: FontWeight.bold)),
+                ),
+                title: Text('Mark Tan (G10 - Emerald)', style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 13)),
+                subtitle: Text('Status: Assigned (Pending)', style: GoogleFonts.robotoMono(color: AppColors.riskModerate, fontSize: 11)),
+                trailing: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Reminder sent to Mark Tan for Classwork.')),
+                    );
+                  },
+                  child: const Text('Remind'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab 3: ADM Students Enrolled
   // ---------------------------------------------------------------------------
   Widget _buildStudentsTab() {
     return SingleChildScrollView(
