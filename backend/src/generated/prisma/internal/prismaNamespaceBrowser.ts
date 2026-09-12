@@ -72,6 +72,7 @@ export const ModelName = {
   AnecdotalFolder: 'AnecdotalFolder',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
   Referral: 'Referral',
+  CounselingSession: 'CounselingSession',
   Intervention: 'Intervention',
   HealthRecord: 'HealthRecord',
   HomeVisitationRecord: 'HomeVisitationRecord',
@@ -388,12 +389,40 @@ export const ReferralScalarFieldEnum = {
   referredBy: 'referredBy',
   reason: 'reason',
   status: 'status',
+  notes: 'notes',
+  escalationReason: 'escalationReason',
+  followUpDate: 'followUpDate',
+  escalatedTo: 'escalatedTo',
+  priority: 'priority',
+  intakeNotes: 'intakeNotes',
+  acceptedAt: 'acceptedAt',
+  resolutionSummary: 'resolutionSummary',
+  resolvedAt: 'resolvedAt',
   studentId: 'studentId',
   rosterId: 'rosterId',
   termId: 'termId'
 } as const
 
 export type ReferralScalarFieldEnum = (typeof ReferralScalarFieldEnum)[keyof typeof ReferralScalarFieldEnum]
+
+
+export const CounselingSessionScalarFieldEnum = {
+  id: 'id',
+  referralId: 'referralId',
+  interventionId: 'interventionId',
+  sessionType: 'sessionType',
+  scheduledAt: 'scheduledAt',
+  venue: 'venue',
+  status: 'status',
+  sessionNotes: 'sessionNotes',
+  outcome: 'outcome',
+  cancelReason: 'cancelReason',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+} as const
+
+export type CounselingSessionScalarFieldEnum = (typeof CounselingSessionScalarFieldEnum)[keyof typeof CounselingSessionScalarFieldEnum]
 
 
 export const InterventionScalarFieldEnum = {
@@ -406,7 +435,9 @@ export const InterventionScalarFieldEnum = {
   assignedAt: 'assignedAt',
   approvalStatus: 'approvalStatus',
   outcomeStatus: 'outcomeStatus',
-  outcomeNotes: 'outcomeNotes'
+  outcomeNotes: 'outcomeNotes',
+  priority: 'priority',
+  intakeNotes: 'intakeNotes'
 } as const
 
 export type InterventionScalarFieldEnum = (typeof InterventionScalarFieldEnum)[keyof typeof InterventionScalarFieldEnum]

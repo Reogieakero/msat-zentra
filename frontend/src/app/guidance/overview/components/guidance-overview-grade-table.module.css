@@ -59,3 +59,8 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
 }
+
+.highRisk {
+  color: var(--destructive);
+  font-weight: 600;
+}

@@ -20,14 +20,74 @@ export default function GuidanceOverviewPage() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true">
-        <Skeleton className={styles.skelHeader} />
-        <div className={styles.skelGrid}>
-          <Skeleton className={styles.skelRow} />
-          <Skeleton className={styles.skelRow} />
-          <Skeleton className={styles.skelRow} />
+        <div className={styles.skelHead}>
+          <div className={styles.skelHeadText}>
+            <Skeleton className={styles.skelEyebrow} />
+            <Skeleton className={styles.skelTitle} />
+            <Skeleton className={styles.skelLede} />
+            <Skeleton className={styles.skelLede} />
+          </div>
+          <Skeleton className={styles.skelBadge} />
         </div>
-        <Skeleton className={styles.skelRow} />
-        <Skeleton className={styles.skelRow} />
+
+        <div className={styles.skelKpiGrid}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={styles.skelKpiCard}>
+              <Skeleton className={styles.skelKpiLabel} />
+              <Skeleton className={styles.skelKpiValue} />
+              <Skeleton className={styles.skelKpiHint} />
+            </div>
+          ))}
+        </div>
+
+        <hr className={styles.divider} />
+
+        <div className={styles.skelChartGrid3}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <Skeleton className={styles.skelChart} />
+              <Skeleton className={styles.skelLineShort} />
+            </div>
+          ))}
+        </div>
+
+        <hr className={styles.divider} />
+
+        <div className={styles.skelChartGrid2}>
+          {[0, 1].map((i) => (
+            <div key={i} className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <Skeleton className={styles.skelChartTall} />
+              <Skeleton className={styles.skelLineShort} />
+            </div>
+          ))}
+        </div>
+
+        <hr className={styles.divider} />
+
+        <div className={styles.skelCard}>
+          <Skeleton className={styles.skelCardTitle} />
+          <Skeleton className={styles.skelCardDesc} />
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className={styles.skelTableRow} />
+          ))}
+        </div>
+
+        <div className={styles.skelQueueGrid}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <Skeleton className={styles.skelQueueItem} />
+              <Skeleton className={styles.skelQueueItem} />
+              <Skeleton className={styles.skelQueueItem} />
+              <Skeleton className={styles.skelBtn} />
+            </div>
+          ))}
+        </div>
       </section>
     );
   }
@@ -42,7 +102,7 @@ export default function GuidanceOverviewPage() {
 
   return (
     <section className={styles.page}>
-      <GuidanceOverviewHeader counselorName={data.counselorName} termLabel={data.termLabel} />
+      <GuidanceOverviewHeader counselorName={data.counselorName} />
 
       <GuidanceOverviewKpis kpis={data.kpis} />
 

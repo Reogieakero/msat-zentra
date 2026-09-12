@@ -1,0 +1,40 @@
+.triggerText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  width: max-content;
+  min-width: var(--radix-dropdown-menu-trigger-width);
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+/* Long option lists (time slots) scroll with a slim custom scrollbar. */
+.scrollable {
+  max-height: min(18rem, calc(100dvh - 4rem));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}

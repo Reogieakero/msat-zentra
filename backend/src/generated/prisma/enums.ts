@@ -131,7 +131,11 @@ export type AnecdotalCategory = (typeof AnecdotalCategory)[keyof typeof Anecdota
 export const ReferralStatus = {
   pending: 'pending',
   in_progress: 'in_progress',
-  resolved: 'resolved'
+  resolved: 'resolved',
+  escalated: 'escalated',
+  info_requested: 'info_requested',
+  dismissed: 'dismissed',
+  follow_up: 'follow_up'
 } as const
 
 export type ReferralStatus = (typeof ReferralStatus)[keyof typeof ReferralStatus]
@@ -237,7 +241,21 @@ export const ActionType = {
   home_visitation_edit: 'home_visitation_edit',
   adm_edit: 'adm_edit',
   referral_status_change: 'referral_status_change',
+  referral_accepted: 'referral_accepted',
+  referral_escalated: 'referral_escalated',
+  referral_reassigned: 'referral_reassigned',
+  referral_note_added: 'referral_note_added',
+  referral_follow_up: 'referral_follow_up',
+  referral_dismissed: 'referral_dismissed',
+  referral_referred_specialist: 'referral_referred_specialist',
+  referral_adm_initiated: 'referral_adm_initiated',
+  session_scheduled: 'session_scheduled',
+  session_completed: 'session_completed',
+  session_cancelled: 'session_cancelled',
+  session_rescheduled: 'session_rescheduled',
   intervention_approval: 'intervention_approval',
+  intervention_assigned: 'intervention_assigned',
+  intervention_outcome: 'intervention_outcome',
   account_approval: 'account_approval',
   role_change: 'role_change',
   adm_principal_approve: 'adm_principal_approve',

@@ -9,6 +9,7 @@ import gradesRoutes from "./modules/grades/grades.routes.js";
 import attendanceRoutes from "./modules/attendance/attendance.routes.js";
 import anecdotalRoutes from "./modules/anecdotal/anecdotal.routes.js";
 import referralsRoutes from "./modules/referrals/referrals.routes.js";
+import interventionsRoutes from "./modules/interventions/interventions.routes.js";
 import admRoutes from "./modules/adm/adm.routes.js";
 import sf10Routes from "./modules/sf10/sf10.routes.js";
 import riskRoutes from "./modules/risk/risk.routes.js";
@@ -40,6 +41,7 @@ export function createApp() {
   app.use("/api/attendance", attendanceRoutes);
   app.use("/api/anecdotal", anecdotalRoutes);
   app.use("/api/referrals", referralsRoutes);
+  app.use("/api/interventions", interventionsRoutes);
   app.use("/api/adm", admRoutes);
   app.use("/api/sf10", sf10Routes);
   app.use("/api/risk", riskRoutes);

@@ -20,28 +20,30 @@ export function GuidanceOverviewGradeTable({ rows }: GuidanceOverviewGradeTableP
       <CardContent>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Grade</th>
-                <th>Sections</th>
-                <th>At-risk</th>
-                <th>Highest section</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.short}>
-                  <td className={styles.mono}>{row.short}</td>
-                  <td>{row.sections}</td>
-                  <td>{row.atRisk}</td>
-                  <td>
-                    {row.topSection === "—"
-                      ? "—"
-                      : `${row.topSection} · ${row.topCount} student${row.topCount === 1 ? "" : "s"}`}
-                  </td>
+             <thead>
+                <tr>
+                  <th>Grade</th>
+                  <th>Sections</th>
+                  <th>High</th>
+                  <th>At-risk</th>
+                  <th>Highest section</th>
                 </tr>
-              ))}
-            </tbody>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.short}>
+                    <td className={styles.mono}>{row.short}</td>
+                    <td>{row.sections}</td>
+                    <td className={row.high > 0 ? styles.highRisk : undefined}>{row.high}</td>
+                    <td>{row.atRisk}</td>
+                    <td>
+                      {row.topSection === "—"
+                        ? "—"
+                        : `${row.topSection} · ${row.topCount} student${row.topCount === 1 ? "" : "s"}`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
           </table>
         </div>
       </CardContent>

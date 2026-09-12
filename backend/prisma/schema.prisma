@@ -101,6 +101,10 @@ enum ReferralStatus {
   pending
   in_progress
   resolved
+  escalated
+  info_requested
+  dismissed
+  follow_up
 }
 
 enum GradeFlagReason {
@@ -175,7 +179,21 @@ enum ActionType {
   home_visitation_edit
   adm_edit
   referral_status_change
+  referral_accepted
+  referral_escalated
+  referral_reassigned
+  referral_note_added
+  referral_follow_up
+  referral_dismissed
+  referral_referred_specialist
+  referral_adm_initiated
+  session_scheduled
+  session_completed
+  session_cancelled
+  session_rescheduled
   intervention_approval
+  intervention_assigned
+  intervention_outcome
   account_approval
   role_change
   adm_principal_approve
@@ -232,6 +250,7 @@ model User {
   anecdotalFolders    AnecdotalFolder[]      @relation("FolderOwner")
   anecdotalFollowups  AnecdotalRecordFollowup[]
   referralsMade       Referral[]             @relation("ReferredBy")
+  sessionsCreated     CounselingSession[]    @relation("SessionCreator")
   assignedInterventions Intervention[]         @relation("InterventionAssignee")
   healthRecords       HealthRecord[]
   homeVisitations     HomeVisitationRecord[]
@@ -626,19 +645,63 @@ model Referral {
   referredBy        String
   reason            String
   status            ReferralStatus  @default(pending)
+  notes             String?
+  escalationReason  String?
+  followUpDate      DateTime?
+  escalatedTo       String?
+  // Guidance intake (filled when the case is accepted): priority triage,
+  // first impressions, and when the counselor took the case.
+  priority          String?
+  intakeNotes       String?
+  acceptedAt        DateTime?
+  // Strict close-out: a closing summary plus when it was resolved.
+  resolutionSummary String?
+  resolvedAt        DateTime?
   // Exactly one of studentId (registered profile) / rosterId (enlisted, no
   // account yet) is set — enforced by a CHECK constraint in the migration.
   studentId         String?
   rosterId          String?
   termId            String
   anecdotalRecord   AnecdotalRecord @relation("AnecdotalReferral", fields: [anecdotalRecordId], references: [id], onDelete: Cascade)
-  referredByUser    User            @relation("ReferredBy", fields: [referredBy], references: [id])
+  referredByUser    User            @relation("ReferredBy", fields: [referredBy], references: [id], onDelete: Cascade)
   student           StudentProfile? @relation("StudentReferrals", fields: [studentId], references: [userId], onDelete: Cascade)
   roster            StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   term              Term            @relation(fields: [termId], references: [id])
   healthRecords     HealthRecord[]
   homeVisitations   HomeVisitationRecord[]
   admProfiles       AdmLearnerProfile[]
+  counselingSessions CounselingSession[]
+}
+
+// Guidance counseling work on one referral: scheduled talks with the
+// student, parents, or a group (plus home visits). A case can only be
+// resolved after at least one session is completed — enforced in the
+// referrals routes, not just the UI.
+model CounselingSession {
+  id           String   @id @default(uuid())
+  // Exactly one of referralId (adviser-referred case) / interventionId
+  // (engine-flagged at-risk follow-up) is set — enforced by a CHECK
+  // constraint in the migration. Same session flow on both pipelines.
+  referralId   String?
+  interventionId String?
+  // individual | parent_conference | group | home_visit
+  sessionType  String
+  scheduledAt  DateTime
+  venue        String?
+  // scheduled | completed | cancelled
+  status       String   @default("scheduled")
+  // Written after the session happens.
+  sessionNotes String?
+  outcome      String?
+  cancelReason String?
+  createdBy    String
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+  referral     Referral? @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  intervention Intervention? @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+  creator      User     @relation("SessionCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  @@index([referralId])
+  @@index([interventionId])
 }
 
 model Intervention {
@@ -654,9 +717,13 @@ model Intervention {
   approvalStatus    ApprovalStatus  @default(pending)
   outcomeStatus     OutcomeStatus   @default(ongoing)
   outcomeNotes      String?
+  // Guidance triage when the follow-up starts (same intake as referrals).
+  priority          String?
+  intakeNotes       String?
   student           StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   roster            StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   assignee          User?           @relation("InterventionAssignee", fields: [assignedTo], references: [id])
+  counselingSessions CounselingSession[]
   @@index([rosterId])
 }
 // ---------------------------------------------------------------------------

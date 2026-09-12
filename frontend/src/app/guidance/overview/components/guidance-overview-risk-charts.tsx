@@ -28,12 +28,12 @@ const TOOLTIP_STYLE: React.CSSProperties = {
 };
 
 const LEVEL_COLORS: Record<string, string> = {
-  High: "#171717",
-  Moderate: "#737373",
-  Low: "#d4d4d4",
+  High: "var(--chart-1)",
+  Moderate: "var(--chart-3)",
+  Low: "var(--chart-5)",
 };
 
-const FACTOR_COLOR = "#171717";
+const FACTOR_COLOR = "var(--chart-1)";
 
 interface GuidanceOverviewRiskChartsProps {
   riskByLevel: { high: number; moderate: number; low: number };

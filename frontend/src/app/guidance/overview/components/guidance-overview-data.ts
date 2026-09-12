@@ -19,6 +19,7 @@ export interface GuidanceGradeAttentionRow {
   grade: string;
   short: string;
   sections: number;
+  high: number;
   atRisk: number;
   topSection: string;
   topCount: number;

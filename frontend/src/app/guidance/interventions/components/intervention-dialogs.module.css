@@ -1,0 +1,42 @@
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.formFull {
+  grid-column: 1 / -1;
+}
+
+.formSectionLabel {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.formSectionHint {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.resolveProgress {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.blocker {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  border: 1px solid color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.75rem;
+}

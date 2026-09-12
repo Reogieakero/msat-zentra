@@ -123,6 +123,11 @@ export type AnecdotalRecordFollowup = Prisma.AnecdotalRecordFollowupModel
  */
 export type Referral = Prisma.ReferralModel
 /**
+ * Model CounselingSession
+ * 
+ */
+export type CounselingSession = Prisma.CounselingSessionModel
+/**
  * Model Intervention
  * 
  */

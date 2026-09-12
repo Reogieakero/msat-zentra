@@ -20,7 +20,23 @@ export interface InterventionLink {
   assignedStaffName: string | null;
   approvalStatus: ApprovalStatusValue;
   outcomeStatus: OutcomeStatusValue;
+  outcomeNotes: string | null;
+  priority: string | null;
+  intakeNotes: string | null;
+  sessions: InterventionSessionLink[];
   createdAt: string | null;
+}
+
+export interface InterventionSessionLink {
+  id: string;
+  sessionType: string;
+  scheduledAt: Date;
+  venue: string | null;
+  status: string;
+  sessionNotes: string | null;
+  outcome: string | null;
+  cancelReason: string | null;
+  completedAt: Date | null;
 }
 
 export interface SubjectGrade {
@@ -160,6 +176,23 @@ export async function getInterventionStudents(
                 assignedTo: true,
                 approvalStatus: true,
                 outcomeStatus: true,
+                outcomeNotes: true,
+                priority: true,
+                intakeNotes: true,
+                counselingSessions: {
+                  orderBy: { scheduledAt: "asc" },
+                  select: {
+                    id: true,
+                    sessionType: true,
+                    scheduledAt: true,
+                    venue: true,
+                    status: true,
+                    sessionNotes: true,
+                    outcome: true,
+                    cancelReason: true,
+                    completedAt: true,
+                  },
+                },
                 assignedAt: true,
                 assignee: { select: { fullName: true } },
               },
@@ -203,6 +236,23 @@ export async function getInterventionStudents(
                 assignedTo: true,
                 approvalStatus: true,
                 outcomeStatus: true,
+                outcomeNotes: true,
+                priority: true,
+                intakeNotes: true,
+                counselingSessions: {
+                  orderBy: { scheduledAt: "asc" },
+                  select: {
+                    id: true,
+                    sessionType: true,
+                    scheduledAt: true,
+                    venue: true,
+                    status: true,
+                    sessionNotes: true,
+                    outcome: true,
+                    cancelReason: true,
+                    completedAt: true,
+                  },
+                },
                 assignedAt: true,
                 assignee: { select: { fullName: true } },
               },
@@ -238,6 +288,20 @@ export async function getInterventionStudents(
     assignedTo: string | null;
     approvalStatus: ApprovalStatusValue;
     outcomeStatus: OutcomeStatusValue;
+    outcomeNotes: string | null;
+    priority: string | null;
+    intakeNotes: string | null;
+    counselingSessions: {
+      id: string;
+      sessionType: string;
+      scheduledAt: Date;
+      venue: string | null;
+      status: string;
+      sessionNotes: string | null;
+      outcome: string | null;
+      cancelReason: string | null;
+      completedAt: Date | null;
+    }[];
     assignedAt: Date | null;
     assignee: { fullName: string } | null;
   } | undefined): InterventionLink | null =>
@@ -249,6 +313,20 @@ export async function getInterventionStudents(
           assignedStaffName: iv.assignee?.fullName ?? null,
           approvalStatus: iv.approvalStatus,
           outcomeStatus: iv.outcomeStatus,
+          outcomeNotes: iv.outcomeNotes,
+          priority: iv.priority,
+          intakeNotes: iv.intakeNotes,
+          sessions: iv.counselingSessions.map((s) => ({
+            id: s.id,
+            sessionType: s.sessionType,
+            scheduledAt: s.scheduledAt,
+            venue: s.venue,
+            status: s.status,
+            sessionNotes: s.sessionNotes,
+            outcome: s.outcome,
+            cancelReason: s.cancelReason,
+            completedAt: s.completedAt,
+          })),
           createdAt: iv.assignedAt ? iv.assignedAt.toISOString() : null,
         }
       : null;

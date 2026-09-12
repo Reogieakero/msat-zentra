@@ -28,11 +28,11 @@ const TOOLTIP_STYLE: React.CSSProperties = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  behavioral: "#171717",
-  bullying: "#525252",
-  academic: "#737373",
-  attendance: "#a3a3a3",
-  health: "#d4d4d4",
+  behavioral: "var(--chart-1)",
+  bullying: "var(--chart-2)",
+  academic: "var(--chart-3)",
+  attendance: "var(--chart-4)",
+  health: "var(--chart-5)",
 };
 
 interface GuidanceOverviewCaseloadChartsProps {
@@ -142,8 +142,8 @@ export function GuidanceOverviewCaseloadCharts({
                     tick={{ fontSize: 12, fill: "var(--foreground)" }}
                   />
                   <Tooltip cursor={{ fill: "color-mix(in oklch, var(--foreground), transparent 95%)" }} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="high" name="High" stackId="risk" fill="#171717" maxBarSize={18} />
-                  <Bar dataKey="moderate" name="Moderate" stackId="risk" fill="#a3a3a3" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                  <Bar dataKey="high" name="High" stackId="risk" fill="var(--chart-1)" maxBarSize={18} />
+                  <Bar dataKey="moderate" name="Moderate" stackId="risk" fill="var(--chart-4)" radius={[0, 4, 4, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

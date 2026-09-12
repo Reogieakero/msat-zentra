@@ -1,0 +1,12 @@
+.spin {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

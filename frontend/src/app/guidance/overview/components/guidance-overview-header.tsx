@@ -1,14 +1,12 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import styles from "./guidance-overview-header.module.css";
 
 interface GuidanceOverviewHeaderProps {
   counselorName: string;
-  termLabel: string;
 }
 
-export function GuidanceOverviewHeader({ counselorName, termLabel }: GuidanceOverviewHeaderProps) {
+export function GuidanceOverviewHeader({ counselorName }: GuidanceOverviewHeaderProps) {
   return (
     <div className={styles.header}>
       <div>
@@ -20,9 +18,6 @@ export function GuidanceOverviewHeader({ counselorName, termLabel }: GuidanceOve
           report cards stay view-only for this role.
         </p>
       </div>
-      <Badge variant="outline" className={styles.liveBadge}>
-        Live · {termLabel}
-      </Badge>
     </div>
   );
 }

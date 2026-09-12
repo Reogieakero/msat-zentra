@@ -36,15 +36,17 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Placeholder nav — mock-up only, no data fetching. Mirrors the Guidance
-// Counselor scope: referred cases, anecdotal records, interventions,
-// ADM hand-off, and school-wide risk views.
+// Guidance Counselor nav — no hardcoded counts. Badges render only when a
+// live count is supplied; mock numbers were removed so the sidebar never
+// shows placeholder figures. Mirrors the Guidance Counselor scope: referred
+// cases, anecdotal records, interventions, ADM hand-off, and school-wide
+// risk views.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
       { title: "Overview", href: "/guidance/overview", icon: LayoutDashboard },
-      { title: "Alerts", href: "/guidance/alerts", icon: BellRing, badge: "12" },
+      { title: "Alerts", href: "/guidance/alerts", icon: BellRing },
     ],
   },
   {
@@ -54,7 +56,6 @@ const NAV: NavGroup[] = [
         title: "Referrals to Me",
         href: "/guidance/referrals",
         icon: Inbox,
-        badge: "8",
       },
       {
         title: "Anecdotal Records",
@@ -70,7 +71,6 @@ const NAV: NavGroup[] = [
         title: "Interventions",
         href: "/guidance/interventions",
         icon: ClipboardList,
-        badge: "5",
       },
       { title: "ADM Referrals", href: "/guidance/adm", icon: Send },
     ],

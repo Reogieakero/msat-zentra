@@ -418,6 +418,7 @@ export const ModelName = {
   AnecdotalFolder: 'AnecdotalFolder',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
   Referral: 'Referral',
+  CounselingSession: 'CounselingSession',
   Intervention: 'Intervention',
   HealthRecord: 'HealthRecord',
   HomeVisitationRecord: 'HomeVisitationRecord',
@@ -449,7 +450,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2007,6 +2008,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CounselingSession: {
+      payload: Prisma.$CounselingSessionPayload<ExtArgs>
+      fields: Prisma.CounselingSessionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CounselingSessionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CounselingSessionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>
+        }
+        findFirst: {
+          args: Prisma.CounselingSessionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CounselingSessionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>
+        }
+        findMany: {
+          args: Prisma.CounselingSessionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>[]
+        }
+        create: {
+          args: Prisma.CounselingSessionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>
+        }
+        createMany: {
+          args: Prisma.CounselingSessionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CounselingSessionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>[]
+        }
+        delete: {
+          args: Prisma.CounselingSessionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>
+        }
+        update: {
+          args: Prisma.CounselingSessionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>
+        }
+        deleteMany: {
+          args: Prisma.CounselingSessionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CounselingSessionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CounselingSessionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>[]
+        }
+        upsert: {
+          args: Prisma.CounselingSessionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CounselingSessionPayload>
+        }
+        aggregate: {
+          args: Prisma.CounselingSessionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCounselingSession>
+        }
+        groupBy: {
+          args: Prisma.CounselingSessionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CounselingSessionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CounselingSessionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CounselingSessionCountAggregateOutputType> | number
+        }
+      }
+    }
     Intervention: {
       payload: Prisma.$InterventionPayload<ExtArgs>
       fields: Prisma.InterventionFieldRefs
@@ -3512,12 +3587,40 @@ export const ReferralScalarFieldEnum = {
   referredBy: 'referredBy',
   reason: 'reason',
   status: 'status',
+  notes: 'notes',
+  escalationReason: 'escalationReason',
+  followUpDate: 'followUpDate',
+  escalatedTo: 'escalatedTo',
+  priority: 'priority',
+  intakeNotes: 'intakeNotes',
+  acceptedAt: 'acceptedAt',
+  resolutionSummary: 'resolutionSummary',
+  resolvedAt: 'resolvedAt',
   studentId: 'studentId',
   rosterId: 'rosterId',
   termId: 'termId'
 } as const
 
 export type ReferralScalarFieldEnum = (typeof ReferralScalarFieldEnum)[keyof typeof ReferralScalarFieldEnum]
+
+
+export const CounselingSessionScalarFieldEnum = {
+  id: 'id',
+  referralId: 'referralId',
+  interventionId: 'interventionId',
+  sessionType: 'sessionType',
+  scheduledAt: 'scheduledAt',
+  venue: 'venue',
+  status: 'status',
+  sessionNotes: 'sessionNotes',
+  outcome: 'outcome',
+  cancelReason: 'cancelReason',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+} as const
+
+export type CounselingSessionScalarFieldEnum = (typeof CounselingSessionScalarFieldEnum)[keyof typeof CounselingSessionScalarFieldEnum]
 
 
 export const InterventionScalarFieldEnum = {
@@ -3530,7 +3633,9 @@ export const InterventionScalarFieldEnum = {
   assignedAt: 'assignedAt',
   approvalStatus: 'approvalStatus',
   outcomeStatus: 'outcomeStatus',
-  outcomeNotes: 'outcomeNotes'
+  outcomeNotes: 'outcomeNotes',
+  priority: 'priority',
+  intakeNotes: 'intakeNotes'
 } as const
 
 export type InterventionScalarFieldEnum = (typeof InterventionScalarFieldEnum)[keyof typeof InterventionScalarFieldEnum]
@@ -4443,6 +4548,7 @@ export type GlobalOmitConfig = {
   anecdotalFolder?: Prisma.AnecdotalFolderOmit
   anecdotalRecordFollowup?: Prisma.AnecdotalRecordFollowupOmit
   referral?: Prisma.ReferralOmit
+  counselingSession?: Prisma.CounselingSessionOmit
   intervention?: Prisma.InterventionOmit
   healthRecord?: Prisma.HealthRecordOmit
   homeVisitationRecord?: Prisma.HomeVisitationRecordOmit

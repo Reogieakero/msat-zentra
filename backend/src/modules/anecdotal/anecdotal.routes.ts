@@ -751,9 +751,11 @@ const GRADE_LABEL_OC: Record<string, string> = {
 
 // Full write-up access for the official OCForm-01 print/export. The observer
 // always qualifies; the section adviser qualifies as the required signatory
-// ("ADVISER'S SIGNATURE OVER PRINTED NAME"); principal + guidance own the
-// case file. Anyone else (e.g. a non-observing subject teacher) gets 403 —
-// mirroring the metadata-only rule on the advisory anecdotal list.
+// ("ADVISER'S SIGNATURE OVER PRINTED NAME"); the principal owns every case
+// file. Guidance qualifies ONLY for cases an adviser referred to guidance —
+// unreferred filings stay invisible to guidance even by direct id. Anyone
+// else (e.g. a non-observing subject teacher) gets 403 — mirroring the
+// metadata-only rule on the advisory anecdotal list.
 async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string): Promise<{
   data: OcForm01Data;
   filename: string;
@@ -790,10 +792,19 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
 
   const isObserver = record.observerId === requesterId;
   const isSectionAdviser = record.section.adviserId === requesterId;
-  const isCaseOwner =
-    requesterRole === "principal" || requesterRole === "guidance_counselor";
-  if (!isObserver && !isSectionAdviser && !isCaseOwner) {
+  const isPrincipal = requesterRole === "principal";
+  const isGuidance = requesterRole === "guidance_counselor";
+  if (!isObserver && !isSectionAdviser && !isPrincipal && !isGuidance) {
     throw new AppError(403, "FORBIDDEN", "Only the observer, section adviser, principal, or guidance counselor may open the official form");
+  }
+  if (isGuidance && !isObserver && !isSectionAdviser) {
+    const referral = await prisma.referral.findFirst({
+      where: { anecdotalRecordId: recordId, referredToRole: "guidance_counselor" },
+      select: { id: true },
+    });
+    if (!referral) {
+      throw new AppError(403, "FORBIDDEN", "Only cases referred to guidance may be opened by the guidance counselor");
+    }
   }
 
   const studentGrade = record.student?.gradeLevel ?? record.roster?.gradeLevel;

@@ -9,7 +9,7 @@ import {
   levelFromFlags,
   resolveActiveTermId,
 } from "../../services/risk.js";
-import { ADM_STAGE_FLOW } from "../../services/adm.js";
+import { ADM_STAGE_FLOW, type AdmStage } from "../../services/adm.js";
 
 const router = Router();
 
@@ -333,6 +333,7 @@ router.get(
       let moderate = 0;
       let low = 0;
       const riskByGrade = new Map<string, number>();
+      const highByGrade = new Map<string, number>();
       const atRiskBySection = new Map<string, number>();
       const levelBySection = new Map<string, { high: number; moderate: number; low: number }>();
 
@@ -360,6 +361,9 @@ router.get(
         if (isAtRisk(level)) {
           riskByGrade.set(s.gradeLevel, (riskByGrade.get(s.gradeLevel) ?? 0) + 1);
           atRiskBySection.set(s.sectionId, (atRiskBySection.get(s.sectionId) ?? 0) + 1);
+        }
+        if (level === "High") {
+          highByGrade.set(s.gradeLevel, (highByGrade.get(s.gradeLevel) ?? 0) + 1);
         }
       }
 
@@ -391,6 +395,7 @@ router.get(
           grade: GRADE_LABELS[g],
           short: g,
           sections: secs.length,
+          high: highByGrade.get(g) ?? 0,
           atRisk: riskByGrade.get(g) ?? 0,
           topSection,
           topCount,
@@ -509,6 +514,573 @@ router.get(
         interventionsQueue,
         latestAlerts,
         admQueue,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Guidance Counselor alerts: live system-flagged queue from the shared risk
+// engine (academic < 75, attendance < 80%, >= 1 anecdotal this term).
+// Status-only rows — student identity, level, tripped factors, referral and
+// intervention state. No anecdotal write-up content ever leaves this endpoint:
+// the behavioral trigger is a report COUNT, and full filings stay visible
+// only after an adviser refers the case (see the referrals queue).
+router.get(
+  "/alerts",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  cache({ tags: ["guidance", "alerts"] }),
+  async (req, res, next) => {
+    try {
+      const levelFilter =
+        req.query.level === "High" || req.query.level === "Moderate"
+          ? (req.query.level as "High" | "Moderate")
+          : null;
+      const factorFilter =
+        req.query.factor === "academic" ||
+        req.query.factor === "attendance" ||
+        req.query.factor === "behavioral"
+          ? (req.query.factor as "academic" | "attendance" | "behavioral")
+          : null;
+      const q =
+        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+
+      const activeYear = await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      const schoolYearId = activeYear?.id;
+      const termId = await resolveActiveTermId();
+      const term = termId
+        ? await prisma.term.findUnique({
+            where: { id: termId },
+            select: { termNumber: true, schoolYear: { select: { name: true } } },
+          })
+        : null;
+      const termLabel = term
+        ? `${term.schoolYear.name.split(" ")[0]} · Term ${term.termNumber}`
+        : "No active term";
+
+      const [students, rosterCohort, sectionPopulations, guidanceReferrals, interventions, admProfiles, admReferrals] =
+        await Promise.all([
+          prisma.studentProfile.findMany({
+            where: schoolYearId ? { section: { schoolYearId } } : undefined,
+            select: {
+              userId: true,
+              lrn: true,
+              gradeLevel: true,
+              section: { select: { id: true, name: true, _count: { select: { students: true } } } },
+              user: { select: { fullName: true } },
+              finalGrades: {
+                where: termId ? { termId } : undefined,
+                select: { computedAverage: true, transmutedGrade: true },
+              },
+              attendanceRecords: {
+                where: termId ? { termId } : undefined,
+                select: { status: true },
+              },
+              anecdotalRecords: {
+                where: termId ? { termId } : undefined,
+                select: { id: true },
+              },
+            },
+          }),
+          prisma.studentRoster.findMany({
+            where: schoolYearId ? { schoolYearId } : undefined,
+            select: {
+              id: true,
+              lrn: true,
+              fullName: true,
+              gradeLevel: true,
+              sectionId: true,
+              section: { select: { name: true } },
+              finalGrades: {
+                where: termId ? { termId } : undefined,
+                select: { computedAverage: true, transmutedGrade: true },
+              },
+              attendanceRecords: {
+                where: termId ? { termId } : undefined,
+                select: { status: true },
+              },
+              anecdotalRecords: {
+                where: termId ? { termId } : undefined,
+                select: { id: true },
+              },
+            },
+          }),
+          prisma.section.findMany({
+            where: schoolYearId ? { schoolYearId } : undefined,
+            select: { id: true },
+          }),
+          prisma.referral.findMany({
+            where: { referredToRole: "guidance_counselor" },
+            select: { studentId: true, rosterId: true, status: true },
+          }),
+          prisma.intervention.findMany({
+            orderBy: { id: "desc" },
+            take: 2000,
+            select: { studentId: true, rosterId: true, outcomeStatus: true },
+          }),
+          // ADM track membership (status-only): a tracked learner profile or
+          // an ADM-track referral marks the case ADM; everything else is the
+          // general guidance caseload.
+          prisma.admLearnerProfile.findMany({
+            select: { studentId: true, stage: true },
+          }),
+          prisma.referral.findMany({
+            where: { referredToRole: "adm_coordinator" },
+            select: { studentId: true, rosterId: true },
+          }),
+        ]);
+
+      const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
+
+      // Latest referral / intervention state per student key.
+      const referralByKey = new Map<string, string>();
+      for (const r of guidanceReferrals) {
+        const key = r.studentId ?? (r.rosterId ? `roster:${r.rosterId}` : null);
+        if (key && !referralByKey.has(key)) referralByKey.set(key, r.status);
+      }
+      const interventionByKey = new Map<string, string>();
+      for (const iv of interventions) {
+        const key = iv.studentId ?? (iv.rosterId ? `roster:${iv.rosterId}` : null);
+        if (key && !interventionByKey.has(key)) interventionByKey.set(key, iv.outcomeStatus);
+      }
+      // ADM stage per student key (tracked profile wins; otherwise any
+      // ADM-track referral still marks the case ADM at consultation).
+      const admStageByKey = new Map<string, string>();
+      for (const p of admProfiles) {
+        if (!admStageByKey.has(p.studentId)) admStageByKey.set(p.studentId, p.stage);
+      }
+      for (const r of admReferrals) {
+        const key = r.studentId ?? (r.rosterId ? `roster:${r.rosterId}` : null);
+        if (key && !admStageByKey.has(key)) admStageByKey.set(key, "consultation");
+      }
+
+      const registeredLrns = new Set(students.map((s) => s.lrn));
+      const cohort: {
+        key: string;
+        student: string;
+        lrn: string;
+        gradeLevel: string;
+        sectionId: string;
+        section: string;
+        enrolledFallback: number;
+        finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
+        attendanceRecords: { status: string }[];
+        anecdotalCount: number;
+      }[] = [
+        ...students.map((s) => ({
+          key: s.userId,
+          student: s.user.fullName,
+          lrn: s.lrn,
+          gradeLevel: s.gradeLevel,
+          sectionId: s.section?.id ?? "",
+          section: s.section?.name ?? "—",
+          enrolledFallback: s.section?._count.students ?? 0,
+          finalGrades: s.finalGrades,
+          attendanceRecords: s.attendanceRecords,
+          anecdotalCount: s.anecdotalRecords.length,
+        })),
+        ...rosterCohort
+          .filter((r) => !registeredLrns.has(r.lrn))
+          .map((r) => ({
+            key: `roster:${r.id}`,
+            student: r.fullName,
+            lrn: r.lrn,
+            gradeLevel: r.gradeLevel,
+            sectionId: r.sectionId,
+            section: r.section?.name ?? "—",
+            enrolledFallback: 0,
+            finalGrades: r.finalGrades,
+            attendanceRecords: r.attendanceRecords,
+            anecdotalCount: r.anecdotalRecords.length,
+          })),
+      ];
+
+      const flagged = [];
+      let academicTotal = 0;
+      let attendanceTotal = 0;
+      let behavioralTotal = 0;
+      let referredTotal = 0;
+      for (const s of cohort) {
+        const flags = computeRiskFactors({
+          finalGrades: s.finalGrades,
+          attendance: s.attendanceRecords,
+          anecdotalCount: s.anecdotalCount,
+          enrolled: headcounts.get(s.sectionId) ?? s.enrolledFallback,
+        });
+        const level = levelFromFlags(flags);
+        if (!isAtRisk(level)) continue;
+        if (flags.academicFlag) academicTotal++;
+        if (flags.attendanceFlag) attendanceTotal++;
+        if (flags.behavioralFlag) behavioralTotal++;
+        const referralStatus = referralByKey.get(s.key) ?? null;
+        if (referralStatus) referredTotal++;
+        const admStage = admStageByKey.get(s.key) ?? null;
+        const triggers: string[] = [];
+        if (flags.academicFlag) triggers.push("Academic average below 75");
+        if (flags.attendanceFlag) triggers.push("Attendance below 80%");
+        if (flags.behavioralFlag)
+          triggers.push(
+            `${s.anecdotalCount} behavioral report${s.anecdotalCount === 1 ? "" : "s"} filed`
+          );
+        flagged.push({
+          id: s.key,
+          student: s.student,
+          lrn: s.lrn,
+          section: s.section,
+          grade: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
+          level,
+          flagCount:
+            (flags.academicFlag ? 1 : 0) +
+            (flags.attendanceFlag ? 1 : 0) +
+            (flags.behavioralFlag ? 1 : 0),
+          factors: {
+            academic: flags.academicFlag,
+            attendance: flags.attendanceFlag,
+            behavioral: flags.behavioralFlag,
+          },
+          triggers,
+          anecdotalCount: s.anecdotalCount,
+          referralStatus,
+          interventionOutcome: interventionByKey.get(s.key) ?? null,
+          track: admStage ? "adm" : "general",
+          admStageLabel: admStage ? (ADM_LABEL.get(admStage as AdmStage) ?? admStage) : null,
+        });
+      }
+
+      // High first, then most flags, then name — newest risk first.
+      flagged.sort(
+        (a, b) =>
+          (a.level === "High" ? 0 : 1) - (b.level === "High" ? 0 : 1) ||
+          b.flagCount - a.flagCount ||
+          a.student.localeCompare(b.student)
+      );
+
+      const filtered = flagged.filter((a) => {
+        if (levelFilter && a.level !== levelFilter) return false;
+        if (factorFilter && !a.factors[factorFilter]) return false;
+        if (
+          q &&
+          !`${a.student} ${a.lrn} ${a.section}`.toLowerCase().includes(q)
+        )
+          return false;
+        return true;
+      });
+
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const alerts = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+      res.json({
+        termLabel,
+        summary: {
+          high: flagged.filter((a) => a.level === "High").length,
+          moderate: flagged.filter((a) => a.level === "Moderate").length,
+          total: flagged.length,
+          academic: academicTotal,
+          attendance: attendanceTotal,
+          behavioral: behavioralTotal,
+          referred: referredTotal,
+          unreferred: flagged.length - referredTotal,
+        },
+        alerts,
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Guidance Counselor referrals: every behavior / incident report an adviser
+// routed to guidance_counselor, newest filing first. Status-only plus the
+// referrer's reason and the linked anecdotal category/date — the full
+// write-up itself is opened through the case file, never listed here.
+router.get(
+  "/referrals",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  cache({ tags: ["guidance", "referrals"] }),
+  async (req, res, next) => {
+    try {
+      const statusFilter =
+        req.query.status === "pending" ||
+        req.query.status === "in_progress" ||
+        req.query.status === "resolved"
+          ? (req.query.status as "pending" | "in_progress" | "resolved")
+          : null;
+      const q =
+        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+
+      const rows = await prisma.referral.findMany({
+        where: { referredToRole: "guidance_counselor" },
+        orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
+        take: 1000,
+        select: {
+          id: true,
+          reason: true,
+          status: true,
+          notes: true,
+          escalationReason: true,
+          escalatedTo: true,
+          followUpDate: true,
+          priority: true,
+          intakeNotes: true,
+          acceptedAt: true,
+          resolutionSummary: true,
+          resolvedAt: true,
+          referredByUser: { select: { fullName: true } },
+          counselingSessions: {
+            orderBy: { scheduledAt: "asc" },
+            select: {
+              id: true,
+              sessionType: true,
+              scheduledAt: true,
+              venue: true,
+              status: true,
+              sessionNotes: true,
+              outcome: true,
+              cancelReason: true,
+              completedAt: true,
+            },
+          },
+          anecdotalRecord: {
+            select: {
+              id: true,
+              category: true,
+              observationDatetime: true,
+              descriptionOfIncident: true,
+              descriptionOfLocation: true,
+              notesRecommendationsActions: true,
+              confidentialityLevel: true,
+              observer: { select: { fullName: true } },
+            },
+          },
+          student: {
+            select: {
+              lrn: true,
+              gradeLevel: true,
+              user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          roster: {
+            select: {
+              lrn: true,
+              fullName: true,
+              gradeLevel: true,
+              section: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      const mapped = rows.map((r) => ({
+        id: r.id,
+        student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
+        lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+        section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
+        grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+        category: r.anecdotalRecord.category,
+        referredBy: r.referredByUser?.fullName ?? "Adviser",
+        observer: r.anecdotalRecord.observer?.fullName ?? "—",
+        reason: r.reason,
+        status: r.status,
+        date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
+        anecdotalId: r.anecdotalRecord.id,
+        anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,
+        location: r.anecdotalRecord.descriptionOfLocation ?? "",
+        recommendations: r.anecdotalRecord.notesRecommendationsActions ?? "",
+        confidentiality: r.anecdotalRecord.confidentialityLevel,
+        notes: r.notes ?? "",
+        escalationReason: r.escalationReason ?? "",
+        escalatedTo: r.escalatedTo ?? "",
+        followUpDate: r.followUpDate ? r.followUpDate.toISOString().slice(0, 10) : "",
+        priority: r.priority ?? "",
+        intakeNotes: r.intakeNotes ?? "",
+        acceptedAt: r.acceptedAt ? r.acceptedAt.toISOString().slice(0, 10) : "",
+        resolutionSummary: r.resolutionSummary ?? "",
+        sessions: r.counselingSessions.map((s) => ({
+          id: s.id,
+          sessionType: s.sessionType,
+          scheduledAt: s.scheduledAt.toISOString(),
+          date: s.scheduledAt.toISOString().slice(0, 10),
+          venue: s.venue ?? "",
+          status: s.status,
+          sessionNotes: s.sessionNotes ?? "",
+          outcome: s.outcome ?? "",
+          cancelReason: s.cancelReason ?? "",
+          completedAt: s.completedAt ? s.completedAt.toISOString().slice(0, 10) : "",
+        })),
+        completedSessions: r.counselingSessions.filter((s) => s.status === "completed").length,
+      }));
+
+      const filtered = mapped.filter((r) => {
+        if (statusFilter && r.status !== statusFilter) return false;
+        if (
+          q &&
+          !`${r.student} ${r.lrn} ${r.section} ${r.referredBy} ${r.observer} ${r.reason} ${r.anecdotalExcerpt} ${r.category}`
+            .toLowerCase()
+            .includes(q)
+        )
+          return false;
+        return true;
+      });
+
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const referrals = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+      res.json({
+        summary: {
+          total: mapped.length,
+          pending: mapped.filter((r) => r.status === "pending").length,
+          inProgress: mapped.filter((r) => r.status === "in_progress").length,
+          resolved: mapped.filter((r) => r.status === "resolved").length,
+        },
+        referrals,
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Guidance Counselor anecdotal records: ONLY filings an adviser referred to
+// guidance_counselor — guidance can never browse the raw anecdotal table.
+// Metadata only (category, observer, dates, confidentiality tier, referral
+// state). Write-up content stays behind the case-file detail endpoint.
+router.get(
+  "/anecdotal",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  cache({ tags: ["guidance", "anecdotal"] }),
+  async (req, res, next) => {
+    try {
+      const categoryFilter =
+        req.query.category === "behavioral" ||
+        req.query.category === "bullying" ||
+        req.query.category === "academic" ||
+        req.query.category === "attendance" ||
+        req.query.category === "health"
+          ? (req.query.category as
+              | "behavioral"
+              | "bullying"
+              | "academic"
+              | "attendance"
+              | "health")
+          : null;
+      const q =
+        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+
+      const rows = await prisma.referral.findMany({
+        where: { referredToRole: "guidance_counselor" },
+        orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
+        take: 1000,
+        select: {
+          id: true,
+          status: true,
+          referredByUser: { select: { fullName: true } },
+          anecdotalRecord: {
+            select: {
+              id: true,
+              category: true,
+              observationDatetime: true,
+              confidentialityLevel: true,
+              observer: { select: { fullName: true } },
+            },
+          },
+          student: {
+            select: {
+              lrn: true,
+              gradeLevel: true,
+              user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          roster: {
+            select: {
+              lrn: true,
+              fullName: true,
+              gradeLevel: true,
+              section: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      // One row per referred filing — a record referred twice still reads as
+      // one case file; the newest referral state wins.
+      const byRecord = new Map<string, (typeof rows)[number]>();
+      for (const r of rows) {
+        if (!byRecord.has(r.anecdotalRecord.id)) byRecord.set(r.anecdotalRecord.id, r);
+      }
+      const mapped = [...byRecord.values()].map((r) => ({
+        id: r.anecdotalRecord.id,
+        referralId: r.id,
+        student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
+        lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+        section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
+        grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+        category: r.anecdotalRecord.category,
+        observer: r.anecdotalRecord.observer?.fullName ?? "—",
+        referredBy: r.referredByUser?.fullName ?? "Adviser",
+        date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
+        confidentiality: r.anecdotalRecord.confidentialityLevel,
+        referralStatus: r.status,
+      }));
+
+      const filtered = mapped.filter((r) => {
+        if (categoryFilter && r.category !== categoryFilter) return false;
+        if (
+          q &&
+          !`${r.student} ${r.lrn} ${r.section} ${r.observer} ${r.referredBy}`
+            .toLowerCase()
+            .includes(q)
+        )
+          return false;
+        return true;
+      });
+
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const records = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+      const countBy = (cat: string) => mapped.filter((r) => r.category === cat).length;
+      res.json({
+        summary: {
+          total: mapped.length,
+          behavioral: countBy("behavioral"),
+          bullying: countBy("bullying"),
+          academic: countBy("academic"),
+          attendance: countBy("attendance"),
+          health: countBy("health"),
+        },
+        records,
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
       });
     } catch (e) {
       next(e);
