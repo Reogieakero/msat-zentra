@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../app/constants/app_breakpoints.dart';
+import '../../app/utils/app_responsive.dart';
 import '../../data/mock/mock_data.dart';
 import '../../data/models/teacher_class_model.dart';
 import '../../providers/sync_provider.dart';
@@ -31,6 +33,8 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    final showDesktopNav = !context.isMobile;
+
     return Scaffold(
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
@@ -102,32 +106,81 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildHomeTab(),
-          _buildClassesTab(),
-          _buildAdmTab(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book_outlined),
-            label: 'Classes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_graph),
-            label: 'ADM',
-          ),
-        ],
-      ),
+      body: showDesktopNav
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: (index) => setState(() => _currentIndex = index),
+                  backgroundColor: AppColors.surfaceDark,
+                  selectedIconTheme: const IconThemeData(color: AppColors.primaryEmerald),
+                  unselectedIconTheme: const IconThemeData(color: AppColors.textMuted),
+                  selectedLabelTextStyle: GoogleFonts.inter(
+                    color: AppColors.primaryEmerald,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  unselectedLabelTextStyle: GoogleFonts.inter(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                  ),
+                  labelType: NavigationRailLabelType.all,
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.grid_view),
+                      label: Text('Home'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.book_outlined),
+                      label: Text('Classes'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.auto_graph),
+                      label: Text('ADM'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1, color: AppColors.borderSubtle),
+                Expanded(
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: [
+                      _buildHomeTab(),
+                      _buildClassesTab(),
+                      _buildAdmTab(),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : IndexedStack(
+              index: _currentIndex,
+              children: [
+                _buildHomeTab(),
+                _buildClassesTab(),
+                _buildAdmTab(),
+              ],
+            ),
+      bottomNavigationBar: showDesktopNav
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.grid_view),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.book_outlined),
+                  label: 'Classes',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.auto_graph),
+                  label: 'ADM',
+                ),
+              ],
+            ),
     );
   }
 

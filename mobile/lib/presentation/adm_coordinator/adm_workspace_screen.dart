@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../app/constants/app_breakpoints.dart';
+import '../../app/utils/app_responsive.dart';
 import '../../data/mock/mock_data.dart';
 import '../../data/models/adm_model.dart';
 import '../shared/widgets/custom_card.dart';
@@ -28,6 +30,8 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showDesktopNav = !context.isMobile;
+
     return Scaffold(
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
@@ -73,32 +77,81 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildOverviewTab(),
-          _buildReferredTab(),
-          _buildEnrolledDirectoryTab(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.pie_chart_outline),
-            label: 'Overview',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_ind_outlined),
-            label: 'Referred',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.view_kanban_outlined),
-            label: 'Enrolled & Directory',
-          ),
-        ],
-      ),
+      body: showDesktopNav
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: (index) => setState(() => _currentIndex = index),
+                  backgroundColor: AppColors.surfaceDark,
+                  selectedIconTheme: const IconThemeData(color: AppColors.primaryEmerald),
+                  unselectedIconTheme: const IconThemeData(color: AppColors.textMuted),
+                  selectedLabelTextStyle: GoogleFonts.inter(
+                    color: AppColors.primaryEmerald,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  unselectedLabelTextStyle: GoogleFonts.inter(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                  ),
+                  labelType: NavigationRailLabelType.all,
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.pie_chart_outline),
+                      label: Text('Overview'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.assignment_ind_outlined),
+                      label: Text('Referred'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.view_kanban_outlined),
+                      label: Text('Directory'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1, color: AppColors.borderSubtle),
+                Expanded(
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: [
+                      _buildOverviewTab(),
+                      _buildReferredTab(),
+                      _buildEnrolledDirectoryTab(),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : IndexedStack(
+              index: _currentIndex,
+              children: [
+                _buildOverviewTab(),
+                _buildReferredTab(),
+                _buildEnrolledDirectoryTab(),
+              ],
+            ),
+      bottomNavigationBar: showDesktopNav
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.pie_chart_outline),
+                  label: 'Overview',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.assignment_ind_outlined),
+                  label: 'Referred',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.view_kanban_outlined),
+                  label: 'Enrolled & Directory',
+                ),
+              ],
+            ),
     );
   }
 
@@ -163,6 +216,7 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
           Text(
             title,
             style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -180,9 +234,12 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                    Flexible(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -195,10 +252,13 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
                 Text(
                   reason,
                   style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
@@ -250,10 +310,14 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            learner.studentName,
-                            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                          Expanded(
+                            child: Text(
+                              learner.studentName,
+                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -272,10 +336,12 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
                       Text(
                         '${learner.sectionName} | LRN: ${learner.lrn}',
                         style: GoogleFonts.robotoMono(color: AppColors.textMuted, fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         'Referred by: ${learner.referredByTeacher ?? "Subject Teacher"}',
                         style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -287,7 +353,7 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
                                   SnackBar(content: Text('Requested parent conference for ${learner.studentName}')),
                                 );
                               },
-                              child: const Text('Parent Meeting'),
+                              child: const Text('Parent Meeting', overflow: TextOverflow.ellipsis),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -298,7 +364,7 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
                                   SnackBar(content: Text('Enrolled ${learner.studentName} into ADM intervention!')),
                                 );
                               },
-                              child: const Text('Approve Enrollment'),
+                              child: const Text('Approve Enrollment', overflow: TextOverflow.ellipsis),
                             ),
                           ),
                         ],

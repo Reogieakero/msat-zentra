@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../app/constants/app_breakpoints.dart';
+import '../../app/utils/app_responsive.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -94,42 +96,135 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 1. Top Brand Header
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-
-                  // 2. Role Cards Grid Selector (Matching web /login)
-                  _buildRoleCardsGrid(),
-                  const SizedBox(height: 20),
-
-                  // 3. Login Form Card (Matching web LoginForm.tsx)
-                  _buildLoginFormCard(),
-                  const SizedBox(height: 20),
-
-                  // 4. Footer Note
-                  Text(
-                    'Need an account? Contact your school administrator for access.',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
+        child: ResponsiveLayout(
+          // Mobile & Tablet centered layout
+          mobile: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.responsiveHorizontalPadding,
+                vertical: 24,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: AppBreakpoints.maxFormWidth),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 24),
+                    _buildRoleCardsGrid(),
+                    const SizedBox(height: 20),
+                    _buildLoginFormCard(),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Need an account? Contact your school administrator for access.',
+                      style: GoogleFonts.inter(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 5. Quick Test Account Presets (Subtle & clean)
-                  _buildQuickPresets(),
-                ],
+                    const SizedBox(height: 16),
+                    _buildQuickPresets(),
+                  ],
+                ),
               ),
             ),
+          ),
+          // Windows / Desktop Split View Layout
+          desktop: Row(
+            children: [
+              // Left side: Desktop Hero Branding Panel
+              Expanded(
+                flex: 5,
+                child: Container(
+                  color: AppColors.surfaceDark,
+                  padding: const EdgeInsets.all(48),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.borderSubtle),
+                            ),
+                            child: const Icon(
+                              Icons.school,
+                              color: AppColors.primaryEmerald,
+                              size: 36,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Zentra',
+                            style: GoogleFonts.inter(
+                              color: AppColors.textPrimary,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'School Management &\nADM Coordination System',
+                        style: GoogleFonts.inter(
+                          color: AppColors.textPrimary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Streamlined attendance tracking, grade matrices, anecdotal loggers, and Alternative Delivery Mode (ADM) interventions built for desktop & mobile.',
+                        style: GoogleFonts.inter(
+                          color: AppColors.textSecondary,
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Right side: Form Panel
+              Expanded(
+                flex: 6,
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: AppBreakpoints.maxFormWidth),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildRoleCardsGrid(),
+                          const SizedBox(height: 20),
+                          _buildLoginFormCard(),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Need an account? Contact your school administrator for access.',
+                            style: GoogleFonts.inter(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildQuickPresets(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

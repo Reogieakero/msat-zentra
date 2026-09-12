@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/constants/app_colors.dart';
+import '../../app/constants/app_breakpoints.dart';
+import '../../app/utils/app_responsive.dart';
 import '../shared/widgets/custom_card.dart';
 import '../shared/zentra_hamburger_drawer.dart';
 import 'widgets/attendance_heatmap.dart';
@@ -20,6 +22,8 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showDesktopNav = !context.isMobile;
+
     return Scaffold(
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
@@ -66,37 +70,91 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildHomeTab(),
-          _buildAttendanceTab(),
-          _buildGradesTab(),
-          _buildAdmTab(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month_outlined),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star_outline),
-            label: 'Grades',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shield_outlined),
-            label: 'ADM',
-          ),
-        ],
-      ),
+      body: showDesktopNav
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: (index) => setState(() => _currentIndex = index),
+                  backgroundColor: AppColors.surfaceDark,
+                  selectedIconTheme: const IconThemeData(color: AppColors.primaryEmerald),
+                  unselectedIconTheme: const IconThemeData(color: AppColors.textMuted),
+                  selectedLabelTextStyle: GoogleFonts.inter(
+                    color: AppColors.primaryEmerald,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  unselectedLabelTextStyle: GoogleFonts.inter(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                  ),
+                  labelType: NavigationRailLabelType.all,
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      label: Text('Home'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.calendar_month_outlined),
+                      label: Text('Attendance'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.star_outline),
+                      label: Text('Grades'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.shield_outlined),
+                      label: Text('ADM'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1, color: AppColors.borderSubtle),
+                Expanded(
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: [
+                      _buildHomeTab(),
+                      _buildAttendanceTab(),
+                      _buildGradesTab(),
+                      _buildAdmTab(),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : IndexedStack(
+              index: _currentIndex,
+              children: [
+                _buildHomeTab(),
+                _buildAttendanceTab(),
+                _buildGradesTab(),
+                _buildAdmTab(),
+              ],
+            ),
+      bottomNavigationBar: showDesktopNav
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  label: 'Attendance',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.star_outline),
+                  label: 'Grades',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.shield_outlined),
+                  label: 'ADM',
+                ),
+              ],
+            ),
     );
   }
 

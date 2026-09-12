@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:device_preview/device_preview.dart';
 import 'app/theme/app_theme.dart';
 import 'data/models/user_model.dart';
 import 'providers/auth_provider.dart';
@@ -18,8 +20,11 @@ Future<void> main() async {
     // Graceful fallback if .env file is missing or unreadable
   }
   runApp(
-    const ProviderScope(
-      child: ZentraMobileApp(),
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (context) => const ProviderScope(
+        child: ZentraMobileApp(),
+      ),
     ),
   );
 }
@@ -32,6 +37,8 @@ class ZentraMobileApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
       title: 'Zentra Mobile',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,

@@ -60,7 +60,10 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
                   child: ElevatedButton.icon(
                     onPressed: () => _showReferStudentModal(context),
                     icon: const Icon(Icons.person_add_alt_1, size: 16),
-                    label: const Text('+ Refer Student for ADM Intervention'),
+                    label: const Text(
+                      '+ Refer Student for ADM Intervention',
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryEmerald,
                       foregroundColor: const Color(0xFF0C1612),
@@ -78,10 +81,14 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'My Responsible ADM Subjects',
-                style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+              Expanded(
+                child: Text(
+                  'My Responsible ADM Subjects',
+                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 6),
               Text(
                 'Google Classroom View',
                 style: GoogleFonts.robotoMono(color: AppColors.primaryEmerald, fontSize: 10, fontWeight: FontWeight.bold),
@@ -136,10 +143,14 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Students Referred to ADM by Me',
-                style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+              Expanded(
+                child: Text(
+                  'Students Referred to ADM by Me',
+                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -159,7 +170,9 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
           ..._referredLearners.map((learner) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: CustomCard(
+                  padding: const EdgeInsets.all(12),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       CircleAvatar(
                         radius: 18,
@@ -174,29 +187,25 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  learner.studentName,
-                                  style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  learner.sectionName,
-                                  style: GoogleFonts.robotoMono(color: AppColors.textMuted, fontSize: 10),
-                                ),
-                              ],
+                            Text(
+                              learner.studentName,
+                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Referred: ${learner.createdAt.month}/${learner.createdAt.day}/${learner.createdAt.year}',
-                              style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 11),
+                              '${learner.sectionName} • Ref: ${learner.createdAt.month}/${learner.createdAt.day}/${learner.createdAt.year}',
+                              style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: (learner.status == AdmStatus.enrolled ? AppColors.primaryEmerald : AppColors.riskModerate).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(4),
@@ -205,7 +214,7 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
                           ),
                         ),
                         child: Text(
-                          learner.status.label.toUpperCase(),
+                          learner.status == AdmStatus.referred ? 'REFERRED' : learner.status.label.toUpperCase(),
                           style: GoogleFonts.robotoMono(
                             color: learner.status == AdmStatus.enrolled ? AppColors.primaryEmerald : AppColors.riskModerate,
                             fontSize: 9,
@@ -257,23 +266,31 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
             title,
             style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
             overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           Text(
             section,
             style: GoogleFonts.robotoMono(color: AppColors.textMuted, fontSize: 11),
             overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           const SizedBox(height: 6),
           Text(
             '$modulesCount • $studentsCount',
             style: GoogleFonts.inter(color: AppColors.primaryEmerald, fontSize: 10, fontWeight: FontWeight.w600),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              Text(
-                'Open Classroom',
-                style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Open Classroom',
+                  style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
               const SizedBox(width: 2),
               const Icon(Icons.chevron_right, size: 12, color: AppColors.textSecondary),
@@ -316,9 +333,12 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Refer Student for ADM Intervention',
-                        style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                      Expanded(
+                        child: Text(
+                          'Refer Student for ADM Intervention',
+                          style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, color: AppColors.textMuted),
@@ -331,12 +351,16 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
                   const SizedBox(height: 4),
                   DropdownButtonFormField<StudentModel>(
                     value: selectedStudent,
+                    isExpanded: true,
                     dropdownColor: AppColors.surfaceElevated,
                     style: GoogleFonts.inter(color: AppColors.textPrimary),
                     items: MockData.students.map((std) {
                       return DropdownMenuItem<StudentModel>(
                         value: std,
-                        child: Text('${std.fullName} (${std.sectionName})'),
+                        child: Text(
+                          '${std.fullName} (${std.sectionName})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -348,12 +372,22 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
                   const SizedBox(height: 4),
                   DropdownButtonFormField<String>(
                     value: selectedReason,
+                    isExpanded: true,
                     dropdownColor: AppColors.surfaceElevated,
                     style: GoogleFonts.inter(color: AppColors.textPrimary),
                     items: const [
-                      DropdownMenuItem(value: 'High Risk: 4 consecutive absences', child: Text('High Risk: Consecutive Absences')),
-                      DropdownMenuItem(value: 'Academic Risk: Transmuted score < 75', child: Text('Academic Risk: Transmuted Score < 75')),
-                      DropdownMenuItem(value: 'Working Student / Socio-Economic', child: Text('Working Student / Socio-Economic')),
+                      DropdownMenuItem(
+                        value: 'High Risk: 4 consecutive absences',
+                        child: Text('High Risk: Consecutive Absences', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Academic Risk: Transmuted score < 75',
+                        child: Text('Academic Risk: Transmuted Score < 75', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Working Student / Socio-Economic',
+                        child: Text('Working Student / Socio-Economic', overflow: TextOverflow.ellipsis),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) setModalState(() => selectedReason = val);
