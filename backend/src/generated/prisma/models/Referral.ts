@@ -30,6 +30,7 @@ export type ReferralMinAggregateOutputType = {
   referredToRole: $Enums.ReferralTarget | null
   referredBy: string | null
   reason: string | null
+  consultReviewer: string | null
   status: $Enums.ReferralStatus | null
   notes: string | null
   escalationReason: string | null
@@ -51,6 +52,7 @@ export type ReferralMaxAggregateOutputType = {
   referredToRole: $Enums.ReferralTarget | null
   referredBy: string | null
   reason: string | null
+  consultReviewer: string | null
   status: $Enums.ReferralStatus | null
   notes: string | null
   escalationReason: string | null
@@ -72,6 +74,7 @@ export type ReferralCountAggregateOutputType = {
   referredToRole: number
   referredBy: number
   reason: number
+  consultReviewer: number
   status: number
   notes: number
   escalationReason: number
@@ -95,6 +98,7 @@ export type ReferralMinAggregateInputType = {
   referredToRole?: true
   referredBy?: true
   reason?: true
+  consultReviewer?: true
   status?: true
   notes?: true
   escalationReason?: true
@@ -116,6 +120,7 @@ export type ReferralMaxAggregateInputType = {
   referredToRole?: true
   referredBy?: true
   reason?: true
+  consultReviewer?: true
   status?: true
   notes?: true
   escalationReason?: true
@@ -137,6 +142,7 @@ export type ReferralCountAggregateInputType = {
   referredToRole?: true
   referredBy?: true
   reason?: true
+  consultReviewer?: true
   status?: true
   notes?: true
   escalationReason?: true
@@ -231,6 +237,7 @@ export type ReferralGroupByOutputType = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer: string | null
   status: $Enums.ReferralStatus
   notes: string | null
   escalationReason: string | null
@@ -273,6 +280,7 @@ export type ReferralWhereInput = {
   referredToRole?: Prisma.EnumReferralTargetFilter<"Referral"> | $Enums.ReferralTarget
   referredBy?: Prisma.StringFilter<"Referral"> | string
   reason?: Prisma.StringFilter<"Referral"> | string
+  consultReviewer?: Prisma.StringNullableFilter<"Referral"> | string | null
   status?: Prisma.EnumReferralStatusFilter<"Referral"> | $Enums.ReferralStatus
   notes?: Prisma.StringNullableFilter<"Referral"> | string | null
   escalationReason?: Prisma.StringNullableFilter<"Referral"> | string | null
@@ -303,6 +311,7 @@ export type ReferralOrderByWithRelationInput = {
   referredToRole?: Prisma.SortOrder
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  consultReviewer?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   escalationReason?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -336,6 +345,7 @@ export type ReferralWhereUniqueInput = Prisma.AtLeast<{
   referredToRole?: Prisma.EnumReferralTargetFilter<"Referral"> | $Enums.ReferralTarget
   referredBy?: Prisma.StringFilter<"Referral"> | string
   reason?: Prisma.StringFilter<"Referral"> | string
+  consultReviewer?: Prisma.StringNullableFilter<"Referral"> | string | null
   status?: Prisma.EnumReferralStatusFilter<"Referral"> | $Enums.ReferralStatus
   notes?: Prisma.StringNullableFilter<"Referral"> | string | null
   escalationReason?: Prisma.StringNullableFilter<"Referral"> | string | null
@@ -366,6 +376,7 @@ export type ReferralOrderByWithAggregationInput = {
   referredToRole?: Prisma.SortOrder
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  consultReviewer?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   escalationReason?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -393,6 +404,7 @@ export type ReferralScalarWhereWithAggregatesInput = {
   referredToRole?: Prisma.EnumReferralTargetWithAggregatesFilter<"Referral"> | $Enums.ReferralTarget
   referredBy?: Prisma.StringWithAggregatesFilter<"Referral"> | string
   reason?: Prisma.StringWithAggregatesFilter<"Referral"> | string
+  consultReviewer?: Prisma.StringNullableWithAggregatesFilter<"Referral"> | string | null
   status?: Prisma.EnumReferralStatusWithAggregatesFilter<"Referral"> | $Enums.ReferralStatus
   notes?: Prisma.StringNullableWithAggregatesFilter<"Referral"> | string | null
   escalationReason?: Prisma.StringNullableWithAggregatesFilter<"Referral"> | string | null
@@ -412,6 +424,7 @@ export type ReferralCreateInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -439,6 +452,7 @@ export type ReferralUncheckedCreateInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -462,6 +476,7 @@ export type ReferralUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -489,6 +504,7 @@ export type ReferralUncheckedUpdateInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -514,6 +530,7 @@ export type ReferralCreateManyInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -533,6 +550,7 @@ export type ReferralUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -551,6 +569,7 @@ export type ReferralUncheckedUpdateManyInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -582,6 +601,7 @@ export type ReferralCountOrderByAggregateInput = {
   referredToRole?: Prisma.SortOrder
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  consultReviewer?: Prisma.SortOrder
   status?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   escalationReason?: Prisma.SortOrder
@@ -603,6 +623,7 @@ export type ReferralMaxOrderByAggregateInput = {
   referredToRole?: Prisma.SortOrder
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  consultReviewer?: Prisma.SortOrder
   status?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   escalationReason?: Prisma.SortOrder
@@ -624,6 +645,7 @@ export type ReferralMinOrderByAggregateInput = {
   referredToRole?: Prisma.SortOrder
   referredBy?: Prisma.SortOrder
   reason?: Prisma.SortOrder
+  consultReviewer?: Prisma.SortOrder
   status?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   escalationReason?: Prisma.SortOrder
@@ -933,6 +955,7 @@ export type ReferralCreateWithoutReferredByUserInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -958,6 +981,7 @@ export type ReferralUncheckedCreateWithoutReferredByUserInput = {
   anecdotalRecordId: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1012,6 +1036,7 @@ export type ReferralScalarWhereInput = {
   referredToRole?: Prisma.EnumReferralTargetFilter<"Referral"> | $Enums.ReferralTarget
   referredBy?: Prisma.StringFilter<"Referral"> | string
   reason?: Prisma.StringFilter<"Referral"> | string
+  consultReviewer?: Prisma.StringNullableFilter<"Referral"> | string | null
   status?: Prisma.EnumReferralStatusFilter<"Referral"> | $Enums.ReferralStatus
   notes?: Prisma.StringNullableFilter<"Referral"> | string | null
   escalationReason?: Prisma.StringNullableFilter<"Referral"> | string | null
@@ -1031,6 +1056,7 @@ export type ReferralCreateWithoutStudentInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1057,6 +1083,7 @@ export type ReferralUncheckedCreateWithoutStudentInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1105,6 +1132,7 @@ export type ReferralCreateWithoutTermInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1131,6 +1159,7 @@ export type ReferralUncheckedCreateWithoutTermInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1179,6 +1208,7 @@ export type ReferralCreateWithoutRosterInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1205,6 +1235,7 @@ export type ReferralUncheckedCreateWithoutRosterInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1253,6 +1284,7 @@ export type ReferralCreateWithoutAnecdotalRecordInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1278,6 +1310,7 @@ export type ReferralUncheckedCreateWithoutAnecdotalRecordInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1327,6 +1360,7 @@ export type ReferralCreateWithoutCounselingSessionsInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1353,6 +1387,7 @@ export type ReferralUncheckedCreateWithoutCounselingSessionsInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1391,6 +1426,7 @@ export type ReferralUpdateWithoutCounselingSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1417,6 +1453,7 @@ export type ReferralUncheckedUpdateWithoutCounselingSessionsInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1439,6 +1476,7 @@ export type ReferralCreateWithoutHealthRecordsInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1465,6 +1503,7 @@ export type ReferralUncheckedCreateWithoutHealthRecordsInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1503,6 +1542,7 @@ export type ReferralUpdateWithoutHealthRecordsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1529,6 +1569,7 @@ export type ReferralUncheckedUpdateWithoutHealthRecordsInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1551,6 +1592,7 @@ export type ReferralCreateWithoutHomeVisitationsInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1577,6 +1619,7 @@ export type ReferralUncheckedCreateWithoutHomeVisitationsInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1615,6 +1658,7 @@ export type ReferralUpdateWithoutHomeVisitationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1641,6 +1685,7 @@ export type ReferralUncheckedUpdateWithoutHomeVisitationsInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1663,6 +1708,7 @@ export type ReferralCreateWithoutAdmProfilesInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1689,6 +1735,7 @@ export type ReferralUncheckedCreateWithoutAdmProfilesInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1727,6 +1774,7 @@ export type ReferralUpdateWithoutAdmProfilesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1753,6 +1801,7 @@ export type ReferralUncheckedUpdateWithoutAdmProfilesInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1776,6 +1825,7 @@ export type ReferralCreateManyReferredByUserInput = {
   anecdotalRecordId: string
   referredToRole: $Enums.ReferralTarget
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1795,6 +1845,7 @@ export type ReferralUpdateWithoutReferredByUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1820,6 +1871,7 @@ export type ReferralUncheckedUpdateWithoutReferredByUserInput = {
   anecdotalRecordId?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1844,6 +1896,7 @@ export type ReferralUncheckedUpdateManyWithoutReferredByUserInput = {
   anecdotalRecordId?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1865,6 +1918,7 @@ export type ReferralCreateManyStudentInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1883,6 +1937,7 @@ export type ReferralUpdateWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1909,6 +1964,7 @@ export type ReferralUncheckedUpdateWithoutStudentInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1933,6 +1989,7 @@ export type ReferralUncheckedUpdateManyWithoutStudentInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1953,6 +2010,7 @@ export type ReferralCreateManyTermInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -1971,6 +2029,7 @@ export type ReferralUpdateWithoutTermInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1997,6 +2056,7 @@ export type ReferralUncheckedUpdateWithoutTermInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2021,6 +2081,7 @@ export type ReferralUncheckedUpdateManyWithoutTermInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2041,6 +2102,7 @@ export type ReferralCreateManyRosterInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -2059,6 +2121,7 @@ export type ReferralUpdateWithoutRosterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2085,6 +2148,7 @@ export type ReferralUncheckedUpdateWithoutRosterInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2109,6 +2173,7 @@ export type ReferralUncheckedUpdateManyWithoutRosterInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2128,6 +2193,7 @@ export type ReferralCreateManyAnecdotalRecordInput = {
   referredToRole: $Enums.ReferralTarget
   referredBy: string
   reason: string
+  consultReviewer?: string | null
   status?: $Enums.ReferralStatus
   notes?: string | null
   escalationReason?: string | null
@@ -2147,6 +2213,7 @@ export type ReferralUpdateWithoutAnecdotalRecordInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2172,6 +2239,7 @@ export type ReferralUncheckedUpdateWithoutAnecdotalRecordInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2196,6 +2264,7 @@ export type ReferralUncheckedUpdateManyWithoutAnecdotalRecordInput = {
   referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
   referredBy?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2275,6 +2344,7 @@ export type ReferralSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   referredToRole?: boolean
   referredBy?: boolean
   reason?: boolean
+  consultReviewer?: boolean
   status?: boolean
   notes?: boolean
   escalationReason?: boolean
@@ -2306,6 +2376,7 @@ export type ReferralSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   referredToRole?: boolean
   referredBy?: boolean
   reason?: boolean
+  consultReviewer?: boolean
   status?: boolean
   notes?: boolean
   escalationReason?: boolean
@@ -2332,6 +2403,7 @@ export type ReferralSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   referredToRole?: boolean
   referredBy?: boolean
   reason?: boolean
+  consultReviewer?: boolean
   status?: boolean
   notes?: boolean
   escalationReason?: boolean
@@ -2358,6 +2430,7 @@ export type ReferralSelectScalar = {
   referredToRole?: boolean
   referredBy?: boolean
   reason?: boolean
+  consultReviewer?: boolean
   status?: boolean
   notes?: boolean
   escalationReason?: boolean
@@ -2373,7 +2446,7 @@ export type ReferralSelectScalar = {
   termId?: boolean
 }
 
-export type ReferralOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anecdotalRecordId" | "referredToRole" | "referredBy" | "reason" | "status" | "notes" | "escalationReason" | "followUpDate" | "escalatedTo" | "priority" | "intakeNotes" | "acceptedAt" | "resolutionSummary" | "resolvedAt" | "studentId" | "rosterId" | "termId", ExtArgs["result"]["referral"]>
+export type ReferralOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anecdotalRecordId" | "referredToRole" | "referredBy" | "reason" | "consultReviewer" | "status" | "notes" | "escalationReason" | "followUpDate" | "escalatedTo" | "priority" | "intakeNotes" | "acceptedAt" | "resolutionSummary" | "resolvedAt" | "studentId" | "rosterId" | "termId", ExtArgs["result"]["referral"]>
 export type ReferralInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   anecdotalRecord?: boolean | Prisma.AnecdotalRecordDefaultArgs<ExtArgs>
   referredByUser?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2420,6 +2493,7 @@ export type $ReferralPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     referredToRole: $Enums.ReferralTarget
     referredBy: string
     reason: string
+    consultReviewer: string | null
     status: $Enums.ReferralStatus
     notes: string | null
     escalationReason: string | null
@@ -2870,6 +2944,7 @@ export interface ReferralFieldRefs {
   readonly referredToRole: Prisma.FieldRef<"Referral", 'ReferralTarget'>
   readonly referredBy: Prisma.FieldRef<"Referral", 'String'>
   readonly reason: Prisma.FieldRef<"Referral", 'String'>
+  readonly consultReviewer: Prisma.FieldRef<"Referral", 'String'>
   readonly status: Prisma.FieldRef<"Referral", 'ReferralStatus'>
   readonly notes: Prisma.FieldRef<"Referral", 'String'>
   readonly escalationReason: Prisma.FieldRef<"Referral", 'String'>

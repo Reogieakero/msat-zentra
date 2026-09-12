@@ -109,6 +109,10 @@ router.post(
 const referSchema = z.object({
   referredToRole: z.enum(["nurse", "guidance_counselor", "adm_coordinator", "principal"]),
   reason: z.string().min(1),
+  // ADM consultation reviewer picked by the teacher ("Who should receive
+  // this case?"). Only meaningful — and only accepted — on ADM-track
+  // referrals; only the selected reviewer may act at consultation.
+  consultReviewer: z.enum(["nurse", "guidance_counselor", "lrpc"]).optional(),
 }).strict();
 router.post(
   "/:id/refer",
@@ -135,16 +139,19 @@ router.post(
       if (!termId) {
         throw new AppError(409, "NO_ACTIVE_TERM", "No active term");
       }
+      if (req.body.consultReviewer && req.body.referredToRole !== "adm_coordinator") {
+        throw new AppError(400, "INVALID_ACTION", "A consultation reviewer can only be picked for ADM cases");
+      }
       // The referral carries whichever student identity the record holds —
       // registered profile or roster enlistment (no account needed to file).
       const referral = await prisma.referral.create({
-        data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, rosterId: record.rosterId, termId },
+        data: { anecdotalRecordId: record.id, referredToRole: req.body.referredToRole, referredBy: req.user!.id, reason: req.body.reason, studentId: record.studentId, rosterId: record.rosterId, termId, consultReviewer: req.body.consultReviewer ?? null },
       });
       // A new referral must surface on the ADM board + teacher cases +
       // guidance overview at once (otherwise the guidance page serves a stale
       // cached empty response right after an adviser refers).
-      await invalidateTags(["adm", "teacher", "guidance", "overview"]);
-      await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}` });
+      await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals"]);
+      await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}${req.body.consultReviewer ? ` (consult reviewer: ${req.body.consultReviewer})` : ""}` });
       res.status(201).json(referral);
     } catch (e) { next(e); }
   }
@@ -753,7 +760,10 @@ const GRADE_LABEL_OC: Record<string, string> = {
 // always qualifies; the section adviser qualifies as the required signatory
 // ("ADVISER'S SIGNATURE OVER PRINTED NAME"); the principal owns every case
 // file. Guidance qualifies ONLY for cases an adviser referred to guidance —
-// unreferred filings stay invisible to guidance even by direct id. Anyone
+// unreferred filings stay invisible to guidance even by direct id — PLUS
+// ADM-purpose referrals sitting at the guidance-owned consultation stage
+// (referredToRole = "adm_coordinator" with no learner profile yet), which the
+// counselor must review before the case moves on. Anyone
 // else (e.g. a non-observing subject teacher) gets 403 — mirroring the
 // metadata-only rule on the advisory anecdotal list.
 async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string): Promise<{
@@ -799,7 +809,16 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
   }
   if (isGuidance && !isObserver && !isSectionAdviser) {
     const referral = await prisma.referral.findFirst({
-      where: { anecdotalRecordId: recordId, referredToRole: "guidance_counselor" },
+      where: {
+        anecdotalRecordId: recordId,
+        OR: [
+          { referredToRole: "guidance_counselor" },
+          {
+            referredToRole: "adm_coordinator",
+            admProfiles: { none: {} },
+          },
+        ],
+      },
       select: { id: true },
     });
     if (!referral) {

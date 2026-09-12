@@ -19,6 +19,9 @@ interface ReferralData {
   targetRole?: string;
   referredAt?: string;
   resolvedAt?: string | null;
+  // Teacher-picked ADM consultation reviewer (nurse | guidance_counselor |
+  // lrpc) — only this role acts at consultation. Null on legacy rows.
+  admReceiver?: string | null;
   hasParentMeeting?: boolean;
   meetingAttended?: boolean | null;
   hasHomeVisit?: boolean;
@@ -53,6 +56,15 @@ const TARGET_ROLE_LABELS: Record<string, string> = {
   guidance_counselor: "Guidance Counselor",
   adm_coordinator: "ADM Coordinator",
   principal: "Principal",
+};
+
+/* Consultation-reviewer labels — the teacher-picked receiver for ADM cases.
+   Only the selected role acts at consultation; the rest see it read-only. */
+const REVIEWER_LABELS: Record<string, string> = {
+  nurse: "School Nurse",
+  guidance_counselor: "Guidance Counselor",
+  lrpc: "LRPC",
+  adm_coordinator: "ADM Coordinator",
 };
 
 function formatDate(value?: string | null): string {
@@ -179,6 +191,10 @@ function buildStages(referral: ReferralData): Stage[] {
   if (referral.track === "adm") {
     const stageKey = referral.admStage ?? "consultation";
     const currentIdx = Math.max(0, ADM_ORDER.indexOf(stageKey));
+    // Truthful routing: the picked consultation reviewer owns this step —
+    // not every reviewer. Falls back to the target role on legacy rows.
+    const reviewerKey = referral.admReceiver ?? targetRole;
+    const reviewerLabel = REVIEWER_LABELS[reviewerKey ?? ""] ?? targetLabel;
     const meetingDone = !!referral.hasParentMeeting;
     const homeDone = !!referral.hasHomeVisit;
     const certified = currentIdx >= ADM_ORDER.indexOf("certification");
@@ -199,7 +215,7 @@ function buildStages(referral: ReferralData): Stage[] {
 
     const statusText: Record<string, string> = {
       anecdotal: `Observed ${referral.observationDate ?? "—"}`,
-      consultation: `${targetLabel} · ${formatDate(referral.referredAt)}`,
+      consultation: `${reviewerLabel} · ${formatDate(referral.referredAt)}`,
       meeting_parents: meetingDone
         ? referral.meetingAttended
           ? "Attended"
@@ -243,11 +259,14 @@ function buildStages(referral: ReferralData): Stage[] {
         key,
         label: meta.label,
         // Owner + status on the card; generic process description on hover.
-        sub: `${meta.owner} · ${status}`,
+        sub: `${key === "consultation" ? reviewerLabel : meta.owner} · ${status}`,
         state,
         optional: key === "home_visitation",
-        owner: meta.owner,
-        description: meta.description,
+        owner: key === "consultation" ? reviewerLabel : meta.owner,
+        description:
+          key === "consultation"
+            ? `Routed to ${reviewerLabel} for review — only this role acts at consultation.`
+            : meta.description,
         principalAction: meta.principalAction,
         Icon: ICONS[key] ?? Send,
       };

@@ -708,7 +708,9 @@ router.get(
           anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,
           category: r.anecdotalRecord.category,
           track: isAdm ? "adm" : "general",
-          admReceiver: isAdm ? "adm_coordinator" : null,
+          // Truthful routing: the teacher-picked consultation reviewer, or
+          // the coordinator for legacy rows without a stored pick.
+          admReceiver: isAdm ? (r.consultReviewer ?? "adm_coordinator") : null,
           hasParentMeeting,
           meetingAttended,
           hasHomeVisit,

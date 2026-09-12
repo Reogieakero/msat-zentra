@@ -1,0 +1,196 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.875rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.legend {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0 0.375rem;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+  align-items: end;
+}
+
+/* Label sits above its box with breathing room, and every box in the row
+   bottom-aligns — including the calendar picker button. */
+.grid2 > div,
+.grid3 > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+/* Picker buttons keep a gap below their Date labels (overrides the
+   baseline reset so label and box never touch). */
+.actionRow > div > button,
+.actionRow3 > div > button,
+.callRow > div > button,
+.grid2 > div > button,
+.grid3 > div > button {
+  margin-top: 0.375rem;
+}
+
+@media (max-width: 560px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 0.625rem;
+  align-items: end;
+}
+
+@media (max-width: 560px) {
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.mt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr 10rem auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.actionRow3 {
+  display: grid;
+  grid-template-columns: 10rem 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+/* Guidance call table — mirrors the template: check + call + date +
+   subject/time + remarks per row, bottom-aligned. */
+.tableTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.callHead,
+.callRow {
+  display: grid;
+  grid-template-columns: auto 4.5rem 10rem 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.callHead {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.callLabel {
+  font-size: 0.875rem;
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* Checkbox + call label center on the row instead of hugging the bottom. */
+.callRow > button:first-child {
+  align-self: center;
+}
+
+@media (max-width: 720px) {
+  .callHead {
+    display: none;
+  }
+  .callRow {
+    grid-template-columns: auto 1fr;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.625rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .actionRow,
+  .actionRow3 {
+    grid-template-columns: 1fr;
+  }
+  .actionNum {
+    display: none;
+  }
+}
+
+.actionNum {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.select {
+  height: 2rem;
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--input);
+  background-color: transparent;
+  padding: 0 0.625rem;
+  font-size: 0.875rem;
+}
+
+/* Auto-filled identity fields — readable but not editable. */
+.readonly {
+  background-color: color-mix(in oklch, var(--muted) 45%, transparent);
+  color: var(--foreground);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  animation: adm-spin 1s linear infinite;
+}
+
+@keyframes adm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

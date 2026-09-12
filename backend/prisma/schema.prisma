@@ -644,6 +644,11 @@ model Referral {
   referredToRole    ReferralTarget
   referredBy        String
   reason            String
+  // ADM consultation reviewer picked by the teacher ("Who should receive
+  // this case?" — nurse | guidance_counselor | lrpc). Only the selected
+  // reviewer may act on the case at the consultation stage; everyone else
+  // sees it read-only. Null = legacy / non-ADM routing.
+  consultReviewer   String?
   status            ReferralStatus  @default(pending)
   notes             String?
   escalationReason  String?

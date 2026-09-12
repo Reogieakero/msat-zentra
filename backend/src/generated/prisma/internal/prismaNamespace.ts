@@ -3586,6 +3586,7 @@ export const ReferralScalarFieldEnum = {
   referredToRole: 'referredToRole',
   referredBy: 'referredBy',
   reason: 'reason',
+  consultReviewer: 'consultReviewer',
   status: 'status',
   notes: 'notes',
   escalationReason: 'escalationReason',

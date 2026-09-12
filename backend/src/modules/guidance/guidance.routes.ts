@@ -1,8 +1,13 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { cache } from "../../lib/cache.js";
+import { validate } from "../../middleware/validate.js";
+import { writeAudit } from "../../lib/audit.js";
+import { fanoutNotification } from "../../lib/notify.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
+import { AppError } from "../../lib/errors.js";
 import {
   computeRiskFactors,
   isAtRisk,
@@ -1082,6 +1087,432 @@ router.get(
         total,
         totalPages,
       });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Guidance Counselor ADM hand-offs: every ADM-track case the counselor needs
+// awareness of — tracked learner profiles (any stage) plus ADM-track
+// referrals the coordinator hasn't built a profile for yet (consultation).
+// Status-only rows: identity, stage, eligibility, parent-meeting flag and
+// home-visit flag. No certification details, minutes, or visit notes ever
+// leave this endpoint.
+//
+// Plus the counselor's own actionable consultation queue: referrals advisers
+// routed to guidance_counselor that are still open. This is where the
+// counselor takes action (counsel, then hand off via POST
+// /api/referrals/:id/adm) — once handed off, the case leaves this queue and
+// appears in the tracker below as referredToRole = "adm_coordinator".
+router.get(
+  "/adm",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  cache({ tags: ["guidance", "adm"] }),
+  async (req, res, next) => {
+    try {
+      const validStages = new Set(ADM_STAGE_FLOW.map((s) => s.stage));
+      const stageFilter =
+        typeof req.query.stage === "string" &&
+        validStages.has(req.query.stage as AdmStage)
+          ? (req.query.stage as string)
+          : "";
+      const q =
+        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+
+      const [profiles, earlyReferrals, consultationReferrals, consultAudits, counselor] =
+        await Promise.all([
+        prisma.admLearnerProfile.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 1000,
+          select: {
+            id: true,
+            stage: true,
+            eligibilityStatus: true,
+            createdAt: true,
+            approvedBy: true,
+            approvedAt: true,
+            preparedByUser: { select: { fullName: true } },
+            parentMeetings: { select: { attended: true } },
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            },
+            referral: {
+              select: {
+                id: true,
+                status: true,
+                reason: true,
+                referredByUser: { select: { fullName: true } },
+                anecdotalRecord: { select: { observationDatetime: true } },
+                homeVisitations: { select: { id: true } },
+              },
+            },
+          },
+        }),
+        prisma.referral.findMany({
+          where: {
+            referredToRole: "adm_coordinator",
+            admProfiles: { none: {} },
+            // Receiver scoping: only cases picked for guidance (plus legacy
+            // rows with no stored pick) reach this queue — nurse/LRPC-picked
+            // cases never appear here, even read-only.
+            OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+          },
+          orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
+          take: 1000,
+          select: {
+            id: true,
+            status: true,
+            reason: true,
+            consultReviewer: true,
+            referredByUser: { select: { fullName: true } },
+            homeVisitations: { select: { id: true } },
+            anecdotalRecord: {
+              select: {
+                id: true,
+                category: true,
+                observationDatetime: true,
+                descriptionOfIncident: true,
+                descriptionOfLocation: true,
+                notesRecommendationsActions: true,
+              },
+            },
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            },
+            roster: {
+              select: {
+                lrn: true,
+                fullName: true,
+                gradeLevel: true,
+                section: { select: { name: true } },
+              },
+            },
+          },
+        }),
+        // Actionable consultation queue: my open guidance referrals —
+        // counsel here, then hand off to the ADM coordinator.
+        prisma.referral.findMany({
+          where: {
+            referredToRole: "guidance_counselor",
+            status: { in: ["pending", "in_progress"] },
+          },
+          orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
+          take: 100,
+          select: {
+            id: true,
+            status: true,
+            reason: true,
+            priority: true,
+            referredByUser: { select: { fullName: true } },
+            anecdotalRecord: {
+              select: { category: true, observationDatetime: true },
+            },
+            counselingSessions: { select: { id: true, status: true } },
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            },
+            roster: {
+              select: {
+                lrn: true,
+                fullName: true,
+                gradeLevel: true,
+                section: { select: { name: true } },
+              },
+            },
+          },
+        }),
+        // Which early ADM referrals guidance already reviewed — the review
+        // writes a marker-prefixed audit reason, so no schema change is
+        // needed to tell "waiting on your review" from "with coordinator".
+        prisma.auditLog.findMany({
+          where: {
+            sourceTable: "referrals",
+            actionType: { in: ["referral_status_change", "referral_reassigned", "referral_dismissed"] },
+            reason: { startsWith: "ADM consultation " },
+          },
+          select: { sourceId: true, reason: true },
+        }),
+        // Counselor name for auto-filling the referral form signature line.
+        prisma.user.findUnique({
+          where: { id: req.user!.id },
+          select: { fullName: true },
+        }),
+      ]);
+
+      const reviewedIds = new Set(
+        consultAudits
+          .filter((a) => a.reason?.startsWith("ADM consultation "))
+          .map((a) => a.sourceId)
+      );
+
+      const profileRows = profiles.map((p) => {
+        const meetings = p.parentMeetings ?? [];
+        return {
+          id: p.id,
+          student: p.student.user.fullName,
+          lrn: p.student.lrn,
+          section: p.student.section?.name ?? "—",
+          grade: GRADE_LABELS[p.student.gradeLevel] ?? p.student.gradeLevel,
+          stage: p.stage,
+          stageLabel: ADM_LABEL.get(p.stage as AdmStage) ?? p.stage,
+          eligibility: p.eligibilityStatus,
+          referralId: p.referral.id,
+          referralStatus: p.referral.status,
+          reason: p.referral.reason,
+          referredBy: p.referral.referredByUser?.fullName ?? "Adviser",
+          preparedBy: p.preparedByUser?.fullName ?? "—",
+          date:
+            p.referral.anecdotalRecord?.observationDatetime
+              .toISOString()
+              .slice(0, 10) ??
+            p.createdAt.toISOString().slice(0, 10),
+          meetingAttended:
+            meetings.length > 0 ? meetings.some((m) => m.attended) : null,
+          hasHomeVisit: p.referral.homeVisitations.length > 0,
+          approved: !!p.approvedBy,
+          approvedAt: p.approvedAt
+            ? p.approvedAt.toISOString().slice(0, 10)
+            : null,
+        };
+      });
+
+      const earlyRows = earlyReferrals.map((r) => ({
+        id: `referral:${r.id}`,
+        student:
+          r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
+        lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+        section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
+        grade:
+          GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ??
+          "",
+        stage: "consultation",
+        stageLabel: ADM_LABEL.get("consultation" as AdmStage) ?? "Consultation and referral",
+        eligibility: "pending",
+        referralId: r.id,
+        referralStatus: r.status,
+        reason: r.reason,
+        referredBy: r.referredByUser?.fullName ?? "Adviser",
+        preparedBy: r.referredByUser?.fullName ?? "Adviser",
+        date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
+        meetingAttended: null as boolean | null,
+        hasHomeVisit: r.homeVisitations.length > 0,
+        approved: false,
+        approvedAt: null as string | null,
+        // Consultation review context: the linked anecdotal id so the
+        // counselor can open the official report, plus whether this case was
+        // already decided out of the consultation stage.
+        anecdotalId: r.anecdotalRecord.id,
+        consultReviewer: r.consultReviewer ?? "guidance_counselor",
+        anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,
+        location: r.anecdotalRecord.descriptionOfLocation ?? "",
+        recommendations: r.anecdotalRecord.notesRecommendationsActions ?? "",
+        reviewed: reviewedIds.has(r.id),
+      }));
+
+      const merged = [...profileRows, ...earlyRows].sort((a, b) =>
+        b.date.localeCompare(a.date)
+      );
+
+      const countBy = (stage: string) =>
+        merged.filter((c) => c.stage === stage).length;
+      const summary = {
+        total: merged.length,
+        consultation: countBy("consultation"),
+        meetingParents: countBy("meeting_parents"),
+        homeVisitation: countBy("home_visitation"),
+        certification: countBy("certification"),
+        principalApproval: countBy("principal_approval"),
+        needsHomeVisit: merged.filter(
+          (c) => c.meetingAttended === false && !c.hasHomeVisit
+        ).length,
+        awaitingReview: earlyRows.filter((c) => !c.reviewed).length,
+      };
+
+      const filtered = merged.filter((c) => {
+        if (stageFilter && c.stage !== stageFilter) return false;
+        if (
+          q &&
+          !`${c.student} ${c.lrn} ${c.section} ${c.reason} ${c.referredBy}`
+            .toLowerCase()
+            .includes(q)
+        )
+          return false;
+        return true;
+      });
+
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const cases = filtered.slice(
+        (safePage - 1) * pageSize,
+        safePage * pageSize
+      );
+
+      const consultationQueue = consultationReferrals.map((r) => ({
+        id: r.id,
+        student:
+          r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
+        lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
+        section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
+        grade:
+          GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ??
+          "",
+        category: r.anecdotalRecord.category,
+        reason: r.reason,
+        status: r.status,
+        priority: r.priority ?? "",
+        referredBy: r.referredByUser?.fullName ?? "Adviser",
+        date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
+        completedSessions: r.counselingSessions.filter(
+          (s) => s.status === "completed"
+        ).length,
+        totalSessions: r.counselingSessions.length,
+      }));
+
+      res.json({
+        summary: {
+          ...summary,
+          consultationAction: consultationQueue.length,
+        },
+        counselorName: counselor?.fullName ?? "Guidance Counselor",
+        consultationQueue,
+        // Top-section queue: latest ADM cases referred to guidance that still
+        // need the counselor's anecdotal review (unfiltered by search).
+        reviewQueue: earlyRows.filter((c) => !c.reviewed).slice(0, 3),
+        cases,
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Guidance consultation review on an ADM-purpose referral sitting at the
+// consultation stage with no learner profile yet. Per the ADM pipeline the
+// consultation stage is owned by guidance — the counselor opens the official
+// anecdotal report and decides the next step:
+//   - endorse ("Create referral"): consultation done, case stays with the ADM
+//     coordinator for the parent meeting (status → in_progress).
+//   - reject: the filing doesn't warrant ADM, case is closed without further
+//     action (status → dismissed).
+const consultReviewSchema = z.object({
+  recommendation: z.string().trim().min(1).max(500),
+  outcome: z.enum(["endorse", "reject"]),
+});
+
+router.post(
+  "/adm/referrals/:id/review",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  validate("body", consultReviewSchema),
+  async (req, res, next) => {
+    try {
+      const referral = await prisma.referral.findUnique({
+        where: { id: String(req.params.id) },
+      });
+      if (
+        !referral ||
+        referral.referredToRole !== "adm_coordinator" ||
+        (await prisma.admLearnerProfile.count({
+          where: { referralId: referral.id },
+        })) > 0
+      ) {
+        throw new AppError(
+          404,
+          "NOT_ADM_CONSULTATION",
+          "Only an ADM referral awaiting consultation review can be reviewed here"
+        );
+      }
+      // Receiver enforcement: a case picked for the nurse or LRPC cannot be
+      // decided from the guidance queue, even if its id is known.
+      if (
+        referral.consultReviewer &&
+        referral.consultReviewer !== "guidance_counselor"
+      ) {
+        throw new AppError(
+          403,
+          "NOT_YOUR_QUEUE",
+          "This case was routed to another consultation reviewer"
+        );
+      }
+      const { recommendation, outcome } = req.body as {
+        recommendation: string;
+        outcome: "endorse" | "reject";
+      };
+      const note = `[ADM consult] ${recommendation.trim()}`;
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data:
+          outcome === "endorse"
+            ? {
+                status: "in_progress",
+                notes: referral.notes ? `${referral.notes}\n${note}` : note,
+              }
+            : {
+                status: "dismissed",
+                notes: referral.notes ? `${referral.notes}\n${note}` : note,
+              },
+      });
+      if (outcome === "endorse") {
+        await writeAudit({
+          userId: req.user!.id,
+          actionType: "referral_status_change",
+          sourceTable: "referrals",
+          sourceId: referral.id,
+          reason: `ADM consultation endorsed: ${recommendation.trim()}`,
+          oldValue: { status: referral.status },
+          newValue: { status: "in_progress" },
+        });
+        await fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: "ADM consultation endorsed — ready for the parent meeting.",
+          sourceId: referral.id,
+        });
+      } else {
+        await writeAudit({
+          userId: req.user!.id,
+          actionType: "referral_dismissed",
+          sourceTable: "referrals",
+          sourceId: referral.id,
+          reason: `ADM consultation rejected: ${recommendation.trim()}`,
+          oldValue: { status: referral.status },
+          newValue: { status: "dismissed" },
+        });
+      }
+      await invalidateTags([
+        "guidance",
+        "overview",
+        "alerts",
+        "referrals",
+        "adm",
+        "teacher",
+      ]);
+      res.json(updated);
     } catch (e) {
       next(e);
     }

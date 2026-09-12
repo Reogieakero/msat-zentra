@@ -387,6 +387,7 @@ export function GuidanceReferralsTable({
       queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
     },
   });
 
@@ -486,6 +487,7 @@ export function GuidanceReferralsTable({
       queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
     },
   });
 

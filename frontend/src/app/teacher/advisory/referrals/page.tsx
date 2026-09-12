@@ -172,6 +172,11 @@ export default function TeacherAdvisoryReferralsPage() {
     const { data } = await apiClient.post(`/api/anecdotal/${draft.anecdotalId}/refer`, {
       referredToRole: draft.targetRole,
       reason: draft.reason,
+      // ADM track: persist the picked consultation reviewer (nurse |
+      // guidance_counselor | lrpc) so only the selected role acts on it.
+      ...(draft.track === "adm" && draft.admReceiver
+        ? { consultReviewer: draft.admReceiver }
+        : {}),
     });
     return { id: data.id };
   }

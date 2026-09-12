@@ -1,0 +1,49 @@
+/* GCForm-03 preview overlay. Scrollbars stay hidden (content still
+   scrolls) to match the anecdotal preview dialog. */
+
+.dialog {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dialog::-webkit-scrollbar {
+  display: none;
+}
+
+/* Excel-sheet preview surface (rendered straight from the workbook). */
+.sheetWrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+/* ---- Print: A4 portrait with the template's own margins; sheet only ---- */
+@page {
+  size: A4 portrait;
+  margin: 0.4in 0.25in;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  :global(.gcform03-print-sheet),
+  :global(.gcform03-print-sheet) * {
+    visibility: visible;
+  }
+
+  :global(.gcform03-print-sheet) {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+}
