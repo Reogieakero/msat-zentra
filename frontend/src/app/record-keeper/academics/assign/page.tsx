@@ -119,7 +119,10 @@ export default function AssignSubjectsPage() {
   );
 
   const termLabel = termNumber != null ? `Term ${termNumber}` : "";
-  const existing = selectedSection?.assignments ?? [];
+  const existing = React.useMemo(
+    () => selectedSection?.assignments ?? [],
+    [selectedSection]
+  );
 
   // Subjects offered for the chosen grade that aren't already assigned to the
   // selected section for the chosen term.
@@ -133,13 +136,17 @@ export default function AssignSubjectsPage() {
   }, [subjects, grade, selectedSection, existing, termNumber, termLabel]);
 
   // Drop picks that are no longer assignable (grade/section/term changed).
-  React.useEffect(() => {
+  // Synced during render (never in an effect): availableSubjects is memoized,
+  // so identity only changes when the inputs do.
+  const [prevAvailable, setPrevAvailable] = React.useState(availableSubjects);
+  if (prevAvailable !== availableSubjects) {
+    setPrevAvailable(availableSubjects);
+    const ok = new Set(availableSubjects.map((s) => s.id));
     setPickedIds((prev) => {
-      const ok = new Set(availableSubjects.map((s) => s.id));
       const next = prev.filter((id) => ok.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [availableSubjects]);
+  }
 
   const togglePick = (id: string) => {
     setPickedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));

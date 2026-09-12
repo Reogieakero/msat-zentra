@@ -58,22 +58,33 @@ export function SectionFormDialog({
 
   // Reset the form every time the dialog opens so edits never leak into "new".
   // Subject assignment lives in the separate "Assign Subjects" dialog, not here.
-  React.useEffect(() => {
-    if (!open) return;
+  // (Synced during render keyed by open + section id — never in an effect.
+  // The school-year fetch below stays in an effect: only async work lives there.)
+  const [prevOpen, setPrevOpen] = React.useState(open);
+  const [prevSectionId, setPrevSectionId] = React.useState<string | null>(
+    section?.id ?? null
+  );
+  if (open && (!prevOpen || prevSectionId !== (section?.id ?? null))) {
+    setPrevOpen(true);
+    setPrevSectionId(section?.id ?? null);
     setName(section?.name ?? "");
     setGradeLevel(section?.gradeLevel ?? 7);
     setSchoolYear(section?.schoolYear ?? "");
     setAdviserId(section?.adviserId ?? "");
     setError(null);
     if (schoolYearsProp) setYears(schoolYearsProp);
-    else {
-      const ctrl = new AbortController();
-      fetchSchoolYears(ctrl.signal)
-        .then((list) => setYears(list))
-        .catch(() => setYears([]));
-      return () => ctrl.abort();
-    }
-  }, [open, section, schoolYearsProp]);
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
+  React.useEffect(() => {
+    if (!open || schoolYearsProp) return;
+    const ctrl = new AbortController();
+    fetchSchoolYears(ctrl.signal)
+      .then((list) => setYears(list))
+      .catch(() => setYears([]));
+    return () => ctrl.abort();
+  }, [open, schoolYearsProp]);
 
   // Default the year picker to the section's year, then the active DB year.
   const effectiveYear =

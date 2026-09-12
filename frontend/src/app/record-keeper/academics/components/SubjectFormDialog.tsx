@@ -37,14 +37,22 @@ export function SubjectFormDialog({ open, subject, onOpenChange, onSave }: Props
   // Reset the form every time the dialog opens — the landing page reuses one
   // mounted instance for every "Add Subject" click. Teacher/section assignment
   // lives in the separate "Assign Subjects" dialog, not here.
-  React.useEffect(() => {
-    if (!open) return;
+  // (Synced during render keyed by open + subject id — never in an effect.)
+  const [prevOpen, setPrevOpen] = React.useState(open);
+  const [prevSubjectId, setPrevSubjectId] = React.useState<string | null>(
+    subject?.id ?? null
+  );
+  if (open && (!prevOpen || prevSubjectId !== (subject?.id ?? null))) {
+    setPrevOpen(true);
+    setPrevSubjectId(subject?.id ?? null);
     setCode(subject?.code ?? "");
     setName(subject?.name ?? "");
     setGrades([subject?.gradeLevel ?? 7]);
     setCategory(subject?.category ?? "Core");
     setError(null);
-  }, [open, subject]);
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
 
   const toggleGrade = (g: GradeLevel) => {
     setGrades((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g].sort()));
