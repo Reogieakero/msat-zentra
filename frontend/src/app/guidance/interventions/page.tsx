@@ -69,7 +69,6 @@ export default function GuidanceInterventionsPage() {
     <section className={pageStyles.page}>
       <div className={pageStyles.header}>
         <div>
-          <p className={pageStyles.eyebrow}>At-risk engine · High risk first</p>
           <h1 className={pageStyles.title}>Interventions</h1>
           <p className={pageStyles.lede}>
             Live high-risk students from the at-risk engine — start follow-ups,
@@ -92,8 +91,99 @@ export default function GuidanceInterventionsPage() {
         <CardContent>
           {isPending ? (
             <div aria-busy="true" className={styles.feed}>
-              <Skeleton style={{ height: "2.25rem", width: "100%" }} />
-              <Skeleton style={{ height: "12rem", width: "100%" }} />
+              <div className={styles.skelToolbar}>
+                <Skeleton className={styles.skelCount} />
+                <div className={styles.skelFilters}>
+                  <Skeleton className={styles.skelSearch} />
+                  <Skeleton className={styles.skelDrop} />
+                  <Skeleton className={styles.skelDrop} />
+                  <Skeleton className={styles.skelDrop} />
+                  <Skeleton className={styles.skelToggle} />
+                </div>
+              </div>
+              <div className={styles.skelTableWrap}>
+                <div className={styles.skelTable}>
+                  <div className={styles.skelHeadRow}>
+                    {[0, 1, 2, 3].map((i) => (
+                      <Skeleton key={i} className={styles.skelTh} />
+                    ))}
+                  </div>
+                  {[0, 1, 2, 3, 4].map((row) => (
+                    <div key={row} className={styles.skelRow}>
+                      <div className={styles.skelCell}>
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: "70%" }}
+                        />
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: "45%" }}
+                        />
+                      </div>
+                      <div className={styles.skelCell}>
+                        <Skeleton
+                          className={styles.skelPill}
+                          style={{ width: "4.5rem" }}
+                        />
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: "55%" }}
+                        />
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: "40%" }}
+                        />
+                      </div>
+                      <div className={styles.skelCell}>
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: "85%" }}
+                        />
+                        <div className={styles.skelBtnRow}>
+                          <Skeleton
+                            className={styles.skelPill}
+                            style={{ width: "5rem" }}
+                          />
+                          <Skeleton
+                            className={styles.skelPill}
+                            style={{ width: "4rem" }}
+                          />
+                        </div>
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: "60%" }}
+                        />
+                      </div>
+                      <div className={styles.skelCell}>
+                        <div className={styles.skelBtnRow}>
+                          <Skeleton
+                            className={styles.skelBtn}
+                            style={{ width: "5rem" }}
+                          />
+                          <Skeleton
+                            className={styles.skelBtn}
+                            style={{ width: "4rem" }}
+                          />
+                        </div>
+                        <div className={styles.skelBtnRow}>
+                          <Skeleton
+                            className={styles.skelBtn}
+                            style={{ width: "6.5rem" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className={styles.skelPager}>
+                <Skeleton className={styles.skelRange} />
+                <div className={styles.skelPagerBtns}>
+                  <Skeleton className={styles.skelPageBtn} />
+                  <Skeleton className={styles.skelPageLabel} />
+                  <Skeleton className={styles.skelPageBtn} />
+                </div>
+              </div>
             </div>
           ) : isError || !data ? (
             <div className={styles.empty} role="alert">

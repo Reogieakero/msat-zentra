@@ -72,7 +72,7 @@ function CompactFilter({
       <DropdownMenuContent align="end" className={styles.filterMenu}>
         {options.map((option) => (
           <DropdownMenuCheckboxItem
-            key={option.value || "all"}
+            key={option.value}
             checked={value === option.value}
             onCheckedChange={() => onChange(option.value)}
           >

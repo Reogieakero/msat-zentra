@@ -10,7 +10,6 @@ export function GuidanceOverviewHeader({ counselorName }: GuidanceOverviewHeader
   return (
     <div className={styles.header}>
       <div>
-        <p className={styles.eyebrow}>Guidance Counselor · Overview</p>
         <h1 className={styles.title}>Guidance overview</h1>
         <p className={styles.lede}>
           Live caseload for {counselorName} — referrals routed to guidance, open
