@@ -123,138 +123,141 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
         ),
       ),
       floatingActionButton: _buildFloatingActionButton(),
-      body: Column(
-        children: [
-          // Google Classroom Header Banner Card
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.surfaceElevated,
-                    AppColors.primaryEmerald.withOpacity(0.15),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: widget.onBack != null ? 0 : 12.0),
+        child: Column(
+          children: [
+            // Google Classroom Header Banner Card
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.surfaceElevated,
+                      AppColors.primaryEmerald.withOpacity(0.15),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.3)),
                 ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryEmerald,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'ADM CLASSROOM',
-                          style: GoogleFonts.robotoMono(
-                            color: const Color(0xFF0C1612),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryEmerald,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'ADM CLASSROOM',
+                            style: GoogleFonts.robotoMono(
+                              color: const Color(0xFF0C1612),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.subjectName,
+                      style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '${widget.sectionName} | Teacher: Maria Santos',
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _metricBadge(Icons.picture_as_pdf, '${_subjectModules.length} Modules'),
+                          const SizedBox(width: 8),
+                          _metricBadge(Icons.assignment_outlined, '${_subjectClasswork.length} Classwork'),
+                          const SizedBox(width: 8),
+                          _metricBadge(Icons.people_alt, '${_enrolledLearners.length} Students'),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.subjectName,
-                    style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '${widget.sectionName} | Teacher: Maria Santos',
-                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Tab Navigation Bar (Google Classroom style: Modules / Classwork / Students)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: AppColors.primaryEmerald,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: AppColors.primaryEmerald,
+                unselectedLabelColor: AppColors.textMuted,
+                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11),
+                tabs: const [
+                  Tab(
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _metricBadge(Icons.picture_as_pdf, '${_subjectModules.length} Modules'),
-                        const SizedBox(width: 8),
-                        _metricBadge(Icons.assignment_outlined, '${_subjectClasswork.length} Classwork'),
-                        const SizedBox(width: 8),
-                        _metricBadge(Icons.people_alt, '${_enrolledLearners.length} Students'),
+                        Icon(Icons.folder_outlined, size: 15),
+                        SizedBox(width: 4),
+                        Text('Modules', overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.assignment_outlined, size: 15),
+                        SizedBox(width: 4),
+                        Text('Classwork', overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.people_outline, size: 15),
+                        SizedBox(width: 4),
+                        Text('ADM Students', overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          // Tab Navigation Bar (Google Classroom style: Modules / Classwork / Students)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.borderSubtle),
+            // Tab Contents
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildModulesTab(),
+                  _buildClassworkTab(),
+                  _buildStudentsTab(),
+                ],
+              ),
             ),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: AppColors.primaryEmerald,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: AppColors.primaryEmerald,
-              unselectedLabelColor: AppColors.textMuted,
-              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11),
-              tabs: const [
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.folder_outlined, size: 15),
-                      SizedBox(width: 4),
-                      Text('Modules & Stream', overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.assignment_outlined, size: 15),
-                      SizedBox(width: 4),
-                      Text('Classwork', overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline, size: 15),
-                      SizedBox(width: 4),
-                      Text('ADM Students', overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Tab Contents
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildModulesTab(),
-                _buildClassworkTab(),
-                _buildStudentsTab(),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -282,11 +285,11 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 1: Modules & Stream
+  // Tab 1: Modules
   // ---------------------------------------------------------------------------
   Widget _buildModulesTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -330,6 +333,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
             ..._subjectModules.map((mod) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: CustomCard(
+                    padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -443,7 +447,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
     final topics = _subjectClasswork.map((c) => c.topic).toSet().toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -509,6 +513,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
                   ...itemsInTopic.map((item) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: CustomCard(
+                          padding: const EdgeInsets.all(12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -881,7 +886,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
   // ---------------------------------------------------------------------------
   Widget _buildStudentsTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -910,6 +915,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
           ..._enrolledLearners.map((learner) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: CustomCard(
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

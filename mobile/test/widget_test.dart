@@ -39,7 +39,7 @@ void main() {
     // Verify navigation to Google Classroom Subject Detail Screen with 3 tabs and FAB
     expect(find.byType(FacultyAdmSubjectDetailScreen), findsOneWidget);
     expect(find.text('Upload Module'), findsOneWidget);
-    expect(find.text('Modules & Stream'), findsOneWidget);
+    expect(find.text('Modules'), findsOneWidget);
     expect(find.text('Classwork'), findsOneWidget);
     expect(find.text('ADM Students'), findsOneWidget);
 
