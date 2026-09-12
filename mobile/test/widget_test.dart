@@ -36,9 +36,9 @@ void main() {
     await tester.tap(find.text('Mathematics 10'));
     await tester.pumpAndSettle();
 
-    // Verify navigation to Google Classroom Subject Detail Screen with 3 tabs
+    // Verify navigation to Google Classroom Subject Detail Screen with 3 tabs and FAB
     expect(find.byType(FacultyAdmSubjectDetailScreen), findsOneWidget);
-    expect(find.text('+ Upload Module'), findsWidgets);
+    expect(find.text('Upload Module'), findsOneWidget);
     expect(find.text('Modules & Stream'), findsOneWidget);
     expect(find.text('Classwork'), findsOneWidget);
     expect(find.text('ADM Students'), findsOneWidget);
@@ -47,9 +47,9 @@ void main() {
     await tester.tap(find.text('Classwork'));
     await tester.pumpAndSettle();
 
-    // Verify Classwork content & mock data
+    // Verify Classwork content & Floating Action Button
     expect(find.text('Classwork & Activities'), findsOneWidget);
-    expect(find.text('+ Classwork'), findsOneWidget);
+    expect(find.text('Create Classwork'), findsOneWidget);
     expect(find.text('Intervention & Remediation'), findsOneWidget);
   });
 }

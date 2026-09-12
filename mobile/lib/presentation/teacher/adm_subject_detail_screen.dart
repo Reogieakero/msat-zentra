@@ -31,6 +31,7 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_handleTabSelection);
 
     // Filter modules for this subject or supply realistic defaults
     _subjectModules = MockData.admModules
@@ -80,8 +81,15 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
     _enrolledLearners = List.from(MockData.admLearners);
   }
 
+  void _handleTabSelection() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
     super.dispose();
   }
@@ -113,14 +121,8 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file, color: AppColors.primaryEmerald),
-            tooltip: 'Upload Module',
-            onPressed: () => _showUploadModuleModal(context),
-          ),
-        ],
       ),
+      floatingActionButton: _buildFloatingActionButton(),
       body: Column(
         children: [
           // Google Classroom Header Banner Card
@@ -160,17 +162,6 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => _showUploadModuleModal(context),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('+ Upload Module'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryEmerald,
-                          foregroundColor: const Color(0xFF0C1612),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -415,6 +406,36 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
     );
   }
 
+  Widget? _buildFloatingActionButton() {
+    final activeIndex = _tabController.index;
+    if (activeIndex == 0) {
+      // Modules & Stream tab active
+      return FloatingActionButton.extended(
+        onPressed: () => _showUploadModuleModal(context),
+        backgroundColor: AppColors.primaryEmerald,
+        foregroundColor: const Color(0xFF0C1612),
+        icon: const Icon(Icons.upload_file),
+        label: Text(
+          'Upload Module',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+      );
+    } else if (activeIndex == 1) {
+      // Classwork tab active
+      return FloatingActionButton.extended(
+        onPressed: () => _showCreateClassworkModal(context),
+        backgroundColor: AppColors.primaryEmerald,
+        foregroundColor: const Color(0xFF0C1612),
+        icon: const Icon(Icons.add),
+        label: Text(
+          'Create Classwork',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // Tab 2: Classwork & Activities
   // ---------------------------------------------------------------------------
@@ -432,17 +453,6 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
               Text(
                 'Classwork & Activities',
                 style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              ElevatedButton.icon(
-                onPressed: () => _showCreateClassworkModal(context),
-                icon: const Icon(Icons.add, size: 14),
-                label: const Text('+ Classwork'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryEmerald,
-                  foregroundColor: const Color(0xFF0C1612),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  textStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
               ),
             ],
           ),
