@@ -34,63 +34,54 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
       );
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Card with Refer Student Button
-          CustomCard(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Faculty ADM Workspace',
-                            style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Access your ADM subject classrooms & refer at-risk learners.',
-                            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showReferStudentModal(context),
+        backgroundColor: AppColors.primaryEmerald,
+        foregroundColor: const Color(0xFF0C1612),
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text(
+          'Refer Student',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Card
+            CustomCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Faculty ADM Workspace',
+                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Access your ADM subject classrooms & refer at-risk learners.',
+                              style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Quick Action Button: Refer Student
-                SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showReferStudentModal(context),
-                    icon: const Icon(Icons.person_add_alt_1, size: 16),
-                    label: const Text(
-                      '+ Refer Student for ADM Intervention',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryEmerald,
-                      foregroundColor: const Color(0xFF0C1612),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
 
           // Subject-First Cards (Google Classroom Style Entry Points)
           Row(
@@ -243,8 +234,9 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
               )),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _subjectCard(
     BuildContext context, {

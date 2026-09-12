@@ -30,7 +30,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mathematics 10'), findsOneWidget);
-    expect(find.text('+ Refer Student for ADM Intervention'), findsOneWidget);
+    expect(find.text('Refer Student'), findsOneWidget);
 
     // Tap Mathematics 10 Subject Card
     await tester.tap(find.text('Mathematics 10'));
