@@ -123,69 +123,73 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
           }
         });
 
-        return Column(
-          children: [
-            // Header Action Bar: Subject Info + Add Assessment + Lock Status
-            CustomCard(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Mathematics G10 — Term 1',
-                              style: GoogleFonts.inter(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Text(
-                                  'Status: ',
-                                  style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          floatingActionButton: isLocked
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.only(bottom: 105.0),
+                  child: FloatingActionButton(
+                    onPressed: () => _showAddAssessmentModal(context, matrixState.assessments, gradesNotifier),
+                    backgroundColor: AppColors.primaryEmerald,
+                    foregroundColor: const Color(0xFF0C1612),
+                    shape: const CircleBorder(),
+                    elevation: 6,
+                    tooltip: 'Add Grade Column',
+                    child: const Icon(Icons.add, size: 26),
+                  ),
+                ),
+          body: Column(
+            children: [
+              // Header Action Bar: Subject Info + Add Assessment + Lock Status
+              CustomCard(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Mathematics G10 — Term 1',
+                                style: GoogleFonts.inter(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
                                 ),
-                                StatusBadge.lockStatus(matrixState.lockStatus),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      if (!isLocked) ...[
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddAssessmentModal(context, matrixState.assessments, gradesNotifier),
-                          icon: const Icon(Icons.add, size: 14),
-                          label: const Text('+ Add'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryEmerald,
-                            foregroundColor: const Color(0xFF0C1612),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Status: ',
+                                    style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                                  ),
+                                  StatusBadge.lockStatus(matrixState.lockStatus),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 6),
-                        ElevatedButton.icon(
-                          onPressed: () => _showLockConfirmationModal(context, ref),
-                          icon: const Icon(Icons.lock_outline, size: 14),
-                          label: const Text('Lock'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.riskHigh,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                        if (!isLocked) ...[
+                          ElevatedButton.icon(
+                            onPressed: () => _showLockConfirmationModal(context, ref),
+                            icon: const Icon(Icons.lock_outline, size: 14),
+                            label: const Text('Lock'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.riskHigh,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ] else
+                        ] else
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -521,7 +525,8 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
               ),
             ),
           ],
-        );
+        ),
+      );
       },
     );
   }

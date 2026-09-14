@@ -36,76 +36,70 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
     final pastAndTodayDays = List.generate(todayDay, (i) => todayDay - i); // [5, 4, 3, 2, 1]
     final totalPages = (pastAndTodayDays.length / _pageSize).ceil().clamp(1, 99);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Top Create Attendance & Date Selector Bar
-          CustomCard(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Selected Date Context',
-                            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 14, color: AppColors.primaryEmerald),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}${_selectedDate.day == todayDay ? " (Today)" : ""}',
-                                  style: GoogleFonts.robotoMono(
-                                    color: AppColors.primaryEmerald,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 105.0),
+        child: FloatingActionButton(
+          onPressed: () {
+            _openRosterMarkingSheet(context, _selectedDate, attendanceNotifier);
+          },
+          backgroundColor: AppColors.primaryEmerald,
+          foregroundColor: const Color(0xFF0C1612),
+          shape: const CircleBorder(),
+          elevation: 6,
+          tooltip: 'Create / Mark Attendance',
+          child: const Icon(Icons.add, size: 26),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Top Create Attendance & Date Selector Bar
+            CustomCard(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Selected Date Context',
+                          style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today, size: 14, color: AppColors.primaryEmerald),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}${_selectedDate.day == todayDay ? " (Today)" : ""}',
+                                style: GoogleFonts.robotoMono(
+                                  color: AppColors.primaryEmerald,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.date_range, color: AppColors.textPrimary),
-                      tooltip: 'Change Date',
-                      onPressed: () => _pickDate(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Prominent Create Attendance Button (Default to Today)
-                SizedBox(
-                  width: double.infinity,
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _openRosterMarkingSheet(context, _selectedDate, attendanceNotifier);
-                    },
-                    icon: const Icon(Icons.add_task, size: 18),
-                    label: Text(
-                      'Create / Mark Attendance (${_selectedDate.month}/${_selectedDate.day})',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.date_range, color: AppColors.textPrimary),
+                    tooltip: 'Change Date',
+                    onPressed: () => _pickDate(context),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
 
           // 2. Color-Coded Calendar Heatmap (Date-First View matching Parents)
           CustomCard(
@@ -400,7 +394,8 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _legendPill(String label, Color color, {bool isToday = false}) {

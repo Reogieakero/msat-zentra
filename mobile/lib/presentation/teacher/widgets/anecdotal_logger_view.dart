@@ -14,34 +14,39 @@ class AnecdotalLoggerView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final anecdotalAsync = ref.watch(anecdotalProvider);
 
-    return Column(
-      children: [
-        CustomCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Behavioral & Anecdotal Logs',
-                style: GoogleFonts.inter(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddIncidentModal(context, ref),
-                icon: const Icon(Icons.add_comment, size: 16),
-                label: const Text('Log Incident'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 105.0),
+        child: FloatingActionButton(
+          onPressed: () => _showAddIncidentModal(context, ref),
+          backgroundColor: AppColors.primaryEmerald,
+          foregroundColor: const Color(0xFF0C1612),
+          shape: const CircleBorder(),
+          elevation: 6,
+          tooltip: 'Log Incident',
+          child: const Icon(Icons.add, size: 26),
         ),
-        const SizedBox(height: 12),
+      ),
+      body: Column(
+        children: [
+          CustomCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Behavioral & Anecdotal Logs',
+                  style: GoogleFonts.inter(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
         Expanded(
           child: anecdotalAsync.when(
             loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryEmerald)),
@@ -116,8 +121,9 @@ class AnecdotalLoggerView extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   void _showAddIncidentModal(BuildContext context, WidgetRef ref) {
     String selectedStudentId = MockData.students.first.id;
