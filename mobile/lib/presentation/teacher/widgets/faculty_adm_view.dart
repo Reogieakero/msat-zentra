@@ -36,14 +36,16 @@ class _FacultyAdmViewState extends State<FacultyAdmView> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showReferStudentModal(context),
-        backgroundColor: AppColors.primaryEmerald,
-        foregroundColor: const Color(0xFF0C1612),
-        icon: const Icon(Icons.person_add_alt_1),
-        label: Text(
-          'Refer Student',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 105.0),
+        child: FloatingActionButton(
+          onPressed: () => _showReferStudentModal(context),
+          backgroundColor: AppColors.primaryEmerald,
+          foregroundColor: const Color(0xFF0C1612),
+          shape: const CircleBorder(),
+          elevation: 6,
+          tooltip: 'Refer Student',
+          child: const Icon(Icons.add, size: 26),
         ),
       ),
       body: SingleChildScrollView(

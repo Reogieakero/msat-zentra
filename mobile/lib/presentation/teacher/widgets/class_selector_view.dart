@@ -37,26 +37,23 @@ class _ClassSelectorViewState extends State<ClassSelectorView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Filter Chips Header
-          Row(
-            children: [
-              Text(
-                'Select Class',
-                style: GoogleFonts.inter(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              _filterChip('today', 'Today\'s Schedule'),
-              const SizedBox(width: 6),
-              _filterChip('all', 'All Sections'),
-              const SizedBox(width: 6),
-              _filterChip('advisory', 'Advisory'),
-            ],
+          // Top Full-Width Segmented Navigation Bar
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderSubtle, width: 1),
+            ),
+            child: Row(
+              children: [
+                _navTabItem('today', 'Today\'s Schedule'),
+                _navTabItem('all', 'All Sections'),
+                _navTabItem('advisory', 'Advisory'),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Assigned Class Cards List
           ListView.separated(
@@ -189,26 +186,32 @@ class _ClassSelectorViewState extends State<ClassSelectorView> {
     );
   }
 
-  Widget _filterChip(String category, String label) {
+  Widget _navTabItem(String category, String label) {
     final isSelected = _filter == category;
 
-    return GestureDetector(
-      onTap: () => setState(() => _filter = category),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryEmerald : AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryEmerald : AppColors.borderSubtle,
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _filter = category),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryEmerald : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
           ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            color: isSelected ? const Color(0xFF0C1612) : AppColors.textSecondary,
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color: isSelected ? const Color(0xFF0C1612) : AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            ),
           ),
         ),
       ),
