@@ -7,6 +7,7 @@ import '../../app/utils/app_responsive.dart';
 import '../shared/widgets/custom_card.dart';
 import '../shared/widgets/floating_oblong_nav_bar.dart';
 import '../shared/zentra_hamburger_drawer.dart';
+import '../shared/notifications_screen.dart';
 import 'widgets/attendance_heatmap.dart';
 import 'widgets/quarterly_report_card.dart';
 
@@ -57,11 +58,32 @@ class _ParentWorkspaceScreenState extends ConsumerState<ParentWorkspaceScreen> {
           ],
         ),
         actions: [
-          // Notification Bell
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
-            tooltip: 'Alerts',
-            onPressed: () => _showAlertsSheet(context),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                tooltip: 'Notifications',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryEmerald,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
           ),
           Builder(
             builder: (context) => IconButton(

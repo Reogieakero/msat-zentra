@@ -10,6 +10,7 @@ import '../../providers/sync_provider.dart';
 import '../shared/widgets/custom_card.dart';
 import '../shared/widgets/sync_status_pill.dart';
 import '../shared/zentra_hamburger_drawer.dart';
+import '../shared/notifications_screen.dart';
 import 'widgets/class_selector_view.dart';
 import 'widgets/attendance_roster_view.dart';
 import 'widgets/grade_matrix_spreadsheet.dart';
@@ -69,6 +70,33 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
           ],
         ),
         actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                tooltip: 'Notifications',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryEmerald,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu, color: AppColors.textPrimary),
