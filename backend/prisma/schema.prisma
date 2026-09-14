@@ -649,6 +649,11 @@ model Referral {
   // reviewer may act on the case at the consultation stage; everyone else
   // sees it read-only. Null = legacy / non-ADM routing.
   consultReviewer   String?
+  // Nurse ADM flow: the referral form (GCForm-03 fill-up) must be completed
+  // on the dedicated form page before the case can be forwarded to the ADM
+  // coordinator. Confirming the form sets this flag; forwarding requires it
+  // — a case never moves to in_progress without an explicit forward click.
+  referralFormReady Boolean @default(false)
   status            ReferralStatus  @default(pending)
   notes             String?
   escalationReason  String?

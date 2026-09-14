@@ -24,6 +24,25 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      // ADM consultation-stage cases move through the review endpoint, not
+      // raw status edits — otherwise the pipeline (consult → parent meeting
+      // → certification) is bypassed silently.
+      if (req.user!.role === "nurse" && referral.referredToRole === "adm_coordinator") {
+        const profileCount = await prisma.admLearnerProfile.count({
+          where: { referralId: referral.id },
+        });
+        if (
+          referral.consultReviewer === "nurse" &&
+          profileCount === 0 &&
+          referral.status === "pending"
+        ) {
+          throw new AppError(
+            400,
+            "USE_REVIEW_ENDPOINT",
+            "ADM cases move through consultation review — use the ADM review action"
+          );
+        }
+      }
       if (
         req.user!.role === "guidance_counselor" &&
         referral.referredToRole !== "guidance_counselor"
@@ -264,6 +283,28 @@ async function getGuidanceReferral(id: string) {
   return referral;
 }
 
+// Clinic cases on the nurse's own desk (direct referrals + escalations to
+// the nurse). Session management below accepts these exactly like guidance
+// cases, so the nurse referrals page runs the same accept → sessions →
+// close workflow.
+async function getNurseClinicReferral(id: string) {
+  const referral = await prisma.referral.findUnique({ where: { id } });
+  if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+  const onNurseDesk =
+    referral.referredToRole === "nurse" ||
+    (referral.status === "escalated" && referral.escalatedTo === "nurse");
+  if (!onNurseDesk) {
+    throw new AppError(403, "FORBIDDEN", "Not routed to the clinic");
+  }
+  return referral;
+}
+
+// Role-aware referral getter for the shared session endpoints.
+async function getSessionReferral(id: string, role: string) {
+  if (role === "nurse") return getNurseClinicReferral(id);
+  return getGuidanceReferral(id);
+}
+
 function parseScheduledAt(value: unknown): Date {
   const date = new Date(String(value ?? ""));
   if (Number.isNaN(date.getTime())) {
@@ -359,6 +400,385 @@ router.post(
   }
 );
 
+// Nurse intake: accept a case on the clinic's desk WITH first impressions
+// and an optional first clinic session booked on the spot — one atomic
+// call so a case is never half-accepted. Mirrors the guidance accept flow
+// but scoped to the nurse's own queue (direct, escalated-to-nurse, or ADM
+// consultation picked for the nurse).
+const nurseAcceptSchema = z.object({
+  intakeNotes: z.string().trim().max(2000).optional(),
+  clinicSession: z
+    .object({
+      scheduledAt: z.string().min(1),
+      venue: z.string().trim().max(200).optional(),
+    })
+    .optional(),
+});
+
+router.post(
+  "/:id/nurse-accept",
+  requireAuth,
+  requireRole("nurse"),
+  validate("body", nurseAcceptSchema),
+  async (req, res, next) => {
+    try {
+      const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
+      if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      // "Start handling" is for clinic matters only — ADM-track cases follow
+      // the consultation review pipeline instead.
+      if (referral.referredToRole === "adm_coordinator") {
+        throw new AppError(
+          400,
+          "USE_ADM_REVIEW",
+          "ADM cases move through consultation review — use the ADM review action"
+        );
+      }
+      const onNurseDesk =
+        referral.referredToRole === "nurse" ||
+        (referral.status === "escalated" && referral.escalatedTo === "nurse");
+      if (!onNurseDesk) {
+        throw new AppError(403, "FORBIDDEN", "Not routed to the clinic");
+      }
+      if (
+        referral.status !== "pending" &&
+        !(referral.status === "escalated" && referral.escalatedTo === "nurse")
+      ) {
+        throw new AppError(400, "INVALID_ACTION", "Only a new case can be accepted");
+      }
+      let sessionAt: Date | null = null;
+      if (req.body.clinicSession) {
+        sessionAt = parseScheduledAt(req.body.clinicSession.scheduledAt);
+        if (sessionAt.getTime() <= Date.now()) {
+          throw new AppError(400, "INVALID_ACTION", "Clinic session must be set in the future");
+        }
+      }
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data: {
+          status: "in_progress",
+          intakeNotes: req.body.intakeNotes?.trim() ? req.body.intakeNotes.trim() : null,
+          acceptedAt: new Date(),
+        },
+      });
+      let session = null;
+      if (sessionAt) {
+        session = await prisma.counselingSession.create({
+          data: {
+            referralId: referral.id,
+            sessionType: "individual",
+            scheduledAt: sessionAt,
+            venue: req.body.clinicSession?.venue?.trim() || "School clinic",
+            status: "scheduled",
+            createdBy: req.user!.id,
+          },
+          include: { creator: { select: { fullName: true } } },
+        });
+        await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: `First clinic session booked on accept`, oldValue: null, newValue: { sessionType: session.sessionType, scheduledAt: session.scheduledAt } });
+      }
+      await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted by the clinic${session ? " with a clinic session booked" : ""}`, oldValue: { status: referral.status }, newValue: { status: "in_progress" } });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json({ referral: updated, clinicSession: session ? formatSession(session) : null });
+    } catch (e) { next(e); }
+  }
+);
+
+// Nurse consultation review on an ADM-purpose referral sitting at the
+// consultation stage with no learner profile yet. Mirrors the guidance
+// consultation review, but only the nurse may decide cases picked for the
+// nurse (consultReviewer === "nurse"):
+//   - endorse: consultation done, case moves to in_progress for the ADM
+//     coordinator's parent meeting (the "create referral forward").
+//   - reject: the filing doesn't warrant ADM, case closes as dismissed.
+// Shared guards for every nurse ADM-consultation action: the case must be
+// an ADM-track referral at the consultation stage picked for the nurse.
+// Receiver enforcement lives here so a case picked for guidance or LRPC
+// cannot be decided from the clinic queue, even if its id is known.
+async function getNurseAdmConsultation(id: string) {
+  const referral = await prisma.referral.findUnique({ where: { id } });
+  if (
+    !referral ||
+    referral.referredToRole !== "adm_coordinator" ||
+    (await prisma.admLearnerProfile.count({ where: { referralId: referral.id } })) > 0
+  ) {
+    throw new AppError(
+      404,
+      "NOT_ADM_CONSULTATION",
+      "Only an ADM referral awaiting consultation review can be reviewed here"
+    );
+  }
+  if (referral.consultReviewer !== "nurse") {
+    throw new AppError(
+      403,
+      "NOT_YOUR_QUEUE",
+      "This case was routed to another consultation reviewer"
+    );
+  }
+  return referral;
+}
+
+// Flatten the referral form fill-up into one notes block so the coordinator
+// receives the nurse's concerns, details, actions taken, and follow-up plan
+// with the case. Returns null when the form carries no answers.
+function buildAdmReferralFormNote(formInput: {
+  concerns?: unknown;
+  detailsOfConcern?: unknown;
+  nurseActions?: unknown;
+  followUp?: unknown;
+} | undefined): string | null {
+  if (!formInput) return null;
+  const parts: string[] = [];
+  if (Array.isArray(formInput.concerns)) {
+    const list = formInput.concerns
+      .filter((c): c is string => typeof c === "string" && c.trim().length > 0)
+      .map((c) => c.trim())
+      .slice(0, 10);
+    if (list.length > 0) parts.push(`Concerns: ${list.join(", ")}`);
+  }
+  if (typeof formInput.detailsOfConcern === "string" && formInput.detailsOfConcern.trim()) {
+    parts.push(`Details: ${formInput.detailsOfConcern.trim()}`);
+  }
+  if (typeof formInput.nurseActions === "string" && formInput.nurseActions.trim()) {
+    parts.push(`Actions taken: ${formInput.nurseActions.trim()}`);
+  }
+  if (typeof formInput.followUp === "string" && formInput.followUp.trim()) {
+    parts.push(`Follow-up: ${formInput.followUp.trim()}`);
+  }
+  return parts.length > 0 ? `[ADM referral] ${parts.join(" | ")}` : null;
+}
+
+// Book the optional clinic session that can accompany the nurse's ADM work
+// (same bargain as the clinic "accept with first session" flow). Returns the
+// parsed date, or null when no session was requested.
+function parseNurseAdmSession(clinicInput: { scheduledAt?: unknown; venue?: unknown } | undefined): Date | null {
+  if (!clinicInput) return null;
+  const sessionAt = parseScheduledAt(clinicInput.scheduledAt);
+  if (sessionAt.getTime() <= Date.now()) {
+    throw new AppError(400, "INVALID_ACTION", "Clinic session must be set in the future");
+  }
+  return sessionAt;
+}
+
+async function createNurseAdmSession(
+  referralId: string,
+  nurseId: string,
+  sessionAt: Date,
+  clinicInput: { venue?: unknown } | undefined,
+  reason: string,
+) {
+  const venue =
+    clinicInput && typeof clinicInput.venue === "string" && clinicInput.venue.trim()
+      ? clinicInput.venue.trim()
+      : "School clinic";
+  const session = await prisma.counselingSession.create({
+    data: {
+      referralId,
+      sessionType: "individual",
+      scheduledAt: sessionAt,
+      venue,
+      status: "scheduled",
+      createdBy: nurseId,
+    },
+    include: { creator: { select: { fullName: true } } },
+  });
+  await writeAudit({ userId: nurseId, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason, oldValue: null, newValue: { sessionType: session.sessionType, scheduledAt: session.scheduledAt } });
+  return session;
+}
+
+const clinicSessionSchema = z
+  .object({
+    scheduledAt: z.string().min(1),
+    venue: z.string().trim().max(200).optional(),
+  })
+  .optional();
+
+const referralFormSchema = z
+  .object({
+    concerns: z.array(z.string().trim().min(1).max(50)).max(10).optional(),
+    detailsOfConcern: z.string().trim().max(2000).optional(),
+    nurseActions: z.string().trim().max(2000).optional(),
+    followUp: z.string().trim().max(2000).optional(),
+  })
+  .optional();
+
+const nurseAdmReviewSchema = z.object({
+  recommendation: z.string().trim().min(1).max(500),
+  outcome: z.enum(["endorse", "reject"]),
+  clinicSession: clinicSessionSchema,
+  // Kept for backward compatibility — new flows save the form first via
+  // nurse-referral-form and forward via nurse-adm-forward.
+  referralForm: referralFormSchema,
+});
+
+router.post(
+  "/:id/nurse-adm-review",
+  requireAuth,
+  requireRole("nurse"),
+  validate("body", nurseAdmReviewSchema),
+  async (req, res, next) => {
+    try {
+      const referral = await getNurseAdmConsultation(String(req.params.id));
+      if (referral.status !== "pending") {
+        throw new AppError(400, "INVALID_ACTION", "Only a new case can be reviewed");
+      }
+      const { recommendation, outcome } = req.body as {
+        recommendation: string;
+        outcome: "endorse" | "reject";
+      };
+      // Forwarding requires the completed referral form — a case never moves
+      // to the coordinator without it. The form is completed on the dedicated
+      // form page (nurse-referral-form); this gate closes direct-call bypasses.
+      if (outcome === "endorse" && !referral.referralFormReady) {
+        throw new AppError(
+          400,
+          "FORM_NOT_READY",
+          "Complete the referral form before forwarding this case"
+        );
+      }
+      const clinicInput = (req.body as { clinicSession?: { scheduledAt?: unknown; venue?: unknown } }).clinicSession;
+      const sessionAt = clinicInput && outcome === "endorse" ? parseNurseAdmSession(clinicInput) : null;
+      const note = `[ADM consult] ${recommendation.trim()}`;
+      const formInput = (req.body as { referralForm?: { concerns?: unknown; detailsOfConcern?: unknown; nurseActions?: unknown; followUp?: unknown } }).referralForm;
+      const formNote = formInput && outcome === "endorse" ? buildAdmReferralFormNote(formInput) : null;
+      const notesWithReview = referral.notes ? `${referral.notes}\n${note}` : note;
+      const notesWithForm = formNote ? `${notesWithReview}\n${formNote}` : notesWithReview;
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data:
+          outcome === "endorse"
+            ? {
+                status: "in_progress",
+                notes: notesWithForm,
+              }
+            : {
+                status: "dismissed",
+                notes: notesWithReview,
+              },
+      });
+      let session = null;
+      if (sessionAt) {
+        session = await createNurseAdmSession(referral.id, req.user!.id, sessionAt, clinicInput, `Clinic session booked on ADM review`);
+      }
+      if (outcome === "endorse") {
+        await writeAudit({
+          userId: req.user!.id,
+          actionType: "referral_status_change",
+          sourceTable: "referrals",
+          sourceId: referral.id,
+          reason: `ADM consultation endorsed: ${recommendation.trim()}${session ? " with a clinic session booked" : ""}`,
+          oldValue: { status: referral.status },
+          newValue: { status: "in_progress" },
+        });
+      } else {
+        await writeAudit({
+          userId: req.user!.id,
+          actionType: "referral_dismissed",
+          sourceTable: "referrals",
+          sourceId: referral.id,
+          reason: `ADM consultation rejected: ${recommendation.trim()}`,
+          oldValue: { status: referral.status },
+          newValue: { status: "dismissed" },
+        });
+      }
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
+// Save the nurse's referral form (GCForm-03 fill-up) on an ADM consultation
+// case. The case STAYS pending — nothing moves to the ADM coordinator here.
+// Confirming the form sets referralFormReady, which unlocks the explicit
+// forward action (nurse-adm-forward, surfaced as Endorse & forward on the
+// alerts page). Re-saving while pending refreshes the stored answers.
+const nurseReferralFormSchema = z.object({
+  recommendation: z.string().trim().min(1).max(500),
+  referralForm: referralFormSchema,
+  clinicSession: clinicSessionSchema,
+});
+
+router.post(
+  "/:id/nurse-referral-form",
+  requireAuth,
+  requireRole("nurse"),
+  validate("body", nurseReferralFormSchema),
+  async (req, res, next) => {
+    try {
+      const referral = await getNurseAdmConsultation(String(req.params.id));
+      if (referral.status !== "pending") {
+        throw new AppError(400, "INVALID_ACTION", "Only a new case can be reviewed");
+      }
+      const { recommendation } = req.body as { recommendation: string };
+      const clinicInput = (req.body as { clinicSession?: { scheduledAt?: unknown; venue?: unknown } }).clinicSession;
+      const sessionAt = parseNurseAdmSession(clinicInput);
+      const formInput = (req.body as { referralForm?: { concerns?: unknown; detailsOfConcern?: unknown; nurseActions?: unknown; followUp?: unknown } }).referralForm;
+      const formNote = buildAdmReferralFormNote(formInput);
+      const note = `[ADM consult] ${recommendation.trim()}`;
+      const withReview = referral.notes ? `${referral.notes}\n${note}` : note;
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data: {
+          intakeNotes: recommendation.trim(),
+          notes: formNote ? `${withReview}\n${formNote}` : withReview,
+          referralFormReady: true,
+        },
+      });
+      if (sessionAt) {
+        await createNurseAdmSession(referral.id, req.user!.id, sessionAt, clinicInput, `Clinic session booked with ADM referral form`);
+      }
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "referral_note_added",
+        sourceTable: "referrals",
+        sourceId: referral.id,
+        reason: "ADM referral form completed — ready to forward",
+        oldValue: null,
+        newValue: { referralFormReady: true },
+      });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
+// Explicit forward: moves a form-ready ADM consultation case to the ADM
+// coordinator (status → in_progress). Requires the completed referral form —
+// without it the case stays on the nurse's desk no matter what.
+router.post(
+  "/:id/nurse-adm-forward",
+  requireAuth,
+  requireRole("nurse"),
+  async (req, res, next) => {
+    try {
+      const referral = await getNurseAdmConsultation(String(req.params.id));
+      if (referral.status !== "pending") {
+        throw new AppError(400, "INVALID_ACTION", "Only a new case can be forwarded");
+      }
+      if (!referral.referralFormReady) {
+        throw new AppError(
+          400,
+          "FORM_NOT_READY",
+          "Complete the referral form before forwarding this case"
+        );
+      }
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data: { status: "in_progress" },
+      });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "referral_status_change",
+        sourceTable: "referrals",
+        sourceId: referral.id,
+        reason: "ADM referral forwarded to the coordinator",
+        oldValue: { status: referral.status },
+        newValue: { status: "in_progress" },
+      });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
 const sessionSchema = z.object({
   scheduledAt: z.string().min(1),
   sessionType: z.string().min(1),
@@ -374,10 +794,10 @@ function ensureOpen(referral: { status: string }) {
 router.get(
   "/:id/sessions",
   requireAuth,
-  requireRole("guidance_counselor", "principal"),
+  requireRole("guidance_counselor", "principal", "nurse"),
   async (req, res, next) => {
     try {
-      const referral = await getGuidanceReferral(String(req.params.id));
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
       const sessions = await prisma.counselingSession.findMany({
         where: { referralId: referral.id },
         orderBy: { scheduledAt: "asc" },
@@ -391,11 +811,11 @@ router.get(
 router.post(
   "/:id/sessions",
   requireAuth,
-  requireRole("guidance_counselor"),
+  requireRole("guidance_counselor", "nurse"),
   validate("body", sessionSchema),
   async (req, res, next) => {
     try {
-      const referral = await getGuidanceReferral(String(req.params.id));
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
       ensureOpen(referral);
       if (!isSessionType(req.body.sessionType)) {
         throw new AppError(400, "INVALID_ACTION", "Unknown session type");
@@ -441,11 +861,11 @@ const completeSessionSchema = z.object({
 router.post(
   "/:id/sessions/:sessionId/complete",
   requireAuth,
-  requireRole("guidance_counselor"),
+  requireRole("guidance_counselor", "nurse"),
   validate("body", completeSessionSchema),
   async (req, res, next) => {
     try {
-      const referral = await getGuidanceReferral(String(req.params.id));
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -491,11 +911,11 @@ const rescheduleSchema = z.object({
 router.post(
   "/:id/sessions/:sessionId/reschedule",
   requireAuth,
-  requireRole("guidance_counselor"),
+  requireRole("guidance_counselor", "nurse"),
   validate("body", rescheduleSchema),
   async (req, res, next) => {
     try {
-      const referral = await getGuidanceReferral(String(req.params.id));
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -517,15 +937,14 @@ router.post(
 const cancelSessionSchema = z.object({
   cancelReason: z.string().trim().max(500).optional(),
 });
-
 router.post(
   "/:id/sessions/:sessionId/cancel",
   requireAuth,
-  requireRole("guidance_counselor"),
+  requireRole("guidance_counselor", "nurse"),
   validate("body", cancelSessionSchema),
   async (req, res, next) => {
     try {
-      const referral = await getGuidanceReferral(String(req.params.id));
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -552,8 +971,88 @@ router.get(
   requireRole("guidance_counselor", "nurse", "adm_coordinator", "principal"),
   async (req, res, next) => {
     try {
-      const referrals = await prisma.referral.findMany({ include: { anecdotalRecord: true, student: true, roster: true }, orderBy: { id: "asc" } });
-      res.json(referrals);
+      // Receiver scoping: never leak another role's referrals + full
+      // anecdotal write-ups to this caller. The nurse desk only receives
+      // clinic-routed cases, escalations to the nurse, and ADM-track cases
+      // where the teacher picked the nurse as consultation reviewer —
+      // guidance-picked / LRPC-picked ADM cases stay invisible here (this is
+      // what keeps ADM anecdotal out of /nurse/alerts unless it is really
+      // the nurse's consultation to review).
+      const role = req.user!.role;
+      // Typed as `any` — string literals here are Prisma ReferralTarget /
+      // ReferralStatus enums; a strict WhereInput annotation would reject
+      // the ternary union without adding safety.
+      const where: any =
+        role === "nurse"
+          ? {
+              OR: [
+                { referredToRole: "nurse" },
+                { status: "escalated", escalatedTo: "nurse" },
+                { referredToRole: "adm_coordinator", consultReviewer: "nurse" },
+              ],
+            }
+          : role === "guidance_counselor"
+            ? { referredToRole: "guidance_counselor" }
+            : role === "adm_coordinator"
+              ? {
+                  OR: [
+                    { referredToRole: "adm_coordinator" },
+                    { status: "escalated", escalatedTo: "adm_coordinator" },
+                  ],
+                }
+              : undefined;
+      const referrals = await prisma.referral.findMany({
+        where,
+        include: {
+          anecdotalRecord: true,
+          student: { include: { section: { select: { name: true } } } },
+          roster: { include: { section: { select: { name: true } } } },
+          // Clinic/counseling sessions per case (oldest first) so the nurse
+          // referrals page renders the same counseling-plan workflow as the
+          // guidance referrals page without extra round-trips.
+          counselingSessions: {
+            orderBy: { scheduledAt: "asc" },
+            select: {
+              id: true,
+              sessionType: true,
+              scheduledAt: true,
+              venue: true,
+              status: true,
+              sessionNotes: true,
+              outcome: true,
+              cancelReason: true,
+              completedAt: true,
+            },
+          },
+        },
+        orderBy: { id: "asc" },
+      });
+      // Referral time = earliest audit entry for the referral (creation
+      // always writes one). Legacy rows without an audit trail fall back
+      // to the observation date so "waiting" never goes blank.
+      const ids = referrals.map((r) => r.id);
+      const logs = ids.length
+        ? await prisma.auditLog.findMany({
+            where: { sourceTable: "referrals", sourceId: { in: ids } },
+            select: { sourceId: true, createdAt: true },
+            orderBy: { createdAt: "asc" },
+          })
+        : [];
+      const referredAtById = new Map<string, string>();
+      for (const log of logs) {
+        if (!referredAtById.has(log.sourceId)) {
+          referredAtById.set(log.sourceId, log.createdAt.toISOString());
+        }
+      }
+      res.json(
+        referrals.map((r) => ({
+          ...r,
+          referredAt:
+            referredAtById.get(r.id) ??
+            r.anecdotalRecord?.observationDatetime?.toISOString() ??
+            null,
+        })),
+      );
     } catch (e) { next(e); }
   }
 );

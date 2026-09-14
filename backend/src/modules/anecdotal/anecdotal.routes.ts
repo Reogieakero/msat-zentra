@@ -804,8 +804,9 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
   const isSectionAdviser = record.section.adviserId === requesterId;
   const isPrincipal = requesterRole === "principal";
   const isGuidance = requesterRole === "guidance_counselor";
-  if (!isObserver && !isSectionAdviser && !isPrincipal && !isGuidance) {
-    throw new AppError(403, "FORBIDDEN", "Only the observer, section adviser, principal, or guidance counselor may open the official form");
+  const isNurse = requesterRole === "nurse";
+  if (!isObserver && !isSectionAdviser && !isPrincipal && !isGuidance && !isNurse) {
+    throw new AppError(403, "FORBIDDEN", "Only the observer, section adviser, principal, guidance counselor, or school nurse may open the official form");
   }
   if (isGuidance && !isObserver && !isSectionAdviser) {
     const referral = await prisma.referral.findFirst({
@@ -816,6 +817,7 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
           {
             referredToRole: "adm_coordinator",
             admProfiles: { none: {} },
+            OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
           },
         ],
       },
@@ -823,6 +825,30 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
     });
     if (!referral) {
       throw new AppError(403, "FORBIDDEN", "Only cases referred to guidance may be opened by the guidance counselor");
+    }
+  }
+  // Same bargain as guidance: the nurse opens only cases routed to the
+  // clinic — direct referrals, escalations to the nurse, or ADM cases
+  // awaiting the nurse's consultation review. Unreferred filings stay
+  // invisible to the nurse even by direct id.
+  if (isNurse && !isObserver && !isSectionAdviser) {
+    const referral = await prisma.referral.findFirst({
+      where: {
+        anecdotalRecordId: recordId,
+        OR: [
+          { referredToRole: "nurse" },
+          { status: "escalated", escalatedTo: "nurse" },
+          {
+            referredToRole: "adm_coordinator",
+            consultReviewer: "nurse",
+            admProfiles: { none: {} },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!referral) {
+      throw new AppError(403, "FORBIDDEN", "Only cases referred to the clinic may be opened by the school nurse");
     }
   }
 
