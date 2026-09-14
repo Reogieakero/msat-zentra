@@ -9,6 +9,119 @@ import type { GuidanceAdmCase } from "./guidance-adm-data";
 
 export const REFERRAL_DRAFT_KEY = "zentra.adm-referral-recommendation";
 
+/* Persistent in-progress fill for the referral page: one localStorage entry
+   per referral so a refresh / accidental navigation never wipes the
+   counselor's answers. Versioned prefix — bump when GcForm03Data changes
+   shape so stale saves stop matching instead of half-loading. */
+const DRAFT_STORE_PREFIX = "zentra.gcform03-fill.v1.";
+
+export function gcForm03DraftKey(referralId: string): string {
+  return `${DRAFT_STORE_PREFIX}${referralId}`;
+}
+
+/** Previously saved fill for one referral, or null when absent/unreadable. */
+export function loadGcForm03Draft(referralId: string): unknown {
+  try {
+    if (typeof window === "undefined" || !referralId) return null;
+    const raw = window.localStorage.getItem(gcForm03DraftKey(referralId));
+    if (!raw) return null;
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export function saveGcForm03Draft(referralId: string, data: GcForm03Data): void {
+  try {
+    if (typeof window === "undefined" || !referralId) return;
+    window.localStorage.setItem(gcForm03DraftKey(referralId), JSON.stringify(data));
+  } catch {
+    /* Storage full or blocked — the form keeps working in memory. */
+  }
+}
+
+export function clearGcForm03Draft(referralId: string): void {
+  try {
+    if (typeof window === "undefined" || !referralId) return;
+    window.localStorage.removeItem(gcForm03DraftKey(referralId));
+  } catch {
+    /* Ignore — nothing to clean. */
+  }
+}
+
+/**
+ * Merge a stored draft over freshly built data. Stored answers always win,
+ * but every field falls back to the live build — so a save from an older
+ * form shape still yields a complete, submittable form.
+ */
+export function sanitizeGcForm03Draft(raw: unknown, fallback: GcForm03Data): GcForm03Data {
+  if (!raw || typeof raw !== "object") return fallback;
+  const r = raw as Record<string, unknown>;
+  const str = (v: unknown, fb: string): string =>
+    typeof v === "string" ? v : fb;
+  const obj = (v: unknown): Record<string, unknown> =>
+    typeof v === "object" && v !== null ? (v as Record<string, unknown>) : {};
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null;
+  const concernsRaw = obj(r.concerns);
+  const actionsRaw = Array.isArray(r.referrerActions)
+    ? (r.referrerActions as unknown[])
+    : [];
+  const callsRaw = Array.isArray(r.guidanceCalls)
+    ? (r.guidanceCalls as unknown[])
+    : [];
+  const actions = actionsRaw.slice(0, 5).map((a) => {
+    const o = obj(a);
+    return { date: str(o.date, ""), action: str(o.action, "") };
+  });
+  const callLabels = ["1st", "2nd", "3rd"];
+  return {
+    ...fallback,
+    studentName: str(r.studentName, fallback.studentName),
+    gradeSection: str(r.gradeSection, fallback.gradeSection),
+    concerns: isObj(r.concerns)
+      ? {
+          absences: concernsRaw.absences === true,
+          academic: concernsRaw.academic === true,
+          personal: concernsRaw.personal === true,
+          family: concernsRaw.family === true,
+          peer: concernsRaw.peer === true,
+          others: concernsRaw.others === true,
+          othersText: str(concernsRaw.othersText, ""),
+        }
+      : fallback.concerns,
+    detailsOfConcern: str(r.detailsOfConcern, fallback.detailsOfConcern),
+    referrerActions: actions.length > 0 ? actions : fallback.referrerActions,
+    referrerRecommendations: str(
+      r.referrerRecommendations,
+      fallback.referrerRecommendations
+    ),
+    referredByName: str(r.referredByName, fallback.referredByName),
+    referredByRole: str(r.referredByRole, fallback.referredByRole),
+    referredDate: str(r.referredDate, fallback.referredDate),
+    receivedBy: str(r.receivedBy, fallback.receivedBy),
+    receivedDate: str(r.receivedDate, fallback.receivedDate),
+    guidanceCalls: callLabels.map((label, i) => {
+      const o = obj(callsRaw[i]);
+      const fb = fallback.guidanceCalls[i];
+      return {
+        call: label,
+        checked: o.checked === true,
+        date: str(o.date, fb?.date ?? ""),
+        subject: str(o.subject, fb?.subject ?? ""),
+        remarks: str(o.remarks, fb?.remarks ?? ""),
+      };
+    }),
+    guidanceRecommendations: str(
+      r.guidanceRecommendations,
+      fallback.guidanceRecommendations
+    ),
+    followUp: str(r.followUp, fallback.followUp),
+    counselorName: str(r.counselorName, fallback.counselorName),
+    counselorDate: str(r.counselorDate, fallback.counselorDate),
+  };
+}
+
 export interface GcForm03ActionRow {
   date: string;
   action: string;

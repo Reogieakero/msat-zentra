@@ -152,6 +152,12 @@
   border-bottom: none;
 }
 
+.table th.num,
+.table td.num {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
@@ -160,6 +166,14 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actionsRight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 

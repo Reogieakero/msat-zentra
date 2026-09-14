@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { combineDateTime } from "../../referrals/components/guidance-referrals-table";
 import type {
@@ -19,6 +19,7 @@ import {
   assignIntervention,
   cancelFollowUpSession,
   completeFollowUpSession,
+  fetchInterventionStaff,
   recordInterventionOutcome,
   rescheduleFollowUpSession,
   reviewIntervention,
@@ -85,6 +86,19 @@ export function GuidanceInterventionsTable({
   const [outcomeStatus, setOutcomeStatus] =
     useState<InterventionOutcome>("ongoing");
   const [outcomeNotes, setOutcomeNotes] = useState("");
+
+  // Staff directory for the "assign to staff" handoff — fetched once, shared
+  // by every row. Guidance intervenes directly or hands the case to someone
+  // on this list.
+  const { data: staffList } = useQuery({
+    queryKey: ["guidance-intervention-staff"],
+    queryFn: () => fetchInterventionStaff(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const staffOptions = (staffList ?? []).map((s) => ({
+    value: s.id,
+    label: `${s.fullName} · ${s.role.replace(/_/g, " ")}`,
+  }));
 
   const activeRow = students.find((r) => r.studentKey === activeKey) ?? null;
   const activeFollowUp = activeRow?.intervention ?? null;
@@ -309,7 +323,7 @@ export function GuidanceInterventionsTable({
     query.trim() !== "" ||
     level !== "High" ||
     factor !== "" ||
-    outcome !== "" ||
+    outcome !== "all" ||
     mineOnly;
 
   const followUpWhen = combineDateTime(sessDate, sessTime);
@@ -394,6 +408,7 @@ export function GuidanceInterventionsTable({
                   locked={rowLocked(row.studentKey)}
                   isActionPending={isActionPending}
                   isBusy={(action) => isBusy(row.studentKey, action)}
+                  staffOptions={staffOptions}
                   planCollapsed={collapsedPlans[row.studentKey] === true}
                   onTogglePlan={() =>
                     setCollapsedPlans((p) => ({

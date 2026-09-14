@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,7 @@ import { GuidanceReferralsTable } from "./components/guidance-referrals-table";
 import type { StatusFilter } from "./components/guidance-referrals-filters";
 import styles from "./components/guidance-referrals.module.css";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 
 export default function GuidanceReferralsPage() {
   const [query, setQuery] = React.useState("");
@@ -43,6 +43,8 @@ export default function GuidanceReferralsPage() {
         page,
         pageSize: PAGE_SIZE,
       }),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 
   if (isPending) {

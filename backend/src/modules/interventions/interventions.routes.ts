@@ -228,6 +228,39 @@ router.get(
   }
 );
 
+// Staff directory for intervention assignment — the people guidance can hand
+// a follow-up to (advisers, subject teachers, nurse, ADM coordinator, fellow
+// counselors). Status-only directory: id, name, role. No student data.
+router.get(
+  "/staff",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  cache({ tags: ["guidance", "staff"] }),
+  async (_req, res, next) => {
+    try {
+      const staff = await prisma.user.findMany({
+        where: {
+          status: "active",
+          role: {
+            in: [
+              "adviser",
+              "subject_teacher",
+              "nurse",
+              "adm_coordinator",
+              "guidance_counselor",
+            ],
+          },
+        },
+        select: { id: true, fullName: true, role: true },
+        orderBy: [{ role: "asc" }, { fullName: "asc" }],
+      });
+      res.json({ staff });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 // Start a follow-up for a live at-risk student who has no open one yet —
 // same intake as accepting a referral: urgency, first impressions, and an
 // optional first counseling session booked on the spot.

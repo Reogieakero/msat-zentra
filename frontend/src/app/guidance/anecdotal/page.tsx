@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GuidanceAnecdotalHeader } from "./components/guidance-anecdotal-header";
 import { GuidanceAnecdotalCharts } from "./components/guidance-anecdotal-charts";
@@ -10,7 +10,7 @@ import type { CategoryFilter } from "./components/guidance-anecdotal-filters";
 import { fetchGuidanceAnecdotal } from "./components/guidance-anecdotal-data";
 import styles from "./components/guidance-anecdotal.module.css";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 
 export default function GuidanceAnecdotalPage() {
   const [queryInput, setQueryInput] = React.useState("");
@@ -26,10 +26,12 @@ export default function GuidanceAnecdotalPage() {
     return () => clearTimeout(timer);
   }, [queryInput]);
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, isFetching } = useQuery({
     queryKey: ["guidance-anecdotal", query, category, page],
     queryFn: () =>
       fetchGuidanceAnecdotal({ q: query, category, page, pageSize: PAGE_SIZE }),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 
   if (isPending) {
@@ -100,6 +102,7 @@ export default function GuidanceAnecdotalPage() {
         pageSize={data.pageSize}
         total={data.total}
         totalPages={data.totalPages}
+        isNavigating={isFetching && !isPending}
         onPageChange={setPage}
         query={queryInput}
         onQueryChange={setQueryInput}

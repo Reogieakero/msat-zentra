@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormDropdown } from "../../referrals/components/form-dropdown";
 import type {
   AtRiskStudentItem,
   CounselingSessionItem,
@@ -44,6 +45,7 @@ interface InterventionRowProps {
   locked: boolean;
   isActionPending: boolean;
   isBusy: (action: string) => boolean;
+  staffOptions: { value: string; label: string }[];
   planCollapsed: boolean;
   onTogglePlan: () => void;
   onStart: () => void;
@@ -64,6 +66,7 @@ export function InterventionRow({
   locked,
   isActionPending,
   isBusy,
+  staffOptions,
   planCollapsed,
   onTogglePlan,
   onStart,
@@ -254,6 +257,18 @@ export function InterventionRow({
               {followUp.assignee ? "Take over" : "Take this case"}
             </Button>
           )}
+          {followUp && closed && (
+            <Button
+              type="button"
+              size="xs"
+              disabled={locked || isActionPending}
+              onClick={onStart}
+              title="This student is still at risk — open a new follow-up"
+            >
+              <Busy busy={isBusy("start")} />
+              Start new follow-up…
+            </Button>
+          )}
           {followUp && isMine && !closed && (
             <Button
               type="button"
@@ -265,6 +280,23 @@ export function InterventionRow({
               <Busy busy={isBusy("assign")} />
               Release
             </Button>
+          )}
+          {followUp && !closed && staffOptions.length > 0 && (
+            <FormDropdown
+              id={`assign-${row.studentKey}`}
+              label="Assign to staff"
+              value={followUp.assigneeId}
+              onChange={(value) => {
+                if (value && value !== followUp.assigneeId) onAssign(value);
+              }}
+              placeholder={
+                followUp.assignee
+                  ? `Handled by ${followUp.assignee}`
+                  : "Assign to staff…"
+              }
+              options={staffOptions}
+              scrollable
+            />
           )}
         </div>
       </td>

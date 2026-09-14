@@ -53,6 +53,7 @@ interface GuidanceAlertsGridProps {
   onLevelChange: (value: LevelFilter) => void;
   factor: FactorFilter;
   onFactorChange: (value: FactorFilter) => void;
+  isNavigating?: boolean;
 }
 
 export function GuidanceAlertsGrid({
@@ -68,6 +69,7 @@ export function GuidanceAlertsGrid({
   onLevelChange,
   factor,
   onFactorChange,
+  isNavigating = false,
 }: GuidanceAlertsGridProps) {
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
@@ -173,18 +175,18 @@ export function GuidanceAlertsGrid({
             <Button
               size="xs"
               variant="outline"
-              disabled={page <= 1}
+              disabled={page <= 1 || isNavigating}
               onClick={() => onPageChange(page - 1)}
             >
               Previous
             </Button>
-            <span className={styles.pageLabel}>
-              Page {page} of {totalPages}
+            <span className={styles.pageLabel} aria-live="polite">
+              {isNavigating ? "Loading…" : `Page ${page} of ${totalPages}`}
             </span>
             <Button
               size="xs"
               variant="outline"
-              disabled={page >= totalPages}
+              disabled={page >= totalPages || isNavigating}
               onClick={() => onPageChange(page + 1)}
             >
               Next

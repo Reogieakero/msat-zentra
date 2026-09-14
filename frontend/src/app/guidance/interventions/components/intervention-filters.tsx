@@ -30,11 +30,11 @@ const FACTOR_OPTIONS: { value: FactorFilter; label: string }[] = [
 ];
 
 const FOLLOW_UP_OPTIONS: { value: FollowUpStatusFilter; label: string }[] = [
+  { value: "all", label: "Show everything" },
   { value: "", label: "Open follow-ups" },
   { value: "ongoing", label: "Still ongoing" },
   { value: "resolved", label: "Resolved" },
   { value: "unresolved", label: "Closed — not resolved" },
-  { value: "all", label: "Show everything" },
 ];
 
 interface CompactFilterProps {
@@ -113,7 +113,7 @@ export function InterventionFilters({
     query.trim() !== "" ||
     level !== "High" ||
     factor !== "" ||
-    outcome !== "" ||
+    outcome !== "all" ||
     mineOnly;
   const levelLabel =
     LEVEL_OPTIONS.find((o) => o.value === level)?.label ?? "High risk";
@@ -121,7 +121,7 @@ export function InterventionFilters({
     FACTOR_OPTIONS.find((o) => o.value === factor)?.label ?? "All reasons";
   const outcomeLabel =
     FOLLOW_UP_OPTIONS.find((o) => o.value === outcome)?.label ??
-    "Open follow-ups";
+    "Show everything";
 
   return (
     <div className={styles.filters}>
@@ -154,7 +154,7 @@ export function InterventionFilters({
       />
       <CompactFilter
         buttonLabel={outcomeLabel}
-        active={outcome !== ""}
+        active={outcome !== "all"}
         ariaLabel={`Filter by follow-up status, currently showing: ${outcomeLabel}`}
         options={FOLLOW_UP_OPTIONS}
         value={outcome}
@@ -181,7 +181,7 @@ export function InterventionFilters({
             onQueryChange("");
             onLevelChange("High");
             onFactorChange("");
-            onOutcomeChange("");
+            onOutcomeChange("all");
             onMineOnlyChange(false);
           }}
         >

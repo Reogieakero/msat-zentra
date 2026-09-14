@@ -79,6 +79,7 @@ interface GuidanceAnecdotalFoldersProps {
   onQueryChange: (value: string) => void;
   category: CategoryFilter;
   onCategoryChange: (value: CategoryFilter) => void;
+  isNavigating?: boolean;
 }
 
 /**
@@ -99,6 +100,7 @@ export function GuidanceAnecdotalFolders({
   onQueryChange,
   category,
   onCategoryChange,
+  isNavigating = false,
 }: GuidanceAnecdotalFoldersProps) {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
@@ -185,18 +187,18 @@ export function GuidanceAnecdotalFolders({
               <Button
                 size="xs"
                 variant="outline"
-                disabled={page <= 1}
+                disabled={page <= 1 || isNavigating}
                 onClick={() => onPageChange(page - 1)}
               >
                 Previous
               </Button>
-              <span className={styles.pageLabel}>
-                Page {page} of {totalPages}
+              <span className={styles.pageLabel} aria-live="polite">
+                {isNavigating ? "Loading…" : `Page ${page} of ${totalPages}`}
               </span>
               <Button
                 size="xs"
                 variant="outline"
-                disabled={page >= totalPages}
+                disabled={page >= totalPages || isNavigating}
                 onClick={() => onPageChange(page + 1)}
               >
                 Next

@@ -55,6 +55,28 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     }
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid input", fields } });
   }
+  // Database connectivity failures (pooler down, wrong port, network blip)
+  // -> 503 so clients know the failure is transient and retryable, instead
+  // of a raw stack trace + generic 500. Covers Prisma P1001/P1008/P1017 and
+  // raw driver codes surfaced through the pg adapter (ETIMEDOUT, etc.).
+  if (err && typeof err === "object" && "code" in err) {
+    const connCode = String((err as { code?: unknown }).code ?? "");
+    if (
+      connCode === "P1001" ||
+      connCode === "P1008" ||
+      connCode === "P1017" ||
+      connCode === "ETIMEDOUT" ||
+      connCode === "ECONNREFUSED" ||
+      connCode === "ENOTFOUND" ||
+      connCode === "EHOSTUNREACH" ||
+      connCode === "ECONNRESET"
+    ) {
+      console.error(err);
+      return res.status(503).json({
+        error: { code: "DB_UNAVAILABLE", message: "Database temporarily unavailable. Please try again." },
+      });
+    }
+  }
   console.error(err);
   return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
 }

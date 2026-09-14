@@ -19,8 +19,12 @@ import {
 } from "../../components/guidance-adm-data";
 import {
   buildGcForm03Data,
+  clearGcForm03Draft,
   CONCERN_OPTIONS,
+  loadGcForm03Draft,
   REFERRAL_DRAFT_KEY,
+  sanitizeGcForm03Draft,
+  saveGcForm03Draft,
   type GcForm03Data,
 } from "../../components/gcform03-data";
 import { GcForm03PreviewDialog } from "../../components/GcForm03PreviewDialog";
@@ -76,7 +80,9 @@ export default function GuidanceAdmReferralPage() {
   const [form, setForm] = React.useState<GcForm03Data | null>(null);
 
   /* Auto-populate once the case + report are in — plus the recommendation
-     the counselor typed on the review overlay (stashed before navigating). */
+     the counselor typed on the review overlay (stashed before navigating).
+     A saved in-progress fill for this referral (localStorage) is layered on
+     top so a refresh restores every answer instead of starting over. */
   React.useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (!activeCase || !report || form) return;
@@ -87,19 +93,25 @@ export default function GuidanceAdmReferralPage() {
     } catch {
       draft = "";
     }
-    setForm(
-      buildGcForm03Data(
-        activeCase,
-        report,
-        draft,
-        casesQuery.data?.counselorName ?? ""
-      )
+    const base = buildGcForm03Data(
+      activeCase,
+      report,
+      draft,
+      casesQuery.data?.counselorName ?? ""
     );
+    setForm(sanitizeGcForm03Draft(loadGcForm03Draft(referralId), base));
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [activeCase, report, form, casesQuery.data?.counselorName]);
+  }, [activeCase, report, form, casesQuery.data?.counselorName, referralId]);
 
   const patch = (p: Partial<GcForm03Data>) =>
     setForm((f) => (f ? { ...f, ...p } : f));
+
+  /* Persist every edit (debounced) so a refresh keeps the in-progress fill. */
+  React.useEffect(() => {
+    if (!mounted || !form) return;
+    const t = window.setTimeout(() => saveGcForm03Draft(referralId, form), 250);
+    return () => window.clearTimeout(t);
+  }, [form, referralId, mounted]);
 
   const confirmMutation = useMutation({
     mutationFn: () =>
@@ -108,6 +120,7 @@ export default function GuidanceAdmReferralPage() {
         outcome: "endorse",
       }),
     onSuccess: () => {
+      clearGcForm03Draft(referralId);
       queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
@@ -449,9 +462,31 @@ export default function GuidanceAdmReferralPage() {
                 </div>
               </fieldset>
 
-              <div className={styles.actions}>
+              <div
+                className={styles.actions}
+                style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
+              >
                 <Button disabled={!form} onClick={() => setStep(2)}>
                   Preview filled form
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!form}
+                  onClick={() => {
+                    if (!activeCase || !report) return;
+                    clearGcForm03Draft(referralId);
+                    setForm(
+                      buildGcForm03Data(
+                        activeCase,
+                        report,
+                        "",
+                        casesQuery.data?.counselorName ?? ""
+                      )
+                    );
+                  }}
+                >
+                  Reset to auto-filled
                 </Button>
               </div>
             </div>

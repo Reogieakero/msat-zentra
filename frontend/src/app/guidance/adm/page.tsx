@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { GuidanceAdmTable } from "./components/guidance-adm-table";
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 
 export default function GuidanceAdmPage() {
   const [query, setQuery] = React.useState("");
@@ -55,6 +55,8 @@ export default function GuidanceAdmPage() {
           page,
           pageSize: PAGE_SIZE,
         }),
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
     });
 
   if (!mounted || isPending) {

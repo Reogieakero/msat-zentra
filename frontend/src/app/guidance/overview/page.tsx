@@ -15,6 +15,7 @@ export default function GuidanceOverviewPage() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["guidance-overview"],
     queryFn: fetchGuidanceOverview,
+    staleTime: 60_000,
   });
 
   if (isPending) {

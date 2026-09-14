@@ -120,6 +120,19 @@ export async function fetchGuidanceInterventions(
   return data;
 }
 
+export interface InterventionStaffMember {
+  id: string;
+  fullName: string;
+  role: string;
+}
+
+export async function fetchInterventionStaff(): Promise<InterventionStaffMember[]> {
+  const { data } = await apiClient.get<{ staff: InterventionStaffMember[] }>(
+    "/api/interventions/staff"
+  );
+  return data.staff;
+}
+
 export type ReviewDecision = "approved" | "rejected" | "modified";
 
 export async function reviewIntervention(

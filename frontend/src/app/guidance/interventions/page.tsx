@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,14 +25,14 @@ import type {
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-interventions.module.css";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 
 export default function GuidanceInterventionsPage() {
   const session = useSession();
   const [query, setQuery] = React.useState("");
   const [level, setLevel] = React.useState<RiskLevelFilter>("High");
   const [factor, setFactor] = React.useState<FactorFilter>("");
-  const [outcome, setOutcome] = React.useState<FollowUpStatusFilter>("");
+  const [outcome, setOutcome] = React.useState<FollowUpStatusFilter>("all");
   const [mineOnly, setMineOnly] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
@@ -63,6 +63,8 @@ export default function GuidanceInterventionsPage() {
           page,
           pageSize: PAGE_SIZE,
         }),
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
     });
 
   return (
@@ -72,7 +74,7 @@ export default function GuidanceInterventionsPage() {
           <h1 className={pageStyles.title}>Interventions</h1>
           <p className={pageStyles.lede}>
             Live high-risk students from the at-risk engine — start follow-ups,
-            review the plan, and record how each student recovers.
+            assign staff to intervene, and record how each student recovers.
           </p>
         </div>
       </div>

@@ -13,7 +13,8 @@ import {
  * The workbook is loaded from the public folder and ONLY answer cells get
  * new values — every font, border, fill, merge, image, print setting, and
  * static label stays exactly as the template ships it. No rebuild, no
- * restyle. Date + received-by answers are always centered in the file.
+ * restyle. Dates, received-by, and both signature names are always centered
+ * in the file.
  *
  * NOTE on ExcelJS style sharing: cells read from a file share their style
  * objects, so per-property setters (`cell.font = …`, `cell.alignment = …`)
@@ -115,7 +116,8 @@ export async function loadGcForm03Template(): Promise<{
 /**
  * Fill ONLY the answer cells of a loaded template sheet. Static labels,
  * captions, logos, borders, merges, and print settings are never altered;
- * date + received-by answers are always centered in the file.
+ * dates, received-by, and both signature names are always centered in
+ * the file.
  */
 export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   /* ---- Identity (underline inputs; masters of merged ranges) ---- */
@@ -158,6 +160,7 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
 
   /* ---- Referrer signature line (name only; role captions stay as printed) ---- */
   setValue(ws, "F28", data.referredByName);
+  centerCell(ws, "F28");
 
   /* ---- Received by / Date (always centered in the file) ---- */
   setValue(ws, "C31", data.receivedBy);
@@ -192,8 +195,9 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   setPara(ws, "A44", followRows[2]);
   fitBlock(ws, 44, followBase, followRows[2], 100);
 
-  /* ---- Counselor sign-off (date always centered in the file) ---- */
+  /* ---- Counselor sign-off (names + date always centered in the file) ---- */
   setValue(ws, "A46", data.counselorName);
+  centerCell(ws, "A46");
   setValue(ws, "G46", data.counselorDate);
   centerCell(ws, "G46");
 }

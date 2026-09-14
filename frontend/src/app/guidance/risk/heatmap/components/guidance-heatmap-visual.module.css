@@ -1,0 +1,150 @@
+.visual {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.matrixBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.matrixTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.matrixSub {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.75rem;
+  min-width: 28rem;
+}
+
+.rowHead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 600;
+  color: var(--foreground);
+  background-color: var(--card);
+  padding: 0.375rem 0.75rem 0.375rem 0;
+  white-space: nowrap;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+thead .rowHead {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.colHead {
+  text-align: center;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 0.375rem;
+  vertical-align: bottom;
+  min-width: 5.5rem;
+}
+
+.colHead span {
+  display: block;
+}
+
+.colTotal {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 500;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell {
+  padding: 0.25rem;
+  text-align: center;
+}
+
+.cellBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 40px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legendLabel {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.legendSwatches {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.legendSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+
+.confidential {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.tip {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tipSub {
+  display: block;
+  font-size: 0.6875rem;
+  opacity: 0.8;
+}
