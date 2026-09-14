@@ -130,89 +130,177 @@ class AnecdotalLoggerView extends ConsumerWidget {
     AnecdotalCategory selectedCategory = AnecdotalCategory.behavioral;
     final controller = TextEditingController();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: AppColors.surfaceDark,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-                side: const BorderSide(color: AppColors.borderSubtle),
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
               ),
-              title: Text(
-                'Log Anecdotal Incident',
-                style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: selectedStudentId,
-                    dropdownColor: AppColors.surfaceElevated,
-                    decoration: const InputDecoration(labelText: 'Select Student'),
-                    items: MockData.students.map((s) {
-                      return DropdownMenuItem(
-                        value: s.id,
-                        child: Text(s.fullName, style: GoogleFonts.inter(color: AppColors.textPrimary)),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => selectedStudentId = val!),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<AnecdotalCategory>(
-                    value: selectedCategory,
-                    dropdownColor: AppColors.surfaceElevated,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: AnecdotalCategory.values.map((c) {
-                      return DropdownMenuItem(
-                        value: c,
-                        child: Text(c.name.toUpperCase(), style: GoogleFonts.inter(color: AppColors.textPrimary)),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => selectedCategory = val!),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    maxLines: 3,
-                    style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 13),
-                    decoration: const InputDecoration(
-                      labelText: 'Incident Description',
-                      hintText: 'Enter observation notes, location, or intervention details...',
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Log Anecdotal Incident',
+                          style: GoogleFonts.inter(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppColors.textMuted),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (controller.text.trim().isNotEmpty) {
-                      final student = MockData.students.firstWhere((s) => s.id == selectedStudentId);
-                      final newRecord = AnecdotalRecordModel(
-                        id: 'anec_${DateTime.now().millisecondsSinceEpoch}',
-                        studentId: student.id,
-                        studentName: student.fullName,
-                        observerName: 'Maria Santos',
-                        sectionName: student.sectionName,
-                        category: selectedCategory,
-                        incidentDescription: controller.text.trim(),
-                        observationDatetime: DateTime.now(),
-                      );
+                    const SizedBox(height: 12),
 
-                      ref.read(anecdotalProvider.notifier).addRecord(newRecord);
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Save Record'),
+                    // Select Student
+                    Text(
+                      'Select Student',
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      value: selectedStudentId,
+                      dropdownColor: AppColors.surfaceElevated,
+                      style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 14),
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: MockData.students.map((s) {
+                        return DropdownMenuItem(
+                          value: s.id,
+                          child: Text(s.fullName, style: GoogleFonts.inter(color: AppColors.textPrimary)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() => selectedStudentId = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Incident Category Radio Options
+                    Text(
+                      'Incident Category',
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+
+                    Column(
+                      children: AnecdotalCategory.values.map((cat) {
+                        final isSelected = selectedCategory == cat;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primaryEmerald.withOpacity(0.12) : AppColors.surfaceCard,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primaryEmerald : AppColors.borderSubtle,
+                            ),
+                          ),
+                          child: RadioListTile<AnecdotalCategory>(
+                            value: cat,
+                            groupValue: selectedCategory,
+                            activeColor: AppColors.primaryEmerald,
+                            dense: true,
+                            title: Text(
+                              cat.name.toUpperCase(),
+                              style: GoogleFonts.inter(
+                                color: isSelected ? AppColors.primaryEmerald : AppColors.textPrimary,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 13,
+                              ),
+                            ),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  selectedCategory = val;
+                                });
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Incident Description Input
+                    Text(
+                      'Incident Description',
+                      style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: controller,
+                      maxLines: 3,
+                      style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: 'Enter observation notes, location, or intervention details...',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Full-width Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final desc = controller.text.trim();
+                          if (desc.isNotEmpty) {
+                            final student = MockData.students.firstWhere((s) => s.id == selectedStudentId);
+                            final newRecord = AnecdotalRecordModel(
+                              id: 'anec_${DateTime.now().millisecondsSinceEpoch}',
+                              studentId: student.id,
+                              studentName: student.fullName,
+                              observerName: 'Maria Santos',
+                              sectionName: student.sectionName,
+                              category: selectedCategory,
+                              incidentDescription: desc,
+                              observationDatetime: DateTime.now(),
+                            );
+
+                            ref.read(anecdotalProvider.notifier).addRecord(newRecord);
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppColors.surfaceElevated,
+                                content: Text(
+                                  'Incident logged for ${student.fullName}.',
+                                  style: GoogleFonts.inter(color: AppColors.primaryEmerald),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(
+                          'Log Anecdotal Incident',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         );

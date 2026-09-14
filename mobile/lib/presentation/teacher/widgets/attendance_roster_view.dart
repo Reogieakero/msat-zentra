@@ -16,6 +16,7 @@ class AttendanceRosterView extends ConsumerStatefulWidget {
 
 class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
   DateTime _selectedDate = DateTime.now(); // Defaults to Today's date
+  late DateTime _mapMonth; // Currently displayed month in Attendance Map
   Session _selectedSession = Session.AM;
 
   // Pagination state for Recent Attendance Logs
@@ -25,12 +26,33 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
   // Set of day numbers in September 2026 where attendance was completed
   final Set<int> _completedDays = {1, 2, 3, 4, 5};
 
+  static const List<String> _monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  String _getMonthName(int month) => _monthNames[month - 1];
+
+  @override
+  void initState() {
+    super.initState();
+    _mapMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final attendanceNotifier = ref.read(attendanceProvider.notifier);
 
     final now = DateTime.now();
     final todayDay = now.day; // 5
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    // Days in current _mapMonth
+    final daysInMonth = DateUtils.getDaysInMonth(_mapMonth.year, _mapMonth.month);
+    final leadingEmptyDays = DateTime(_mapMonth.year, _mapMonth.month, 1).weekday - 1;
+    final totalGridItems = leadingEmptyDays + daysInMonth;
 
     // Only past school days & today (most recent day first)
     final pastAndTodayDays = List.generate(todayDay, (i) => todayDay - i); // [5, 4, 3, 2, 1]
@@ -56,94 +78,118 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Top Create Attendance & Date Selector Bar
+            // 1. Color-Coded Calendar Heatmap & Active Date Context (Unified View)
             CustomCard(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: isMobile
+                  ? const EdgeInsets.fromLTRB(10, 10, 10, 6)
+                  : const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Selected Date Context',
-                          style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.calendar_today, size: 14, color: AppColors.primaryEmerald),
-                            const SizedBox(width: 6),
-                            Expanded(
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left, color: AppColors.primaryEmerald, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                              tooltip: 'Previous Month',
+                              onPressed: () {
+                                setState(() {
+                                  _mapMonth = DateTime(_mapMonth.year, _mapMonth.month - 1, 1);
+                                });
+                              },
+                            ),
+                            Flexible(
                               child: Text(
-                                '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}${_selectedDate.day == todayDay ? " (Today)" : ""}',
-                                style: GoogleFonts.robotoMono(
-                                  color: AppColors.primaryEmerald,
-                                  fontSize: 14,
+                                '${_getMonthName(_mapMonth.month)} ${_mapMonth.year}',
+                                style: GoogleFonts.inter(
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: isMobile ? 13 : 14,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right, color: AppColors.primaryEmerald, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                              tooltip: 'Next Month',
+                              onPressed: () {
+                                setState(() {
+                                  _mapMonth = DateTime(_mapMonth.year, _mapMonth.month + 1, 1);
+                                });
+                              },
+                            ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryEmerald.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${_completedDays.length}/22 Days Done',
+                          style: GoogleFonts.robotoMono(
+                            color: AppColors.primaryEmerald,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.date_range, color: AppColors.primaryEmerald, size: 20),
+                        tooltip: 'Select Date',
+                        onPressed: () => _pickDate(context),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: isMobile ? 4 : 6),
+
+                  // Integrated Active Selected Date Context Banner
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 6 : 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryEmerald.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.35)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event_available, size: 16, color: AppColors.primaryEmerald),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Active Context: ',
+                          style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 12),
+                        ),
+                        Expanded(
+                          child: Text(
+                            '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}${_selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == todayDay ? " (Today)" : ""}',
+                            style: GoogleFonts.robotoMono(
+                              color: AppColors.primaryEmerald,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.date_range, color: AppColors.textPrimary),
-                    tooltip: 'Change Date',
-                    onPressed: () => _pickDate(context),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-          // 2. Color-Coded Calendar Heatmap (Date-First View matching Parents)
-          CustomCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'September 2026 Attendance Map',
-                        style: GoogleFonts.inter(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryEmerald.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${_completedDays.length}/22 Days Done',
-                        style: GoogleFonts.robotoMono(
-                          color: AppColors.primaryEmerald,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                  SizedBox(height: isMobile ? 8 : 12),
 
                 // Color Coding Legend
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 6,
+                  spacing: isMobile ? 8 : 10,
+                  runSpacing: 4,
                   children: [
                     _legendPill('Completed', AppColors.attendancePresent),
                     _legendPill('Unrecorded (Past)', AppColors.attendanceAbsent),
@@ -152,7 +198,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                     _legendPill('Weekend', AppColors.surfaceElevated),
                   ],
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: isMobile ? 8 : 14),
 
                 // Days of week header
                 Row(
@@ -171,24 +217,29 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 4 : 8),
 
-                // Calendar Grid (30 Days of September 2026)
+                // Calendar Grid with AspectRatio to eliminate vertical stretching
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 30,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  itemCount: totalGridItems,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 7,
-                    crossAxisSpacing: 6,
-                    mainAxisSpacing: 6,
+                    crossAxisSpacing: isMobile ? 4 : 6,
+                    mainAxisSpacing: isMobile ? 4 : 6,
+                    childAspectRatio: isMobile ? 1.35 : 1.25,
                   ),
                   itemBuilder: (context, index) {
-                    final dayNum = index + 1;
-                    final isWeekend = (dayNum % 7 == 6) || (dayNum % 7 == 0);
-                    final isDone = _completedDays.contains(dayNum);
-                    final isToday = (dayNum == todayDay);
-                    final isPastDay = dayNum < todayDay;
+                    if (index < leadingEmptyDays) {
+                      return const SizedBox.shrink();
+                    }
+                    final dayNum = index - leadingEmptyDays + 1;
+                    final tileDate = DateTime(_mapMonth.year, _mapMonth.month, dayNum);
+                    final isWeekend = (tileDate.weekday == DateTime.saturday || tileDate.weekday == DateTime.sunday);
+                    final isDone = (_mapMonth.year == 2026 && _mapMonth.month == 9 && _completedDays.contains(dayNum));
+                    final isToday = (tileDate.year == now.year && tileDate.month == now.month && tileDate.day == now.day);
+                    final isPastDay = tileDate.isBefore(DateTime(now.year, now.month, now.day));
 
                     Color bgTileColor;
                     Color borderTileColor;
@@ -218,23 +269,35 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
                       textTileColor = AppColors.riskModerate;
                     }
 
+                    final isSelectedDate = (_selectedDate.year == tileDate.year &&
+                        _selectedDate.month == tileDate.month &&
+                        _selectedDate.day == tileDate.day);
+
                     return GestureDetector(
                       onTap: () {
-                        final targetDate = DateTime(2026, 9, dayNum);
                         setState(() {
-                          _selectedDate = targetDate;
+                          _selectedDate = tileDate;
                         });
-                        _openRosterMarkingSheet(context, targetDate, attendanceNotifier);
+                        _openRosterMarkingSheet(context, tileDate, attendanceNotifier);
                       },
                       child: Container(
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: bgTileColor,
+                          color: isSelectedDate ? AppColors.primaryEmerald.withOpacity(0.3) : bgTileColor,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: borderTileColor,
-                            width: isToday ? 2.0 : 1.0,
+                            color: isSelectedDate ? AppColors.primaryEmerald : borderTileColor,
+                            width: isSelectedDate ? 2.5 : (isToday ? 2.0 : 1.0),
                           ),
+                          boxShadow: isSelectedDate
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primaryEmerald.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    spreadRadius: -1,
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Text(
                           '$dayNum',
@@ -443,6 +506,7 @@ class _AttendanceRosterViewState extends ConsumerState<AttendanceRosterView> {
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
+        _mapMonth = DateTime(picked.year, picked.month, 1);
       });
     }
   }
