@@ -41,64 +41,33 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
       extendBody: true,
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
-        title: _selectedClass != null && _currentIndex == 1
-            ? Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 20, color: AppColors.primaryEmerald),
-                    tooltip: 'Back to Class Selector',
-                    onPressed: () {
-                      setState(() {
-                        _selectedClass = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${_selectedClass!.subjectName} — ${_selectedClass!.sectionName}',
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${_selectedClass!.scheduleTime} | ${_selectedClass!.room}',
-                          style: GoogleFonts.robotoMono(fontSize: 10, color: AppColors.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  const Icon(Icons.school, color: AppColors.primaryEmerald, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Zentra',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppColors.borderSubtle),
-                    ),
-                    child: Text(
-                      'Faculty',
-                      style: GoogleFonts.robotoMono(
-                        color: AppColors.primaryEmerald,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+        title: Row(
+          children: [
+            const Icon(Icons.school, color: AppColors.primaryEmerald, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              'Zentra',
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
+              child: Text(
+                'Faculty',
+                style: GoogleFonts.robotoMono(
+                  color: AppColors.primaryEmerald,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           Builder(
             builder: (context) => IconButton(
@@ -319,6 +288,48 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
       padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
+          // Top Subject Sub-Header Bar (Back Button + Subject Info below Zentra AppBar)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, size: 20, color: AppColors.primaryEmerald),
+                  tooltip: 'Back to Class Selector',
+                  onPressed: () {
+                    setState(() {
+                      _selectedClass = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_selectedClass!.subjectName} — ${_selectedClass!.sectionName}',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${_selectedClass!.scheduleTime} | ${_selectedClass!.room}',
+                        style: GoogleFonts.robotoMono(fontSize: 10, color: AppColors.textMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
           // Segmented Control Header
           Container(
             padding: const EdgeInsets.all(3),
