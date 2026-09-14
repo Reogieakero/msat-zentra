@@ -84,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       SnackBar(
         backgroundColor: AppColors.surfaceElevated,
         content: Text(
-          'Connecting to Google Auth for ${_getRoleLabel()}...',
+          'Connecting to Google Auth...',
           style: GoogleFonts.inter(color: AppColors.textPrimary),
         ),
       ),
@@ -111,8 +111,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     _buildHeader(),
                     const SizedBox(height: 24),
-                    _buildRoleCardsGrid(),
-                    const SizedBox(height: 20),
                     _buildLoginFormCard(),
                     const SizedBox(height: 20),
                     Text(
@@ -204,8 +202,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildRoleCardsGrid(),
-                          const SizedBox(height: 20),
                           _buildLoginFormCard(),
                           const SizedBox(height: 20),
                           Text(
@@ -292,77 +288,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Role Cards Grid Selector (Matching web /login)
-  // ---------------------------------------------------------------------------
-  Widget _buildRoleCardsGrid() {
-    return Row(
-      children: [
-        _roleCardItem(
-          category: 'student',
-          label: 'Student',
-          icon: Icons.school_outlined,
-        ),
-        const SizedBox(width: 8),
-        _roleCardItem(
-          category: 'staff',
-          label: 'Staff',
-          icon: Icons.badge_outlined,
-        ),
-        const SizedBox(width: 8),
-        _roleCardItem(
-          category: 'parent',
-          label: 'Parent',
-          icon: Icons.groups_outlined,
-        ),
-      ],
-    );
-  }
-
-  Widget _roleCardItem({
-    required String category,
-    required String label,
-    required IconData icon,
-  }) {
-    final isSelected = _selectedRoleCategory == category;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onRoleCategoryChanged(category),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.surfaceElevated : AppColors.surfaceCard,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: isSelected ? AppColors.primaryEmerald : AppColors.borderSubtle,
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? AppColors.primaryEmerald : AppColors.textMuted,
-                size: 22,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -650,66 +575,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // Helper strings
-  String _getFormTitle() {
-    switch (_selectedRoleCategory) {
-      case 'student':
-        return 'Student sign in';
-      case 'parent':
-        return 'Parent sign in';
-      case 'staff':
-      default:
-        return 'Staff sign in';
-    }
-  }
-
-  String _getFormSubtitle() {
-    switch (_selectedRoleCategory) {
-      case 'student':
-        return 'Access your grades, attendance, and learner records.';
-      case 'parent':
-        return 'Follow your child\'s progress and school updates.';
-      case 'staff':
-      default:
-        return 'For teachers, advisers, guidance, and school leadership.';
-    }
-  }
-
-  String _getIdentifierLabel() {
-    switch (_selectedRoleCategory) {
-      case 'student':
-        return 'Student LRN or Email';
-      case 'parent':
-        return 'Parent Email';
-      case 'staff':
-      default:
-        return 'School email';
-    }
-  }
-
-  String _getIdentifierPlaceholder() {
-    switch (_selectedRoleCategory) {
-      case 'student':
-        return '109283746501 or name@student.msat.edu.ph';
-      case 'parent':
-        return 'parent@example.com';
-      case 'staff':
-      default:
-        return 'name@msat.edu';
-    }
-  }
-
-  String _getRoleLabel() {
-    switch (_selectedRoleCategory) {
-      case 'student':
-        return 'Student';
-      case 'parent':
-        return 'Parent';
-      case 'staff':
-      default:
-        return 'Staff';
-    }
-  }
+  // Universal Helper strings
+  String _getFormTitle() => 'Sign in';
+  String _getFormSubtitle() => 'Enter your credentials or select a quick demo preset.';
+  String _getIdentifierLabel() => 'Email or Student LRN';
+  String _getIdentifierPlaceholder() => 'e.g. adviser.santos@msat.edu.ph or 109283746501';
 }
 
 // -----------------------------------------------------------------------------
