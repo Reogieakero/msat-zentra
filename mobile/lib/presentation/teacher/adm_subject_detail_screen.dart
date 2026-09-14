@@ -414,26 +414,30 @@ class _FacultyAdmSubjectDetailScreenState extends State<FacultyAdmSubjectDetailS
     final activeIndex = _tabController.index;
     if (activeIndex == 0) {
       // Modules & Stream tab active
-      return FloatingActionButton.extended(
-        onPressed: () => _showUploadModuleModal(context),
-        backgroundColor: AppColors.primaryEmerald,
-        foregroundColor: const Color(0xFF0C1612),
-        icon: const Icon(Icons.upload_file),
-        label: Text(
-          'Upload Module',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 105.0),
+        child: FloatingActionButton(
+          onPressed: () => _showUploadModuleModal(context),
+          backgroundColor: AppColors.primaryEmerald,
+          foregroundColor: const Color(0xFF0C1612),
+          shape: const CircleBorder(),
+          elevation: 6,
+          tooltip: 'Upload Module',
+          child: const Icon(Icons.add, size: 26),
         ),
       );
     } else if (activeIndex == 1) {
       // Classwork tab active
-      return FloatingActionButton.extended(
-        onPressed: () => _showCreateClassworkModal(context),
-        backgroundColor: AppColors.primaryEmerald,
-        foregroundColor: const Color(0xFF0C1612),
-        icon: const Icon(Icons.add),
-        label: Text(
-          'Create Classwork',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 105.0),
+        child: FloatingActionButton(
+          onPressed: () => _showCreateClassworkModal(context),
+          backgroundColor: AppColors.primaryEmerald,
+          foregroundColor: const Color(0xFF0C1612),
+          shape: const CircleBorder(),
+          elevation: 6,
+          tooltip: 'Create Classwork',
+          child: const Icon(Icons.add, size: 26),
         ),
       );
     }
