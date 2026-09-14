@@ -24,10 +24,10 @@ class TeacherWorkspaceScreen extends ConsumerStatefulWidget {
 }
 
 class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen> {
-  int _currentIndex = 1; // Default to Classes Tab for quick workflow
+  int _currentIndex = 0; // Default to Home Tab
 
   // Active selected class context (null = show Class Selector list)
-  TeacherClassModel? _selectedClass = MockData.teacherClasses.first;
+  TeacherClassModel? _selectedClass;
 
   // Segmented control state inside Class Workspace (0 = Attendance, 1 = Grades, 2 = Anecdotal)
   int _classSubTab = 0;
