@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zentra_mobile/main.dart';
 import 'package:zentra_mobile/presentation/teacher/widgets/faculty_adm_view.dart';
 import 'package:zentra_mobile/presentation/teacher/adm_subject_detail_screen.dart';
+import 'package:zentra_mobile/presentation/shared/widgets/floating_oblong_nav_bar.dart';
 
 void main() {
   testWidgets('Zentra mobile app loads login screen successfully', (WidgetTester tester) async {
@@ -51,5 +52,58 @@ void main() {
     expect(find.text('Classwork & Activities'), findsOneWidget);
     expect(find.text('Create Classwork'), findsOneWidget);
     expect(find.text('Intervention & Remediation'), findsOneWidget);
+  });
+
+  testWidgets('FloatingOblongNavBar renders items and triggers onTap callback on item tap', (WidgetTester tester) async {
+    int selectedTab = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            return Scaffold(
+              extendBody: true,
+              bottomNavigationBar: FloatingOblongNavBar(
+                currentIndex: selectedTab,
+                onTap: (index) {
+                  setState(() {
+                    selectedTab = index;
+                  });
+                },
+                items: const [
+                  FloatingNavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
+                    label: 'Home',
+                  ),
+                  FloatingNavItem(
+                    icon: Icons.calendar_month_outlined,
+                    activeIcon: Icons.calendar_month_rounded,
+                    label: 'Attendance',
+                  ),
+                  FloatingNavItem(
+                    icon: Icons.star_outline,
+                    activeIcon: Icons.star_rounded,
+                    label: 'Grades',
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Attendance'), findsOneWidget);
+    expect(find.text('Grades'), findsOneWidget);
+
+    // Tap Attendance item
+    await tester.tap(find.text('Attendance'));
+    await tester.pumpAndSettle();
+
+    expect(selectedTab, 1);
   });
 }

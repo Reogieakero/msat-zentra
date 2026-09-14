@@ -33,7 +33,7 @@ class _ClassSelectorViewState extends State<ClassSelectorView> {
     final classes = _filteredClasses;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

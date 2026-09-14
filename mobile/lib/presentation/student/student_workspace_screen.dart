@@ -5,6 +5,7 @@ import '../../app/constants/app_colors.dart';
 import '../../app/constants/app_breakpoints.dart';
 import '../../app/utils/app_responsive.dart';
 import '../shared/widgets/custom_card.dart';
+import '../shared/widgets/floating_oblong_nav_bar.dart';
 import '../shared/zentra_hamburger_drawer.dart';
 
 class StudentWorkspaceScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
     final showDesktopNav = !context.isMobile;
 
     return Scaffold(
+      extendBody: true,
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
         title: Row(
@@ -129,24 +131,28 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
             ),
       bottomNavigationBar: showDesktopNav
           ? null
-          : BottomNavigationBar(
+          : FloatingOblongNavBar(
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
               items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
+                FloatingNavItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
                   label: 'Home',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.calendar_month_outlined),
+                FloatingNavItem(
+                  icon: Icons.calendar_month_outlined,
+                  activeIcon: Icons.calendar_month_rounded,
                   label: 'Attendance',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.star_outline),
+                FloatingNavItem(
+                  icon: Icons.star_outline,
+                  activeIcon: Icons.star_rounded,
                   label: 'Grades',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.shield_outlined),
+                FloatingNavItem(
+                  icon: Icons.shield_outlined,
+                  activeIcon: Icons.shield_rounded,
                   label: 'ADM',
                 ),
               ],
@@ -159,7 +165,7 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
   // ---------------------------------------------------------------------------
   Widget _buildHomeTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -264,7 +270,7 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
   // ---------------------------------------------------------------------------
   Widget _buildAttendanceTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -363,7 +369,7 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
   // ---------------------------------------------------------------------------
   Widget _buildGradesTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -430,7 +436,7 @@ class _StudentWorkspaceScreenState extends ConsumerState<StudentWorkspaceScreen>
   // ---------------------------------------------------------------------------
   Widget _buildAdmTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

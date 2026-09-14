@@ -7,6 +7,7 @@ import '../../app/utils/app_responsive.dart';
 import '../../data/mock/mock_data.dart';
 import '../../data/models/adm_model.dart';
 import '../shared/widgets/custom_card.dart';
+import '../shared/widgets/floating_oblong_nav_bar.dart';
 import '../shared/zentra_hamburger_drawer.dart';
 import 'widgets/adm_kanban_board.dart';
 import 'widgets/adm_device_tracker.dart';
@@ -33,6 +34,7 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
     final showDesktopNav = !context.isMobile;
 
     return Scaffold(
+      extendBody: true,
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
         title: Row(
@@ -134,21 +136,24 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
             ),
       bottomNavigationBar: showDesktopNav
           ? null
-          : BottomNavigationBar(
+          : FloatingOblongNavBar(
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
               items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.pie_chart_outline),
+                FloatingNavItem(
+                  icon: Icons.pie_chart_outline,
+                  activeIcon: Icons.pie_chart_rounded,
                   label: 'Overview',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.assignment_ind_outlined),
+                FloatingNavItem(
+                  icon: Icons.assignment_ind_outlined,
+                  activeIcon: Icons.assignment_ind_rounded,
                   label: 'Referred',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.view_kanban_outlined),
-                  label: 'Enrolled & Directory',
+                FloatingNavItem(
+                  icon: Icons.view_kanban_outlined,
+                  activeIcon: Icons.view_kanban_rounded,
+                  label: 'Directory',
                 ),
               ],
             ),
@@ -160,7 +165,7 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
   // ---------------------------------------------------------------------------
   Widget _buildOverviewTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -287,7 +292,7 @@ class _AdmWorkspaceScreenState extends ConsumerState<AdmWorkspaceScreen> {
     final referredLearners = MockData.admLearners.where((l) => l.status == AdmStatus.referred || l.status == AdmStatus.pendingApproval).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

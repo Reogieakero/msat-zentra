@@ -15,6 +15,7 @@ import 'widgets/attendance_roster_view.dart';
 import 'widgets/grade_matrix_spreadsheet.dart';
 import 'widgets/anecdotal_logger_view.dart';
 import 'widgets/faculty_adm_view.dart';
+import '../shared/widgets/floating_oblong_nav_bar.dart';
 
 class TeacherWorkspaceScreen extends ConsumerStatefulWidget {
   const TeacherWorkspaceScreen({super.key});
@@ -37,6 +38,7 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
     final showDesktopNav = !context.isMobile;
 
     return Scaffold(
+      extendBody: true,
       endDrawer: const ZentraHamburgerDrawer(),
       appBar: AppBar(
         title: _selectedClass != null && _currentIndex == 1
@@ -164,20 +166,23 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
             ),
       bottomNavigationBar: showDesktopNav
           ? null
-          : BottomNavigationBar(
+          : FloatingOblongNavBar(
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
               items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.grid_view),
+                FloatingNavItem(
+                  icon: Icons.grid_view_outlined,
+                  activeIcon: Icons.grid_view_rounded,
                   label: 'Home',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.book_outlined),
+                FloatingNavItem(
+                  icon: Icons.book_outlined,
+                  activeIcon: Icons.book_rounded,
                   label: 'Classes',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.auto_graph),
+                FloatingNavItem(
+                  icon: Icons.auto_graph_outlined,
+                  activeIcon: Icons.auto_graph_rounded,
                   label: 'ADM',
                 ),
               ],
@@ -190,7 +195,7 @@ class _TeacherWorkspaceScreenState extends ConsumerState<TeacherWorkspaceScreen>
   // ---------------------------------------------------------------------------
   Widget _buildHomeTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 96.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
