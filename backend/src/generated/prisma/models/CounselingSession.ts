@@ -249,6 +249,7 @@ export type CounselingSessionWhereInput = {
   referral?: Prisma.XOR<Prisma.ReferralNullableScalarRelationFilter, Prisma.ReferralWhereInput> | null
   intervention?: Prisma.XOR<Prisma.InterventionNullableScalarRelationFilter, Prisma.InterventionWhereInput> | null
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  attachments?: Prisma.ClinicSessionAttachmentListRelationFilter
 }
 
 export type CounselingSessionOrderByWithRelationInput = {
@@ -268,6 +269,7 @@ export type CounselingSessionOrderByWithRelationInput = {
   referral?: Prisma.ReferralOrderByWithRelationInput
   intervention?: Prisma.InterventionOrderByWithRelationInput
   creator?: Prisma.UserOrderByWithRelationInput
+  attachments?: Prisma.ClinicSessionAttachmentOrderByRelationAggregateInput
 }
 
 export type CounselingSessionWhereUniqueInput = Prisma.AtLeast<{
@@ -290,6 +292,7 @@ export type CounselingSessionWhereUniqueInput = Prisma.AtLeast<{
   referral?: Prisma.XOR<Prisma.ReferralNullableScalarRelationFilter, Prisma.ReferralWhereInput> | null
   intervention?: Prisma.XOR<Prisma.InterventionNullableScalarRelationFilter, Prisma.InterventionWhereInput> | null
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  attachments?: Prisma.ClinicSessionAttachmentListRelationFilter
 }, "id">
 
 export type CounselingSessionOrderByWithAggregationInput = {
@@ -344,6 +347,7 @@ export type CounselingSessionCreateInput = {
   referral?: Prisma.ReferralCreateNestedOneWithoutCounselingSessionsInput
   intervention?: Prisma.InterventionCreateNestedOneWithoutCounselingSessionsInput
   creator: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+  attachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionUncheckedCreateInput = {
@@ -360,6 +364,7 @@ export type CounselingSessionUncheckedCreateInput = {
   createdBy: string
   createdAt?: Date | string
   completedAt?: Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionUpdateInput = {
@@ -376,6 +381,7 @@ export type CounselingSessionUpdateInput = {
   referral?: Prisma.ReferralUpdateOneWithoutCounselingSessionsNestedInput
   intervention?: Prisma.InterventionUpdateOneWithoutCounselingSessionsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutSessionsCreatedNestedInput
+  attachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateInput = {
@@ -392,6 +398,7 @@ export type CounselingSessionUncheckedUpdateInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionCreateManyInput = {
@@ -497,6 +504,11 @@ export type CounselingSessionMinOrderByAggregateInput = {
   completedAt?: Prisma.SortOrder
 }
 
+export type CounselingSessionScalarRelationFilter = {
+  is?: Prisma.CounselingSessionWhereInput
+  isNot?: Prisma.CounselingSessionWhereInput
+}
+
 export type CounselingSessionCreateNestedManyWithoutCreatorInput = {
   create?: Prisma.XOR<Prisma.CounselingSessionCreateWithoutCreatorInput, Prisma.CounselingSessionUncheckedCreateWithoutCreatorInput> | Prisma.CounselingSessionCreateWithoutCreatorInput[] | Prisma.CounselingSessionUncheckedCreateWithoutCreatorInput[]
   connectOrCreate?: Prisma.CounselingSessionCreateOrConnectWithoutCreatorInput | Prisma.CounselingSessionCreateOrConnectWithoutCreatorInput[]
@@ -581,6 +593,20 @@ export type CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput = {
   deleteMany?: Prisma.CounselingSessionScalarWhereInput | Prisma.CounselingSessionScalarWhereInput[]
 }
 
+export type CounselingSessionCreateNestedOneWithoutAttachmentsInput = {
+  create?: Prisma.XOR<Prisma.CounselingSessionCreateWithoutAttachmentsInput, Prisma.CounselingSessionUncheckedCreateWithoutAttachmentsInput>
+  connectOrCreate?: Prisma.CounselingSessionCreateOrConnectWithoutAttachmentsInput
+  connect?: Prisma.CounselingSessionWhereUniqueInput
+}
+
+export type CounselingSessionUpdateOneRequiredWithoutAttachmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.CounselingSessionCreateWithoutAttachmentsInput, Prisma.CounselingSessionUncheckedCreateWithoutAttachmentsInput>
+  connectOrCreate?: Prisma.CounselingSessionCreateOrConnectWithoutAttachmentsInput
+  upsert?: Prisma.CounselingSessionUpsertWithoutAttachmentsInput
+  connect?: Prisma.CounselingSessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CounselingSessionUpdateToOneWithWhereWithoutAttachmentsInput, Prisma.CounselingSessionUpdateWithoutAttachmentsInput>, Prisma.CounselingSessionUncheckedUpdateWithoutAttachmentsInput>
+}
+
 export type CounselingSessionCreateNestedManyWithoutInterventionInput = {
   create?: Prisma.XOR<Prisma.CounselingSessionCreateWithoutInterventionInput, Prisma.CounselingSessionUncheckedCreateWithoutInterventionInput> | Prisma.CounselingSessionCreateWithoutInterventionInput[] | Prisma.CounselingSessionUncheckedCreateWithoutInterventionInput[]
   connectOrCreate?: Prisma.CounselingSessionCreateOrConnectWithoutInterventionInput | Prisma.CounselingSessionCreateOrConnectWithoutInterventionInput[]
@@ -636,6 +662,7 @@ export type CounselingSessionCreateWithoutCreatorInput = {
   completedAt?: Date | string | null
   referral?: Prisma.ReferralCreateNestedOneWithoutCounselingSessionsInput
   intervention?: Prisma.InterventionCreateNestedOneWithoutCounselingSessionsInput
+  attachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionUncheckedCreateWithoutCreatorInput = {
@@ -651,6 +678,7 @@ export type CounselingSessionUncheckedCreateWithoutCreatorInput = {
   cancelReason?: string | null
   createdAt?: Date | string
   completedAt?: Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionCreateOrConnectWithoutCreatorInput = {
@@ -711,6 +739,7 @@ export type CounselingSessionCreateWithoutReferralInput = {
   completedAt?: Date | string | null
   intervention?: Prisma.InterventionCreateNestedOneWithoutCounselingSessionsInput
   creator: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+  attachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionUncheckedCreateWithoutReferralInput = {
@@ -726,6 +755,7 @@ export type CounselingSessionUncheckedCreateWithoutReferralInput = {
   createdBy: string
   createdAt?: Date | string
   completedAt?: Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionCreateOrConnectWithoutReferralInput = {
@@ -754,6 +784,86 @@ export type CounselingSessionUpdateManyWithWhereWithoutReferralInput = {
   data: Prisma.XOR<Prisma.CounselingSessionUpdateManyMutationInput, Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralInput>
 }
 
+export type CounselingSessionCreateWithoutAttachmentsInput = {
+  id?: string
+  sessionType: string
+  scheduledAt: Date | string
+  venue?: string | null
+  status?: string
+  sessionNotes?: string | null
+  outcome?: string | null
+  cancelReason?: string | null
+  createdAt?: Date | string
+  completedAt?: Date | string | null
+  referral?: Prisma.ReferralCreateNestedOneWithoutCounselingSessionsInput
+  intervention?: Prisma.InterventionCreateNestedOneWithoutCounselingSessionsInput
+  creator: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+}
+
+export type CounselingSessionUncheckedCreateWithoutAttachmentsInput = {
+  id?: string
+  referralId?: string | null
+  interventionId?: string | null
+  sessionType: string
+  scheduledAt: Date | string
+  venue?: string | null
+  status?: string
+  sessionNotes?: string | null
+  outcome?: string | null
+  cancelReason?: string | null
+  createdBy: string
+  createdAt?: Date | string
+  completedAt?: Date | string | null
+}
+
+export type CounselingSessionCreateOrConnectWithoutAttachmentsInput = {
+  where: Prisma.CounselingSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.CounselingSessionCreateWithoutAttachmentsInput, Prisma.CounselingSessionUncheckedCreateWithoutAttachmentsInput>
+}
+
+export type CounselingSessionUpsertWithoutAttachmentsInput = {
+  update: Prisma.XOR<Prisma.CounselingSessionUpdateWithoutAttachmentsInput, Prisma.CounselingSessionUncheckedUpdateWithoutAttachmentsInput>
+  create: Prisma.XOR<Prisma.CounselingSessionCreateWithoutAttachmentsInput, Prisma.CounselingSessionUncheckedCreateWithoutAttachmentsInput>
+  where?: Prisma.CounselingSessionWhereInput
+}
+
+export type CounselingSessionUpdateToOneWithWhereWithoutAttachmentsInput = {
+  where?: Prisma.CounselingSessionWhereInput
+  data: Prisma.XOR<Prisma.CounselingSessionUpdateWithoutAttachmentsInput, Prisma.CounselingSessionUncheckedUpdateWithoutAttachmentsInput>
+}
+
+export type CounselingSessionUpdateWithoutAttachmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionType?: Prisma.StringFieldUpdateOperationsInput | string
+  scheduledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  referral?: Prisma.ReferralUpdateOneWithoutCounselingSessionsNestedInput
+  intervention?: Prisma.InterventionUpdateOneWithoutCounselingSessionsNestedInput
+  creator?: Prisma.UserUpdateOneRequiredWithoutSessionsCreatedNestedInput
+}
+
+export type CounselingSessionUncheckedUpdateWithoutAttachmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  referralId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionType?: Prisma.StringFieldUpdateOperationsInput | string
+  scheduledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
 export type CounselingSessionCreateWithoutInterventionInput = {
   id?: string
   sessionType: string
@@ -767,6 +877,7 @@ export type CounselingSessionCreateWithoutInterventionInput = {
   completedAt?: Date | string | null
   referral?: Prisma.ReferralCreateNestedOneWithoutCounselingSessionsInput
   creator: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+  attachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionUncheckedCreateWithoutInterventionInput = {
@@ -782,6 +893,7 @@ export type CounselingSessionUncheckedCreateWithoutInterventionInput = {
   createdBy: string
   createdAt?: Date | string
   completedAt?: Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type CounselingSessionCreateOrConnectWithoutInterventionInput = {
@@ -838,6 +950,7 @@ export type CounselingSessionUpdateWithoutCreatorInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   referral?: Prisma.ReferralUpdateOneWithoutCounselingSessionsNestedInput
   intervention?: Prisma.InterventionUpdateOneWithoutCounselingSessionsNestedInput
+  attachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateWithoutCreatorInput = {
@@ -853,6 +966,7 @@ export type CounselingSessionUncheckedUpdateWithoutCreatorInput = {
   cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateManyWithoutCreatorInput = {
@@ -898,6 +1012,7 @@ export type CounselingSessionUpdateWithoutReferralInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   intervention?: Prisma.InterventionUpdateOneWithoutCounselingSessionsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutSessionsCreatedNestedInput
+  attachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateWithoutReferralInput = {
@@ -913,6 +1028,7 @@ export type CounselingSessionUncheckedUpdateWithoutReferralInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateManyWithoutReferralInput = {
@@ -958,6 +1074,7 @@ export type CounselingSessionUpdateWithoutInterventionInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   referral?: Prisma.ReferralUpdateOneWithoutCounselingSessionsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutSessionsCreatedNestedInput
+  attachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateWithoutInterventionInput = {
@@ -973,6 +1090,7 @@ export type CounselingSessionUncheckedUpdateWithoutInterventionInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  attachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type CounselingSessionUncheckedUpdateManyWithoutInterventionInput = {
@@ -990,6 +1108,35 @@ export type CounselingSessionUncheckedUpdateManyWithoutInterventionInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
+
+/**
+ * Count Type CounselingSessionCountOutputType
+ */
+
+export type CounselingSessionCountOutputType = {
+  attachments: number
+}
+
+export type CounselingSessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  attachments?: boolean | CounselingSessionCountOutputTypeCountAttachmentsArgs
+}
+
+/**
+ * CounselingSessionCountOutputType without action
+ */
+export type CounselingSessionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CounselingSessionCountOutputType
+   */
+  select?: Prisma.CounselingSessionCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * CounselingSessionCountOutputType without action
+ */
+export type CounselingSessionCountOutputTypeCountAttachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ClinicSessionAttachmentWhereInput
+}
 
 
 export type CounselingSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1009,6 +1156,8 @@ export type CounselingSessionSelect<ExtArgs extends runtime.Types.Extensions.Int
   referral?: boolean | Prisma.CounselingSession$referralArgs<ExtArgs>
   intervention?: boolean | Prisma.CounselingSession$interventionArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  attachments?: boolean | Prisma.CounselingSession$attachmentsArgs<ExtArgs>
+  _count?: boolean | Prisma.CounselingSessionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["counselingSession"]>
 
 export type CounselingSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1070,6 +1219,8 @@ export type CounselingSessionInclude<ExtArgs extends runtime.Types.Extensions.In
   referral?: boolean | Prisma.CounselingSession$referralArgs<ExtArgs>
   intervention?: boolean | Prisma.CounselingSession$interventionArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  attachments?: boolean | Prisma.CounselingSession$attachmentsArgs<ExtArgs>
+  _count?: boolean | Prisma.CounselingSessionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CounselingSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   referral?: boolean | Prisma.CounselingSession$referralArgs<ExtArgs>
@@ -1088,6 +1239,7 @@ export type $CounselingSessionPayload<ExtArgs extends runtime.Types.Extensions.I
     referral: Prisma.$ReferralPayload<ExtArgs> | null
     intervention: Prisma.$InterventionPayload<ExtArgs> | null
     creator: Prisma.$UserPayload<ExtArgs>
+    attachments: Prisma.$ClinicSessionAttachmentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1500,6 +1652,7 @@ export interface Prisma__CounselingSessionClient<T, Null = never, ExtArgs extend
   referral<T extends Prisma.CounselingSession$referralArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CounselingSession$referralArgs<ExtArgs>>): Prisma.Prisma__ReferralClient<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   intervention<T extends Prisma.CounselingSession$interventionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CounselingSession$interventionArgs<ExtArgs>>): Prisma.Prisma__InterventionClient<runtime.Types.Result.GetResult<Prisma.$InterventionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   creator<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  attachments<T extends Prisma.CounselingSession$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CounselingSession$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClinicSessionAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1978,6 +2131,30 @@ export type CounselingSession$interventionArgs<ExtArgs extends runtime.Types.Ext
    */
   include?: Prisma.InterventionInclude<ExtArgs> | null
   where?: Prisma.InterventionWhereInput
+}
+
+/**
+ * CounselingSession.attachments
+ */
+export type CounselingSession$attachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ClinicSessionAttachment
+   */
+  select?: Prisma.ClinicSessionAttachmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ClinicSessionAttachment
+   */
+  omit?: Prisma.ClinicSessionAttachmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ClinicSessionAttachmentInclude<ExtArgs> | null
+  where?: Prisma.ClinicSessionAttachmentWhereInput
+  orderBy?: Prisma.ClinicSessionAttachmentOrderByWithRelationInput | Prisma.ClinicSessionAttachmentOrderByWithRelationInput[]
+  cursor?: Prisma.ClinicSessionAttachmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ClinicSessionAttachmentScalarFieldEnum | Prisma.ClinicSessionAttachmentScalarFieldEnum[]
 }
 
 /**

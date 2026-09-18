@@ -73,6 +73,7 @@ export const ModelName = {
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
   Referral: 'Referral',
   CounselingSession: 'CounselingSession',
+  ClinicSessionAttachment: 'ClinicSessionAttachment',
   Intervention: 'Intervention',
   HealthRecord: 'HealthRecord',
   HomeVisitationRecord: 'HomeVisitationRecord',
@@ -425,6 +426,20 @@ export const CounselingSessionScalarFieldEnum = {
 } as const
 
 export type CounselingSessionScalarFieldEnum = (typeof CounselingSessionScalarFieldEnum)[keyof typeof CounselingSessionScalarFieldEnum]
+
+
+export const ClinicSessionAttachmentScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  fileSize: 'fileSize',
+  uploadedBy: 'uploadedBy',
+  uploadedAt: 'uploadedAt'
+} as const
+
+export type ClinicSessionAttachmentScalarFieldEnum = (typeof ClinicSessionAttachmentScalarFieldEnum)[keyof typeof ClinicSessionAttachmentScalarFieldEnum]
 
 
 export const InterventionScalarFieldEnum = {

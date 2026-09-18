@@ -191,6 +191,7 @@ enum ActionType {
   session_completed
   session_cancelled
   session_rescheduled
+  session_document_added
   intervention_approval
   intervention_assigned
   intervention_outcome
@@ -251,6 +252,7 @@ model User {
   anecdotalFollowups  AnecdotalRecordFollowup[]
   referralsMade       Referral[]             @relation("ReferredBy")
   sessionsCreated     CounselingSession[]    @relation("SessionCreator")
+  sessionAttachments  ClinicSessionAttachment[] @relation("SessionAttachmentUploader")
   assignedInterventions Intervention[]         @relation("InterventionAssignee")
   healthRecords       HealthRecord[]
   homeVisitations     HomeVisitationRecord[]
@@ -710,8 +712,28 @@ model CounselingSession {
   referral     Referral? @relation(fields: [referralId], references: [id], onDelete: Cascade)
   intervention Intervention? @relation(fields: [interventionId], references: [id], onDelete: Cascade)
   creator      User     @relation("SessionCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  attachments  ClinicSessionAttachment[]
   @@index([referralId])
   @@index([interventionId])
+}
+
+// Documentation filed on one clinic/counseling session: photos (wound,
+// referral slip, lab result…) plus the URLs live in object storage — only
+// metadata + the public URL are stored here. Filed by the nurse when a
+// session is marked done; filing the closing documentation is what finishes
+// the case (auto-resolve), so attachments are the case evidence trail.
+model ClinicSessionAttachment {
+  id         String   @id @default(uuid())
+  sessionId  String
+  fileUrl    String
+  fileName   String
+  mimeType   String
+  fileSize   Int
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+  session    CounselingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  uploader   User              @relation("SessionAttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  @@index([sessionId])
 }
 
 model Intervention {

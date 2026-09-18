@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,25 +22,30 @@ import {
   apiErrorMessage,
   reviewNurseAdmCase,
   saveNurseReferralDraft,
+  scheduleClinicSession,
   type NurseQueueRow,
 } from "./nurse-overview-data";
 import styles from "./nurse-overview.module.css";
 
 /**
  * ADM consultation review for cases the adviser routed to the nurse.
- * Mirrors the guidance flow: review here, then Create referral opens the
- * dedicated referral form page (/nurse/adm/referral/[referralId]) where the
- * nurse fills up the form and confirms forwarding to the ADM coordinator.
- * Reject (turn down) closes the case straight from this dialog.
- * "Start handling" stays clinic-only — this dialog is the nurse's pipeline
- * path for ADM cases.
+ * Review here, then Create referral opens the referral form — as a modal
+ * when the caller passes onCreateReferral (referrals page, no navigation),
+ * otherwise the dedicated referral form page
+ * (/nurse/adm/referral/[referralId]). Reject (turn down) closes the case
+ * straight from this dialog. "Start handling" stays clinic-only — this
+ * dialog is the nurse's pipeline path for ADM cases.
  */
 export function NurseAdmReviewDialog({
   row,
   onChanged,
+  onCreateReferral,
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
+  // When provided, Create referral hands the typed recommendation + optional
+  // session to the caller (modal flow) instead of navigating to the form page.
+  onCreateReferral?: (draft: { recommendation: string; scheduledAt?: string }) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -47,6 +53,9 @@ export function NurseAdmReviewDialog({
   const [sessionDate, setSessionDate] = React.useState("");
   const [sessionTime, setSessionTime] = React.useState("");
   const [acting, setActing] = React.useState(false);
+  const [booking, setBooking] = React.useState(false);
+  // Which footer action is awaiting confirmation in the confirm dialog.
+  const [confirmFor, setConfirmFor] = React.useState<null | "book" | "reject" | "create">(null);
   const [error, setError] = React.useState<string | null>(null);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
 
@@ -68,8 +77,9 @@ export function NurseAdmReviewDialog({
   }
 
   // Create-referral gate: recommendation is mandatory; an optional session
-  // must be fully specified and in the future. Both travel to the dedicated
-  // form page, which confirms the forward.
+  // must be fully specified and in the future. With a modal handoff the
+  // draft goes straight to the form modal; otherwise it travels via
+  // sessionStorage to the dedicated form page.
   function goToReferralForm() {
     if (!recommendation.trim()) {
       setError("Write your recommendation first — the coordinator needs it.");
@@ -92,14 +102,100 @@ export function NurseAdmReviewDialog({
       }
       scheduledAt = `${sessionDate}T${sessionTime}:00`;
     }
+    if (scheduledAt && row.sessions.some((s) => s.status === "scheduled")) {
+      setError("This referral already has a session that is not done yet — finish or cancel it before booking another one.");
+      return;
+    }
     setError(null);
-    saveNurseReferralDraft({ recommendation: recommendation.trim(), scheduledAt });
+    const draft = { recommendation: recommendation.trim(), ...(scheduledAt ? { scheduledAt } : {}) };
     setOpen(false);
+    if (onCreateReferral) {
+      onCreateReferral(draft);
+      return;
+    }
+    saveNurseReferralDraft(draft);
     router.push(`/nurse/adm/referral/${encodeURIComponent(row.id)}`);
+  }
+
+  // Footer buttons validate first (inline error, no popup), then ask for
+  // confirmation in the confirm dialog. The actual work runs only after
+  // confirming, with a spinner on the acting button.
+  function askBook() {
+    if (!sessionDate || !sessionTime) {
+      setError("Pick a date and a time first — or leave both empty and carry the session into the referral form instead.");
+      return;
+    }
+    setError(null);
+    setConfirmFor("book");
+  }
+
+  function askReject() {
+    if (!recommendation.trim()) {
+      setError("Write your recommendation first — the coordinator needs it.");
+      return;
+    }
+    setError(null);
+    setConfirmFor("reject");
+  }
+
+  function askCreate() {
+    if (!recommendation.trim()) {
+      setError("Write your recommendation first — the coordinator needs it.");
+      return;
+    }
+    setError(null);
+    setConfirmFor("create");
+  }
+
+  // Standalone booking: schedule the clinic session WITHOUT deciding the
+  // case — it stays pending until the nurse confirms the referral or turns
+  // it down. The dialog stays open so review can continue. One active
+  // session per referral: booking waits while a scheduled session exists.
+  async function bookSessionOnly() {
+    if (row.sessions.some((s) => s.status === "scheduled")) {
+      setError("This referral already has a session that is not done yet — finish or cancel it before booking another one.");
+      return;
+    }
+    if (!sessionDate || !sessionTime) {
+      setError("Pick a date and a time first — or leave both empty and carry the session into the referral form instead.");
+      return;
+    }
+    const at = new Date(`${sessionDate}T${sessionTime}:00`);
+    if (Number.isNaN(at.getTime())) {
+      setError("Pick a valid date and time for the clinic session.");
+      return;
+    }
+    if (at.getTime() <= Date.now()) {
+      setError("Clinic session must be set in the future.");
+      return;
+    }
+    setError(null);
+    setBooking(true);
+    try {
+      await scheduleClinicSession(row.id, {
+        scheduledAt: `${sessionDate}T${sessionTime}:00`,
+      });
+      toast.success({
+        title: "Session booked",
+        description: `${row.student}'s case stays pending until you confirm the referral.`,
+      });
+      setSessionDate("");
+      setSessionTime("");
+      // The confirm dialog stays open with the spinner until booking
+      // finishes — only then does it close back to the review.
+      setConfirmFor(null);
+      onChanged();
+    } catch (err) {
+      setConfirmFor(null);
+      setError(apiErrorMessage(err, "Could not book the session. Try again."));
+    } finally {
+      setBooking(false);
+    }
   }
 
   async function decideReject() {
     if (!recommendation.trim()) {
+      setConfirmFor(null);
       setError("Write your recommendation first — the coordinator needs it.");
       return;
     }
@@ -108,9 +204,10 @@ export function NurseAdmReviewDialog({
     try {
       await reviewNurseAdmCase(row.id, { recommendation: recommendation.trim(), outcome: "reject" });
       toast.success({
-        title: "Case turned down",
+        title: "Case rejected",
         description: `${row.student}'s case was closed without ADM follow-through.`,
       });
+      setConfirmFor(null);
       closeDialog();
       onChanged();
     } catch (err) {
@@ -122,7 +219,7 @@ export function NurseAdmReviewDialog({
 
   return (
     <>
-      <Button variant="outline" size="xs" onClick={openDialog}>
+      <Button variant="outline" size="xs" style={{ height: "32px" }} onClick={openDialog}>
         Review ADM case
       </Button>
 
@@ -133,13 +230,16 @@ export function NurseAdmReviewDialog({
             if (!isOpen) closeDialog();
           }}
         >
-          <DialogContent>
+          <DialogContent
+            className={styles.dialogScrollHidden}
+            style={{ maxWidth: "36rem", maxHeight: "90vh", overflowY: "auto" }}
+          >
             <DialogHeader>
               <DialogTitle>Review ADM case</DialogTitle>
               <DialogDescription>
                 Review {row.student}&rsquo;s case, write your recommendation, then create the
-                referral form — forwarding it to the ADM coordinator happens from the
-                alerts page once the form is saved. Or turn it down.
+                referral form — confirming it endorses the case to the ADM coordinator
+                at once. Or reject it.
               </DialogDescription>
             </DialogHeader>
             <dl className={styles.intakeSummary}>
@@ -215,7 +315,13 @@ export function NurseAdmReviewDialog({
                   onChange={setSessionTime}
                 />
               </div>
-              <p className={styles.dialogHint}>Held at the school clinic. Leave both empty to forward without booking.</p>
+              {row.sessions.some((s) => s.status === "scheduled") ? (
+                <p className={styles.dialogError} role="note">
+                  A session that is not done yet is already booked on this case — finish or cancel it before booking another one.
+                </p>
+              ) : (
+                <p className={styles.dialogHint}>Held at the school clinic. Book it now without deciding, or carry it into the referral form.</p>
+              )}
             </div>
             <div className={styles.dialogField}>
               <Label htmlFor={`adm-rec-${row.id}`}>Your recommendation (required)</Label>
@@ -230,15 +336,82 @@ export function NurseAdmReviewDialog({
             </div>
             {error ? <p className={styles.dialogError}>{error}</p> : null}
             <DialogFooter>
-              <Button variant="outline" onClick={closeDialog}>
-                Cancel
+              <Button variant="outline" onClick={askBook} disabled={acting || booking}>
+                {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                Book session
               </Button>
-              <Button variant="destructive" onClick={() => void decideReject()} disabled={acting}>
-                {acting ? "Sending…" : "Turn down"}
+              <Button
+                variant="destructive"
+                style={{ backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#ffffff" }}
+                onClick={askReject}
+                disabled={acting || booking}
+              >
+                {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                Reject
               </Button>
-              <Button onClick={goToReferralForm} disabled={acting}>
+              <Button onClick={askCreate} disabled={acting || booking}>
                 Create referral…
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {confirmFor && (
+        <Dialog
+          open
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setConfirmFor(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {confirmFor === "book"
+                  ? "Book this session?"
+                  : confirmFor === "reject"
+                    ? "Reject this case?"
+                    : "Create referral?"}
+              </DialogTitle>
+              <DialogDescription>
+                {confirmFor === "book" ? (
+                  <>A clinic session will be scheduled for {row.student}. The case stays pending until you confirm the referral or reject it.</>
+                ) : confirmFor === "reject" ? (
+                  <>{row.student}&rsquo;s case will be closed without ADM follow-through — the coordinator never receives it. This can&apos;t be undone.</>
+                ) : (
+                  <>Open the referral form with your recommendation carried over. Confirming there endorses the case to the ADM coordinator at once.</>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmFor(null)} disabled={acting || booking}>
+                Cancel
+              </Button>
+              {confirmFor === "book" ? (
+                <Button onClick={() => void bookSessionOnly()} disabled={booking}>
+                  {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                  Yes, book
+                </Button>
+              ) : confirmFor === "reject" ? (
+                <Button
+                  variant="destructive"
+                  style={{ backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#ffffff" }}
+                  onClick={() => void decideReject()}
+                  disabled={acting}
+                >
+                  {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                  Yes, reject
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setConfirmFor(null);
+                    goToReferralForm();
+                  }}
+                >
+                  Continue
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

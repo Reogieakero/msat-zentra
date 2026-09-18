@@ -152,6 +152,11 @@ export type Referral = Prisma.ReferralModel
  */
 export type CounselingSession = Prisma.CounselingSessionModel
 /**
+ * Model ClinicSessionAttachment
+ * 
+ */
+export type ClinicSessionAttachment = Prisma.ClinicSessionAttachmentModel
+/**
  * Model Intervention
  * 
  */

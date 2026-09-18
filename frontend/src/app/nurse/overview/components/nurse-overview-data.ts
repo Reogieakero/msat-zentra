@@ -51,10 +51,24 @@ export interface RawReferral {
   // When the case was actually referred (earliest audit entry; falls back
   // to the observation date for legacy rows). Drives the "waiting" clock.
   referredAt?: string | null;
+  // Latest execution across the referral + its sessions (backend audit).
+  // This is the wall-clock time the last action ran — use it for display,
+  // never the future appointment time.
+  lastActionAt?: string | null;
+  lastActionType?: string | null;
   anecdotalRecord?: RawAnecdotal | null;
   student?: RawStudent | null;
   roster?: RawRoster | null;
   counselingSessions?: RawSession[] | null;
+}
+
+interface RawAttachment {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
 }
 
 interface RawSession {
@@ -66,7 +80,20 @@ interface RawSession {
   sessionNotes?: string | null;
   outcome?: string | null;
   cancelReason?: string | null;
+  // Execution times (backend): createdAt = when booked, completedAt = when
+  // marked done. Never display the future appointment as the action time.
+  createdAt?: string | null;
   completedAt?: string | null;
+  attachments?: RawAttachment[] | null;
+}
+
+export interface ClinicAttachment {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
 }
 
 export interface NurseSessionItem {
@@ -79,7 +106,13 @@ export interface NurseSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
+  // When the session was booked (execution time). Falls back to
+  // scheduledAt for legacy rows without it.
+  createdAt: string;
   completedAt: string;
+  // Optional documentation filed on the session (photos). Empty when the
+  // nurse closes the case without filing — docs never gate Done.
+  attachments: ClinicAttachment[];
 }
 
 export interface NurseKpis {
@@ -132,6 +165,10 @@ export interface NurseQueueRow {
   // workflow as the guidance referrals page).
   sessions: NurseSessionItem[];
   completedSessions: number;
+  // Latest execution across referral + sessions (backend audit, ISO).
+  // Empty when no audit trail exists (legacy rows) — callers fall back.
+  lastActionAt: string;
+  lastActionType: string;
 }
 
 export interface NurseFollowUpRow extends NurseQueueRow {
@@ -228,7 +265,16 @@ export function toSessionItem(s: RawSession): NurseSessionItem {
     sessionNotes: s.sessionNotes ?? "",
     outcome: s.outcome ?? "",
     cancelReason: s.cancelReason ?? "",
+    createdAt: s.createdAt ?? s.scheduledAt ?? "",
     completedAt: parseDate(s.completedAt)?.toISOString().slice(0, 10) ?? "",
+    attachments: (s.attachments ?? []).map((a) => ({
+      id: a.id,
+      fileUrl: a.fileUrl,
+      fileName: a.fileName,
+      mimeType: a.mimeType,
+      fileSize: a.fileSize,
+      uploadedAt: a.uploadedAt,
+    })),
   };
 }
 
@@ -256,6 +302,8 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
     escalationReason: r.escalationReason?.trim() ?? "",
     sessions,
     completedSessions: sessions.filter((s) => s.status === "completed").length,
+    lastActionAt: r.lastActionAt ?? "",
+    lastActionType: r.lastActionType ?? "",
     anecdotalId: anec?.id ?? null,
     anecdotal: anec
       ? {
@@ -438,6 +486,101 @@ export async function forwardNurseAdmCase(id: string): Promise<void> {
   await apiClient.post(`/api/referrals/${id}/nurse-adm-forward`);
 }
 
+// Confirm + auto-endorse in one action: save the referral form, then forward
+// the case to the ADM coordinator immediately. Saving is retry-safe
+// (re-saving while pending just refreshes the answers), so if the forward
+// fails the nurse can safely retry Confirm.
+export async function confirmNurseReferralAndEndorse(
+  id: string,
+  input: { recommendation: string; scheduledAt?: string; venue?: string; referralForm?: NurseAdmReferralForm },
+): Promise<void> {
+  await saveNurseReferralForm(id, input);
+  await forwardNurseAdmCase(id);
+}
+
+export interface SavedNurseAdmForm {
+  recommendation: string;
+  concerns: string[];
+  details: string;
+  actions: string;
+  followUp: string;
+}
+
+function parseAdmFormParts(body: string): SavedNurseAdmForm {
+  const out: SavedNurseAdmForm = {
+    recommendation: "",
+    concerns: [],
+    details: "",
+    actions: "",
+    followUp: "",
+  };
+  // Continuations (an answer containing " | ") rejoin the previous field, so
+  // the parse is a lossless round-trip of what the save endpoint wrote.
+  let current: "recommendation" | "details" | "actions" | "followUp" | "concerns" = "recommendation";
+  const appendText = (key: "recommendation" | "details" | "actions" | "followUp", value: string) => {
+    out[key] = out[key] ? `${out[key]} | ${value}` : value;
+  };
+  for (const segment of body.split(" | ")) {
+    const t = segment.trim();
+    if (!t) continue;
+    if (t.startsWith("Concerns:")) {
+      current = "concerns";
+      out.concerns = t
+        .slice("Concerns:".length)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (t.startsWith("Details:")) {
+      current = "details";
+      out.details = t.slice("Details:".length).trim();
+    } else if (t.startsWith("Actions taken:")) {
+      current = "actions";
+      out.actions = t.slice("Actions taken:".length).trim();
+    } else if (t.startsWith("Follow-up:")) {
+      current = "followUp";
+      out.followUp = t.slice("Follow-up:".length).trim();
+    } else if (current === "concerns") {
+      const last = out.concerns[out.concerns.length - 1];
+      out.concerns[out.concerns.length - 1] = last ? `${last} | ${t}` : t;
+    } else {
+      appendText(current, t);
+    }
+  }
+  out.recommendation = out.recommendation.trim();
+  return out;
+}
+
+// Read a confirmed referral form back out of the internal note so the
+// referrals page can display the filled (autofilled) template. Supports the
+// current `[ADM endorsed] …` line and the legacy `[ADM consult]` /
+// `[ADM referral]` lines. Returns null when no saved form is found.
+export function parseSavedNurseAdmForm(notes: string | null | undefined): SavedNurseAdmForm | null {
+  if (!notes) return null;
+  const lines = notes
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const endorsed = [...lines].reverse().find((l) => l.startsWith("[ADM endorsed]"));
+  if (endorsed) {
+    const parsed = parseAdmFormParts(endorsed.slice("[ADM endorsed]".length).trim());
+    return parsed.recommendation ? parsed : null;
+  }
+  const consult = [...lines].reverse().find((l) => l.startsWith("[ADM consult]"));
+  if (!consult) return null;
+  const recommendation = consult.slice("[ADM consult]".length).trim();
+  const referralLine = [...lines].reverse().find((l) => l.startsWith("[ADM referral]"));
+  const parts = referralLine
+    ? parseAdmFormParts(referralLine.slice("[ADM referral]".length).trim())
+    : null;
+  return {
+    recommendation,
+    concerns: parts?.concerns ?? [],
+    details: parts?.details ?? "",
+    actions: parts?.actions ?? "",
+    followUp: parts?.followUp ?? "",
+  };
+}
+
 // Status changes the nurse role is allowed to make
 // (POST /api/referrals/:id/status).
 export async function updateNurseReferralStatus(
@@ -512,6 +655,68 @@ export async function cancelClinicSession(
   await apiClient.post(
     `/api/referrals/${id}/sessions/${sessionId}/cancel`,
     cancelReason?.trim() ? { cancelReason: cancelReason.trim() } : {}
+  );
+}
+
+export async function deleteClinicSession(
+  id: string,
+  sessionId: string
+): Promise<void> {
+  await apiClient.delete(`/api/referrals/${id}/sessions/${sessionId}`);
+}
+
+// Optional documentation on one clinic session: list / upload / remove
+// image attachments. Filing is optional before Done — these helpers only
+// build the evidence trail, they never gate the resolve call.
+export async function listClinicAttachments(
+  referralId: string,
+  sessionId: string
+): Promise<ClinicAttachment[]> {
+  const { data } = await apiClient.get<ClinicAttachment[]>(
+    `/api/referrals/${referralId}/sessions/${sessionId}/attachments`
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+const CLINIC_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_CLINIC_IMAGE_BYTES = 5 * 1024 * 1024;
+
+export function clinicAttachmentError(files: File[]): string | null {
+  if (files.length === 0) return "Choose at least one image to attach.";
+  if (files.length > 5) return "Attach at most 5 images at a time.";
+  for (const f of files) {
+    if (!CLINIC_IMAGE_TYPES.includes(f.type)) {
+      return `"${f.name}" is not a JPG, PNG, or WEBP image.`;
+    }
+    if (f.size > MAX_CLINIC_IMAGE_BYTES) {
+      return `"${f.name}" is over 5 MB — pick a smaller photo.`;
+    }
+  }
+  return null;
+}
+
+export async function uploadClinicAttachments(
+  referralId: string,
+  sessionId: string,
+  files: File[]
+): Promise<ClinicAttachment[]> {
+  const form = new FormData();
+  for (const f of files) form.append("files", f, f.name);
+  const { data } = await apiClient.post<ClinicAttachment[]>(
+    `/api/referrals/${referralId}/sessions/${sessionId}/attachments`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function deleteClinicAttachment(
+  referralId: string,
+  sessionId: string,
+  attachmentId: string
+): Promise<void> {
+  await apiClient.delete(
+    `/api/referrals/${referralId}/sessions/${sessionId}/attachments/${attachmentId}`
   );
 }
 

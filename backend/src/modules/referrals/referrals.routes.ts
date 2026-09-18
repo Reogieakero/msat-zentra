@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
@@ -6,7 +7,23 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
+import { clinicSessionObjectPath, uploadFile } from "../../lib/storage.js";
 import { ADM_STAGE_FLOW } from "../../services/adm.js";
+
+// Clinic documentation uploads: photos filed on a session (wound, slip,
+// lab result…). Images only, 5 MB each, max 5 per request — filing is
+// optional before closing a clinic case, so uploads never gate resolve.
+const clinicUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  fileFilter: (_req, file, cb) => {
+    if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPG, PNG, or WEBP images are allowed for clinic documentation."));
+    }
+  },
+});
 
 const router = Router();
 
@@ -51,8 +68,7 @@ router.post(
       }
       if (referral.status === req.body.status) return res.json(referral);
       // Strict close-out for guidance cases: finishing at least one
-      // counseling session plus a closing summary is mandatory. Other
-      // roles keep their own (ungated) workflows.
+      // counseling session plus a closing summary is mandatory.
       const resolvingGuidanceCase =
         req.body.status === "resolved" &&
         referral.referredToRole === "guidance_counselor" &&
@@ -68,6 +84,41 @@ router.post(
           throw new AppError(400, "RESOLVE_BLOCKED", "A closing summary is required to resolve this case");
         }
       }
+      // Clinic close-out (nurse desk: direct + escalated-to-nurse cases):
+      // review → accept → ≥1 completed clinic session → done. Documentation
+      // (images / notes) stays optional and never blocks resolve — only the
+      // completed session does. Resolving straight from pending/escalated
+      // (skipping Start handling) is rejected so the review step can't be
+      // bypassed silently.
+      const onNurseClinicDesk =
+        referral.referredToRole === "nurse" ||
+        (referral.status === "escalated" && referral.escalatedTo === "nurse");
+      const resolvingClinicCase =
+        req.body.status === "resolved" &&
+        onNurseClinicDesk &&
+        referral.status !== "resolved";
+      if (resolvingClinicCase) {
+        if (
+          referral.status === "pending" ||
+          (referral.status === "escalated" && referral.escalatedTo === "nurse")
+        ) {
+          throw new AppError(
+            400,
+            "RESOLVE_BLOCKED",
+            "Start handling this case first — review the details and accept it before marking it done"
+          );
+        }
+        const doneCount = await prisma.counselingSession.count({
+          where: { referralId: referral.id, status: "completed" },
+        });
+        if (doneCount === 0) {
+          throw new AppError(
+            400,
+            "RESOLVE_BLOCKED",
+            "Finish at least one clinic session before marking this case done"
+          );
+        }
+      }
       const updated = await prisma.referral.update({
         where: { id: referral.id },
         data: {
@@ -77,7 +128,14 @@ router.post(
                 resolutionSummary: req.body.resolutionSummary,
                 resolvedAt: new Date(),
               }
-            : {}),
+            : resolvingClinicCase
+              ? {
+                  ...(req.body.resolutionSummary
+                    ? { resolutionSummary: req.body.resolutionSummary }
+                    : {}),
+                  resolvedAt: new Date(),
+                }
+              : {}),
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Status → ${req.body.status}`, oldValue: { status: referral.status }, newValue: { status: req.body.status } });
@@ -301,8 +359,34 @@ async function getNurseClinicReferral(id: string) {
 
 // Role-aware referral getter for the shared session endpoints.
 async function getSessionReferral(id: string, role: string) {
-  if (role === "nurse") return getNurseClinicReferral(id);
+  if (role === "nurse") {
+    // Clinic desk first; ADM consultations picked for the nurse may also
+    // carry standalone clinic sessions (booked from the review dialog
+    // without deciding the case), so they fall through to the ADM getter.
+    try {
+      return await getNurseClinicReferral(id);
+    } catch {
+      return await getNurseAdmSessionsReferral(id);
+    }
+  }
   return getGuidanceReferral(id);
+}
+
+// Session scope for nurse ADM consultations: the case must be ADM-track and
+// picked for the nurse. No consultation-stage or status gate here —
+// standalone sessions can be booked while pending (pre-confirm) and stay
+// visible afterwards; closing the case itself still blocks changes via
+// ensureOpen at each endpoint.
+async function getNurseAdmSessionsReferral(id: string) {
+  const referral = await prisma.referral.findUnique({ where: { id } });
+  if (
+    !referral ||
+    referral.referredToRole !== "adm_coordinator" ||
+    referral.consultReviewer !== "nurse"
+  ) {
+    throw new AppError(404, "NOT_FOUND", "Session not found");
+  }
+  return referral;
 }
 
 function parseScheduledAt(value: unknown): Date {
@@ -311,6 +395,24 @@ function parseScheduledAt(value: unknown): Date {
     throw new AppError(400, "INVALID_DATE", "Pick a valid date and time for the session");
   }
   return date;
+}
+
+function formatAttachment(row: {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: Date;
+}) {
+  return {
+    id: row.id,
+    fileUrl: row.fileUrl,
+    fileName: row.fileName,
+    mimeType: row.mimeType,
+    fileSize: row.fileSize,
+    uploadedAt: row.uploadedAt.toISOString(),
+  };
 }
 
 function formatSession(row: {
@@ -322,8 +424,17 @@ function formatSession(row: {
   sessionNotes: string | null;
   outcome: string | null;
   cancelReason: string | null;
+  createdAt?: Date | null;
   completedAt: Date | null;
   creator?: { fullName: string } | null;
+  attachments?: Array<{
+    id: string;
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    uploadedAt: Date;
+  }>;
 }) {
   return {
     id: row.id,
@@ -335,8 +446,10 @@ function formatSession(row: {
     sessionNotes: row.sessionNotes ?? "",
     outcome: row.outcome ?? "",
     cancelReason: row.cancelReason ?? "",
+    createdAt: row.createdAt ? row.createdAt.toISOString() : null,
     completedAt: row.completedAt ? row.completedAt.toISOString() : null,
     createdBy: row.creator?.fullName ?? "",
+    attachments: (row.attachments ?? []).map(formatAttachment),
   };
 }
 
@@ -451,6 +564,9 @@ router.post(
         if (sessionAt.getTime() <= Date.now()) {
           throw new AppError(400, "INVALID_ACTION", "Clinic session must be set in the future");
         }
+        // Accept carries the first session — still blocked when an active
+        // session already exists on this referral.
+        await ensureNoActiveSession(referral.id);
       }
       const updated = await prisma.referral.update({
         where: { id: referral.id },
@@ -518,7 +634,9 @@ async function getNurseAdmConsultation(id: string) {
 
 // Flatten the referral form fill-up into one notes block so the coordinator
 // receives the nurse's concerns, details, actions taken, and follow-up plan
-// with the case. Returns null when the form carries no answers.
+// with the case. Returns the bare parts (no prefix) so each caller can label
+// the block for its own step — save labels it endorsed, the legacy review
+// labels it a referral. Returns null when the form carries no answers.
 function buildAdmReferralFormNote(formInput: {
   concerns?: unknown;
   detailsOfConcern?: unknown;
@@ -543,7 +661,7 @@ function buildAdmReferralFormNote(formInput: {
   if (typeof formInput.followUp === "string" && formInput.followUp.trim()) {
     parts.push(`Follow-up: ${formInput.followUp.trim()}`);
   }
-  return parts.length > 0 ? `[ADM referral] ${parts.join(" | ")}` : null;
+  return parts.length > 0 ? parts.join(" | ") : null;
 }
 
 // Book the optional clinic session that can accompany the nurse's ADM work
@@ -565,6 +683,9 @@ async function createNurseAdmSession(
   clinicInput: { venue?: unknown } | undefined,
   reason: string,
 ) {
+  // One active session per referral — even ADM-side bookings wait until the
+  // existing scheduled session is done or cancelled.
+  await ensureNoActiveSession(referralId);
   const venue =
     clinicInput && typeof clinicInput.venue === "string" && clinicInput.venue.trim()
       ? clinicInput.venue.trim()
@@ -638,7 +759,8 @@ router.post(
       const sessionAt = clinicInput && outcome === "endorse" ? parseNurseAdmSession(clinicInput) : null;
       const note = `[ADM consult] ${recommendation.trim()}`;
       const formInput = (req.body as { referralForm?: { concerns?: unknown; detailsOfConcern?: unknown; nurseActions?: unknown; followUp?: unknown } }).referralForm;
-      const formNote = formInput && outcome === "endorse" ? buildAdmReferralFormNote(formInput) : null;
+      const formParts = formInput && outcome === "endorse" ? buildAdmReferralFormNote(formInput) : null;
+      const formNote = formParts ? `[ADM referral] ${formParts}` : null;
       const notesWithReview = referral.notes ? `${referral.notes}\n${note}` : note;
       const notesWithForm = formNote ? `${notesWithReview}\n${formNote}` : notesWithReview;
       const updated = await prisma.referral.update({
@@ -686,10 +808,11 @@ router.post(
 );
 
 // Save the nurse's referral form (GCForm-03 fill-up) on an ADM consultation
-// case. The case STAYS pending — nothing moves to the ADM coordinator here.
-// Confirming the form sets referralFormReady, which unlocks the explicit
-// forward action (nurse-adm-forward, surfaced as Endorse & forward on the
-// alerts page). Re-saving while pending refreshes the stored answers.
+// case. Confirming the form writes one endorse-style internal note and sets
+// referralFormReady — the UI forwards (endorses) to the ADM coordinator
+// right away, so the note reads as the endorsement. The nurse's
+// recommendation is NOT copied to intakeNotes, so ADM cards never show a
+// "First impressions" line. Re-saving while pending refreshes the answers.
 const nurseReferralFormSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
   referralForm: referralFormSchema,
@@ -711,14 +834,15 @@ router.post(
       const clinicInput = (req.body as { clinicSession?: { scheduledAt?: unknown; venue?: unknown } }).clinicSession;
       const sessionAt = parseNurseAdmSession(clinicInput);
       const formInput = (req.body as { referralForm?: { concerns?: unknown; detailsOfConcern?: unknown; nurseActions?: unknown; followUp?: unknown } }).referralForm;
-      const formNote = buildAdmReferralFormNote(formInput);
-      const note = `[ADM consult] ${recommendation.trim()}`;
-      const withReview = referral.notes ? `${referral.notes}\n${note}` : note;
+      const formParts = buildAdmReferralFormNote(formInput);
+      const note = formParts
+        ? `[ADM endorsed] ${recommendation.trim()} | ${formParts}`
+        : `[ADM endorsed] ${recommendation.trim()}`;
+      const withEndorsement = referral.notes ? `${referral.notes}\n${note}` : note;
       const updated = await prisma.referral.update({
         where: { id: referral.id },
         data: {
-          intakeNotes: recommendation.trim(),
-          notes: formNote ? `${withReview}\n${formNote}` : withReview,
+          notes: withEndorsement,
           referralFormReady: true,
         },
       });
@@ -791,6 +915,40 @@ function ensureOpen(referral: { status: string }) {
   }
 }
 
+// One active session per referral: booking is blocked while the referral
+// still has a session that is not done yet (status === "scheduled").
+// Pass exceptSessionId when the caller is completing that session and
+// booking its follow-up in the same request.
+async function ensureNoActiveSession(referralId: string, exceptSessionId?: string) {
+  const active = await prisma.counselingSession.count({
+    where: {
+      referralId,
+      status: "scheduled",
+      ...(exceptSessionId ? { NOT: { id: exceptSessionId } } : {}),
+    },
+  });
+  if (active > 0) {
+    throw new AppError(
+      400,
+      "ACTIVE_SESSION_EXISTS",
+      "This referral already has a session that is not done yet — finish or cancel it before booking another one"
+    );
+  }
+}
+
+// Clinic/counseling sessions unlock only once their scheduled time arrives:
+// a still-upcoming session can be moved or cancelled, but it cannot be
+// marked done and cannot take documentation yet.
+function ensureSessionStarted(session: { scheduledAt: Date }) {
+  if (session.scheduledAt.getTime() > Date.now()) {
+    throw new AppError(
+      400,
+      "SESSION_NOT_STARTED",
+      "This session hasn't started yet — you can mark it done and file documentation once the scheduled time arrives"
+    );
+  }
+}
+
 router.get(
   "/:id/sessions",
   requireAuth,
@@ -801,7 +959,10 @@ router.get(
       const sessions = await prisma.counselingSession.findMany({
         where: { referralId: referral.id },
         orderBy: { scheduledAt: "asc" },
-        include: { creator: { select: { fullName: true } } },
+        include: {
+          creator: { select: { fullName: true } },
+          attachments: { orderBy: { uploadedAt: "asc" } },
+        },
       });
       res.json(sessions.map(formatSession));
     } catch (e) { next(e); }
@@ -820,6 +981,9 @@ router.post(
       if (!isSessionType(req.body.sessionType)) {
         throw new AppError(400, "INVALID_ACTION", "Unknown session type");
       }
+      // One active session per referral — finish or cancel the existing
+      // scheduled session before booking another one.
+      await ensureNoActiveSession(referral.id);
       const created = await prisma.counselingSession.create({
         data: {
           referralId: referral.id,
@@ -829,7 +993,10 @@ router.post(
           status: "scheduled",
           createdBy: req.user!.id,
         },
-        include: { creator: { select: { fullName: true } } },
+        include: {
+          creator: { select: { fullName: true } },
+          attachments: { orderBy: { uploadedAt: "asc" } },
+        },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: created.id, reason: "Counseling session scheduled", oldValue: null, newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
@@ -871,8 +1038,16 @@ router.post(
       if (session.status !== "scheduled") {
         throw new AppError(400, "INVALID_ACTION", "Only an upcoming session can be marked done");
       }
+      // A still-upcoming session cannot be marked done — it unlocks once
+      // the scheduled time arrives.
+      ensureSessionStarted(session);
       if (req.body.followUpSession && !isSessionType(req.body.followUpSession.sessionType)) {
         throw new AppError(400, "INVALID_ACTION", "Unknown follow-up session type");
+      }
+      // The follow-up replaces this session, so other active sessions
+      // (excluding this one) still block booking it.
+      if (req.body.followUpSession) {
+        await ensureNoActiveSession(referral.id, session.id);
       }
       const updated = await prisma.counselingSession.update({
         where: { id: session.id },
@@ -882,7 +1057,10 @@ router.post(
           outcome: req.body.outcome?.trim() || null,
           completedAt: new Date(),
         },
-        include: { creator: { select: { fullName: true } } },
+        include: {
+          creator: { select: { fullName: true } },
+          attachments: { orderBy: { uploadedAt: "asc" } },
+        },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_completed", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session completed", oldValue: { status: session.status }, newValue: { status: "completed" } });
       if (req.body.followUpSession) {
@@ -925,7 +1103,10 @@ router.post(
       const updated = await prisma.counselingSession.update({
         where: { id: session.id },
         data: { scheduledAt: nextDate },
-        include: { creator: { select: { fullName: true } } },
+        include: {
+          creator: { select: { fullName: true } },
+          attachments: { orderBy: { uploadedAt: "asc" } },
+        },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt }, newValue: { scheduledAt: nextDate } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
@@ -956,11 +1137,154 @@ router.post(
           status: "cancelled",
           cancelReason: req.body.cancelReason?.trim() || null,
         },
-        include: { creator: { select: { fullName: true } } },
+        include: {
+          creator: { select: { fullName: true } },
+          attachments: { orderBy: { uploadedAt: "asc" } },
+        },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: req.body.cancelReason?.trim() || "Counseling session cancelled", oldValue: { status: session.status }, newValue: { status: "cancelled" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json(formatSession(updated));
+    } catch (e) { next(e); }
+  }
+);
+
+// Delete a cancelled clinic/counseling session (DELETE
+// /api/referrals/:id/sessions/:sessionId). Only cancelled sessions can be
+// removed — scheduled/completed sessions must be finished or cancelled
+// first. Closed cases stay immutable.
+router.delete(
+  "/:id/sessions/:sessionId",
+  requireAuth,
+  requireRole("guidance_counselor", "nurse"),
+  async (req, res, next) => {
+    try {
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      ensureOpen(referral);
+      const session = await getSession(referral.id, String(req.params.sessionId));
+      if (session.status !== "cancelled") {
+        throw new AppError(400, "INVALID_ACTION", "Only a cancelled session can be deleted");
+      }
+      await prisma.clinicSessionAttachment.deleteMany({ where: { sessionId: session.id } });
+      await prisma.counselingSession.delete({ where: { id: session.id } });
+      await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Cancelled session deleted", oldValue: { status: session.status }, newValue: null });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  }
+);
+
+// Clinic documentation on one session: list / upload / remove image
+// attachments. Filing is optional before closing a clinic case — these
+// endpoints never gate resolve, they only build the evidence trail.
+// Uploads are allowed on open cases (any session status except when the
+// case itself is closed) so the nurse can file a photo after marking a
+// session done — but a still-upcoming session unlocks only once its
+// scheduled time arrives.
+router.get(
+  "/:id/sessions/:sessionId/attachments",
+  requireAuth,
+  requireRole("guidance_counselor", "nurse", "principal"),
+  async (req, res, next) => {
+    try {
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const session = await getSession(referral.id, String(req.params.sessionId));
+      const rows = await prisma.clinicSessionAttachment.findMany({
+        where: { sessionId: session.id },
+        orderBy: { uploadedAt: "asc" },
+      });
+      res.json(rows.map(formatAttachment));
+    } catch (e) { next(e); }
+  }
+);
+
+router.post(
+  "/:id/sessions/:sessionId/attachments",
+  requireAuth,
+  requireRole("guidance_counselor", "nurse"),
+  clinicUpload.array("files", 5),
+  async (req, res, next) => {
+    try {
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      if (referral.status === "resolved" || referral.status === "dismissed") {
+        throw new AppError(400, "INVALID_ACTION", "Cannot add documentation to a closed case");
+      }
+      const session = await getSession(referral.id, String(req.params.sessionId));
+      // Documentation unlocks once the session time arrives — upcoming
+      // sessions can still be viewed but cannot take new files yet.
+      if (session.status === "scheduled") {
+        ensureSessionStarted(session);
+      }
+      const files = ((req as unknown as { files?: Array<{ buffer: Buffer; originalname: string; mimetype: string; size: number }> }).files ?? []);
+      if (files.length === 0) {
+        throw new AppError(400, "BAD_REQUEST", "Attach at least one image");
+      }
+      const existing = await prisma.clinicSessionAttachment.count({
+        where: { sessionId: session.id },
+      });
+      if (existing + files.length > 10) {
+        throw new AppError(400, "BAD_REQUEST", "A session can hold at most 10 documentation images");
+      }
+      const created = [];
+      for (const file of files) {
+        const path = clinicSessionObjectPath(session.id, file.originalname);
+        const fileUrl = await uploadFile(file.buffer, path, file.mimetype);
+        const row = await prisma.clinicSessionAttachment.create({
+          data: {
+            sessionId: session.id,
+            fileUrl,
+            fileName: file.originalname.slice(0, 200),
+            mimeType: file.mimetype,
+            fileSize: file.size,
+            uploadedBy: req.user!.id,
+          },
+        });
+        created.push(row);
+      }
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "session_document_added",
+        sourceTable: "counseling_sessions",
+        sourceId: session.id,
+        reason: `${created.length} documentation image${created.length === 1 ? "" : "s"} filed`,
+        oldValue: null,
+        newValue: { count: created.length },
+      });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.status(201).json(created.map(formatAttachment));
+    } catch (e) { next(e); }
+  }
+);
+
+router.delete(
+  "/:id/sessions/:sessionId/attachments/:attachmentId",
+  requireAuth,
+  requireRole("guidance_counselor", "nurse"),
+  async (req, res, next) => {
+    try {
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      if (referral.status === "resolved" || referral.status === "dismissed") {
+        throw new AppError(400, "INVALID_ACTION", "Cannot remove documentation from a closed case");
+      }
+      const session = await getSession(referral.id, String(req.params.sessionId));
+      const row = await prisma.clinicSessionAttachment.findUnique({
+        where: { id: String(req.params.attachmentId) },
+      });
+      if (!row || row.sessionId !== session.id) {
+        throw new AppError(404, "NOT_FOUND", "Documentation not found");
+      }
+      await prisma.clinicSessionAttachment.delete({ where: { id: row.id } });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "session_document_added",
+        sourceTable: "counseling_sessions",
+        sourceId: session.id,
+        reason: `Documentation removed: ${row.fileName}`,
+        oldValue: { fileName: row.fileName },
+        newValue: null,
+      });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json({ ok: true });
     } catch (e) { next(e); }
   }
 );
@@ -1021,7 +1345,19 @@ router.get(
               sessionNotes: true,
               outcome: true,
               cancelReason: true,
+              createdAt: true,
               completedAt: true,
+              attachments: {
+                orderBy: { uploadedAt: "asc" },
+                select: {
+                  id: true,
+                  fileUrl: true,
+                  fileName: true,
+                  mimeType: true,
+                  fileSize: true,
+                  uploadedAt: true,
+                },
+              },
             },
           },
         },
@@ -1030,7 +1366,11 @@ router.get(
       // Referral time = earliest audit entry for the referral (creation
       // always writes one). Legacy rows without an audit trail fall back
       // to the observation date so "waiting" never goes blank.
+      // Last action = latest audit across the referral row AND its sessions
+      // (session booked/done/cancelled/moved + status changes) so the DUI
+      // shows the execution time, not the future appointment time.
       const ids = referrals.map((r) => r.id);
+      const sessionIds = referrals.flatMap((r) => r.counselingSessions.map((s) => s.id));
       const logs = ids.length
         ? await prisma.auditLog.findMany({
             where: { sourceTable: "referrals", sourceId: { in: ids } },
@@ -1044,14 +1384,56 @@ router.get(
           referredAtById.set(log.sourceId, log.createdAt.toISOString());
         }
       }
+      // Latest execution per referral: newest referral-level audit wins
+      // unless a session-level audit on one of its sessions is newer.
+      const lastActionById = new Map<string, { type: string; at: string }>();
+      if (ids.length > 0 || sessionIds.length > 0) {
+        const latestLogs = await prisma.auditLog.findMany({
+          where: {
+            OR: [
+              ...(ids.length ? [{ sourceTable: "referrals", sourceId: { in: ids } }] : []),
+              ...(sessionIds.length ? [{ sourceTable: "counseling_sessions", sourceId: { in: sessionIds } }] : []),
+            ],
+          },
+          select: { sourceId: true, sourceTable: true, actionType: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        });
+        const sessionToReferral = new Map<string, string>();
+        for (const r of referrals) {
+          for (const s of r.counselingSessions) sessionToReferral.set(s.id, r.id);
+        }
+        for (const log of latestLogs) {
+          const referralId =
+            log.sourceTable === "referrals"
+              ? log.sourceId
+              : (sessionToReferral.get(log.sourceId) ?? null);
+          if (!referralId || lastActionById.has(referralId)) continue;
+          lastActionById.set(referralId, {
+            type: String(log.actionType),
+            at: log.createdAt.toISOString(),
+          });
+        }
+      }
       res.json(
-        referrals.map((r) => ({
-          ...r,
-          referredAt:
-            referredAtById.get(r.id) ??
-            r.anecdotalRecord?.observationDatetime?.toISOString() ??
-            null,
-        })),
+        referrals
+          .map((r) => ({
+            ...r,
+            referredAt:
+              referredAtById.get(r.id) ??
+              r.anecdotalRecord?.observationDatetime?.toISOString() ??
+              null,
+            lastActionAt: lastActionById.get(r.id)?.at ?? null,
+            lastActionType: lastActionById.get(r.id)?.type ?? null,
+          }))
+          // Latest referred on top — the nurse referrals queue is a
+          // newest-first timeline. (Referral ids are uuids, so the DB
+          // orderBy above carries no chronology; referredAt does.)
+          .sort((a, b) => {
+            const at = a.referredAt ?? "";
+            const bt = b.referredAt ?? "";
+            if (at === bt) return 0;
+            return bt < at ? -1 : 1;
+          }),
       );
     } catch (e) { next(e); }
   }

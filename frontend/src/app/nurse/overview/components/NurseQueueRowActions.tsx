@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal } from "lucide-react";
+import { Loader2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -86,6 +86,13 @@ export function NurseQueueRowActions({
 
   async function handleResolve() {
     setDialogError(null);
+    // Mirror the referrals-page gate: Done needs ≥1 completed clinic
+    // session (docs stay optional). The server enforces this too — this
+    // is just the friendly early message.
+    if (row.type !== "ADM" && row.completedSessions === 0) {
+      setDialogError("Finish at least one clinic session before marking this case done.");
+      return;
+    }
     const ok = await runStatus("resolved", summary.trim() ? summary.trim() : undefined);
     if (ok) {
       setResolveOpen(false);
@@ -193,9 +200,14 @@ export function NurseQueueRowActions({
             <DialogHeader>
               <DialogTitle>Resolve case</DialogTitle>
               <DialogDescription>
-                Close {row.student}&rsquo;s case. Add a closing summary so the next reader knows the outcome.
+                Close {row.student}&rsquo;s case. Done needs at least one finished clinic session — photos stay optional.
               </DialogDescription>
             </DialogHeader>
+            {row.type !== "ADM" && row.completedSessions === 0 ? (
+              <p className={styles.dialogError} role="alert">
+                Not ready yet — finish at least one clinic session first, then come back to close.
+              </p>
+            ) : null}
             <div className={styles.dialogField}>
               <Label htmlFor={`resolve-${row.id}`}>Closing summary (optional)</Label>
               <Textarea
@@ -211,8 +223,12 @@ export function NurseQueueRowActions({
               <Button variant="outline" onClick={() => setResolveOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => void handleResolve()} disabled={acting}>
-                {acting ? "Resolving…" : "Resolve case"}
+              <Button
+                onClick={() => void handleResolve()}
+                disabled={acting || (row.type !== "ADM" && row.completedSessions === 0)}
+              >
+                {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                Resolve case
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -252,7 +268,8 @@ export function NurseQueueRowActions({
                 Cancel
               </Button>
               <Button onClick={() => void handleNote()} disabled={acting}>
-                {acting ? "Saving…" : "Save note"}
+                {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                Save note
               </Button>
             </DialogFooter>
           </DialogContent>

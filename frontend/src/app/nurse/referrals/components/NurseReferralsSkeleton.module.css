@@ -1,0 +1,226 @@
+/* Loading skeleton — mirrors the referrals display row-for-row (toolbar,
+   two-column entries with rail blocks incl. the student card, report body)
+   so content doesn't jump when the fetch lands. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 0.25rem 2rem;
+  min-height: 100%;
+  background-color: var(--background);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 90rem;
+  margin: 0 auto;
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 1.25rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  width: 11rem;
+  height: 1.75rem;
+  border-radius: var(--radius-md);
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.search {
+  width: 16rem;
+  max-width: 100%;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+}
+
+.pill {
+  width: 6.5rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 1.75rem;
+  padding: 1.75rem 0.75rem 1.75rem 1.75rem;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--card);
+}
+
+.entryAlt {
+  background-color: color-mix(in oklch, var(--foreground) 7%, var(--card));
+  border-radius: var(--radius-lg);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.date {
+  width: 7rem;
+  height: 1.25rem;
+  border-radius: var(--radius-md);
+}
+
+.badges {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.badges > * {
+  width: 4rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+}
+
+.line {
+  width: 100%;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+.lineShort {
+  width: 65%;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+.studentCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  padding: 0.75rem;
+  margin-top: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  max-width: 44rem;
+}
+
+.reason {
+  width: 75%;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+.block {
+  width: 100%;
+  height: 5rem;
+  border-radius: var(--radius-md);
+}
+
+.sessions {
+  width: 100%;
+  height: 7rem;
+  border-radius: var(--radius-lg);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.actions > * {
+  width: 7rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.side {
+  width: 12.5rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.sideRow {
+  width: 100%;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .entry {
+    grid-template-columns: 10rem minmax(0, 1fr);
+  }
+
+  .side {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .entry {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .body {
+    max-width: none;
+  }
+}

@@ -253,6 +253,7 @@ export const ActionType = {
   session_completed: 'session_completed',
   session_cancelled: 'session_cancelled',
   session_rescheduled: 'session_rescheduled',
+  session_document_added: 'session_document_added',
   intervention_approval: 'intervention_approval',
   intervention_assigned: 'intervention_assigned',
   intervention_outcome: 'intervention_outcome',

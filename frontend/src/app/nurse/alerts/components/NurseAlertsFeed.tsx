@@ -20,14 +20,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/sonner";
 import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
 import { NurseAdmReviewDialog } from "../../overview/components/NurseAdmReviewDialog";
-import {
-  apiErrorMessage,
-  forwardNurseAdmCase,
-  NURSE_STATUS_LABELS,
-} from "../../overview/components/nurse-overview-data";
+import { NURSE_STATUS_LABELS } from "../../overview/components/nurse-overview-data";
+import type { NurseQueueRow } from "../../overview/components/nurse-overview-data";
+import { NurseReferralFormViewModal } from "../../referrals/components/NurseReferralDialogs";
 import {
   NURSE_SEVERITY_LABELS,
   type NurseAlertItem,
@@ -55,51 +52,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Explicit forward for ADM cases whose referral form is completed. The case
-// reaches the ADM coordinator only when the nurse clicks this — saving the
-// form alone never moves it.
-function ForwardAdmButton({
-  id,
-  student,
-  onChanged,
-}: {
-  id: string;
-  student: string;
-  onChanged: () => void;
-}) {
-  const [sending, setSending] = React.useState(false);
-
-  async function onForward() {
-    setSending(true);
-    try {
-      await forwardNurseAdmCase(id);
-      toast.success({
-        title: "Case forwarded",
-        description: `${student}'s case moves to the ADM coordinator for the parent meeting.`,
-      });
-      onChanged();
-    } catch (err) {
-      toast.error({
-        title: "Forward failed",
-        description: apiErrorMessage(err, "Could not forward this case."),
-      });
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <Button
-      variant="default"
-      size="xs"
-      disabled={sending}
-      onClick={() => void onForward()}
-    >
-      {sending ? "Forwarding…" : "Endorse & forward"}
-    </Button>
-  );
-}
-
 export function NurseAlertsFeed({
   alerts,
   onChanged,
@@ -110,6 +62,7 @@ export function NurseAlertsFeed({
   const [query, setQuery] = React.useState("");
   const [severity, setSeverity] = React.useState<"" | NurseAlertSeverity>("");
   const [page, setPage] = React.useState(1);
+  const [viewFor, setViewFor] = React.useState<NurseQueueRow | null>(null);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -255,16 +208,17 @@ export function NurseAlertsFeed({
                 </div>
                 <div className={styles.actions}>
                   {alert.row.type === "ADM" &&
-                    alert.row.status === "pending" &&
-                    alert.row.referralReady && (
-                      <ForwardAdmButton
-                        id={alert.row.id}
-                        student={alert.row.student}
-                        onChanged={onChanged}
-                      />
+                    alert.row.status === "pending" && (
+                      <NurseAdmReviewDialog row={alert.row} onChanged={onChanged} />
                     )}
-                  {alert.row.type === "ADM" && alert.row.status === "pending" && (
-                    <NurseAdmReviewDialog row={alert.row} onChanged={onChanged} />
+                  {alert.row.type === "ADM" && alert.row.referralReady && (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => setViewFor(alert.row)}
+                    >
+                      View referral form
+                    </Button>
                   )}
                   <NurseQueueRowActions row={alert.row} onChanged={onChanged} />
                 </div>
@@ -299,6 +253,14 @@ export function NurseAlertsFeed({
           </div>
         </div>
       </CardContent>
+      {viewFor && (
+        <NurseReferralFormViewModal
+          row={viewFor}
+          open
+          onClose={() => setViewFor(null)}
+          onChanged={onChanged}
+        />
+      )}
     </Card>
   );
 }

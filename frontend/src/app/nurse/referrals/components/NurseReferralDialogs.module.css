@@ -1,0 +1,39 @@
+/* Nurse referral dialog form primitives — owned by the nurse referrals
+   dialogs (previously shared with the guidance timeline). */
+
+.errorBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--destructive, #dc2626);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--destructive, #dc2626), transparent 94%);
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.formFull {
+  grid-column: 1 / -1;
+}
+
+.blockLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}

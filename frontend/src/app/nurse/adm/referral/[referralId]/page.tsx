@@ -28,7 +28,7 @@ import { toast } from "@/components/ui/sonner";
 import {
   fetchNurseOverview,
   loadNurseReferralDraft,
-  saveNurseReferralForm,
+  confirmNurseReferralAndEndorse,
   type NurseAdmReferralForm,
 } from "../../../overview/components/nurse-overview-data";
 import {
@@ -148,6 +148,10 @@ export default function NurseAdmReferralPage() {
       setSessionError("Pick both a date and a time for the clinic session — or leave both empty to forward without one.");
       return null as unknown as undefined;
     }
+    if (activeRow?.sessions.some((s) => s.status === "scheduled")) {
+      setSessionError("This referral already has a session that is not done yet — finish or cancel it before booking another one.");
+      return null as unknown as undefined;
+    }
     const at = new Date(`${sessionDate}T${sessionTime}:00`);
     if (Number.isNaN(at.getTime())) {
       setSessionError("Pick a valid date and time for the clinic session.");
@@ -187,16 +191,16 @@ export default function NurseAdmReferralPage() {
     };
   }
 
-  // Confirming SAVES the referral form — the case stays pending and reaches
-  // the ADM coordinator only when the nurse clicks Endorse & forward on the
-  // alerts page (forwardNurseAdmCase).
+  // Confirming SAVES the referral form AND endorses the case to the ADM
+  // coordinator at once (auto-endorse) — then returns to the referrals page.
+  // Nothing redirects to the alerts page.
   const confirmMutation = useMutation({
     mutationFn: () => {
       const scheduledAt = resolveSession();
       if (scheduledAt === (null as unknown as undefined)) {
         throw new Error("INVALID_SESSION");
       }
-      return saveNurseReferralForm(referralId, {
+      return confirmNurseReferralAndEndorse(referralId, {
         recommendation: form?.guidanceRecommendations.trim() || "Referred for ADM.",
         scheduledAt,
         referralForm: form ? referralFormOf(form) : undefined,
@@ -207,10 +211,10 @@ export default function NurseAdmReferralPage() {
       queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
       queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
       toast.success({
-        title: "Referral saved",
-        description: "Forward it to the ADM coordinator from the alerts page.",
+        title: "Referral confirmed",
+        description: "The case was endorsed to the ADM coordinator.",
       });
-      router.push("/nurse/alerts");
+      router.push("/nurse/referrals");
     },
   });
 
@@ -277,7 +281,7 @@ export default function NurseAdmReferralPage() {
           <p className={pageStyles.lede}>
             {step === 1
               ? "Answer the form's questions — names, dates, and the anecdotal detail are already filled in."
-              : "Filled referral sheet preview — print it, download the .xlsx, or confirm to save the referral. Forwarding happens from the alerts page."}
+              : "Filled referral sheet preview — print it, download the .xlsx, or confirm to save and endorse the case to the ADM coordinator."}
           </p>
         </div>
         <Button size="sm" variant="outline" asChild>
@@ -587,7 +591,9 @@ export default function NurseAdmReferralPage() {
                   />
                 </div>
                 <p className={formStyles.mt} style={{ fontSize: "0.8125rem", opacity: 0.75 }}>
-                  Held at the school clinic. Leave both empty to forward without booking.
+                  {activeRow?.sessions.some((s) => s.status === "scheduled")
+                    ? "A session that is not done yet is already booked on this case — leave the session empty, or finish/cancel the existing one first."
+                    : "Held at the school clinic. Leave both empty to forward without booking."}
                 </p>
                 {sessionError ? (
                   <p className={styles.errorText} role="alert">{sessionError}</p>

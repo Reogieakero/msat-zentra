@@ -238,6 +238,7 @@ export type UserWhereInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupListRelationFilter
   referralsMade?: Prisma.ReferralListRelationFilter
   sessionsCreated?: Prisma.CounselingSessionListRelationFilter
+  sessionAttachments?: Prisma.ClinicSessionAttachmentListRelationFilter
   assignedInterventions?: Prisma.InterventionListRelationFilter
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
@@ -282,6 +283,7 @@ export type UserOrderByWithRelationInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupOrderByRelationAggregateInput
   referralsMade?: Prisma.ReferralOrderByRelationAggregateInput
   sessionsCreated?: Prisma.CounselingSessionOrderByRelationAggregateInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentOrderByRelationAggregateInput
   assignedInterventions?: Prisma.InterventionOrderByRelationAggregateInput
   healthRecords?: Prisma.HealthRecordOrderByRelationAggregateInput
   homeVisitations?: Prisma.HomeVisitationRecordOrderByRelationAggregateInput
@@ -329,6 +331,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupListRelationFilter
   referralsMade?: Prisma.ReferralListRelationFilter
   sessionsCreated?: Prisma.CounselingSessionListRelationFilter
+  sessionAttachments?: Prisma.ClinicSessionAttachmentListRelationFilter
   assignedInterventions?: Prisma.InterventionListRelationFilter
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
@@ -407,6 +410,7 @@ export type UserCreateInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -451,6 +455,7 @@ export type UserUncheckedCreateInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -495,6 +500,7 @@ export type UserUpdateInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -539,6 +545,7 @@ export type UserUncheckedUpdateInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -869,6 +876,20 @@ export type UserUpdateOneRequiredWithoutSessionsCreatedNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSessionsCreatedInput, Prisma.UserUpdateWithoutSessionsCreatedInput>, Prisma.UserUncheckedUpdateWithoutSessionsCreatedInput>
 }
 
+export type UserCreateNestedOneWithoutSessionAttachmentsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSessionAttachmentsInput, Prisma.UserUncheckedCreateWithoutSessionAttachmentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSessionAttachmentsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSessionAttachmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSessionAttachmentsInput, Prisma.UserUncheckedCreateWithoutSessionAttachmentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSessionAttachmentsInput
+  upsert?: Prisma.UserUpsertWithoutSessionAttachmentsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSessionAttachmentsInput, Prisma.UserUpdateWithoutSessionAttachmentsInput>, Prisma.UserUncheckedUpdateWithoutSessionAttachmentsInput>
+}
+
 export type UserCreateNestedOneWithoutAssignedInterventionsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedInterventionsInput, Prisma.UserUncheckedCreateWithoutAssignedInterventionsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedInterventionsInput
@@ -1136,6 +1157,7 @@ export type UserCreateWithoutStudentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -1179,6 +1201,7 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -1238,6 +1261,7 @@ export type UserUpdateWithoutStudentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -1281,6 +1305,7 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -1324,6 +1349,7 @@ export type UserCreateWithoutParentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -1367,6 +1393,7 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -1426,6 +1453,7 @@ export type UserUpdateWithoutParentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -1469,6 +1497,7 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -1512,6 +1541,7 @@ export type UserCreateWithoutStaffProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -1555,6 +1585,7 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -1614,6 +1645,7 @@ export type UserUpdateWithoutStaffProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -1657,6 +1689,7 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -1701,6 +1734,7 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -1744,6 +1778,7 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -1803,6 +1838,7 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -1846,6 +1882,7 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -1889,6 +1926,7 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -1932,6 +1970,7 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -1991,6 +2030,7 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -2034,6 +2074,7 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -2077,6 +2118,7 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -2120,6 +2162,7 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -2168,6 +2211,7 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -2211,6 +2255,7 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -2259,6 +2304,7 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -2302,6 +2348,7 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -2361,6 +2408,7 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -2404,6 +2452,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -2458,6 +2507,7 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -2501,6 +2551,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -2555,6 +2606,7 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -2598,6 +2650,7 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -2640,6 +2693,7 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -2683,6 +2737,7 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -2742,6 +2797,7 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -2785,6 +2841,7 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -2828,6 +2885,7 @@ export type UserCreateWithoutAnecdotalFoldersInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -2871,6 +2929,7 @@ export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -2930,6 +2989,7 @@ export type UserUpdateWithoutAnecdotalFoldersInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -2973,6 +3033,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -3016,6 +3077,7 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -3059,6 +3121,7 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -3118,6 +3181,7 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -3161,6 +3225,7 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -3204,6 +3269,7 @@ export type UserCreateWithoutReferralsMadeInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -3247,6 +3313,7 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -3306,6 +3373,7 @@ export type UserUpdateWithoutReferralsMadeInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -3349,6 +3417,7 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -3392,6 +3461,7 @@ export type UserCreateWithoutSessionsCreatedInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -3435,6 +3505,7 @@ export type UserUncheckedCreateWithoutSessionsCreatedInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -3494,6 +3565,7 @@ export type UserUpdateWithoutSessionsCreatedInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -3537,6 +3609,199 @@ export type UserUncheckedUpdateWithoutSessionsCreatedInput = {
   anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutSessionAttachmentsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutSessionAttachmentsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutSessionAttachmentsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSessionAttachmentsInput, Prisma.UserUncheckedCreateWithoutSessionAttachmentsInput>
+}
+
+export type UserUpsertWithoutSessionAttachmentsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSessionAttachmentsInput, Prisma.UserUncheckedUpdateWithoutSessionAttachmentsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSessionAttachmentsInput, Prisma.UserUncheckedCreateWithoutSessionAttachmentsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSessionAttachmentsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSessionAttachmentsInput, Prisma.UserUncheckedUpdateWithoutSessionAttachmentsInput>
+}
+
+export type UserUpdateWithoutSessionAttachmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSessionAttachmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -3581,6 +3846,7 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
@@ -3624,6 +3890,7 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
@@ -3683,6 +3950,7 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
@@ -3726,6 +3994,7 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
@@ -3769,6 +4038,7 @@ export type UserCreateWithoutHealthRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
@@ -3812,6 +4082,7 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
@@ -3871,6 +4142,7 @@ export type UserUpdateWithoutHealthRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
@@ -3914,6 +4186,7 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
@@ -3957,6 +4230,7 @@ export type UserCreateWithoutHomeVisitationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
@@ -4000,6 +4274,7 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
@@ -4059,6 +4334,7 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
@@ -4102,6 +4378,7 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
@@ -4145,6 +4422,7 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -4188,6 +4466,7 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -4236,6 +4515,7 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -4279,6 +4559,7 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -4338,6 +4619,7 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -4381,6 +4663,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -4435,6 +4718,7 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -4478,6 +4762,7 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -4521,6 +4806,7 @@ export type UserCreateWithoutAdmMeetingsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -4564,6 +4850,7 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -4623,6 +4910,7 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -4666,6 +4954,7 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -4709,6 +4998,7 @@ export type UserCreateWithoutAdmModulesInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -4752,6 +5042,7 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -4811,6 +5102,7 @@ export type UserUpdateWithoutAdmModulesInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -4854,6 +5146,7 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -4897,6 +5190,7 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -4940,6 +5234,7 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -4999,6 +5294,7 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -5042,6 +5338,7 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -5085,6 +5382,7 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -5128,6 +5426,7 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -5187,6 +5486,7 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -5230,6 +5530,7 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -5273,6 +5574,7 @@ export type UserCreateWithoutSf10RecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -5316,6 +5618,7 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -5364,6 +5667,7 @@ export type UserCreateWithoutSf10ValidatedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -5407,6 +5711,7 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -5466,6 +5771,7 @@ export type UserUpdateWithoutSf10RecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -5509,6 +5815,7 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -5563,6 +5870,7 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -5606,6 +5914,7 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -5649,6 +5958,7 @@ export type UserCreateWithoutSf10VersionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -5692,6 +6002,7 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -5751,6 +6062,7 @@ export type UserUpdateWithoutSf10VersionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -5794,6 +6106,7 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -5837,6 +6150,7 @@ export type UserCreateWithoutAuditLogsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -5880,6 +6194,7 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -5939,6 +6254,7 @@ export type UserUpdateWithoutAuditLogsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -5982,6 +6298,7 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -6025,6 +6342,7 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -6068,6 +6386,7 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -6116,6 +6435,7 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -6159,6 +6479,7 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -6218,6 +6539,7 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -6261,6 +6583,7 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -6315,6 +6638,7 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -6358,6 +6682,7 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -6401,6 +6726,7 @@ export type UserCreateWithoutNotificationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -6444,6 +6770,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -6503,6 +6830,7 @@ export type UserUpdateWithoutNotificationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -6546,6 +6874,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -6589,6 +6918,7 @@ export type UserCreateWithoutRefreshTokensInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
@@ -6632,6 +6962,7 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
   referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
   assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
@@ -6691,6 +7022,7 @@ export type UserUpdateWithoutRefreshTokensInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
@@ -6734,6 +7066,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
   referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
   sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
   assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
@@ -6768,6 +7101,7 @@ export type UserCountOutputType = {
   anecdotalFollowups: number
   referralsMade: number
   sessionsCreated: number
+  sessionAttachments: number
   assignedInterventions: number
   healthRecords: number
   homeVisitations: number
@@ -6798,6 +7132,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   anecdotalFollowups?: boolean | UserCountOutputTypeCountAnecdotalFollowupsArgs
   referralsMade?: boolean | UserCountOutputTypeCountReferralsMadeArgs
   sessionsCreated?: boolean | UserCountOutputTypeCountSessionsCreatedArgs
+  sessionAttachments?: boolean | UserCountOutputTypeCountSessionAttachmentsArgs
   assignedInterventions?: boolean | UserCountOutputTypeCountAssignedInterventionsArgs
   healthRecords?: boolean | UserCountOutputTypeCountHealthRecordsArgs
   homeVisitations?: boolean | UserCountOutputTypeCountHomeVisitationsArgs
@@ -6865,6 +7200,13 @@ export type UserCountOutputTypeCountReferralsMadeArgs<ExtArgs extends runtime.Ty
  */
 export type UserCountOutputTypeCountSessionsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.CounselingSessionWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountSessionAttachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ClinicSessionAttachmentWhereInput
 }
 
 /**
@@ -7042,6 +7384,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   anecdotalFollowups?: boolean | Prisma.User$anecdotalFollowupsArgs<ExtArgs>
   referralsMade?: boolean | Prisma.User$referralsMadeArgs<ExtArgs>
   sessionsCreated?: boolean | Prisma.User$sessionsCreatedArgs<ExtArgs>
+  sessionAttachments?: boolean | Prisma.User$sessionAttachmentsArgs<ExtArgs>
   assignedInterventions?: boolean | Prisma.User$assignedInterventionsArgs<ExtArgs>
   healthRecords?: boolean | Prisma.User$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.User$homeVisitationsArgs<ExtArgs>
@@ -7119,6 +7462,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   anecdotalFollowups?: boolean | Prisma.User$anecdotalFollowupsArgs<ExtArgs>
   referralsMade?: boolean | Prisma.User$referralsMadeArgs<ExtArgs>
   sessionsCreated?: boolean | Prisma.User$sessionsCreatedArgs<ExtArgs>
+  sessionAttachments?: boolean | Prisma.User$sessionAttachmentsArgs<ExtArgs>
   assignedInterventions?: boolean | Prisma.User$assignedInterventionsArgs<ExtArgs>
   healthRecords?: boolean | Prisma.User$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.User$homeVisitationsArgs<ExtArgs>
@@ -7157,6 +7501,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     anecdotalFollowups: Prisma.$AnecdotalRecordFollowupPayload<ExtArgs>[]
     referralsMade: Prisma.$ReferralPayload<ExtArgs>[]
     sessionsCreated: Prisma.$CounselingSessionPayload<ExtArgs>[]
+    sessionAttachments: Prisma.$ClinicSessionAttachmentPayload<ExtArgs>[]
     assignedInterventions: Prisma.$InterventionPayload<ExtArgs>[]
     healthRecords: Prisma.$HealthRecordPayload<ExtArgs>[]
     homeVisitations: Prisma.$HomeVisitationRecordPayload<ExtArgs>[]
@@ -7594,6 +7939,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   anecdotalFollowups<T extends Prisma.User$anecdotalFollowupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$anecdotalFollowupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordFollowupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referralsMade<T extends Prisma.User$referralsMadeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$referralsMadeArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sessionsCreated<T extends Prisma.User$sessionsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CounselingSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sessionAttachments<T extends Prisma.User$sessionAttachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionAttachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClinicSessionAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assignedInterventions<T extends Prisma.User$assignedInterventionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedInterventionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterventionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   healthRecords<T extends Prisma.User$healthRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$healthRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HealthRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   homeVisitations<T extends Prisma.User$homeVisitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$homeVisitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HomeVisitationRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -8223,6 +8569,30 @@ export type User$sessionsCreatedArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.CounselingSessionScalarFieldEnum | Prisma.CounselingSessionScalarFieldEnum[]
+}
+
+/**
+ * User.sessionAttachments
+ */
+export type User$sessionAttachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ClinicSessionAttachment
+   */
+  select?: Prisma.ClinicSessionAttachmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ClinicSessionAttachment
+   */
+  omit?: Prisma.ClinicSessionAttachmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ClinicSessionAttachmentInclude<ExtArgs> | null
+  where?: Prisma.ClinicSessionAttachmentWhereInput
+  orderBy?: Prisma.ClinicSessionAttachmentOrderByWithRelationInput | Prisma.ClinicSessionAttachmentOrderByWithRelationInput[]
+  cursor?: Prisma.ClinicSessionAttachmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ClinicSessionAttachmentScalarFieldEnum | Prisma.ClinicSessionAttachmentScalarFieldEnum[]
 }
 
 /**

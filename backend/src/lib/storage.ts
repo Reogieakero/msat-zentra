@@ -37,3 +37,8 @@ export function sf10ObjectPath(studentId: string, ext: string): string {
   const safeExt = ext.replace(/[^a-z0-9]/gi, "").toLowerCase() || "pdf";
   return `sf10/${studentId}-${Date.now()}.${safeExt}`;
 }
+
+export function clinicSessionObjectPath(sessionId: string, originalName: string): string {
+  const ext = (originalName.split(".").pop() ?? "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+  return `clinic/${sessionId}-${Date.now()}.${ext}`;
+}

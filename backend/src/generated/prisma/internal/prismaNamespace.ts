@@ -419,6 +419,7 @@ export const ModelName = {
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
   Referral: 'Referral',
   CounselingSession: 'CounselingSession',
+  ClinicSessionAttachment: 'ClinicSessionAttachment',
   Intervention: 'Intervention',
   HealthRecord: 'HealthRecord',
   HomeVisitationRecord: 'HomeVisitationRecord',
@@ -450,7 +451,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2082,6 +2083,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ClinicSessionAttachment: {
+      payload: Prisma.$ClinicSessionAttachmentPayload<ExtArgs>
+      fields: Prisma.ClinicSessionAttachmentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClinicSessionAttachmentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClinicSessionAttachmentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>
+        }
+        findFirst: {
+          args: Prisma.ClinicSessionAttachmentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClinicSessionAttachmentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>
+        }
+        findMany: {
+          args: Prisma.ClinicSessionAttachmentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>[]
+        }
+        create: {
+          args: Prisma.ClinicSessionAttachmentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>
+        }
+        createMany: {
+          args: Prisma.ClinicSessionAttachmentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ClinicSessionAttachmentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>[]
+        }
+        delete: {
+          args: Prisma.ClinicSessionAttachmentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>
+        }
+        update: {
+          args: Prisma.ClinicSessionAttachmentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClinicSessionAttachmentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClinicSessionAttachmentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ClinicSessionAttachmentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>[]
+        }
+        upsert: {
+          args: Prisma.ClinicSessionAttachmentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClinicSessionAttachmentPayload>
+        }
+        aggregate: {
+          args: Prisma.ClinicSessionAttachmentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClinicSessionAttachment>
+        }
+        groupBy: {
+          args: Prisma.ClinicSessionAttachmentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClinicSessionAttachmentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClinicSessionAttachmentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClinicSessionAttachmentCountAggregateOutputType> | number
+        }
+      }
+    }
     Intervention: {
       payload: Prisma.$InterventionPayload<ExtArgs>
       fields: Prisma.InterventionFieldRefs
@@ -3625,6 +3700,20 @@ export const CounselingSessionScalarFieldEnum = {
 export type CounselingSessionScalarFieldEnum = (typeof CounselingSessionScalarFieldEnum)[keyof typeof CounselingSessionScalarFieldEnum]
 
 
+export const ClinicSessionAttachmentScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  fileSize: 'fileSize',
+  uploadedBy: 'uploadedBy',
+  uploadedAt: 'uploadedAt'
+} as const
+
+export type ClinicSessionAttachmentScalarFieldEnum = (typeof ClinicSessionAttachmentScalarFieldEnum)[keyof typeof ClinicSessionAttachmentScalarFieldEnum]
+
+
 export const InterventionScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
@@ -4551,6 +4640,7 @@ export type GlobalOmitConfig = {
   anecdotalRecordFollowup?: Prisma.AnecdotalRecordFollowupOmit
   referral?: Prisma.ReferralOmit
   counselingSession?: Prisma.CounselingSessionOmit
+  clinicSessionAttachment?: Prisma.ClinicSessionAttachmentOmit
   intervention?: Prisma.InterventionOmit
   healthRecord?: Prisma.HealthRecordOmit
   homeVisitationRecord?: Prisma.HomeVisitationRecordOmit

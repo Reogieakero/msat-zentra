@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner";
+import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { ClinicDatePicker, ClinicTimePicker } from "./ClinicDateTimePicker";
 import {
   acceptNurseCase,
@@ -42,6 +44,7 @@ export function NurseStartHandlingDialog({
   const [sessionDate, setSessionDate] = React.useState("");
   const [sessionTime, setSessionTime] = React.useState("");
   const [dialogError, setDialogError] = React.useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   function todayKey(): string {
     return new Date().toISOString().slice(0, 10);
@@ -109,9 +112,28 @@ export function NurseStartHandlingDialog({
         <DialogHeader>
           <DialogTitle>Start handling this case</DialogTitle>
           <DialogDescription>
-            Review the referral, record your opening note, book the first clinic session, then accept it.
+            Step 1 — review the referral and its anecdotal report, record your
+            opening note, book the first clinic session, then accept it.
           </DialogDescription>
         </DialogHeader>
+        {row.anecdotal?.incident && row.anecdotal.incident !== "—" ? (
+          <p className={styles.dialogHint} style={{ marginBottom: 0 }}>
+            What was observed: {row.anecdotal.incident.slice(0, 220)}
+            {row.anecdotal.incident.length > 220 ? "…" : ""}
+          </p>
+        ) : null}
+        {row.anecdotalId ? (
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPreviewOpen(true)}
+            >
+              View details &amp; anecdotal report
+            </Button>
+          </div>
+        ) : null}
         <dl className={styles.intakeSummary}>
           <div className={styles.intakeRow}>
             <dt className={styles.intakeLabel}>Student</dt>
@@ -185,10 +207,17 @@ export function NurseStartHandlingDialog({
             Cancel
           </Button>
           <Button onClick={() => void handleStart()} disabled={acting}>
-            {acting ? "Accepting…" : "Accept & start handling"}
+            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            Accept & start handling
           </Button>
         </DialogFooter>
       </DialogContent>
+      {row.anecdotalId && previewOpen ? (
+        <OcForm01PreviewDialog
+          recordId={row.anecdotalId}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
     </Dialog>
   );
 }

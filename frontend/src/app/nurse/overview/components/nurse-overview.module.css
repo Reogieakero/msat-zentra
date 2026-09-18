@@ -197,6 +197,16 @@
   gap: 0.375rem;
 }
 
+/* Wide dialog content that scrolls without showing a scrollbar. */
+.dialogScrollHidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dialogScrollHidden::-webkit-scrollbar {
+  display: none;
+}
+
 .dialogTextarea {
   min-height: 6rem;
 }
