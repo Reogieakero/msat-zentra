@@ -1,38 +1,24 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
-import { useState } from "react";
-import { Loader2, MoreHorizontal } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { ChevronDown, Loader2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
 import type {
   CounselingSessionItem,
   CounselingSessionType,
   GuidanceReferralItem,
   GuidanceReferralStatus,
+  GuidanceReferralsSummary,
 } from "./guidance-referrals-data";
 import {
   acceptReferral,
@@ -48,177 +34,40 @@ import {
   completeSession,
   rescheduleSession,
   cancelSession,
+  deleteSession,
 } from "./guidance-referrals-data";
 import {
-  GuidanceReferralsFilters,
-  type StatusFilter,
-} from "./guidance-referrals-filters";
+  GuidanceReferralDialogs,
+  INITIAL_GUIDANCE_FORM,
+  type GuidanceActionFormState as ActionFormState,
+  type GuidanceActionDialogs as ActionDialogs,
+} from "./GuidanceReferralDialogs";
 import {
-  SessionDatePicker,
-  SessionTimePicker,
-} from "./session-datetime-picker";
-import { FormDropdown } from "./form-dropdown";
+  GuidanceReferralEntry,
+} from "./GuidanceReferralEntry";
+import { AdmReviewDialog } from "../../adm/components/AdmReviewDialog";
+import { GuidanceAdmReferralFormSheet } from "../../adm/components/GuidanceAdmReferralFormSheet";
+import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
+import { GuidanceActionMenu } from "./GuidanceActionMenu";
+import {
+  toDateInputValue,
+  toTimeInputValue,
+  GUIDANCE_TYPES,
+  type GuidanceAction,
+  type GuidanceTypeFilter,
+} from "./guidance-referrals-format";
 import styles from "./guidance-referrals-table.module.css";
 
-function formatStatus(value: string): string {
-  const words = value.replace(/_/g, " ").toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-/* "2026-09-12" -> "Sep 12, 2026": long dates confuse non-technical readers. */
-function formatDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return value;
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const month = months[Number(match[2]) - 1] ?? match[2];
-  return `${month} ${Number(match[3])}, ${match[1]}`;
-}
-
-/* Same relative-time tag the folder UI shows under each file. */
-function timeAgo(iso: string): string {
-  const then = new Date(`${iso}T00:00:00`).getTime();
-  if (!Number.isFinite(then) || then < Date.UTC(2000, 0, 1)) return "—";
-  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
-  if (seconds < 60) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  return `${days}d ago`;
-}
-
-/* Plain words for each case status — "Pending" means little to non-staff. */
-function statusLabel(status: string): string {
-  switch (status) {
-    case "pending":
-      return "Needs action";
-    case "in_progress":
-      return "In progress";
-    case "resolved":
-      return "Resolved";
-    case "escalated":
-      return "Sent higher up";
-    case "follow_up":
-      return "Follow-up";
-    case "dismissed":
-      return "Closed";
-    case "info_requested":
-      return "Needs more info";
-    default:
-      return formatStatus(status);
-  }
-}
-
-/* One plain line telling the reader what the status means for them. */
-function statusHelp(status: string): string {
-  switch (status) {
-    case "pending":
-      return "Waiting for you to accept this case.";
-    case "in_progress":
-      return "You accepted this — it is being handled.";
-    case "resolved":
-      return "Done. Nothing left to do.";
-    case "escalated":
-      return "This was sent to a higher office.";
-    case "follow_up":
-      return "Check back on the follow-up date below.";
-    case "dismissed":
-      return "Closed without further action.";
-    case "info_requested":
-      return "Waiting for more information.";
-    default:
-      return "";
-  }
-}
-
-function roleLabel(value: string): string {
-  switch (value) {
-    case "principal":
-      return "Principal";
-    case "nurse":
-      return "Nurse";
-    case "adm_coordinator":
-      return "ADM coordinator";
-    case "guidance_counselor":
-      return "Guidance";
-    default:
-      return formatStatus(value);
-  }
-}
-
-/* Friendly names for the four session kinds. */
-export function sessionTypeLabel(value: string): string {
-  switch (value) {
-    case "individual":
-      return "One-on-one";
-    case "parent_conference":
-      return "Parent conference";
-    case "group":
-      return "Group session";
-    case "home_visit":
-      return "Home visit";
-    default:
-      return formatStatus(value);
-  }
-}
-
-/* "2026-09-20T06:30:00.000Z" -> "2:30 PM" (reader's timezone). */
-export function formatTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-/* "2026-09-20T06:30:00.000Z" -> "Sep 20, 2026 · 2:30 PM" (reader's timezone). */
-export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const date = d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const time = d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${date} · ${time}`;
-}
-
-export function toDateInputValue(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const month = `${d.getMonth() + 1}`.padStart(2, "0");
-  const day = `${d.getDate()}`.padStart(2, "0");
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-export function toTimeInputValue(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${`${d.getHours()}`.padStart(2, "0")}:${`${d.getMinutes()}`.padStart(2, "0")}`;
-}
-
-/* Shared by the accept + schedule dialogs — and the interventions page. */
-export const SESSION_KIND_OPTIONS = [
-  { value: "individual", label: "One-on-one" },
-  { value: "parent_conference", label: "Parent conference" },
-  { value: "group", label: "Group session" },
-  { value: "home_visit", label: "Home visit" },
-];
-
-export function combineDateTime(date: string, time: string): string | null {
-  if (!date || !time) return null;
-  const d = new Date(`${date}T${time}`);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
+/* Re-exported for the interventions page (same helpers, new home). */
+export {
+  combineDateTime,
+  formatDateTime,
+  formatTime,
+  sessionTypeLabel,
+  toDateInputValue,
+  toTimeInputValue,
+  SESSION_KIND_OPTIONS,
+} from "./guidance-referrals-format";
 
 /* Spinner shown inside a button while its action is running. The button
    text already flips ("Saving…"), so this is purely visual. */
@@ -227,84 +76,21 @@ function Busy({ busy }: { busy: boolean }) {
   return <Loader2 className={styles.spin} aria-hidden="true" />;
 }
 
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
+/* Live clock for the session countdowns — ticks each second while any
+   scheduled session is on screen so the seconds stay exact. */
+function useNowTick(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [active]);
+  return now;
 }
-
-function statusVariant(
-  status: string
-): "warning" | "destructive" | "secondary" | "outline" {
-  if (status === "pending") return "warning";
-  if (status === "escalated") return "destructive";
-  if (status === "resolved" || status === "dismissed") return "secondary";
-  return "outline";
-}
-
-interface ActionDialogs {
-  escalate: boolean;
-  reassign: boolean;
-  note: boolean;
-  followUp: boolean;
-  dismiss: boolean;
-  specialist: boolean;
-  adm: boolean;
-  accept: boolean;
-  schedule: boolean;
-  finish: boolean;
-  move: boolean;
-  cancelSess: boolean;
-  resolve: boolean;
-}
-
-interface ActionFormState {
-  escalationReason: string;
-  escalatedTo: string;
-  noteText: string;
-  followUpDate: string;
-  dismissReason: string;
-  specialistRole: string;
-  specialistReason: string;
-  admReason: string;
-  priority: string;
-  intakeNotes: string;
-  sessDate: string;
-  sessTime: string;
-  sessType: string;
-  sessVenue: string;
-  doneNotes: string;
-  doneOutcome: string;
-  cancelReasonInput: string;
-  resolveSummary: string;
-}
-
-const INITIAL_FORM: ActionFormState = {
-  escalationReason: "",
-  escalatedTo: "",
-  noteText: "",
-  followUpDate: "",
-  dismissReason: "",
-  specialistRole: "",
-  specialistReason: "",
-  admReason: "",
-  priority: "normal",
-  intakeNotes: "",
-  sessDate: "",
-  sessTime: "",
-  sessType: "individual",
-  sessVenue: "",
-  doneNotes: "",
-  doneOutcome: "",
-  cancelReasonInput: "",
-  resolveSummary: "",
-};
 
 export function GuidanceReferralsTable({
   referrals,
+  summary,
   page,
   pageSize,
   total,
@@ -312,11 +98,15 @@ export function GuidanceReferralsTable({
   onPageChange,
   query,
   onQueryChange,
-  status,
-  onStatusChange,
+  typeFilter,
+  onTypeChange,
+  action,
+  onActionChange,
   onRetry,
   isRetrying,
   isNavigating,
+  lockType = false,
+  title = "Referrals to me",
 }: GuidanceReferralsTableProps) {
   const queryClient = useQueryClient();
   const [dialogs, setDialogs] = useState<ActionDialogs>({
@@ -332,38 +122,48 @@ export function GuidanceReferralsTable({
     finish: false,
     move: false,
     cancelSess: false,
+    deleteSess: false,
     resolve: false,
   });
-  const [form, setForm] = useState<ActionFormState>(INITIAL_FORM);
+  const [form, setForm] = useState<ActionFormState>(INITIAL_GUIDANCE_FORM);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   /* Anecdotal record open in the official-form overlay (same as folder UI). */
   const [previewId, setPreviewId] = useState<string | null>(null);
   /* Student whose finished case shows the privacy notice instead. */
   const [privacyFor, setPrivacyFor] = useState<string | null>(null);
+  /* Student whose endorsed case shows the moved-with-case notice instead. */
+  const [endorsedFor, setEndorsedFor] = useState<string | null>(null);
+  // ADM-track row under review (desk mode — same actions as the nurse ADM
+  // review, without the coordinator form).
+  const [reviewAdmFor, setReviewAdmFor] = useState<GuidanceReferralItem | null>(null);
+  const [formSheet, setFormSheet] = useState<{
+    row: GuidanceReferralItem;
+    draft: AdmReviewDraft;
+  } | null>(null);
 
   const openDialog = (id: string, dialog: keyof ActionDialogs) => {
     setActiveId(id);
     setActiveSessionId(null);
-    setForm(INITIAL_FORM);
+    setForm(INITIAL_GUIDANCE_FORM);
     setDialogs((prev) => ({ ...prev, [dialog]: true }));
   };
 
   const openSessionDialog = (
     referralId: string,
     session: CounselingSessionItem,
-    dialog: "finish" | "move" | "cancelSess"
+    dialog: "finish" | "move" | "cancelSess" | "deleteSess"
   ) => {
     setActiveId(referralId);
     setActiveSessionId(session.id);
     setForm({
-      ...INITIAL_FORM,
+      ...INITIAL_GUIDANCE_FORM,
       // "Move" starts from the current slot; "finish" leaves the follow-up
       // date empty so booking the next session stays opt-in.
       sessDate: dialog === "move" ? toDateInputValue(session.scheduledAt) : "",
       sessTime: dialog === "move" ? toTimeInputValue(session.scheduledAt) : "",
       // Follow-up defaults to the same kind of session.
-      sessType: dialog === "finish" ? session.sessionType : INITIAL_FORM.sessType,
+      sessType: dialog === "finish" ? session.sessionType : INITIAL_GUIDANCE_FORM.sessType,
     });
     setDialogs((prev) => ({ ...prev, [dialog]: true }));
   };
@@ -479,6 +279,10 @@ export function GuidanceReferralsTable({
           const p = payload as { sessionId: string; cancelReason?: string };
           return cancelSession(id, p.sessionId, p.cancelReason);
         }
+        case "deleteSess": {
+          const p = payload as { sessionId: string };
+          return deleteSession(id, p.sessionId);
+        }
         default:
           throw new Error(`Unknown action: ${action}`);
       }
@@ -507,6 +311,7 @@ export function GuidanceReferralsTable({
       finish: false,
       move: false,
       cancelSess: false,
+      deleteSess: false,
       resolve: false,
     });
     setActiveId(null);
@@ -515,38 +320,97 @@ export function GuidanceReferralsTable({
 
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
-  const updatingId =
-    mutation.isPending && mutation.variables ? mutation.variables.id : null;
   const isActionPending = actionMutation.isPending;
 
-  const openCases = referrals.filter(
-    (r) => r.status !== "resolved" && r.status !== "dismissed"
-  ).length;
-  const hasActiveFilters = query.trim() !== "" || status !== "";
+  const hasActiveFilters =
+    query.trim() !== "" || action !== "" || (!lockType && typeFilter !== "");
   const activeRow = referrals.find((r) => r.id === activeId) ?? null;
   const activeSession =
     activeRow?.sessions.find((s) => s.id === activeSessionId) ?? null;
+  // One live clock for every countdown on this page — ticks each second
+  // only while a scheduled session is visible, so seconds stay exact.
+  const hasScheduledOnPage = referrals.some((r) =>
+    r.sessions.some((s) => s.status === "scheduled")
+  );
+  const now = useNowTick(hasScheduledOnPage);
+  const typeFilterLabel =
+    GUIDANCE_TYPES.find((t) => t.value === typeFilter)?.label ?? "All types";
+
+  function clearFilters() {
+    onQueryChange("");
+    onActionChange("");
+    // Locked pages (ADM Cases / Counseling Cases) stay on their track —
+    // clearing only resets the search and the action menu.
+    onTypeChange(lockType ? typeFilter : "");
+  }
 
   return (
-    <div className={styles.feed}>
-      <h1 className={styles.srOnly}>Cases sent to guidance</h1>
-      <div className={styles.toolbar}>
-        <p className={styles.count} aria-live="polite">
-          {total === 0
-            ? "No cases"
-            : `${total} case${total === 1 ? "" : "s"} sent to you${
-                openCases > 0 ? ` · ${openCases} still need${
-                  openCases === 1 ? "s" : ""
-                } action` : ""
-              }`}
-        </p>
-        <GuidanceReferralsFilters
-          query={query}
-          onQueryChange={onQueryChange}
-          status={status}
-          onStatusChange={onStatusChange}
-        />
-      </div>
+    <div className={styles.layout}>
+      <div className={`${styles.feed} ${styles.layoutFeed}`}>
+        <h1 className={styles.srOnly}>Cases sent to guidance</h1>
+        <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
+          <div>
+            <p className={styles.pageTitle}>{title}</p>
+          </div>
+          <div className={styles.toolbarFilters}>
+            <div className={styles.searchWrap}>
+              <Search className={styles.searchIcon} aria-hidden />
+              <Input
+                className={styles.searchInput}
+                style={{ height: "1.75rem" }}
+                placeholder="Search by student name or keyword…"
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                aria-label="Search your cases"
+              />
+            </div>
+            {/* Locked pages never need the track dropdown — the page itself
+                is the track, so the picker would only ever hold one value. */}
+            {!lockType && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Filter cases by type, currently showing: ${typeFilterLabel}`}
+                  className={`${styles.filterBtn} ${typeFilter !== "" ? styles.filterActive : ""}`}
+                >
+                  {typeFilterLabel}
+                  {typeFilter !== "" && <span className={styles.filterDot} aria-hidden />}
+                  <ChevronDown aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className={styles.filterMenu}>
+                {GUIDANCE_TYPES.map((item) => (
+                  <DropdownMenuCheckboxItem
+                    key={item.label}
+                    checked={typeFilter === item.value}
+                    onCheckedChange={() => {
+                      onTypeChange(item.value);
+                      // Sidebar actions are per-track — a stale action from
+                      // the other track would empty the list, so reset it.
+                      onActionChange("");
+                      onPageChange(1);
+                    }}
+                  >
+                    {item.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            )}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+              >
+                <X aria-hidden />
+                Show all
+              </Button>
+            )}
+          </div>
+        </div>
 
       {mutation.isError && (
         <div className={styles.errorBlock} role="alert">
@@ -596,381 +460,26 @@ export function GuidanceReferralsTable({
         </div>
       ) : (
         <ol className={styles.timeline}>
-          {referrals.map((row) => {
-            const updating = updatingId === row.id;
-            const isPending = row.status === "pending";
-            const isDismissed = row.status === "dismissed";
-            const isClosed =
-              row.status === "resolved" || isDismissed;
-            return (
-              <li key={row.id} className={styles.entry}>
-                <span className={styles.dot} aria-hidden="true" />
-                {/* Left rail — when it arrived and what state it is in */}
-                <div className={styles.rail}>
-                  <p className={styles.railDate}>
-                    <time dateTime={row.date}>{formatDate(row.date)}</time>
-                  </p>
-                  <div className={styles.railBadges}>
-                    <Badge variant={statusVariant(row.status)}>
-                      {statusLabel(row.status)}
-                    </Badge>
-                    <Badge variant="outline">
-                      {formatStatus(row.category)}
-                    </Badge>
-                    {row.priority === "high" ? (
-                      <Badge variant="destructive">High priority</Badge>
-                    ) : null}
-                    {row.priority === "low" ? (
-                      <Badge variant="outline">Low priority</Badge>
-                    ) : null}
-                  </div>
-                  {statusHelp(row.status) ? (
-                    <p className={styles.statusHelp}>
-                      {statusHelp(row.status)}
-                    </p>
-                  ) : null}
-                  <p className={styles.railMeta}>Sent by {row.referredBy}</p>
-                  <p className={styles.railMeta}>
-                    Observed by {row.observer || "not recorded"}
-                  </p>
-                </div>
-
-                {/* Center — the report itself: reason, what happened, details */}
-                <div className={styles.body}>
-                  <h2 className={styles.reason}>{row.reason}</h2>
-
-                  {row.anecdotalExcerpt || row.anecdotalId ? (
-                    <div className={styles.block}>
-                      <p className={styles.blockLabel}>What was observed</p>
-                      {row.anecdotalExcerpt ? (
-                        <p className={styles.blockText}>
-                          {row.anecdotalExcerpt}
-                        </p>
-                      ) : null}
-                      {row.anecdotalId ? (
-                        <button
-                          type="button"
-                          className={styles.folderBtn}
-                          onClick={() =>
-                            isClosed
-                              ? setPrivacyFor(row.student)
-                              : setPreviewId(row.anecdotalId)
-                          }
-                          aria-label={
-                            isClosed
-                              ? `Report for ${row.student} is kept private because the case is finished`
-                              : `Open the official anecdotal report for ${row.student}`
-                          }
-                        >
-                          <FolderCard
-                            label="Anecdotal report"
-                            sublabel={`${formatStatus(row.category)} · ${formatDate(row.date)}`}
-                            files={[
-                              {
-                                name: `OCForm-01_${row.date}`,
-                                tag: `${formatStatus(row.category)} • ${timeAgo(row.date)}`,
-                                icon: "doc",
-                              },
-                            ]}
-                          />
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {row.location || row.recommendations || row.confidentiality ? (
-                    <dl className={styles.metaGrid}>
-                      {row.location ? (
-                        <div className={styles.metaItem}>
-                          <dt>Where it happened</dt>
-                          <dd>{row.location}</dd>
-                        </div>
-                      ) : null}
-                      {row.recommendations ? (
-                        <div className={styles.metaItem}>
-                          <dt>Suggested next steps</dt>
-                          <dd>{row.recommendations}</dd>
-                        </div>
-                      ) : null}
-                      {row.confidentiality ? (
-                        <div className={styles.metaItem}>
-                          <dt>Privacy level</dt>
-                          <dd>{formatStatus(row.confidentiality)}</dd>
-                        </div>
-                      ) : null}
-                    </dl>
-                  ) : null}
-
-                  {row.intakeNotes ? (
-                    <p className={styles.calloutMuted}>
-                      <span className={styles.calloutPrefix}>First impressions: </span>
-                      {row.intakeNotes}
-                    </p>
-                  ) : null}
-
-                  {/* Counseling plan — the real work on an accepted case */}
-                  {isPending ? (
-                    <p className={styles.planHint}>
-                      Accept this case to record your first impressions and
-                      schedule counseling sessions.
-                    </p>
-                  ) : (
-                    <div className={styles.plan}>
-                      <div className={styles.planHead}>
-                        <p className={styles.blockLabel}>Counseling plan</p>
-                        {!isClosed ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isActionPending}
-                            onClick={() => openDialog(row.id, "schedule")}
-                          >
-                            Schedule a session
-                          </Button>
-                        ) : null}
-                      </div>
-                      {isClosed ? (
-                        <p className={styles.planEmpty}>
-                          This case is closed — the sessions below are kept as
-                          history and can&apos;t be changed.
-                        </p>
-                      ) : null}
-                      {row.sessions.length === 0 ? (
-                        <p className={styles.planEmpty}>
-                          No sessions yet — schedule the first talk with{" "}
-                          {row.student.split(" ")[0]}.
-                        </p>
-                      ) : (
-                        <ul className={styles.sessionList}>
-                          {row.sessions.map((s) => (
-                            <li key={s.id} className={styles.session}>
-                              <div className={styles.sessionTop}>
-                                <Badge
-                                  variant={
-                                    s.status === "completed"
-                                      ? "success"
-                                      : s.status === "cancelled"
-                                        ? "secondary"
-                                        : "default"
-                                  }
-                                >
-                                  {s.status === "completed"
-                                    ? "Done"
-                                    : s.status === "cancelled"
-                                      ? "Cancelled"
-                                      : "Upcoming"}
-                                </Badge>
-                                <p className={styles.sessionTitle}>
-                                  {sessionTypeLabel(s.sessionType)}
-                                </p>
-                              </div>
-                              <ul className={styles.sessionFacts}>
-                                <li>
-                                  <time dateTime={s.scheduledAt}>
-                                    {formatDate(s.date)}
-                                  </time>
-                                </li>
-                                <li>{formatTime(s.scheduledAt)}</li>
-                                {s.venue ? <li>{s.venue}</li> : null}
-                              </ul>
-                              {s.status === "completed" && s.sessionNotes ? (
-                                <p className={styles.sessionNotes}>
-                                  {s.sessionNotes}
-                                </p>
-                              ) : null}
-                              {s.status === "completed" && s.outcome ? (
-                                <p className={styles.sessionOutcome}>
-                                  <span className={styles.calloutPrefix}>
-                                    Outcome:{" "}
-                                  </span>
-                                  {s.outcome}
-                                </p>
-                              ) : null}
-                              {s.status === "cancelled" && s.cancelReason ? (
-                                <p className={styles.sessionOutcome}>
-                                  {s.cancelReason}
-                                </p>
-                              ) : null}
-                              {s.status === "scheduled" && !isClosed && (
-                                <div className={styles.sessionActions}>
-                                  <Button
-                                    type="button"
-                                    size="xs"
-                                    disabled={isActionPending}
-                                    onClick={() =>
-                                      openSessionDialog(row.id, s, "finish")
-                                    }
-                                  >
-                                    Mark done
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="xs"
-                                    variant="outline"
-                                    disabled={isActionPending}
-                                    onClick={() =>
-                                      openSessionDialog(row.id, s, "move")
-                                    }
-                                  >
-                                    Move
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="xs"
-                                    variant="ghost"
-                                    disabled={isActionPending}
-                                    onClick={() =>
-                                      openSessionDialog(row.id, s, "cancelSess")
-                                    }
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-
-                  {row.followUpDate ? (
-                    <p className={styles.callout}>
-                      Reminder: check back on{" "}
-                      <time dateTime={row.followUpDate}>
-                        {formatDate(row.followUpDate)}
-                      </time>
-                      .
-                    </p>
-                  ) : null}
-                  {row.escalationReason ? (
-                    <p className={styles.callout}>
-                      Sent up{row.escalatedTo ? ` to ${roleLabel(row.escalatedTo)}` : ""}:{" "}
-                      {row.escalationReason}
-                    </p>
-                  ) : null}
-                  {row.notes ? (
-                    <p className={styles.calloutMuted}>
-                      <span className={styles.calloutPrefix}>Internal note: </span>
-                      {row.notes}
-                    </p>
-                  ) : null}
-                  {row.resolutionSummary ? (
-                    <p className={styles.calloutMuted}>
-                      <span className={styles.calloutPrefix}>How this ended: </span>
-                      {row.resolutionSummary}
-                    </p>
-                  ) : null}
-
-                  <div className={styles.actions}>
-                    {isPending && (
-                      <Button
-                        size="sm"
-                        disabled={isActionPending}
-                        onClick={() => openDialog(row.id, "accept")}
-                      >
-                        Accept case
-                      </Button>
-                    )}
-                    {!isClosed && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={updating || isActionPending}
-                        onClick={() => openDialog(row.id, "resolve")}
-                      >
-                        Finish & close
-                      </Button>
-                    )}
-                    {!isClosed && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isActionPending}
-                            aria-label={`More actions for ${row.student}`}
-                          >
-                            <MoreHorizontal aria-hidden="true" />
-                            More actions
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className={styles.moreMenu}>
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "escalate")}
-                          >
-                            Send to a higher office…
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "reassign")}
-                          >
-                            Pass to someone else…
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "note")}
-                          >
-                            Add internal note…
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "followUp")}
-                          >
-                            Remind me to check back…
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "specialist")}
-                          >
-                            Ask a specialist for help…
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "adm")}
-                          >
-                            Start ADM process…
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onSelect={() => openDialog(row.id, "dismiss")}
-                          >
-                            Close without action…
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link href="/guidance/interventions">
-                        See interventions
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Right — who this case is about */}
-                <aside
-                  className={styles.student}
-                  aria-label={`About the student: ${row.student}`}
-                >
-                  <p className={styles.studentCaption}>Student</p>
-                  <div className={styles.studentRow}>
-                    <Avatar className={styles.avatar} aria-hidden="true">
-                      <AvatarFallback>{initials(row.student)}</AvatarFallback>
-                    </Avatar>
-                    <div className={styles.studentText}>
-                      <p className={styles.studentName}>{row.student}</p>
-                      {row.lrn ? (
-                        <p className={styles.studentSub}>
-                          ID <span className={styles.lrn}>{row.lrn}</span>
-                        </p>
-                      ) : null}
-                      <p className={styles.studentSub}>
-                        {row.section}
-                        {row.grade ? ` · ${row.grade}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                </aside>
-              </li>
-            );
-          })}
+          {referrals.map((row, index) => (
+            <GuidanceReferralEntry
+              key={row.id}
+              row={row}
+              alt={index % 2 === 1}
+              now={now}
+              actionPending={isActionPending}
+              onOpenDialog={(referralId, dialog) => openDialog(referralId, dialog)}
+              onOpenSession={(referralId, session, dialog) =>
+                openSessionDialog(referralId, session, dialog)
+              }
+              onPreview={setPreviewId}
+              onPrivacy={setPrivacyFor}
+              onEndorsedNotice={setEndorsedFor}
+              onReviewAdm={setReviewAdmFor}
+              onChanged={() => {
+                void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
+              }}
+            />
+          ))}
         </ol>
       )}
 
@@ -1010,838 +519,35 @@ export function GuidanceReferralsTable({
           </Button>
         </div>
       </nav>
+      </div>
 
-      {/* Escalate Dialog */}
-      <Dialog
-        open={dialogs.escalate}
-        onOpenChange={() => closeDialog("escalate")}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send to a higher office</DialogTitle>
-            <DialogDescription>
-              Send this case up when it needs attention beyond guidance.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <div>
-              <FormDropdown
-                id="escalatedTo"
-                label="Send to"
-                value={form.escalatedTo}
-                onChange={(v) => setForm((f) => ({ ...f, escalatedTo: v }))}
-                placeholder="Pick an office"
-                options={[
-                  { value: "principal", label: "Principal" },
-                  { value: "nurse", label: "Nurse" },
-                  { value: "adm_coordinator", label: "ADM Coordinator" },
-                ]}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <Label htmlFor="escalationReason">Why does this need to go higher?</Label>
-              <Textarea
-                id="escalationReason"
-                value={form.escalationReason}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, escalationReason: e.target.value }))
-                }
-                placeholder="Explain what is happening and what help is needed…"
-                maxLength={500}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("escalate")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                isActionPending ||
-                !form.escalatedTo ||
-                !form.escalationReason
-              }
-              onClick={() =>
-                handleAction("escalate", {
-                  escalationReason: form.escalationReason,
-                  escalatedTo: form.escalatedTo,
-                })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Sending…" : "Send up"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GuidanceActionMenu
+        action={action}
+        summary={summary}
+        typeFilter={typeFilter}
+        onPick={(value) => {
+          onActionChange(action === value ? "" : value);
+          onPageChange(1);
+        }}
+        onClear={() => onActionChange("")}
+      />
 
-      {/* Reassign Dialog */}
-      <Dialog
-        open={dialogs.reassign}
-        onOpenChange={() => closeDialog("reassign")}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pass to someone else</DialogTitle>
-            <DialogDescription>
-              Hand this case to another office. It will show up in their queue.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <FormDropdown
-              id="reassignRole"
-              label="Pass to"
-              value={form.specialistRole}
-              onChange={(v) => setForm((f) => ({ ...f, specialistRole: v }))}
-              placeholder="Pick an office"
-              options={[
-                { value: "nurse", label: "Nurse" },
-                { value: "guidance_counselor", label: "Guidance Counselor" },
-                { value: "adm_coordinator", label: "ADM Coordinator" },
-                { value: "principal", label: "Principal" },
-              ]}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("reassign")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.specialistRole}
-              onClick={() =>
-                handleAction("reassign", {
-                  referredToRole: form.specialistRole,
-                })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Passing…" : "Pass case"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Note Dialog */}
-      <Dialog open={dialogs.note} onOpenChange={() => closeDialog("note")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add a private note</DialogTitle>
-            <DialogDescription>
-              Only guidance staff can see this note.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="noteText">Note</Label>
-            <Textarea
-              id="noteText"
-              value={form.noteText}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, noteText: e.target.value }))
-              }
-                placeholder="Write your note here…"
-                maxLength={2000}
-              />
-            </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("note")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.noteText}
-              onClick={() => handleAction("note", { notes: form.noteText })}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Saving…" : "Save note"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Follow-up Dialog */}
-      <Dialog
-        open={dialogs.followUp}
-        onOpenChange={() => closeDialog("followUp")}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set a check-back reminder</DialogTitle>
-            <DialogDescription>
-              Pick a date to come back to this case.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <SessionDatePicker
-              id="followUpDate"
-              label="Check back on"
-              value={form.followUpDate}
-              onChange={(v) => setForm((f) => ({ ...f, followUpDate: v }))}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("followUp")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.followUpDate}
-              onClick={() =>
-                handleAction("followUp", { followUpDate: form.followUpDate })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Setting…" : "Set reminder"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dismiss Dialog */}
-      <Dialog
-        open={dialogs.dismiss}
-        onOpenChange={() => closeDialog("dismiss")}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close without action</DialogTitle>
-            <DialogDescription>
-              Close this case. Please say why, so there is a record.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="dismissReason">Why is this being closed?</Label>
-              <Textarea
-                id="dismissReason"
-                value={form.dismissReason}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, dismissReason: e.target.value }))
-                }
-                placeholder="Explain why no further action is needed…"
-                maxLength={500}
-              />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("dismiss")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.dismissReason}
-              onClick={() =>
-                handleAction("dismiss", { reason: form.dismissReason })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Closing…" : "Close case"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Specialist Dialog */}
-      <Dialog
-        open={dialogs.specialist}
-        onOpenChange={() => closeDialog("specialist")}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ask a specialist for help</DialogTitle>
-            <DialogDescription>
-              Send this case to a specialist office.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <div>
-              <FormDropdown
-                id="specialistRole"
-                label="Send to"
-                value={form.specialistRole}
-                onChange={(v) =>
-                  setForm((f) => ({ ...f, specialistRole: v }))
-                }
-                placeholder="Pick a specialist"
-                options={[
-                  { value: "nurse", label: "Nurse" },
-                  { value: "adm_coordinator", label: "ADM Coordinator" },
-                  { value: "principal", label: "Principal" },
-                ]}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <Label htmlFor="specialistReason">What help is needed?</Label>
-              <Textarea
-                id="specialistReason"
-                value={form.specialistReason}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, specialistReason: e.target.value }))
-                }
-                placeholder="Explain what help the student needs…"
-                maxLength={500}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("specialist")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                isActionPending ||
-                !form.specialistRole ||
-                !form.specialistReason
-              }
-              onClick={() =>
-                handleAction("specialist", {
-                  referredToRole: form.specialistRole,
-                  reason: form.specialistReason,
-                })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Sending…" : "Send"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ADM Dialog */}
-      <Dialog open={dialogs.adm} onOpenChange={() => closeDialog("adm")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Start ADM process</DialogTitle>
-            <DialogDescription>
-              Move this case into ADM (Alternative Dispute Resolution) for
-              closer follow-through.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="admReason">Why does this case need ADM?</Label>
-              <Textarea
-                id="admReason"
-                value={form.admReason}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, admReason: e.target.value }))
-                }
-                placeholder="Explain why this case needs closer follow-through…"
-                maxLength={500}
-              />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("adm")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.admReason}
-              onClick={() => handleAction("adm", { reason: form.admReason })}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Starting…" : "Start ADM"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Accept with intake */}
-      <Dialog open={dialogs.accept} onOpenChange={() => closeDialog("accept")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Accept this case{activeRow ? ` — ${activeRow.student}` : ""}</DialogTitle>
-            <DialogDescription>
-              Record your first impressions and book the first counseling
-              session. You can schedule more sessions afterwards.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <FormDropdown
-              id="priority"
-              label="How urgent is this?"
-              value={form.priority}
-              onChange={(v) => setForm((f) => ({ ...f, priority: v }))}
-              placeholder="Pick urgency"
-              options={[
-                { value: "high", label: "High — act right away" },
-                { value: "normal", label: "Normal" },
-                { value: "low", label: "Low — monitor for now" },
-              ]}
-            />
-            <div className={styles.formFull}>
-              <Label htmlFor="intakeNotes">First impressions (optional)</Label>
-              <Textarea
-                id="intakeNotes"
-                value={form.intakeNotes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, intakeNotes: e.target.value }))
-                }
-                placeholder="What stands out? Anything the next reader should know…"
-                maxLength={2000}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <p className={styles.formSectionLabel}>First session (optional)</p>
-            </div>
-            <SessionDatePicker
-              id="firstDate"
-              label="Date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="firstTime"
-              label="Time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-            <FormDropdown
-              id="firstType"
-              label="Session kind"
-              value={form.sessType}
-              onChange={(v) => setForm((f) => ({ ...f, sessType: v }))}
-              placeholder="Pick a kind"
-              options={SESSION_KIND_OPTIONS}
-            />
-            <div>
-              <Label htmlFor="firstVenue">Venue (optional)</Label>
-              <Input
-                id="firstVenue"
-                value={form.sessVenue}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sessVenue: e.target.value }))
-                }
-                placeholder="e.g. Guidance office"
-                maxLength={200}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("accept")}
-              disabled={isActionPending}
-            >
-              Not yet
-            </Button>
-            <Button
-              disabled={isActionPending}
-              onClick={() => {
-                const when =
-                  form.sessDate && form.sessTime
-                    ? combineDateTime(form.sessDate, form.sessTime)
-                    : null;
-                handleAction("accept", {
-                  priority: form.priority as "low" | "normal" | "high",
-                  ...(form.intakeNotes.trim()
-                    ? { intakeNotes: form.intakeNotes.trim() }
-                    : {}),
-                  ...(when
-                    ? {
-                        firstSession: {
-                          scheduledAt: when,
-                          sessionType: form.sessType as CounselingSessionType,
-                          ...(form.sessVenue.trim()
-                            ? { venue: form.sessVenue.trim() }
-                            : {}),
-                        },
-                      }
-                    : {}),
-                });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Accepting…" : "Accept and start case"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Schedule a session */}
-      <Dialog open={dialogs.schedule} onOpenChange={() => closeDialog("schedule")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule a session</DialogTitle>
-            <DialogDescription>
-              Book a counseling session{activeRow ? ` for ${activeRow.student}` : ""}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <SessionDatePicker
-              id="sessDate"
-              label="Date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="sessTime"
-              label="Time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-            <FormDropdown
-              id="sessType"
-              label="Session kind"
-              value={form.sessType}
-              onChange={(v) => setForm((f) => ({ ...f, sessType: v }))}
-              placeholder="Pick a kind"
-              options={SESSION_KIND_OPTIONS}
-            />
-            <div>
-              <Label htmlFor="sessVenue">Venue (optional)</Label>
-              <Input
-                id="sessVenue"
-                value={form.sessVenue}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sessVenue: e.target.value }))
-                }
-                placeholder="e.g. Guidance office"
-                maxLength={200}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("schedule")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                isActionPending || !combineDateTime(form.sessDate, form.sessTime)
-              }
-              onClick={() => {
-                const when = combineDateTime(form.sessDate, form.sessTime);
-                if (!when) return;
-                handleAction("schedule", {
-                  scheduledAt: when,
-                  sessionType: form.sessType as CounselingSessionType,
-                  ...(form.sessVenue.trim()
-                    ? { venue: form.sessVenue.trim() }
-                    : {}),
-                });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Scheduling…" : "Schedule session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mark a session done */}
-      <Dialog open={dialogs.finish} onOpenChange={() => closeDialog("finish")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mark session done</DialogTitle>
-            <DialogDescription>
-              {activeSession
-                ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)}${activeSession.venue ? ` · ${activeSession.venue}` : ""}`
-                : "Record what happened in this session."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <div className={styles.formFull}>
-              <Label htmlFor="doneNotes">What happened in the session?</Label>
-              <Textarea
-                id="doneNotes"
-                value={form.doneNotes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, doneNotes: e.target.value }))
-                }
-                placeholder="Key points discussed, student response…"
-                maxLength={5000}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <Label htmlFor="doneOutcome">Outcome / next step (optional)</Label>
-              <Textarea
-                id="doneOutcome"
-                value={form.doneOutcome}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, doneOutcome: e.target.value }))
-                }
-                placeholder="What changed? What happens next…"
-                maxLength={2000}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <p className={styles.formSectionLabel}>
-                Book a follow-up session (optional)
-              </p>
-              <p className={styles.formSectionHint}>
-                If this needs another talk, book it now so it stays on the plan.
-              </p>
-            </div>
-            <SessionDatePicker
-              id="followUpSessDate"
-              label="Follow-up date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="followUpSessTime"
-              label="Follow-up time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-            <FormDropdown
-              id="followUpSessType"
-              label="Follow-up kind"
-              value={form.sessType}
-              onChange={(v) => setForm((f) => ({ ...f, sessType: v }))}
-              placeholder="Pick a kind"
-              options={SESSION_KIND_OPTIONS}
-            />
-            <div>
-              <Label htmlFor="followUpSessVenue">Venue (optional)</Label>
-              <Input
-                id="followUpSessVenue"
-                value={form.sessVenue}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sessVenue: e.target.value }))
-                }
-                placeholder="e.g. Guidance office"
-                maxLength={200}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("finish")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.doneNotes.trim() || !activeSessionId}
-              onClick={() => {
-                if (!activeSessionId) return;
-                const followUpAt = combineDateTime(form.sessDate, form.sessTime);
-                handleAction("finish", {
-                  sessionId: activeSessionId,
-                  sessionNotes: form.doneNotes.trim(),
-                  ...(form.doneOutcome.trim()
-                    ? { outcome: form.doneOutcome.trim() }
-                    : {}),
-                  ...(followUpAt
-                    ? {
-                        followUpSession: {
-                          scheduledAt: followUpAt,
-                          sessionType:
-                            form.sessType as CounselingSessionType,
-                          ...(form.sessVenue.trim()
-                            ? { venue: form.sessVenue.trim() }
-                            : {}),
-                        },
-                      }
-                    : {}),
-                });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Saving…" : "Mark done"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Move a session */}
-      <Dialog open={dialogs.move} onOpenChange={() => closeDialog("move")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Move session</DialogTitle>
-            <DialogDescription>
-              {activeSession
-                ? `Currently ${formatDateTime(activeSession.scheduledAt)}. Pick the new date and time.`
-                : "Pick the new date and time."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <SessionDatePicker
-              id="moveDate"
-              label="New date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="moveTime"
-              label="New time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("move")}
-              disabled={isActionPending}
-            >
-              Keep as is
-            </Button>
-            <Button
-              disabled={
-                isActionPending ||
-                !activeSessionId ||
-                !combineDateTime(form.sessDate, form.sessTime)
-              }
-              onClick={() => {
-                const when = combineDateTime(form.sessDate, form.sessTime);
-                if (!when || !activeSessionId) return;
-                handleAction("move", { sessionId: activeSessionId, scheduledAt: when });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Moving…" : "Move session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel a session */}
-      <Dialog
-        open={dialogs.cancelSess}
-        onOpenChange={() => closeDialog("cancelSess")}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel this session?</DialogTitle>
-            <DialogDescription>
-              {activeSession
-                ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)} will be cancelled.`
-                : "This session will be cancelled."}
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="cancelReasonInput">Why? (optional)</Label>
-            <Textarea
-              id="cancelReasonInput"
-              value={form.cancelReasonInput}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, cancelReasonInput: e.target.value }))
-              }
-              placeholder="e.g. Student was absent, moved to next week…"
-              maxLength={500}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("cancelSess")}
-              disabled={isActionPending}
-            >
-              Keep session
-            </Button>
-            <Button
-              disabled={isActionPending || !activeSessionId}
-              onClick={() =>
-                activeSessionId &&
-                handleAction("cancelSess", {
-                  sessionId: activeSessionId,
-                  ...(form.cancelReasonInput.trim()
-                    ? { cancelReason: form.cancelReasonInput.trim() }
-                    : {}),
-                })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Cancelling…" : "Cancel session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Finish & close with strict requirements */}
-      <Dialog open={dialogs.resolve} onOpenChange={() => closeDialog("resolve")}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Finish and close case</DialogTitle>
-            <DialogDescription>
-              Closing needs two things: at least one finished session and a
-              closing summary.
-            </DialogDescription>
-          </DialogHeader>
-          <p className={styles.resolveProgress} aria-live="polite">
-            {activeRow
-              ? `${activeRow.completedSessions} of ${activeRow.sessions.length} session${activeRow.sessions.length === 1 ? "" : "s"} finished`
-              : "No case selected"}
-          </p>
-          {activeRow && activeRow.completedSessions === 0 ? (
-            <p className={styles.resolveBlocker} role="note">
-              Finish at least one session first — use “Schedule a session” in
-              the counseling plan, then mark it done.
-            </p>
-          ) : null}
-          <div>
-            <Label htmlFor="resolveSummary">Closing summary</Label>
-            <Textarea
-              id="resolveSummary"
-              value={form.resolveSummary}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, resolveSummary: e.target.value }))
-              }
-              placeholder="What changed for the student? What was the final outcome…"
-              maxLength={2000}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("resolve")}
-              disabled={mutation.isPending}
-            >
-              Keep open
-            </Button>
-            <Button
-              disabled={
-                mutation.isPending ||
-                isActionPending ||
-                !activeId ||
-                !form.resolveSummary.trim() ||
-                !activeRow ||
-                activeRow.completedSessions === 0
-              }
-              onClick={() => {
-                if (!activeId) return;
-                mutation.mutate({
-                  id: activeId,
-                  next: "resolved",
-                  summary: form.resolveSummary.trim(),
-                });
-                setDialogs((prev) => ({ ...prev, resolve: false }));
-                setActiveId(null);
-              }}
-            >
-              <Busy busy={mutation.isPending} />
-              {mutation.isPending ? "Closing…" : "Close case"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GuidanceReferralDialogs
+        dialogs={dialogs}
+        form={form}
+        setForm={setForm}
+        activeRow={activeRow}
+        activeSession={activeSession}
+        isActionPending={isActionPending}
+        mutationIsPending={mutation.isPending}
+        closeDialog={closeDialog}
+        handleAction={handleAction}
+        onResolveCase={(id, summary) => {
+          mutation.mutate({ id, next: "resolved", summary });
+          setDialogs((prev) => ({ ...prev, resolve: false }));
+          setActiveId(null);
+        }}
+      />
 
       {/* Official GCForm-01 report overlay — same preview the folder UI opens. */}
       <OcForm01PreviewDialog
@@ -1855,12 +561,77 @@ export function GuidanceReferralsTable({
         onClose={() => setPrivacyFor(null)}
         studentName={privacyFor ?? undefined}
       />
+      {/* Moved-with-case notice instead of the report on endorsed cases. */}
+      <PrivacyNoticeDialog
+        open={endorsedFor !== null}
+        onClose={() => setEndorsedFor(null)}
+        studentName={endorsedFor ?? undefined}
+        reason="endorsed"
+      />
+      {reviewAdmFor && (
+        <AdmReviewDialog
+          referralId={reviewAdmFor.id}
+          student={reviewAdmFor.student}
+          anecdotalId={reviewAdmFor.anecdotalId || null}
+          info={{
+            lrn: reviewAdmFor.lrn,
+            section: reviewAdmFor.section,
+            grade: reviewAdmFor.grade,
+            category: reviewAdmFor.category,
+            date: reviewAdmFor.date,
+          }}
+          open
+          onClose={() => setReviewAdmFor(null)}
+          onChanged={() => {
+            void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
+          }}
+          onCreateReferral={(draft) => setFormSheet({ row: reviewAdmFor, draft })}
+          mode="desk"
+        />
+      )}
+      {formSheet && (
+        <GuidanceAdmReferralFormSheet
+          open
+          onClose={() => setFormSheet(null)}
+          adapter={{
+            id: formSheet.row.id,
+            student: formSheet.row.student,
+            lrn: formSheet.row.lrn,
+            section: formSheet.row.section,
+            grade: formSheet.row.grade,
+            stage: "consultation",
+            stageLabel: "Consultation and referral",
+            eligibility: "pending",
+            referralId: formSheet.row.id,
+            referralStatus: formSheet.row.status,
+            reason: formSheet.row.reason,
+            referredBy: formSheet.row.referredBy,
+            preparedBy: formSheet.row.referredBy,
+            date: formSheet.row.date,
+            meetingAttended: null,
+            hasHomeVisit: false,
+            approved: false,
+            approvedAt: null,
+            anecdotalId: formSheet.row.anecdotalId || undefined,
+            category: formSheet.row.category,
+            anecdotalExcerpt: formSheet.row.anecdotalExcerpt,
+            recommendations: formSheet.row.recommendations,
+          }}
+          anecdotalId={formSheet.row.anecdotalId || null}
+          lrn={formSheet.row.lrn}
+          initialDraft={formSheet.draft}
+          onChanged={() => {
+            void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
+          }}
+        />
+      )}
     </div>
   );
 }
 
 interface GuidanceReferralsTableProps {
   referrals: GuidanceReferralItem[];
+  summary: GuidanceReferralsSummary | null;
   page: number;
   pageSize: number;
   total: number;
@@ -1868,9 +639,15 @@ interface GuidanceReferralsTableProps {
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  status: StatusFilter;
-  onStatusChange: (value: StatusFilter) => void;
+  typeFilter: GuidanceTypeFilter;
+  onTypeChange: (value: GuidanceTypeFilter) => void;
+  action: GuidanceAction;
+  onActionChange: (value: GuidanceAction) => void;
   onRetry: () => void;
   isRetrying: boolean;
   isNavigating: boolean;
+  // Locked pages (ADM Cases / Counseling Cases) hide the track dropdown
+  // and keep "Show all" within their own track.
+  lockType?: boolean;
+  title?: string;
 }

@@ -73,14 +73,18 @@ interface DialogProps {
   onChanged: () => void;
 }
 
+/**
+ * Book a clinic session on a clinic matter (the referrals page had no way
+ * to create one — only finish/move/cancel/delete once booked). Same
+ * one-active-session rule as the guidance "Book session" flow; the server
+ * enforces it too, this is just the friendly early message.
+ */
 export function ScheduleSessionDialog({
-  referralId,
-  student,
-  sessions = [],
+  row,
   open,
   onClose,
   onChanged,
-}: DialogProps & { referralId: string; student: string; sessions?: NurseSessionItem[] }) {
+}: DialogProps & { row: NurseQueueRow }) {
   const [date, setDate] = React.useState("");
   const [time, setTime] = React.useState("");
   const [venue, setVenue] = React.useState("");
@@ -89,15 +93,7 @@ export function ScheduleSessionDialog({
 
   if (!open) return null;
 
-  // One active session per referral — booking waits until the existing
-  // scheduled session is done or cancelled.
-  const blocked = sessions.some((s) => s.status === "scheduled");
-
   async function save() {
-    if (blocked) {
-      setError("This referral already has a session that is not done yet — finish or cancel it before booking another one.");
-      return;
-    }
     const scheduledAt = toScheduledAt(date, time);
     if (!scheduledAt) {
       setError("Pick both a date and a time for the clinic session.");
@@ -107,21 +103,25 @@ export function ScheduleSessionDialog({
       setError("Clinic session must be set in the future.");
       return;
     }
+    if (row.sessions.some((s) => s.status === "scheduled")) {
+      setError("This case already has a session that is not done yet — finish or cancel it before booking another one.");
+      return;
+    }
     setError(null);
     setActing(true);
     try {
-      await scheduleClinicSession(referralId, {
+      await scheduleClinicSession(row.id, {
         scheduledAt,
         ...(venue.trim() ? { venue: venue.trim() } : {}),
       });
-      toast.success({ title: "Session scheduled", description: `Clinic session booked for ${student}.` });
+      toast.success({ title: "Session booked", description: `Clinic session booked for ${row.student}.` });
       onClose();
       setDate("");
       setTime("");
       setVenue("");
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not schedule the session. Try again."));
+      setError(apiErrorMessage(err, "Could not book the session. Try again."));
     } finally {
       setActing(false);
     }
@@ -129,40 +129,33 @@ export function ScheduleSessionDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
-          <DialogTitle>Schedule a session</DialogTitle>
+          <DialogTitle>Book session</DialogTitle>
           <DialogDescription>
-            Book a one-on-one clinic talk with {student}.
+            Book a clinic session{row.student ? ` for ${row.student}` : ""}. Held at the school clinic unless another venue is given.
           </DialogDescription>
         </DialogHeader>
-        {blocked ? (
-          <div className={styles.errorBlock} role="alert">
-            <p className={styles.errorText}>
-              This referral already has a session that is not done yet — finish or cancel it before booking another one.
-            </p>
-          </div>
-        ) : null}
         <div className={styles.formGrid}>
-          <ClinicDatePicker id="nurse-sess-date" label="Date" value={date} onChange={setDate} min={todayKey()} />
-          <ClinicTimePicker id="nurse-sess-time" label="Time" value={time} onChange={setTime} />
+          <ClinicDatePicker id="nurse-book-date" label="Date" value={date} onChange={setDate} min={todayKey()} />
+          <ClinicTimePicker id="nurse-book-time" label="Time" value={time} onChange={setTime} />
           <div className={styles.formFull}>
-            <Label htmlFor="nurse-sess-venue">Venue (optional)</Label>
+            <Label htmlFor="nurse-book-venue">Venue (optional)</Label>
             <Input
-              id="nurse-sess-venue"
+              id="nurse-book-venue"
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
-              placeholder="School clinic"
+              placeholder="e.g. School clinic"
               maxLength={200}
             />
           </div>
         </div>
         {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => void save()} disabled={acting || blocked}>
+          <Button onClick={() => void save()} disabled={acting}>
             {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
             Book session
           </Button>
@@ -274,7 +267,7 @@ export function FinishSessionDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Mark session done</DialogTitle>
           <DialogDescription>
@@ -329,7 +322,7 @@ export function FinishSessionDialog({
         </div>
         {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={() => void save()} disabled={acting || notStarted}>
@@ -380,7 +373,7 @@ export function MoveSessionDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Move session</DialogTitle>
           <DialogDescription>Pick the new date and time.</DialogDescription>
@@ -391,7 +384,7 @@ export function MoveSessionDialog({
         </div>
         {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={() => void save()} disabled={acting}>
@@ -435,7 +428,7 @@ export function CancelSessionDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Cancel session</DialogTitle>
           <DialogDescription>This frees the slot. The case itself stays open.</DialogDescription>
@@ -457,7 +450,7 @@ export function CancelSessionDialog({
           <Button variant="outline" onClick={onClose}>
             Keep it
           </Button>
-          <Button variant="destructive" onClick={() => void save()} disabled={acting}>
+          <Button variant="destructive" className={styles.btnRed} onClick={() => void save()} disabled={acting}>
             {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
             Cancel session
           </Button>
@@ -496,7 +489,7 @@ export function DeleteSessionDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Delete cancelled session?</DialogTitle>
           <DialogDescription>
@@ -508,7 +501,7 @@ export function DeleteSessionDialog({
           <Button variant="outline" onClick={onClose}>
             Keep it
           </Button>
-          <Button variant="destructive" onClick={() => void remove()} disabled={acting}>
+          <Button variant="destructive" className={styles.btnRed} onClick={() => void remove()} disabled={acting}>
             {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
             Delete session
           </Button>
@@ -562,7 +555,7 @@ export function ResolveCaseDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Finish &amp; close</DialogTitle>
           <DialogDescription>
@@ -591,7 +584,7 @@ export function ResolveCaseDialog({
         </div>
         {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={() => void save()} disabled={acting || !canResolve}>
@@ -675,7 +668,7 @@ export function SessionDocsDialog({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+      <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Session documentation</DialogTitle>
           <DialogDescription>
@@ -736,216 +729,6 @@ export function SessionDocsDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Done
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/**
- * ADM referral form as a modal (no page navigation): the nurse answers the
- * form, then Confirm referral saves the form AND endorses the case to the
- * ADM coordinator in one action. The dialog stays on the referrals page —
- * nothing redirects. If endorsing fails after the save, retrying Confirm is
- * safe (re-saving while pending just refreshes the answers).
- */
-export function NurseReferralFormModal({
-  row,
-  initialRecommendation = "",
-  initialScheduledAt,
-  open,
-  onClose,
-  onChanged,
-}: DialogProps & {
-  row: NurseQueueRow;
-  initialRecommendation?: string;
-  initialScheduledAt?: string;
-}) {
-  const [recommendation, setRecommendation] = React.useState(initialRecommendation);
-  const [concerns, setConcerns] = React.useState<Record<string, boolean>>({});
-  const [othersText, setOthersText] = React.useState("");
-  const [details, setDetails] = React.useState(
-    row.anecdotal && row.anecdotal.incident !== "—" ? row.anecdotal.incident : ""
-  );
-  const [actions, setActions] = React.useState("");
-  const [followUp, setFollowUp] = React.useState("");
-  const [sessionDate, setSessionDate] = React.useState(
-    initialScheduledAt ? initialScheduledAt.slice(0, 10) : ""
-  );
-  const [sessionTime, setSessionTime] = React.useState(
-    initialScheduledAt ? initialScheduledAt.slice(11, 16) : ""
-  );
-  const [acting, setActing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  if (!open) return null;
-
-  const hasActive = row.sessions.some((s) => s.status === "scheduled");
-
-  function resolveSession(): string | undefined {
-    if (!sessionDate && !sessionTime) return undefined;
-    if (!sessionDate || !sessionTime) {
-      setError("Pick both a date and a time for the clinic session — or leave both empty to endorse without one.");
-      return null as unknown as undefined;
-    }
-    const at = new Date(`${sessionDate}T${sessionTime}:00`);
-    if (Number.isNaN(at.getTime())) {
-      setError("Pick a valid date and time for the clinic session.");
-      return null as unknown as undefined;
-    }
-    if (at.getTime() <= Date.now()) {
-      setError("Clinic session must be set in the future.");
-      return null as unknown as undefined;
-    }
-    return `${sessionDate}T${sessionTime}:00`;
-  }
-
-  async function confirm() {
-    if (!recommendation.trim()) {
-      setError("Write your recommendation first — the coordinator needs it.");
-      return;
-    }
-    const scheduledAt = resolveSession();
-    if (scheduledAt === (null as unknown as undefined)) return;
-    if (scheduledAt && hasActive) {
-      setError("This referral already has a session that is not done yet — finish or cancel it before booking another one.");
-      return;
-    }
-    const checked = CONCERN_OPTIONS.filter((c) => concerns[c.key]);
-    const form: NurseAdmReferralForm = {
-      ...(checked.length > 0
-        ? {
-            concerns: checked.map((c) =>
-              c.key === "others" && othersText.trim()
-                ? `Others: ${othersText.trim()}`
-                : c.label
-            ),
-          }
-        : {}),
-      ...(details.trim() ? { detailsOfConcern: details.trim().slice(0, 2000) } : {}),
-      ...(actions.trim() ? { nurseActions: actions.trim().slice(0, 2000) } : {}),
-      ...(followUp.trim() ? { followUp: followUp.trim().slice(0, 2000) } : {}),
-    };
-    setError(null);
-    setActing(true);
-    try {
-      await confirmNurseReferralAndEndorse(row.id, {
-        recommendation: recommendation.trim(),
-        ...(scheduledAt ? { scheduledAt } : {}),
-        referralForm: form,
-      });
-      toast.success({
-        title: "Referral confirmed",
-        description: `${row.student}'s case was endorsed to the ADM coordinator.`,
-      });
-      onClose();
-      onChanged();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Could not confirm this referral. Try again — retrying is safe."));
-    } finally {
-      setActing(false);
-    }
-  }
-
-  return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent style={{ maxHeight: "85vh", overflowY: "auto" }}>
-        <DialogHeader>
-          <DialogTitle>Referral form — {row.student}</DialogTitle>
-          <DialogDescription>
-            {row.lrn} · {row.section}{row.grade && row.grade !== "—" ? ` · ${row.grade}` : ""}.
-            Confirming saves this form and endorses the case to the ADM coordinator at once.
-          </DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <div className={styles.formFull}>
-            <Label htmlFor={`nurse-rf-rec-${row.id}`}>Recommendation (required)</Label>
-            <Textarea
-              id={`nurse-rf-rec-${row.id}`}
-              value={recommendation}
-              onChange={(e) => setRecommendation(e.target.value)}
-              placeholder="Should this student enter ADM? Why…"
-              maxLength={500}
-            />
-          </div>
-          <div className={styles.formFull}>
-            <p className={styles.blockLabel}>Concerns — check all that apply</p>
-            <div style={{ display: "grid", gap: "0.375rem", marginTop: "0.375rem" }}>
-              {CONCERN_OPTIONS.map((c) => (
-                <label key={c.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
-                  <Checkbox
-                    checked={concerns[c.key] === true}
-                    onCheckedChange={(v) =>
-                      setConcerns((prev) => ({ ...prev, [c.key]: v === true }))
-                    }
-                  />
-                  <span>{c.label}</span>
-                </label>
-              ))}
-            </div>
-            {concerns.others ? (
-              <div style={{ marginTop: "0.5rem" }}>
-                <Label htmlFor={`nurse-rf-others-${row.id}`}>Others — specify</Label>
-                <Input
-                  id={`nurse-rf-others-${row.id}`}
-                  value={othersText}
-                  onChange={(e) => setOthersText(e.target.value)}
-                  placeholder="Specify the other concern…"
-                  maxLength={50}
-                />
-              </div>
-            ) : null}
-          </div>
-          <div className={styles.formFull}>
-            <Label htmlFor={`nurse-rf-details-${row.id}`}>Details of concern</Label>
-            <Textarea
-              id={`nurse-rf-details-${row.id}`}
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="What was observed…"
-              maxLength={2000}
-              rows={3}
-            />
-          </div>
-          <div className={styles.formFull}>
-            <Label htmlFor={`nurse-rf-actions-${row.id}`}>Actions taken</Label>
-            <Textarea
-              id={`nurse-rf-actions-${row.id}`}
-              value={actions}
-              onChange={(e) => setActions(e.target.value)}
-              placeholder="What did you do or advise…"
-              maxLength={2000}
-              rows={3}
-            />
-          </div>
-          <div className={styles.formFull}>
-            <Label htmlFor={`nurse-rf-follow-${row.id}`}>Follow-up plan</Label>
-            <Textarea
-              id={`nurse-rf-follow-${row.id}`}
-              value={followUp}
-              onChange={(e) => setFollowUp(e.target.value)}
-              placeholder="What happens next…"
-              maxLength={2000}
-              rows={2}
-            />
-          </div>
-          <ClinicDatePicker id={`nurse-rf-date-${row.id}`} label="Clinic session date (optional)" value={sessionDate} onChange={setSessionDate} min={todayKey()} />
-          <ClinicTimePicker id={`nurse-rf-time-${row.id}`} label="Clinic session time (optional)" value={sessionTime} onChange={setSessionTime} />
-          {hasActive ? (
-            <p className={styles.blockLabel} style={{ gridColumn: "1 / -1" }}>
-              A session that is not done yet is already booked on this case — leave the session empty, or finish/cancel the existing one first.
-            </p>
-          ) : null}
-        </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={() => void confirm()} disabled={acting}>
-            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Confirm referral
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1130,7 +913,7 @@ export function NurseReferralFormViewModal({
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) { onClose(); } }}>
-      <DialogContent style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}>
+      <DialogContent className={styles.dialogScrollHidden} style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}>
         <DialogHeader>
           <DialogTitle>Referral form — {row.student}</DialogTitle>
           <DialogDescription>

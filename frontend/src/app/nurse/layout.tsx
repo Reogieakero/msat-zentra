@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme, useFont } from "@/components/providers";
 import { NurseSidebar } from "@/components/nurse-sidebar";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Command,
@@ -19,12 +18,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
@@ -41,20 +39,6 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-label={openMobile ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={openMobile}
-          onClick={() => setOpenMobile(!openMobile)}
-        >
-          {openMobile ? (
-            <X className={styles.menuIcon} />
-          ) : (
-            <Menu className={styles.menuIcon} />
-          )}
-        </button>
-
         <Link href="/nurse/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -181,9 +165,5 @@ export default function NurseLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <NurseShell>{children}</NurseShell>
-    </SidebarProvider>
-  );
+  return <NurseShell>{children}</NurseShell>;
 }

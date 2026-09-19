@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/sonner";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import { SessionDatePicker } from "@/app/guidance/referrals/components/session-datetime-picker";
+import { ClinicDatePicker, ClinicTimePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
 import type { GuidanceAdmCase } from "@/app/guidance/adm/components/guidance-adm-data";
 import {
   buildGcForm03Data,
@@ -24,40 +25,98 @@ import {
   type GcForm03Data,
 } from "@/app/guidance/adm/components/gcform03-data";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
-import { toast } from "@/components/ui/sonner";
-import {
-  fetchNurseOverview,
-  loadNurseReferralDraft,
-  confirmNurseReferralAndEndorse,
-  type NurseAdmReferralForm,
-} from "../../../overview/components/nurse-overview-data";
-import {
-  ClinicDatePicker,
-  ClinicTimePicker,
-} from "../../../overview/components/ClinicDateTimePicker";
 import pageStyles from "@/app/guidance/pages.module.css";
 import styles from "@/app/guidance/adm/components/guidance-adm.module.css";
 import formStyles from "@/app/guidance/adm/components/referral-form-dialog.module.css";
+import sheetStyles from "./adm-referral-form-sheet.module.css";
+
+/* One consultation-stage ADM case ready for the GCForm-03 fill-up. */
+export interface AdmReferralFormPageCase {
+  adapter: GuidanceAdmCase;
+  anecdotalId: string | null;
+  hasActiveSession: boolean;
+  lrn: string;
+}
+
+/* Stashed review-dialog handoff, read once when the form initializes. */
+export interface AdmReferralFormDraft {
+  recommendation: string;
+  scheduledAt?: string;
+}
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/* Right-side slide-over shell for the fill-up form — half the page wide.
+   Closing (X, overlay click, Escape, Back button) just closes the sheet;
+   in-progress answers persist per referral so nothing is lost. */
+function FormSheet({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Sheet open onOpenChange={(next) => { if (!next) onClose(); }}>
+      {/* Half the page: same stacked variants as the base right-side
+          styles so the override wins (base is w-3/4 capped at sm:max-w-sm). */}
+      <SheetContent
+        side="right"
+        className="w-1/2 max-w-none data-[side=right]:w-1/2 data-[side=right]:sm:max-w-none"
+      >
+        <SheetTitle className="sr-only">Referral form</SheetTitle>
+        <div className={sheetStyles.scrollBody}>{children}</div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 /**
- * Dedicated GCForm-03 referral form page for one nurse consultation-stage ADM
- * case — the same official form and fill-up flow as the guidance referral
- * page (/guidance/adm/referral/[referralId]), reached via Create referral
- * from the nurse Review ADM dialog. Step 1 asks the template's questions
- * with every answerable field auto-populated from the live case + its
- * official anecdotal report (plus the nurse's optional clinic session);
- * Preview opens the official-sheet modal with Print, Download .xlsx, and
- * Confirm & forward (endorses the case to the ADM coordinator).
+ * Shared GCForm-03 referral fill-up sheet (nurse + guidance desks, same
+ * UI): opens as a right-side slide-over on the referrals page — no page
+ * navigation. Step 1 asks the template's questions with every answerable
+ * field auto-populated from the live case + its official anecdotal
+ * report, plus the review-dialog handoff. Step 2 previews the official
+ * sheet with Print, Download .xlsx, and Confirm (moves the case
+ * forward). Confirming pops a success toast and closes the sheet.
  */
-export default function NurseAdmReferralPage() {
-  const params = useParams<{ referralId: string }>();
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const referralId = decodeURIComponent(params.referralId ?? "");
+export function AdmReferralFormSheet({
+  open,
+  onClose,
+  referralId,
+  backLabel,
+  staffSectionTitle,
+  signerLabel,
+  showClinicSession,
+  counselorName,
+  casePending,
+  caseError,
+  activeCase,
+  unavailableMessage,
+  initialDraft,
+  confirmToastDescription,
+  onConfirm,
+  onConfirmed,
+}: {
+  open: boolean;
+  onClose: () => void;
+  referralId: string;
+  backLabel: string;
+  staffSectionTitle: string;
+  signerLabel: string;
+  showClinicSession: boolean;
+  counselorName: string;
+  casePending: boolean;
+  caseError: boolean;
+  activeCase: AdmReferralFormPageCase | null;
+  unavailableMessage: string | null;
+  initialDraft: AdmReferralFormDraft;
+  confirmToastDescription: string;
+  onConfirm: (args: { form: GcForm03Data; scheduledAt?: string }) => Promise<void>;
+  onConfirmed: () => void;
+}) {
   /* First client paint must match the server skeleton. */
   const [mounted, setMounted] = React.useState(false);
 
@@ -67,19 +126,10 @@ export default function NurseAdmReferralPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  const overviewQuery = useQuery({
-    queryKey: ["nurse-overview"],
-    queryFn: fetchNurseOverview,
-  });
-  const activeRow =
-    overviewQuery.data?.needsReview.find((r) => r.id === referralId) ?? null;
-  const reviewable =
-    !!activeRow && activeRow.type === "ADM" && activeRow.status === "pending";
-
   const reportQuery = useQuery({
-    queryKey: ["gcform03-report", activeRow?.anecdotalId ?? null],
-    queryFn: () => fetchOcForm01Detail(activeRow!.anecdotalId!),
-    enabled: !!activeRow?.anecdotalId,
+    queryKey: ["gcform03-report", activeCase?.anecdotalId ?? null],
+    queryFn: () => fetchOcForm01Detail(activeCase!.anecdotalId!),
+    enabled: !!activeCase?.anecdotalId,
   });
   const report = reportQuery.data ?? null;
   const reportLoading = reportQuery.isPending;
@@ -92,45 +142,27 @@ export default function NurseAdmReferralPage() {
   const [sessionError, setSessionError] = React.useState<string | null>(null);
 
   /* Auto-populate once the case + report are in — plus the recommendation
-     and optional session the nurse entered on the review dialog (stashed
-     before navigating). A saved in-progress fill for this referral
-     (localStorage) is layered on top so a refresh restores every answer. */
+     and optional session handed off by the review dialog. A saved
+     in-progress fill for this referral (localStorage) is layered on top
+     so a refresh restores every answer instead of starting over. */
   React.useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (!activeRow || !report || form) return;
-    const draft = loadNurseReferralDraft();
-    if (draft?.scheduledAt) {
+    if (!open || !activeCase || !report || form) return;
+    const draft = initialDraft;
+    if (draft.scheduledAt) {
       setSessionDate(draft.scheduledAt.slice(0, 10));
       setSessionTime(draft.scheduledAt.slice(11, 16));
     }
-    const adapter: GuidanceAdmCase = {
-      id: activeRow.id,
-      student: activeRow.student,
-      lrn: activeRow.lrn,
-      section: activeRow.section,
-      grade: activeRow.grade,
-      stage: "consultation",
-      stageLabel: "Consultation and referral",
-      eligibility: "pending",
-      referralId: activeRow.id,
-      referralStatus: activeRow.status,
-      reason: activeRow.reason,
-      referredBy: "",
-      preparedBy: "",
-      date: activeRow.date,
-      meetingAttended: null,
-      hasHomeVisit: false,
-      approved: false,
-      approvedAt: null,
-      anecdotalId: activeRow.anecdotalId ?? undefined,
-      category: activeRow.category,
-      anecdotalExcerpt: activeRow.anecdotal?.incident ?? "",
-      recommendations: activeRow.anecdotal?.notes ?? "",
-    };
-    const base = buildGcForm03Data(adapter, report, draft?.recommendation ?? "", "");
+    const base = buildGcForm03Data(
+      activeCase.adapter,
+      report,
+      draft.recommendation,
+      counselorName
+    );
     setForm(sanitizeGcForm03Draft(loadGcForm03Draft(referralId), base));
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [activeRow, report, form, referralId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCase, report, form, referralId]);
 
   const patch = (p: Partial<GcForm03Data>) =>
     setForm((f) => (f ? { ...f, ...p } : f));
@@ -143,12 +175,13 @@ export default function NurseAdmReferralPage() {
   }, [form, referralId, mounted]);
 
   function resolveSession(): string | undefined {
+    if (!showClinicSession) return undefined;
     if (!sessionDate && !sessionTime) return undefined;
     if (!sessionDate || !sessionTime) {
       setSessionError("Pick both a date and a time for the clinic session — or leave both empty to forward without one.");
       return null as unknown as undefined;
     }
-    if (activeRow?.sessions.some((s) => s.status === "scheduled")) {
+    if (activeCase?.hasActiveSession) {
       setSessionError("This referral already has a session that is not done yet — finish or cancel it before booking another one.");
       return null as unknown as undefined;
     }
@@ -165,61 +198,34 @@ export default function NurseAdmReferralPage() {
     return `${sessionDate}T${sessionTime}:00`;
   }
 
-  function referralFormOf(f: GcForm03Data): NurseAdmReferralForm {
-    const checked = CONCERN_OPTIONS.filter((c) => f.concerns[c.key]);
-    const concerns = checked.map((c) =>
-      c.key === "others" && f.concerns.othersText.trim()
-        ? `Others: ${f.concerns.othersText.trim()}`
-        : c.label
-    );
-    const actionBits = f.referrerActions
-      .map((a) => [a.action.trim(), a.date.trim()].filter(Boolean).join(" "))
-      .filter(Boolean);
-    const nurseBits = [
-      ...(f.referrerRecommendations.trim() ? [f.referrerRecommendations.trim()] : []),
-      ...(actionBits.length > 0 ? [`Actions: ${actionBits.join("; ")}`] : []),
-    ];
-    return {
-      ...(concerns.length > 0 ? { concerns } : {}),
-      ...(f.detailsOfConcern.trim()
-        ? { detailsOfConcern: f.detailsOfConcern.trim().slice(0, 2000) }
-        : {}),
-      ...(nurseBits.length > 0
-        ? { nurseActions: nurseBits.join(" | ").slice(0, 2000) }
-        : {}),
-      ...(f.followUp.trim() ? { followUp: f.followUp.trim().slice(0, 2000) } : {}),
-    };
-  }
-
-  // Confirming SAVES the referral form AND endorses the case to the ADM
-  // coordinator at once (auto-endorse) — then returns to the referrals page.
-  // Nothing redirects to the alerts page.
   const confirmMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      if (!form) throw new Error("NO_FORM");
+      // Confirming is blocked while a session is still upcoming — finish
+      // or cancel it first (covers booked sessions and booked follow-ups).
+      if (activeCase?.hasActiveSession) throw new Error("ACTIVE_SESSION");
       const scheduledAt = resolveSession();
       if (scheduledAt === (null as unknown as undefined)) {
         throw new Error("INVALID_SESSION");
       }
-      return confirmNurseReferralAndEndorse(referralId, {
-        recommendation: form?.guidanceRecommendations.trim() || "Referred for ADM.",
-        scheduledAt,
-        referralForm: form ? referralFormOf(form) : undefined,
-      });
+      await onConfirm({ form, scheduledAt });
     },
     onSuccess: () => {
       clearGcForm03Draft(referralId);
-      queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
       toast.success({
         title: "Referral confirmed",
-        description: "The case was endorsed to the ADM coordinator.",
+        description: confirmToastDescription,
       });
-      router.push("/nurse/referrals");
+      setStep(1);
+      onConfirmed();
     },
   });
 
-  if (!mounted || overviewQuery.isPending || reportLoading) {
+  if (!open) return null;
+
+  if (!mounted || casePending || reportLoading) {
     return (
+      <FormSheet onClose={onClose}>
       <section className={pageStyles.page} aria-busy="true">
         <div className={pageStyles.header}>
           <div>
@@ -239,18 +245,13 @@ export default function NurseAdmReferralPage() {
           </CardContent>
         </Card>
       </section>
+      </FormSheet>
     );
   }
 
-  if (
-    overviewQuery.isError ||
-    !activeRow ||
-    !reviewable ||
-    !activeRow.anecdotalId ||
-    reportError ||
-    (!report && !reportLoading)
-  ) {
+  if (caseError || !activeCase || reportError || (!report && !reportLoading)) {
     return (
+      <FormSheet onClose={onClose}>
       <section className={pageStyles.page}>
         <div className={pageStyles.header}>
           <div>
@@ -260,32 +261,33 @@ export default function NurseAdmReferralPage() {
         </div>
         <div className={styles.errorBlock} role="alert">
           <p className={styles.errorText}>
-            {!activeRow || !reviewable
-              ? "This case is no longer waiting for review — it may have been decided already."
-              : "We couldn't load the referral form. Check your connection and try again."}
+            {unavailableMessage ??
+              "We couldn't load the referral form. Check your connection and try again."}
           </p>
-          <Button size="sm" variant="outline" asChild>
-            <Link href="/nurse/alerts">Back to alerts</Link>
+          <Button size="sm" variant="outline" onClick={onClose}>
+            {backLabel}
           </Button>
         </div>
       </section>
+      </FormSheet>
     );
   }
 
   return (
+    <FormSheet onClose={onClose}>
     <section className={pageStyles.page}>
       <div className={pageStyles.header}>
         <div>
           <p className={pageStyles.eyebrow}>ADM · Referral form</p>
-          <h1 className={pageStyles.title}>GCForm-03 — {activeRow.student}</h1>
+          <h1 className={pageStyles.title}>GCForm-03 — {activeCase.adapter.student}</h1>
           <p className={pageStyles.lede}>
             {step === 1
               ? "Answer the form's questions — names, dates, and the anecdotal detail are already filled in."
               : "Filled referral sheet preview — print it, download the .xlsx, or confirm to save and endorse the case to the ADM coordinator."}
           </p>
         </div>
-        <Button size="sm" variant="outline" asChild>
-          <Link href="/nurse/alerts">Back to alerts</Link>
+        <Button size="sm" variant="outline" onClick={onClose}>
+          {backLabel}
         </Button>
       </div>
 
@@ -293,9 +295,20 @@ export default function NurseAdmReferralPage() {
         <div className={styles.errorBlock} role="alert">
           <p className={styles.errorText}>
             {confirmMutation.error instanceof Error &&
-            confirmMutation.error.message === "INVALID_SESSION"
-              ? "Pick both a session date and time — or leave both empty."
-              : "Sorry — saving the referral did not go through. Please try again."}
+            confirmMutation.error.message === "ACTIVE_SESSION"
+              ? "Finish or cancel the upcoming session (or follow-up) before confirming this referral."
+              : confirmMutation.error instanceof Error &&
+                confirmMutation.error.message === "INVALID_SESSION"
+                ? "Pick both a session date and time — or leave both empty."
+                : "Sorry — saving the referral did not go through. Please try again."}
+          </p>
+        </div>
+      ) : null}
+
+      {activeCase?.hasActiveSession ? (
+        <div className={styles.errorBlock} style={{ borderStyle: "solid" }} role="alert">
+          <p className={styles.errorText} style={{ fontWeight: 600 }}>
+            Not ready to confirm yet — finish or cancel the upcoming session (or follow-up) first, then come back.
           </p>
         </div>
       ) : null}
@@ -320,7 +333,7 @@ export default function NurseAdmReferralPage() {
                     <Label htmlFor="rf-lrn">LRN</Label>
                     <Input
                       id="rf-lrn"
-                      value={activeRow.lrn}
+                      value={activeCase.lrn}
                       readOnly
                       className={formStyles.readonly}
                     />
@@ -475,7 +488,7 @@ export default function NurseAdmReferralPage() {
               </fieldset>
 
               <fieldset className={formStyles.group}>
-                <legend className={formStyles.legend}>School nurse section</legend>
+                <legend className={formStyles.legend}>{staffSectionTitle}</legend>
                 <p className={formStyles.tableTitle}>A. Action/s Taken</p>
                 <div className={formStyles.callHead} aria-hidden="true">
                   <span />
@@ -556,7 +569,7 @@ export default function NurseAdmReferralPage() {
                 </div>
                 <div className={formStyles.grid2}>
                   <div>
-                    <Label htmlFor="rf-counselor">School Nurse</Label>
+                    <Label htmlFor="rf-counselor">{signerLabel}</Label>
                     <Input
                       id="rf-counselor"
                       value={form.counselorName}
@@ -573,32 +586,34 @@ export default function NurseAdmReferralPage() {
                 </div>
               </fieldset>
 
-              <fieldset className={formStyles.group}>
-                <legend className={formStyles.legend}>Clinic session (optional)</legend>
-                <div className={formStyles.grid2}>
-                  <ClinicDatePicker
-                    id="rf-session-date"
-                    label="Date"
-                    value={sessionDate}
-                    onChange={setSessionDate}
-                    min={todayKey()}
-                  />
-                  <ClinicTimePicker
-                    id="rf-session-time"
-                    label="Time"
-                    value={sessionTime}
-                    onChange={setSessionTime}
-                  />
-                </div>
-                <p className={formStyles.mt} style={{ fontSize: "0.8125rem", opacity: 0.75 }}>
-                  {activeRow?.sessions.some((s) => s.status === "scheduled")
-                    ? "A session that is not done yet is already booked on this case — leave the session empty, or finish/cancel the existing one first."
-                    : "Held at the school clinic. Leave both empty to forward without booking."}
-                </p>
-                {sessionError ? (
-                  <p className={styles.errorText} role="alert">{sessionError}</p>
-                ) : null}
-              </fieldset>
+              {showClinicSession ? (
+                <fieldset className={formStyles.group}>
+                  <legend className={formStyles.legend}>Clinic session (optional)</legend>
+                  <div className={formStyles.grid2}>
+                    <ClinicDatePicker
+                      id="rf-session-date"
+                      label="Date"
+                      value={sessionDate}
+                      onChange={setSessionDate}
+                      min={todayKey()}
+                    />
+                    <ClinicTimePicker
+                      id="rf-session-time"
+                      label="Time"
+                      value={sessionTime}
+                      onChange={setSessionTime}
+                    />
+                  </div>
+                  <p className={formStyles.mt} style={{ fontSize: "0.8125rem", opacity: 0.75 }}>
+                    {activeCase?.hasActiveSession
+                      ? "A session that is not done yet is already booked on this case — leave the session empty, or finish/cancel the existing one first."
+                      : "Held at the school clinic. Leave both empty to forward without booking."}
+                  </p>
+                  {sessionError ? (
+                    <p className={styles.errorText} role="alert">{sessionError}</p>
+                  ) : null}
+                </fieldset>
+              ) : null}
 
               <div
                 className={styles.actions}
@@ -612,36 +627,14 @@ export default function NurseAdmReferralPage() {
                   variant="outline"
                   disabled={!form}
                   onClick={() => {
-                    if (!activeRow || !report) return;
+                    if (!activeCase || !report) return;
                     clearGcForm03Draft(referralId);
                     setSessionDate("");
                     setSessionTime("");
                     setSessionError(null);
-                    const adapter: GuidanceAdmCase = {
-                      id: activeRow.id,
-                      student: activeRow.student,
-                      lrn: activeRow.lrn,
-                      section: activeRow.section,
-                      grade: activeRow.grade,
-                      stage: "consultation",
-                      stageLabel: "Consultation and referral",
-                      eligibility: "pending",
-                      referralId: activeRow.id,
-                      referralStatus: activeRow.status,
-                      reason: activeRow.reason,
-                      referredBy: "",
-                      preparedBy: "",
-                      date: activeRow.date,
-                      meetingAttended: null,
-                      hasHomeVisit: false,
-                      approved: false,
-                      approvedAt: null,
-                      anecdotalId: activeRow.anecdotalId ?? undefined,
-                      category: activeRow.category,
-                      anecdotalExcerpt: activeRow.anecdotal?.incident ?? "",
-                      recommendations: activeRow.anecdotal?.notes ?? "",
-                    };
-                    setForm(buildGcForm03Data(adapter, report, "", ""));
+                    setForm(
+                      buildGcForm03Data(activeCase.adapter, report, "", counselorName)
+                    );
                   }}
                 >
                   Reset to auto-filled
@@ -662,5 +655,6 @@ export default function NurseAdmReferralPage() {
         />
       ) : null}
     </section>
+    </FormSheet>
   );
 }

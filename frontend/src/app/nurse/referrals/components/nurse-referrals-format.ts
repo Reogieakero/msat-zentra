@@ -18,6 +18,7 @@ export const TYPES: { value: TypeFilter; label: string }[] = [
    state, with the count on the right. */
 export type ActionFilter =
   | ""
+  | "adm_needs"
   | "endorse"
   | "followup"
   | "booked"
@@ -30,6 +31,7 @@ export type ActionFilter =
 export type ActionValue = Exclude<ActionFilter, "">;
 
 export const ADM_MENU: { value: ActionValue; label: string }[] = [
+  { value: "adm_needs", label: "Needs review" },
   { value: "endorse", label: "Endorse" },
   { value: "followup", label: "Follow-up" },
   { value: "booked", label: "Book session" },
@@ -45,6 +47,8 @@ export const CLINIC_MENU: { value: ActionValue; label: string }[] = [
 
 export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): boolean {
   switch (filter) {
+    case "adm_needs":
+      return row.type === "ADM" && row.status === "pending";
     case "endorse":
       return row.type === "ADM" && isEndorsed(row.type, row.status);
     case "followup":
@@ -216,9 +220,6 @@ export function latestActionOf(
   row: NurseQueueRow,
   alert: NurseAlertItem
 ): { label: string; time: string } {
-  if (row.lastActionAt) {
-    return { label: labelForActionType(row.lastActionType, row, alert), time: row.lastActionAt };
-  }
   if (row.sessions.length > 0) {
     const sorted = [...row.sessions].sort((a, b) => {
       const at = new Date(a.createdAt || a.scheduledAt).getTime();
@@ -229,14 +230,19 @@ export function latestActionOf(
       return bt - at;
     });
     const latest = sorted[0];
+    if (latest.status === "completed" && row.followUpDate) {
+      return { label: "Marked for follow-up", time: row.followUpDate };
+    }
     if (latest.status === "completed") {
-      const doneAt = row.lastActionAt || latest.createdAt || latest.scheduledAt;
-      return { label: "Session done", time: doneAt };
+      return { label: "Session done", time: latest.createdAt || latest.scheduledAt };
     }
     if (latest.status === "cancelled") {
       return { label: "Session cancelled", time: latest.createdAt || latest.scheduledAt };
     }
     return { label: "Session booked", time: latest.createdAt || latest.scheduledAt };
+  }
+  if (row.lastActionAt) {
+    return { label: labelForActionType(row.lastActionType, row, alert), time: row.lastActionAt };
   }
   if (row.followUpDate) return { label: "Marked for follow-up", time: row.followUpDate };
   if (isEndorsed(row.type, row.status)) return { label: "Endorsed to ADM coordinator", time: row.date };
@@ -298,6 +304,31 @@ export function activeSessionOf(sessions: NurseSessionItem[]): NurseSessionItem 
    exists (server enforces this too; the button disables early). */
 export function hasScheduledSession(sessions: NurseSessionItem[]): boolean {
   return sessions.some((s) => s.status === "scheduled");
+}
+
+/* Watermark label for the diagonal background on each referral entry.
+   Matches the sidebar action menu labels so the reader sees the
+   same wording in the watermark as in the filters. */
+export function watermarkLabel(row: NurseQueueRow): string {
+  if (isEndorsed(row.type, row.status)) return "Endorse";
+  if (row.status === "dismissed") return "Reject";
+  if (row.status === "resolved") return "Done";
+  if (row.status === "follow_up") return "Follow-up";
+  if (hasScheduledSession(row.sessions)) return "Booked session";
+  if (row.status === "pending") return "Needs review";
+  return rowStatusLabel(row.type, row.status);
+}
+
+/* Watermark color class suffix for each status — maps to CSS
+   classes that give each status its own distinct color. */
+export function watermarkColor(row: NurseQueueRow): string {
+  if (isEndorsed(row.type, row.status)) return "endorse";
+  if (row.status === "dismissed") return "reject";
+  if (row.status === "resolved") return "done";
+  if (row.status === "follow_up") return "followup";
+  if (hasScheduledSession(row.sessions)) return "booked";
+  if (row.status === "pending") return "needsreview";
+  return "";
 }
 
 /* A clinic session unlocks once its scheduled time arrives (ongoing or

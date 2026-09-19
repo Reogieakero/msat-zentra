@@ -1,0 +1,40 @@
+/* CardSwap — centered stacked-card deck (ReactBits port).
+   The deck centers itself in its parent; the parent (stage) supplies a
+   fixed height and overflow: visible so the drop animation can play. */
+
+.card-swap {
+  position: relative;
+  margin-inline: auto;
+  perspective: 900px;
+  overflow: visible;
+  transform-origin: top center;
+}
+
+.card-swap-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: var(--radius-md, 0.625rem);
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--card-foreground, var(--foreground));
+  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+
+/* Shrink the whole deck on small screens instead of overflowing. The CSS
+   `scale` property (separate from `transform`) never fights GSAP, which
+   only writes inline transforms on the cards themselves. */
+@media (max-width: 768px) {
+  .card-swap {
+    scale: 0.78;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-swap {
+    scale: 0.6;
+  }
+}

@@ -14,6 +14,8 @@ import { NurseQueueFilters, type NurseQueueTypeFilter } from "./NurseQueueFilter
 import { NurseQueueRowActions } from "./NurseQueueRowActions";
 import { NurseAdmReviewDialog } from "./NurseAdmReviewDialog";
 import { NurseForwardAdmButton } from "./NurseForwardAdmButton";
+import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
+import { NurseAdmReferralFormSheet } from "../../referrals/components/NurseAdmReferralFormSheet";
 import styles from "./nurse-overview.module.css";
 
 const PAGE_SIZE = 5;
@@ -48,6 +50,10 @@ export function NurseOverviewQueues({
   const [statusFilter, setStatusFilter] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [formSheet, setFormSheet] = React.useState<{
+    row: NurseQueueRow;
+    draft: AdmReviewDraft;
+  } | null>(null);
   const queryClient = useQueryClient();
   const refresh = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
@@ -195,7 +201,11 @@ export function NurseOverviewQueues({
                                   />
                                 )}
                               {row.type === "ADM" && row.status === "pending" && (
-                                <NurseAdmReviewDialog row={row} onChanged={refresh} />
+                                <NurseAdmReviewDialog
+                                  row={row}
+                                  onChanged={refresh}
+                                  onCreateReferral={(draft) => setFormSheet({ row, draft })}
+                                />
                               )}
                               <NurseQueueRowActions row={row} onChanged={refresh} />
                             </div>
@@ -281,6 +291,16 @@ export function NurseOverviewQueues({
           </div>
         )}
       </Card>
+
+      {formSheet && (
+        <NurseAdmReferralFormSheet
+          open
+          onClose={() => setFormSheet(null)}
+          row={formSheet.row}
+          initialDraft={formSheet.draft}
+          onChanged={refresh}
+        />
+      )}
     </>
   );
 }

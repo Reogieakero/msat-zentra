@@ -110,14 +110,76 @@ export async function fetchGuidanceAdm(
 
 /* Consultation review on an ADM-purpose referral at the consultation stage:
    endorse creates the referral forward to the coordinator's parent meeting,
-   reject closes the case without ADM action. */
+   reject closes the case without ADM action. An optional first session can
+   ride an endorsement (same pattern as the nurse ADM review) — standalone
+   booking while pending goes through the shared session endpoints. */
 export async function reviewAdmConsultation(
   referralId: string,
-  input: { recommendation: string; outcome: "endorse" | "reject" }
+  input: {
+    recommendation: string;
+    outcome: "endorse" | "reject";
+    scheduledAt?: string;
+    sessionType?: string;
+    venue?: string;
+  }
 ): Promise<unknown> {
   const { data } = await apiClient.post(
     `/api/guidance/adm/referrals/${referralId}/review`,
-    input
+    {
+      recommendation: input.recommendation,
+      outcome: input.outcome,
+      ...(input.scheduledAt
+        ? {
+            clinicSession: {
+              scheduledAt: input.scheduledAt,
+              sessionType: input.sessionType ?? "individual",
+              ...(input.venue?.trim() ? { venue: input.venue.trim() } : {}),
+            },
+          }
+        : {}),
+    }
+  );
+  return data;
+}
+
+/* Counseling sessions on one ADM consultation (booked from the review
+   dialog without deciding, or with the endorsement). Shared session
+   endpoints — completing, moving, cancelling, and deleting go through
+   guidance-referrals-data, same as the referrals page. */
+export interface AdmConsultationSession {
+  id: string;
+  sessionType: string;
+  scheduledAt: string;
+  date: string;
+  venue: string;
+  status: string;
+  sessionNotes: string;
+  outcome: string;
+  cancelReason: string;
+  createdAt: string;
+  completedAt: string;
+}
+
+export async function listAdmConsultationSessions(
+  referralId: string
+): Promise<AdmConsultationSession[]> {
+  const { data } = await apiClient.get<AdmConsultationSession[]>(
+    `/api/referrals/${referralId}/sessions`
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function bookAdmConsultationSession(
+  referralId: string,
+  input: { scheduledAt: string; sessionType?: string; venue?: string }
+): Promise<unknown> {
+  const { data } = await apiClient.post(
+    `/api/referrals/${referralId}/sessions`,
+    {
+      scheduledAt: input.scheduledAt,
+      sessionType: input.sessionType ?? "individual",
+      ...(input.venue?.trim() ? { venue: input.venue.trim() } : {}),
+    }
   );
   return data;
 }

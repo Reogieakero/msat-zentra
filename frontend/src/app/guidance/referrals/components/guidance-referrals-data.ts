@@ -17,6 +17,15 @@ export type CounselingSessionType =
 
 export type CounselingSessionStatus = "scheduled" | "completed" | "cancelled";
 
+export interface CounselingSessionAttachment {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
 export interface CounselingSessionItem {
   id: string;
   sessionType: CounselingSessionType;
@@ -27,7 +36,13 @@ export interface CounselingSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
+  // When the session was booked (execution time). Falls back to
+  // scheduledAt for legacy rows without it.
+  createdAt: string;
   completedAt: string;
+  // Optional documentation filed on the session (photos). Empty when
+  // nothing is filed — docs never gate Done.
+  attachments: CounselingSessionAttachment[];
 }
 
 export interface GuidanceReferralItem {
@@ -36,6 +51,9 @@ export interface GuidanceReferralItem {
   lrn: string;
   section: string;
   grade: string;
+  // Action track: "ADM" needs ADM action (escalated toward the ADM
+  // coordinator), otherwise regular "Counseling" handled on this desk.
+  type: string;
   category: string;
   referredBy: string;
   observer: string;
@@ -57,6 +75,22 @@ export interface GuidanceReferralItem {
   resolutionSummary: string;
   sessions: CounselingSessionItem[];
   completedSessions: number;
+  // Latest execution across referral + sessions (backend audit, ISO).
+  // Empty when no audit trail exists (legacy rows) — callers fall back.
+  lastActionAt: string;
+  lastActionType: string;
+}
+
+export interface GuidanceTypeSummary {
+  pending: number;
+  inProgress: number;
+  followUp: number;
+  escalated: number;
+  resolved: number;
+  dismissed: number;
+  booked: number;
+  done: number;
+  open: number;
 }
 
 export interface GuidanceReferralsSummary {
@@ -68,6 +102,8 @@ export interface GuidanceReferralsSummary {
   infoRequested?: number;
   dismissed?: number;
   followUp?: number;
+  // Per-track totals for the sidebar's separate Counseling vs ADM menus.
+  byType?: Record<"Counseling" | "ADM", GuidanceTypeSummary>;
 }
 
 export interface GuidanceReferralsData {
@@ -82,6 +118,10 @@ export interface GuidanceReferralsData {
 export interface GuidanceReferralsParams {
   q?: string;
   status?: "" | GuidanceReferralStatus;
+  type?: "" | "counseling" | "adm";
+  booked?: boolean;
+  completed?: boolean;
+  open?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -92,6 +132,10 @@ export async function fetchGuidanceReferrals(
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
   if (params.status) search.set("status", params.status);
+  if (params.type) search.set("type", params.type);
+  if (params.booked) search.set("booked", "1");
+  if (params.completed) search.set("completed", "1");
+  if (params.open) search.set("open", "1");
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
@@ -183,6 +227,80 @@ export async function cancelSession(
     cancelReason ? { cancelReason } : {}
   );
   return data;
+}
+
+// Permanently remove a cancelled session (only cancelled sessions can be
+// deleted; scheduled/completed must be finished or cancelled first).
+export async function deleteSession(id: string, sessionId: string): Promise<unknown> {
+  const { data } = await apiClient.delete(
+    `/api/referrals/${id}/sessions/${sessionId}`
+  );
+  return data;
+}
+
+// Optional documentation on one counseling session: list / upload / remove
+// image attachments. Filing is optional — these helpers only build the
+// evidence trail, they never gate Done or resolve.
+export async function listSessionAttachments(
+  referralId: string,
+  sessionId: string
+): Promise<CounselingSessionAttachment[]> {
+  const { data } = await apiClient.get<CounselingSessionAttachment[]>(
+    `/api/referrals/${referralId}/sessions/${sessionId}/attachments`
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+const SESSION_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SESSION_IMAGE_BYTES = 5 * 1024 * 1024;
+
+export function sessionAttachmentError(files: File[]): string | null {
+  if (files.length === 0) return "Choose at least one image to attach.";
+  if (files.length > 5) return "Attach at most 5 images at a time.";
+  for (const f of files) {
+    if (!SESSION_IMAGE_TYPES.includes(f.type)) {
+      return `"${f.name}" is not a JPG, PNG, or WEBP image.`;
+    }
+    if (f.size > MAX_SESSION_IMAGE_BYTES) {
+      return `"${f.name}" is over 5 MB — pick a smaller photo.`;
+    }
+  }
+  return null;
+}
+
+export async function uploadSessionAttachments(
+  referralId: string,
+  sessionId: string,
+  files: File[]
+): Promise<CounselingSessionAttachment[]> {
+  const form = new FormData();
+  for (const f of files) form.append("files", f, f.name);
+  const { data } = await apiClient.post<CounselingSessionAttachment[]>(
+    `/api/referrals/${referralId}/sessions/${sessionId}/attachments`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function deleteSessionAttachment(
+  referralId: string,
+  sessionId: string,
+  attachmentId: string
+): Promise<void> {
+  await apiClient.delete(
+    `/api/referrals/${referralId}/sessions/${sessionId}/attachments/${attachmentId}`
+  );
+}
+
+// Backend errors arrive as { error: { code, message } } — surface the
+// server's message instead of a generic failure notice.
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  if (typeof err === "object" && err !== null && "response" in err) {
+    const data = (err as { response?: { data?: { error?: { message?: string } } } }).response?.data;
+    if (data?.error?.message) return data.error.message;
+  }
+  return fallback;
 }
 
 export async function escalateReferral(

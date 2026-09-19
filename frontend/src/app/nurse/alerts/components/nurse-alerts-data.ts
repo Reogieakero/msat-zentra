@@ -8,6 +8,11 @@ import {
 
 export type NurseAlertSeverity = "urgent" | "new" | "info" | "done";
 
+// Live rule-based risk level from the risk engine (High/Moderate/Low).
+// Null when the student has no account-backed profile (roster-only) or the
+// lookup failed — the table renders "—" for those rows.
+export type NurseRiskLevel = "High" | "Moderate" | "Low";
+
 export interface NurseAlertItem {
   key: string;
   severity: NurseAlertSeverity;
@@ -17,6 +22,10 @@ export interface NurseAlertItem {
   waiting: string;
   date: string;
   sortTime: number;
+  // Account userId (or roster id for enlisted students without accounts)
+  // for the live risk lookup. The endpoint serves both, so every referred
+  // student resolves a level instead of "—".
+  studentId: string | null;
   row: NurseQueueRow;
 }
 
@@ -113,6 +122,10 @@ export function buildNurseAlerts(
 
   for (const r of scoped) {
     const row = toQueueRow(r);
+    // Account userId for the live risk lookup (GET /api/risk/students/:id),
+    // falling back to the roster id for enlisted students without accounts
+    // (the endpoint evaluates those live too).
+    const studentId = r.student?.userId ?? r.roster?.id ?? null;
     const status = r.status ?? "pending";
     const timeOf = (iso: string | null | undefined) => parseDate(iso)?.getTime() ?? 0;
 
@@ -125,6 +138,7 @@ export function buildNurseAlerts(
         waiting: waitingLine(row.waitingDays, "Escalated"),
         date: row.date,
         sortTime: timeOf(r.referredAt),
+        studentId,
         row,
       });
       continue;
@@ -142,6 +156,7 @@ export function buildNurseAlerts(
         waiting: waitingLine(row.waitingDays),
         date: row.date,
         sortTime: timeOf(r.referredAt),
+        studentId,
         row,
       });
     }
@@ -155,6 +170,7 @@ export function buildNurseAlerts(
         waiting: waitingLine(row.waitingDays),
         date: row.date,
         sortTime: timeOf(r.referredAt),
+        studentId,
         row,
       });
     }
@@ -177,6 +193,7 @@ export function buildNurseAlerts(
         date: row.date,
         // Most overdue (smallest due date) floats to the top.
         sortTime: due ? due.getTime() : timeOf(r.referredAt),
+        studentId,
         row,
       });
     }
@@ -193,6 +210,7 @@ export function buildNurseAlerts(
           date: resolvedAt.toISOString().slice(0, 10),
           // Negated so the most recently resolved surfaces first.
           sortTime: -resolvedAt.getTime(),
+          studentId,
           row,
         });
       }
@@ -242,4 +260,38 @@ export async function markNurseNotificationRead(id: string): Promise<void> {
 
 export async function markAllNurseNotificationsRead(): Promise<void> {
   await apiClient.post("/api/notifications/read-all");
+}
+
+// Live rule-based risk level per referred student (GET /api/risk/students/:id
+// → { lrn, riskLevel }). The nurse role is allowed this limited projection,
+// and the endpoint serves roster ids too — pass the alert's studentId
+// (account or roster) so every row resolves a level.
+// Resolves each id independently so one failure never blocks the rest;
+// ids with no result are simply absent from the map (table shows "—").
+export async function fetchNurseRiskLevels(
+  studentIds: string[]
+): Promise<Record<string, NurseRiskLevel>> {
+  const unique = [...new Set(studentIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  const settled = await Promise.allSettled(
+    unique.map(async (id) => {
+      const { data } = await apiClient.get<{ lrn: string; riskLevel: NurseRiskLevel }>(
+        `/api/risk/students/${id}`
+      );
+      return { id, riskLevel: data?.riskLevel ?? null };
+    })
+  );
+  const map: Record<string, NurseRiskLevel> = {};
+  for (const s of settled) {
+    if (
+      s.status === "fulfilled" &&
+      s.value.riskLevel !== null &&
+      (s.value.riskLevel === "High" ||
+        s.value.riskLevel === "Moderate" ||
+        s.value.riskLevel === "Low")
+    ) {
+      map[s.value.id] = s.value.riskLevel;
+    }
+  }
+  return map;
 }

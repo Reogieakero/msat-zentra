@@ -8,7 +8,7 @@ import { invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { sf10Upload } from "../../lib/upload.js";
-import { uploadFile, sf10ObjectPath } from "../../lib/storage.js";
+import { uploadFile, sf10ObjectPath, getSf10Bucket } from "../../lib/storage.js";
 
 const router = Router();
 
@@ -196,7 +196,7 @@ router.post(
 
       const ext = req.file.originalname.split(".").pop() ?? "pdf";
       const path = sf10ObjectPath(studentId, ext);
-      const fileUrl = await uploadFile(req.file.buffer, path, req.file.mimetype);
+      const fileUrl = await uploadFile(req.file.buffer, path, req.file.mimetype, getSf10Bucket());
 
       const source = isRegistrar ? "manual" : "ocr_upload";
       const record = await prisma.sf10Record.upsert({

@@ -821,22 +821,59 @@ router.get(
       const statusFilter =
         req.query.status === "pending" ||
         req.query.status === "in_progress" ||
-        req.query.status === "resolved"
-          ? (req.query.status as "pending" | "in_progress" | "resolved")
+        req.query.status === "resolved" ||
+        req.query.status === "escalated" ||
+        req.query.status === "follow_up" ||
+        req.query.status === "info_requested" ||
+        req.query.status === "dismissed"
+          ? (req.query.status as
+              | "pending"
+              | "in_progress"
+              | "resolved"
+              | "escalated"
+              | "follow_up"
+              | "info_requested"
+              | "dismissed")
           : null;
       const q =
         typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      // Case type: "ADM" needs ADM action (already moving toward the ADM
+      // coordinator via escalation); anything else is regular guidance
+      // counseling handled on this desk.
+      const typeFilter =
+        req.query.type === "adm" || req.query.type === "counseling"
+          ? (req.query.type as "adm" | "counseling")
+          : null;
+      // Session/open gates for the action menus (same one-active-session
+      // semantics as the nurse desk; "open" = not resolved or dismissed).
+      const bookedFilter = req.query.booked === "1";
+      const completedFilter = req.query.completed === "1";
+      const openFilter = req.query.open === "1";
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
 
       const rows = await prisma.referral.findMany({
-        where: { referredToRole: "guidance_counselor" },
+        // The desk receives direct counseling referrals PLUS ADM-track
+        // cases picked for the guidance counselor as consultation
+        // reviewer (same receiver scoping as the ADM page — nurse/LRPC
+        // picks never land here). Both tracks render on the referrals
+        // page; the mapped `type` below keeps them separable.
+        where: {
+          OR: [
+            { referredToRole: "guidance_counselor" },
+            {
+              referredToRole: "adm_coordinator",
+              OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+            },
+          ],
+        },
         orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
         take: 1000,
         select: {
           id: true,
           reason: true,
           status: true,
+          referredToRole: true,
           notes: true,
           escalationReason: true,
           escalatedTo: true,
@@ -858,7 +895,19 @@ router.get(
               sessionNotes: true,
               outcome: true,
               cancelReason: true,
+              createdAt: true,
               completedAt: true,
+              attachments: {
+                orderBy: { uploadedAt: "asc" },
+                select: {
+                  id: true,
+                  fileUrl: true,
+                  fileName: true,
+                  mimeType: true,
+                  fileSize: true,
+                  uploadedAt: true,
+                },
+              },
             },
           },
           anecdotalRecord: {
@@ -898,6 +947,13 @@ router.get(
         lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
         section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
         grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+        // Action track: ADM-bound when already escalated toward the ADM
+        // coordinator or arriving on the ADM track picked for guidance,
+        // otherwise regular guidance counseling.
+        type:
+          r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
+            ? "ADM"
+            : "Counseling",
         category: r.anecdotalRecord.category,
         referredBy: r.referredByUser?.fullName ?? "Adviser",
         observer: r.anecdotalRecord.observer?.fullName ?? "—",
@@ -927,13 +983,66 @@ router.get(
           sessionNotes: s.sessionNotes ?? "",
           outcome: s.outcome ?? "",
           cancelReason: s.cancelReason ?? "",
+          createdAt: s.createdAt.toISOString(),
           completedAt: s.completedAt ? s.completedAt.toISOString().slice(0, 10) : "",
+          attachments: (s.attachments ?? []).map((a) => ({
+            id: a.id,
+            fileUrl: a.fileUrl,
+            fileName: a.fileName,
+            mimeType: a.mimeType,
+            fileSize: a.fileSize,
+            uploadedAt: a.uploadedAt.toISOString(),
+          })),
         })),
         completedSessions: r.counselingSessions.filter((s) => s.status === "completed").length,
       }));
 
-      const filtered = mapped.filter((r) => {
+      // Latest execution per referral: newest audit across the referral row
+      // and its sessions (booked/done/cancelled/moved + status changes), so
+      // the UI shows when the action ran — never the appointment time.
+      const refIds = mapped.map((r) => r.id);
+      const sessIds = mapped.flatMap((r) => r.sessions.map((s) => s.id));
+      const lastActionById = new Map<string, { type: string; at: string }>();
+      if (refIds.length > 0 || sessIds.length > 0) {
+        const latestLogs = await prisma.auditLog.findMany({
+          where: {
+            OR: [
+              ...(refIds.length ? [{ sourceTable: "referrals", sourceId: { in: refIds } }] : []),
+              ...(sessIds.length ? [{ sourceTable: "counseling_sessions", sourceId: { in: sessIds } }] : []),
+            ],
+          },
+          select: { sourceId: true, sourceTable: true, actionType: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        });
+        const sessionToReferral = new Map<string, string>();
+        for (const r of mapped) {
+          for (const s of r.sessions) sessionToReferral.set(s.id, r.id);
+        }
+        for (const log of latestLogs) {
+          const referralId =
+            log.sourceTable === "referrals"
+              ? log.sourceId
+              : (sessionToReferral.get(log.sourceId) ?? null);
+          if (!referralId || lastActionById.has(referralId)) continue;
+          lastActionById.set(referralId, {
+            type: String(log.actionType),
+            at: log.createdAt.toISOString(),
+          });
+        }
+      }
+      const withAction = mapped.map((r) => ({
+        ...r,
+        lastActionAt: lastActionById.get(r.id)?.at ?? null,
+        lastActionType: lastActionById.get(r.id)?.type ?? null,
+      }));
+
+      const filtered = withAction.filter((r) => {
         if (statusFilter && r.status !== statusFilter) return false;
+        if (typeFilter === "adm" && r.type !== "ADM") return false;
+        if (typeFilter === "counseling" && r.type !== "Counseling") return false;
+        if (bookedFilter && r.sessions.length === 0) return false;
+        if (completedFilter && !r.sessions.some((s) => s.status === "completed")) return false;
+        if (openFilter && (r.status === "resolved" || r.status === "dismissed")) return false;
         if (
           q &&
           !`${r.student} ${r.lrn} ${r.section} ${r.referredBy} ${r.observer} ${r.reason} ${r.anecdotalExcerpt} ${r.category}`
@@ -955,6 +1064,49 @@ router.get(
           pending: mapped.filter((r) => r.status === "pending").length,
           inProgress: mapped.filter((r) => r.status === "in_progress").length,
           resolved: mapped.filter((r) => r.status === "resolved").length,
+          escalated: mapped.filter((r) => r.status === "escalated").length,
+          infoRequested: mapped.filter((r) => r.status === "info_requested").length,
+          dismissed: mapped.filter((r) => r.status === "dismissed").length,
+          followUp: mapped.filter((r) => r.status === "follow_up").length,
+          // Per-track totals for the sidebar's separate ADM vs Counseling
+          // menus — same statuses, counted only within each type, plus the
+          // session/open gates the menus filter on.
+          byType: (["Counseling", "ADM"] as const).reduce(
+            (acc, type) => {
+              const scoped = mapped.filter((r) => r.type === type);
+              const open = scoped.filter(
+                (r) => r.status !== "resolved" && r.status !== "dismissed"
+              );
+              acc[type] = {
+                pending: scoped.filter((r) => r.status === "pending").length,
+                inProgress: scoped.filter((r) => r.status === "in_progress").length,
+                followUp: scoped.filter((r) => r.status === "follow_up").length,
+                escalated: scoped.filter((r) => r.status === "escalated").length,
+                resolved: scoped.filter((r) => r.status === "resolved").length,
+                dismissed: scoped.filter((r) => r.status === "dismissed").length,
+                booked: scoped.filter((r) => r.sessions.length > 0).length,
+                done: scoped.filter((r) =>
+                  r.sessions.some((s) => s.status === "completed")
+                ).length,
+                open: open.length,
+              };
+              return acc;
+            },
+            {} as Record<
+              "Counseling" | "ADM",
+              {
+                pending: number;
+                inProgress: number;
+                followUp: number;
+                escalated: number;
+                resolved: number;
+                dismissed: number;
+                booked: number;
+                done: number;
+                open: number;
+              }
+            >
+          ),
         },
         referrals,
         page: safePage,
@@ -1421,7 +1573,24 @@ router.get(
 const consultReviewSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
   outcome: z.enum(["endorse", "reject"]),
+  // Optional first session booked alongside an endorsement (same pattern
+  // as the nurse ADM review) — standalone booking while pending goes
+  // through the shared session endpoints instead.
+  clinicSession: z
+    .object({
+      scheduledAt: z.string().min(1),
+      sessionType: z.string().min(1).optional(),
+      venue: z.string().trim().max(200).optional(),
+    })
+    .optional(),
 });
+
+const GUIDANCE_SESSION_TYPES = [
+  "individual",
+  "parent_conference",
+  "group",
+  "home_visit",
+] as const;
 
 router.post(
   "/adm/referrals/:id/review",
@@ -1462,6 +1631,47 @@ router.post(
         recommendation: string;
         outcome: "endorse" | "reject";
       };
+      // Endorsing is blocked while a session is still upcoming — finish
+      // or cancel it first (covers booked sessions and booked follow-ups).
+      if (outcome === "endorse") {
+        const active = await prisma.counselingSession.count({
+          where: { referralId: referral.id, status: "scheduled" },
+        });
+        if (active > 0) {
+          throw new AppError(
+            400,
+            "ACTIVE_SESSION_EXISTS",
+            "This referral already has a session that is not done yet — finish or cancel it before endorsing"
+          );
+        }
+      }
+      // Optional session booked with the endorsement (stays pending-free:
+      // the case moves on; the session is worked from the ADM review).
+      // Rejects close the case, so a session only ever rides an endorse.
+      let sessionAt: Date | null = null;
+      let sessionType = "individual";
+      let sessionVenue: string | null = null;
+      const clinicInput = (req.body as { clinicSession?: unknown }).clinicSession as
+        | { scheduledAt?: unknown; sessionType?: unknown; venue?: unknown }
+        | undefined;
+      if (clinicInput && outcome === "endorse") {
+        sessionAt = new Date(String(clinicInput.scheduledAt ?? ""));
+        if (Number.isNaN(sessionAt.getTime())) {
+          throw new AppError(400, "INVALID_DATE", "Pick a valid date and time for the session");
+        }
+        if (sessionAt.getTime() <= Date.now()) {
+          throw new AppError(400, "INVALID_ACTION", "Session must be set in the future");
+        }
+        const kind = String(clinicInput.sessionType ?? "individual");
+        if (!(GUIDANCE_SESSION_TYPES as readonly string[]).includes(kind)) {
+          throw new AppError(400, "INVALID_ACTION", "Unknown session type");
+        }
+        sessionType = kind;
+        sessionVenue =
+          typeof clinicInput.venue === "string" && clinicInput.venue.trim()
+            ? clinicInput.venue.trim()
+            : null;
+      }
       const note = `[ADM consult] ${recommendation.trim()}`;
       const updated = await prisma.referral.update({
         where: { id: referral.id },
@@ -1482,7 +1692,7 @@ router.post(
           actionType: "referral_status_change",
           sourceTable: "referrals",
           sourceId: referral.id,
-          reason: `ADM consultation endorsed: ${recommendation.trim()}`,
+          reason: `ADM consultation endorsed: ${recommendation.trim()}${sessionAt ? " with a session booked" : ""}`,
           oldValue: { status: referral.status },
           newValue: { status: "in_progress" },
         });
@@ -1502,6 +1712,27 @@ router.post(
           reason: `ADM consultation rejected: ${recommendation.trim()}`,
           oldValue: { status: referral.status },
           newValue: { status: "dismissed" },
+        });
+      }
+      if (sessionAt) {
+        const created = await prisma.counselingSession.create({
+          data: {
+            referralId: referral.id,
+            sessionType,
+            scheduledAt: sessionAt,
+            venue: sessionVenue,
+            status: "scheduled",
+            createdBy: req.user!.id,
+          },
+        });
+        await writeAudit({
+          userId: req.user!.id,
+          actionType: "session_scheduled",
+          sourceTable: "counseling_sessions",
+          sourceId: created.id,
+          reason: "Session booked on ADM consultation endorse",
+          oldValue: null,
+          newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt },
         });
       }
       await invalidateTags([

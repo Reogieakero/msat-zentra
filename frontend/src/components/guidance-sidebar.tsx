@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Inbox,
+  MessagesSquare,
   FilePenLine,
   BellRing,
   ClipboardList,
@@ -38,9 +39,9 @@ type NavGroup = {
 
 // Guidance Counselor nav — no hardcoded counts. Badges render only when a
 // live count is supplied; mock numbers were removed so the sidebar never
-// shows placeholder figures. Mirrors the Guidance Counselor scope: referred
-// cases, anecdotal records, interventions, ADM hand-off, and school-wide
-// risk views.
+// shows placeholder figures. Referrals are split into two dedicated pages
+// (ADM Cases and Counseling Cases, mirroring the nurse desk) so the reader
+// never needs the track filter; each page locks to its own track.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -50,13 +51,23 @@ const NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Cases",
+    label: "Referrals",
     items: [
       {
-        title: "Referrals to Me",
-        href: "/guidance/referrals",
+        title: "ADM Cases",
+        href: "/guidance/referrals/adm",
         icon: Inbox,
       },
+      {
+        title: "Counseling Cases",
+        href: "/guidance/referrals/counseling",
+        icon: MessagesSquare,
+      },
+    ],
+  },
+  {
+    label: "Records",
+    items: [
       {
         title: "Anecdotal Records",
         href: "/guidance/anecdotal",

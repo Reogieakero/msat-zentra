@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
 import {
   evaluateRisk,
+  evaluateRosterRisk,
   resolveActiveTermId,
 } from "../../services/risk.js";
 import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
@@ -129,7 +130,35 @@ router.get(
         where: { userId: String(req.params.id) },
         select: { riskLevel: true, riskCount: true, lrn: true },
       });
-      if (!profile) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      if (!profile) {
+        // Roster-enlisted students have no profile — evaluate live from
+        // their roster rows so desks (e.g. nurse alerts) can show a risk
+        // level for every referred student, not just account holders.
+        // Same shape as the profile path: { lrn, riskLevel }.
+        const roster = await prisma.studentRoster.findUnique({
+          where: { id: String(req.params.id) },
+          select: {
+            id: true,
+            lrn: true,
+            section: { select: { adviserId: true } },
+          },
+        });
+        if (!roster) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+        const isPrincipal = req.user!.role === "principal";
+        const isStaff = ["adviser", "guidance_counselor", "nurse", "adm_coordinator"].includes(req.user!.role);
+        if (!isPrincipal && !isStaff) {
+          return res.status(403).json({ error: { code: "FORBIDDEN", message: "Limited view only" } });
+        }
+        if (req.user!.role === "adviser" && roster.section?.adviserId !== req.user!.id) {
+          return res.status(403).json({ error: { code: "FORBIDDEN", message: "Not your advisee" } });
+        }
+        const termId = await resolveActiveTermId();
+        if (!termId) {
+          return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
+        }
+        const { result } = await evaluateRosterRisk(roster.id, termId);
+        return res.json({ lrn: roster.lrn, riskLevel: result.riskLevel });
+      }
       const isSelf = req.user!.id === String(req.params.id);
       const isPrincipal = req.user!.role === "principal";
       const isStaff = ["adviser", "guidance_counselor", "nurse", "adm_coordinator"].includes(req.user!.role);

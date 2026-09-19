@@ -8,10 +8,10 @@ import {
   BellRing,
   Inbox,
   Stethoscope,
+  ClipboardList,
   Flame,
 } from "lucide-react";
 
-import { useSidebar } from "@/components/ui/sidebar";
 import styles from "./nurse-sidebar.module.css";
 
 type NavItem = {
@@ -26,9 +26,9 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// School Nurse nav — placeholder shell. Mirrors the Nurse scope: referred
-// cases, clinic health records, and school-wide risk views. Pages render
-// placeholders until the clinical workflows are built.
+// School Nurse nav — Referrals are split into two dedicated pages (ADM
+// Cases and Clinic Matters) so the reader never needs the old case-type
+// filter; each page locks to its own type.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -38,17 +38,27 @@ const NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Cases",
+    label: "Referrals",
     items: [
       {
-        title: "Referrals to Me",
-        href: "/nurse/referrals",
+        title: "ADM Cases",
+        href: "/nurse/referrals/adm",
         icon: Inbox,
       },
       {
-        title: "Health Records",
-        href: "/nurse/health-records",
+        title: "Clinic Matters",
+        href: "/nurse/referrals/clinic",
         icon: Stethoscope,
+      },
+    ],
+  },
+  {
+    label: "Records",
+    items: [
+      {
+        title: "Documentaries",
+        href: "/nurse/health-records",
+        icon: ClipboardList,
       },
     ],
   },
@@ -64,6 +74,10 @@ const NAV: NavGroup[] = [
   },
 ];
 
+// GitHub-style tab bar: every section flattened into one row under the
+// topbar. Groups only group the source data, not the rendered tabs.
+const TABS: NavItem[] = NAV.flatMap((group) => group.items);
+
 function useIsActive() {
   const pathname = usePathname();
   return React.useCallback(
@@ -75,68 +89,33 @@ function useIsActive() {
   );
 }
 
-function SidebarNav() {
+function NurseNavbar() {
   const isActive = useIsActive();
 
-  const renderItem = (item: NavItem) => {
-    const active = isActive(item.href);
-    return (
-      <li key={item.href}>
-        <Link
-          href={item.href}
-          className={`${styles.item} ${active ? styles.itemActive : ""}`}
-          aria-current={active ? "page" : undefined}
-        >
-          <item.icon className={styles.itemIcon} />
-          <span className={styles.itemLabel}>{item.title}</span>
-          {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
-        </Link>
-      </li>
-    );
-  };
-
   return (
-    <>
-      {NAV.map((group) => (
-        <div key={group.label} className={styles.group}>
-          <p className={styles.groupLabel}>{group.label}</p>
-          <ul className={styles.menu}>
-            {group.items.map((item) => renderItem(item))}
-          </ul>
-        </div>
-      ))}
-    </>
+    <nav className={styles.navbar} aria-label="Nurse sections">
+      <ul className={styles.tabs}>
+        {TABS.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <li key={item.href} className={styles.tabItem}>
+              <Link
+                href={item.href}
+                className={`${styles.tab} ${active ? styles.tabActive : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
+                <item.icon className={styles.tabIcon} aria-hidden="true" />
+                <span className={styles.tabLabel}>{item.title}</span>
+                {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
-}
-
-function SidebarShell() {
-  const { isMobile, openMobile, setOpenMobile } = useSidebar();
-
-  const aside = (
-    <aside className={styles.sidebar}>
-      <nav className={styles.content}>
-        <SidebarNav />
-      </nav>
-    </aside>
-  );
-
-  if (isMobile) {
-    return (
-      <>
-        <div
-          className={`${styles.scrim} ${openMobile ? styles.scrimOpen : ""}`}
-          onClick={() => setOpenMobile(false)}
-        />
-        <div className={`${styles.mobile} ${openMobile ? styles.mobileOpen : ""}`}>
-          {aside}
-        </div>
-      </>
-    );
-  }
-
-  return aside;
 }
 
 export function NurseSidebar() {
-  return <SidebarShell />;
+  return <NurseNavbar />;
 }

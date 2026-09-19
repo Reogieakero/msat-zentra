@@ -1,0 +1,105 @@
+/* Guidance referral dialog form primitives — owned by the referrals
+   dialogs (previously shared with the timeline table). */
+
+/* Dialog content scrolls without ever showing a scrollbar. */
+.dialogScrollHidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dialogScrollHidden::-webkit-scrollbar {
+  display: none;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.formFull {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.formSectionLabel {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.formSectionHint {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.resolveProgress {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.resolveBlocker {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  border: 1px solid color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.75rem;
+}
+
+.errorBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--destructive, #dc2626);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--destructive, #dc2626), transparent 94%);
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Processing spinner shown inside buttons while their action runs. */
+.spin {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Cancel / delete buttons stay solid red in every state. */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+}

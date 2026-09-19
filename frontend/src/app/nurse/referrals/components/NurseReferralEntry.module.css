@@ -2,6 +2,29 @@
    (previously shared with the guidance timeline). Same two-column
    rail + body layout every row; odd rows only get a tint. */
 
+/* Watermark — diagonal status label in the background center of each entry */
+.watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 4rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklch, var(--watermark-color, var(--primary)) 14%, transparent);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.watermarkEndorse   { --watermark-color: oklch(0.35 0.16 150); }
+.watermarkNeedsreview { --watermark-color: oklch(0.55 0.16 80); }
+.watermarkBooked     { --watermark-color: oklch(0.35 0.15 220); }
+.watermarkFollowup   { --watermark-color: oklch(0.35 0.15 280); }
+.watermarkReject     { --watermark-color: oklch(0.5 0.17 20); }
+.watermarkDone       { --watermark-color: oklch(0.45 0.08 50); }
+
 .entry {
   position: relative;
   display: grid;
@@ -19,6 +42,19 @@
   background-color: color-mix(in oklch, var(--foreground) 7%, var(--card));
   border-bottom-color: var(--border);
   border-radius: var(--radius-lg);
+}
+
+/* Deep-link highlight — the alerts table jumps here, so the case glows
+   until the reader moves on. Scroll margin clears the sticky toolbar. */
+.entry {
+  scroll-margin-top: 7rem;
+}
+
+.entryHighlight {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in oklch, var(--primary) 9%, var(--card));
 }
 
 /* Vertical spine + node dot, like the changelog rail */
@@ -50,6 +86,7 @@
   border-radius: 9999px;
   background-color: var(--background);
   border: 2px solid var(--primary);
+  z-index: 1;
 }
 
 /* Left rail — sticks below the toolbar while its case is in view */
@@ -61,6 +98,7 @@
   flex-direction: column;
   gap: 0.5rem;
   min-width: 0;
+  z-index: 1;
 }
 
 .railSticky {
@@ -175,6 +213,8 @@
 
 /* Report body */
 .body {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -490,6 +530,10 @@
   align-items: center;
   gap: 0.5rem;
   padding-top: 0.25rem;
+  /* Pin to the bottom-right of the card body (the row uses
+     justify-content: flex-end inline) no matter how tall the
+     content above is. */
+  margin-top: auto;
 }
 
 /* Tablet: rail + body stack under the sticky offsets. */

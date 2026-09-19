@@ -6,113 +6,86 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { NurseAdmReviewDialog } from "../../overview/components/NurseAdmReviewDialog";
-import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
 import type {
   NurseQueueRow,
-  NurseReferralDraft,
   NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";
+import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
 import {
-  activeSessionOf,
   formatActionTime,
-  formatCountdown,
   formatDate,
-  formatTime,
   hasScheduledSession,
   initials,
-  isSessionStarted,
+  isEndorsed,
   latestActionOf,
   rowStatusHelp,
   rowStatusLabel,
   sessionKindLabel,
   statusVariant,
   timeAgo,
+  watermarkLabel,
+  watermarkColor,
 } from "./nurse-referrals-format";
+import { SessionPlanCard } from "@/components/session-plan/SessionPlanCard";
 import styles from "./NurseReferralEntry.module.css";
 
 export type SessionDialogKind = "finish" | "move" | "cancel" | "delete";
 
-/* Live countdown to the next scheduled session, with seconds. Once the
-   time arrives it flips to a steady "Ongoing" state. */
-function ClinicSessionsCountdown({
-  sessions,
-  now,
-}: {
-  sessions: NurseSessionItem[];
-  now: number;
-}) {
-  const next = activeSessionOf(sessions);
-  if (!next) return null;
-  const at = new Date(next.scheduledAt).getTime();
-  if (!Number.isFinite(at)) return null;
-  const started = at <= now;
-  return (
-    <span
-      className={styles.countdown}
-      role="timer"
-      aria-live="off"
-      aria-label={
-        started
-          ? `Session started at ${formatTime(next.scheduledAt)} — you can now mark it done and file documentation`
-          : `Session starts in ${formatCountdown(at, now)}`
-      }
-      title={
-        started
-          ? "Session time arrived — Mark done and docs are now unlocked"
-          : `Starts ${formatDate(next.date)} at ${formatTime(next.scheduledAt)}`
-      }
-    >
-      <span className={styles.countdownDot} aria-hidden="true" />
-      {started ? (
-        <>Ongoing — time arrived</>
-      ) : (
-        <>Starts in {formatCountdown(at, now)}</>
-      )}
-    </span>
-  );
-}
-
 export function NurseReferralEntry({
   alert,
   alt,
+  highlighted = false,
   now,
   onPreview,
   onPrivacy,
+  onEndorsedNotice,
   onSession,
   onDocs,
-  onBook,
+  onSchedule,
   onCreateReferral,
   onViewForm,
   onChanged,
 }: {
   alert: NurseAlertItem;
   alt: boolean;
+  highlighted?: boolean;
   now: number;
   onPreview: (recordId: string) => void;
   onPrivacy: (studentName: string) => void;
+  onEndorsedNotice: (studentName: string) => void;
   onSession: (row: NurseQueueRow, session: NurseSessionItem, kind: SessionDialogKind) => void;
   onDocs: (row: NurseQueueRow, session: NurseSessionItem) => void;
-  onBook: (row: NurseQueueRow) => void;
-  onCreateReferral: (row: NurseQueueRow, draft: NurseReferralDraft) => void;
+  onSchedule: (row: NurseQueueRow) => void;
+  onCreateReferral: (row: NurseQueueRow, draft: AdmReviewDraft) => void;
   onViewForm: (row: NurseQueueRow) => void;
   onChanged: () => void;
 }) {
   const row = alert.row;
   const isAdm = row.type === "ADM";
   const isPending = row.status === "pending";
-  const isClosed = row.status === "resolved" || row.status === "dismissed";
+  const isClosed = row.status === "resolved" || row.status === "dismissed" || (row.completedSessions > 0 && !hasScheduledSession(row.sessions));
+  // Endorsed ADM cases moved to the coordinator with their full report —
+  // the anecdotal write-up is no longer viewable on this desk.
+  const isEndorsedRow = isEndorsed(row.type, row.status);
   // Clinic sessions run on clinic matters, plus pre-confirm bookings
   // on pending ADM consultations (booked from review without
   // deciding). Endorsed ADM sessions stay read-only history.
   const canManageSessions = !isAdm || (isAdm && row.status === "pending");
+  // One active session per case — booking waits while one is scheduled
+  // (same rule as the guidance desk; the server enforces it too).
+  const booked = hasScheduledSession(row.sessions);
   const incident = row.anecdotal?.incident?.trim() || "";
   const latest = latestActionOf(row, alert);
 
   return (
     <li
-      className={`${styles.entry}${alt ? ` ${styles.entryAlt}` : ""}`}
+      id={`nurse-case-${row.id}`}
+      className={`${styles.entry}${alt ? ` ${styles.entryAlt}` : ""}${highlighted ? ` ${styles.entryHighlight}` : ""}`}
     >
+      <span className={`${styles.watermark} ${styles["watermark" + watermarkColor(row).replace(/^./, c => c.toUpperCase())]}`} aria-hidden="true">
+        {watermarkLabel(row)}
+      </span>
       <span className={styles.dot} aria-hidden="true" />
       {/* Date rail — always left, sticks below the toolbar */}
       <div className={`${styles.rail} ${styles.railSticky}`}>
@@ -183,12 +156,16 @@ export function NurseReferralEntry({
                 onClick={() =>
                   isClosed
                     ? onPrivacy(row.student)
-                    : onPreview(row.anecdotalId as string)
+                    : isEndorsedRow
+                      ? onEndorsedNotice(row.student)
+                      : onPreview(row.anecdotalId as string)
                 }
                 aria-label={
                   isClosed
                     ? `Report for ${row.student} is kept private because the case is finished`
-                    : `Open the official anecdotal report for ${row.student}`
+                    : isEndorsedRow
+                      ? `Report for ${row.student} moved with the case to the ADM coordinator`
+                      : `Open the official anecdotal report for ${row.student}`
                 }
               >
                 <FolderCard
@@ -205,15 +182,6 @@ export function NurseReferralEntry({
               </button>
             ) : null}
           </div>
-        ) : null}
-
-        {row.anecdotal && row.anecdotal.location !== "—" ? (
-          <dl className={styles.metaGrid}>
-            <div className={styles.metaItem}>
-              <dt>Where it happened</dt>
-              <dd>{row.anecdotal.location}</dd>
-            </div>
-          </dl>
         ) : null}
 
         {/* Clinic intake notes only — ADM consultations carry the
@@ -245,202 +213,35 @@ export function NurseReferralEntry({
           </p>
         ) : null}
 
-        {/* Clinic sessions — the real work on an accepted case.
-            ADM consultations move through review instead: a prompt
-            while pending (plus any sessions booked early, which stay
-            manageable until the case is confirmed) and read-only
-            history afterwards. */}
-        {isPending && isAdm ? (
-          <p className={styles.planHint}>
-            Review this ADM consultation, fill the referral form, then
-            confirm — confirming endorses it to the ADM coordinator
-            at once. Or reject it. You can also book a clinic
-            session first without deciding.
-          </p>
-        ) : null}
+        {/* Clinic sessions — shared card (nurse design): status badge,
+            then the live timer, then the title on every session row. */}
         {!isPending || (isAdm && row.sessions.length > 0) ? (
-          <div className={styles.plan}>
-            <div className={styles.planHead}>
-              <p className={styles.blockLabel}>Clinic sessions</p>
-              <span className={styles.planHeadRight}>
-                <ClinicSessionsCountdown sessions={row.sessions} now={now} />
-              </span>
-            </div>
-            {isClosed ? (
-              <p className={styles.planEmpty}>
-                This case is closed — the sessions below are kept as
-                history and can&apos;t be changed.
-              </p>
-            ) : null}
-            {row.sessions.length === 0 ? (
-              <p className={styles.planEmpty}>
-                No clinic sessions booked on this case.
-              </p>
-            ) : (
-              <ul className={styles.sessionList}>
-                {row.sessions.map((s) => {
-                  const isScheduled = s.status === "scheduled";
-                  const started = isSessionStarted(s.scheduledAt, now);
-                  const locked = isScheduled && !started;
-                  const targetMs = new Date(s.scheduledAt).getTime();
-                  return (
-                  <li key={s.id} className={styles.session}>
-                    <div className={styles.sessionTop}>
-                      <Badge
-                        variant={
-                          s.status === "completed"
-                            ? "success"
-                            : s.status === "cancelled"
-                              ? "secondary"
-                              : "default"
-                        }
-                      >
-                        {s.status === "completed"
-                          ? "Done"
-                          : s.status === "cancelled"
-                            ? "Cancelled"
-                            : "Upcoming"}
-                      </Badge>
-                      <p className={styles.sessionTitle}>
-                        {sessionKindLabel(s.sessionType)}
-                      </p>
-                    </div>
-                    <ul className={styles.sessionFacts}>
-                      <li>
-                        <time dateTime={s.scheduledAt}>
-                          {formatDate(s.date)}
-                        </time>
-                      </li>
-                      <li>{formatTime(s.scheduledAt)}</li>
-                      {s.venue ? <li>{s.venue}</li> : null}
-                    </ul>
-                    {locked && Number.isFinite(targetMs) ? (
-                      <p className={styles.sessionCountdown} role="timer" aria-label={`Session starts in ${formatCountdown(targetMs, now)}`}>
-                        Starts in {formatCountdown(targetMs, now)} — Mark done and docs unlock at session time.
-                      </p>
-                    ) : null}
-                    {s.status === "completed" && s.sessionNotes ? (
-                      <p className={styles.sessionNotes}>
-                        {s.sessionNotes}
-                      </p>
-                    ) : null}
-                    {s.status === "completed" && s.outcome ? (
-                      <p className={styles.sessionOutcome}>
-                        <span className={styles.calloutPrefix}>
-                          Outcome:{" "}
-                        </span>
-                        {s.outcome}
-                      </p>
-                    ) : null}
-                    {s.status === "cancelled" && s.cancelReason ? (
-                      <p className={styles.sessionOutcome}>
-                        {s.cancelReason}
-                      </p>
-                    ) : null}
-                    {(s.attachments?.length ?? 0) > 0 ? (
-                      <p className={styles.sessionOutcome}>
-                        <span className={styles.calloutPrefix}>
-                          Docs:{" "}
-                        </span>
-                        {s.attachments.length} photo{s.attachments.length === 1 ? "" : "s"} filed
-                        {" — "}
-                        <button
-                          type="button"
-                          className={styles.folderBtn}
-                          style={{ display: "inline" }}
-                          onClick={() => onDocs(row, s)}
-                          aria-label={`View documentation for the ${formatDate(s.date)} session`}
-                        >
-                          view
-                        </button>
-                      </p>
-                    ) : null}
-                    {!isClosed && canManageSessions && s.status !== "cancelled" ? (
-                      <div
-                        className={styles.sessionActions}
-                        style={{ justifyContent: "space-between", alignItems: "center" }}
-                      >
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="outline"
-                          style={{ height: "32px" }}
-                          disabled={locked}
-                          title={
-                            locked
-                              ? "Documentation unlocks once the session time arrives"
-                              : s.status === "completed"
-                                ? "View or file documentation for this session"
-                                : "File documentation for this session"
-                          }
-                          onClick={() => onDocs(row, s)}
-                        >
-                          {(s.attachments?.length ?? 0) > 0 ? "Docs" : "Add docs (optional)"}
-                        </Button>
-                        {s.status === "scheduled" ? (
-                          <span style={{ display: "inline-flex", gap: "0.375rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                            <Button
-                              type="button"
-                              size="xs"
-                              style={{ height: "32px" }}
-                              disabled={locked}
-                              title={
-                                locked
-                                  ? "You can mark this session done once the scheduled time arrives"
-                                  : "Record what happened and mark this session done"
-                              }
-                              onClick={() => onSession(row, s, "finish")}
-                            >
-                              Mark done
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="outline"
-                              style={{ height: "32px" }}
-                              onClick={() => onSession(row, s, "move")}
-                            >
-                              Move
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="destructive"
-                              style={{ height: "32px", backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#ffffff" }}
-                              onClick={() => onSession(row, s, "cancel")}
-                            >
-                              Cancel
-                            </Button>
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {!isClosed && s.status === "cancelled" ? (
-                      <div
-                        className={styles.sessionActions}
-                        style={{ justifyContent: "flex-end", alignItems: "center" }}
-                      >
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="destructive"
-                          className={styles.deleteBtn}
-                          style={{ height: "32px", backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#ffffff", opacity: 1 }}
-                          title="Permanently remove this cancelled session"
-                          onClick={() => onSession(row, s, "delete")}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    ) : null}
-                  </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <SessionPlanCard
+            title="Clinic sessions"
+            sessions={row.sessions.map((s) => ({
+              ...s,
+              attachmentsCount: s.attachments?.length ?? 0,
+            }))}
+            now={now}
+            closed={isClosed}
+            closedHint="This case is closed — the sessions below are kept as history and can't be changed."
+            emptyHint="No clinic sessions booked on this case."
+            kindLabel={sessionKindLabel}
+            docsSupported
+            gateOnStart
+            manageable={canManageSessions}
+            onAction={(s, action) =>
+              action === "docs" ? onDocs(row, s) : onSession(row, s, action)
+            }
+          />
         ) : null}
 
+        {isPending && !isAdm ? (
+          <p className={styles.planHint}>
+            Book a session below, mark it done once it happens,
+            then file photos/notes from the session list.
+          </p>
+        ) : null}
         <div className={styles.actions} style={{ justifyContent: "flex-end" }}>
           {isAdm ? (
             <>
@@ -467,8 +268,8 @@ export function NurseReferralEntry({
             </>
           ) : (
             <>
-              {/* Clinic flow: view → book → done → docs. No endorse,
-                  no start-handling / finish-close buttons. */}
+              {/* Clinic flow: view → book → done → docs. Same Book session
+                  button as the guidance desk; one active session at a time. */}
               {row.anecdotalId && (
                 <Button
                   type="button"
@@ -483,10 +284,10 @@ export function NurseReferralEntry({
                   aria-label={
                     isClosed
                       ? `Referral for ${row.student} is kept private because the case is finished`
-                      : `View the referral for ${row.student}`
+                      : `View the referral form for ${row.student}`
                   }
                 >
-                  View referral
+                  View referral form
                 </Button>
               )}
               {!isClosed && (
@@ -495,33 +296,20 @@ export function NurseReferralEntry({
                   size="xs"
                   variant="outline"
                   style={{ height: "32px" }}
-                  disabled={hasScheduledSession(row.sessions)}
+                  disabled={booked}
                   title={
-                    hasScheduledSession(row.sessions)
+                    booked
                       ? "Finish or cancel the existing session before booking another one"
                       : `Book a clinic session for ${row.student}`
                   }
-                  onClick={() => onBook(row)}
+                  onClick={() => onSchedule(row)}
                 >
                   Book session
                 </Button>
               )}
             </>
           )}
-          <NurseQueueRowActions
-            row={row}
-            onChanged={onChanged}
-            hiddenItems={["start", "resolve"]}
-          />
         </div>
-        {/* Clinic steps live under the actions menu. */}
-        {isPending && !isAdm ? (
-          <p className={styles.planHint}>
-            View the referral, book a clinic session below, mark it
-            done once it happens, then file photos/notes from the
-            session list.
-          </p>
-        ) : null}
       </div>
     </li>
   );

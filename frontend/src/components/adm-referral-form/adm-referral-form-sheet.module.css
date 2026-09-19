@@ -1,0 +1,13 @@
+/* Fill-up sheet shell — right-side slide-over, half the page width. The
+   sheet body scrolls without ever showing a scrollbar. */
+
+.scrollBody {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollBody::-webkit-scrollbar {
+  display: none;
+}

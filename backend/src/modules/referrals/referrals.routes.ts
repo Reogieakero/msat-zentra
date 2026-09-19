@@ -7,7 +7,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
-import { clinicSessionObjectPath, uploadFile } from "../../lib/storage.js";
+import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
 import { ADM_STAGE_FLOW } from "../../services/adm.js";
 
 // Clinic documentation uploads: photos filed on a session (wound, slip,
@@ -369,6 +369,16 @@ async function getSessionReferral(id: string, role: string) {
       return await getNurseAdmSessionsReferral(id);
     }
   }
+  if (role === "guidance_counselor") {
+    // Guidance desk first; ADM consultations picked for (or left with)
+    // guidance may also carry sessions booked from the ADM review, so
+    // they fall through to the ADM getter the same way the nurse desk does.
+    try {
+      return await getGuidanceReferral(id);
+    } catch {
+      return await getGuidanceAdmSessionsReferral(id);
+    }
+  }
   return getGuidanceReferral(id);
 }
 
@@ -383,6 +393,25 @@ async function getNurseAdmSessionsReferral(id: string) {
     !referral ||
     referral.referredToRole !== "adm_coordinator" ||
     referral.consultReviewer !== "nurse"
+  ) {
+    throw new AppError(404, "NOT_FOUND", "Session not found");
+  }
+  return referral;
+}
+
+// Session scope for guidance ADM consultations: the case must be ADM-track
+// and picked for (or left with) guidance — same receiver rule as the
+// consultation review endpoint. Standalone sessions can be booked while
+// pending (pre-decision) and stay visible afterwards; closing the case
+// itself still blocks changes via ensureOpen at each endpoint.
+async function getGuidanceAdmSessionsReferral(id: string) {
+  const referral = await prisma.referral.findUnique({ where: { id } });
+  if (
+    !referral ||
+    referral.referredToRole !== "adm_coordinator" ||
+    (referral.consultReviewer !== null &&
+      referral.consultReviewer !== undefined &&
+      referral.consultReviewer !== "guidance_counselor")
   ) {
     throw new AppError(404, "NOT_FOUND", "Session not found");
   }
@@ -830,6 +859,9 @@ router.post(
       if (referral.status !== "pending") {
         throw new AppError(400, "INVALID_ACTION", "Only a new case can be reviewed");
       }
+      // Confirming is blocked while a session is still upcoming — finish
+      // or cancel it first (covers booked sessions and booked follow-ups).
+      await ensureNoActiveSession(referral.id);
       const { recommendation } = req.body as { recommendation: string };
       const clinicInput = (req.body as { clinicSession?: { scheduledAt?: unknown; venue?: unknown } }).clinicSession;
       const sessionAt = parseNurseAdmSession(clinicInput);
@@ -884,6 +916,9 @@ router.post(
           "Complete the referral form before forwarding this case"
         );
       }
+      // Forwarding is the second half of confirming — same upcoming-session
+      // block as the form save.
+      await ensureNoActiveSession(referral.id);
       const updated = await prisma.referral.update({
         where: { id: referral.id },
         data: { status: "in_progress" },
@@ -999,6 +1034,16 @@ router.post(
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: created.id, reason: "Counseling session scheduled", oldValue: null, newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt } });
+      // Booking is handling: a still-pending referral leaves "Needs review"
+      // the moment its first session is booked (mirrors nurse-accept, which
+      // flips pending → in_progress when a session goes with the accept).
+      if (referral.status === "pending") {
+        await prisma.referral.update({
+          where: { id: referral.id },
+          data: { status: "in_progress" },
+        });
+        await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: "Session booked — case now in progress", oldValue: { status: "pending" }, newValue: { status: "in_progress" } });
+      }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.status(201).json(formatSession(created));
     } catch (e) { next(e); }
@@ -1075,6 +1120,17 @@ router.post(
           },
         });
         await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: next.id, reason: "Follow-up session booked", oldValue: null, newValue: { sessionType: next.sessionType, scheduledAt: next.scheduledAt } });
+        // Marking done WITH a follow-up counts the referral as follow-up —
+        // sidebar menus, counts, and due lists key off this. Scoped to the
+        // clinic/counseling desks: ADM-track referrals keep their pipeline
+        // status (pending → endorsed) so consultation review still works.
+        if (referral.referredToRole === "nurse" || referral.referredToRole === "guidance_counselor") {
+          await prisma.referral.update({
+            where: { id: referral.id },
+            data: { status: "follow_up", followUpDate: next.scheduledAt },
+          });
+          await writeAudit({ userId: req.user!.id, actionType: "referral_follow_up", sourceTable: "referrals", sourceId: referral.id, reason: `Follow-up on ${next.scheduledAt.toISOString().slice(0, 10)}`, oldValue: { status: referral.status }, newValue: { status: "follow_up", followUpDate: next.scheduledAt.toISOString().slice(0, 10) } });
+        }
       }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json(formatSession(updated));
@@ -1149,10 +1205,10 @@ router.post(
   }
 );
 
-// Delete a cancelled clinic/counseling session (DELETE
-// /api/referrals/:id/sessions/:sessionId). Only cancelled sessions can be
-// removed — scheduled/completed sessions must be finished or cancelled
-// first. Closed cases stay immutable.
+// Permanently remove a cancelled clinic/counseling session (its filed
+// documentation goes with it via cascade). Only cancelled sessions can be
+// deleted — scheduled sessions must be finished or cancelled first, and
+// completed sessions stay as the case history.
 router.delete(
   "/:id/sessions/:sessionId",
   requireAuth,
@@ -1165,9 +1221,8 @@ router.delete(
       if (session.status !== "cancelled") {
         throw new AppError(400, "INVALID_ACTION", "Only a cancelled session can be deleted");
       }
-      await prisma.clinicSessionAttachment.deleteMany({ where: { sessionId: session.id } });
       await prisma.counselingSession.delete({ where: { id: session.id } });
-      await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Cancelled session deleted", oldValue: { status: session.status }, newValue: null });
+      await writeAudit({ userId: req.user!.id, actionType: "delete", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Cancelled session deleted", oldValue: { status: session.status }, newValue: null });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json({ ok: true });
     } catch (e) { next(e); }
@@ -1228,7 +1283,7 @@ router.post(
       const created = [];
       for (const file of files) {
         const path = clinicSessionObjectPath(session.id, file.originalname);
-        const fileUrl = await uploadFile(file.buffer, path, file.mimetype);
+        const fileUrl = await uploadFile(file.buffer, path, file.mimetype, getReferralBucket());
         const row = await prisma.clinicSessionAttachment.create({
           data: {
             sessionId: session.id,

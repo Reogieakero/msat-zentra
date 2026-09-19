@@ -16,14 +16,14 @@ import type {
   NurseQueueRow,
   NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";
-import type { NurseReferralDraft } from "../../overview/components/nurse-overview-data";
 import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
+import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
+import { NurseAdmReferralFormSheet } from "./NurseAdmReferralFormSheet";
 import {
   CancelSessionDialog,
   DeleteSessionDialog,
   FinishSessionDialog,
   MoveSessionDialog,
-  NurseReferralFormModal,
   NurseReferralFormViewModal,
   ScheduleSessionDialog,
   SessionDocsDialog,
@@ -58,37 +58,99 @@ function useNowTick(active: boolean): number {
  * Cases sent to the nurse (clinic matters and ADM consultations), newest
  * first — toolbar with count + filters, alternating timeline entries, an
  * action-menu sidebar, and a pager.
+ *
+ * Separate pages lock to one type (ADM Cases / Clinic Matters) via
+ * `initialType` + `lockType` so the reader never needs the case-type
+ * dropdown — the timeline, action menu, and counts all stay on that type.
+ *
+ * Deep-links from the alerts table pass `highlightId` (scrolls to and
+ * highlights the case, jumping the pager to its page) and optionally
+ * `autoViewFormId` (overlays the filled referral form on arrival).
  */
 export function NurseAlertsTable({
   alerts,
   onChanged,
+  initialType = "",
+  lockType = false,
+  title = "Referrals to me",
+  highlightId = null,
+  autoViewFormId = null,
 }: {
   alerts: NurseAlertItem[];
   onChanged: () => void;
+  initialType?: TypeFilter;
+  lockType?: boolean;
+  title?: string;
+  highlightId?: string | null;
+  autoViewFormId?: string | null;
 }) {
   const [query, setQuery] = React.useState("");
-  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>("");
+  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>(initialType);
   const [actionFilter, setActionFilter] = React.useState<ActionFilter>("");
   const [page, setPage] = React.useState(1);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
+  const [endorsedFor, setEndorsedFor] = React.useState<string | null>(null);
   const [sessionDialog, setSessionDialog] = React.useState<{
     row: NurseQueueRow;
     session: NurseSessionItem;
     kind: SessionDialogKind;
   } | null>(null);
+  // Clinic session booking target — the referrals page had finish/move/
+  // cancel/delete but no way to create a session until now.
+  const [scheduleFor, setScheduleFor] = React.useState<NurseQueueRow | null>(null);
   const [docsFor, setDocsFor] = React.useState<{
     row: NurseQueueRow;
     session: NurseSessionItem;
   } | null>(null);
-  // Clinic "Book session" target — opens the schedule dialog. Kept
-  // separate from sessionDialog (per-session actions) on purpose.
-  const [bookFor, setBookFor] = React.useState<NurseQueueRow | null>(null);
-  const [formModal, setFormModal] = React.useState<{
+  // Fill-up form sheet target — opened from the review dialog's Create
+  // referral handoff (in place, no navigation).
+  const [formSheet, setFormSheet] = React.useState<{
     row: NurseQueueRow;
-    draft?: NurseReferralDraft;
+    draft: AdmReviewDraft;
   } | null>(null);
   const [viewFor, setViewFor] = React.useState<NurseQueueRow | null>(null);
+  // Deep-link arrival: the highlighted case's page (fresh mounts start
+  // unfiltered, so the index is over the full newest-first list). Derived
+  // during render — no effect — and yields to the pager once the reader
+  // navigates or filters.
+  const [paged, setPaged] = React.useState(false);
+  const highlightPage = React.useMemo(() => {
+    if (!highlightId || alerts.length === 0) return null;
+    const sorted = [...alerts].sort((a, b) => {
+      const aDate = a.row.date === "—" ? "" : a.row.date;
+      const bDate = b.row.date === "—" ? "" : b.row.date;
+      const dateCmp = bDate.localeCompare(aDate);
+      if (dateCmp !== 0) return dateCmp;
+      return b.sortTime - a.sortTime;
+    });
+    const idx = sorted.findIndex((a) => a.row.id === highlightId);
+    return idx >= 0 ? Math.floor(idx / PAGE_SIZE) + 1 : null;
+  }, [alerts, highlightId]);
+  const effPage = !paged && highlightPage !== null ? highlightPage : page;
+
+  // Scroll the highlighted case into view once its page renders.
+  React.useEffect(() => {
+    if (!highlightId) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`nurse-case-${highlightId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [highlightId, effPage, alerts]);
+
+  // Overlay the filled referral form on arrival ("View referral form") —
+  // derived during render; dismissing sticks via formDismissed.
+  const [formDismissed, setFormDismissed] = React.useState(false);
+  const autoRow = React.useMemo(
+    () =>
+      autoViewFormId
+        ? (alerts.find((a) => a.row.id === autoViewFormId)?.row ?? null)
+        : null,
+    [alerts, autoViewFormId]
+  );
+  const effectiveViewFor = !formDismissed ? (viewFor ?? autoRow) : viewFor;
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -123,6 +185,7 @@ export function NurseAlertsTable({
   // their own type.
   const actionCounts = React.useMemo(() => {
     const counts: Record<ActionValue, number> = {
+      adm_needs: 0,
       endorse: 0,
       followup: 0,
       booked: 0,
@@ -134,6 +197,7 @@ export function NurseAlertsTable({
     };
     for (const a of alerts) {
       if (a.row.type === "ADM") {
+        if (a.row.status === "pending") counts.adm_needs += 1;
         if (isEndorsed(a.row.type, a.row.status)) counts.endorse += 1;
         if (a.row.status === "follow_up") counts.followup += 1;
         if (a.row.sessions.length > 0) counts.booked += 1;
@@ -150,7 +214,7 @@ export function NurseAlertsTable({
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
+  const safePage = Math.min(effPage, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   // One live clock for every countdown on this page — ticks each second
   // only while a scheduled session is visible, so seconds stay exact.
@@ -161,20 +225,29 @@ export function NurseAlertsTable({
   const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, total);
   const hasActiveFilters =
-    query.trim() !== "" || typeFilter !== "" || actionFilter !== "";
+    query.trim() !== "" ||
+    actionFilter !== "" ||
+    (!lockType && typeFilter !== "");
   const typeFilterLabel =
     TYPES.find((t) => t.value === typeFilter)?.label ?? "All types";
 
   function clearFilters() {
-    setTypeFilter("");
+    // Locked pages stay on their type — clearing only resets the search
+    // and the action menu so the timeline never empties to the other type.
+    // Either way the reader takes over paging from here.
+    if (!lockType) setTypeFilter("");
     setActionFilter("");
     setPage(1);
+    setPaged(true);
   }
 
   function pickAction(value: ActionValue, type: "ADM" | "Clinic") {
-    setTypeFilter(type);
+    // Locked pages never switch type — picking an action only toggles the
+    // action state within the page's own type.
+    if (!lockType) setTypeFilter(type);
     setActionFilter((prev) => (prev === value ? "" : value));
     setPage(1);
+    setPaged(true);
   }
 
   return (
@@ -182,7 +255,7 @@ export function NurseAlertsTable({
       <div className={styles.feed}>
         <div className={styles.toolbar}>
           <div>
-            <h1 className={styles.title}>Referrals to me</h1>
+            <h1 className={styles.title}>{title}</h1>
           </div>
           <div className={styles.filters}>
             <div className={styles.searchWrap}>
@@ -200,37 +273,39 @@ export function NurseAlertsTable({
               />
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label={`Filter cases by type, currently showing: ${typeFilterLabel}`}
-                  className={`${styles.filterBtn} ${typeFilter !== "" ? styles.filterActive : ""}`}
-                >
-                  {typeFilterLabel}
-                  {typeFilter !== "" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                {TYPES.map((item) => (
-                  <DropdownMenuCheckboxItem
-                    key={item.label}
-                    checked={typeFilter === item.value}
-                    onCheckedChange={() => {
-                      setTypeFilter(item.value);
-                      // The sidebar menus are per-type — a stale action from
-                      // the other type would empty the list, so reset it.
-                      setActionFilter("");
-                      setPage(1);
-                    }}
+            {!lockType && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Filter cases by type, currently showing: ${typeFilterLabel}`}
+                    className={`${styles.filterBtn} ${typeFilter !== "" ? styles.filterActive : ""}`}
                   >
-                    {item.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    {typeFilterLabel}
+                    {typeFilter !== "" && <span className={styles.filterDot} aria-hidden />}
+                    <ChevronDown aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={styles.filterMenu}>
+                  {TYPES.map((item) => (
+                    <DropdownMenuCheckboxItem
+                      key={item.label}
+                      checked={typeFilter === item.value}
+                      onCheckedChange={() => {
+                        setTypeFilter(item.value);
+                        // The sidebar menus are per-type — a stale action from
+                        // the other type would empty the list, so reset it.
+                        setActionFilter("");
+                        setPage(1);
+                      }}
+                    >
+                      {item.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {hasActiveFilters && (
               <Button
@@ -264,13 +339,15 @@ export function NurseAlertsTable({
                 key={alert.key}
                 alert={alert}
                 alt={index % 2 === 1}
+                highlighted={highlightId !== null && highlightId === alert.row.id}
                 now={now}
                 onPreview={setPreviewId}
                 onPrivacy={setPrivacyFor}
+                onEndorsedNotice={setEndorsedFor}
                 onSession={(row, session, kind) => setSessionDialog({ row, session, kind })}
                 onDocs={(row, session) => setDocsFor({ row, session })}
-                onBook={setBookFor}
-                onCreateReferral={(row, draft) => setFormModal({ row, draft })}
+                onSchedule={setScheduleFor}
+                onCreateReferral={(row, draft) => setFormSheet({ row, draft })}
                 onViewForm={setViewFor}
                 onChanged={onChanged}
               />
@@ -281,29 +358,33 @@ export function NurseAlertsTable({
         {/* Pager */}
         <nav className={styles.pager} aria-label="Cases pages">
           <p className={styles.range}>
-            Showing cases {start}–{end} of {total}
+            Showing {start}–{end} of {total}
           </p>
           <div className={styles.pagerButtons}>
             <Button
-              size="sm"
+              size="xs"
               variant="outline"
               disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              aria-label="Show newer cases"
+              onClick={() => {
+                setPaged(true);
+                setPage(Math.max(1, safePage - 1));
+              }}
             >
-              ← Newer
+              Previous
             </Button>
             <span className={styles.pageLabel} aria-live="polite">
               Page {safePage} of {totalPages}
             </span>
             <Button
-              size="sm"
+              size="xs"
               variant="outline"
               disabled={safePage >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              aria-label="Show older cases"
+              onClick={() => {
+                setPaged(true);
+                setPage(safePage + 1);
+              }}
             >
-              Older →
+              Next
             </Button>
           </div>
         </nav>
@@ -317,6 +398,7 @@ export function NurseAlertsTable({
         onClear={() => {
           setActionFilter("");
           setPage(1);
+          setPaged(true);
         }}
       />
 
@@ -328,8 +410,22 @@ export function NurseAlertsTable({
         studentName={privacyFor ?? undefined}
       />
 
-      {sessionDialog && sessionDialog.kind === "finish" && (
-        <FinishSessionDialog
+      <PrivacyNoticeDialog
+        open={endorsedFor !== null}
+        onClose={() => setEndorsedFor(null)}
+        studentName={endorsedFor ?? undefined}
+        reason="endorsed"
+      />
+
+      {scheduleFor && (
+        <ScheduleSessionDialog
+          row={scheduleFor}
+          open
+          onClose={() => setScheduleFor(null)}
+          onChanged={onChanged}
+        />
+      )}
+      {sessionDialog && sessionDialog.kind === "finish" && (        <FinishSessionDialog
           referralId={sessionDialog.row.id}
           session={sessionDialog.session}
           open
@@ -373,32 +469,24 @@ export function NurseAlertsTable({
           onChanged={onChanged}
         />
       )}
-      {bookFor && (
-        <ScheduleSessionDialog
-          referralId={bookFor.id}
-          student={bookFor.student}
-          sessions={bookFor.sessions}
+      {formSheet && (
+        <NurseAdmReferralFormSheet
           open
-          onClose={() => setBookFor(null)}
+          onClose={() => setFormSheet(null)}
+          row={formSheet.row}
+          initialDraft={formSheet.draft}
           onChanged={onChanged}
         />
       )}
-      {formModal && (
-        <NurseReferralFormModal
-          row={formModal.row}
-          initialRecommendation={formModal.draft?.recommendation ?? ""}
-          initialScheduledAt={formModal.draft?.scheduledAt}
-          open
-          onClose={() => setFormModal(null)}
-          onChanged={onChanged}
-        />
-      )}
-      {viewFor && (
+      {effectiveViewFor && (
         <NurseReferralFormViewModal
-          key={viewFor.id}
-          row={viewFor}
+          key={effectiveViewFor.id}
+          row={effectiveViewFor}
           open
-          onClose={() => setViewFor(null)}
+          onClose={() => {
+            setViewFor(null);
+            setFormDismissed(true);
+          }}
           onChanged={onChanged}
         />
       )}

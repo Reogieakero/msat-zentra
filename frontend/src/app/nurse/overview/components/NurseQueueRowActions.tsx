@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,23 +32,34 @@ import {
   type NurseQueueRow,
   type NurseReferralStatus,
 } from "./nurse-overview-data";
+import { isEndorsed } from "../../referrals/components/nurse-referrals-format";
 import styles from "./nurse-overview.module.css";
 
 const QUICK_ACTIONS: { status: NurseReferralStatus; label: string }[] = [
   { status: "info_requested", label: "Request info" },
-  { status: "follow_up", label: "Mark follow-up" },
 ];
 
 export function NurseQueueRowActions({
   row,
   onChanged,
   hiddenItems = [],
+  seeMoreHref,
+  viewFormHref,
+  viewOnly = false,
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
   // Hides menu entries the caller already offers as primary buttons
   // (timeline layout).
   hiddenItems?: Array<"start" | "resolve">;
+  // Deep-links to the page where this case lives (alerts table): "See
+  // more" jumps to the highlighted case, "View referral form" also
+  // overlays the filled referral form — no manual hunting.
+  seeMoreHref?: string;
+  viewFormHref?: string;
+  // View-only mode (alerts table): exactly three items — View referral
+  // form, View anecdotal report, See more. No status edits, no truncation.
+  viewOnly?: boolean;
 }) {
   const [acting, setActing] = React.useState(false);
   const [startOpen, setStartOpen] = React.useState(false);
@@ -58,10 +70,19 @@ export function NurseQueueRowActions({
   const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [privacyOpen, setPrivacyOpen] = React.useState(false);
+  const [endorsedOpen, setEndorsedOpen] = React.useState(false);
 
   const isClosed = row.status === "resolved" || row.status === "dismissed";
+  // Endorsed ADM cases moved to the coordinator with their full report —
+  // the anecdotal write-up is no longer viewable on this desk (same rule
+  // as the ADM referrals page).
+  const isEndorsedRow = isEndorsed(row.type, row.status);
 
   function openReport() {
+    if (isEndorsedRow) {
+      setEndorsedOpen(true);
+      return;
+    }
     if (!row.anecdotalId) return;
     // Same privacy rule as guidance: finished cases keep the full
     // write-up hidden; the summary on this page stays visible.
@@ -138,7 +159,44 @@ export function NurseQueueRowActions({
             <MoreHorizontal aria-hidden />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-56">
+          {viewOnly ? (
+            <>
+              {viewFormHref && (
+                <DropdownMenuItem asChild className={styles.menuItem}>
+                  <Link href={viewFormHref}>View referral form</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                className={styles.menuItem}
+                disabled={acting || (!row.anecdotalId && !isEndorsedRow)}
+                onSelect={openReport}
+              >
+                View anecdotal report
+              </DropdownMenuItem>
+              {seeMoreHref && (
+                <DropdownMenuItem asChild className={styles.menuItem}>
+                  <Link href={seeMoreHref}>See more</Link>
+                </DropdownMenuItem>
+              )}
+            </>
+          ) : (
+          <>
+          {(seeMoreHref || viewFormHref) && (
+            <>
+              {seeMoreHref && (
+                <DropdownMenuItem asChild>
+                  <Link href={seeMoreHref}>See more…</Link>
+                </DropdownMenuItem>
+              )}
+              {viewFormHref && (
+                <DropdownMenuItem asChild>
+                  <Link href={viewFormHref}>View referral form…</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+            </>
+          )}
           {/* ADM cases follow the consultation review pipeline — raw status
               edits are blocked server-side, so only notes stay here. */}
           {!isAdm && (
@@ -172,6 +230,8 @@ export function NurseQueueRowActions({
                 Resolve case…
               </DropdownMenuItem>
             </>
+          )}
+          </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -220,7 +280,7 @@ export function NurseQueueRowActions({
             </div>
             {dialogError ? <p className={styles.dialogError}>{dialogError}</p> : null}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setResolveOpen(false)}>
+              <Button variant="destructive" className={styles.btnRed} onClick={() => setResolveOpen(false)}>
                 Cancel
               </Button>
               <Button
@@ -264,7 +324,7 @@ export function NurseQueueRowActions({
             </div>
             {dialogError ? <p className={styles.dialogError}>{dialogError}</p> : null}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setNoteOpen(false)}>
+              <Button variant="destructive" className={styles.btnRed} onClick={() => setNoteOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={() => void handleNote()} disabled={acting}>
@@ -282,6 +342,12 @@ export function NurseQueueRowActions({
         open={privacyOpen}
         onClose={() => setPrivacyOpen(false)}
         studentName={row.student}
+      />
+      <PrivacyNoticeDialog
+        open={endorsedOpen}
+        onClose={() => setEndorsedOpen(false)}
+        studentName={row.student}
+        reason="endorsed"
       />
     </>
   );

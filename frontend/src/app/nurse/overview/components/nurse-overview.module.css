@@ -197,6 +197,11 @@
   gap: 0.375rem;
 }
 
+/* Row-action menu items — one option per row, full label, never cut off. */
+.menuItem {
+  white-space: nowrap;
+}
+
 /* Wide dialog content that scrolls without showing a scrollbar. */
 .dialogScrollHidden {
   scrollbar-width: none;
@@ -272,6 +277,21 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--destructive);
+}
+
+/* Cancel / delete buttons stay solid red in every state. */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
 }
 
 /* Table pager */

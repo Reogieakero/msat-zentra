@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,19 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
-import { OcForm01Print } from "@/components/ocform01/OcForm01Print";
-import {
-  fetchOcForm01Detail,
-  type OcForm01Detail,
-} from "@/components/ocform01/ocform01";
 import type {
   GuidanceAdmCase,
   GuidanceAdmStageFilter,
   GuidanceAdmSummary,
 } from "./guidance-adm-data";
 import { reviewAdmConsultation } from "./guidance-adm-data";
-import { REFERRAL_DRAFT_KEY } from "./gcform03-data";
+import { AdmReviewDialog } from "./AdmReviewDialog";
+import { GuidanceAdmReferralFormSheet } from "./GuidanceAdmReferralFormSheet";
+import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { GuidanceAdmFilters } from "./guidance-adm-filters";
 import pageStyles from "../../pages.module.css";
 import styles from "./guidance-adm.module.css";
@@ -151,42 +146,21 @@ export function GuidanceAdmTable({
   isNavigating,
 }: GuidanceAdmTableProps) {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [reviewId, setReviewId] = React.useState<string | null>(null);
-  const [recommendation, setRecommendation] = React.useState("");
+  const [formSheet, setFormSheet] = React.useState<{
+    row: GuidanceAdmCase;
+    draft: AdmReviewDraft;
+  } | null>(null);
   const [rejectId, setRejectId] = React.useState<string | null>(null);
   const [rejectReason, setRejectReason] = React.useState("");
-  const [report, setReport] = React.useState<OcForm01Detail | null>(null);
-  const [reportLoading, setReportLoading] = React.useState(false);
-  const [reportError, setReportError] = React.useState<string | null>(null);
   const findCase = (id: string | null) =>
     reviewQueue.find((c) => c.id === id) ?? cases.find((c) => c.id === id) ?? null;
   const activeReview = findCase(reviewId);
   const activeReject = findCase(rejectId);
-  const activeAnecdotalId = activeReview?.anecdotalId ?? null;
 
-  /* Load the official anecdotal report when the overlay opens — same
-     GCForm-01 sheet the referrals page previews. */
-  React.useEffect(() => {
-    if (reviewId === null || !activeAnecdotalId) return;
-    let cancelled = false;
-    fetchOcForm01Detail(activeAnecdotalId)
-      .then((d) => {
-        if (!cancelled) setReport(d);
-      })
-      .catch(() => {
-        if (!cancelled)
-          setReportError(
-            "The anecdotal report could not be loaded. Check your connection and try again."
-          );
-      })
-      .finally(() => {
-        if (!cancelled) setReportLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [reviewId, activeAnecdotalId]);
+  const openReview = (row: GuidanceAdmCase) => {
+    setReviewId(row.id);
+  };
 
   const reviewMutation = useMutation({
     mutationFn: ({
@@ -205,50 +179,9 @@ export function GuidanceAdmTable({
     },
   });
 
-  const closeReview = () => {
-    setReviewId(null);
-    setRecommendation("");
-    setReport(null);
-    setReportError(null);
-    setReportLoading(false);
-  };
-
   const closeReject = () => {
     setRejectId(null);
     setRejectReason("");
-  };
-
-  const openReview = (row: GuidanceAdmCase) => {
-    setReviewId(row.id);
-    setRecommendation("");
-    setReport(null);
-    setReportError(null);
-    setReportLoading(true);
-  };
-
-  const submitReview = (outcome: "endorse" | "reject") => {
-    if (!activeReview || !recommendation.trim()) return;
-    reviewMutation.mutate({
-      referralId: activeReview.referralId,
-      outcome,
-      text: recommendation.trim(),
-    });
-    closeReview();
-  };
-
-  /* Create referral opens the dedicated form page — stash the typed
-     recommendation so the page auto-fills it. */
-  const openReferralForm = () => {
-    if (!activeReview) return;
-    try {
-      window.sessionStorage.setItem(REFERRAL_DRAFT_KEY, recommendation.trim());
-    } catch {
-      /* Private mode — the page still works, recommendation starts empty. */
-    }
-    closeReview();
-    router.push(
-      `/guidance/adm/referral/${encodeURIComponent(activeReview.referralId)}`
-    );
   };
 
   const submitQuickReject = () => {
@@ -324,7 +257,8 @@ export function GuidanceAdmTable({
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="destructive"
+                      className={styles.btnRed}
                       disabled={reviewMutation.isPending}
                       onClick={() => {
                         setRejectId(row.id);
@@ -543,93 +477,45 @@ export function GuidanceAdmTable({
         </div>
       </nav>
 
-      {/* Consultation review: the official anecdotal report, then the next
-          step — create the referral forward to the coordinator, or reject. */}
-      <Dialog open={reviewId !== null} onOpenChange={(open) => { if (!open) closeReview(); }}>
-        <DialogContent
-          style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}
-          className={styles.noScrollbar}
-        >
-          <DialogHeader>
-            <DialogTitle>
-              Anecdotal report{activeReview ? ` — ${activeReview.student}` : ""}
-            </DialogTitle>
-            <DialogDescription>
-              This record was passed for ADM purposes and sits at your
-              consultation stage. Read the official report, then create the
-              referral forward or reject it.
-            </DialogDescription>
-          </DialogHeader>
-          {reportLoading ? (
-            <div className={styles.reviewFile} aria-busy="true">
-              <Skeleton style={{ width: "100%", height: "0.875rem" }} />
-              <Skeleton style={{ width: "100%", height: "0.875rem" }} />
-              <Skeleton style={{ width: "55%", height: "0.875rem" }} />
-            </div>
-          ) : reportError ? (
-            <div className={styles.errorBlock} role="alert">
-              <p className={styles.errorText}>{reportError}</p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => activeReview && openReview(activeReview)}
-              >
-                Try again
-              </Button>
-            </div>
-          ) : report ? (
-            <OcForm01Print detail={report} />
-          ) : null}
-          {reviewMutation.isError ? (
-            <div className={styles.errorBlock} role="alert">
-              <p className={styles.errorText}>
-                Sorry — your review did not go through. Please try again.
-              </p>
-            </div>
-          ) : null}
-          <div>
-            <Label htmlFor="consultRecommendation">Your consultation recommendation</Label>
-            <Textarea
-              id="consultRecommendation"
-              value={recommendation}
-              onChange={(e) => setRecommendation(e.target.value)}
-              placeholder="What did your review find? What should happen next…"
-              maxLength={500}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeReview}
-              disabled={reviewMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={reviewMutation.isPending || !recommendation.trim() || !report}
-              onClick={() => submitReview("reject")}
-            >
-              {reviewMutation.isPending ? (
-                <Loader2 className={styles.spin} aria-hidden="true" />
-              ) : null}
-              Reject
-            </Button>
-            <Button
-              disabled={reviewMutation.isPending || !recommendation.trim() || !report}
-              onClick={openReferralForm}
-            >
-              {reviewMutation.isPending ? (
-                <Loader2 className={styles.spin} aria-hidden="true" />
-              ) : null}
-              Create referral
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Consultation review — shared dialog, same actions as the nurse
+          ADM review: report, recommendation, book session, reject, or
+          create the referral. */}
+      {activeReview && (
+        <AdmReviewDialog
+          referralId={activeReview.referralId}
+          student={activeReview.student}
+          anecdotalId={activeReview.anecdotalId ?? null}
+          info={{
+            lrn: activeReview.lrn,
+            section: activeReview.section,
+            grade: activeReview.grade,
+            category: activeReview.category,
+            date: activeReview.date,
+          }}
+          open={reviewId !== null}
+          onClose={() => setReviewId(null)}
+          onChanged={() => {
+            void queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+          }}
+          onCreateReferral={(draft) => setFormSheet({ row: activeReview, draft })}
+        />
+      )}
+      {formSheet && (
+        <GuidanceAdmReferralFormSheet
+          open
+          onClose={() => setFormSheet(null)}
+          adapter={formSheet.row}
+          anecdotalId={formSheet.row.anecdotalId ?? null}
+          lrn={formSheet.row.lrn}
+          initialDraft={formSheet.draft}
+          onChanged={() => {
+            void queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+          }}
+        />
+      )}
 
       {/* Quick reject straight from the Action column — no need to open the
-          full report when the case clearly doesn't warrant ADM. */}
+           full report when the case clearly doesn't warrant ADM. */}
       <Dialog open={rejectId !== null} onOpenChange={(open) => { if (!open) closeReject(); }}>
         <DialogContent>
           <DialogHeader>
@@ -653,7 +539,8 @@ export function GuidanceAdmTable({
           </div>
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="destructive"
+              className={styles.btnRed}
               onClick={closeReject}
               disabled={reviewMutation.isPending}
             >
@@ -661,6 +548,7 @@ export function GuidanceAdmTable({
             </Button>
             <Button
               variant="destructive"
+              className={styles.btnRed}
               disabled={reviewMutation.isPending || !rejectReason.trim()}
               onClick={submitQuickReject}
             >
