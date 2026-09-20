@@ -1,0 +1,42 @@
+.panel {
+  padding: 1rem;
+  min-width: 0;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.panelDesc {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.chart {
+  margin-top: 0.5rem;
+  min-height: 9rem;
+}
+
+.interpretation {
+  margin: 0.625rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}

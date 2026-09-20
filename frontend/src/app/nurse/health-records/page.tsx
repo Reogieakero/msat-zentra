@@ -35,13 +35,19 @@ export default function NurseHealthRecordsPage() {
               <Skeleton className={styles.skelDrop} />
             </div>
           </div>
-          {[0, 1, 2, 3, 4].map((i) => (
+          <div className={styles.skelThead} aria-hidden="true">
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className={styles.skelTheadCell} />
+            ))}
+          </div>
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
             <Skeleton key={i} className={styles.skelRow} />
           ))}
           <div className={styles.skelPager}>
             <Skeleton className={styles.skelRange} />
             <div className={styles.skelPagerBtns}>
               <Skeleton className={styles.skelBtn} />
+              <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
               <Skeleton className={styles.skelBtn} />
             </div>
           </div>

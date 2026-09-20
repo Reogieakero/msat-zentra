@@ -5,47 +5,85 @@
   padding: 1.5rem 0;
 }
 
-.eyebrow {
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-
-.title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
-}
-
-.lede {
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: var(--muted-foreground);
-  max-width: 44rem;
-}
-
 .divider {
   border: none;
   border-top: 1px solid var(--border);
   margin: 0.25rem 0;
 }
 
+/* Top layout: queues (left, ~85%) + KPI rail (right, ~15%).
+   The Needs-review card stretches to the rail height so both columns
+   always match — the row takes the taller natural height and the
+   shorter side fills it. */
+.topRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.mainCol {
+  flex: 1 1 85%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainCol > .needsPanel {
+  flex: 1;
+}
+
+.needsPanel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.kpiRail {
+  flex: 0 0 15%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* KPI cards */
 .kpiGrid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
+.kpiGrid .card {
+  flex: 1;
+}
+
 @media (max-width: 1023px) {
+  .topRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mainCol {
+    flex: none;
+    width: 100%;
+  }
+
+  .needsPanel {
+    height: auto;
+  }
+
+  .kpiRail {
+    flex: none;
+    width: 100%;
+  }
+
   .kpiGrid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpiGrid .card {
+    flex: none;
   }
 }
 
@@ -100,78 +138,22 @@
   color: var(--muted-foreground);
 }
 
-.twoCol {
+.threeCol {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
-@media (max-width: 767px) {
-  .twoCol {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1023px) {
+  .threeCol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* Queue filters */
-.filters {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.searchWrap {
-  position: relative;
-  width: 16rem;
-  max-width: 100%;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 0.625rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1rem;
-  height: 1rem;
-  color: var(--muted-foreground);
-  pointer-events: none;
-}
-
-.search {
-  padding-left: 2rem;
-}
-
-.filterBtn {
-  gap: 0.375rem;
-}
-
-.filterActive {
-  border-color: var(--ring);
-}
-
-.filterDot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 999px;
-  background-color: var(--primary);
-}
-
-.filterMenu {
-  min-width: 12rem;
-}
-
-.clearBtn {
-  gap: 0.375rem;
-}
-
-/* Card header with actions on the right */
-.panelHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+@media (max-width: 767px) {
+  .threeCol {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .panelHeadText {
@@ -295,26 +277,6 @@
 }
 
 /* Table pager */
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 0.75rem;
-}
-
-.pagerInfo {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.pagerActions {
-  display: flex;
-  gap: 0.5rem;
-}
-
 /* Tables */
 .tableWrap {
   margin-top: 0.75rem;
@@ -364,11 +326,6 @@
   font-size: 0.75rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
-}
-
-.reason {
-  max-width: 22rem;
-  color: var(--muted-foreground);
 }
 
 .wait {
@@ -508,6 +465,25 @@
   white-space: nowrap;
 }
 
+/* Breakdown bar charts — theme-aware SVG text (recharts sets its own
+   attributes, so color comes from the stylesheet, not props). */
+.barChart {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.barChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.legendTotal {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Loading + error */
 .error {
   margin: 0;
@@ -515,26 +491,44 @@
   color: var(--destructive);
 }
 
-.skelHead {
+/* Unified error state — same box as health/risk/referrals so
+   Loading → Error keeps page padding and centers content. */
+.pageError {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
-  max-width: 44rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+  max-width: 26rem;
+  text-align: center;
 }
 
-.skelEyebrow {
-  height: 0.75rem;
-  width: 8rem;
+.pageErrorTitle {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.skelTitle {
-  height: 1.75rem;
-  width: 16rem;
+.pageErrorHint {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
 }
 
-.skelLede {
-  height: 0.875rem;
-  width: 100%;
+.spin {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  animation: overview-spin 1s linear infinite;
+}
+
+@keyframes overview-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .skelKpiBody {
@@ -553,13 +547,45 @@
   width: 45%;
 }
 
+/* Matches .kpiHint (0.75rem + 0.125rem margin) so the KPI rail does not
+   grow when hints arrive. */
+.skelKpiHint {
+  height: 0.75rem;
+  width: 80%;
+}
+
 .skelCardTitle {
   height: 1.125rem;
   width: 12rem;
 }
 
+/* Matches .panelDesc (0.8125rem + 0.25rem top margin) under each title. */
+.skelPanelDesc {
+  height: 0.8125rem;
+  width: 16rem;
+  margin-top: 0.25rem;
+}
+
+/* Matches the needs-review thead row (th padding 0.5rem + ~11px label +
+   1px border ≈ 2.0625rem) so the divider + threeCol don't shift down. */
+.skelThead {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.skelTheadCell {
+  height: 0.6875rem;
+  flex: 1;
+  min-width: 0;
+}
+
 .skelRow {
-  height: 2.5rem;
+  /* Real rows: td padding 0.625rem*2 + 2-line studentCell/badges/actions
+     ≈ 3.5-4rem. Previous 2.5rem underestimated by ~80-150px over 8 rows. */
+  height: 3.625rem;
   width: 100%;
 }
 
@@ -571,8 +597,9 @@
 }
 
 .skelDonut {
-  width: 10rem;
-  height: 10rem;
+  /* Matches .chartWrap (11rem wide, 168px / 10.5rem chart height). */
+  width: 11rem;
+  height: 10.5rem;
   border-radius: 9999px;
   flex-shrink: 0;
 }
@@ -586,6 +613,40 @@
 }
 
 .skelLegendRow {
-  height: 0.875rem;
+  /* Real .legendItem rows are ~1.25rem with swatch + label + value. */
+  height: 1.25rem;
   width: 100%;
+}
+
+.skelBars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 0.75rem;
+}
+
+.skelBarRow {
+  height: 1.125rem;
+  border-radius: 4px;
+}
+
+/* Matches .legendTotal (0.75rem + 0.375rem top margin) under each bar chart. */
+.skelBarTotal {
+  height: 0.75rem;
+  width: 8rem;
+  margin-top: 0.375rem;
+}
+
+/* Bar-chart Y-axis gutter: real YAxis width={112} pushes bars right.
+   Without this the skeleton bars jump right on load. */
+.skelBarRowWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skelBarYLabel {
+  height: 0.75rem;
+  width: 7rem;
+  flex-shrink: 0;
 }

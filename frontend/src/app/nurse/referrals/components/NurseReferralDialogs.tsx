@@ -924,10 +924,24 @@ export function NurseReferralFormViewModal({
         </DialogHeader>
 
         {loading ? (
-          <div className="flex flex-col gap-2 py-4" aria-busy="true">
-            <Skeleton className="h-3.5 w-full" />
-            <Skeleton className="h-3.5 w-full" />
-            <Skeleton className="h-3.5 w-[55%]" />
+          <div
+            className="flex flex-col gap-3 py-4"
+            aria-busy="true"
+            role="status"
+            aria-label="Loading referral form"
+          >
+            {/* Mirrors the GcForm03 sheet: header + field grid + rows. */}
+            <Skeleton className="h-6 w-1/3" aria-hidden="true" />
+            <Skeleton className="h-4 w-2/3" aria-hidden="true" />
+            <div className="grid grid-cols-2 gap-2" aria-hidden="true">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-12 w-full" aria-hidden="true" />
+            <Skeleton className="h-12 w-full" aria-hidden="true" />
+            <Skeleton className="h-4 w-[55%]" aria-hidden="true" />
           </div>
         ) : null}
         {loadError ? (

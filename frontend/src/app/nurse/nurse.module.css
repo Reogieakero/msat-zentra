@@ -3,7 +3,10 @@
    display: flex;
    min-height: 100vh;
    width: 100%;
-   overflow-x: hidden;
+   /* clip (not hidden): still trims horizontal overflow but does not
+      create a scroll container, so sticky descendants (action menu,
+      toolbar) keep sticking to the viewport. */
+   overflow-x: clip;
 }
 
 .shell {
@@ -21,7 +24,8 @@
    background-color: var(--background);
    color: var(--foreground);
    font-family: var(--font-sans), system-ui, sans-serif;
-   overflow-x: hidden;
+   /* clip (not hidden): see .wrapper — keeps sticky working. */
+   overflow-x: clip;
 }
 
 .topbar {
@@ -30,7 +34,9 @@
    left: 0;
    right: 0;
    width: 100%;
-   z-index: 40;
+   /* Above the tab navbar (10000) so the app bar keeps its old
+      topbar-over-navbar order. */
+   z-index: 10001;
    display: flex;
    align-items: center;
    gap: 0.5rem;

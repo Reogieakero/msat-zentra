@@ -35,7 +35,7 @@ function NurseClinicReferralsView() {
   if (isPending) {
     return (
       <section className={styles.page}>
-        <NurseReferralsSkeleton />
+        <NurseReferralsSkeleton lockType sideRows={4} />
       </section>
     );
   }
@@ -83,7 +83,7 @@ export default function NurseClinicReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page}>
-          <NurseReferralsSkeleton />
+          <NurseReferralsSkeleton lockType sideRows={4} />
         </section>
       }
     >

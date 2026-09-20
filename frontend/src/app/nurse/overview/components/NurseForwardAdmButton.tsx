@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import {
   apiErrorMessage,
@@ -49,8 +50,18 @@ export function NurseForwardAdmButton({
       size="xs"
       disabled={sending}
       onClick={() => void onForward()}
+      /* Fixed min-width + inline spinner slot so the "Forwarding…"
+         swap doesn't widen the Actions cell and shift the row. */
+      style={{ minWidth: "9.5rem" }}
     >
-      {sending ? "Forwarding…" : "Endorse & forward"}
+      {sending ? (
+        <>
+          <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+          {"Forwarding…"}
+        </>
+      ) : (
+        "Endorse & forward"
+      )}
     </Button>
   );
 }

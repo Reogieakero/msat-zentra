@@ -36,7 +36,7 @@ function NurseAdmReferralsView() {
   if (isPending) {
     return (
       <section className={styles.page}>
-        <NurseReferralsSkeleton />
+        <NurseReferralsSkeleton lockType sideRows={5} />
       </section>
     );
   }
@@ -85,7 +85,7 @@ export default function NurseAdmReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page}>
-          <NurseReferralsSkeleton />
+          <NurseReferralsSkeleton lockType sideRows={5} />
         </section>
       }
     >

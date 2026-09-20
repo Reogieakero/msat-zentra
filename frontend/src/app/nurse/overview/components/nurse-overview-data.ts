@@ -117,10 +117,10 @@ export interface NurseSessionItem {
 
 export interface NurseKpis {
   needsReview: number;
-  inProgress: number;
-  escalatedToMe: number;
-  resolved: number;
-  healthRelated: number;
+  bookedSession: number;
+  endorsedToAdm: number;
+  followUp: number;
+  doneSession: number;
   total: number;
 }
 
@@ -142,6 +142,9 @@ export interface NurseQueueRow {
   status: string;
   date: string;
   waitingDays: number | null;
+  // Full referred timestamp (ISO) — drives the live "Waiting" elapsed
+  // clock (referred time → now). Empty when unknown (legacy rows).
+  referredAt: string;
   // Optional context lines for the timeline view ("" when unset).
   followUpDate: string;
   intakeNotes: string;
@@ -185,9 +188,9 @@ export interface NurseBreakdownRow {
 export interface NurseOverviewData {
   kpis: NurseKpis;
   needsReview: NurseQueueRow[];
-  followUpsDue: NurseFollowUpRow[];
   statusBreakdown: NurseBreakdownRow[];
-  categoryBreakdown: NurseBreakdownRow[];
+  clinicStatusBreakdown: NurseBreakdownRow[];
+  admStatusBreakdown: NurseBreakdownRow[];
 }
 
 export const NURSE_STATUS_LABELS: Record<string, string> = {
@@ -217,8 +220,36 @@ function wholeDaysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / DAY_MS);
 }
 
+function referredTimeMs(value: string | null | undefined): number {
+  const d = parseDate(value);
+  return d ? d.getTime() : Number.POSITIVE_INFINITY;
+}
+
 function titleCase(raw: string): string {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/** Derive the action-based status key and label from referral fields —
+ *  the same vocabulary the Needs-review table uses, so charts and the
+ *  table always agree. */
+export function deriveActionStatus(
+  type: string,
+  status: string,
+  sessions: { status?: string | null }[],
+): { key: string; label: string } {
+  const hasScheduled = sessions.some((s) => s.status === "scheduled");
+  const hasCompleted = sessions.some((s) => s.status === "completed");
+  const isEndorsedCase = type === "ADM" && status === "in_progress";
+
+  if (isEndorsedCase) return { key: "endorsed", label: "Endorsed" };
+  if (status === "dismissed") return { key: "rejected", label: "Rejected" };
+  if (status === "resolved") return { key: "done", label: "Done" };
+  if (status === "follow_up") return { key: "followup", label: "Follow-up" };
+  if (hasScheduled) return { key: "booked", label: "Booked session" };
+  if (hasCompleted) return { key: "done_session", label: "Done session" };
+  if (status === "pending") return { key: "needs_review", label: "Needs review" };
+  if (status === "escalated") return { key: "escalated", label: "Escalated" };
+  return { key: status, label: NURSE_STATUS_LABELS[status] ?? titleCase(status) };
 }
 
 // A referral belongs on the nurse's desk when:
@@ -296,6 +327,7 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
     status: r.status ?? "pending",
     date: referred ? referred.toISOString().slice(0, 10) : "—",
     waitingDays: referred ? Math.max(0, wholeDaysBetween(referred, startOfToday())) : null,
+    referredAt: r.referredAt ?? r.anecdotalRecord?.observationDatetime ?? "",
     followUpDate: parseDate(r.followUpDate)?.toISOString().slice(0, 10) ?? "",
     intakeNotes: r.intakeNotes?.trim() ?? "",
     notes: r.notes?.trim() ?? "",
@@ -323,61 +355,52 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
 // numbers on this page always derive from one fetch, one filter, one pass.
 export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData {
   const scoped = referrals.filter(isNurseScope);
-  const today = startOfToday();
 
   const kpis: NurseKpis = {
     needsReview: scoped.filter((r) => r.status === "pending").length,
-    inProgress: scoped.filter((r) => r.status === "in_progress" || r.status === "follow_up" || r.status === "info_requested").length,
-    escalatedToMe: scoped.filter((r) => r.status === "escalated" && r.escalatedTo === "nurse").length,
-    resolved: scoped.filter((r) => r.status === "resolved").length,
-    healthRelated: scoped.filter((r) => r.anecdotalRecord?.category === "health").length,
+    bookedSession: scoped.filter((r) =>
+      (r.counselingSessions ?? []).some((s) => s.status === "scheduled"),
+    ).length,
+    endorsedToAdm: scoped.filter(
+      (r) => r.consultReviewer && r.status === "in_progress",
+    ).length,
+    followUp: scoped.filter((r) => r.status === "follow_up").length,
+    doneSession: scoped.filter((r) =>
+      (r.counselingSessions ?? []).some((s) => s.status === "completed"),
+    ).length,
     total: scoped.length,
   };
 
   const needsReview = scoped
     .filter((r) => r.status === "pending" || (r.status === "escalated" && r.escalatedTo === "nurse"))
     .map(toQueueRow)
-    .sort((a, b) => (b.waitingDays ?? -1) - (a.waitingDays ?? -1));
+    .sort((a, b) => referredTimeMs(a.referredAt) - referredTimeMs(b.referredAt));
 
-  const followUpsDue = scoped
-    .filter((r) => {
-      if (!r.followUpDate || r.status === "resolved" || r.status === "dismissed") return false;
-      const due = parseDate(r.followUpDate);
-      return due !== null && due <= today;
-    })
-    .map((r) => {
-      const row = toQueueRow(r);
-      const due = parseDate(r.followUpDate) as Date;
-      return {
-        ...row,
-        dueDate: due.toISOString().slice(0, 10),
-        overdueDays: Math.max(0, wholeDaysBetween(due, today)),
-      };
-    })
-    .sort((a, b) => (b.overdueDays ?? -1) - (a.overdueDays ?? -1));
+  // One action-status grouping, reused for the overall + per-type chart
+  // cards so every chart speaks the same status vocabulary as the table.
+  const actionStatusBreakdown = (referrals: RawReferral[]): NurseBreakdownRow[] => {
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const r of referrals) {
+      const type = r.consultReviewer ? "ADM" : "Clinic";
+      const sessions = r.counselingSessions ?? [];
+      const action = deriveActionStatus(type, r.status ?? "pending", sessions);
+      const existing = counts.get(action.key);
+      if (existing) {
+        existing.count++;
+      } else {
+        counts.set(action.key, { label: action.label, count: 1 });
+      }
+    }
+    return [...counts.entries()]
+      .map(([key, { label, count }]) => ({ key, label, count }))
+      .sort((a, b) => b.count - a.count);
+  };
 
-  const statusOrder = ["pending", "in_progress", "follow_up", "info_requested", "escalated", "resolved", "dismissed"];
-  const statusCounts = new Map<string, number>();
-  for (const r of scoped) statusCounts.set(r.status ?? "pending", (statusCounts.get(r.status ?? "pending") ?? 0) + 1);
-  const statusBreakdown: NurseBreakdownRow[] = [
-    ...statusOrder
-      .filter((s) => (statusCounts.get(s) ?? 0) > 0)
-      .map((s) => ({ key: s, label: NURSE_STATUS_LABELS[s] ?? titleCase(s), count: statusCounts.get(s) ?? 0 })),
-    ...[...statusCounts.keys()]
-      .filter((s) => !statusOrder.includes(s))
-      .map((s) => ({ key: s, label: NURSE_STATUS_LABELS[s] ?? titleCase(s), count: statusCounts.get(s) ?? 0 })),
-  ];
+  const statusBreakdown = actionStatusBreakdown(scoped);
+  const clinicStatusBreakdown = actionStatusBreakdown(scoped.filter((r) => !r.consultReviewer));
+  const admStatusBreakdown = actionStatusBreakdown(scoped.filter((r) => r.consultReviewer));
 
-  const categoryCounts = new Map<string, number>();
-  for (const r of scoped) {
-    const key = r.anecdotalRecord?.category ?? "unknown";
-    categoryCounts.set(key, (categoryCounts.get(key) ?? 0) + 1);
-  }
-  const categoryBreakdown: NurseBreakdownRow[] = [...categoryCounts.entries()]
-    .map(([key, count]) => ({ key, label: key === "unknown" ? "Uncategorized" : titleCase(key), count }))
-    .sort((a, b) => b.count - a.count);
-
-  return { kpis, needsReview, followUpsDue, statusBreakdown, categoryBreakdown };
+  return { kpis, needsReview, statusBreakdown, clinicStatusBreakdown, admStatusBreakdown };
 }
 
 export async function fetchNurseOverview(): Promise<NurseOverviewData> {

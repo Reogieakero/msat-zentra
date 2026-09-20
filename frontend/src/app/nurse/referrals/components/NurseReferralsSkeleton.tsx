@@ -3,10 +3,20 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./NurseReferralsSkeleton.module.css";
 
-/* Loading state that mirrors the referrals display: sticky-style toolbar,
-   two-column entries (rail blocks incl. student card + report body), and
-   the action-menu sidebar — so nothing jumps when the fetch lands. */
-export function NurseReferralsSkeleton() {
+/* Loading state that mirrors the referrals display: sticky toolbar,
+   two-column entries (rail blocks incl. student card + report body),
+   pager, and the action-menu sidebar — so nothing jumps when the
+   fetch lands. Locked type pages (ADM/Clinic) hide the type filter,
+   so `lockType` drops the phantom pill. */
+export function NurseReferralsSkeleton({
+  lockType = false,
+  entries = 5,
+  sideRows = 5,
+}: {
+  lockType?: boolean;
+  entries?: number;
+  sideRows?: number;
+}) {
   return (
     <div className={styles.page} aria-busy="true" aria-label="Loading your cases">
       <div className={styles.layout}>
@@ -15,15 +25,16 @@ export function NurseReferralsSkeleton() {
             <Skeleton className={styles.title} />
             <div className={styles.toolbarRight}>
               <Skeleton className={styles.search} />
-              <Skeleton className={styles.pill} />
+              {lockType ? null : <Skeleton className={styles.pill} />}
             </div>
           </div>
           <div className={styles.timeline}>
-            {[0, 1, 2].map((i) => (
+            {Array.from({ length: entries }).map((_, i) => (
               <div
                 key={i}
                 className={`${styles.entry}${i % 2 === 1 ? ` ${styles.entryAlt}` : ""}`}
               >
+                <span className={styles.dot} aria-hidden="true" />
                 <div className={styles.rail}>
                   <Skeleton className={styles.date} />
                   <div className={styles.badges}>
@@ -31,12 +42,17 @@ export function NurseReferralsSkeleton() {
                     <Skeleton />
                     <Skeleton />
                   </div>
-                  <Skeleton className={styles.line} />
-                  <Skeleton className={styles.lineShort} />
+                  <Skeleton className={styles.line} aria-hidden="true" />
+                  <Skeleton className={styles.lineShort} aria-hidden="true" />
+                  <Skeleton className={styles.latestAction} aria-hidden="true" />
                   <div className={styles.studentCard}>
+                    <Skeleton className={styles.caption} aria-hidden="true" />
                     <Skeleton className={styles.avatar} />
-                    <Skeleton className={styles.line} />
-                    <Skeleton className={styles.lineShort} />
+                    <div className={styles.studentText}>
+                      <Skeleton className={styles.line} aria-hidden="true" />
+                      <Skeleton className={styles.lineShort} aria-hidden="true" />
+                      <Skeleton className={styles.lineShort} aria-hidden="true" />
+                    </div>
                   </div>
                 </div>
                 <div className={styles.body}>
@@ -51,12 +67,23 @@ export function NurseReferralsSkeleton() {
               </div>
             ))}
           </div>
+          <div className={styles.pager} aria-hidden="true">
+            <Skeleton className={styles.range} />
+            <div className={styles.pagerButtons}>
+              <Skeleton className={styles.pagerBtn} />
+              <Skeleton className={styles.pageLabel} />
+              <Skeleton className={styles.pagerBtn} />
+            </div>
+          </div>
         </div>
         <div className={styles.side} aria-hidden="true">
-          <Skeleton className={styles.sideRow} />
-          <Skeleton className={styles.sideRow} />
-          <Skeleton className={styles.sideRow} />
-          <Skeleton className={styles.sideRow} />
+          <Skeleton className={styles.sideLabel} />
+          {Array.from({ length: sideRows }).map((_, i) => (
+            <Skeleton
+              key={i}
+              className={`${styles.sideRow}${i === sideRows - 1 ? ` ${styles.sideRowLast}` : ""}`}
+            />
+          ))}
         </div>
       </div>
     </div>

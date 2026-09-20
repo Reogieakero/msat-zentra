@@ -12,24 +12,24 @@ export function NurseOverviewKpis({ kpis }: { kpis: NurseKpis }) {
       hint: "pending cases on your desk",
     },
     {
-      label: "In progress",
-      value: kpis.inProgress,
-      hint: "being handled or followed up",
+      label: "Booked session",
+      value: kpis.bookedSession,
+      hint: "cases with an active booking",
     },
     {
-      label: "Escalated to me",
-      value: kpis.escalatedToMe,
-      hint: "sent up to the clinic",
+      label: "Endorsed to ADM coordinator",
+      value: kpis.endorsedToAdm,
+      hint: "sent to the coordinator",
     },
     {
-      label: "Resolved",
-      value: kpis.resolved,
-      hint: "closed cases",
+      label: "Follow-up",
+      value: kpis.followUp,
+      hint: "awaiting follow-up",
     },
     {
-      label: "Health-related",
-      value: kpis.healthRelated,
-      hint: `of ${kpis.total} total cases`,
+      label: "Done session",
+      value: kpis.doneSession,
+      hint: "cases with a completed session",
     },
   ];
 

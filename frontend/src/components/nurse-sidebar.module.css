@@ -7,7 +7,9 @@
    top: 3rem;
    left: 0;
    right: 0;
-   z-index: 30;
+   /* 10000: nav links always paint above the sticky page title bars
+      below, so the tabs are never covered while cases scroll. */
+   z-index: 10000;
    width: 100%;
    background-color: var(--background);
    border-bottom: 1px solid var(--border);

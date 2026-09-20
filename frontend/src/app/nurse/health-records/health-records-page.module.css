@@ -38,6 +38,24 @@
   width: 100%;
 }
 
+/* Matches the documentaries thead (th padding + label + border) so the
+   first body row doesn't jump when headers render. */
+.skelThead {
+  display: flex;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.skelTheadCell {
+  height: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
 .skelPanelActions {
   display: flex;
   align-items: center;
@@ -71,6 +89,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* Matches .pageLabel ("Page X of Y", 0.75rem tabular-nums). */
+.skelPageLabel {
+  height: 0.75rem;
+  width: 5rem;
 }
 
 .skelBtn {
