@@ -33,6 +33,13 @@ export function createApp() {
   const app = express();
   app.use(helmet());
   app.use(cors({ origin: [env.WEB_ORIGIN, env.MOBILE_ORIGIN], credentials: true }));
+  // Authenticated API responses carry user-/role-scoped (often sensitive)
+  // data. Never allow shared/public HTTP caching of them; freshness is
+  // managed by the database + client query invalidation instead.
+  app.use("/api", (_req, res, next) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    next();
+  });
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ export function LoginForm({
   backHref = "/login",
 }: LoginFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [identifier, setIdentifier] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
@@ -68,6 +70,9 @@ export function LoginForm({
       }
       if (data.accessToken) setAccessToken(data.accessToken);
       if (data.refreshToken) setRefreshToken(data.refreshToken);
+      // Drop any cached queries from a previous account on this device
+      // before entering the new session (QueryClient outlives SPA login).
+      queryClient.clear();
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =
         (data.role === "principal" && "/principal/overview") ||

@@ -31,6 +31,8 @@ function NurseAdmReferralsView() {
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
     void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
   }
 
   if (isPending) {

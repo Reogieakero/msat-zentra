@@ -82,6 +82,9 @@ export function NurseNeedsReviewPanel({
   const queryClient = useQueryClient();
   const refresh = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
   }, [queryClient]);
   const nowMs = useNowMs();
 

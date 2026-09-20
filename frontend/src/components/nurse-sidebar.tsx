@@ -5,10 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  BellRing,
+  FolderOpen,
   Inbox,
   Stethoscope,
-  ClipboardList,
+  HeartPulse,
   Flame,
 } from "lucide-react";
 
@@ -34,7 +34,7 @@ const NAV: NavGroup[] = [
     label: "Overview",
     items: [
       { title: "Overview", href: "/nurse/overview", icon: LayoutDashboard },
-      { title: "Alerts", href: "/nurse/alerts", icon: BellRing },
+      { title: "Referred Cases", href: "/nurse/alerts", icon: FolderOpen },
     ],
   },
   {
@@ -56,9 +56,9 @@ const NAV: NavGroup[] = [
     label: "Records",
     items: [
       {
-        title: "Documentaries",
+        title: "Health Records",
         href: "/nurse/health-records",
-        icon: ClipboardList,
+        icon: HeartPulse,
       },
     ],
   },

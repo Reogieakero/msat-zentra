@@ -75,7 +75,7 @@ export default function NurseAlertsPage() {
     return (
       <section className={styles.page}>
         <div className={styles.pageError} role="alert">
-          <p className={styles.pageErrorTitle}>We couldn&apos;t load the alerts</p>
+          <p className={styles.pageErrorTitle}>We couldn&apos;t load the referred cases</p>
           <p className={styles.pageErrorHint}>
             Please check your internet connection and try again.
           </p>
@@ -103,6 +103,8 @@ export default function NurseAlertsPage() {
         onChanged={() => {
           void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
           void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
+          void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
+          void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
         }}
       />
     </section>

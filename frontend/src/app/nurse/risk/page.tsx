@@ -167,6 +167,15 @@ export default function NurseRiskPage() {
 
   return (
     <section className={styles.page}>
+      <div>
+        <p className={styles.eyebrow}>School Nurse · Insights</p>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>Risk dashboard</h1>
+        </div>
+        <p className={styles.lede}>
+          Desk-scoped categories, levels, and heatmaps.
+        </p>
+      </div>
       <div className={styles.mainGrid}>
         <NurseRiskHeatmap
           categories={dashboard.matrixCategories}

@@ -9,7 +9,7 @@ import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
 import styles from "./health-records-page.module.css";
 
 /**
- * Documentaries — the school nurse transaction archive: every finished
+ * Health Records — the school nurse transaction archive: every finished
  * transaction (completed clinic sessions with notes, outcomes, and
  * attached files, plus resolved case closures) for the students on the
  * nurse's desk. Read-only; handling stays on the case pages.
@@ -60,7 +60,7 @@ export default function NurseHealthRecordsPage() {
     return (
       <section className={styles.page}>
         <div className={styles.pageError} role="alert">
-          <p className={styles.pageErrorTitle}>We couldn&apos;t load the documentaries</p>
+          <p className={styles.pageErrorTitle}>We couldn&apos;t load the health records</p>
           <p className={styles.pageErrorHint}>
             Please check your internet connection and try again.
           </p>

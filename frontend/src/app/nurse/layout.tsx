@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme, useFont } from "@/components/providers";
 import { NurseSidebar } from "@/components/nurse-sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,10 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { NURSE_REFERRAL_DRAFT_KEY } from "./overview/components/nurse-overview-data";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
@@ -30,6 +33,14 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
+    // Drop all cached queries so the next account on this device never sees
+    // the previous nurse's student data (QueryClient outlives SPA logout).
+    queryClient.clear();
+    try {
+      window.sessionStorage.removeItem(NURSE_REFERRAL_DRAFT_KEY);
+    } catch {
+      /* storage unavailable — nothing cached to clear */
+    }
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));

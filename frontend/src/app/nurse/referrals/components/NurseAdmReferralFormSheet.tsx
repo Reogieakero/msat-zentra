@@ -79,6 +79,8 @@ export function NurseAdmReferralFormSheet({
   function onConfirmed() {
     queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
     queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
+    queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
+    queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
     onChanged();
     onClose();
   }

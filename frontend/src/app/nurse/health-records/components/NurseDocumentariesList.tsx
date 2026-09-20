@@ -120,10 +120,10 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
   const hasActiveFilters = query.trim() !== "" || typeFilter !== "";
 
   return (
-    <section aria-label="Student documentaries">
+    <section aria-label="Student health records">
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <h2 className={styles.sectionTitle}>Documentaries</h2>
+          <h2 className={styles.sectionTitle}>Health Records</h2>
           <p className={styles.sectionDesc}>
             Finished transactions — {total} record{total === 1 ? "" : "s"}.
           </p>
@@ -138,7 +138,7 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
                 placeholder="Search by referral ID, student or keyword…"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                aria-label="Search documentaries"
+                aria-label="Search health records"
               />
             </div>
             <DropdownMenu>
