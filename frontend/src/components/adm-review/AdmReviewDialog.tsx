@@ -202,6 +202,9 @@ export function AdmReviewDialog({
   // confirm) with a single success toast from the caller. One active
   // session per referral.
   async function bookSessionOnly() {
+    // Idempotency: rapid double-clicks on the confirm button issue one
+    // request — the disabled state flips only after re-render.
+    if (booking || acting) return;
     if (hasActiveSession) {
       setConfirmFor(null);
       setError(copy.activeSessionExists);
@@ -229,6 +232,8 @@ export function AdmReviewDialog({
   }
 
   async function decideReject() {
+    // Idempotency: see bookSessionOnly.
+    if (acting || booking) return;
     if (!recommendation.trim()) {
       setConfirmFor(null);
       setError(copy.recommendationRequired);

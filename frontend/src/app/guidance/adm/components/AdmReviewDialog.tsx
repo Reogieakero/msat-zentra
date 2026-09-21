@@ -13,6 +13,7 @@ import {
   reviewAdmConsultation,
 } from "./guidance-adm-data";
 import { dismissReferral } from "../../referrals/components/guidance-referrals-data";
+import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
 
 /* Case identity for the intake summary (Name / LRN / Section / Observed /
    Referred) — passed by both callers from their row data. */
@@ -88,9 +89,9 @@ export function AdmReviewDialog({
   }, [open, referralId]);
 
   function refreshAll() {
-    void queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
-    void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
-    void queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
+    for (const key of GUIDANCE_QUERY_KEYS) {
+      void queryClient.invalidateQueries({ queryKey: [...key] });
+    }
     onChanged();
   }
 
@@ -141,7 +142,8 @@ export function AdmReviewDialog({
   }
 
   function goToReferralForm(draft: AdmReviewDraft) {
-    toast.success({
+    // Info, not success: the case is only endorsed after the form confirms.
+    toast.info({
       title: "Referral form opened",
       description: "Confirm the form to endorse the case to the ADM coordinator.",
     });

@@ -37,6 +37,8 @@ import {
 } from "./intervention-dialogs";
 import { Busy } from "./busy";
 import { toast } from "@/components/ui/sonner";
+import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
+import { apiErrorMessage } from "../../referrals/components/guidance-referrals-data";
 import styles from "./guidance-interventions.module.css";
 
 function interventionSuccessMessage(action: string): { title: string; description: string } {
@@ -294,16 +296,19 @@ export function GuidanceInterventionsTable({
       }
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["guidance-interventions"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
+      for (const key of GUIDANCE_QUERY_KEYS) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
+      }
       // Confirmed success only — toast fires after the server confirms.
       toast.success(interventionSuccessMessage(variables.action));
     },
-    onError: () => {
+    onError: (err) => {
       toast.error({
         title: "Could not save",
-        description: "The change did not go through. Check your connection and try again.",
+        description: apiErrorMessage(
+          err,
+          "The change did not go through. Check your connection and try again."
+        ),
       });
     },
   });

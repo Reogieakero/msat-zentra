@@ -8,8 +8,17 @@ const GUIDANCE_KEYS = [
   ["guidance-referrals"],
   ["guidance-interventions"],
   ["guidance-overview"],
+  // ["guidance-alerts"] prefix covers the nested alerts queries
+  // (["guidance-alerts", "referrals"] / ["guidance-alerts", "interventions"]).
   ["guidance-alerts"],
   ["guidance-adm"],
+  ["guidance-anecdotal"],
+  ["guidance-risk"],
+  ["guidance-risk-levels"],
+  ["guidance-risk-heatmap"],
+  ["guidance-risk-behavioral"],
+  ["guidance-referrals-highlight"],
+  ["adm-consultation-sessions"],
 ] as const;
 
 /**

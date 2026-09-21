@@ -21,14 +21,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
+import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import styles from "./guidance.module.css";
 
 function GuidanceShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { allowed } = useRoleGuard(["guidance_counselor"]);
   // Cross-user sync: another counselor's decision invalidates this desk's
   // lists without manual refresh. Single channel, cleaned up on unmount.
-  useGuidanceRealtime(true);
+  // Only subscribe once the role check passes.
+  useGuidanceRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
@@ -44,6 +47,18 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
       .forEach((key) => window.localStorage.removeItem(key));
     router.push("/login");
   };
+
+  // Block sensitive desk content until the role check passes (see nurse
+  // shell — backend stays authoritative).
+  if (!allowed) {
+    return (
+      <div className={styles.wrapper}>
+        <section className={styles.main} aria-busy="true" aria-label="Checking access" role="status">
+          <p>Checking access…</p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrapper}>

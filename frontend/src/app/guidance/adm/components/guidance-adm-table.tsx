@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, Loader2, MoreHorizontal, Search, Send } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useQueryClient } from "@tanstack/react-query";
+import { Eye, Loader2, MoreHorizontal, Send } from "lucide-react";
+import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
+import {
+  AdmQueueTable,
+  type AdmQueueRowVM,
+} from "@/components/adm-queue/AdmQueueTable";
 import {
   Dialog,
   DialogContent,
@@ -22,14 +24,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -39,6 +33,7 @@ import type {
 import { reviewAdmConsultation } from "./guidance-adm-data";
 import { AdmReviewDialog } from "./AdmReviewDialog";
 import { GuidanceAdmReferralFormSheet } from "./GuidanceAdmReferralFormSheet";
+import { AdmTrackDialog } from "@/components/adm-tracker/AdmTrackDialog";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
 import {
@@ -47,8 +42,6 @@ import {
   type GcForm03Data,
 } from "./gcform03-data";
 import { GcForm03PreviewDialog } from "./GcForm03PreviewDialog";
-import { toast } from "@/components/ui/sonner";
-import pageStyles from "../../pages.module.css";
 import styles from "./guidance-adm.module.css";
 
 function formatStatus(value: string): string {
@@ -95,31 +88,6 @@ function eligibilityLabel(value: string): string {
     default:
       return "For review";
   }
-}
-
-/* Live clock for the queue's elapsed readouts — ticks every 30s, same as
-   the alerts table. */
-function useQueueTick(): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
-}
-
-/* "4d 3h 12m" — days, hours, minutes only, never seconds. */
-function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
 }
 
 /* Queue-row case status: referred (needs review), endorsed, or rejected. */
@@ -186,8 +154,6 @@ export function GuidanceAdmTable({
   reviewQueue,
 }: GuidanceAdmTableProps) {
   const queryClient = useQueryClient();
-  const queueNow = useQueueTick();
-  const [queueQuery, setQueueQuery] = React.useState("");
   const [endorsedFor, setEndorsedFor] = React.useState<string | null>(null);
   const [reviewId, setReviewId] = React.useState<string | null>(null);
   const [formSheet, setFormSheet] = React.useState<{
@@ -196,6 +162,7 @@ export function GuidanceAdmTable({
   } | null>(null);
   const [rejectId, setRejectId] = React.useState<string | null>(null);
   const [rejectReason, setRejectReason] = React.useState("");
+  const [trackId, setTrackId] = React.useState<string | null>(null);
   // GCForm-03 (Control No. GCForm-03) viewer — rebuilt from the row + its
   // OCForm-01, exactly like the endorse-time preview.
   const [gcRow, setGcRow] = React.useState<GuidanceAdmCase | null>(null);
@@ -226,12 +193,13 @@ export function GuidanceAdmTable({
     reviewQueue.find((c) => c.id === id) ?? null;
   const activeReview = findCase(reviewId);
   const activeReject = findCase(rejectId);
+  const activeTrack = findCase(trackId);
 
   const openReview = (row: GuidanceAdmCase) => {
     setReviewId(row.id);
   };
 
-  const reviewMutation = useMutation({
+  const reviewMutation = useGuidanceMutation({
     mutationFn: ({
       referralId,
       outcome,
@@ -241,21 +209,11 @@ export function GuidanceAdmTable({
       outcome: "endorse" | "reject";
       text: string;
     }) => reviewAdmConsultation(referralId, { recommendation: text, outcome }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
-      toast.success({
-        title: "Rejected from ADM",
-        description: "The case was closed with your reason kept on record. No further ADM action is needed.",
-      });
-    },
-    onError: () => {
-      toast.error({
-        title: "Could not reject the case",
-        description: "The rejection did not go through. Check your connection and try again.",
-      });
-    },
+    successTitle: "Rejected from ADM",
+    successDescription:
+      () => "The case was closed with your reason kept on record. No further ADM action is needed.",
+    errorTitle: "Could not reject the case",
+    errorFallback: "The rejection did not go through. Check your connection and try again.",
   });
 
   const closeReject = () => {
@@ -263,15 +221,86 @@ export function GuidanceAdmTable({
     setRejectReason("");
   };
 
-  const filteredQueue = React.useMemo(() => {
-    const q = queueQuery.trim().toLowerCase();
-    if (!q) return reviewQueue;
-    return reviewQueue.filter((r) =>
-      `${r.student} ${r.lrn} ${r.section} ${r.reason} ${r.referredBy}`
-        .toLowerCase()
-        .includes(q)
+  /* Shared queue rows — the table shell, search, and elapsed clock live
+     in the shared component; this adapter only maps guidance rows. */
+  const vmRows = React.useMemo<AdmQueueRowVM[]>(
+    () =>
+      reviewQueue.map((row) => {
+        const status = queueStatus(row);
+        const latest = queueLatest(row);
+        const risk =
+          row.riskLevel === "High" ||
+          row.riskLevel === "Moderate" ||
+          row.riskLevel === "Low"
+            ? row.riskLevel
+            : undefined;
+        return {
+          id: row.id,
+          lrn: row.lrn || "—",
+          student: row.student,
+          section: row.section,
+          searchText: `${row.student} ${row.lrn} ${row.section} ${row.reason} ${row.referredBy}`,
+          statusLabel: status.label,
+          statusVariant: status.variant,
+          riskLevel: risk,
+          latestLabel: latest.label,
+          LatestIcon: latest.icon === "eye" ? Eye : Send,
+          actionTime: `${row.date}T00:00:00`,
+          dateReferred: formatDate(row.date),
+        };
+      }),
+    [reviewQueue]
+  );
+
+  function renderQueueActions(id: string) {
+    const row = reviewQueue.find((c) => c.id === id) ?? null;
+    if (!row) return null;
+    const needsAction = row.reviewed === false;
+    const isEndorsed =
+      row.reviewed === true && row.referralStatus === "in_progress";
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${row.student}'s case`}
+          >
+            <MoreHorizontal aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-56">
+          <DropdownMenuItem onSelect={() => setTrackId(row.id)}>
+            Track ADM referral
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={gcLoadingId === row.id}
+            onSelect={() => void openGcForm(row)}
+          >
+            {gcLoadingId === row.id ? "Loading form…" : "See referral form"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              if (isEndorsed) setEndorsedFor(row.student);
+              else openReview(row);
+            }}
+          >
+            View anecdotal
+          </DropdownMenuItem>
+          {needsAction && (
+            <DropdownMenuItem
+              onSelect={() => {
+                setRejectId(row.id);
+                setRejectReason("");
+              }}
+            >
+              Reject
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
-  }, [reviewQueue, queueQuery]);
+  }
 
   const submitQuickReject = () => {
     if (!activeReject || !rejectReason.trim()) return;
@@ -297,165 +326,16 @@ export function GuidanceAdmTable({
     <div className={styles.feed}>
       {/* Latest ADM cases referred to you — referred or endorsed. Rows still
           needing your anecdotal review carry actions; decided rows render
-          read-only. */}
-      <Card className={pageStyles.card}>
-        <CardHeader>
-          <div className={styles.queueHeadRow}>
-            <div>
-              <CardTitle className={pageStyles.sectionTitle}>
-                Latest referred ADM cases
-              </CardTitle>
-              <CardDescription className={pageStyles.sectionDesc}>
-                The latest ADM cases referred to you — review the anecdotal,
-                then endorse or reject.
-              </CardDescription>
-            </div>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "2rem" }}
-                placeholder="Search student…"
-                value={queueQuery}
-                onChange={(e) => setQueueQuery(e.target.value)}
-                aria-label="Search referred ADM cases"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredQueue.length === 0 ? (
-            <div className={styles.empty}>
-              <p className={styles.emptyTitle}>
-                {queueQuery.trim() !== ""
-                  ? "No cases match your search"
-                  : "No ADM cases referred to you yet"}
-              </p>
-              <p className={styles.emptyHint}>
-                {queueQuery.trim() !== ""
-                  ? "Try a different name or keyword."
-                  : "New ADM cases referred to you will appear here."}
-              </p>
-            </div>
-          ) : (
-            <div className={styles.tableWrap}>
-              <Table aria-label="Latest ADM cases referred to you">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>LRN</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Case status</TableHead>
-                    <TableHead>Risk</TableHead>
-                    <TableHead>Latest action</TableHead>
-                    <TableHead>Time elapsed</TableHead>
-                    <TableHead>Date referred</TableHead>
-                    <TableHead>
-                      <span className={styles.srOnly}>Row actions</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQueue.map((row) => {
-                    const needsAction = row.reviewed === false;
-                    const status = queueStatus(row);
-                    const isEndorsed =
-                      row.reviewed === true && row.referralStatus === "in_progress";
-                    const latest = queueLatest(row);
-                    const at = new Date(`${row.date}T00:00:00`).getTime();
-                    const actionMs = Number.isFinite(at) ? Math.max(0, queueNow - at) : null;
-                    const ActionIcon = latest.icon === "eye" ? Eye : Send;
-                    return (
-                      <TableRow key={row.id}>
-                        <TableCell>
-                          <p className={styles.cellMain}>
-                            <span className={styles.lrn}>{row.lrn || "—"}</span>
-                          </p>
-                          <p className={styles.cellSub}>
-                            {row.student} · {row.section}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">ADM</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={status.variant}>{status.label}</Badge>
-                          {row.category ? (
-                            <p className={styles.cellSub}>{formatStatus(row.category)}</p>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>
-                          {row.riskLevel === "High" ? (
-                            <Badge variant="destructive">High</Badge>
-                          ) : row.riskLevel === "Moderate" ? (
-                            <Badge variant="warning">Moderate</Badge>
-                          ) : row.riskLevel === "Low" ? (
-                            <Badge variant="outline">Low</Badge>
-                          ) : (
-                            <span className={styles.noRisk}>—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <p className={styles.actionLabel}>
-                            <ActionIcon className={styles.actionIcon} aria-hidden />
-                            <span>{latest.label}</span>
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <p className={styles.cellTime} aria-live="off">
-                            {actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <p className={styles.cellMain}>{formatDate(row.date)}</p>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Actions for ${row.student}'s case`}
-                              >
-                                <MoreHorizontal aria-hidden />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="min-w-56">
-                              <DropdownMenuItem
-                                disabled={gcLoadingId === row.id}
-                                onSelect={() => void openGcForm(row)}
-                              >
-                                {gcLoadingId === row.id ? "Loading form…" : "See referral form"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  if (isEndorsed) setEndorsedFor(row.student);
-                                  else openReview(row);
-                                }}
-                              >
-                                View anecdotal
-                              </DropdownMenuItem>
-                              {needsAction && (
-                                <DropdownMenuItem
-                                  onSelect={() => {
-                                    setRejectId(row.id);
-                                    setRejectReason("");
-                                  }}
-                                >
-                                  Reject
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          read-only. The table shell is shared with the nurse queue. */}
+      <AdmQueueTable
+        title="Latest referred ADM cases"
+        description="The latest ADM cases referred to you — review the anecdotal, then endorse or reject."
+        searchPlaceholder="Search student…"
+        emptyTitle="No ADM cases referred to you yet"
+        emptyHint="New ADM cases referred to you will appear here."
+        rows={vmRows}
+        renderActions={renderQueueActions}
+      />
 
 
 
@@ -524,6 +404,34 @@ export function GuidanceAdmTable({
           onClose={() => setGcRow(null)}
           onConfirm={() => {}}
           viewOnly
+        />
+      )}
+
+      {/* Track ADM referral — full pipeline from the adviser's anecdotal
+          filing through the picked consultation reviewer and every backend
+          ADM stage. Read-only; handling stays on this page. */}
+      {activeTrack && (
+        <AdmTrackDialog
+          open={trackId !== null}
+          onClose={() => setTrackId(null)}
+          caseInfo={{
+            student: activeTrack.student,
+            lrn: activeTrack.lrn,
+            section: activeTrack.section,
+            reason: activeTrack.reason,
+          }}
+          track={{
+            stage: activeTrack.stage,
+            referralStatus: activeTrack.referralStatus,
+            consultReviewer: activeTrack.consultReviewer ?? "guidance_counselor",
+            referredBy: activeTrack.referredBy,
+            anecdotalDate: activeTrack.date,
+            referredDate: activeTrack.date,
+            meetingAttended: activeTrack.meetingAttended,
+            hasHomeVisit: activeTrack.hasHomeVisit,
+            approved: activeTrack.approved,
+            approvedAt: activeTrack.approvedAt,
+          }}
         />
       )}
 

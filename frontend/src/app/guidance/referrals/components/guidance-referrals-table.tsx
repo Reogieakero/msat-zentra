@@ -57,6 +57,8 @@ import {
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
 import { toast } from "@/components/ui/sonner";
+import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
+import { apiErrorMessage } from "./guidance-referrals-data";
 import styles from "./guidance-referrals-table.module.css";
 
 function referralActionMessage(action: string): { title: string; description: string } | null {
@@ -263,19 +265,21 @@ export function GuidanceReferralsTable({
       summary?: string;
     }) => updateReferralStatus(id, next, summary),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+      for (const key of GUIDANCE_QUERY_KEYS) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
+      }
       toast.success({
         title: "Case closed",
         description: "The closing summary was saved and the case left your active list.",
       });
     },
-    onError: () => {
+    onError: (err) => {
       toast.error({
         title: "Could not close the case",
-        description: "The change did not go through. Check your connection and try again.",
+        description: apiErrorMessage(
+          err,
+          "The change did not go through. Check your connection and try again."
+        ),
       });
     },
   });
@@ -377,17 +381,19 @@ export function GuidanceReferralsTable({
       }
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+      for (const key of GUIDANCE_QUERY_KEYS) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
+      }
       const message = referralActionMessage(variables.action);
       if (message) toast.success(message);
     },
-    onError: () => {
+    onError: (err) => {
       toast.error({
         title: "Could not save",
-        description: "The action did not go through. Check your connection and try again.",
+        description: apiErrorMessage(
+          err,
+          "The action did not go through. Check your connection and try again."
+        ),
       });
     },
   });

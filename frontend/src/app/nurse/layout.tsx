@@ -1,16 +1,11 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme, useFont } from "@/components/providers";
 import { NurseSidebar } from "@/components/nurse-sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Command,
-  CommandInput,
-} from "@/components/ui/command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,14 +16,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
 import { NURSE_REFERRAL_DRAFT_KEY } from "./overview/components/nurse-overview-data";
+import { useNurseRealtime } from "@/lib/realtime/nurseChannel";
+import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { allowed } = useRoleGuard(["nurse"]);
+  useNurseRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
-  const [query, setQuery] = React.useState("");
 
   const isDark = resolvedTheme === "dark";
 
@@ -47,6 +45,19 @@ function NurseShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
+  // Block sensitive desk content until the role check passes. Backend stays
+  // authoritative; this avoids flashing another role's cached data while the
+  // redirect to /login or /errors/403 lands.
+  if (!allowed) {
+    return (
+      <div className={styles.wrapper}>
+        <section className={styles.main} aria-busy="true" aria-label="Checking access" role="status">
+          <p>Checking access…</p>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
@@ -55,16 +66,6 @@ function NurseShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className={styles.spacer} />
-
-        <div className={styles.search}>
-          <Command shouldFilter={false} className={styles.searchCommand}>
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Search…"
-            />
-          </Command>
-        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

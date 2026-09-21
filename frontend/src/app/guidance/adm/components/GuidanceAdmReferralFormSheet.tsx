@@ -8,6 +8,7 @@ import {
 } from "@/components/adm-referral-form/AdmReferralFormPage";
 import type { GuidanceAdmCase } from "./guidance-adm-data";
 import { listAdmConsultationSessions, reviewAdmConsultation } from "./guidance-adm-data";
+import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
 import type { GcForm03Data } from "./gcform03-data";
 
 /**
@@ -54,9 +55,9 @@ export function GuidanceAdmReferralFormSheet({
   }
 
   function onConfirmed() {
-    queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
-    queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
-    queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
+    for (const key of GUIDANCE_QUERY_KEYS) {
+      void queryClient.invalidateQueries({ queryKey: [...key] });
+    }
     onChanged();
     onClose();
   }

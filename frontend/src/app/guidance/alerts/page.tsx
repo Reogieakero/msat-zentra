@@ -15,12 +15,16 @@ import styles from "./components/guidance-alerts.module.css";
 
 export default function GuidanceAlertsPage() {
   const referralsQuery = useQuery({
-    queryKey: ["guidance-alerts-referrals"],
+    // Nested under ["guidance-alerts"] so realtime + mutation invalidation
+    // on the prefix refreshes this page (a flat "guidance-alerts-referrals"
+    // first element would never prefix-match).
+    queryKey: ["guidance-alerts", "referrals"],
     queryFn: () => fetchAllGuidanceReferrals(),
     staleTime: 60_000,
   });
   const interventionsQuery = useQuery({
-    queryKey: ["guidance-alerts-interventions"],
+    // See above — nested so ["guidance-alerts"] invalidation reaches it.
+    queryKey: ["guidance-alerts", "interventions"],
     queryFn: fetchAllGuidanceInterventions,
     staleTime: 60_000,
   });
