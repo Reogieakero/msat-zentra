@@ -13,7 +13,7 @@ export function GuidanceOverviewKpis({ kpis }: GuidanceOverviewKpisProps) {
     {
       label: "Referred to me",
       value: kpis.referredToMe,
-      hint: "pending + in progress",
+      hint: `needs action · ADM ${kpis.pendingAdm} + Counseling ${kpis.pendingCounseling}`,
     },
     {
       label: "Open interventions",
@@ -28,7 +28,7 @@ export function GuidanceOverviewKpis({ kpis }: GuidanceOverviewKpisProps) {
     {
       label: "Pending ADM hand-offs",
       value: kpis.admHandoffs,
-      hint: `${kpis.admHomeVisitation} at home visitation`,
+      hint: "endorsed · with the coordinator",
     },
   ];
 

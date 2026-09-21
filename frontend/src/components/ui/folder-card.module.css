@@ -44,7 +44,9 @@
   position: absolute;
   bottom: -5px;
   width: 100%;
-  z-index: 90;
+  /* Internal order only (counter > front > files) — kept below the app
+     dialog/dropdown layer (z-50) so overlays always open above folders. */
+  z-index: 10;
   transform-origin: bottom;
   border-radius: 12px;
 }
@@ -84,7 +86,7 @@
   transform: scale(0) translateY(20px);
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 100;
+  z-index: 20;
   pointer-events: auto;
 }
 
@@ -159,31 +161,31 @@
 
 .tone1 {
   background: #f5f5f5;
-  z-index: 25;
+  z-index: 5;
   transition-delay: 0.15s;
 }
 
 .tone2 {
   background: #e5e5e5;
-  z-index: 24;
+  z-index: 4;
   transition-delay: 0.1s;
 }
 
 .tone3 {
   background: #d4d4d4;
-  z-index: 23;
+  z-index: 3;
   transition-delay: 0.05s;
 }
 
 .tone4 {
   background: #a3a3a3;
-  z-index: 22;
+  z-index: 2;
   transition-delay: 0.02s;
 }
 
 .tone5 {
   background: #737373;
-  z-index: 21;
+  z-index: 1;
   transition-delay: 0s;
 }
 

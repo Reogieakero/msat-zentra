@@ -9,19 +9,22 @@ import {
   LEVEL_COLORS_DARK,
   LEVEL_COLORS_LIGHT,
   type LevelSlice,
-} from "./nurse-risk-data";
-import styles from "./NurseRiskLevels.module.css";
+  type RiskDesk,
+} from "./risk-dashboard-data";
+import styles from "./RiskLevels.module.css";
 
 /**
- * Students on the clinic desk by risk level — one learner counts once no
+ * Students on a desk by risk level — one learner counts once no
  * matter how many cases they carry. Each slice links to nothing; levels
  * only, no identities.
  */
-export function NurseRiskLevels({
+export function RiskLevels({
+  desk,
   mix,
   totalStudents,
   interpretation,
 }: {
+  desk: RiskDesk;
   mix: LevelSlice[];
   totalStudents: number;
   interpretation: string;
@@ -34,7 +37,7 @@ export function NurseRiskLevels({
     <Card className={styles.panel}>
       <h2 className={styles.panelTitle}>Students by risk level</h2>
       <p className={styles.panelDesc}>
-        Live levels for learners with a case on the clinic desk.
+        Live levels for learners with a case on the {desk} desk.
       </p>
       {totalStudents === 0 ? (
         <p className={styles.empty}>No students on the desk yet.</p>

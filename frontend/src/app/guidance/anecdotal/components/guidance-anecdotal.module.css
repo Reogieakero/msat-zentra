@@ -14,6 +14,36 @@
   border-top: 1px solid var(--border, #e5e5e5);
 }
 
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 25%) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.main > * {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .error {
   margin: 0;
   padding: 2rem 1rem;
@@ -22,8 +52,10 @@
   font-size: 0.875rem;
 }
 
-/* Skeleton mirrors the loaded layout block-for-block: header, 6 summary
-   cards, divider, panel with filters in the header + table rows. */
+/* Skeleton mirrors the loaded layout block-for-block: side rail with
+   donut card (168px + 5-row legend + interpretation) and grade-bars
+   card, main panel with title/help/desc + 32px filters, folder grid,
+   and pager with middle page label. */
 .skelHeadText {
   display: flex;
   flex-direction: column;
@@ -79,6 +111,73 @@
   border-radius: var(--radius-md);
 }
 
+.skelLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.skelLegendRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.skelLegendLabel {
+  width: 6rem;
+  height: 0.8125rem;
+  border-radius: 0.25rem;
+}
+
+.skelLegendCount {
+  width: 2rem;
+  height: 0.8125rem;
+  border-radius: 0.25rem;
+}
+
+.skelInterpretation {
+  width: 100%;
+  height: 2.25rem;
+  margin-top: 0.625rem;
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--border);
+  border-radius: 0.25rem;
+}
+
+.skelGradeBars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.skelGradeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skelGradeLabel {
+  width: 3rem;
+  height: 0.8125rem;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+}
+
+.skelGradeBar {
+  flex: 1 1 auto;
+  min-width: 3rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.skelGradeCount {
+  width: 1.5rem;
+  height: 0.8125rem;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+}
+
 .skelLineShort {
   width: 65%;
   height: 0.75rem;
@@ -116,6 +215,19 @@
   border-radius: 0.25rem;
 }
 
+.skelPanelTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.skelHelpBtn {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
 .skelPanelDesc {
   width: min(24rem, 90%);
   height: 0.8rem;
@@ -132,13 +244,13 @@
 .skelSearch {
   width: 16rem;
   max-width: 100%;
-  height: 2.25rem;
+  height: 32px;
   border-radius: var(--radius-md);
 }
 
 .skelDrop {
   width: 6.5rem;
-  height: 2rem;
+  height: 32px;
   border-radius: var(--radius-md);
 }
 
@@ -150,10 +262,36 @@
   gap: 0.875rem;
 }
 
+.skelFolderCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.skelFolderBadge {
+  width: 4.5rem;
+  height: 0.6875rem;
+  margin-left: auto;
+  border-radius: 0.25rem;
+}
+
 .skelFolder {
-  height: 9rem;
+  height: 6.5rem;
   width: 100%;
   border-radius: var(--radius-md);
+}
+
+.skelFolderLabel {
+  width: 80%;
+  height: 0.875rem;
+  border-radius: 0.25rem;
+}
+
+.skelFolderSub {
+  width: 65%;
+  height: 0.75rem;
+  border-radius: 0.25rem;
 }
 
 .skelBtn {
@@ -180,4 +318,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.skelPageLabel {
+  width: 5rem;
+  height: 0.75rem;
+  border-radius: 0.25rem;
 }

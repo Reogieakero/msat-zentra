@@ -95,7 +95,15 @@ export function AdmReviewDialog({
   }
 
   async function bookSessionOnly(scheduledAt: string) {
-    await bookAdmConsultationSession(referralId, { scheduledAt });
+    try {
+      await bookAdmConsultationSession(referralId, { scheduledAt });
+    } catch {
+      toast.error({
+        title: "Could not book the session",
+        description: "The session was not saved. Check your connection and try again.",
+      });
+      throw new Error("book-failed");
+    }
     toast.success({
       title: "Session booked",
       description: `${student}'s case stays pending until you decide.`,
@@ -110,13 +118,25 @@ export function AdmReviewDialog({
   }
 
   async function decideReject(recommendation: string) {
-    if (mode === "desk") {
-      // Desk rows are already ADM-flagged — rejecting closes the case
-      // directly (same outcome, no consultation endpoint involved).
-      await dismissReferral(referralId, recommendation);
-    } else {
-      await reviewAdmConsultation(referralId, { recommendation, outcome: "reject" });
+    try {
+      if (mode === "desk") {
+        // Desk rows are already ADM-flagged — rejecting closes the case
+        // directly (same outcome, no consultation endpoint involved).
+        await dismissReferral(referralId, recommendation);
+      } else {
+        await reviewAdmConsultation(referralId, { recommendation, outcome: "reject" });
+      }
+    } catch {
+      toast.error({
+        title: "Could not reject the case",
+        description: "The rejection did not go through. Check your connection and try again.",
+      });
+      throw new Error("reject-failed");
     }
+    toast.success({
+      title: "Rejected from ADM",
+      description: `${student}'s case was closed with your recommendation kept on record.`,
+    });
     refreshAll();
   }
 

@@ -33,6 +33,8 @@ export interface GuidanceAdmCase {
      anecdotal id so the counselor can open the official report, plus whether
      this case was already decided out of the consultation stage. */
   anecdotalId?: string;
+  /* Latest engine risk level for the student (null when never flagged). */
+  riskLevel?: string | null;
   /* Teacher-picked consultation reviewer — this queue only ever carries
      guidance-picked (or legacy unpicked) cases. */
   consultReviewer?: string;
@@ -41,6 +43,33 @@ export interface GuidanceAdmCase {
   location?: string;
   recommendations?: string;
   reviewed?: boolean;
+  /* Raw review note (`[ADM consult] ...`) for rebuilding the GCForm-03
+     guidance-recommendations line in the referral-form viewer. */
+  consultNote?: string | null;
+}
+
+export interface GuidanceAdmStageCount {
+  stage: string;
+  label: string;
+  count: number;
+}
+
+export interface GuidanceAdmEligibilityCount {
+  eligibility: string;
+  label: string;
+  count: number;
+}
+
+export interface GuidanceAdmActionCount {
+  action: string;
+  label: string;
+  count: number;
+}
+
+export interface GuidanceAdmTrendWeek {
+  week: string;
+  label: string;
+  count: number;
 }
 
 export interface GuidanceAdmSummary {
@@ -53,6 +82,14 @@ export interface GuidanceAdmSummary {
   needsHomeVisit: number;
   awaitingReview: number;
   consultationAction: number;
+  // Reports breakdowns (optional for backward-compat with cached responses).
+  // Guidance ADM only — never the school-wide tracker counts.
+  reviewed?: number;
+  scopedTotal?: number;
+  byStage?: GuidanceAdmStageCount[];
+  byEligibility?: GuidanceAdmEligibilityCount[];
+  byAction?: GuidanceAdmActionCount[];
+  referralTrend?: GuidanceAdmTrendWeek[];
 }
 
 /* One open guidance referral waiting on the counselor's consultation action.

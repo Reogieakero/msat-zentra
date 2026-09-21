@@ -26,15 +26,9 @@
 
 .split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: center;
-}
-
-@media (max-width: 640px) {
-  .split {
-    grid-template-columns: 1fr;
-  }
 }
 
 .donutWrap {
@@ -115,4 +109,20 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--muted-foreground);
+}
+
+.barWrap {
+  flex: 1 1 auto;
+  min-width: 3rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted-foreground), transparent 80%);
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--primary);
 }

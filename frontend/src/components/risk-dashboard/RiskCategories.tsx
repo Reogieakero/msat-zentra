@@ -9,17 +9,19 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import type { CategorySlice } from "./nurse-risk-data";
-import styles from "./NurseRiskCategories.module.css";
+import type { CategorySlice, RiskDesk } from "./risk-dashboard-data";
+import styles from "./RiskCategories.module.css";
 
 /**
  * Desk cases grouped by report category — one bar per category. Counts
  * only; the underlying write-ups stay on their case pages.
  */
-export function NurseRiskCategories({
+export function RiskCategories({
+  desk,
   rows,
   interpretation,
 }: {
+  desk: RiskDesk;
   rows: CategorySlice[];
   interpretation: string;
 }) {
@@ -33,7 +35,7 @@ export function NurseRiskCategories({
     <Card className={styles.panel}>
       <h2 className={styles.panelTitle}>Cases by category</h2>
       <p className={styles.panelDesc}>
-        What the underlying reports on the clinic desk are about.
+        What the underlying reports on the {desk} desk are about.
       </p>
       {rows.length === 0 ? (
         <p className={styles.empty}>No categorized cases yet.</p>

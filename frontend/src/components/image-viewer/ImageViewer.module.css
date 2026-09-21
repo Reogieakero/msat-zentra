@@ -1,0 +1,112 @@
+/* Fullscreen gallery viewer — theme-aware via --card / --foreground so it
+   follows light and dark mode instead of a hardcoded dark panel. */
+.viewerBackdrop {
+  position: fixed;
+  inset: 0;
+  /* Above the tab navbar (35) and dialogs (50) so the fullscreen
+     viewer covers everything. */
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.6);
+  padding: 1rem;
+}
+
+.viewerContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: min(56rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.35);
+  padding: 1rem 3rem 1rem;
+}
+
+.viewerHead {
+  text-align: center;
+  margin-bottom: 0.75rem;
+  max-width: 100%;
+}
+
+.viewerStudent {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.viewerSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.viewerImage {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.viewerNav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.viewerNav:hover {
+  background: var(--accent);
+}
+
+.viewerPrev {
+  left: 0.5rem;
+}
+
+.viewerNext {
+  right: 0.5rem;
+}
+
+.viewerFooter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--foreground);
+}
+
+.viewerName {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 28rem;
+}
+
+.viewerCounter {
+  margin: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}

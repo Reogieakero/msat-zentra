@@ -1,10 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
+import {
+  buildGcForm03Data,
+  consultRecommendation,
+  type GcForm03Data,
+} from "../../adm/components/gcform03-data";
+import { GcForm03PreviewDialog } from "../../adm/components/GcForm03PreviewDialog";
 import type {
   CounselingSessionItem,
   GuidanceReferralItem,
@@ -43,6 +51,13 @@ export type GuidanceDialogKey =
 
 export type GuidanceSessionDialogKey = "finish" | "move" | "cancelSess" | "deleteSess";
 
+/* Day (YYYY-MM-DD) of the row's latest action for the viewed form's
+   received/counselor dates — the builder would otherwise stamp today. */
+function latestActionDay(time: string): string | null {
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(time);
+  return m ? m[1] : null;
+}
+
 export function GuidanceReferralEntry({
   row,
   alt,
@@ -55,6 +70,7 @@ export function GuidanceReferralEntry({
   onEndorsedNotice,
   onReviewAdm,
   onChanged,
+  highlighted = false,
 }: {
   row: GuidanceReferralItem;
   alt: boolean;
@@ -71,6 +87,7 @@ export function GuidanceReferralEntry({
   onEndorsedNotice: (studentName: string) => void;
   onReviewAdm: (row: GuidanceReferralItem) => void;
   onChanged: () => void;
+  highlighted?: boolean;
 }) {
   const isPending = row.status === "pending";
   const isDismissed = row.status === "dismissed";
@@ -88,10 +105,47 @@ export function GuidanceReferralEntry({
   const latest = latestActionOf(row);
   const booked = hasScheduledSession(row.sessions);
   const [docsFor, setDocsFor] = React.useState<CounselingSessionItem | null>(null);
+  // Endorsed GCForm-03 (Control No. GCForm-03) viewer — rebuilt from the
+  // case + its OCForm-01, exactly like the endorse-time preview, since the
+  // filled form itself lives with the ADM coordinator.
+  const [gcOpen, setGcOpen] = React.useState(false);
+  const [gcData, setGcData] = React.useState<GcForm03Data | null>(null);
+  const [gcLoading, setGcLoading] = React.useState(false);
+
+  async function openGcForm() {
+    if (gcLoading) return;
+    if (gcData) {
+      setGcOpen(true);
+      return;
+    }
+    setGcLoading(true);
+    try {
+      let report: OcForm01Detail | null = null;
+      try {
+        if (row.anecdotalId) report = await fetchOcForm01Detail(row.anecdotalId);
+      } catch {
+        report = null;
+      }
+      const data = buildGcForm03Data(
+        row,
+        report,
+        consultRecommendation(row.notes)
+      );
+      const day = latestActionDay(latest.time);
+      if (day) {
+        data.receivedDate = day;
+        data.counselorDate = day;
+      }
+      setGcData(data);
+      setGcOpen(true);
+    } finally {
+      setGcLoading(false);
+    }
+  }
 
   return (
     <>
-    <li className={`${styles.entry}${alt ? ` ${styles.entryAlt}` : ""}`}>
+    <li id={`guidance-case-${row.id}`} className={`${styles.entry}${alt ? ` ${styles.entryAlt}` : ""}${highlighted ? ` ${styles.entryHighlight}` : ""}`}>
       <span className={`${styles.watermark} ${styles["watermark" + watermarkColor(row).replace(/^./, c => c.toUpperCase())]}`} aria-hidden="true">
         {watermarkLabel(row)}
       </span>
@@ -268,7 +322,7 @@ export function GuidanceReferralEntry({
             {row.escalationReason}
           </p>
         ) : null}
-        {row.notes ? (
+        {row.notes && !isAdmTrack ? (
           <p className={styles.calloutMuted}>
             <span className={styles.calloutPrefix}>Internal note: </span>
             {row.notes}
@@ -298,6 +352,22 @@ export function GuidanceReferralEntry({
           ) : (
             <>
               {row.anecdotalId && (
+                isEndorsedRow ? (
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="outline"
+                    style={{ height: "32px" }}
+                    disabled={actionPending || gcLoading}
+                    onClick={() => void openGcForm()}
+                    aria-label={`View the GCForm-03 referral form for ${row.student}`}
+                  >
+                    {gcLoading ? (
+                      <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+                    ) : null}
+                    {gcLoading ? "Loading…" : "View referral form"}
+                  </Button>
+                ) : (
                 <Button
                   type="button"
                   size="xs"
@@ -306,20 +376,17 @@ export function GuidanceReferralEntry({
                   onClick={() =>
                     isClosed
                       ? onPrivacy(row.student)
-                      : isEndorsedRow
-                        ? onEndorsedNotice(row.student)
-                        : onPreview(row.anecdotalId)
+                      : onPreview(row.anecdotalId)
                   }
                   aria-label={
                     isClosed
                       ? `Referral for ${row.student} is kept private because the case is finished`
-                      : isEndorsedRow
-                        ? `Referral for ${row.student} moved with the case to the ADM coordinator`
-                        : `View the referral form for ${row.student}`
+                      : `View the referral form for ${row.student}`
                   }
                 >
                   View referral form
                 </Button>
+                )
               )}
               {!isClosed && !isAdmTrack && (
                 <Button
@@ -350,6 +417,18 @@ export function GuidanceReferralEntry({
         open
         onClose={() => setDocsFor(null)}
         onChanged={onChanged}
+      />
+    )}
+    {/* Endorsed GCForm-03 viewer — read-only; the filled form lives with
+        the ADM coordinator, rebuilt here from the case + its OCForm-01. */}
+    {gcOpen && gcData && (
+      <GcForm03PreviewDialog
+        open
+        data={gcData}
+        confirming={false}
+        onClose={() => setGcOpen(false)}
+        onConfirm={() => {}}
+        viewOnly
       />
     )}
     </>

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
@@ -8,6 +9,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { cache } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
 import { getInterventionStudents } from "../risk/interventions.service.js";
 import {
   evaluateRisk,
@@ -16,6 +18,51 @@ import {
 } from "../../services/risk.js";
 
 const router = Router();
+
+// Session documentary uploads — same rules as the clinic desk: images only,
+// 5 MB each, max 5 per request. Filing never gates Done; it only builds the
+// evidence trail for sessions that already started (or are finished).
+const sessionDocsUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  fileFilter: (_req, file, cb) => {
+    if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPG, PNG, or WEBP images are allowed for session documentation."));
+    }
+  },
+});
+
+function formatSessionDoc(row: {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: Date;
+}) {
+  return {
+    id: row.id,
+    fileUrl: row.fileUrl,
+    fileName: row.fileName,
+    mimeType: row.mimeType,
+    fileSize: row.fileSize,
+    uploadedAt: row.uploadedAt.toISOString(),
+  };
+}
+
+// Documentation unlocks once the session time arrives — upcoming sessions
+// can still be viewed but cannot take new files yet.
+function ensureDocsUnlocked(session: { status: string; scheduledAt: Date }) {
+  if (session.status === "scheduled" && session.scheduledAt.getTime() > Date.now()) {
+    throw new AppError(
+      400,
+      "SESSION_NOT_STARTED",
+      "This session hasn't started yet — documentation unlocks once the scheduled time arrives"
+    );
+  }
+}
 
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
@@ -67,7 +114,13 @@ router.get(
 
       // One full-cohort engine read; every view below filters the LIVE values
       // in memory so counts and pages always agree with each other.
-      const cohort = await getInterventionStudents({ page: 1, pageSize: 1000 });
+      // fullCohort enumerates the live enrollment (profiles + roster, no
+      // account required) instead of starting from engine snapshots, so
+      // at-risk students the engine hasn't flagged yet still appear.
+      // includeRecovered keeps students whose risk cleared but whose
+      // follow-up is still open, so the case can be discontinued on the
+      // desk instead of silently vanishing from the queue.
+      const cohort = await getInterventionStudents({ page: 1, pageSize: 1000, includeRecovered: true, fullCohort: true });
 
       const factorKey =
         factorFilter === "Academic"
@@ -79,7 +132,12 @@ router.get(
               : null;
 
       const matches = (s: (typeof cohort.students)[number]) => {
-        if (levelFilter !== "All" && s.riskLevel !== levelFilter) return false;
+        // Recovered students (live Low, follow-up still open) stay visible
+        // under every level view — they are actionable discontinue items,
+        // not at-risk cases, so the level filter never hides them.
+        const recovered =
+          s.riskLevel === "Low" && s.intervention?.outcomeStatus === "ongoing";
+        if (levelFilter !== "All" && s.riskLevel !== levelFilter && !recovered) return false;
         if (factorKey && !s.factors[factorKey as keyof typeof s.factors]) return false;
         if (mineOnly && s.intervention?.assignedTo !== me) return false;
         // Default queue hides closed follow-ups (resolved or not resolved) —
@@ -165,6 +223,10 @@ router.get(
         grade: GRADE_LABELS[s.gradeLevel] ?? "",
         riskLevel: s.riskLevel,
         riskCount: s.riskCount,
+        // Engine detection moment for the active term (RiskSnapshot date).
+        // Null only for legacy rows — the table falls back to the follow-up
+        // opened date, then to a dateless engine-flag label.
+        detectedAt: s.snapshotDate ?? null,
         factors: s.factors,
         referralContext: refByKey.get(s.studentId) ?? { open: 0, closed: 0 },
         intervention: s.intervention
@@ -178,6 +240,8 @@ router.get(
               outcomeNotes: s.intervention.outcomeNotes ?? "",
               priority: s.intervention.priority ?? "",
               intakeNotes: s.intervention.intakeNotes ?? "",
+              // Opened date for queue date columns (null for legacy rows).
+              createdAt: s.intervention.createdAt,
               sessions: s.intervention.sessions.map((sess) => ({
                 id: sess.id,
                 sessionType: sess.sessionType,
@@ -188,9 +252,9 @@ router.get(
                 sessionNotes: sess.sessionNotes ?? "",
                 outcome: sess.outcome ?? "",
                 cancelReason: sess.cancelReason ?? "",
-                completedAt: sess.completedAt
-                  ? sess.completedAt.toISOString().slice(0, 10)
-                  : "",
+                createdAt: sess.createdAt.toISOString(),
+                completedAt: sess.completedAt ? sess.completedAt.toISOString() : "",
+                attachmentsCount: sess.attachmentsCount ?? 0,
               })),
               completedSessions: s.intervention.sessions.filter(
                 (sess) => sess.status === "completed"
@@ -298,6 +362,7 @@ function formatSession(row: {
   sessionNotes: string | null;
   outcome: string | null;
   cancelReason: string | null;
+  createdAt: Date;
   completedAt: Date | null;
 }) {
   return {
@@ -310,7 +375,8 @@ function formatSession(row: {
     sessionNotes: row.sessionNotes ?? "",
     outcome: row.outcome ?? "",
     cancelReason: row.cancelReason ?? "",
-    completedAt: row.completedAt ? row.completedAt.toISOString().slice(0, 10) : "",
+    createdAt: row.createdAt.toISOString(),
+    completedAt: row.completedAt ? row.completedAt.toISOString() : "",
   };
 }
 
@@ -682,6 +748,14 @@ router.post(
       if (row.outcomeStatus === "resolved") {
         throw new AppError(400, "INVALID_ACTION", "A resolved intervention can no longer be reassigned");
       }
+      // No hand-offs while a session is still upcoming — finish or cancel it
+      // first so the booked session never strands with the wrong handler.
+      const upcoming = await prisma.counselingSession.count({
+        where: { interventionId: row.id, status: "scheduled" },
+      });
+      if (upcoming > 0) {
+        throw new AppError(400, "ACTIVE_SESSION_EXISTS", "This case has an upcoming session — finish or cancel it before reassigning");
+      }
       const assigneeId: string | null = req.body.assigneeId || null;
       if (assigneeId) {
         const user = await prisma.user.findUnique({ where: { id: assigneeId } });
@@ -740,17 +814,41 @@ router.post(
       ) {
         throw new AppError(400, "INVALID_ACTION", "Review the recommendation before closing the outcome");
       }
+      // No outcome while a session is still upcoming — finish or cancel it
+      // first (same rule as endorsing: the booked session decides the case).
       // Strict close-out (same rule as referrals): a finished session plus a
-      // closing note are mandatory before a follow-up can be closed.
+      // closing note are mandatory before a follow-up can be closed — except
+      // a discontinue close (unresolved) for a student whose live risk has
+      // genuinely cleared to Low: there is nothing left to counsel, so the
+      // closing note alone suffices and the case leaves the queue.
       const closing =
         req.body.outcomeStatus === "resolved" ||
         req.body.outcomeStatus === "unresolved";
       if (closing) {
-        const doneCount = await prisma.counselingSession.count({
-          where: { interventionId: row.id, status: "completed" },
-        });
+        // Independent counts run in parallel.
+        const [upcomingCount, doneCount] = await Promise.all([
+          prisma.counselingSession.count({
+            where: { interventionId: row.id, status: "scheduled" },
+          }),
+          prisma.counselingSession.count({
+            where: { interventionId: row.id, status: "completed" },
+          }),
+        ]);
+        if (upcomingCount > 0) {
+          throw new AppError(400, "ACTIVE_SESSION_EXISTS", "This case has an upcoming session — finish or cancel it before recording the outcome");
+        }
         if (doneCount === 0) {
-          throw new AppError(400, "OUTCOME_BLOCKED", "Finish at least one counseling session before closing this follow-up");
+          const termId = await resolveActiveTermId();
+          const liveLevel = termId
+            ? row.studentId
+              ? (await evaluateRisk(row.studentId, termId)).result.riskLevel
+              : row.rosterId
+                ? (await evaluateRosterRisk(row.rosterId, termId)).result.riskLevel
+                : null
+            : null;
+          if (req.body.outcomeStatus !== "unresolved" || liveLevel !== "Low") {
+            throw new AppError(400, "OUTCOME_BLOCKED", "Finish at least one counseling session before closing this follow-up");
+          }
         }
         if (!req.body.outcomeNotes?.trim()) {
           throw new AppError(400, "OUTCOME_BLOCKED", "A closing note is required to close this follow-up");
@@ -786,6 +884,118 @@ router.post(
     } catch (e) {
       next(e);
     }
+  }
+);
+
+// Session documentary: list / upload / remove image attachments on one
+// counseling session. Filing is optional — these endpoints never gate Done,
+// they only build the evidence trail. Uploads are allowed on open cases (any
+// session status except a closed follow-up) so documentation can be filed
+// after marking a session done — but a still-upcoming session unlocks only
+// once its scheduled time arrives.
+router.get(
+  "/:id/sessions/:sessionId/attachments",
+  requireAuth,
+  requireRole("guidance_counselor", "principal"),
+  async (req, res, next) => {
+    try {
+      const row = await getIntervention(String(req.params.id));
+      const session = await getInterventionSession(row.id, String(req.params.sessionId));
+      const rows = await prisma.clinicSessionAttachment.findMany({
+        where: { sessionId: session.id },
+        orderBy: { uploadedAt: "asc" },
+      });
+      res.json(rows.map(formatSessionDoc));
+    } catch (e) { next(e); }
+  }
+);
+
+router.post(
+  "/:id/sessions/:sessionId/attachments",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  sessionDocsUpload.array("files", 5),
+  async (req, res, next) => {
+    try {
+      const row = await getIntervention(String(req.params.id));
+      // Resolved follow-ups stay open for late documentary filing;
+      // discontinued ones do not accumulate further evidence.
+      if (row.outcomeStatus === "unresolved") {
+        throw new AppError(400, "INVALID_ACTION", "Cannot add documentation to a discontinued follow-up");
+      }
+      const session = await getInterventionSession(row.id, String(req.params.sessionId));
+      ensureDocsUnlocked(session);
+      const files = ((req as unknown as { files?: Array<{ buffer: Buffer; originalname: string; mimetype: string; size: number }> }).files ?? []);
+      if (files.length === 0) {
+        throw new AppError(400, "BAD_REQUEST", "Attach at least one image");
+      }
+      const existing = await prisma.clinicSessionAttachment.count({
+        where: { sessionId: session.id },
+      });
+      if (existing + files.length > 10) {
+        throw new AppError(400, "BAD_REQUEST", "A session can hold at most 10 documentation images");
+      }
+      const created = await Promise.all(
+        files.map(async (file) => {
+          const path = clinicSessionObjectPath(session.id, file.originalname);
+          const fileUrl = await uploadFile(file.buffer, path, file.mimetype, getReferralBucket());
+          return prisma.clinicSessionAttachment.create({
+            data: {
+              sessionId: session.id,
+              fileUrl,
+              fileName: file.originalname.slice(0, 200),
+              mimeType: file.mimetype,
+              fileSize: file.size,
+              uploadedBy: req.user!.id,
+            },
+          });
+        })
+      );
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "session_document_added",
+        sourceTable: "counseling_sessions",
+        sourceId: session.id,
+        reason: `${created.length} documentation image${created.length === 1 ? "" : "s"} filed`,
+        oldValue: null,
+        newValue: { count: created.length },
+      });
+      await invalidateTags(TAGS);
+      res.status(201).json(created.map(formatSessionDoc));
+    } catch (e) { next(e); }
+  }
+);
+
+router.delete(
+  "/:id/sessions/:sessionId/attachments/:attachmentId",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  async (req, res, next) => {
+    try {
+      const row = await getIntervention(String(req.params.id));
+      if (row.outcomeStatus === "unresolved") {
+        throw new AppError(400, "INVALID_ACTION", "Cannot remove documentation from a discontinued follow-up");
+      }
+      const session = await getInterventionSession(row.id, String(req.params.sessionId));
+      const doc = await prisma.clinicSessionAttachment.findUnique({
+        where: { id: String(req.params.attachmentId) },
+      });
+      if (!doc || doc.sessionId !== session.id) {
+        throw new AppError(404, "NOT_FOUND", "Documentation not found");
+      }
+      await prisma.clinicSessionAttachment.delete({ where: { id: doc.id } });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "session_document_added",
+        sourceTable: "counseling_sessions",
+        sourceId: session.id,
+        reason: `Documentation removed: ${doc.fileName}`,
+        oldValue: { fileName: doc.fileName },
+        newValue: null,
+      });
+      await invalidateTags(TAGS);
+      res.json({ ok: true });
+    } catch (e) { next(e); }
   }
 );
 

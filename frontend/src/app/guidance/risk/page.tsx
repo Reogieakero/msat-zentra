@@ -1,296 +1,256 @@
 "use client";
 
-import Link from "next/link";
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchGuidanceOverview } from "./components/guidance-risk-data";
-import styles from "../pages.module.css";
+import { useTheme } from "@/components/providers";
+import {
+  buildRiskDashboard,
+  interpretCategoryMix,
+  interpretLevelMix,
+  interpretSectionMatrix,
+} from "@/components/risk-dashboard/risk-dashboard-data";
+import { RiskCategories } from "@/components/risk-dashboard/RiskCategories";
+import { RiskHeatmap } from "@/components/risk-dashboard/RiskHeatmap";
+import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
+import { fetchGuidanceRiskLevels } from "../referrals/components/guidance-referrals-data";
+import { fetchGuidanceRisk } from "./components/guidance-risk-dashboard";
+import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
 /**
- * Guidance risk dashboard — fully live. Reads only guidance-scoped backend
- * endpoints (`/api/guidance/overview`): rule-based risk levels
- * (High = 2+ flags, Moderate = 1, Low = 0), status-only factor totals, the
- * per-section level heatmap, and the grade attention table. No mock data,
- * no confidential write-ups, no principal-only aggregates.
+ * Guidance risk dashboard — desk-scoped categories, levels, and heatmaps.
+ * Same shared UI as the nurse risk board; every number derives from the
+ * guidance desk's own referrals plus the per-student risk-level projection
+ * the guidance role may read. Counts and levels only; confidential notes
+ * from other roles never appear here.
  */
 export default function GuidanceRiskPage() {
-  const { data, isPending, isError, refetch, isFetching } = useQuery({
-    queryKey: ["guidance-risk-board"],
-    queryFn: () => fetchGuidanceOverview(),
+  // Slice fills resolve per mode (SVG attributes can't read CSS vars), so
+  // the dashboard rebuilds its palette whenever the theme flips.
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
+  const riskQuery = useQuery({
+    queryKey: ["guidance-risk"],
+    queryFn: fetchGuidanceRisk,
     staleTime: 60_000,
   });
 
-  if (isPending) {
+  // Track scope — the board mixes both referral tracks by default; the
+  // switch isolates the Counseling caseload or the ADM consultation queue.
+  const [track, setTrack] = React.useState<"all" | "Counseling" | "ADM">("all");
+  const trackCounts = React.useMemo(() => {
+    const rows = riskQuery.data?.rows ?? [];
+    return {
+      all: rows.length,
+      Counseling: rows.filter((r) => r.track === "Counseling").length,
+      ADM: rows.filter((r) => r.track === "ADM").length,
+    };
+  }, [riskQuery.data]);
+  const filteredRows = React.useMemo(() => {
+    const rows = riskQuery.data?.rows ?? [];
+    return track === "all" ? rows : rows.filter((r) => r.track === track);
+  }, [riskQuery.data, track]);
+
+  const studentIds = React.useMemo(
+    () => [
+      ...new Set(
+        filteredRows
+          .map((r) => riskQuery.data?.caseToStudent[r.id] ?? null)
+          .filter((id): id is string => id !== null)
+      ),
+    ],
+    [filteredRows, riskQuery.data]
+  );
+  const levelsQuery = useQuery({
+    queryKey: ["guidance-risk-levels", studentIds],
+    queryFn: () => fetchGuidanceRiskLevels(studentIds),
+    staleTime: 300_000,
+    enabled: studentIds.length > 0,
+  });
+
+  const dashboard = React.useMemo(
+    () =>
+      riskQuery.data
+        ? buildRiskDashboard(
+            filteredRows,
+            levelsQuery.data ?? {},
+            riskQuery.data.caseToStudent,
+            isDark
+          )
+        : null,
+    [riskQuery.data, filteredRows, levelsQuery.data, isDark]
+  );
+
+  const levelsPending = studentIds.length > 0 && levelsQuery.isPending;
+
+  if (riskQuery.isPending || levelsPending) {
+    // Skeleton mirrors the real layout one-to-one (page head, heatmap
+    // grid panel + donut/bars side rail with descs and interpretations)
+    // so nothing shifts when data arrives.
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · School-wide</p>
-            <h1 className={styles.title}>Risk dashboard</h1>
-            <p className={styles.lede}>Loading live risk levels…</p>
-          </div>
+        <div className={styles.skelPageHead} aria-hidden="true">
+          <Skeleton className={styles.skelEyebrow} />
+          <Skeleton className={styles.skelTitle} />
+          <Skeleton className={styles.skelLede} />
         </div>
-        <div className={styles.kpiGrid} aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <Card key={i} className={styles.card}>
-              <CardContent>
-                <Skeleton style={{ width: "60%", height: "0.85rem" }} />
-                <Skeleton
-                  style={{ width: "40%", height: "1.75rem", marginTop: "0.5rem" }}
-                />
-                <Skeleton
-                  style={{ width: "80%", height: "0.8rem", marginTop: "0.5rem" }}
-                />
-              </CardContent>
-            </Card>
+        <div className={styles.trackRow} aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className={styles.skelTrackBtn} />
           ))}
         </div>
-        {/* Section heatmap mirror — heat cells. */}
-        <Card className={styles.card} aria-hidden="true">
-          <CardHeader>
-            <Skeleton style={{ width: "14rem", height: "1rem" }} />
-            <Skeleton style={{ width: "20rem", maxWidth: "100%", height: "0.8rem", marginTop: "0.375rem" }} />
-          </CardHeader>
-          <CardContent>
-            <div className={styles.heatGrid}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className={styles.heatCell}>
-                  <Skeleton style={{ width: "60%", height: "0.85rem" }} />
-                  <Skeleton style={{ width: "100%", height: "2.5rem", marginTop: "0.5rem" }} />
-                  <Skeleton style={{ width: "80%", height: "0.75rem", marginTop: "0.5rem" }} />
+        <div className={styles.mainGrid}>
+          <Card>
+            <CardContent className={styles.skelChartCard}>
+              <Skeleton className={styles.skelLabel} />
+              <Skeleton className={styles.skelDesc} aria-hidden="true" />
+              <div className={styles.skelHeatScroll} aria-hidden="true">
+                <div className={styles.skelHeatGrid}>
+                  <div className={styles.skelHeatRow}>
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className={styles.skelHeatHeadCell} />
+                    ))}
+                  </div>
+                  {[0, 1, 2, 3].map((r) => (
+                    <div key={r} className={styles.skelHeatRow}>
+                      {[0, 1, 2, 3, 4].map((c) => (
+                        <Skeleton key={c} className={styles.skelHeatCell} />
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        {/* Grade attention table mirror. */}
-        <Card className={styles.card} aria-hidden="true">
-          <CardHeader>
-            <Skeleton style={{ width: "10rem", height: "1rem" }} />
-            <Skeleton style={{ width: "18rem", maxWidth: "100%", height: "0.8rem", marginTop: "0.375rem" }} />
-          </CardHeader>
-          <CardContent>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} style={{ width: "100%", height: "2.25rem", marginTop: i === 0 ? 0 : "0.375rem" }} />
-            ))}
-          </CardContent>
-        </Card>
+              </div>
+              <div className={styles.skelHeatFooter} aria-hidden="true">
+                <Skeleton className={styles.skelHeatLegend} />
+              </div>
+              <Skeleton className={styles.skelInterp} aria-hidden="true" />
+              <Skeleton className={styles.skelInterpShort} aria-hidden="true" />
+            </CardContent>
+          </Card>
+          <div className={styles.sideRail}>
+            <Card>
+              <CardContent className={styles.skelChartCard}>
+                <Skeleton className={styles.skelLabel} />
+                <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                <div className={styles.skelChartRow}>
+                  <Skeleton className={styles.skelDonut} />
+                  <div className={styles.skelLegend}>
+                    {[0, 1, 2, 3].map((i) => (
+                      <Skeleton key={i} className={styles.skelLegendRow} />
+                    ))}
+                  </div>
+                </div>
+                <Skeleton className={styles.skelInterp} aria-hidden="true" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className={styles.skelChartCard}>
+                <Skeleton className={styles.skelLabel} />
+                <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                <div className={styles.skelBars}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <Skeleton key={i} className={styles.skelBar} />
+                  ))}
+                </div>
+                <Skeleton className={styles.skelInterp} aria-hidden="true" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </section>
     );
   }
 
-  if (isError || !data) {
+  if (riskQuery.isError || !riskQuery.data || !dashboard) {
+    const retry = () => {
+      void riskQuery.refetch();
+      void levelsQuery.refetch();
+    };
+    const fetching = riskQuery.isFetching || levelsQuery.isFetching;
     return (
       <section className={styles.page}>
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · School-wide</p>
+        <div>
+          <p className={styles.eyebrow}>Guidance · Insights</p>
+          <div className={styles.titleRow}>
             <h1 className={styles.title}>Risk dashboard</h1>
           </div>
         </div>
-        <Card className={styles.card}>
-          <CardHeader>
-            <CardTitle className={styles.sectionTitle}>
-              We couldn&apos;t load the risk board
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              Check your connection and try again.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              {isFetching ? "Retrying…" : "Retry"}
-            </Button>
-          </CardContent>
-        </Card>
+        <div className={styles.pageError} role="alert">
+          <p className={styles.pageErrorTitle}>We couldn&apos;t load the risk dashboard</p>
+          <p className={styles.pageErrorHint}>
+            Please check your internet connection and try again.
+          </p>
+          <Button size="sm" variant="outline" disabled={fetching} onClick={retry}>
+            {fetching ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
+            Try again
+          </Button>
+        </div>
       </section>
     );
   }
-
-  const { high, moderate, low } = data.riskByLevel;
-  const flagged = high + moderate;
-  const activeFlags =
-    data.factorTotals.attendance +
-    data.factorTotals.grades +
-    data.factorTotals.behavior;
 
   return (
     <section className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Insights · School-wide</p>
+      <div>
+        <p className={styles.eyebrow}>Guidance · Insights</p>
+        <div className={styles.titleRow}>
           <h1 className={styles.title}>Risk dashboard</h1>
-          <p className={styles.lede}>
-            Live rule-based risk scores (High ≥ 2 flags, Moderate = 1, Low =
-            0) and section heatmap for {data.termLabel}. Status-only counts —
-            detail views live under Heatmap and Behavioral.
-          </p>
         </div>
-        <Badge variant="outline">Live · {data.termLabel}</Badge>
+        <p className={styles.lede}>
+          Desk-scoped categories, levels, and heatmaps.
+        </p>
       </div>
-
-      <div className={styles.actions}>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/guidance/risk/heatmap">Heatmap detail</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/guidance/risk/behavioral">Behavioral records</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/guidance/alerts">At-risk queue</Link>
-        </Button>
+      <div className={styles.trackRow} role="group" aria-label="Filter board by case track">
+        {(
+          [
+            { key: "all", label: "All tracks" },
+            { key: "Counseling", label: "Counseling" },
+            { key: "ADM", label: "ADM" },
+          ] as const
+        ).map((t) => (
+          <Button
+            key={t.key}
+            size="sm"
+            variant={track === t.key ? "default" : "outline"}
+            onClick={() => setTrack(t.key)}
+            aria-pressed={track === t.key}
+          >
+            {t.label} · {trackCounts[t.key]}
+          </Button>
+        ))}
       </div>
-
-      <div className={styles.kpiGrid}>
-        <Card className={styles.card}>
-          <CardContent>
-            <p className={styles.kpiLabel}>High-risk students</p>
-            <p className={styles.kpiValue}>{high}</p>
-            <p className={styles.kpiHint}>2 or more flags this term</p>
-          </CardContent>
-        </Card>
-        <Card className={styles.card}>
-          <CardContent>
-            <p className={styles.kpiLabel}>Moderate-risk students</p>
-            <p className={styles.kpiValue}>{moderate}</p>
-            <p className={styles.kpiHint}>Exactly 1 flag this term</p>
-          </CardContent>
-        </Card>
-        <Card className={styles.card}>
-          <CardContent>
-            <p className={styles.kpiLabel}>Low-risk students</p>
-            <p className={styles.kpiValue}>{low}</p>
-            <p className={styles.kpiHint}>No flags this term</p>
-          </CardContent>
-        </Card>
-        <Card className={styles.card}>
-          <CardContent>
-            <p className={styles.kpiLabel}>Active flags</p>
-            <p className={styles.kpiValue}>{activeFlags}</p>
-            <p className={styles.kpiHint}>
-              Academic {data.factorTotals.grades} · Attendance{" "}
-              {data.factorTotals.attendance} · Behavioral{" "}
-              {data.factorTotals.behavior}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className={styles.card}>
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>
-            Section heatmap ({data.termLabel})
-          </CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Darker bar = more High-risk students in that section.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data.sectionHeat.length === 0 ? (
-            <p className={styles.sectionDesc}>
-              No sections enrolled for the active school year yet.
-            </p>
-          ) : (
-            <div className={styles.heatGrid}>
-              {data.sectionHeat.map((cell) => (
-                <div
-                  key={cell.section}
-                  className={styles.heatCell}
-                  title={`${cell.section} · ${cell.grade}`}
-                >
-                  <p className={styles.heatSection}>{cell.section}</p>
-                  <div className={styles.heatBars} aria-hidden>
-                    <span
-                      className={styles.heatBar}
-                      style={{ height: `${cell.high * 10 + 4}px` }}
-                    />
-                    <span
-                      className={`${styles.heatBar} ${styles.heatBarMid}`}
-                      style={{ height: `${cell.moderate * 10 + 4}px` }}
-                    />
-                    <span
-                      className={`${styles.heatBar} ${styles.heatBarLow}`}
-                      style={{ height: `${Math.min(cell.low * 2 + 4, 40)}px` }}
-                    />
-                  </div>
-                  <p className={styles.heatLegend}>
-                    H {cell.high} · M {cell.moderate} · L {cell.low}
-                  </p>
-                </div>
-              ))}
-            </div>
+      <div className={styles.mainGrid}>
+        <RiskHeatmap
+          desk="guidance"
+          categories={dashboard.matrixCategories}
+          matrix={dashboard.matrix}
+          colTotals={dashboard.colTotals}
+          total={dashboard.totalCases}
+          interpretation={interpretSectionMatrix(
+            dashboard.matrix,
+            dashboard.matrixCategories,
+            dashboard.totalCases,
+            "guidance"
           )}
-        </CardContent>
-      </Card>
-
-      <Card className={styles.card}>
-        <CardHeader>
-          <CardTitle className={styles.sectionTitle}>
-            Grade attention
-          </CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Where flagged students concentrate, and which section leads each
-            grade.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Grade</th>
-                  <th>Sections</th>
-                  <th>High</th>
-                  <th>At-risk</th>
-                  <th>Highest section</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.gradeAttention.map((row) => (
-                  <tr key={row.short}>
-                    <td className={styles.mono}>{row.grade}</td>
-                    <td>{row.sections}</td>
-                    <td>{row.high}</td>
-                    <td>{row.atRisk}</td>
-                    <td>
-                      {flagged === 0 && row.atRisk === 0 ? (
-                        "—"
-                      ) : (
-                        <>
-                          {row.topSection}{" "}
-                          <span className={styles.mono}>
-                            ({row.topCount} flagged)
-                          </span>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <p className={styles.note}>
-        Levels recompute live per student and term; heatmaps aggregate section
-        × risk level without exposing confidential write-ups. The flagged
-        caseload itself lives in the at-risk queue.
-      </p>
+        />
+        <div className={styles.sideRail}>
+          <RiskLevels
+            desk="guidance"
+            mix={dashboard.levelMix}
+            totalStudents={dashboard.totalStudents}
+            interpretation={interpretLevelMix(dashboard.levelMix, dashboard.totalStudents, "guidance")}
+          />
+          <RiskCategories
+            desk="guidance"
+            rows={dashboard.categoryRows}
+            interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases, "guidance")}
+          />
+        </div>
+      </div>
     </section>
   );
 }

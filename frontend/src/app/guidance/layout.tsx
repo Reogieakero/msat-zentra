@@ -3,9 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme, useFont } from "@/components/providers";
 import { GuidanceSidebar } from "@/components/guidance-sidebar";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Command,
@@ -19,12 +19,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import styles from "./guidance.module.css";
 
 function GuidanceShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { openMobile, setOpenMobile } = useSidebar();
+  const queryClient = useQueryClient();
+  // Cross-user sync: another counselor's decision invalidates this desk's
+  // lists without manual refresh. Single channel, cleaned up on unmount.
+  useGuidanceRealtime(true);
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
@@ -32,6 +36,9 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
+    // Drop all cached queries so the next account on this device never sees
+    // the previous counselor's student data (QueryClient outlives SPA logout).
+    queryClient.clear();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));
@@ -41,20 +48,6 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-label={openMobile ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={openMobile}
-          onClick={() => setOpenMobile(!openMobile)}
-        >
-          {openMobile ? (
-            <X className={styles.menuIcon} />
-          ) : (
-            <Menu className={styles.menuIcon} />
-          )}
-        </button>
-
         <Link href="/guidance/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -85,7 +78,10 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
               </Avatar>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={styles.accountMenu}>
+          <DropdownMenuContent
+            align="end"
+            className={styles.accountMenu}
+          >
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem className={styles.accountItem}>
@@ -181,9 +177,5 @@ export default function GuidanceLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <GuidanceShell>{children}</GuidanceShell>
-    </SidebarProvider>
-  );
+  return <GuidanceShell>{children}</GuidanceShell>;
 }

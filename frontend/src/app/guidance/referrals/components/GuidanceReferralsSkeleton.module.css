@@ -29,6 +29,17 @@
   flex-wrap: wrap;
 }
 
+/* Sticky toolbar shell — same offsets as the live .toolbarSticky so the
+   page doesn't gain padding/border/stickiness on swap. */
+.toolbarSticky {
+  position: sticky;
+  top: calc(6rem + 1px);
+  z-index: 30;
+  background-color: var(--background);
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
 .title {
   width: 11rem;
   height: 1.75rem;
@@ -45,7 +56,15 @@
 .search {
   width: 16rem;
   max-width: 100%;
-  height: 2.25rem;
+  /* Live Input is 1.75rem + 2rem left icon inset. */
+  height: 1.75rem;
+  border-radius: var(--radius-md);
+}
+
+/* Track dropdown placeholder — mirrors live Button size=sm. */
+.filterBtn {
+  width: 7.5rem;
+  height: 2rem;
   border-radius: var(--radius-md);
 }
 
@@ -65,6 +84,39 @@
   padding: 1.75rem 0.75rem 1.75rem 1.75rem;
   border-bottom: 1px solid var(--border);
   background-color: var(--card);
+  scroll-margin-top: 7rem;
+}
+
+/* Vertical spine + node dot — overlay only, but mirror so no visual flash. */
+.entry::before {
+  content: "";
+  position: absolute;
+  left: 0.4375rem;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--border);
+}
+
+.entry:first-child::before {
+  top: 2rem;
+}
+
+.entry:last-child::before {
+  bottom: auto;
+  height: 2rem;
+}
+
+.dot {
+  position: absolute;
+  left: 0.125rem;
+  top: 2rem;
+  width: 0.6875rem;
+  height: 0.6875rem;
+  border-radius: 9999px;
+  background-color: var(--background);
+  border: 2px solid var(--primary);
+  z-index: 1;
 }
 
 .entryAlt {
@@ -77,6 +129,16 @@
   flex-direction: column;
   gap: 0.5rem;
   min-width: 0;
+  align-self: start;
+}
+
+/* Live rail sticks below the toolbar (top: 8rem). Keep static here would
+   shift scroll anchoring, so mirror the sticky offset without overlap. */
+.railSticky {
+  position: sticky;
+  top: 8rem;
+  align-self: start;
+  z-index: 1;
 }
 
 .date {
@@ -87,6 +149,7 @@
 
 .badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.375rem;
 }
 
@@ -94,6 +157,46 @@
   width: 4rem;
   height: 1.375rem;
   border-radius: 9999px;
+}
+
+.badgeHidden {
+  visibility: hidden;
+}
+
+/* statusHelp line: 0.8125rem × 1.5 ≈ 1.2rem. */
+.statusHelp {
+  width: 90%;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+/* railMeta lines: Sent by / Observed by. */
+.meta {
+  width: 100%;
+  height: 0.8125rem;
+  border-radius: var(--radius-md);
+}
+
+.metaShort {
+  width: 65%;
+  height: 0.8125rem;
+  border-radius: var(--radius-md);
+}
+
+/* Latest-action block: border-top + label + value + time. */
+.latestAction {
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.latestLabel {
+  width: 5.5rem;
+  height: 0.75rem;
+  border-radius: var(--radius-md);
 }
 
 .line {
@@ -116,8 +219,31 @@
   margin-top: 0.625rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 0.5rem;
+}
+
+.studentCaption {
+  width: 4rem;
+  height: 0.75rem;
+  border-radius: var(--radius-md);
+}
+
+.studentRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.studentText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .avatar {
@@ -140,46 +266,185 @@
   border-radius: var(--radius-md);
 }
 
-.block {
-  width: 100%;
-  height: 5rem;
+/* Observed block: left border + label + excerpt lines + folder card. */
+.observed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border-left: 2px solid var(--border);
+  padding-left: 0.875rem;
+}
+
+.observedLabel {
+  width: 7rem;
+  height: 0.75rem;
   border-radius: var(--radius-md);
 }
 
+.folder {
+  width: 15rem;
+  max-width: 100%;
+  height: 3.5rem;
+  border-radius: var(--radius-md);
+}
+
+/* Intake/follow-up/note callout line. */
+.callout {
+  width: 100%;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+}
+
+/* Session plan card: header + a couple of session lines. Pending rows
+   render no card, rows with sessions render taller — this is the
+   average case so per-row variance stays small. */
 .sessions {
   width: 100%;
-  height: 7rem;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  background-color: var(--card);
+  padding: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.sessionsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+}
+
+.sessionsTitle {
+  width: 9rem;
+  height: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.sessionsPill {
+  width: 6rem;
+  height: 1.375rem;
+  border-radius: 9999px;
 }
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  margin-top: auto;
+}
+
+/* Live buttons are size=xs @ 32px with variable text widths. */
+.actionWide {
+  width: 8.5rem;
+  height: 32px;
+  border-radius: var(--radius-md);
+}
+
+.actionNarrow {
+  width: 6.5rem;
+  height: 32px;
+  border-radius: var(--radius-md);
+}
+
+/* Pager: border-top + range + Newer/Older buttons. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 0 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.pagerRange {
+  width: 12rem;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.actions > * {
-  width: 7rem;
+.pagerBtn {
+  width: 5.5rem;
   height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.pagerLabel {
+  width: 5rem;
+  height: 0.875rem;
   border-radius: var(--radius-md);
 }
 
 .side {
   width: 12.5rem;
   flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 6.75rem;
+  z-index: 10;
+  max-height: calc(100vh - 7.75rem);
+  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background-color: var(--card);
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0;
 }
 
-.sideRow {
-  width: 100%;
-  height: 2rem;
+.sideGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sideGroup + .sideGroup {
+  margin-top: 0.75rem;
+}
+
+.sideGroupLabel {
+  width: 6rem;
+  height: 0.75rem;
+  margin-bottom: 0.375rem;
   border-radius: var(--radius-md);
+}
+
+.sideRowWrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sideRowWrap:last-child {
+  border-bottom: none;
+}
+
+.sideRowLabel {
+  width: 6.5rem;
+  height: 0.875rem;
+  border-radius: var(--radius-md);
+}
+
+.sideCount {
+  width: 2rem;
+  height: 1.375rem;
+  border-radius: 9999px;
 }
 
 @media (max-width: 1024px) {
@@ -191,8 +456,16 @@
     grid-template-columns: 10rem minmax(0, 1fr);
   }
 
+  .rail,
+  .railSticky {
+    position: static;
+    top: auto;
+  }
+
   .side {
     width: 100%;
+    position: static;
+    max-height: none;
   }
 }
 
@@ -205,5 +478,15 @@
 
   .body {
     max-width: none;
+  }
+
+  .toolbar,
+  .toolbarSticky {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
   }
 }

@@ -4,7 +4,7 @@ import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fetchGuidanceReferrals } from "./guidance-referrals-data";
+import { fetchGuidanceReferrals, fetchAllGuidanceReferrals } from "./guidance-referrals-data";
 import { GuidanceReferralsTable } from "./guidance-referrals-table";
 import { GuidanceReferralsSkeleton } from "./GuidanceReferralsSkeleton";
 import {
@@ -14,19 +14,24 @@ import {
 } from "./guidance-referrals-format";
 import styles from "./guidance-referrals.module.css";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
 /**
  * Shared referrals view — the All page uses it unlocked (with the track
  * dropdown), while ADM Cases / Counseling Cases lock it to one track so
  * the reader never needs the dropdown.
+ *
+ * Deep-links from the alerts table pass `highlightId` (jumps the pager to
+ * the case's page; the table scrolls to and highlights it).
  */
 export function GuidanceReferralsView({
   lockedType = "",
   title = "Referrals to me",
+  highlightId = null,
 }: {
   lockedType?: GuidanceTypeFilter;
   title?: string;
+  highlightId?: string | null;
 }) {
   const [query, setQuery] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<GuidanceTypeFilter>(lockedType);
@@ -39,10 +44,16 @@ export function GuidanceReferralsView({
   React.useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedQuery(query);
-      setPage(1);
     }, 300);
     return () => clearTimeout(t);
   }, [query]);
+
+  const handleQueryChange = (value: string) => {
+    // Reset to page 1 synchronously so a pager click during the debounce
+    // window isn't overwritten back when the timer fires.
+    setQuery(value);
+    setPage(1);
+  };
 
   const handleTypeChange = (value: GuidanceTypeFilter) => {
     // Locked pages stay on their track — the dropdown is hidden, and
@@ -85,25 +96,48 @@ export function GuidanceReferralsView({
         pageSize: PAGE_SIZE,
       },
     ],
-    queryFn: () =>
-      fetchGuidanceReferrals({
-        q: debouncedQuery || undefined,
-        status: actionParams.status || undefined,
-        type: effType || undefined,
-        booked: actionParams.booked || undefined,
-        completed: actionParams.completed || undefined,
-        open: actionParams.open || undefined,
-        page,
-        pageSize: PAGE_SIZE,
-      }),
+    queryFn: ({ signal }) =>
+      fetchGuidanceReferrals(
+        {
+          q: debouncedQuery || undefined,
+          status: actionParams.status || undefined,
+          type: effType || undefined,
+          booked: actionParams.booked || undefined,
+          completed: actionParams.completed || undefined,
+          open: actionParams.open || undefined,
+          page,
+          pageSize: PAGE_SIZE,
+        },
+        { signal }
+      ),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
   });
 
+  // Deep-link arrival: the highlighted case's page. Fresh mounts start
+  // unfiltered on the locked track, so the index is over the full
+  // newest-first list in that scope. Applied once per highlight id, during
+  // render — yields to the pager as soon as the reader navigates.
+  const highlightType =
+    lockedType === "ADM" ? "adm" : lockedType === "Counseling" ? "counseling" : "";
+  const { data: highlightRows } = useQuery({
+    queryKey: ["guidance-referrals-highlight", highlightType],
+    queryFn: () =>
+      fetchAllGuidanceReferrals(highlightType ? { type: highlightType } : undefined),
+    staleTime: 60_000,
+    enabled: highlightId !== null,
+  });
+  const [highlightKey, setHighlightKey] = React.useState<string | null>(null);
+  if (highlightId && highlightRows && highlightKey !== highlightId) {
+    setHighlightKey(highlightId);
+    const idx = highlightRows.findIndex((r) => r.id === highlightId);
+    if (idx >= 0) setPage(Math.floor(idx / PAGE_SIZE) + 1);
+  }
+
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true">
-        <GuidanceReferralsSkeleton />
+        <GuidanceReferralsSkeleton lockType={lockedType !== ""} />
       </section>
     );
   }
@@ -143,7 +177,7 @@ export function GuidanceReferralsView({
         totalPages={data.totalPages}
         onPageChange={setPage}
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={handleQueryChange}
         typeFilter={typeFilter}
         onTypeChange={handleTypeChange}
         action={action}
@@ -153,6 +187,7 @@ export function GuidanceReferralsView({
         isNavigating={isFetching && !isPending}
         lockType={lockedType !== ""}
         title={title}
+        highlightId={highlightId}
       />
     </section>
   );

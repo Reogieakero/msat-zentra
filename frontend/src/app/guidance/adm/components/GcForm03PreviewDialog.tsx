@@ -21,6 +21,9 @@ interface GcForm03PreviewDialogProps {
   confirming: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  // View-only arrival (e.g. alerts "View referral form"): hides the
+  // Confirm action and relabels the back button.
+  viewOnly?: boolean;
 }
 
 /**
@@ -28,7 +31,8 @@ interface GcForm03PreviewDialogProps {
  * public-folder template loaded, value-filled, and drawn cell-for-cell
  * (merges, fonts, alignments, borders, logo included) — so the preview is
  * the file. Print (browser print → Save as PDF), Download .xlsx (the same
- * filled workbook), Back to questions, and Confirm referral.
+ * filled workbook), Back to questions, and Confirm referral. In viewOnly
+ * mode the Confirm action is hidden and the dialog is purely for reading.
  */
 export function GcForm03PreviewDialog({
   open,
@@ -36,6 +40,7 @@ export function GcForm03PreviewDialog({
   confirming,
   onClose,
   onConfirm,
+  viewOnly = false,
 }: GcForm03PreviewDialogProps) {
   const [downloading, setDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
@@ -116,10 +121,19 @@ export function GcForm03PreviewDialog({
         </DialogHeader>
 
         {loadingSheet ? (
-          <div className="flex flex-col gap-2 py-4" aria-busy="true">
-            <Skeleton className="h-3.5 w-full" />
-            <Skeleton className="h-3.5 w-full" />
-            <Skeleton className="h-3.5 w-[55%]" />
+          <div className="flex flex-col gap-2 py-4" aria-busy="true" aria-label="Loading referral form preview">
+            {/* Sheet-like reserve: header bar + grid rows inside the same
+                bordered padded wrap as the live sheet, so the dialog does
+                not collapse then jump to 90vh when the workbook resolves. */}
+            <Skeleton className="h-6 w-[40%]" />
+            <div className={styles.sheetWrap} aria-hidden="true">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[80%]" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[55%]" />
+            </div>
           </div>
         ) : null}
         {sheetError ? (
@@ -149,7 +163,7 @@ export function GcForm03PreviewDialog({
             onClick={handleClose}
             disabled={confirming}
           >
-            Back to questions
+            {viewOnly ? "Close" : "Back to questions"}
           </Button>
           <Button
             type="button"
@@ -168,18 +182,24 @@ export function GcForm03PreviewDialog({
             disabled={!data || downloading}
             onClick={() => void handleDownload()}
           >
-            <Download aria-hidden />
+            {downloading ? (
+              <Loader2 className="animate-spin" aria-hidden />
+            ) : (
+              <Download aria-hidden />
+            )}
             {downloading ? "Preparing…" : "Download .xlsx"}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={!data || confirming}
-            onClick={onConfirm}
-          >
-            {confirming ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            {confirming ? "Creating…" : "Confirm referral"}
-          </Button>
+          {viewOnly ? null : (
+            <Button
+              type="button"
+              size="sm"
+              disabled={!data || confirming}
+              onClick={onConfirm}
+            >
+              {confirming ? <Loader2 className="animate-spin" aria-hidden /> : null}
+              {confirming ? "Creating…" : "Confirm referral"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

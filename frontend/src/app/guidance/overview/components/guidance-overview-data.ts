@@ -2,11 +2,12 @@ import { apiClient } from "@/lib/api/client";
 
 export interface GuidanceKpis {
   referredToMe: number;
+  pendingAdm: number;
+  pendingCounseling: number;
   openInterventions: number;
   myInterventions: number;
   highRisk: number;
   admHandoffs: number;
-  admHomeVisitation: number;
 }
 
 export interface GuidanceRiskByGradeRow {
@@ -88,6 +89,11 @@ export interface GuidanceAdmRow {
   date: string;
 }
 
+export interface GuidanceReferralTypeRow {
+  type: string;
+  count: number;
+}
+
 export interface GuidanceOverviewData {
   counselorName: string;
   termLabel: string;
@@ -97,7 +103,7 @@ export interface GuidanceOverviewData {
   riskByGrade: GuidanceRiskByGradeRow[];
   gradeAttention: GuidanceGradeAttentionRow[];
   sectionHeat: GuidanceSectionHeatRow[];
-  anecdotalByCategory: GuidanceCategoryRow[];
+  referralsByType: GuidanceReferralTypeRow[];
   referralsQueue: GuidanceReferralRow[];
   interventionsQueue: GuidanceInterventionRow[];
   latestAlerts: GuidanceAlertRow[];

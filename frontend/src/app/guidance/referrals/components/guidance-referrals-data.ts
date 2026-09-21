@@ -51,6 +51,9 @@ export interface GuidanceReferralItem {
   lrn: string;
   section: string;
   grade: string;
+  // Account userId (or roster id for enlisted students without accounts)
+  // for the live risk lookup. The endpoint serves both.
+  studentId: string | null;
   // Action track: "ADM" needs ADM action (escalated toward the ADM
   // coordinator), otherwise regular "Counseling" handled on this desk.
   type: string;
@@ -86,6 +89,8 @@ export interface GuidanceTypeSummary {
   inProgress: number;
   followUp: number;
   escalated: number;
+  // Optional for backward-compat with cached responses.
+  infoRequested?: number;
   resolved: number;
   dismissed: number;
   booked: number;
@@ -127,7 +132,8 @@ export interface GuidanceReferralsParams {
 }
 
 export async function fetchGuidanceReferrals(
-  params: GuidanceReferralsParams = {}
+  params: GuidanceReferralsParams = {},
+  opts: { signal?: AbortSignal } = {}
 ): Promise<GuidanceReferralsData> {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
@@ -140,9 +146,62 @@ export async function fetchGuidanceReferrals(
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
   const { data } = await apiClient.get<GuidanceReferralsData>(
-    `/api/guidance/referrals${query ? `?${query}` : ""}`
+    `/api/guidance/referrals${query ? `?${query}` : ""}`,
+    { signal: opts.signal }
   );
   return data;
+}
+
+// Every referral on the desk (newest pages first) for client-side tables.
+// The endpoint caps pageSize at 100, so walk all pages — filtering and
+// paging then happen locally. Optional params (e.g. type) scope the walk
+// to the same track a locked page shows.
+export async function fetchAllGuidanceReferrals(
+  params: GuidanceReferralsParams = {}
+): Promise<GuidanceReferralItem[]> {
+  const first = await fetchGuidanceReferrals({ ...params, page: 1, pageSize: 100 });
+  const all = [...first.referrals];
+  for (let p = 2; p <= first.totalPages; p++) {
+    const res = await fetchGuidanceReferrals({ ...params, page: p, pageSize: 100 });
+    all.push(...res.referrals);
+  }
+  return all;
+}
+
+export type GuidanceRiskLevel = "High" | "Moderate" | "Low";
+
+// Live rule-based risk level per referred student (GET /api/risk/students/:id
+// → { lrn, riskLevel }). The guidance role is allowed this limited
+// projection, and the endpoint serves roster ids too — pass the referral's
+// studentId (account or roster) so every row resolves a level.
+// Resolves each id independently so one failure never blocks the rest;
+// ids with no result are simply absent from the map (table shows "—").
+export async function fetchGuidanceRiskLevels(
+  studentIds: string[]
+): Promise<Record<string, GuidanceRiskLevel>> {
+  const unique = [...new Set(studentIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  const settled = await Promise.allSettled(
+    unique.map(async (id) => {
+      const { data } = await apiClient.get<{ lrn: string; riskLevel: GuidanceRiskLevel }>(
+        `/api/risk/students/${id}`
+      );
+      return { id, riskLevel: data?.riskLevel ?? null };
+    })
+  );
+  const map: Record<string, GuidanceRiskLevel> = {};
+  for (const s of settled) {
+    if (
+      s.status === "fulfilled" &&
+      s.value.riskLevel !== null &&
+      (s.value.riskLevel === "High" ||
+        s.value.riskLevel === "Moderate" ||
+        s.value.riskLevel === "Low")
+    ) {
+      map[s.value.id] = s.value.riskLevel;
+    }
+  }
+  return map;
 }
 
 export async function updateReferralStatus(

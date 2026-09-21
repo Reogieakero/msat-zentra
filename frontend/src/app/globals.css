@@ -189,6 +189,12 @@
   }
 }
 
+[data-sileo-viewport] {
+  /* Above every overlay: dialogs/sheets (z-50) and the image viewer (60),
+     so success/error feedback is never hidden behind an open modal. */
+  z-index: 100 !important;
+}
+
 [data-sileo-viewport] [data-sileo-title] {
   color: #000 !important;
 }

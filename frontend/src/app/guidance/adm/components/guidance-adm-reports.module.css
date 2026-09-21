@@ -1,0 +1,220 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  box-shadow: none;
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem 0;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Pipeline stage bars */
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label count"
+    "bar bar";
+  gap: 0.125rem 0.5rem;
+  align-items: center;
+}
+
+.barLabel {
+  grid-area: label;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barCount {
+  grid-area: count;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.barWrap {
+  grid-area: bar;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted-foreground), transparent 80%);
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--primary);
+}
+
+/* Eligibility donut */
+.donutBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.donutWrap {
+  position: relative;
+  height: 168px;
+}
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.donutCaption {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.legendLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legendCount {
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Consultation review progress */
+.reviewNums {
+  display: flex;
+  gap: 2rem;
+}
+
+.reviewValue {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.reviewCaption {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.progressWrap {
+  margin-top: 0.75rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted-foreground), transparent 80%);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--primary);
+}
+
+.interpretation {
+  margin: 0.625rem 0 0;
+  padding-left: 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.trendWrap {
+  width: 100%;
+}

@@ -10,6 +10,8 @@ import { cache, invalidateTags } from "../../lib/cache.js";
 import { AppError } from "../../lib/errors.js";
 import {
   computeRiskFactors,
+  evaluateRisk,
+  evaluateRosterRisk,
   isAtRisk,
   levelFromFlags,
   resolveActiveTermId,
@@ -51,17 +53,19 @@ router.get(
   async (req, res, next) => {
     try {
       const counselorId = req.user!.id;
-      const counselor = await prisma.user.findUnique({
-        where: { id: counselorId },
-        select: { fullName: true },
-      });
-
-      const activeYear = await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true, name: true },
-      });
+      // Independent preamble reads run in parallel — none depends on another.
+      const [counselor, activeYear, termId] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: counselorId },
+          select: { fullName: true },
+        }),
+        prisma.schoolYear.findFirst({
+          where: { isActive: true },
+          select: { id: true, name: true },
+        }),
+        resolveActiveTermId(),
+      ]);
       const schoolYearId = activeYear?.id;
-      const termId = await resolveActiveTermId();
       const term = termId
         ? await prisma.term.findUnique({
             where: { id: termId },
@@ -73,24 +77,57 @@ router.get(
         : "No active term";
 
       const [
-        referralsOpen,
+        pendingAdm,
+        pendingCounseling,
+        endorsedHandoffs,
         referralsLatest,
         interventionsOpen,
         interventionsMine,
         interventionsLatest,
         guidanceReferralsDetailed,
-        admActive,
-        admHomeVisit,
         admLatest,
         admEarlyDetailed,
         students,
         rosterCohort,
         sectionPopulations,
       ] = await Promise.all([
+        // Referred to me = desk-scope referrals still needing action
+        // (pending), whatever the track — direct counseling referrals plus
+        // ADM-track cases picked for guidance as consultation reviewer.
         prisma.referral.count({
           where: {
+            status: "pending",
+            OR: [
+              { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
+              {
+                referredToRole: "adm_coordinator",
+                OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+              },
+            ],
+          },
+        }),
+        prisma.referral.count({
+          where: {
+            status: "pending",
             referredToRole: "guidance_counselor",
-            status: { in: ["pending", "in_progress"] },
+            // NULL escalatedTo fails a bare NOT in SQL three-valued logic,
+            // so un-escalated rows are matched explicitly.
+            OR: [{ escalatedTo: null }, { NOT: { escalatedTo: "adm_coordinator" } }],
+          },
+        }),
+        // Pending ADM hand-offs = endorsed ADM cases (same rule as the
+        // Endorsed badge and the ADM menu Endorse count): ADM track and
+        // in progress, so the case now sits with the ADM coordinator.
+        prisma.referral.count({
+          where: {
+            status: "in_progress",
+            OR: [
+              { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
+              {
+                referredToRole: "adm_coordinator",
+                OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+              },
+            ],
           },
         }),
         prisma.referral.findMany({
@@ -156,11 +193,22 @@ router.get(
             },
           },
         }),
-        // Referral-scoped view of anecdotal filings: only records an adviser
-        // explicitly referred to guidance. NOT term-filtered — the overview is
-        // a caseload view, and a term mismatch must never hide referred cases.
+        // Referral-scoped view of anecdotal filings: every case on the
+        // guidance desk — direct counseling referrals PLUS ADM-track cases
+        // picked for guidance as consultation reviewer (same scope as the
+        // ADM / Counseling referrals pages). NOT term-filtered — the
+        // overview is a caseload view, and a term mismatch must never hide
+        // referred cases.
         prisma.referral.findMany({
-          where: { referredToRole: "guidance_counselor" },
+          where: {
+            OR: [
+              { referredToRole: "guidance_counselor" },
+              {
+                referredToRole: "adm_coordinator",
+                OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+              },
+            ],
+          },
           orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
           take: 500,
           select: {
@@ -168,6 +216,8 @@ router.get(
             reason: true,
             status: true,
             referredBy: true,
+            referredToRole: true,
+            escalatedTo: true,
             anecdotalRecord: {
               select: { category: true, observationDatetime: true },
             },
@@ -189,16 +239,6 @@ router.get(
               },
             },
           },
-        }),
-        prisma.admLearnerProfile.count({
-          where: {
-            stage: {
-              in: ["meeting_parents", "home_visitation", "certification", "principal_approval"],
-            },
-          },
-        }),
-        prisma.admLearnerProfile.count({
-          where: { stage: "home_visitation" },
         }),
         prisma.admLearnerProfile.findMany({
           orderBy: { createdAt: "desc" },
@@ -417,19 +457,24 @@ router.get(
         };
       });
 
-      // Category breakdown over referred cases only — guidance never sees
-      // unreferred filings, so this is NOT a school-wide anecdotal census.
-      const referredCategoryCounts = new Map<string, number>();
+      // Desk split by case type (same mapping as the ADM / Counseling
+      // referrals pages): ADM-bound when already escalated toward the ADM
+      // coordinator or arriving on the ADM track; everything else is
+      // Counseling. Guidance never sees unreferred filings, so this is
+      // NOT a school-wide census.
+      let admCases = 0;
+      let counselingCases = 0;
       for (const r of guidanceReferralsDetailed) {
-        const cat = r.anecdotalRecord.category;
-        referredCategoryCounts.set(cat, (referredCategoryCounts.get(cat) ?? 0) + 1);
+        if (r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator") {
+          admCases++;
+        } else {
+          counselingCases++;
+        }
       }
-      const anecdotalByCategory = ["behavioral", "bullying", "academic", "attendance", "health"].map(
-        (cat) => ({
-          category: cat,
-          count: referredCategoryCounts.get(cat) ?? 0,
-        })
-      );
+      const referralsByType = [
+        { type: "ADM", count: admCases },
+        { type: "Counseling", count: counselingCases },
+      ];
 
       const referralsQueue = referralsLatest.map((r) => ({
         id: r.id,
@@ -502,19 +547,20 @@ router.get(
         counselorName: counselor?.fullName ?? "Guidance Counselor",
         termLabel,
         kpis: {
-          referredToMe: referralsOpen,
+          referredToMe: pendingAdm + pendingCounseling,
+          pendingAdm,
+          pendingCounseling,
           openInterventions: interventionsOpen,
           myInterventions: interventionsMine,
           highRisk: high,
-          admHandoffs: admActive + admEarlyDetailed.length,
-          admHomeVisitation: admHomeVisit,
+          admHandoffs: endorsedHandoffs,
         },
         riskByLevel: { high, moderate, low },
         factorTotals: { attendance, grades, behavior },
         riskByGrade: riskByGradeRows,
         gradeAttention,
         sectionHeat,
-        anecdotalByCategory,
+        referralsByType,
         referralsQueue,
         interventionsQueue,
         latestAlerts,
@@ -926,12 +972,14 @@ router.get(
             select: {
               lrn: true,
               gradeLevel: true,
+              userId: true,
               user: { select: { fullName: true } },
               section: { select: { name: true } },
             },
           },
           roster: {
             select: {
+              id: true,
               lrn: true,
               fullName: true,
               gradeLevel: true,
@@ -947,6 +995,9 @@ router.get(
         lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
         section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
         grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+        // Account userId (or roster id for enlisted students without
+        // accounts) for the live risk lookup — the endpoint serves both.
+        studentId: r.student?.userId ?? r.roster?.id ?? null,
         // Action track: ADM-bound when already escalated toward the ADM
         // coordinator or arriving on the ADM track picked for guidance,
         // otherwise regular guidance counseling.
@@ -1082,6 +1133,7 @@ router.get(
                 inProgress: scoped.filter((r) => r.status === "in_progress").length,
                 followUp: scoped.filter((r) => r.status === "follow_up").length,
                 escalated: scoped.filter((r) => r.status === "escalated").length,
+                infoRequested: scoped.filter((r) => r.status === "info_requested").length,
                 resolved: scoped.filter((r) => r.status === "resolved").length,
                 dismissed: scoped.filter((r) => r.status === "dismissed").length,
                 booked: scoped.filter((r) => r.sessions.length > 0).length,
@@ -1099,6 +1151,7 @@ router.get(
                 inProgress: number;
                 followUp: number;
                 escalated: number;
+                infoRequested: number;
                 resolved: number;
                 dismissed: number;
                 booked: number;
@@ -1146,16 +1199,36 @@ router.get(
           : null;
       const q =
         typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const anecdotalTypeFilter =
+        req.query.type === "adm" || req.query.type === "counseling"
+          ? (req.query.type as "adm" | "counseling")
+          : null;
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
 
       const rows = await prisma.referral.findMany({
-        where: { referredToRole: "guidance_counselor" },
+        // Same desk scope as GET /api/guidance/referrals: direct
+        // counseling referrals PLUS ADM-track cases picked for the
+        // guidance counselor as consultation reviewer. Otherwise the
+        // alerts/referrals counts (ADM + Counseling) never match the
+        // anecdotal files, and endorsed ADM cases disappear instead of
+        // staying listed with the "with the ADM coordinator" overlay.
+        where: {
+          OR: [
+            { referredToRole: "guidance_counselor" },
+            {
+              referredToRole: "adm_coordinator",
+              OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+            },
+          ],
+        },
         orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
         take: 1000,
         select: {
           id: true,
           status: true,
+          referredToRole: true,
+          escalatedTo: true,
           referredByUser: { select: { fullName: true } },
           anecdotalRecord: {
             select: {
@@ -1204,10 +1277,22 @@ router.get(
         date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
         confidentiality: r.anecdotalRecord.confidentialityLevel,
         referralStatus: r.status,
+        // Action track, same mapping as GET /api/guidance/referrals:
+        // ADM-bound when already escalated toward the ADM coordinator,
+        // otherwise regular guidance counseling. Needed so the desk can
+        // hide the full report on finished (resolved/dismissed) and
+        // endorsed (ADM + in_progress) cases — same overlays as the
+        // referrals page.
+        referralType:
+          r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
+            ? "ADM"
+            : "Counseling",
       }));
 
       const filtered = mapped.filter((r) => {
         if (categoryFilter && r.category !== categoryFilter) return false;
+        if (anecdotalTypeFilter === "adm" && r.referralType !== "ADM") return false;
+        if (anecdotalTypeFilter === "counseling" && r.referralType !== "Counseling") return false;
         if (
           q &&
           !`${r.student} ${r.lrn} ${r.section} ${r.observer} ${r.referredBy}`
@@ -1224,6 +1309,10 @@ router.get(
       const records = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
       const countBy = (cat: string) => mapped.filter((r) => r.category === cat).length;
+      const byGrade = GRADE_ORDER.map((g) => ({
+        grade: GRADE_LABELS[g] ?? g,
+        count: mapped.filter((r) => r.grade === (GRADE_LABELS[g] ?? g)).length,
+      }));
       res.json({
         summary: {
           total: mapped.length,
@@ -1232,6 +1321,7 @@ router.get(
           academic: countBy("academic"),
           attendance: countBy("attendance"),
           health: countBy("health"),
+          byGrade,
         },
         records,
         page: safePage,
@@ -1302,6 +1392,8 @@ router.get(
                 id: true,
                 status: true,
                 reason: true,
+                consultReviewer: true,
+                notes: true,
                 referredByUser: { select: { fullName: true } },
                 anecdotalRecord: { select: { observationDatetime: true } },
                 homeVisitations: { select: { id: true } },
@@ -1325,8 +1417,10 @@ router.get(
             status: true,
             reason: true,
             consultReviewer: true,
+            notes: true,
             referredByUser: { select: { fullName: true } },
             homeVisitations: { select: { id: true } },
+            counselingSessions: { select: { id: true, status: true } },
             anecdotalRecord: {
               select: {
                 id: true,
@@ -1339,6 +1433,7 @@ router.get(
             },
             student: {
               select: {
+                userId: true,
                 lrn: true,
                 gradeLevel: true,
                 user: { select: { fullName: true } },
@@ -1347,6 +1442,7 @@ router.get(
             },
             roster: {
               select: {
+                id: true,
                 lrn: true,
                 fullName: true,
                 gradeLevel: true,
@@ -1428,8 +1524,10 @@ router.get(
           stageLabel: ADM_LABEL.get(p.stage as AdmStage) ?? p.stage,
           eligibility: p.eligibilityStatus,
           referralId: p.referral.id,
+          consultReviewer: p.referral.consultReviewer ?? null,
           referralStatus: p.referral.status,
           reason: p.referral.reason,
+          consultNote: p.referral.notes ?? null,
           referredBy: p.referral.referredByUser?.fullName ?? "Adviser",
           preparedBy: p.preparedByUser?.fullName ?? "—",
           date:
@@ -1475,10 +1573,40 @@ router.get(
         anecdotalId: r.anecdotalRecord.id,
         consultReviewer: r.consultReviewer ?? "guidance_counselor",
         anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,
+        category: r.anecdotalRecord.category,
+        consultNote: r.notes ?? null,
         location: r.anecdotalRecord.descriptionOfLocation ?? "",
         recommendations: r.anecdotalRecord.notesRecommendationsActions ?? "",
         reviewed: reviewedIds.has(r.id),
+        hasBookedSession: r.counselingSessions.some((s) => s.status === "scheduled"),
+        // Filled below from the latest engine snapshot (risk column).
+        riskLevel: null as string | null,
       }));
+
+      // Live engine risk per queued student — same rule as the alerts desk,
+      // so the level here never disagrees with it. Stored snapshots are only
+      // written when grades/attendance change, so a snapshot lookup alone
+      // goes stale (and blank for never-snapshotted students).
+      {
+        const termId = await resolveActiveTermId();
+        if (termId) {
+          await Promise.all(
+            earlyReferrals.map(async (r, i) => {
+              try {
+                const live = r.student?.userId
+                  ? (await evaluateRisk(r.student.userId, termId)).result.riskLevel
+                  : r.roster?.id
+                    ? (await evaluateRosterRisk(r.roster.id, termId)).result.riskLevel
+                    : null;
+                if (live) earlyRows[i].riskLevel = live;
+              } catch {
+                // Keep the snapshot value (or null) — one student's failure
+                // never blocks the rest of the queue.
+              }
+            })
+          );
+        }
+      }
 
       const merged = [...profileRows, ...earlyRows].sort((a, b) =>
         b.date.localeCompare(a.date)
@@ -1486,6 +1614,43 @@ router.get(
 
       const countBy = (stage: string) =>
         merged.filter((c) => c.stage === stage).length;
+      const eligibilityLabelOf = (value: string) =>
+        value === "eligible"
+          ? "Eligible"
+          : value === "ineligible"
+            ? "Incomplete file"
+            : "For review";
+      // Reports scope: guidance ADM only — tracked profiles picked for the
+      // guidance counselor (plus legacy rows with no stored pick) and the
+      // consultation queue. Nurse/LRPC-picked profiles count school-wide in
+      // the tracker above, never in the reports below.
+      const guidanceCases = [
+        ...profileRows.filter(
+          (c) => !c.consultReviewer || c.consultReviewer === "guidance_counselor"
+        ),
+        ...earlyRows,
+      ];
+      // Weekly referral volume over the last 12 weeks (Monday buckets) for
+      // the guidance ADM caseload — feeds the referral line graph.
+      const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const dayMs = 86_400_000;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const thisMonday = new Date(today.getTime() - ((today.getDay() + 6) % 7) * dayMs);
+      const referralTrend = Array.from({ length: 12 }, (_, i) => {
+        const weekStart = new Date(thisMonday.getTime() - (11 - i) * 7 * dayMs);
+        const weekEnd = new Date(weekStart.getTime() + 7 * dayMs);
+        return {
+          week: weekStart.toISOString().slice(0, 10),
+          label: `${MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}`,
+          count: guidanceCases.filter((c) => {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(c.date);
+            if (!m) return false;
+            const at = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+            return at >= weekStart.getTime() && at < weekEnd.getTime();
+          }).length,
+        };
+      });
       const summary = {
         total: merged.length,
         consultation: countBy("consultation"),
@@ -1497,6 +1662,42 @@ router.get(
           (c) => c.meetingAttended === false && !c.hasHomeVisit
         ).length,
         awaitingReview: earlyRows.filter((c) => !c.reviewed).length,
+        reviewed: earlyRows.filter((c) => c.reviewed).length,
+        // Guidance-scoped report totals (not the school-wide tracker).
+        scopedTotal: guidanceCases.length,
+        referralTrend,
+        // Referred-actions breakdown for the donut (reports charts).
+        byAction: [
+          {
+            action: "needs_review",
+            label: "Needs review",
+            count: earlyRows.filter((c) => !c.reviewed).length,
+          },
+          {
+            action: "booked_session",
+            label: "Booked session",
+            count: earlyRows.filter((c) => c.reviewed && c.hasBookedSession).length,
+          },
+          {
+            action: "followup",
+            label: "Follow-up",
+            count: earlyRows.filter(
+              (c) => c.reviewed && !c.hasBookedSession && c.referralStatus === "follow_up"
+            ).length,
+          },
+          {
+            action: "endorsed",
+            label: "Endorsed",
+            count: earlyRows.filter(
+              (c) => c.reviewed && !c.hasBookedSession && c.referralStatus === "in_progress"
+            ).length,
+          },
+          {
+            action: "rejected",
+            label: "Rejected",
+            count: earlyRows.filter((c) => c.referralStatus === "dismissed").length,
+          },
+        ],
       };
 
       const filtered = merged.filter((c) => {
@@ -1547,9 +1748,10 @@ router.get(
         },
         counselorName: counselor?.fullName ?? "Guidance Counselor",
         consultationQueue,
-        // Top-section queue: latest ADM cases referred to guidance that still
-        // need the counselor's anecdotal review (unfiltered by search).
-        reviewQueue: earlyRows.filter((c) => !c.reviewed).slice(0, 3),
+        // Top-section queue: latest ADM cases referred to guidance, referred
+        // or endorsed (unfiltered by search). Unreviewed rows still need the
+        // counselor's anecdotal review; decided rows render read-only.
+        reviewQueue: earlyRows.slice(0, 3),
         cases,
         page: safePage,
         pageSize,
@@ -1599,20 +1801,36 @@ router.post(
   validate("body", consultReviewSchema),
   async (req, res, next) => {
     try {
-      const referral = await prisma.referral.findUnique({
-        where: { id: String(req.params.id) },
-      });
+      const referralId = String(req.params.id);
+      // Independent reads run in parallel — the profile count only needs
+      // the param id, not the referral row.
+      const [referral, profileCount] = await Promise.all([
+        prisma.referral.findUnique({
+          where: { id: referralId },
+        }),
+        prisma.admLearnerProfile.count({
+          where: { referralId },
+        }),
+      ]);
       if (
         !referral ||
         referral.referredToRole !== "adm_coordinator" ||
-        (await prisma.admLearnerProfile.count({
-          where: { referralId: referral.id },
-        })) > 0
+        profileCount > 0
       ) {
         throw new AppError(
           404,
           "NOT_ADM_CONSULTATION",
           "Only an ADM referral awaiting consultation review can be reviewed here"
+        );
+      }
+      // Parity with the nurse consultation review: only pending cases can
+      // be decided — re-POSTs after a decision get a clean 400, and the
+      // atomic updateMany below makes double-submits a no-op.
+      if (referral.status !== "pending") {
+        throw new AppError(
+          400,
+          "INVALID_ACTION",
+          "This case has already been decided"
         );
       }
       // Receiver enforcement: a case picked for the nurse or LRPC cannot be
@@ -1673,8 +1891,11 @@ router.post(
             : null;
       }
       const note = `[ADM consult] ${recommendation.trim()}`;
-      const updated = await prisma.referral.update({
-        where: { id: referral.id },
+      // Atomic single-submit guard: the update only applies while the case
+      // is still pending, so a rapid double-POST can't append duplicate
+      // notes or re-audit. updateMany returns count 0 when already decided.
+      const applied = await prisma.referral.updateMany({
+        where: { id: referral.id, status: "pending" },
         data:
           outcome === "endorse"
             ? {
@@ -1686,6 +1907,16 @@ router.post(
                 notes: referral.notes ? `${referral.notes}\n${note}` : note,
               },
       });
+      if (applied.count === 0) {
+        throw new AppError(
+          400,
+          "INVALID_ACTION",
+          "This case has already been decided"
+        );
+      }
+      const updated = await prisma.referral.findUnique({
+        where: { id: referral.id },
+      });
       if (outcome === "endorse") {
         await writeAudit({
           userId: req.user!.id,
@@ -1696,13 +1927,30 @@ router.post(
           oldValue: { status: referral.status },
           newValue: { status: "in_progress" },
         });
-        await fanoutNotification({
-          userId: req.user!.id,
-          sourceTable: "referrals",
-          action: "status",
-          message: "ADM consultation endorsed — ready for the parent meeting.",
-          sourceId: referral.id,
-        });
+        // Notify ADM coordinators (bounded) instead of the actor — the
+        // endorsed case now sits with them for the parent meeting.
+        try {
+          const coordinators = await prisma.user.findMany({
+            where: { role: "adm_coordinator", status: "active" },
+            select: { id: true },
+            take: 10,
+          });
+          await Promise.all(
+            coordinators
+              .filter((c) => c.id !== req.user!.id)
+              .map((c) =>
+                fanoutNotification({
+                  userId: c.id,
+                  sourceTable: "referrals",
+                  action: "status",
+                  message: "ADM consultation endorsed — ready for the parent meeting.",
+                  sourceId: referral.id,
+                })
+              )
+          );
+        } catch {
+          // Notifications are best-effort; the decision already committed.
+        }
       } else {
         await writeAudit({
           userId: req.user!.id,

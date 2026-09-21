@@ -1,164 +1,116 @@
 "use client";
 
-import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchGuidanceAdm } from "./components/guidance-adm-data";
-import type { GuidanceAdmStageFilter } from "./components/guidance-adm-data";
+import { GuidanceAdmReports } from "./components/guidance-adm-reports";
 import { GuidanceAdmTable } from "./components/guidance-adm-table";
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
-const PAGE_SIZE = 50;
-
 export default function GuidanceAdmPage() {
-  const [query, setQuery] = React.useState("");
-  const [stage, setStage] = React.useState<GuidanceAdmStageFilter>("");
-  const [page, setPage] = React.useState(1);
-  const [debouncedQuery, setDebouncedQuery] = React.useState("");
-  /* First client paint must match the server skeleton — cached query data
-     would otherwise render live content over server skeleton HTML. */
-  const [mounted, setMounted] = React.useState(false);
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+    queryKey: ["guidance-adm"],
+    queryFn: () => fetchGuidanceAdm({ page: 1, pageSize: 1 }),
+    staleTime: 60_000,
+  });
 
-  React.useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedQuery(query.trim());
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  React.useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setMounted(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
-
-  const handleStageChange = (value: GuidanceAdmStageFilter) => {
-    setStage(value);
-    setPage(1);
-  };
-
-  const { data, isPending, isError, refetch, isRefetching, isFetching } =
-    useQuery({
-      queryKey: [
-        "guidance-adm",
-        { q: debouncedQuery, stage, page, pageSize: PAGE_SIZE },
-      ],
-      queryFn: () =>
-        fetchGuidanceAdm({
-          q: debouncedQuery || undefined,
-          stage: stage || undefined,
-          page,
-          pageSize: PAGE_SIZE,
-        }),
-      staleTime: 60_000,
-      placeholderData: keepPreviousData,
-    });
-
-  if (!mounted || isPending) {
+  if (isPending) {
     return (
       <section className={pageStyles.page} aria-busy="true">
-        <div className={pageStyles.header}>
-          <div>
-            <p className={pageStyles.eyebrow}>Hand-off · ADM Coordinator</p>
-            <h1 className={pageStyles.title}>ADM referrals</h1>
-            <p className={pageStyles.lede}>
-              Consult first, then hand off — adviser referrals waiting on your
-              consultation, plus the live tracker of cases now with the ADM
-              Coordinator.
-            </p>
-          </div>
+        <div
+          aria-hidden="true"
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))", gap: "1rem" }}
+        >
+          <Card>
+            <CardContent>
+              <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
+              <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
+              <Skeleton style={{ width: "100%", height: "168px", marginTop: "0.75rem" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginTop: "0.5rem" }}>
+                {[0, 1, 2, 3, 4].map((j) => (
+                  <div key={j} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+                    <Skeleton style={{ width: "6rem", height: "0.8125rem" }} />
+                    <Skeleton style={{ width: "2rem", height: "0.8125rem" }} />
+                  </div>
+                ))}
+              </div>
+              <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem", paddingLeft: "0.625rem" }} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent>
+              <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
+              <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
+              {/* Trend chart is 200px with axes, not 168px like the donut. */}
+              <Skeleton style={{ width: "100%", height: "200px", marginTop: "0.75rem" }} />
+              <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem", paddingLeft: "0.625rem" }} />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Top review-grid section skeleton — same position and shape as the
-            3 review cards. */}
-        <Card className={pageStyles.card}>
+        {/* Queue card skeleton — mirrors the live Card: header row with
+            title/desc + 16rem × 2rem search, then the 8-column table with
+            roomy 0.875rem/1rem cells, 2-line LRN cell, badge pills, and
+            action icons. */}
+        <Card aria-hidden="true">
           <CardContent>
-            <Skeleton style={{ width: "15rem", height: "1rem" }} />
-            <Skeleton
-              style={{ width: "24rem", maxWidth: "100%", height: "0.75rem", marginTop: "0.5rem" }}
-            />
-            <div className={styles.reviewGrid} aria-hidden="true" style={{ marginTop: "1rem" }}>
-              {[0, 1, 2].map((i) => (
-                <div key={i} className={styles.reviewCard}>
-                  <Skeleton style={{ width: "55%", height: "0.875rem" }} />
-                  <div className={styles.nestedCard}>
-                    <Skeleton style={{ width: "40%", height: "0.75rem" }} />
-                    <Skeleton style={{ width: "60%", height: "0.75rem", marginTop: "0.375rem" }} />
-                    <Skeleton style={{ width: "75%", height: "0.75rem", marginTop: "0.375rem" }} />
-                  </div>
-                  <div className={styles.consultActions} style={{ justifyContent: "flex-end" }}>
-                    <Skeleton style={{ width: "5.5rem", height: "1.5rem" }} />
-                    <Skeleton style={{ width: "4rem", height: "1.5rem" }} />
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flex: "1 1 auto", minWidth: 0 }}>
+                <Skeleton style={{ width: "12rem", height: "0.9375rem" }} />
+                <Skeleton style={{ width: "min(24rem, 90%)", height: "0.8125rem" }} />
+              </div>
+              <Skeleton style={{ width: "16rem", height: "2rem" }} />
+            </div>
+            <div style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", marginTop: "0.75rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "36rem" }}>
+                <thead>
+                  <tr>
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                      <th key={i} style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "4rem", height: "0.75rem" }} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[0, 1, 2].map((i) => (
+                    <tr key={i}>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "5rem", height: "0.8125rem" }} />
+                        <Skeleton style={{ width: "7rem", height: "0.75rem", marginTop: "0.125rem" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "3.5rem", height: "1.375rem", borderRadius: "9999px" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "5rem", height: "1.375rem", borderRadius: "9999px" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "4rem", height: "1.375rem", borderRadius: "9999px" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "6rem", height: "0.8125rem" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "3.5rem", height: "0.8125rem" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "5rem", height: "0.8125rem" }} />
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <Skeleton style={{ width: "1.5rem", height: "1.5rem" }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
-
-        <div className={styles.kpiGrid} aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <Card key={i} className={styles.kpiCard}>
-              <Skeleton style={{ width: "60%", height: "0.75rem" }} />
-              <Skeleton style={{ width: "30%", height: "1.5rem", marginTop: "0.5rem" }} />
-            </Card>
-          ))}
-        </div>
-
-        <div className={styles.toolbar} aria-hidden="true">
-          <Skeleton style={{ width: "14rem", height: "1rem" }} />
-          <Skeleton style={{ width: "20rem", maxWidth: "100%", height: "2rem" }} />
-        </div>
-
-        {/* Tracker table skeleton — same 5 columns as the live table. */}
-        <div className={pageStyles.tableWrap} aria-hidden="true">
-          <table className={pageStyles.table}>
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Stage</th>
-                <th>Status</th>
-                <th>Next step</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[0, 1, 2].map((i) => (
-                <tr key={i}>
-                  <td>
-                    <div className={styles.nestedCard}>
-                      <Skeleton style={{ width: "50%", height: "0.875rem" }} />
-                      <Skeleton style={{ width: "80%", height: "0.75rem", marginTop: "0.375rem" }} />
-                      <Skeleton style={{ width: "65%", height: "0.75rem", marginTop: "0.375rem" }} />
-                    </div>
-                  </td>
-                  <td>
-                    <Skeleton style={{ width: "6rem", height: "1.25rem", borderRadius: "999px" }} />
-                    <Skeleton style={{ width: "8rem", height: "0.75rem", marginTop: "0.375rem" }} />
-                  </td>
-                  <td>
-                    <Skeleton style={{ width: "5rem", height: "1.25rem", borderRadius: "999px" }} />
-                    <Skeleton style={{ width: "7rem", height: "0.75rem", marginTop: "0.375rem" }} />
-                  </td>
-                  <td>
-                    <Skeleton style={{ width: "7rem", height: "0.875rem" }} />
-                    <Skeleton style={{ width: "9rem", height: "0.75rem", marginTop: "0.375rem" }} />
-                  </td>
-                  <td>
-                    <div className={styles.badgeRow} style={{ justifyContent: "flex-end" }}>
-                      <Skeleton style={{ width: "5.5rem", height: "1.5rem" }} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </section>
     );
   }
@@ -166,12 +118,6 @@ export default function GuidanceAdmPage() {
   if (isError || !data) {
     return (
       <section className={pageStyles.page}>
-        <div className={pageStyles.header}>
-          <div>
-            <p className={pageStyles.eyebrow}>Hand-off · ADM Coordinator</p>
-            <h1 className={pageStyles.title}>ADM referrals</h1>
-          </div>
-        </div>
         <div className={styles.errorBlock} role="alert">
           <p className={styles.errorText}>
             We couldn&apos;t load the ADM hand-offs. Please check your internet
@@ -195,32 +141,11 @@ export default function GuidanceAdmPage() {
 
   return (
     <section className={pageStyles.page}>
-      <div className={pageStyles.header}>
-        <div>
-          <p className={pageStyles.eyebrow}>Hand-off · ADM Coordinator</p>
-          <h1 className={pageStyles.title}>ADM referrals</h1>
-          <p className={pageStyles.lede}>
-            Consult first, then hand off — adviser referrals waiting on your
-            consultation, plus the live tracker of cases now with the ADM
-            Coordinator.
-          </p>
-        </div>
-      </div>
+      <GuidanceAdmReports summary={data.summary} />
 
       <GuidanceAdmTable
         summary={data.summary}
         reviewQueue={data.reviewQueue}
-        cases={data.cases}
-        page={data.page}
-        pageSize={data.pageSize}
-        total={data.total}
-        totalPages={data.totalPages}
-        onPageChange={setPage}
-        query={query}
-        onQueryChange={setQuery}
-        stage={stage}
-        onStageChange={handleStageChange}
-        isNavigating={isFetching && !isPending}
       />
     </section>
   );

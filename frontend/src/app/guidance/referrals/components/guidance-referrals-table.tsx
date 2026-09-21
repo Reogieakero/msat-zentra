@@ -56,7 +56,85 @@ import {
   type GuidanceAction,
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
+import { toast } from "@/components/ui/sonner";
 import styles from "./guidance-referrals-table.module.css";
+
+function referralActionMessage(action: string): { title: string; description: string } | null {
+  switch (action) {
+    case "escalate":
+      return {
+        title: "Sent to a higher office",
+        description: "The case was escalated with your reason attached for the receiving office.",
+      };
+    case "reassign":
+      return {
+        title: "Case passed on",
+        description: "The referral was reassigned and now appears on the new handler's desk.",
+      };
+    case "dismiss":
+      return {
+        title: "Case closed",
+        description: "The referral was closed with your reason kept on record.",
+      };
+    case "specialist":
+      return {
+        title: "Specialist asked",
+        description: "The referral was sent for specialist input with your reason attached.",
+      };
+    case "adm":
+      return {
+        title: "ADM process started",
+        description: "The case is now on the ADM track and visible in the ADM queue.",
+      };
+    case "accept":
+      return {
+        title: "Case accepted",
+        description: "The case is now in progress on your desk. A first session stays optional.",
+      };
+    case "schedule":
+      return {
+        title: "Session booked",
+        description: "The counseling session was added with its date, time, and venue.",
+      };
+    case "finish":
+      return {
+        title: "Session completed",
+        description: "Session notes were saved. Any booked follow-up stays on the plan.",
+      };
+    case "move":
+      return {
+        title: "Session moved",
+        description: "The session was rescheduled to the new date and time.",
+      };
+    case "cancelSess":
+      return {
+        title: "Session cancelled",
+        description: "The session was cancelled with your reason kept on record.",
+      };
+    case "deleteSess":
+      return {
+        title: "Session removed",
+        description: "The cancelled session was permanently removed from the plan.",
+      };
+    case "resolve":
+      return {
+        title: "Case closed",
+        description: "The closing summary was saved and the case left your active list.",
+      };
+    case "note":
+      return {
+        title: "Note saved",
+        description: "Your internal note was attached to the case timeline.",
+      };
+    case "followUp":
+      return {
+        title: "Follow-up set",
+        description: "A reminder was set — the case will resurface on the follow-up date.",
+      };
+    default:
+      return { title: "Saved", description: "Your change was recorded on the case." };
+  }
+}
 
 /* Re-exported for the interventions page (same helpers, new home). */
 export {
@@ -107,6 +185,7 @@ export function GuidanceReferralsTable({
   isNavigating,
   lockType = false,
   title = "Referrals to me",
+  highlightId = null,
 }: GuidanceReferralsTableProps) {
   const queryClient = useQueryClient();
   const [dialogs, setDialogs] = useState<ActionDialogs>({
@@ -188,6 +267,16 @@ export function GuidanceReferralsTable({
       queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+      toast.success({
+        title: "Case closed",
+        description: "The closing summary was saved and the case left your active list.",
+      });
+    },
+    onError: () => {
+      toast.error({
+        title: "Could not close the case",
+        description: "The change did not go through. Check your connection and try again.",
+      });
     },
   });
 
@@ -287,35 +376,53 @@ export function GuidanceReferralsTable({
           throw new Error(`Unknown action: ${action}`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+      const message = referralActionMessage(variables.action);
+      if (message) toast.success(message);
+    },
+    onError: () => {
+      toast.error({
+        title: "Could not save",
+        description: "The action did not go through. Check your connection and try again.",
+      });
     },
   });
 
   const handleAction = (action: string, payload: unknown) => {
     if (!activeId) return;
-    actionMutation.mutate({ id: activeId, action, payload });
-    setDialogs({
-      escalate: false,
-      reassign: false,
-      note: false,
-      followUp: false,
-      dismiss: false,
-      specialist: false,
-      adm: false,
-      accept: false,
-      schedule: false,
-      finish: false,
-      move: false,
-      cancelSess: false,
-      deleteSess: false,
-      resolve: false,
-    });
-    setActiveId(null);
-    setActiveSessionId(null);
+    if (actionMutation.isPending) return;
+    // Keep the dialog open while the request runs so the submit button's
+    // spinner stays visible. Close only on confirmed success; on error the
+    // dialog stays open with its values intact so the user can retry.
+    actionMutation.mutate(
+      { id: activeId, action, payload },
+      {
+        onSuccess: () => {
+          setDialogs({
+            escalate: false,
+            reassign: false,
+            note: false,
+            followUp: false,
+            dismiss: false,
+            specialist: false,
+            adm: false,
+            accept: false,
+            schedule: false,
+            finish: false,
+            move: false,
+            cancelSess: false,
+            deleteSess: false,
+            resolve: false,
+          });
+          setActiveId(null);
+          setActiveSessionId(null);
+        },
+      }
+    );
   };
 
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -343,6 +450,17 @@ export function GuidanceReferralsTable({
     // clearing only resets the search and the action menu.
     onTypeChange(lockType ? typeFilter : "");
   }
+
+  // Scroll the highlighted case into view once its page renders.
+  useEffect(() => {
+    if (!highlightId) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`guidance-case-${highlightId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [highlightId, page, referrals]);
 
   return (
     <div className={styles.layout}>
@@ -466,6 +584,7 @@ export function GuidanceReferralsTable({
               row={row}
               alt={index % 2 === 1}
               now={now}
+              highlighted={highlightId !== null && highlightId === row.id}
               actionPending={isActionPending}
               onOpenDialog={(referralId, dialog) => openDialog(referralId, dialog)}
               onOpenSession={(referralId, session, dialog) =>
@@ -543,9 +662,16 @@ export function GuidanceReferralsTable({
         closeDialog={closeDialog}
         handleAction={handleAction}
         onResolveCase={(id, summary) => {
-          mutation.mutate({ id, next: "resolved", summary });
-          setDialogs((prev) => ({ ...prev, resolve: false }));
-          setActiveId(null);
+          if (mutation.isPending) return;
+          mutation.mutate(
+            { id, next: "resolved", summary },
+            {
+              onSuccess: () => {
+                setDialogs((prev) => ({ ...prev, resolve: false }));
+                setActiveId(null);
+              },
+            }
+          );
         }}
       />
 
@@ -650,4 +776,7 @@ interface GuidanceReferralsTableProps {
   // and keep "Show all" within their own track.
   lockType?: boolean;
   title?: string;
+  // Deep-link arrival from the alerts table: scrolls to and highlights
+  // the case once its page renders.
+  highlightId?: string | null;
 }

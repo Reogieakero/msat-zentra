@@ -27,6 +27,7 @@ interface FormDropdownProps {
   options: FormDropdownOption[];
   /** Short lists (urgency, session kind) fit without scrolling. */
   scrollable?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -41,6 +42,7 @@ export function FormDropdown({
   placeholder,
   options,
   scrollable = false,
+  disabled = false,
 }: FormDropdownProps) {
   const selected = options.find((option) => option.value === value);
 
@@ -53,6 +55,7 @@ export function FormDropdown({
             id={id}
             type="button"
             variant="outline"
+            disabled={disabled}
             className={cn(
               "mt-1 w-full justify-between text-left font-normal",
               !selected && "text-muted-foreground"

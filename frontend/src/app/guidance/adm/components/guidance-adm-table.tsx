@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Eye, Loader2, MoreHorizontal, Search, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import {
   Dialog,
   DialogContent,
@@ -14,18 +16,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   GuidanceAdmCase,
-  GuidanceAdmStageFilter,
   GuidanceAdmSummary,
 } from "./guidance-adm-data";
 import { reviewAdmConsultation } from "./guidance-adm-data";
 import { AdmReviewDialog } from "./AdmReviewDialog";
 import { GuidanceAdmReferralFormSheet } from "./GuidanceAdmReferralFormSheet";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
-import { GuidanceAdmFilters } from "./guidance-adm-filters";
+import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/ocform01";
+import {
+  buildGcForm03Data,
+  consultRecommendation,
+  type GcForm03Data,
+} from "./gcform03-data";
+import { GcForm03PreviewDialog } from "./GcForm03PreviewDialog";
+import { toast } from "@/components/ui/sonner";
 import pageStyles from "../../pages.module.css";
 import styles from "./guidance-adm.module.css";
 
@@ -75,6 +97,46 @@ function eligibilityLabel(value: string): string {
   }
 }
 
+/* Live clock for the queue's elapsed readouts — ticks every 30s, same as
+   the alerts table. */
+function useQueueTick(): number {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  return now;
+}
+
+/* "4d 3h 12m" — days, hours, minutes only, never seconds. */
+function formatElapsedShort(ms: number): string {
+  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
+  if (totalMinutes < 1) return "just now";
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+  return parts.join(" ");
+}
+
+/* Queue-row case status: referred (needs review), endorsed, or rejected. */
+function queueStatus(row: GuidanceAdmCase): { label: string; variant: "warning" | "success" | "destructive" | "secondary" } {
+  if (row.reviewed === false) return { label: "Needs review", variant: "warning" };
+  if (row.referralStatus === "dismissed") return { label: "Rejected", variant: "destructive" };
+  if (row.referralStatus === "in_progress") return { label: "Endorsed", variant: "success" };
+  return { label: "Reviewed", variant: "secondary" };
+}
+
+/* Latest action on a queue row, timed from the referral date. */
+function queueLatest(row: GuidanceAdmCase): { label: string; icon: "eye" | "send" } {
+  if (row.reviewed === false) return { label: "Waiting on your review", icon: "eye" };
+  if (row.referralStatus === "dismissed") return { label: "Rejected", icon: "send" };
+  return { label: "Endorsed to ADM coordinator", icon: "send" };
+}
+
 /* Plain next step so non-technical readers know who holds the case. */
 function nextStep(row: GuidanceAdmCase): string {
   if (row.meetingAttended === false && !row.hasHomeVisit) {
@@ -115,37 +177,18 @@ function stageVariant(stage: string): "warning" | "destructive" | "secondary" | 
 
 interface GuidanceAdmTableProps {
   summary: GuidanceAdmSummary;
-  /* Latest ADM cases referred to guidance still needing review. */
+  /* Latest ADM cases referred to guidance — referred or endorsed. */
   reviewQueue: GuidanceAdmCase[];
-  cases: GuidanceAdmCase[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  query: string;
-  onQueryChange: (value: string) => void;
-  stage: GuidanceAdmStageFilter;
-  onStageChange: (value: GuidanceAdmStageFilter) => void;
-  isNavigating: boolean;
 }
 
 export function GuidanceAdmTable({
   summary,
   reviewQueue,
-  cases,
-  page,
-  pageSize,
-  total,
-  totalPages,
-  onPageChange,
-  query,
-  onQueryChange,
-  stage,
-  onStageChange,
-  isNavigating,
 }: GuidanceAdmTableProps) {
   const queryClient = useQueryClient();
+  const queueNow = useQueueTick();
+  const [queueQuery, setQueueQuery] = React.useState("");
+  const [endorsedFor, setEndorsedFor] = React.useState<string | null>(null);
   const [reviewId, setReviewId] = React.useState<string | null>(null);
   const [formSheet, setFormSheet] = React.useState<{
     row: GuidanceAdmCase;
@@ -153,8 +196,34 @@ export function GuidanceAdmTable({
   } | null>(null);
   const [rejectId, setRejectId] = React.useState<string | null>(null);
   const [rejectReason, setRejectReason] = React.useState("");
+  // GCForm-03 (Control No. GCForm-03) viewer — rebuilt from the row + its
+  // OCForm-01, exactly like the endorse-time preview.
+  const [gcRow, setGcRow] = React.useState<GuidanceAdmCase | null>(null);
+  const [gcData, setGcData] = React.useState<GcForm03Data | null>(null);
+  const [gcLoadingId, setGcLoadingId] = React.useState<string | null>(null);
+
+  async function openGcForm(row: GuidanceAdmCase) {
+    if (gcLoadingId) return;
+    if (gcData && gcRow?.id === row.id) {
+      setGcRow(row);
+      return;
+    }
+    setGcLoadingId(row.id);
+    try {
+      let report: OcForm01Detail | null = null;
+      try {
+        if (row.anecdotalId) report = await fetchOcForm01Detail(row.anecdotalId);
+      } catch {
+        report = null;
+      }
+      setGcData(buildGcForm03Data(row, report, consultRecommendation(row.consultNote)));
+      setGcRow(row);
+    } finally {
+      setGcLoadingId(null);
+    }
+  }
   const findCase = (id: string | null) =>
-    reviewQueue.find((c) => c.id === id) ?? cases.find((c) => c.id === id) ?? null;
+    reviewQueue.find((c) => c.id === id) ?? null;
   const activeReview = findCase(reviewId);
   const activeReject = findCase(rejectId);
 
@@ -176,6 +245,16 @@ export function GuidanceAdmTable({
       queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
       queryClient.invalidateQueries({ queryKey: ["guidance-overview"] });
+      toast.success({
+        title: "Rejected from ADM",
+        description: "The case was closed with your reason kept on record. No further ADM action is needed.",
+      });
+    },
+    onError: () => {
+      toast.error({
+        title: "Could not reject the case",
+        description: "The rejection did not go through. Check your connection and try again.",
+      });
     },
   });
 
@@ -184,298 +263,211 @@ export function GuidanceAdmTable({
     setRejectReason("");
   };
 
+  const filteredQueue = React.useMemo(() => {
+    const q = queueQuery.trim().toLowerCase();
+    if (!q) return reviewQueue;
+    return reviewQueue.filter((r) =>
+      `${r.student} ${r.lrn} ${r.section} ${r.reason} ${r.referredBy}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [reviewQueue, queueQuery]);
+
   const submitQuickReject = () => {
     if (!activeReject || !rejectReason.trim()) return;
-    reviewMutation.mutate({
-      referralId: activeReject.referralId,
-      outcome: "reject",
-      text: rejectReason.trim(),
-    });
-    closeReject();
+    if (reviewMutation.isPending) return;
+    // Keep the dialog open while rejecting so the Reject button's spinner
+    // stays visible. Close only on confirmed success; on error the dialog
+    // stays open with the reason intact so the user can retry.
+    reviewMutation.mutate(
+      {
+        referralId: activeReject.referralId,
+        outcome: "reject",
+        text: rejectReason.trim(),
+      },
+      {
+        onSuccess: () => {
+          closeReject();
+        },
+      }
+    );
   };
-
-  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
-  const hasActiveFilters = query.trim() !== "" || stage !== "";
 
   return (
     <div className={styles.feed}>
-      {/* ADM cases referred to YOU that still need your anecdotal review —
-          the 2 latest. Everything else is in the tracker below. */}
+      {/* Latest ADM cases referred to you — referred or endorsed. Rows still
+          needing your anecdotal review carry actions; decided rows render
+          read-only. */}
       <Card className={pageStyles.card}>
         <CardHeader>
-          <CardTitle className={pageStyles.sectionTitle}>
-            ADM referred needing action ({summary.awaitingReview})
-          </CardTitle>
-          <CardDescription className={pageStyles.sectionDesc}>
-            The 3 latest ADM cases referred to you awaiting your anecdotal
-            review.
-          </CardDescription>
+          <div className={styles.queueHeadRow}>
+            <div>
+              <CardTitle className={pageStyles.sectionTitle}>
+                Latest referred ADM cases
+              </CardTitle>
+              <CardDescription className={pageStyles.sectionDesc}>
+                The latest ADM cases referred to you — review the anecdotal,
+                then endorse or reject.
+              </CardDescription>
+            </div>
+            <div className={styles.searchWrap}>
+              <Search className={styles.searchIcon} aria-hidden />
+              <Input
+                className={styles.search}
+                style={{ height: "2rem" }}
+                placeholder="Search student…"
+                value={queueQuery}
+                onChange={(e) => setQueueQuery(e.target.value)}
+                aria-label="Search referred ADM cases"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {reviewQueue.length === 0 ? (
+          {filteredQueue.length === 0 ? (
             <div className={styles.empty}>
-              <p className={styles.emptyTitle}>No ADM cases waiting for your review</p>
+              <p className={styles.emptyTitle}>
+                {queueQuery.trim() !== ""
+                  ? "No cases match your search"
+                  : "No ADM cases referred to you yet"}
+              </p>
               <p className={styles.emptyHint}>
-                New ADM cases referred to you will appear here for review.
+                {queueQuery.trim() !== ""
+                  ? "Try a different name or keyword."
+                  : "New ADM cases referred to you will appear here."}
               </p>
             </div>
           ) : (
-            <ul className={styles.reviewGrid}>
-              {reviewQueue.map((row) => (
-                <li key={row.id} className={styles.reviewCard}>
-                  <div className={styles.consultMain}>
-                    <p className={styles.studentName}>
-                      {row.student}{" "}
-                      <Badge variant="warning">Needs review</Badge>{" "}
-                      {row.category ? (
-                        <Badge variant="outline">{formatStatus(row.category)}</Badge>
-                      ) : null}
-                    </p>
-                    <div className={styles.nestedCard}>
-                      <ul className={styles.msgList}>
-                      <li>
-                        <span className={pageStyles.mono}>{row.lrn || "—"}</span>
-                      </li>
-                      <li>
-                        {row.section}
-                        {row.grade ? ` · ${row.grade}` : ""}
-                      </li>
-                      <li>
-                        Sent by {row.referredBy} · {formatDate(row.date)}
-                      </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className={styles.consultActions}>
-                    <Button
-                      size="sm"
-                      disabled={reviewMutation.isPending}
-                      onClick={() => openReview(row)}
-                    >
-                      View anecdotal
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className={styles.btnRed}
-                      disabled={reviewMutation.isPending}
-                      onClick={() => {
-                        setRejectId(row.id);
-                        setRejectReason("");
-                      }}
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className={styles.tableWrap}>
+              <Table aria-label="Latest ADM cases referred to you">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>LRN</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Case status</TableHead>
+                    <TableHead>Risk</TableHead>
+                    <TableHead>Latest action</TableHead>
+                    <TableHead>Time elapsed</TableHead>
+                    <TableHead>Date referred</TableHead>
+                    <TableHead>
+                      <span className={styles.srOnly}>Row actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredQueue.map((row) => {
+                    const needsAction = row.reviewed === false;
+                    const status = queueStatus(row);
+                    const isEndorsed =
+                      row.reviewed === true && row.referralStatus === "in_progress";
+                    const latest = queueLatest(row);
+                    const at = new Date(`${row.date}T00:00:00`).getTime();
+                    const actionMs = Number.isFinite(at) ? Math.max(0, queueNow - at) : null;
+                    const ActionIcon = latest.icon === "eye" ? Eye : Send;
+                    return (
+                      <TableRow key={row.id}>
+                        <TableCell>
+                          <p className={styles.cellMain}>
+                            <span className={styles.lrn}>{row.lrn || "—"}</span>
+                          </p>
+                          <p className={styles.cellSub}>
+                            {row.student} · {row.section}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">ADM</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                          {row.category ? (
+                            <p className={styles.cellSub}>{formatStatus(row.category)}</p>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          {row.riskLevel === "High" ? (
+                            <Badge variant="destructive">High</Badge>
+                          ) : row.riskLevel === "Moderate" ? (
+                            <Badge variant="warning">Moderate</Badge>
+                          ) : row.riskLevel === "Low" ? (
+                            <Badge variant="outline">Low</Badge>
+                          ) : (
+                            <span className={styles.noRisk}>—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <p className={styles.actionLabel}>
+                            <ActionIcon className={styles.actionIcon} aria-hidden />
+                            <span>{latest.label}</span>
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p className={styles.cellTime} aria-live="off">
+                            {actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p className={styles.cellMain}>{formatDate(row.date)}</p>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Actions for ${row.student}'s case`}
+                              >
+                                <MoreHorizontal aria-hidden />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-56">
+                              <DropdownMenuItem
+                                disabled={gcLoadingId === row.id}
+                                onSelect={() => void openGcForm(row)}
+                              >
+                                {gcLoadingId === row.id ? "Loading form…" : "See referral form"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  if (isEndorsed) setEndorsedFor(row.student);
+                                  else openReview(row);
+                                }}
+                              >
+                                View anecdotal
+                              </DropdownMenuItem>
+                              {needsAction && (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setRejectId(row.id);
+                                    setRejectReason("");
+                                  }}
+                                >
+                                  Reject
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Step 2+: handed to the ADM coordinator — read-only tracker. */}
-      <div className={styles.kpiGrid}>
-        <Card className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>ADM hand-offs</p>
-          <p className={styles.kpiValue}>{summary.total}</p>
-          <p className={styles.kpiHint}>Tracked profiles + referrals awaiting a profile.</p>
-        </Card>
-        <Card className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>Awaiting your review</p>
-          <p className={styles.kpiValue}>{summary.awaitingReview}</p>
-          <p className={styles.kpiHint}>Consultation-stage referrals needing your anecdotal review.</p>
-        </Card>
-        <Card className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>Home visitation stage</p>
-          <p className={styles.kpiValue}>{summary.homeVisitation}</p>
-          <p className={styles.kpiHint}>Cases currently on a home visit.</p>
-        </Card>
-        <Card className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>Needs a home visit</p>
-          <p className={styles.kpiValue}>{summary.needsHomeVisit}</p>
-          <p className={styles.kpiHint}>Parents missed the meeting and no visit logged.</p>
-        </Card>
-      </div>
 
-      <div className={styles.toolbar}>
-        <p className={styles.count} aria-live="polite">
-          {total === 0
-            ? "No ADM cases referred to you for review"
-            : `${total} ADM case${total === 1 ? "" : "s"} referred to you for review`}
-        </p>
-        <GuidanceAdmFilters
-          query={query}
-          onQueryChange={onQueryChange}
-          stage={stage}
-          onStageChange={onStageChange}
-        />
-      </div>
 
-      {cases.length === 0 ? (
-        <div className={styles.empty}>
-          <p className={styles.emptyTitle}>
-            {hasActiveFilters ? "No hand-offs match your search" : "No ADM hand-offs yet"}
-          </p>
-          <p className={styles.emptyHint}>
-            {hasActiveFilters
-              ? "Try a different name or keyword, or clear the filter to see every hand-off."
-              : "Cases you hand off to the ADM coordinator above will appear here with their stage and review state."}
-          </p>
-        </div>
-      ) : (
-        <div className={pageStyles.tableWrap}>
-          <table className={pageStyles.table}>
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Stage</th>
-                <th>Status</th>
-                <th>Next step</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((row) => {
-                const needsReview =
-                  row.stage === "consultation" && row.reviewed === false;
-                return (
-                <tr key={row.id}>
-                  <td>
-                    <div className={styles.msgCard}>
-                      <p className={styles.msgHead}>{row.student}</p>
-                      <ul className={styles.msgList}>
-                        <li>
-                          <span className={pageStyles.mono}>{row.lrn || "—"}</span>
-                        </li>
-                        <li>
-                          {row.section}
-                          {row.grade ? ` · ${row.grade}` : ""}
-                        </li>
-                        <li>
-                          Sent by {row.referredBy} · {formatDate(row.date)}
-                        </li>
-                      </ul>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.badgeRow}>
-                      <Badge variant={stageVariant(row.stage)}>{row.stageLabel}</Badge>
-                    </div>
-                    <p className={styles.studentSub}>
-                      File {row.referralId.slice(0, 8)}… ·{" "}
-                      {row.stage === "consultation" && row.reviewed !== undefined
-                        ? !row.reviewed
-                          ? "Waiting on your review"
-                          : row.referralStatus === "dismissed"
-                            ? "Rejected"
-                            : "Reviewed — with coordinator"
-                        : referralLabel(row.referralStatus)}
-                    </p>
-                  </td>
-                  <td>
-                    <div className={styles.badgeRow}>
-                      <Badge variant="secondary">{eligibilityLabel(row.eligibility)}</Badge>
-                      {row.approved ? <Badge variant="default">Signed</Badge> : null}
-                    </div>
-                    <p className={styles.studentSub}>
-                      {row.approved && row.approvedAt
-                        ? `Principal signed ${formatDate(row.approvedAt)}`
-                        : `Prepared by ${row.preparedBy}`}
-                    </p>
-                  </td>
-                  <td>
-                    <p className={styles.studentName}>{nextStep(row)}</p>
-                    <p className={styles.studentSub}>
-                      {row.stage === "consultation"
-                        ? row.reviewed === true
-                          ? "Coordinator schedules the parent meeting next."
-                          : "Review the anecdotal, then endorse or return."
-                        : "Tracked by the ADM coordinator."}
-                    </p>
-                  </td>
-                  <td>
-                    {needsReview ? (
-                      <div className={styles.badgeRow}>
-                        <Button
-                          size="sm"
-                          disabled={reviewMutation.isPending}
-                          onClick={() => openReview(row)}
-                        >
-                          View anecdotal
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={reviewMutation.isPending}
-                          onClick={() => {
-                            setRejectId(row.id);
-                            setRejectReason("");
-                          }}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    ) : row.stage === "consultation" && row.reviewed === true ? (
-                      <Badge
-                        variant={
-                          row.referralStatus === "dismissed"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                      >
-                        {row.referralStatus === "dismissed"
-                          ? "Rejected"
-                          : "Reviewed"}
-                      </Badge>
-                    ) : (
-                      <span className={styles.studentSub}>—</span>
-                    )}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <nav className={styles.pager} aria-label="ADM hand-off pages">
-        <p className={styles.range}>
-          Showing hand-offs {start}–{end} of {total}
-        </p>
-        <div className={styles.pagerButtons}>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page <= 1 || isNavigating}
-            onClick={() => onPageChange(page - 1)}
-            aria-label="Show newer hand-offs"
-          >
-            ← Newer
-          </Button>
-          <span className={styles.pageLabel} aria-live="polite">
-            {isNavigating ? (
-              <span className={styles.loadingLabel}>
-                <Loader2 className={styles.spin} aria-hidden="true" />
-                Loading…
-              </span>
-            ) : (
-              `Page ${page} of ${totalPages}`
-            )}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page >= totalPages || isNavigating}
-            onClick={() => onPageChange(page + 1)}
-            aria-label="Show older hand-offs"
-          >
-            Older →
-          </Button>
-        </div>
-      </nav>
+      {/* Endorsed cases moved to the coordinator with their full report —
+          the anecdotal never opens on this desk (same overlay as the
+          referrals desk). */}
+      <PrivacyNoticeDialog
+        open={endorsedFor !== null}
+        onClose={() => setEndorsedFor(null)}
+        studentName={endorsedFor ?? undefined}
+        reason="endorsed"
+      />
 
       {/* Consultation review — shared dialog, same actions as the nurse
           ADM review: report, recommendation, book session, reject, or
@@ -514,6 +506,27 @@ export function GuidanceAdmTable({
         />
       )}
 
+      {reviewMutation.isError ? (
+        <div className={styles.errorBlock} role="alert">
+          <p className={styles.errorText}>
+            Sorry — that rejection did not go through. Please try again.
+          </p>
+        </div>
+      ) : null}
+
+      {/* GCForm-03 referral-form viewer — read-only; the filled form lives
+          with the ADM coordinator once endorsed. */}
+      {gcRow && gcData && (
+        <GcForm03PreviewDialog
+          open
+          data={gcData}
+          confirming={false}
+          onClose={() => setGcRow(null)}
+          onConfirm={() => {}}
+          viewOnly
+        />
+      )}
+
       {/* Quick reject straight from the Action column — no need to open the
            full report when the case clearly doesn't warrant ADM. */}
       <Dialog open={rejectId !== null} onOpenChange={(open) => { if (!open) closeReject(); }}>
@@ -542,7 +555,6 @@ export function GuidanceAdmTable({
               variant="destructive"
               className={styles.btnRed}
               onClick={closeReject}
-              disabled={reviewMutation.isPending}
             >
               Cancel
             </Button>

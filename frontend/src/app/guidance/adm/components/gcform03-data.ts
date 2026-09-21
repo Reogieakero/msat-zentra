@@ -1,5 +1,18 @@
 import type { OcForm01Detail } from "@/components/ocform01/ocform01";
-import type { GuidanceAdmCase } from "./guidance-adm-data";
+
+/* Minimal case fields the GCForm-03 builder reads — satisfied by ADM cases
+   and desk referral rows alike, so previews can build from either. */
+export interface GcForm03Source {
+  student: string;
+  grade: string;
+  section: string;
+  category?: string;
+  anecdotalExcerpt?: string;
+  reason: string;
+  recommendations?: string;
+  referredBy: string;
+  date: string;
+}
 
 /**
  * GCForm-03 Referral Form data (template: public/referral forms/).
@@ -120,6 +133,19 @@ export function sanitizeGcForm03Draft(raw: unknown, fallback: GcForm03Data): GcF
     counselorName: str(r.counselorName, fallback.counselorName),
     counselorDate: str(r.counselorDate, fallback.counselorDate),
   };
+}
+
+/* Review recommendation stored on the referral by the ADM consultation
+   review (`[ADM consult] ...` appended to notes) — reused as the GCForm-03
+   guidance-recommendations line when viewing the passed-on form. */
+export function consultRecommendation(notes?: string | null): string {
+  if (!notes) return "";
+  const line = notes
+    .split("\n")
+    .map((s) => s.trim())
+    .find((s) => s.startsWith("[ADM consult]"));
+  if (!line) return "";
+  return line.replace(/^\[ADM consult\]\s*/, "");
 }
 
 export interface GcForm03ActionRow {
@@ -288,7 +314,7 @@ function concernsFor(category: string | undefined): GcForm03Concerns {
 }
 
 export function buildGcForm03Data(
-  row: GuidanceAdmCase,
+  row: GcForm03Source,
   report: OcForm01Detail | null,
   recommendation: string,
   counselorName = ""

@@ -353,6 +353,7 @@ model SchoolYear {
   terms      Term[]
   sections   Section[]
   rosterEntries StudentRoster[]
+  @@index([isActive])
 }
 
 model Term {
@@ -392,6 +393,9 @@ model Section {
   gradeFlags GradeFlag[]
   rosterEntries StudentRoster[]
   sf10AccessRequests AdviserSf10AccessRequest[]
+  @@index([schoolYearId])
+  @@index([gradeLevel])
+  @@index([adviserId])
 }
 
 // Decoupled enrollment roster: a student enrolled in a section for a school year,
@@ -519,6 +523,8 @@ model FinalGrade {
   @@unique([studentId, subjectId, termId])
   @@unique([rosterId, subjectId, termId])
   @@index([rosterId])
+  @@index([studentId, termId])
+  @@index([termId])
 }
 
 // Teacher-raised flags on student grades. Any teacher may raise a flag on any
@@ -577,6 +583,8 @@ model AttendanceRecord {
   @@unique([studentId, date, session])
   @@unique([rosterId, date, session])
   @@index([rosterId])
+  @@index([studentId, termId])
+  @@index([sectionId, termId])
 }
 
 // ---------------------------------------------------------------------------
@@ -615,6 +623,10 @@ model AnecdotalRecord {
   followups              AnecdotalRecordFollowup[]
   referrals              Referral[]      @relation("AnecdotalReferral")
   @@index([folderId])
+  @@index([observationDatetime])
+  @@index([studentId, termId])
+  @@index([rosterId, termId])
+  @@index([sectionId, termId])
 }
 
 // Teacher-owned collections of filed anecdotal records. Folders organize
@@ -683,6 +695,12 @@ model Referral {
   homeVisitations   HomeVisitationRecord[]
   admProfiles       AdmLearnerProfile[]
   counselingSessions CounselingSession[]
+  @@index([referredToRole, status])
+  @@index([referredToRole, consultReviewer])
+  @@index([status])
+  @@index([studentId])
+  @@index([rosterId])
+  @@index([termId])
 }
 
 // Guidance counseling work on one referral: scheduled talks with the
@@ -715,6 +733,7 @@ model CounselingSession {
   attachments  ClinicSessionAttachment[]
   @@index([referralId])
   @@index([interventionId])
+  @@index([status])
 }
 
 // Documentation filed on one clinic/counseling session: photos (wound,
@@ -757,6 +776,10 @@ model Intervention {
   assignee          User?           @relation("InterventionAssignee", fields: [assignedTo], references: [id])
   counselingSessions CounselingSession[]
   @@index([rosterId])
+  @@index([studentId])
+  @@index([outcomeStatus])
+  @@index([approvalStatus])
+  @@index([assignedTo, outcomeStatus])
 }
 // ---------------------------------------------------------------------------
 // 3.6 Specialist modules
@@ -819,6 +842,9 @@ model AdmLearnerProfile {
   modules             AdmModule[]
   devices             AdmDevice[]
   forms               AdmForm[]
+  @@index([referralId])
+  @@index([studentId])
+  @@index([stage])
 }
 model AdmParentMeeting {
   id                    String             @id @default(uuid())
@@ -928,6 +954,9 @@ model AuditLog {
   newValue    Json?
   createdAt   DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id])
+  @@index([sourceTable, sourceId, createdAt])
+  @@index([actionType])
+  @@index([createdAt])
 }
 
 model RiskSnapshot {
@@ -944,6 +973,8 @@ model RiskSnapshot {
   roster      StudentRoster? @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   term        Term          @relation(fields: [termId], references: [id])
   @@index([rosterId])
+  @@index([studentId])
+  @@index([termId, riskLevel])
 }
 
 model ReportSnapshot {

@@ -10,36 +10,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { GuidanceAnecdotalCategory } from "./guidance-anecdotal-data";
 import styles from "./guidance-anecdotal-filters.module.css";
 
-export type CategoryFilter = "" | GuidanceAnecdotalCategory;
+export type CategoryFilter = "";
+export type TypeFilter = "" | "ADM" | "Counseling";
 
-const CATEGORIES: { value: CategoryFilter; label: string }[] = [
-  { value: "", label: "All categories" },
-  { value: "behavioral", label: "Behavioral" },
-  { value: "bullying", label: "Bullying" },
-  { value: "academic", label: "Academic" },
-  { value: "attendance", label: "Attendance" },
-  { value: "health", label: "Health" },
+const TYPES: { value: TypeFilter; label: string }[] = [
+  { value: "", label: "All types" },
+  { value: "ADM", label: "ADM cases" },
+  { value: "Counseling", label: "Counseling cases" },
 ];
 
 interface GuidanceAnecdotalFiltersProps {
   query: string;
   onQueryChange: (value: string) => void;
-  category: CategoryFilter;
-  onCategoryChange: (value: CategoryFilter) => void;
+  type: TypeFilter;
+  onTypeChange: (value: TypeFilter) => void;
 }
 
 export function GuidanceAnecdotalFilters({
   query,
   onQueryChange,
-  category,
-  onCategoryChange,
+  type,
+  onTypeChange,
 }: GuidanceAnecdotalFiltersProps) {
-  const hasActiveFilters = category !== "";
-  const categoryLabel =
-    CATEGORIES.find((c) => c.value === category)?.label ?? "Category";
+  const hasActiveFilters = type !== "";
+  const typeLabel = TYPES.find((t) => t.value === type)?.label ?? "Type";
 
   return (
     <div className={styles.filters}>
@@ -59,20 +55,20 @@ export function GuidanceAnecdotalFilters({
           <Button
             variant="outline"
             size="sm"
-            className={`${styles.filterBtn} ${category !== "" ? styles.filterActive : ""}`}
+            className={`${styles.filterBtn} ${type !== "" ? styles.filterActive : ""}`}
           >
-            {category === "" ? "Category" : categoryLabel}
-            {category !== "" && <span className={styles.filterDot} aria-hidden />}
+            {type === "" ? "Type" : typeLabel}
+            {type !== "" && <span className={styles.filterDot} aria-hidden />}
             <ChevronDown aria-hidden />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className={styles.filterMenu}>
-          {CATEGORIES.map((item, index) => (
+          {TYPES.map((item, index) => (
             <div key={item.label}>
               {index === 1 && <DropdownMenuSeparator />}
               <DropdownMenuCheckboxItem
-                checked={category === item.value}
-                onCheckedChange={() => onCategoryChange(item.value)}
+                checked={type === item.value}
+                onCheckedChange={() => onTypeChange(item.value)}
               >
                 {item.label}
               </DropdownMenuCheckboxItem>
@@ -86,7 +82,9 @@ export function GuidanceAnecdotalFilters({
           variant="ghost"
           size="sm"
           className={styles.clearBtn}
-          onClick={() => onCategoryChange("")}
+          onClick={() => {
+            onTypeChange("");
+          }}
         >
           <X aria-hidden />
           Clear

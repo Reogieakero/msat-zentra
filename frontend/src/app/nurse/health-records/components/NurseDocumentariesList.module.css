@@ -592,8 +592,9 @@
 .viewerBackdrop {
   position: fixed;
   inset: 0;
-  /* Above the 10000 tab navbar so the fullscreen viewer covers it. */
-  z-index: 10002;
+  /* Above the tab navbar (35) and dialogs (50) so the fullscreen
+     viewer covers everything. */
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;

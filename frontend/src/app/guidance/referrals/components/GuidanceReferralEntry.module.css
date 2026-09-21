@@ -51,6 +51,19 @@
   border-radius: var(--radius-lg);
 }
 
+/* Deep-link highlight — the alerts table jumps here, so the case glows
+   until the reader moves on. Scroll margin clears the sticky toolbar. */
+.entry {
+  scroll-margin-top: 7rem;
+}
+
+.entryHighlight {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in oklch, var(--primary) 9%, var(--card));
+}
+
 /* Vertical spine + node dot, like the changelog rail */
 .entry::before {
   content: "";

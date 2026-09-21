@@ -2,14 +2,14 @@
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
-import type { SectionMatrixRow } from "./nurse-risk-data";
-import styles from "./NurseRiskHeatmap.module.css";
+import type { RiskDesk, SectionMatrixRow } from "./risk-dashboard-data";
+import styles from "./RiskHeatmap.module.css";
 
 /**
- * Section × category matrix over the clinic desk — status-only case counts,
+ * Section × category matrix over a desk — status-only case counts,
  * no identities. Darker cells mean more cases from that section in that
- * category. Mirrors the principal board's intensity buckets so the two
- * views agree on what "dark" means.
+ * category. Mirrors the principal board's intensity buckets so the views
+ * agree on what "dark" means.
  */
 function cellColor(count: number): string {
   if (count <= 0) return "var(--hm-0)";
@@ -21,13 +21,15 @@ function cellColor(count: number): string {
 
 const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(--hm-4)"];
 
-export function NurseRiskHeatmap({
+export function RiskHeatmap({
+  desk,
   categories,
   matrix,
   colTotals,
   total,
   interpretation,
 }: {
+  desk: RiskDesk;
   categories: string[];
   matrix: SectionMatrixRow[];
   colTotals: number[];
@@ -39,7 +41,7 @@ export function NurseRiskHeatmap({
       <h2 className={styles.panelTitle}>Section × category heatmap</h2>
       <p className={styles.panelDesc}>
         {matrix.length === 0
-          ? "No sections on the clinic desk yet."
+          ? `No sections on the ${desk} desk yet.`
           : `${total} ${total === 1 ? "case" : "cases"} across ${matrix.length} ${matrix.length === 1 ? "section" : "sections"}. Darker = more cases.`}
       </p>
       {matrix.length > 0 && (

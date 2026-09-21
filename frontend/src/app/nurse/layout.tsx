@@ -83,9 +83,6 @@ function NurseShell({ children }: { children: React.ReactNode }) {
           <DropdownMenuContent
             align="end"
             className={styles.accountMenu}
-            /* Radix renders in a portal at z-50 — lift it above the
-               10000 tab navbar so the menu never hides behind it. */
-            style={{ zIndex: 10002 }}
           >
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />

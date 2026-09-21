@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,20 +47,22 @@ export default function GuidanceBehavioralPage() {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(queryInput.trim());
-      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [queryInput]);
 
   const { data, isPending, isError, refetch, isFetching } = useQuery({
     queryKey: ["guidance-risk-behavioral", query, category, page],
-    queryFn: () =>
-      fetchGuidanceAnecdotal({
-        q: query,
-        category: category === "all" ? "" : category,
-        page,
-        pageSize: PAGE_SIZE,
-      }),
+    queryFn: ({ signal }) =>
+      fetchGuidanceAnecdotal(
+        {
+          q: query,
+          category: category === "all" ? "" : category,
+          page,
+          pageSize: PAGE_SIZE,
+        },
+        { signal }
+      ),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
   });
@@ -88,7 +91,8 @@ export default function GuidanceBehavioralPage() {
           </CardHeader>
           <CardContent>
             <div className={donutStyles.chartRow}>
-              <Skeleton style={{ width: "13rem", height: "10.5rem", borderRadius: "50%" }} />
+              {/* Donut diameter is constrained by the 168px chart height. */}
+              <Skeleton style={{ width: "10.5rem", height: "10.5rem", borderRadius: "50%", flexShrink: 0 }} />
               <div style={{ flex: "1 1 12rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
                 {[0, 1, 2, 3, 4].map((i) => (
                   <Skeleton key={i} style={{ width: `${88 - i * 9}%`, height: "0.9rem" }} />
@@ -147,8 +151,13 @@ export default function GuidanceBehavioralPage() {
               <Skeleton style={{ width: "7rem", height: "0.8rem" }} />
               <Skeleton style={{ width: "4rem", height: "1.75rem" }} />
             </div>
+            <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
+              <Skeleton style={{ width: "9rem", height: "2rem" }} />
+              <Skeleton style={{ width: "8rem", height: "2rem" }} />
+            </div>
           </CardContent>
         </Card>
+        <Skeleton style={{ width: "100%", height: "2.5rem" }} />
       </section>
     );
   }
@@ -178,6 +187,9 @@ export default function GuidanceBehavioralPage() {
               onClick={() => refetch()}
               disabled={isFetching}
             >
+              {isFetching ? (
+                <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+              ) : null}
               {isFetching ? "Retrying…" : "Retry"}
             </Button>
           </CardContent>
@@ -230,7 +242,10 @@ export default function GuidanceBehavioralPage() {
           <CardAction className={filterStyles.headerAction}>
             <GuidanceBehavioralFilters
               query={queryInput}
-              onQueryChange={(v) => setQueryInput(v)}
+              onQueryChange={(v) => {
+                setQueryInput(v);
+                setPage(1);
+              }}
               category={category}
               onCategoryChange={(v) => {
                 setCategory(v);
@@ -259,9 +274,14 @@ export default function GuidanceBehavioralPage() {
               Previous
             </Button>
             <span className={styles.sectionDesc} aria-live="polite">
-              {isFetching && !isPending
-                ? "Loading…"
-                : `Page ${data.page} of ${data.totalPages}`}
+              {isFetching && !isPending ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                  <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
+                  Loading…
+                </span>
+              ) : (
+                `Page ${data.page} of ${data.totalPages}`
+              )}
             </span>
             <Button
               size="sm"

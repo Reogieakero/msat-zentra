@@ -35,6 +35,21 @@ export interface NotifyInput {
 export async function fanoutNotification(input: NotifyInput) {
   try {
     const type = deriveNotifType(input.sourceTable, input.action);
+    // Dedup: a retry/double-submit within 60s for the same user + source +
+    // action must not create a second inbox row.
+    if (input.sourceId) {
+      const recent = await prisma.notification.findFirst({
+        where: {
+          userId: input.userId,
+          type,
+          sourceTable: input.sourceTable,
+          sourceId: input.sourceId,
+          createdAt: { gte: new Date(Date.now() - 60_000) },
+        },
+        select: { id: true },
+      });
+      if (recent) return;
+    }
     await prisma.notification.create({
       data: {
         userId: input.userId,

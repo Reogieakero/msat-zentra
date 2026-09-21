@@ -172,7 +172,17 @@ export function SessionDocsDialog({
             />
           </div>
         </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
+        {uploading ? (
+            <p
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem", opacity: 0.9 }}
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="animate-spin" aria-hidden />
+              Uploading photos…
+            </p>
+          ) : null}
+          {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Done

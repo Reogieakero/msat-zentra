@@ -117,19 +117,23 @@ export async function getRiskHeatmap(
     Behavioral: 0,
   };
 
-  const result: HeatmapSection[] = [];
-  for (const sec of sections) {
-    const factors = await sectionFactors(sec.id, termId, gradeMode);
+  // Sections are independent — fetch all factor blocks in parallel instead
+  // of one serial round-trip per section.
+  const factorsList = await Promise.all(
+    sections.map((sec) => sectionFactors(sec.id, termId, gradeMode))
+  );
+  const result: HeatmapSection[] = sections.map((sec, i) => {
+    const factors = factorsList[i];
     factorTotals.Academic += factors.Academic;
     factorTotals.Attendance += factors.Attendance;
     factorTotals.Behavioral += factors.Behavioral;
-    result.push({
+    return {
       sectionId: sec.id,
       section: sec.name,
       gradeLevel: sec.gradeLevel,
       factors,
-    });
-  }
+    };
+  });
 
   return { termId, sections: result, factorTotals };
 }

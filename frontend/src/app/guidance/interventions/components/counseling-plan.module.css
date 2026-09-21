@@ -2,11 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  padding: 0.875rem;
-  margin-top: 0.375rem;
+  margin-top: 0.75rem;
+  min-width: 0;
 }
 
 .planHead {
@@ -50,11 +47,13 @@
 }
 
 .session {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
   border-top: 1px solid var(--border);
   padding-top: 0.625rem;
+  overflow: hidden;
 }
 
 .session:first-child {
@@ -62,11 +61,54 @@
   padding-top: 0;
 }
 
+/* Slanted rubber-stamp status on the right side of each session card. */
+.watermark {
+  position: absolute;
+  right: 0.625rem;
+  bottom: 0.5rem;
+  max-width: calc(100% - 1.25rem);
+  transform: rotate(-12deg);
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.watermarkDone {
+  color: color-mix(in oklch, var(--success, #16a34a), transparent 55%);
+}
+
+.watermarkUpcoming {
+  color: color-mix(in oklch, var(--success, #16a34a), transparent 55%);
+}
+
+.watermarkCancelled {
+  color: color-mix(in oklch, var(--success, #16a34a), transparent 55%);
+}
+
 .sessionTop {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
   flex-wrap: wrap;
+  min-height: 1.25rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .sessionTitle {
@@ -76,22 +118,59 @@
   letter-spacing: -0.01em;
 }
 
-.sessionFacts {
-  margin: 0;
-  padding-left: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  font-size: 0.8125rem;
-  line-height: 1.5;
+.titleLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  list-style-type: disc;
-  list-style-position: outside;
+  margin-right: 0.375rem;
 }
 
-.sessionFacts li::marker {
+.sessionFacts {
+  position: relative;
+  margin: 0.375rem 0 0;
+  padding: 0.625rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  background-color: color-mix(in oklch, var(--muted), transparent 60%);
+  border: 1px solid color-mix(in oklch, var(--border), transparent 30%);
+  border-radius: var(--radius-md);
+  list-style: none;
+  overflow: hidden;
+}
+
+.factRow {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.factRow time {
+  font-weight: 600;
+}
+
+.factIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.topCountdown {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .sessionNotes {
@@ -116,6 +195,34 @@
 .sessionActions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.375rem;
   padding-top: 0.125rem;
+}
+
+.planFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+  margin-top: 0.25rem;
+}
+
+/* Cancel stays solid red in every state (same as the nurse desk) — the
+   theme's destructive variant is only a soft tint. */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
 }

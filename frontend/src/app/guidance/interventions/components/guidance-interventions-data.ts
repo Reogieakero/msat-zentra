@@ -38,7 +38,12 @@ export interface CounselingSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
+  // When the session was booked (execution time). Falls back to
+  // scheduledAt for legacy rows without it — never display the future
+  // appointment as the action time.
+  createdAt: string;
   completedAt: string;
+  attachmentsCount: number;
 }
 
 export interface StudentFollowUp {
@@ -53,6 +58,8 @@ export interface StudentFollowUp {
   intakeNotes: string;
   sessions: CounselingSessionItem[];
   completedSessions: number;
+  // When the intervention was opened (ISO, null for legacy rows).
+  createdAt: string | null;
 }
 
 export interface ReferralContext {
@@ -68,6 +75,8 @@ export interface AtRiskStudentItem {
   grade: string;
   riskLevel: string;
   riskCount: number;
+  /** Engine detection moment for the active term (RiskSnapshot date). */
+  detectedAt: string | null;
   factors: AtRiskFactors;
   /** Read-only context: adviser-referred cases exist separately. Never mixed. */
   referralContext: ReferralContext;
@@ -103,7 +112,8 @@ export interface GuidanceInterventionsParams {
 }
 
 export async function fetchGuidanceInterventions(
-  params: GuidanceInterventionsParams = {}
+  params: GuidanceInterventionsParams = {},
+  opts: { signal?: AbortSignal } = {}
 ): Promise<GuidanceInterventionsData> {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
@@ -115,9 +125,84 @@ export async function fetchGuidanceInterventions(
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
   const { data } = await apiClient.get<GuidanceInterventionsData>(
-    `/api/interventions${query ? `?${query}` : ""}`
+    `/api/interventions${query ? `?${query}` : ""}`,
+    { signal: opts.signal }
   );
   return data;
+}
+
+// Every at-risk student carrying an intervention (all outcomes) for
+// client-side tables. The endpoint caps pageSize at 100, so walk all
+// pages — filtering and paging then happen locally.
+export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
+  const first = await fetchGuidanceInterventions({ page: 1, pageSize: 100, outcome: "all" });
+  const all = [...first.students];
+  for (let p = 2; p <= first.totalPages; p++) {
+    const res = await fetchGuidanceInterventions({ page: p, pageSize: 100, outcome: "all" });
+    all.push(...res.students);
+  }
+  return all.filter((s) => s.intervention !== null);
+}
+
+export interface InterventionSessionDoc {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
+export async function listInterventionSessionDocs(
+  followUpId: string,
+  sessionId: string
+): Promise<InterventionSessionDoc[]> {
+  const { data } = await apiClient.get<InterventionSessionDoc[]>(
+    `/api/interventions/${followUpId}/sessions/${sessionId}/attachments`
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+const SESSION_DOC_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SESSION_DOC_BYTES = 5 * 1024 * 1024;
+
+export function sessionDocError(files: File[]): string | null {
+  if (files.length === 0) return "Choose at least one image to attach.";
+  if (files.length > 5) return "Attach at most 5 images at a time.";
+  for (const f of files) {
+    if (!SESSION_DOC_IMAGE_TYPES.includes(f.type)) {
+      return `"${f.name}" is not a JPG, PNG, or WEBP image.`;
+    }
+    if (f.size > MAX_SESSION_DOC_BYTES) {
+      return `"${f.name}" is over 5 MB — pick a smaller photo.`;
+    }
+  }
+  return null;
+}
+
+export async function uploadInterventionSessionDocs(
+  followUpId: string,
+  sessionId: string,
+  files: File[]
+): Promise<InterventionSessionDoc[]> {
+  const form = new FormData();
+  for (const f of files) form.append("files", f, f.name);
+  const { data } = await apiClient.post<InterventionSessionDoc[]>(
+    `/api/interventions/${followUpId}/sessions/${sessionId}/attachments`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function deleteInterventionSessionDoc(
+  followUpId: string,
+  sessionId: string,
+  attachmentId: string
+): Promise<void> {
+  await apiClient.delete(
+    `/api/interventions/${followUpId}/sessions/${sessionId}/attachments/${attachmentId}`
+  );
 }
 
 export interface InterventionStaffMember {

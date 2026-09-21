@@ -1,115 +1,81 @@
 "use client";
 
 import * as React from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GuidanceAlertsHeader } from "./components/guidance-alerts-header";
-import { GuidanceAlertsSummary } from "./components/guidance-alerts-summary";
-import type {
-  FactorFilter,
-  LevelFilter,
-} from "./components/guidance-alerts-filters";
-import { GuidanceAlertsGrid } from "./components/guidance-alerts-grid";
-import { fetchGuidanceAlerts } from "./components/guidance-alerts-data";
+import { GuidanceAlertsTable } from "./components/guidance-alerts-table";
+import {
+  fetchAllGuidanceReferrals,
+  fetchGuidanceRiskLevels,
+} from "../referrals/components/guidance-referrals-data";
+import { fetchAllGuidanceInterventions } from "../interventions/components/guidance-interventions-data";
 import styles from "./components/guidance-alerts.module.css";
 
-const PAGE_SIZE = 50;
-
 export default function GuidanceAlertsPage() {
-  const [queryInput, setQueryInput] = React.useState("");
-  const [query, setQuery] = React.useState("");
-  const [level, setLevel] = React.useState<LevelFilter>("");
-  const [factor, setFactor] = React.useState<FactorFilter>("");
-  const [page, setPage] = React.useState(1);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setQuery(queryInput.trim());
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [queryInput]);
-
-  const { data, isPending, isError, isFetching } = useQuery({
-    queryKey: ["guidance-alerts", query, level, factor, page],
-    queryFn: () =>
-      fetchGuidanceAlerts({ q: query, level, factor, page, pageSize: PAGE_SIZE }),
-    // Keep the previous page on screen while the next one loads, and reuse
-    // cached pages for 60s so back-navigation feels instant.
+  const referralsQuery = useQuery({
+    queryKey: ["guidance-alerts-referrals"],
+    queryFn: () => fetchAllGuidanceReferrals(),
     staleTime: 60_000,
-    placeholderData: keepPreviousData,
+  });
+  const interventionsQuery = useQuery({
+    queryKey: ["guidance-alerts-interventions"],
+    queryFn: fetchAllGuidanceInterventions,
+    staleTime: 60_000,
+  });
+
+  const isPending = referralsQuery.isPending || interventionsQuery.isPending;
+  const isError = referralsQuery.isError || interventionsQuery.isError;
+  const isFetching = referralsQuery.isFetching || interventionsQuery.isFetching;
+  const referrals = referralsQuery.data ?? [];
+  const interventions = interventionsQuery.data ?? [];
+
+  // Live rule-based risk level per referred student (account id or roster
+  // id — the endpoint serves both). Intervention rows carry their level
+  // directly, so only referrals need the lookup.
+  const studentIds = React.useMemo(
+    () => [
+      ...new Set(
+        referrals.map((r) => r.studentId).filter((id): id is string => id !== null)
+      ),
+    ],
+    [referrals]
+  );
+  const { data: riskByStudent } = useQuery({
+    queryKey: ["guidance-risk-levels", studentIds],
+    queryFn: () => fetchGuidanceRiskLevels(studentIds),
+    staleTime: 300_000,
+    enabled: studentIds.length > 0,
   });
 
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.skelHead}>
-          <div className={styles.skelHeadText}>
-            <Skeleton className={styles.skelEyebrow} />
-            <Skeleton className={styles.skelTitle} />
-            <Skeleton className={styles.skelLede} />
-            <Skeleton className={styles.skelLede} />
-          </div>
-          <Skeleton className={styles.skelBadge} />
-        </div>
-
-        <div className={styles.skelKpiGrid}>
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className={styles.skelKpiCard}>
-              <Skeleton className={styles.skelKpiLabel} />
-              <Skeleton className={styles.skelKpiValue} />
-              <Skeleton className={styles.skelKpiHint} />
-            </div>
-          ))}
-        </div>
-
-        <hr className={styles.divider} />
-
         <div className={styles.skelPanel}>
           <div className={styles.skelPanelHead}>
-            <div className={styles.skelPanelHeadText}>
-              <Skeleton className={styles.skelPanelTitle} />
+            <div>
+              <Skeleton className={styles.skelCardTitle} />
               <Skeleton className={styles.skelPanelDesc} />
             </div>
             <div className={styles.skelPanelActions}>
               <Skeleton className={styles.skelSearch} />
               <Skeleton className={styles.skelDrop} />
-              <Skeleton className={styles.skelDrop} />
             </div>
           </div>
-          <div className={styles.skelAlertGrid}>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className={styles.skelAlertCard}>
-                <div className={styles.skelCardHead}>
-                  <div className={styles.skelCardHeadText}>
-                    <Skeleton className={styles.skelName} />
-                    <Skeleton className={styles.skelNameSub} />
-                  </div>
-                  <Skeleton className={styles.skelLevel} />
-                </div>
-                <div className={styles.skelChips}>
-                  <Skeleton className={styles.skelChip} />
-                  <Skeleton className={styles.skelChip} />
-                </div>
-                <ul className={styles.skelBullets}>
-                  {[0, 1, 2].map((j) => (
-                    <li key={j} className={styles.skelBullet}>
-                      <span className={styles.skelBulletDot} aria-hidden />
-                      <Skeleton className={styles.skelBulletLine} />
-                    </li>
-                  ))}
-                </ul>
-                <div className={styles.skelCardActions}>
-                  <Skeleton className={styles.skelBtn} />
-                  <Skeleton className={styles.skelBtn} />
-                </div>
-              </div>
+          <div className={styles.skelThead} aria-hidden="true">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <Skeleton key={i} className={styles.skelTheadCell} />
             ))}
           </div>
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <Skeleton key={i} className={styles.skelRow} />
+          ))}
           <div className={styles.skelPager}>
             <Skeleton className={styles.skelRange} />
             <div className={styles.skelPagerBtns}>
               <Skeleton className={styles.skelBtn} />
+              <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
               <Skeleton className={styles.skelBtn} />
             </div>
           </div>
@@ -118,42 +84,39 @@ export default function GuidanceAlertsPage() {
     );
   }
 
-  if (isError || !data) {
+  if (isError) {
     return (
       <section className={styles.page}>
-        <p className={styles.error}>Could not load the alerts queue.</p>
+        <div className={styles.pageError} role="alert">
+          <p className={styles.pageErrorTitle}>We couldn&apos;t load the referred cases</p>
+          <p className={styles.pageErrorHint}>
+            Please check your internet connection and try again.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isFetching}
+            onClick={() => {
+              void referralsQuery.refetch();
+              void interventionsQuery.refetch();
+            }}
+          >
+            {isFetching ? (
+              <Loader2 className={styles.spin} aria-hidden="true" />
+            ) : null}
+            {isFetching ? "Retrying…" : "Try again"}
+          </Button>
+        </div>
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <GuidanceAlertsHeader />
-
-      <GuidanceAlertsSummary summary={data.summary} />
-
-      <hr className={styles.divider} />
-
-      <GuidanceAlertsGrid
-        alerts={data.alerts}
-        page={data.page}
-        pageSize={data.pageSize}
-        total={data.total}
-        totalPages={data.totalPages}
-        isNavigating={isFetching && !isPending}
-        onPageChange={setPage}
-        query={queryInput}
-        onQueryChange={setQueryInput}
-        level={level}
-        onLevelChange={(value) => {
-          setLevel(value);
-          setPage(1);
-        }}
-        factor={factor}
-        onFactorChange={(value) => {
-          setFactor(value);
-          setPage(1);
-        }}
+      <GuidanceAlertsTable
+        referrals={referrals}
+        interventions={interventions}
+        riskByStudent={riskByStudent ?? {}}
       />
     </section>
   );

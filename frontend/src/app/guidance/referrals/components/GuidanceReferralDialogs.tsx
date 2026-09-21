@@ -29,6 +29,11 @@ import {
   SessionTimePicker,
 } from "./session-datetime-picker";
 import { FormDropdown } from "./form-dropdown";
+import { BookSessionDialog } from "@/components/session-booking/BookSessionDialog";
+import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/session-booking/FinishSessionDialog";
+import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
+import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
+import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
 import styles from "./GuidanceReferralDialogs.module.css";
 
 export interface GuidanceActionDialogs {
@@ -604,343 +609,127 @@ export function GuidanceReferralDialogs({
         </DialogContent>
       </Dialog>
 
-      {/* Schedule a session */}
-      <Dialog open={dialogs.schedule} onOpenChange={() => closeDialog("schedule")}>
-        <DialogContent className={styles.dialogScrollHidden}>
-          <DialogHeader>
-            <DialogTitle>Schedule a session</DialogTitle>
-            <DialogDescription>
-              Book a counseling session{activeRow ? ` for ${activeRow.student}` : ""}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <SessionDatePicker
-              id="sessDate"
-              label="Date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="sessTime"
-              label="Time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-            <FormDropdown
-              id="sessType"
-              label="Session kind"
-              value={form.sessType}
-              onChange={(v) => setForm((f) => ({ ...f, sessType: v }))}
-              placeholder="Pick a kind"
-              options={SESSION_KIND_OPTIONS}
-            />
-            <div>
-              <Label htmlFor="sessVenue">Venue (optional)</Label>
-              <Input
-                id="sessVenue"
-                value={form.sessVenue}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sessVenue: e.target.value }))
-                }
-                placeholder="e.g. Guidance office"
-                maxLength={200}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="destructive"
-              className={styles.btnRed}
-              onClick={() => closeDialog("schedule")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                isActionPending || !combineDateTime(form.sessDate, form.sessTime)
-              }
-              onClick={() => {
-                const when = combineDateTime(form.sessDate, form.sessTime);
-                if (!when) return;
-                handleAction("schedule", {
-                  scheduledAt: when,
-                  sessionType: form.sessType as CounselingSessionType,
-                  ...(form.sessVenue.trim()
-                    ? { venue: form.sessVenue.trim() }
-                    : {}),
-                });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Scheduling…" : "Schedule session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Schedule a session — shared book-session modal */}
+      {dialogs.schedule && (
+        <BookSessionDialog
+          open
+          onClose={() => closeDialog("schedule")}
+          onSubmit={(fields) =>
+            handleAction("schedule", {
+              scheduledAt: fields.scheduledAt,
+              sessionType: fields.sessionType as CounselingSessionType,
+              ...(fields.venue ? { venue: fields.venue } : {}),
+            })
+          }
+          description={`Book a counseling session${activeRow ? ` for ${activeRow.student}` : ""}.`}
+          venueHint="Held at the guidance office unless another venue is given."
+          venuePlaceholder="e.g. Guidance office"
+          showSessionType
+          sessionTypeOptions={SESSION_KIND_OPTIONS}
+          hasActiveSession={
+            !!activeRow?.sessions.some((s) => s.status === "scheduled")
+          }
+          busy={isActionPending}
+          idPrefix="ref-sess"
+        />
+      )}
 
-      {/* Mark a session done */}
-      <Dialog open={dialogs.finish} onOpenChange={() => closeDialog("finish")}>
-        <DialogContent className={styles.dialogScrollHidden}>
-          <DialogHeader>
-            <DialogTitle>Mark session done</DialogTitle>
-            <DialogDescription>
-              {activeSession
-                ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)}${activeSession.venue ? ` · ${activeSession.venue}` : ""}`
-                : "Record what happened in this session."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <div className={styles.formFull}>
-              <Label htmlFor="doneNotes">What happened in the session?</Label>
-              <Textarea
-                id="doneNotes"
-                value={form.doneNotes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, doneNotes: e.target.value }))
-                }
-                placeholder="Key points discussed, student response…"
-                maxLength={5000}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <Label htmlFor="doneOutcome">Outcome / next step (optional)</Label>
-              <Textarea
-                id="doneOutcome"
-                value={form.doneOutcome}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, doneOutcome: e.target.value }))
-                }
-                placeholder="What changed? What happens next…"
-                maxLength={2000}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <p className={styles.formSectionLabel}>
-                Book a follow-up session (optional)
-              </p>
-              <p className={styles.formSectionHint}>
-                If this needs another talk, book it now so it stays on the plan.
-              </p>
-            </div>
-            <SessionDatePicker
-              id="followUpSessDate"
-              label="Follow-up date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="followUpSessTime"
-              label="Follow-up time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-            <FormDropdown
-              id="followUpSessType"
-              label="Follow-up kind"
-              value={form.sessType}
-              onChange={(v) => setForm((f) => ({ ...f, sessType: v }))}
-              placeholder="Pick a kind"
-              options={SESSION_KIND_OPTIONS}
-            />
-            <div>
-              <Label htmlFor="followUpSessVenue">Venue (optional)</Label>
-              <Input
-                id="followUpSessVenue"
-                value={form.sessVenue}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sessVenue: e.target.value }))
-                }
-                placeholder="e.g. Guidance office"
-                maxLength={200}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="destructive"
-              className={styles.btnRed}
-              onClick={() => closeDialog("finish")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={isActionPending || !form.doneNotes.trim() || !activeSession?.id}
-              onClick={() => {
-                if (!activeSession?.id) return;
-                const followUpAt = combineDateTime(form.sessDate, form.sessTime);
-                handleAction("finish", {
-                  sessionId: activeSession?.id,
-                  sessionNotes: form.doneNotes.trim(),
-                  ...(form.doneOutcome.trim()
-                    ? { outcome: form.doneOutcome.trim() }
-                    : {}),
-                  ...(followUpAt
-                    ? {
-                        followUpSession: {
-                          scheduledAt: followUpAt,
-                          sessionType:
-                            form.sessType as CounselingSessionType,
-                          ...(form.sessVenue.trim()
-                            ? { venue: form.sessVenue.trim() }
-                            : {}),
-                        },
-                      }
-                    : {}),
-                });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Saving…" : "Mark done"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Mark a session done — shared finish modal */}
+      {dialogs.finish && (
+        <SharedFinishSessionDialog
+          open
+          onClose={() => closeDialog("finish")}
+          onSubmit={(fields) => {
+            if (!activeSession?.id) return;
+            handleAction("finish", {
+              sessionId: activeSession.id,
+              sessionNotes: fields.sessionNotes,
+              ...(fields.outcome ? { outcome: fields.outcome } : {}),
+              ...(fields.followUpSession
+                ? {
+                    followUpSession: {
+                      scheduledAt: fields.followUpSession.scheduledAt,
+                      sessionType:
+                        fields.followUpSession.sessionType as CounselingSessionType,
+                      ...(fields.followUpSession.venue
+                        ? { venue: fields.followUpSession.venue }
+                        : {}),
+                    },
+                  }
+                : {}),
+            });
+          }}
+          description={
+            activeSession
+              ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)}${activeSession.venue ? ` · ${activeSession.venue}` : ""}`
+              : "Record what happened in this session."
+          }
+          followUpTitle="Book a follow-up session (optional)"
+          followUpHint="If this needs another talk, book it now so it stays on the plan."
+          followUpDateLabel="Follow-up date"
+          followUpTimeLabel="Follow-up time"
+          venuePlaceholder="e.g. Guidance office"
+          showSessionType
+          sessionTypeOptions={SESSION_KIND_OPTIONS}
+          busy={isActionPending}
+          idPrefix="ref-done"
+        />
+      )}
 
-      {/* Move a session */}
-      <Dialog open={dialogs.move} onOpenChange={() => closeDialog("move")}>
-        <DialogContent className={styles.dialogScrollHidden}>
-          <DialogHeader>
-            <DialogTitle>Move session</DialogTitle>
-            <DialogDescription>
-              {activeSession
-                ? `Currently ${formatDateTime(activeSession.scheduledAt)}. Pick the new date and time.`
-                : "Pick the new date and time."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <SessionDatePicker
-              id="moveDate"
-              label="New date"
-              value={form.sessDate}
-              onChange={(v) => setForm((f) => ({ ...f, sessDate: v }))}
-            />
-            <SessionTimePicker
-              id="moveTime"
-              label="New time"
-              value={form.sessTime}
-              onChange={(v) => setForm((f) => ({ ...f, sessTime: v }))}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("move")}
-              disabled={isActionPending}
-            >
-              Keep as is
-            </Button>
-            <Button
-              disabled={
-                isActionPending ||
-                !activeSession?.id ||
-                !combineDateTime(form.sessDate, form.sessTime)
-              }
-              onClick={() => {
-                const when = combineDateTime(form.sessDate, form.sessTime);
-                if (!when || !activeSession?.id) return;
-                handleAction("move", { sessionId: activeSession?.id, scheduledAt: when });
-              }}
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Moving…" : "Move session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Move a session — shared reschedule modal */}
+      {dialogs.move && (
+        <SharedRescheduleSessionDialog
+          open
+          onClose={() => closeDialog("move")}
+          onSubmit={(scheduledAt) => {
+            if (!activeSession?.id) return;
+            handleAction("move", { sessionId: activeSession.id, scheduledAt });
+          }}
+          description={
+            activeSession
+              ? `Currently ${formatDateTime(activeSession.scheduledAt)}. Pick the new date and time.`
+              : "Pick the new date and time."
+          }
+          busy={isActionPending}
+          idPrefix="ref-move"
+        />
+      )}
 
-      {/* Cancel a session */}
-      <Dialog
-        open={dialogs.cancelSess}
-        onOpenChange={() => closeDialog("cancelSess")}
-      >
-        <DialogContent className={styles.dialogScrollHidden}>
-          <DialogHeader>
-            <DialogTitle>Cancel this session?</DialogTitle>
-            <DialogDescription>
-              {activeSession
-                ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)} will be cancelled.`
-                : "This session will be cancelled."}
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="cancelReasonInput">Why? (optional)</Label>
-            <Textarea
-              id="cancelReasonInput"
-              value={form.cancelReasonInput}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, cancelReasonInput: e.target.value }))
-              }
-              placeholder="e.g. Student was absent, moved to next week…"
-              maxLength={500}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("cancelSess")}
-              disabled={isActionPending}
-            >
-              Keep session
-            </Button>
-            <Button
-              variant="destructive"
-              className={styles.btnRed}
-              disabled={isActionPending || !activeSession?.id}
-              onClick={() =>
-                activeSession?.id &&
-                handleAction("cancelSess", {
-                  sessionId: activeSession?.id,
-                  ...(form.cancelReasonInput.trim()
-                    ? { cancelReason: form.cancelReasonInput.trim() }
-                    : {}),
-                })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Cancelling…" : "Cancel session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Cancel a session — shared cancel modal */}
+      {dialogs.cancelSess && (
+        <SharedCancelSessionDialog
+          open
+          onClose={() => closeDialog("cancelSess")}
+          onSubmit={(reason) => {
+            if (!activeSession?.id) return;
+            handleAction("cancelSess", {
+              sessionId: activeSession.id,
+              ...(reason ? { cancelReason: reason } : {}),
+            });
+          }}
+          description={
+            activeSession
+              ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)} will be cancelled.`
+              : "This session will be cancelled."
+          }
+          keepLabel="Keep session"
+          busy={isActionPending}
+          idPrefix="ref-cancel"
+        />
+      )}
 
-      {/* Delete a cancelled session — permanent, case stays open */}
-      <Dialog
-        open={dialogs.deleteSess}
-        onOpenChange={() => closeDialog("deleteSess")}
-      >
-        <DialogContent className={styles.dialogScrollHidden}>
-          <DialogHeader>
-            <DialogTitle>Delete cancelled session?</DialogTitle>
-            <DialogDescription>
-              This permanently removes the cancelled session from the list.
-              The case itself stays open. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => closeDialog("deleteSess")}
-              disabled={isActionPending}
-            >
-              Keep it
-            </Button>
-            <Button
-              variant="destructive"
-              className={styles.btnRed}
-              disabled={isActionPending || !activeSession?.id}
-              onClick={() =>
-                activeSession?.id &&
-                handleAction("deleteSess", { sessionId: activeSession?.id })
-              }
-            >
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Deleting…" : "Delete session"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete a cancelled session — shared delete confirm */}
+      {dialogs.deleteSess && (
+        <SharedDeleteSessionDialog
+          open
+          onClose={() => closeDialog("deleteSess")}
+          onConfirm={() => {
+            if (!activeSession?.id) return;
+            handleAction("deleteSess", { sessionId: activeSession.id });
+          }}
+          busy={isActionPending}
+        />
+      )}
 
       {/* Finish & close with strict requirements */}
       <Dialog open={dialogs.resolve} onOpenChange={() => closeDialog("resolve")}>

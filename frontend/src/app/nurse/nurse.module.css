@@ -34,9 +34,10 @@
    left: 0;
    right: 0;
    width: 100%;
-   /* Above the tab navbar (10000) so the app bar keeps its old
-      topbar-over-navbar order. */
-   z-index: 10001;
+   /* Above the tab navbar (35) so the app bar keeps its old
+      topbar-over-navbar order, matching the other desks (40) — still
+      below overlays (Radix dialogs, dropdowns at z-50). */
+   z-index: 40;
    display: flex;
    align-items: center;
    gap: 0.5rem;

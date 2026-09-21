@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
-  GuidanceCategoryRow,
+  GuidanceReferralTypeRow,
   GuidanceSectionHeatRow,
 } from "./guidance-overview-data";
 import styles from "./guidance-overview-caseload-charts.module.css";
@@ -27,31 +27,68 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  behavioral: "var(--chart-1)",
-  bullying: "var(--chart-2)",
-  academic: "var(--chart-3)",
-  attendance: "var(--chart-4)",
-  health: "var(--chart-5)",
+const TYPE_COLORS: Record<string, string> = {
+  ADM: "var(--chart-1)",
+  Counseling: "var(--chart-2)",
 };
 
+const BAR_END_RADIUS = 4;
+
+type BarShapeProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  payload?: { moderate?: number };
+};
+
+/* High segment of the stacked section bars: square on the left (axis /
+   stack junction), rounded top-right + bottom-right only when it is the
+   visible bar end — i.e. the row stacks no moderate segment after it.
+   The moderate segment keeps radius={[0, 4, 4, 0]}, so the bar's right
+   end is always rounded and the junction never is. */
+function HighBarShape(props: BarShapeProps) {
+  const { x = 0, y = 0, width = 0, height = 0, fill, payload } = props;
+  if (width <= 0 || height <= 0) return null;
+  const roundRight = (payload?.moderate ?? 0) === 0;
+  const r = roundRight ? Math.min(BAR_END_RADIUS, width / 2, height / 2) : 0;
+  if (r <= 0) {
+    return <rect x={x} y={y} width={width} height={height} fill={fill} />;
+  }
+  return (
+    <path
+      d={
+        `M ${x} ${y} ` +
+        `H ${x + width - r} ` +
+        `Q ${x + width} ${y} ${x + width} ${y + r} ` +
+        `V ${y + height - r} ` +
+        `Q ${x + width} ${y + height} ${x + width - r} ${y + height} ` +
+        `H ${x} Z`
+      }
+      fill={fill}
+    />
+  );
+}
+
 interface GuidanceOverviewCaseloadChartsProps {
-  anecdotalByCategory: GuidanceCategoryRow[];
+  referralsByType: GuidanceReferralTypeRow[];
   sectionHeat: GuidanceSectionHeatRow[];
 }
 
-function interpretAnecdotal(rows: GuidanceCategoryRow[]): string {
+function interpretReferralTypes(rows: GuidanceReferralTypeRow[]): string {
   const total = rows.reduce((s, r) => s + r.count, 0);
   if (total === 0) return "No cases referred to you for the active term yet.";
-  const top = [...rows].sort((a, b) => b.count - a.count)[0];
-  return `${total} referred cases this term — most filed as ${top.category} (${top.count}). Unreferred filings are not counted here.`;
+  const adm = rows.find((r) => r.type === "ADM")?.count ?? 0;
+  const counseling = rows.find((r) => r.type === "Counseling")?.count ?? 0;
+  return `${total} referred cases this term — ${adm} ADM and ${counseling} counseling.`;
 }
 
 export function GuidanceOverviewCaseloadCharts({
-  anecdotalByCategory,
+  referralsByType,
   sectionHeat,
 }: GuidanceOverviewCaseloadChartsProps) {
-  const anecdotalTotal = anecdotalByCategory.reduce((s, r) => s + r.count, 0);
+  const referralsTotal = referralsByType.reduce((s, r) => s + r.count, 0);
   const topSections = [...sectionHeat]
     .sort((a, b) => b.high - a.high || b.moderate - a.moderate)
     .slice(0, 6);
@@ -60,14 +97,13 @@ export function GuidanceOverviewCaseloadCharts({
     <div className={styles.chartGrid}>
       <Card className={styles.card}>
         <CardHeader>
-          <CardTitle className={styles.sectionTitle}>Referred cases by category</CardTitle>
+          <CardTitle className={styles.sectionTitle}>Referred cases by type</CardTitle>
           <CardDescription className={styles.sectionDesc}>
-            Only cases advisers referred to you this term — you cannot browse
-            unreferred filings.
+            ADM vs counseling split of the cases on your desk this term.
           </CardDescription>
         </CardHeader>
         <CardContent className={styles.cardBody}>
-          {anecdotalTotal === 0 ? (
+          {referralsTotal === 0 ? (
             <p className={styles.empty}>No cases referred to you this term.</p>
           ) : (
             <>
@@ -75,9 +111,9 @@ export function GuidanceOverviewCaseloadCharts({
                 <ResponsiveContainer width="100%" height={148}>
                   <PieChart>
                     <Pie
-                      data={anecdotalByCategory}
+                      data={referralsByType}
                       dataKey="count"
-                      nameKey="category"
+                      nameKey="type"
                       cx="50%"
                       cy="50%"
                       innerRadius={42}
@@ -85,28 +121,28 @@ export function GuidanceOverviewCaseloadCharts({
                       paddingAngle={2}
                       strokeWidth={0}
                     >
-                      {anecdotalByCategory.map((r) => (
-                        <Cell key={r.category} fill={CATEGORY_COLORS[r.category] ?? "#737373"} />
+                      {referralsByType.map((r) => (
+                        <Cell key={r.type} fill={TYPE_COLORS[r.type] ?? "#737373"} />
                       ))}
                     </Pie>
                     <Tooltip contentStyle={TOOLTIP_STYLE} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className={styles.donutCenter}>
-                  <span className={styles.donutValue}>{anecdotalTotal}</span>
+                  <span className={styles.donutValue}>{referralsTotal}</span>
                   <span className={styles.donutCaption}>records</span>
                 </div>
               </div>
               <ul className={styles.legend}>
-                {anecdotalByCategory.map((r) => (
-                  <li key={r.category} className={styles.legendItem}>
+                {referralsByType.map((r) => (
+                  <li key={r.type} className={styles.legendItem}>
                     <span className={styles.legendLabel}>
                       <span
                         className={styles.legendDot}
-                        style={{ backgroundColor: CATEGORY_COLORS[r.category] ?? "#737373" }}
+                        style={{ backgroundColor: TYPE_COLORS[r.type] ?? "#737373" }}
                         aria-hidden
                       />
-                      {r.category}
+                      {r.type}
                     </span>
                     <span className={styles.legendCount}>{r.count}</span>
                   </li>
@@ -114,7 +150,7 @@ export function GuidanceOverviewCaseloadCharts({
               </ul>
             </>
           )}
-          <p className={styles.interpretation}>{interpretAnecdotal(anecdotalByCategory)}</p>
+          <p className={styles.interpretation}>{interpretReferralTypes(referralsByType)}</p>
         </CardContent>
       </Card>
 
@@ -142,7 +178,7 @@ export function GuidanceOverviewCaseloadCharts({
                     tick={{ fontSize: 12, fill: "var(--foreground)" }}
                   />
                   <Tooltip cursor={{ fill: "color-mix(in oklch, var(--foreground), transparent 95%)" }} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="high" name="High" stackId="risk" fill="var(--chart-1)" maxBarSize={18} />
+                  <Bar dataKey="high" name="High" stackId="risk" fill="var(--chart-1)" maxBarSize={18} shape={<HighBarShape />} />
                   <Bar dataKey="moderate" name="Moderate" stackId="risk" fill="var(--chart-4)" radius={[0, 4, 4, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>

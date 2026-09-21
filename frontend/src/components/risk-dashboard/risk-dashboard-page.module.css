@@ -1,4 +1,6 @@
-/* Nurse risk dashboard — page layout, skeleton, and error states. */
+/* Shared risk dashboard — page layout, skeleton, and error states.
+   Used by the nurse and guidance risk pages; both render the same
+   heatmap + side-rail (levels donut, categories bars) arrangement. */
 
 .page {
   display: flex;
@@ -43,6 +45,21 @@
   border: none;
   border-top: 1px solid var(--border);
   margin: 0.25rem 0;
+}
+
+/* Desk-specific switches above the board (e.g. guidance case tracks). */
+.trackRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Track filter buttons — mirrors live Button size=sm. */
+.skelTrackBtn {
+  width: 8.5rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
 }
 
 .mainGrid {
@@ -171,7 +188,7 @@
 }
 
 .skelDonut {
-  /* Matches NurseRiskLevels chartWrap (10.5rem) + chart height 140px. */
+  /* Matches RiskLevels chartWrap (10.5rem) + chart height 140px. */
   height: 8.75rem;
   width: 10.5rem;
   border-radius: 9999px;

@@ -8,17 +8,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/providers";
 import { fetchNurseRiskLevels } from "../alerts/components/nurse-alerts-data";
+import { fetchNurseRisk } from "./components/nurse-risk-data";
 import {
-  buildNurseRiskDashboard,
-  fetchNurseRisk,
+  buildRiskDashboard,
   interpretCategoryMix,
   interpretLevelMix,
   interpretSectionMatrix,
-} from "./components/nurse-risk-data";
-import { NurseRiskLevels } from "./components/NurseRiskLevels";
-import { NurseRiskCategories } from "./components/NurseRiskCategories";
-import { NurseRiskHeatmap } from "./components/NurseRiskHeatmap";
-import styles from "./nurse-risk-page.module.css";
+} from "@/components/risk-dashboard/risk-dashboard-data";
+import { RiskCategories } from "@/components/risk-dashboard/RiskCategories";
+import { RiskHeatmap } from "@/components/risk-dashboard/RiskHeatmap";
+import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
+import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
 /**
  * Nurse risk dashboard — desk-scoped categories, levels, and heatmaps.
@@ -52,7 +52,7 @@ export default function NurseRiskPage() {
   const dashboard = React.useMemo(
     () =>
       riskQuery.data
-        ? buildNurseRiskDashboard(
+        ? buildRiskDashboard(
             riskQuery.data.rows,
             levelsQuery.data ?? {},
             riskQuery.data.referralToStudent,
@@ -177,7 +177,8 @@ export default function NurseRiskPage() {
         </p>
       </div>
       <div className={styles.mainGrid}>
-        <NurseRiskHeatmap
+        <RiskHeatmap
+          desk="clinic"
           categories={dashboard.matrixCategories}
           matrix={dashboard.matrix}
           colTotals={dashboard.colTotals}
@@ -185,18 +186,21 @@ export default function NurseRiskPage() {
           interpretation={interpretSectionMatrix(
             dashboard.matrix,
             dashboard.matrixCategories,
-            dashboard.totalCases
+            dashboard.totalCases,
+            "clinic"
           )}
         />
         <div className={styles.sideRail}>
-          <NurseRiskLevels
+          <RiskLevels
+            desk="clinic"
             mix={dashboard.levelMix}
             totalStudents={dashboard.totalStudents}
-            interpretation={interpretLevelMix(dashboard.levelMix, dashboard.totalStudents)}
+            interpretation={interpretLevelMix(dashboard.levelMix, dashboard.totalStudents, "clinic")}
           />
-          <NurseRiskCategories
+          <RiskCategories
+            desk="clinic"
             rows={dashboard.categoryRows}
-            interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases)}
+            interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases, "clinic")}
           />
         </div>
       </div>

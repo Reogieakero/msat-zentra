@@ -3,9 +3,12 @@
   flex-shrink: 0;
   align-self: flex-start;
   position: sticky;
-  top: 4rem;
+  /* Below both fixed bars (3rem topbar + 3rem tab navbar) plus a gap, so
+     the menu title never slides under the navbar when pinned — same as
+     the nurse desk. */
+  top: 6.75rem;
   z-index: 10;
-  max-height: calc(100vh - 5rem);
+  max-height: calc(100vh - 7.75rem);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

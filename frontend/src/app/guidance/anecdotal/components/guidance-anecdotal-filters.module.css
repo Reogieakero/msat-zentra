@@ -24,10 +24,14 @@
 
 .search {
   padding-left: 2rem;
+  height: 32px;
+  font-size: 0.8125rem;
 }
 
 .filterBtn {
   gap: 0.375rem;
+  height: 32px;
+  font-size: 0.8125rem;
 }
 
 .filterActive {

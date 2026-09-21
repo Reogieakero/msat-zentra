@@ -6,6 +6,9 @@
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* 16px gutter between the sheet chrome and the form content — shared by
+     the nurse and guidance ADM sheets. */
+  padding: 1rem;
 }
 
 .scrollBody::-webkit-scrollbar {

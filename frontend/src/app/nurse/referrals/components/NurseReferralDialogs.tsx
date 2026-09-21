@@ -21,7 +21,11 @@ import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import { CONCERN_OPTIONS, buildGcForm03Data, type GcForm03Data } from "@/app/guidance/adm/components/gcform03-data";
 import type { GuidanceAdmCase } from "@/app/guidance/adm/components/guidance-adm-data";
 import sheetStyles from "@/app/guidance/adm/components/GcForm03PreviewDialog.module.css";
-import { ClinicDatePicker, ClinicTimePicker } from "../../overview/components/ClinicDateTimePicker";
+import { BookSessionDialog } from "@/components/session-booking/BookSessionDialog";
+import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/session-booking/FinishSessionDialog";
+import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
+import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
+import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
 import {
   apiErrorMessage,
   cancelClinicSession,
@@ -42,17 +46,6 @@ import {
   type NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";
 import styles from "./NurseReferralDialogs.module.css";
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function toScheduledAt(date: string, time: string): string | null {
-  if (!date || !time) return null;
-  const at = new Date(`${date}T${time}:00`);
-  if (Number.isNaN(at.getTime())) return null;
-  return `${date}T${time}:00`;
-}
 
 /* Live clock for session-gate checks below — ticks each second while the
    dialog is open so "starts at" guards stay exact without calling Date
@@ -78,6 +71,9 @@ interface DialogProps {
  * to create one — only finish/move/cancel/delete once booked). Same
  * one-active-session rule as the guidance "Book session" flow; the server
  * enforces it too, this is just the friendly early message.
+ *
+ * Thin wrapper around the shared book-session modal so the clinic desk and
+ * the guidance interventions desk book sessions through identical UI.
  */
 export function ScheduleSessionDialog({
   row,
@@ -85,83 +81,43 @@ export function ScheduleSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { row: NurseQueueRow }) {
-  const [date, setDate] = React.useState("");
-  const [time, setTime] = React.useState("");
-  const [venue, setVenue] = React.useState("");
   const [acting, setActing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
 
   if (!open) return null;
 
-  async function save() {
-    const scheduledAt = toScheduledAt(date, time);
-    if (!scheduledAt) {
-      setError("Pick both a date and a time for the clinic session.");
-      return;
-    }
-    if (new Date(scheduledAt).getTime() <= Date.now()) {
-      setError("Clinic session must be set in the future.");
-      return;
-    }
-    if (row.sessions.some((s) => s.status === "scheduled")) {
-      setError("This case already has a session that is not done yet — finish or cancel it before booking another one.");
-      return;
-    }
-    setError(null);
+  async function save(fields: { scheduledAt: string; venue: string }) {
     setActing(true);
     try {
       await scheduleClinicSession(row.id, {
-        scheduledAt,
-        ...(venue.trim() ? { venue: venue.trim() } : {}),
+        scheduledAt: fields.scheduledAt,
+        ...(fields.venue ? { venue: fields.venue } : {}),
       });
       toast.success({ title: "Session booked", description: `Clinic session booked for ${row.student}.` });
       onClose();
-      setDate("");
-      setTime("");
-      setVenue("");
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not book the session. Try again."));
+      setServerError(apiErrorMessage(err, "Could not book the session. Try again."));
     } finally {
       setActing(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
-        <DialogHeader>
-          <DialogTitle>Book session</DialogTitle>
-          <DialogDescription>
-            Book a clinic session{row.student ? ` for ${row.student}` : ""}. Held at the school clinic unless another venue is given.
-          </DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <ClinicDatePicker id="nurse-book-date" label="Date" value={date} onChange={setDate} min={todayKey()} />
-          <ClinicTimePicker id="nurse-book-time" label="Time" value={time} onChange={setTime} />
-          <div className={styles.formFull}>
-            <Label htmlFor="nurse-book-venue">Venue (optional)</Label>
-            <Input
-              id="nurse-book-venue"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              placeholder="e.g. School clinic"
-              maxLength={200}
-            />
-          </div>
-        </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
-        <DialogFooter>
-          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={() => void save()} disabled={acting}>
-            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Book session
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <BookSessionDialog
+      open
+      onClose={() => {
+        onClose();
+        setServerError(null);
+      }}
+      onSubmit={(fields) => void save(fields)}
+      description={`Book a clinic session${row.student ? ` for ${row.student}` : ""}. Held at the school clinic unless another venue is given.`}
+      venuePlaceholder="e.g. School clinic"
+      hasActiveSession={row.sessions.some((s) => s.status === "scheduled")}
+      busy={acting}
+      serverError={serverError}
+      idPrefix="nurse-book"
+    />
   );
 }
 
@@ -172,13 +128,10 @@ export function FinishSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
-  const [notes, setNotes] = React.useState("");
-  const [outcome, setOutcome] = React.useState("");
-  const [followDate, setFollowDate] = React.useState("");
-  const [followTime, setFollowTime] = React.useState("");
   const [files, setFiles] = React.useState<File[]>([]);
   const [acting, setActing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [pickError, setPickError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
   const now = useNowTick(open);
 
   if (!open) return null;
@@ -193,55 +146,41 @@ export function FinishSessionDialog({
     const picked = Array.from(list).slice(0, 5);
     const problem = clinicAttachmentError(picked);
     if (problem) {
-      setError(problem);
+      setPickError(problem);
       return;
     }
-    setError(null);
+    setPickError(null);
     setFiles(picked);
   }
 
-  async function save() {
-    if (notStarted) {
-      setError("This session hasn't started yet — you can mark it done once the scheduled time arrives.");
-      return;
-    }
-    if (!notes.trim()) {
-      setError("Write what happened in the session first.");
-      return;
-    }
-    let followUpAt: string | undefined;
-    if (followDate || followTime) {
-      const at = toScheduledAt(followDate, followTime);
-      if (!at) {
-        setError("Pick both a date and a time for the follow-up — or leave both empty.");
-        return;
-      }
-      followUpAt = at;
-    }
+  async function save(fields: {
+    sessionNotes: string;
+    outcome?: string;
+    followUpSession?: { scheduledAt: string };
+  }) {
     if (files.length > 0) {
       const problem = clinicAttachmentError(files);
       if (problem) {
-        setError(problem);
+        setPickError(problem);
         return;
       }
     }
-    setError(null);
     setActing(true);
     try {
       // Step 1 — mark the session done (required). Step 2 — file the
       // optional photos (docs never block Done; a failed upload keeps the
       // dialog open so the nurse can retry or close anyway).
       await completeClinicSession(referralId, session.id, {
-        sessionNotes: notes.trim(),
-        ...(outcome.trim() ? { outcome: outcome.trim() } : {}),
-        ...(followUpAt ? { followUpAt } : {}),
+        sessionNotes: fields.sessionNotes,
+        ...(fields.outcome ? { outcome: fields.outcome } : {}),
+        ...(fields.followUpSession ? { followUpAt: fields.followUpSession.scheduledAt } : {}),
       });
       if (files.length > 0) {
         try {
           await uploadClinicAttachments(referralId, session.id, files);
         } catch (uploadErr) {
           onChanged();
-          setError(apiErrorMessage(uploadErr, "Session is done, but the photos did not upload. Try attaching them again from the session list."));
+          setServerError(apiErrorMessage(uploadErr, "Session is done, but the photos did not upload. Try attaching them again from the session list."));
           return;
         }
       }
@@ -252,86 +191,52 @@ export function FinishSessionDialog({
           : "The session was marked done.",
       });
       onClose();
-      setNotes("");
-      setOutcome("");
-      setFollowDate("");
-      setFollowTime("");
       setFiles([]);
+      setPickError(null);
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not finish the session. Try again."));
+      setServerError(apiErrorMessage(err, "Could not finish the session. Try again."));
     } finally {
       setActing(false);
     }
   }
 
+  function handleClose() {
+    onClose();
+    setPickError(null);
+    setServerError(null);
+  }
+
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
-        <DialogHeader>
-          <DialogTitle>Mark session done</DialogTitle>
-          <DialogDescription>
-            Record what happened. Photos are optional — file them now or later from the session list.
-          </DialogDescription>
-        </DialogHeader>
-        {notStarted ? (
-          <div className={styles.errorBlock} role="alert">
-            <p className={styles.errorText}>
-              This session hasn&apos;t started yet — you can mark it done once the scheduled time arrives.
-            </p>
-          </div>
-        ) : null}
-        <div className={styles.formGrid}>
-          <div className={styles.formFull}>
-            <Label htmlFor="nurse-done-notes">Session notes (required)</Label>
-            <Textarea
-              id="nurse-done-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="What happened? What was discussed…"
-              maxLength={5000}
-            />
-          </div>
-          <div className={styles.formFull}>
-            <Label htmlFor="nurse-done-outcome">Outcome (optional)</Label>
-            <Textarea
-              id="nurse-done-outcome"
-              value={outcome}
-              onChange={(e) => setOutcome(e.target.value)}
-              placeholder="Result or next step…"
-              maxLength={2000}
-            />
-          </div>
-          <ClinicDatePicker id="nurse-follow-date" label="Follow-up date (optional)" value={followDate} onChange={setFollowDate} min={todayKey()} />
-          <ClinicTimePicker id="nurse-follow-time" label="Follow-up time (optional)" value={followTime} onChange={setFollowTime} />
-          <div className={styles.formFull}>
-            <Label htmlFor="nurse-done-files">Documentation photos (optional)</Label>
-            <Input
-              id="nurse-done-files"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={(e) => onPickFiles(e.target.files)}
-            />
-            <p style={{ fontSize: "0.8125rem", opacity: 0.75, marginTop: "0.25rem" }}>
-              {files.length === 0
-                ? "Wound photo, referral slip, lab result… JPG/PNG/WEBP, max 5 at a time, 5 MB each. You can skip this."
-                : `${files.length} photo${files.length === 1 ? "" : "s"} selected: ${files.map((f) => f.name).join(", ")}`}
-            </p>
-          </div>
+    <SharedFinishSessionDialog
+      open
+      onClose={handleClose}
+      onSubmit={(fields) => void save(fields)}
+      description="Record what happened. Photos are optional — file them now or later from the session list."
+      showSessionType={false}
+      showFollowUpVenue={false}
+      docsSection={
+        <div className={styles.formFull}>
+          <Label htmlFor="nurse-done-files">Documentation photos (optional)</Label>
+          <Input
+            id="nurse-done-files"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={(e) => onPickFiles(e.target.files)}
+          />
+          <p style={{ fontSize: "0.8125rem", opacity: 0.75, marginTop: "0.25rem" }}>
+            {files.length === 0
+              ? "Wound photo, referral slip, lab result… JPG/PNG/WEBP, max 5 at a time, 5 MB each. You can skip this."
+              : `${files.length} photo${files.length === 1 ? "" : "s"} selected: ${files.map((f) => f.name).join(", ")}`}
+          </p>
         </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
-        <DialogFooter>
-          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={() => void save()} disabled={acting || notStarted}>
-            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Mark done
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      notStarted={notStarted}
+      busy={acting}
+      serverError={pickError ?? serverError}
+      idPrefix="nurse-done"
+    />
   );
 }
 
@@ -342,58 +247,37 @@ export function MoveSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
-  const [date, setDate] = React.useState("");
-  const [time, setTime] = React.useState("");
   const [acting, setActing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
 
   if (!open) return null;
 
-  async function save() {
-    const scheduledAt = toScheduledAt(date, time);
-    if (!scheduledAt) {
-      setError("Pick both a date and a time to move the session to.");
-      return;
-    }
-    setError(null);
+  async function save(scheduledAt: string) {
     setActing(true);
     try {
       await rescheduleClinicSession(referralId, session.id, scheduledAt);
       toast.success({ title: "Session moved", description: "The session was moved." });
       onClose();
-      setDate("");
-      setTime("");
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not move the session. Try again."));
+      setServerError(apiErrorMessage(err, "Could not move the session. Try again."));
     } finally {
       setActing(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
-        <DialogHeader>
-          <DialogTitle>Move session</DialogTitle>
-          <DialogDescription>Pick the new date and time.</DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <ClinicDatePicker id="nurse-move-date" label="Date" value={date} onChange={setDate} min={todayKey()} />
-          <ClinicTimePicker id="nurse-move-time" label="Time" value={time} onChange={setTime} />
-        </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
-        <DialogFooter>
-          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={() => void save()} disabled={acting}>
-            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Move session
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SharedRescheduleSessionDialog
+      open
+      onClose={() => {
+        onClose();
+        setServerError(null);
+      }}
+      onSubmit={(scheduledAt) => void save(scheduledAt)}
+      busy={acting}
+      serverError={serverError}
+      idPrefix="nurse-move"
+    />
   );
 }
 
@@ -404,59 +288,38 @@ export function CancelSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
-  const [reason, setReason] = React.useState("");
   const [acting, setActing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
 
   if (!open) return null;
 
-  async function save() {
-    setError(null);
+  async function save(reason?: string) {
     setActing(true);
     try {
-      await cancelClinicSession(referralId, session.id, reason.trim() || undefined);
+      await cancelClinicSession(referralId, session.id, reason);
       toast.success({ title: "Session cancelled", description: "The session was cancelled." });
       onClose();
-      setReason("");
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not cancel the session. Try again."));
+      setServerError(apiErrorMessage(err, "Could not cancel the session. Try again."));
     } finally {
       setActing(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
-        <DialogHeader>
-          <DialogTitle>Cancel session</DialogTitle>
-          <DialogDescription>This frees the slot. The case itself stays open.</DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <div className={styles.formFull}>
-            <Label htmlFor="nurse-cancel-reason">Why is it cancelled? (optional)</Label>
-            <Textarea
-              id="nurse-cancel-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Reason for cancelling…"
-              maxLength={500}
-            />
-          </div>
-        </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Keep it
-          </Button>
-          <Button variant="destructive" className={styles.btnRed} onClick={() => void save()} disabled={acting}>
-            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Cancel session
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SharedCancelSessionDialog
+      open
+      onClose={() => {
+        onClose();
+        setServerError(null);
+      }}
+      onSubmit={(reason) => void save(reason)}
+      reasonLabel="Why is it cancelled? (optional)"
+      busy={acting}
+      serverError={serverError}
+      idPrefix="nurse-cancel"
+    />
   );
 }
 
@@ -468,12 +331,11 @@ export function DeleteSessionDialog({
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
   const [acting, setActing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
 
   if (!open) return null;
 
   async function remove() {
-    setError(null);
     setActing(true);
     try {
       await deleteClinicSession(referralId, session.id);
@@ -481,33 +343,23 @@ export function DeleteSessionDialog({
       onClose();
       onChanged();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not delete the session. Try again."));
+      setServerError(apiErrorMessage(err, "Could not delete the session. Try again."));
     } finally {
       setActing(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
-        <DialogHeader>
-          <DialogTitle>Delete cancelled session?</DialogTitle>
-          <DialogDescription>
-            This permanently removes the cancelled session from the list. The case itself stays open. This cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Keep it
-          </Button>
-          <Button variant="destructive" className={styles.btnRed} onClick={() => void remove()} disabled={acting}>
-            {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Delete session
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SharedDeleteSessionDialog
+      open
+      onClose={() => {
+        onClose();
+        setServerError(null);
+      }}
+      onConfirm={() => void remove()}
+      busy={acting}
+      serverError={serverError}
+    />
   );
 }
 

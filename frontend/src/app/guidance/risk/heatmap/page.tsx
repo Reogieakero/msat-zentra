@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,10 @@ export default function GuidanceHeatmapPage() {
             <p className={styles.lede}>Loading the live section matrix…</p>
           </div>
           <Skeleton style={{ width: "8rem", height: "1.5rem" }} />
+        </div>
+        <div className={styles.actions}>
+          <Skeleton style={{ width: "11rem", height: "2rem" }} />
+          <Skeleton style={{ width: "7rem", height: "2rem" }} />
         </div>
         {/* Heatmap matrices mirror — two matrix blocks with cell grids. */}
         <Card className={styles.card} aria-hidden="true">
@@ -94,6 +99,7 @@ export default function GuidanceHeatmapPage() {
             </div>
           </CardContent>
         </Card>
+        <Skeleton style={{ width: "100%", height: "2.5rem" }} />
       </section>
     );
   }
@@ -123,6 +129,9 @@ export default function GuidanceHeatmapPage() {
               onClick={() => refetch()}
               disabled={isFetching}
             >
+              {isFetching ? (
+                <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+              ) : null}
               {isFetching ? "Retrying…" : "Retry"}
             </Button>
           </CardContent>

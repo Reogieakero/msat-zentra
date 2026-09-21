@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +14,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import { ImageViewer } from "@/components/image-viewer/ImageViewer";
 import { type ClinicAttachment } from "../../overview/components/nurse-overview-data";
 import { type NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
 import { DocumentaryTable } from "./DocumentaryTable";
@@ -45,7 +46,6 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
     meta: string;
   } | null>(null);
 
-  const viewerCount = viewer?.files.length ?? 0;
   function openViewer(entry: DocEntry, index = 0) {
     if (entry.files.length === 0) return;
     setViewer({
@@ -59,25 +59,6 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
   function closeViewer() {
     setViewer(null);
   }
-  function stepViewer(dir: 1 | -1) {
-    setViewer((v) => {
-      if (!v || v.files.length === 0) return v;
-      const n = v.files.length;
-      return { ...v, index: (v.index + dir + n) % n };
-    });
-  }
-
-  React.useEffect(() => {
-    if (!viewer) return;
-    const count = viewer.files.length;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeViewer();
-      if (e.key === "ArrowRight" && count > 1) stepViewer(1);
-      if (e.key === "ArrowLeft" && count > 1) stepViewer(-1);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [viewer]);
 
   const entries = React.useMemo(() => buildEntries(alerts), [alerts]);
 
@@ -200,38 +181,15 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
       </Dialog>
 
       {viewer && viewer.files.length > 0 && (
-        <div className={styles.viewerBackdrop} role="dialog" aria-modal="true" aria-label={`Image viewer for ${viewer.student} — ${viewer.index + 1} of ${viewer.files.length}`} onClick={closeViewer}>
-          <div className={styles.viewerContent} onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon-sm" className="absolute top-2 right-2" onClick={closeViewer} aria-label="Close">
-              <X aria-hidden />
-              <span className="sr-only">Close</span>
-            </Button>
-            <div className={styles.viewerHead}>
-              <p className={styles.viewerStudent}>{viewer.student}</p>
-              <p className={styles.viewerSub}>
-                <span className={styles.lrn}>{viewer.lrn}</span>
-                {viewer.meta ? <><span aria-hidden="true"> · </span><span>{viewer.meta}</span></> : null}
-              </p>
-            </div>
-            {viewerCount > 1 && (
-              <button type="button" className={`${styles.viewerNav} ${styles.viewerPrev}`} onClick={() => stepViewer(-1)} aria-label="Previous image">
-                <ChevronLeft size={22} aria-hidden />
-              </button>
-            )}
-            <img key={viewer.files[viewer.index].id} src={fileHref(viewer.files[viewer.index].fileUrl)} alt={viewer.files[viewer.index].fileName} className={styles.viewerImage} />
-            {viewerCount > 1 && (
-              <button type="button" className={`${styles.viewerNav} ${styles.viewerNext}`} onClick={() => stepViewer(1)} aria-label="Next image">
-                <ChevronRight size={22} aria-hidden />
-              </button>
-            )}
-            <div className={styles.viewerFooter}>
-              <p className={styles.viewerName}>{viewer.files[viewer.index].fileName}</p>
-              {viewerCount > 1 && (
-                <p className={styles.viewerCounter} aria-live="polite">{viewer.index + 1} / {viewerCount}</p>
-              )}
-            </div>
-          </div>
-        </div>
+        <ImageViewer
+          files={viewer.files}
+          index={viewer.index}
+          title={viewer.student}
+          subtitle={`${viewer.lrn}${viewer.meta ? ` · ${viewer.meta}` : ""}`}
+          resolveHref={fileHref}
+          onIndexChange={(index) => setViewer((v) => (v ? { ...v, index } : v))}
+          onClose={closeViewer}
+        />
       )}
     </section>
   );

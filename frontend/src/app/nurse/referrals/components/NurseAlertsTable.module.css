@@ -32,7 +32,7 @@
 /* Slim toolbar: title on the left, search + filter on the right. Stays
    pinned below both fixed bars (topbar + tab navbar) while cases scroll —
    it never scrolls away and never slides under the navbar. z-index stays
-   well below the navbar (10000) so the title bar can never cover the
+   well below the navbar (35) so the title bar can never cover the
    nav links. */
 .toolbar {
   display: flex;

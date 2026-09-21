@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { NURSE_STATUS_LABELS } from "../../overview/components/nurse-overview-data";
+import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
 import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
 import {
   formatActionTime,
@@ -126,6 +126,23 @@ function statusVariant(
       return "outline";
   }
 }
+
+/* Badge variant per action-derived status key — the same vocabulary the
+   overview charts use, so every surface agrees. Unknown keys fall back
+   to the raw-status variant. */
+const ACTION_STATUS_VARIANT: Record<
+  string,
+  "warning" | "default" | "secondary" | "outline" | "destructive" | "success"
+> = {
+  endorsed: "success",
+  done: "success",
+  done_session: "success",
+  booked: "default",
+  followup: "secondary",
+  rejected: "secondary",
+  needs_review: "warning",
+  escalated: "destructive",
+};
 
 function RiskBadge({ level }: { level: NurseRiskLevel | undefined }) {
   if (!level) return <span className={styles.noRisk}>—</span>;
@@ -348,26 +365,38 @@ export function NurseReferralsTable({
                     </TableCell>
 <TableCell>
                        {(() => {
-                         const doneCount = alert.row.sessions.filter(
-                           (s) => s.status === "completed"
-                         ).length;
-                         const allDone = doneCount > 0 && !alert.row.sessions.some((s) => s.status === "scheduled");
-                         const statusLabel = allDone ? "Done" : (NURSE_STATUS_LABELS[alert.row.status] ?? alert.row.status);
-                         const statusVar = allDone ? "success" : statusVariant(alert.row.status);
-                         return (
-                           <>
-                             <Badge variant={statusVar}>
-                               {statusLabel}
-                             </Badge>
-                             {doneCount > 0 && !allDone ? (
-                               <p className={styles.cellSub}>
-                                 {doneCount} session{doneCount === 1 ? "" : "s"} done
-                               </p>
-                             ) : null}
-                           </>
-                         );
-                       })()}
-                     </TableCell>
+                          const doneCount = alert.row.sessions.filter(
+                            (s) => s.status === "completed"
+                          ).length;
+                          const allDone = doneCount > 0 && !alert.row.sessions.some((s) => s.status === "scheduled");
+                          // Action-based status — what the case actually needs
+                          // now (Endorsed, Booked session, Done, Needs review…)
+                          // instead of the raw database enum. Same vocabulary
+                          // the overview charts use.
+                          const actionStatus = allDone
+                            ? { key: "done", label: "Done" }
+                            : deriveActionStatus(
+                                alert.row.type,
+                                alert.row.status,
+                                alert.row.sessions
+                              );
+                          const statusVar =
+                            ACTION_STATUS_VARIANT[actionStatus.key] ??
+                            statusVariant(alert.row.status);
+                          return (
+                            <>
+                              <Badge variant={statusVar}>
+                                {actionStatus.label}
+                              </Badge>
+                              {doneCount > 0 && !allDone ? (
+                                <p className={styles.cellSub}>
+                                  {doneCount} session{doneCount === 1 ? "" : "s"} done
+                                </p>
+                              ) : null}
+                            </>
+                          );
+                        })()}
+                      </TableCell>
                     <TableCell>
                       <RiskBadge level={riskLevel} />
                     </TableCell>
