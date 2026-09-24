@@ -3,10 +3,12 @@ import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
 import {
-  evaluateRisk,
+  computeRiskFactors,
   evaluateRosterRisk,
+  levelFromFlags,
   resolveActiveTermId,
 } from "../../services/risk.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
 import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
 import { getLowRiskStudents } from "./lowRiskStudents.service.js";
 import {
@@ -114,6 +116,122 @@ router.get(
           : "final";
       const result = await getRiskStudents(page, pageSize, section, gradeMode);
       res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Batch risk levels for desk queues (nurse/alerts, guidance, ADM).
+// Single HTTP round-trip replacing the per-student N+1 fan-out:
+//   GET /api/risk/students/batch?ids=a,b,c → { levels: { [id]: "High"|"Moderate"|"Low" } }
+// Profiles return the stored riskLevel (same as the single endpoint — one
+// query); roster-enlisted students are evaluated live in bulk (bulk grades +
+// attendance + anecdotal groupBy + section headcounts, then the pure
+// computeRiskFactors — constant queries regardless of N). Unknown ids are
+// omitted (caller renders "—"). Auth mirrors the single endpoint: staff +
+// principal broad read, advisers scoped to their own advisees.
+router.get(
+  "/students/batch",
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const raw = req.query.ids;
+      const list = Array.isArray(raw)
+        ? raw.flatMap((v) => String(v).split(","))
+        : String(raw ?? "").split(",");
+      const ids = [...new Set(list.map((s) => s.trim()).filter(Boolean))].slice(0, 100);
+      if (ids.length === 0) return res.json({ levels: {} });
+
+      const role = req.user!.role;
+      const isPrincipal = role === "principal";
+      const isStaff = ["adviser", "guidance_counselor", "nurse", "adm_coordinator"].includes(role);
+      if (!isPrincipal && !isStaff) {
+        return res.status(403).json({ error: { code: "FORBIDDEN", message: "Limited view only" } });
+      }
+
+      const [profiles, rosters] = await Promise.all([
+        prisma.studentProfile.findMany({
+          where: { userId: { in: ids } },
+          select: {
+            userId: true,
+            riskLevel: true,
+            section: { select: { adviserId: true } },
+          },
+        }),
+        prisma.studentRoster.findMany({
+          where: { id: { in: ids } },
+          select: {
+            id: true,
+            sectionId: true,
+            section: { select: { adviserId: true } },
+          },
+        }),
+      ]);
+
+      const levels: Record<string, string> = {};
+      const rosterIds: string[] = [];
+      const rosterSection = new Map<string, string>();
+      for (const p of profiles) {
+        if (role === "adviser" && req.user!.id !== p.userId && p.section?.adviserId !== req.user!.id) continue;
+        if (p.riskLevel) levels[p.userId] = String(p.riskLevel);
+      }
+      for (const r of rosters) {
+        if (role === "adviser" && r.section?.adviserId !== req.user!.id) continue;
+        rosterIds.push(r.id);
+        if (r.sectionId) rosterSection.set(r.id, r.sectionId);
+      }
+      if (rosterIds.length > 0) {
+        const termId = await resolveActiveTermId();
+        if (termId) {
+          const [grades, attendance, anecdotalGroups, headcounts] = await Promise.all([
+            prisma.finalGrade.findMany({
+              where: { rosterId: { in: rosterIds }, termId },
+              select: { rosterId: true, computedAverage: true, transmutedGrade: true },
+            }),
+            prisma.attendanceRecord.findMany({
+              where: { rosterId: { in: rosterIds }, termId },
+              select: { rosterId: true, status: true },
+            }),
+            prisma.anecdotalRecord.groupBy({
+              by: ["rosterId"],
+              where: { rosterId: { in: rosterIds }, termId },
+              _count: { _all: true },
+            }),
+            sectionHeadcounts([...new Set(rosterSection.values())]),
+          ]);
+          const gradesBy = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
+          for (const g of grades) {
+            if (!g.rosterId) continue;
+            const arr = gradesBy.get(g.rosterId) ?? [];
+            arr.push({ computedAverage: g.computedAverage, transmutedGrade: g.transmutedGrade });
+            gradesBy.set(g.rosterId, arr);
+          }
+          const attBy = new Map<string, { status: string }[]>();
+          for (const a of attendance) {
+            if (!a.rosterId) continue;
+            const arr = attBy.get(a.rosterId) ?? [];
+            arr.push({ status: a.status });
+            attBy.set(a.rosterId, arr);
+          }
+          const anecBy = new Map<string, number>();
+          for (const g of anecdotalGroups) {
+            if (g.rosterId) anecBy.set(g.rosterId, g._count._all);
+          }
+          for (const rid of rosterIds) {
+            const sectionId = rosterSection.get(rid);
+            const enrolled = sectionId ? (headcounts.get(sectionId) ?? 0) : 0;
+            const flags = computeRiskFactors({
+              finalGrades: gradesBy.get(rid) ?? [],
+              attendance: attBy.get(rid) ?? [],
+              anecdotalCount: anecBy.get(rid) ?? 0,
+              enrolled,
+            });
+            levels[rid] = levelFromFlags(flags);
+          }
+        }
+      }
+      res.json({ levels });
     } catch (e) {
       next(e);
     }

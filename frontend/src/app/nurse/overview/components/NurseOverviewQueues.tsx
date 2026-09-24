@@ -72,8 +72,14 @@ function useNowMs(intervalMs = 30_000): number {
 
 export function NurseNeedsReviewPanel({
   needsReview,
+  title = "Needs your review",
+  description = "Pending cases routed to the clinic, longest waiting first.",
+  emptyText = "All caught up — nothing waiting for review.",
 }: {
   needsReview: NurseQueueRow[];
+  title?: string;
+  description?: string;
+  emptyText?: string;
 }) {
   const [formSheet, setFormSheet] = React.useState<{
     row: NurseQueueRow;
@@ -96,13 +102,13 @@ export function NurseNeedsReviewPanel({
     <>
       <Card className={`${styles.panel} ${styles.needsPanel}`}>
         <div className={styles.panelHeadText}>
-          <h2 className={styles.panelTitle}>Needs your review</h2>
+          <h2 className={styles.panelTitle}>{title}</h2>
           <p className={styles.panelDesc}>
-            Pending cases routed to the clinic, longest waiting first.
+            {description}
           </p>
         </div>
         {needsReview.length === 0 ? (
-          <p className={styles.empty}>All caught up — nothing waiting for review.</p>
+          <p className={styles.empty}>{emptyText}</p>
         ) : (
           <>
             <div className={styles.tableWrap}>
@@ -113,8 +119,8 @@ export function NurseNeedsReviewPanel({
                         <th>Grade</th>
                         <th>Type</th>
                         <th>Category</th>
-                        <th>Status</th>
-                        <th>Waiting</th>
+                        <th>Case status</th>
+                        <th>Time elapsed</th>
                         <th>
                           <span className={styles.srOnly}>Actions</span>
                         </th>
@@ -129,8 +135,11 @@ export function NurseNeedsReviewPanel({
                         const homeBase =
                           row.type === "ADM" ? "/nurse/referrals/adm" : "/nurse/referrals/clinic";
                         const seeMoreHref = `${homeBase}?highlight=${row.id}`;
+                        // Every ADM case overlays its GCForm-03 (pending or
+                        // endorsed, including legacy endorsements) — same as
+                        // the guidance ADM "See referral form" behavior.
                         const viewFormHref =
-                          row.type === "ADM" && row.referralReady
+                          row.type === "ADM"
                             ? `${seeMoreHref}&form=1`
                             : seeMoreHref;
                         return (

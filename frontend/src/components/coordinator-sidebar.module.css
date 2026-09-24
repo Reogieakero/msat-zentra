@@ -1,0 +1,102 @@
+/* Coordinator top navbar — same GitHub-style tab bar as the guidance and
+   nurse desks, fixed under the real topbar. One flattened row of section
+   tabs with an active underline; scrolls horizontally on narrow screens
+   instead of collapsing behind a menu. */
+
+.navbar {
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  right: 0;
+  /* 35: above the sticky page title bars (30) so the tabs are never
+     covered while cases scroll, but below overlays (Radix dialogs,
+     dropdowns at z-50) so menus and dialogs always paint on top. */
+  z-index: 35;
+  width: 100%;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  height: 3rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tabItem {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.625rem;
+  border-bottom: 2px solid transparent;
+  font-size: 0.875rem;
+  text-decoration: none;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  outline: none;
+  transition: color 140ms ease-out, border-color 140ms ease-out;
+}
+
+.tab:hover {
+  color: var(--foreground);
+}
+
+.tab:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+.tabActive {
+  color: var(--foreground);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+
+.tabIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.tabLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding-inline: 0.375rem;
+  border-radius: var(--radius-md);
+  background-color: var(--sidebar-primary);
+  color: var(--sidebar-primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+}

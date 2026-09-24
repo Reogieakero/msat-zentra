@@ -262,36 +262,43 @@ export async function markAllNurseNotificationsRead(): Promise<void> {
   await apiClient.post("/api/notifications/read-all");
 }
 
-// Live rule-based risk level per referred student (GET /api/risk/students/:id
-// → { lrn, riskLevel }). The nurse role is allowed this limited projection,
-// and the endpoint serves roster ids too — pass the alert's studentId
-// (account or roster) so every row resolves a level.
-// Resolves each id independently so one failure never blocks the rest;
-// ids with no result are simply absent from the map (table shows "—").
+// Live rule-based risk level per referred student — single batched call
+// (GET /api/risk/students/batch?ids=…) replacing the old per-student N+1
+// fan-out. Falls back to per-id requests only if the batch endpoint is
+// unavailable (transitional). Ids with no result stay absent (table "—").
 export async function fetchNurseRiskLevels(
   studentIds: string[]
 ): Promise<Record<string, NurseRiskLevel>> {
   const unique = [...new Set(studentIds.filter(Boolean))];
   if (unique.length === 0) return {};
-  const settled = await Promise.allSettled(
-    unique.map(async (id) => {
-      const { data } = await apiClient.get<{ lrn: string; riskLevel: NurseRiskLevel }>(
-        `/api/risk/students/${id}`
-      );
-      return { id, riskLevel: data?.riskLevel ?? null };
-    })
-  );
-  const map: Record<string, NurseRiskLevel> = {};
-  for (const s of settled) {
-    if (
-      s.status === "fulfilled" &&
-      s.value.riskLevel !== null &&
-      (s.value.riskLevel === "High" ||
-        s.value.riskLevel === "Moderate" ||
-        s.value.riskLevel === "Low")
-    ) {
-      map[s.value.id] = s.value.riskLevel;
+  const isLevel = (v: unknown): v is NurseRiskLevel =>
+    v === "High" || v === "Moderate" || v === "Low";
+  try {
+    const { data } = await apiClient.get<{ levels: Record<string, string> }>(
+      "/api/risk/students/batch",
+      { params: { ids: unique.join(",") } }
+    );
+    const map: Record<string, NurseRiskLevel> = {};
+    for (const [id, level] of Object.entries(data?.levels ?? {})) {
+      if (isLevel(level)) map[id] = level;
     }
+    return map;
+  } catch {
+    // Transitional fallback — one failure never blocks the rest.
+    const settled = await Promise.allSettled(
+      unique.map(async (id) => {
+        const { data } = await apiClient.get<{ lrn: string; riskLevel: NurseRiskLevel }>(
+          `/api/risk/students/${id}`
+        );
+        return { id, riskLevel: data?.riskLevel ?? null };
+      })
+    );
+    const map: Record<string, NurseRiskLevel> = {};
+    for (const s of settled) {
+      if (s.status === "fulfilled" && s.value.riskLevel !== null && isLevel(s.value.riskLevel)) {
+        map[s.value.id] = s.value.riskLevel;
+      }
+    }
+    return map;
   }
-  return map;
 }

@@ -694,6 +694,7 @@ model Referral {
   healthRecords     HealthRecord[]
   homeVisitations   HomeVisitationRecord[]
   admProfiles       AdmLearnerProfile[]
+  admMeetings       AdmParentMeeting[]
   counselingSessions CounselingSession[]
   @@index([referredToRole, status])
   @@index([referredToRole, consultReviewer])
@@ -848,15 +849,31 @@ model AdmLearnerProfile {
 }
 model AdmParentMeeting {
   id                    String             @id @default(uuid())
-  admLearnerProfileId   String
+  // Exactly one side is set (CHECK in the migration): a profile booking, or
+  // a pre-profile referral booking. Referral bookings need no student
+  // account — the coordinator can schedule the parent meeting the moment a
+  // case is referred. They transfer to the learner profile when it is
+  // created (see POST /api/adm/profiles).
+  admLearnerProfileId   String?
+  referralId            String?
   recordedBy            String
   meetingDatetime       DateTime
+  // Where the meeting happens: "school" (in-school) or "home" (home
+  // visitation). The coordinator books either venue once a case is
+  // referred to ADM.
+  venue                 String             @default("school")
   attended              Boolean
   parentConfirmedAt     DateTime?
   minutesOfMeeting      String?
   attendanceLogbookRef  String?
-  admLearnerProfile     AdmLearnerProfile  @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
+  // People present at the meeting, kept by the ADM Coordinator when
+  // logging attendance: [{ name, role }]. Roles come from a fixed set
+  // (parent/guardian, teacher, student, …) enforced at the API layer.
+  attendees             Json                @default("[]")
+  admLearnerProfile     AdmLearnerProfile? @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
+  referral              Referral?          @relation(fields: [referralId], references: [id], onDelete: Cascade)
   recorder              User               @relation(fields: [recordedBy], references: [id])
+  @@index([referralId])
 }
 
 model AdmModule {

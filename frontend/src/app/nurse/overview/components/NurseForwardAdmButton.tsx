@@ -1,13 +1,9 @@
 "use client";
 
-import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
-import {
-  apiErrorMessage,
-  forwardNurseAdmCase,
-} from "./nurse-overview-data";
+import { forwardNurseAdmCase } from "./nurse-overview-data";
+import { useNurseMutation } from "./use-nurse-mutation";
 
 /**
  * Explicit forward for ADM cases whose referral form is completed. The case
@@ -23,33 +19,22 @@ export function NurseForwardAdmButton({
   student: string;
   onChanged: () => void;
 }) {
-  const [sending, setSending] = React.useState(false);
-
-  async function onForward() {
-    setSending(true);
-    try {
-      await forwardNurseAdmCase(id);
-      toast.success({
-        title: "Case forwarded",
-        description: `${student}'s case moves to the ADM coordinator for the parent meeting.`,
-      });
-      onChanged();
-    } catch (err) {
-      toast.error({
-        title: "Forward failed",
-        description: apiErrorMessage(err, "Could not forward this case."),
-      });
-    } finally {
-      setSending(false);
-    }
-  }
+  const forwardMutation = useNurseMutation({
+    mutationFn: () => forwardNurseAdmCase(id),
+    successTitle: "Case forwarded",
+    successDescription: () =>
+      `${student}'s case moves to the ADM coordinator for the parent meeting.`,
+    errorFallback: "Could not forward this case.",
+    onSuccessExtra: () => onChanged(),
+  });
+  const sending = forwardMutation.isPending;
 
   return (
     <Button
       variant="default"
       size="xs"
       disabled={sending}
-      onClick={() => void onForward()}
+      onClick={() => forwardMutation.mutate()}
       /* Fixed min-width + inline spinner slot so the "Forwarding…"
          swap doesn't widen the Actions cell and shift the row. */
       style={{ minWidth: "9.5rem" }}

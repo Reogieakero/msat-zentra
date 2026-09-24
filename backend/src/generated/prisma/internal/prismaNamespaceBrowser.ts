@@ -515,12 +515,15 @@ export type AdmLearnerProfileScalarFieldEnum = (typeof AdmLearnerProfileScalarFi
 export const AdmParentMeetingScalarFieldEnum = {
   id: 'id',
   admLearnerProfileId: 'admLearnerProfileId',
+  referralId: 'referralId',
   recordedBy: 'recordedBy',
   meetingDatetime: 'meetingDatetime',
+  venue: 'venue',
   attended: 'attended',
   parentConfirmedAt: 'parentConfirmedAt',
   minutesOfMeeting: 'minutesOfMeeting',
-  attendanceLogbookRef: 'attendanceLogbookRef'
+  attendanceLogbookRef: 'attendanceLogbookRef',
+  attendees: 'attendees'
 } as const
 
 export type AdmParentMeetingScalarFieldEnum = (typeof AdmParentMeetingScalarFieldEnum)[keyof typeof AdmParentMeetingScalarFieldEnum]

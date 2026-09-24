@@ -55,7 +55,7 @@ export function NurseAdmReviewDialog({
 
   function goToReferralForm(draft: AdmReviewDraft) {
     setOpen(false);
-    toast.success({
+    toast.info({
       title: "Referral form opened",
       description: "Confirm the form to endorse the case to the ADM coordinator.",
     });

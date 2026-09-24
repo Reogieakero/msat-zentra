@@ -310,6 +310,7 @@ export type ReferralWhereInput = {
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
   admProfiles?: Prisma.AdmLearnerProfileListRelationFilter
+  admMeetings?: Prisma.AdmParentMeetingListRelationFilter
   counselingSessions?: Prisma.CounselingSessionListRelationFilter
 }
 
@@ -342,6 +343,7 @@ export type ReferralOrderByWithRelationInput = {
   healthRecords?: Prisma.HealthRecordOrderByRelationAggregateInput
   homeVisitations?: Prisma.HomeVisitationRecordOrderByRelationAggregateInput
   admProfiles?: Prisma.AdmLearnerProfileOrderByRelationAggregateInput
+  admMeetings?: Prisma.AdmParentMeetingOrderByRelationAggregateInput
   counselingSessions?: Prisma.CounselingSessionOrderByRelationAggregateInput
 }
 
@@ -377,6 +379,7 @@ export type ReferralWhereUniqueInput = Prisma.AtLeast<{
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
   admProfiles?: Prisma.AdmLearnerProfileListRelationFilter
+  admMeetings?: Prisma.AdmParentMeetingListRelationFilter
   counselingSessions?: Prisma.CounselingSessionListRelationFilter
 }, "id">
 
@@ -456,6 +459,7 @@ export type ReferralCreateInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -483,6 +487,7 @@ export type ReferralUncheckedCreateInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -510,6 +515,7 @@ export type ReferralUpdateInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -537,6 +543,7 @@ export type ReferralUncheckedUpdateInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -973,6 +980,22 @@ export type ReferralUpdateOneRequiredWithoutAdmProfilesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ReferralUpdateToOneWithWhereWithoutAdmProfilesInput, Prisma.ReferralUpdateWithoutAdmProfilesInput>, Prisma.ReferralUncheckedUpdateWithoutAdmProfilesInput>
 }
 
+export type ReferralCreateNestedOneWithoutAdmMeetingsInput = {
+  create?: Prisma.XOR<Prisma.ReferralCreateWithoutAdmMeetingsInput, Prisma.ReferralUncheckedCreateWithoutAdmMeetingsInput>
+  connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutAdmMeetingsInput
+  connect?: Prisma.ReferralWhereUniqueInput
+}
+
+export type ReferralUpdateOneWithoutAdmMeetingsNestedInput = {
+  create?: Prisma.XOR<Prisma.ReferralCreateWithoutAdmMeetingsInput, Prisma.ReferralUncheckedCreateWithoutAdmMeetingsInput>
+  connectOrCreate?: Prisma.ReferralCreateOrConnectWithoutAdmMeetingsInput
+  upsert?: Prisma.ReferralUpsertWithoutAdmMeetingsInput
+  disconnect?: Prisma.ReferralWhereInput | boolean
+  delete?: Prisma.ReferralWhereInput | boolean
+  connect?: Prisma.ReferralWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ReferralUpdateToOneWithWhereWithoutAdmMeetingsInput, Prisma.ReferralUpdateWithoutAdmMeetingsInput>, Prisma.ReferralUncheckedUpdateWithoutAdmMeetingsInput>
+}
+
 export type ReferralCreateWithoutReferredByUserInput = {
   id?: string
   referredToRole: $Enums.ReferralTarget
@@ -996,6 +1019,7 @@ export type ReferralCreateWithoutReferredByUserInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1022,6 +1046,7 @@ export type ReferralUncheckedCreateWithoutReferredByUserInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1100,6 +1125,7 @@ export type ReferralCreateWithoutStudentInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1126,6 +1152,7 @@ export type ReferralUncheckedCreateWithoutStudentInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1178,6 +1205,7 @@ export type ReferralCreateWithoutTermInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1204,6 +1232,7 @@ export type ReferralUncheckedCreateWithoutTermInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1256,6 +1285,7 @@ export type ReferralCreateWithoutRosterInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1282,6 +1312,7 @@ export type ReferralUncheckedCreateWithoutRosterInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1334,6 +1365,7 @@ export type ReferralCreateWithoutAnecdotalRecordInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1360,6 +1392,7 @@ export type ReferralUncheckedCreateWithoutAnecdotalRecordInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1413,6 +1446,7 @@ export type ReferralCreateWithoutCounselingSessionsInput = {
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
 }
 
 export type ReferralUncheckedCreateWithoutCounselingSessionsInput = {
@@ -1439,6 +1473,7 @@ export type ReferralUncheckedCreateWithoutCounselingSessionsInput = {
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
 }
 
 export type ReferralCreateOrConnectWithoutCounselingSessionsInput = {
@@ -1481,6 +1516,7 @@ export type ReferralUpdateWithoutCounselingSessionsInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
 }
 
 export type ReferralUncheckedUpdateWithoutCounselingSessionsInput = {
@@ -1507,6 +1543,7 @@ export type ReferralUncheckedUpdateWithoutCounselingSessionsInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
 }
 
 export type ReferralCreateWithoutHealthRecordsInput = {
@@ -1532,6 +1569,7 @@ export type ReferralCreateWithoutHealthRecordsInput = {
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1558,6 +1596,7 @@ export type ReferralUncheckedCreateWithoutHealthRecordsInput = {
   termId: string
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1600,6 +1639,7 @@ export type ReferralUpdateWithoutHealthRecordsInput = {
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -1626,6 +1666,7 @@ export type ReferralUncheckedUpdateWithoutHealthRecordsInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -1652,6 +1693,7 @@ export type ReferralCreateWithoutHomeVisitationsInput = {
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1678,6 +1720,7 @@ export type ReferralUncheckedCreateWithoutHomeVisitationsInput = {
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1720,6 +1763,7 @@ export type ReferralUpdateWithoutHomeVisitationsInput = {
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -1746,6 +1790,7 @@ export type ReferralUncheckedUpdateWithoutHomeVisitationsInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -1772,6 +1817,7 @@ export type ReferralCreateWithoutAdmProfilesInput = {
   term: Prisma.TermCreateNestedOneWithoutReferralsInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
 }
 
@@ -1798,6 +1844,7 @@ export type ReferralUncheckedCreateWithoutAdmProfilesInput = {
   termId: string
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutReferralInput
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
 }
 
@@ -1840,6 +1887,7 @@ export type ReferralUpdateWithoutAdmProfilesInput = {
   term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -1866,6 +1914,131 @@ export type ReferralUncheckedUpdateWithoutAdmProfilesInput = {
   termId?: Prisma.StringFieldUpdateOperationsInput | string
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
+  counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
+}
+
+export type ReferralCreateWithoutAdmMeetingsInput = {
+  id?: string
+  referredToRole: $Enums.ReferralTarget
+  reason: string
+  consultReviewer?: string | null
+  referralFormReady?: boolean
+  status?: $Enums.ReferralStatus
+  notes?: string | null
+  escalationReason?: string | null
+  followUpDate?: Date | string | null
+  escalatedTo?: string | null
+  priority?: string | null
+  intakeNotes?: string | null
+  acceptedAt?: Date | string | null
+  resolutionSummary?: string | null
+  resolvedAt?: Date | string | null
+  anecdotalRecord: Prisma.AnecdotalRecordCreateNestedOneWithoutReferralsInput
+  referredByUser: Prisma.UserCreateNestedOneWithoutReferralsMadeInput
+  student?: Prisma.StudentProfileCreateNestedOneWithoutReferralsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutReferralsInput
+  term: Prisma.TermCreateNestedOneWithoutReferralsInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutReferralInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutReferralInput
+  admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutReferralInput
+  counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutReferralInput
+}
+
+export type ReferralUncheckedCreateWithoutAdmMeetingsInput = {
+  id?: string
+  anecdotalRecordId: string
+  referredToRole: $Enums.ReferralTarget
+  referredBy: string
+  reason: string
+  consultReviewer?: string | null
+  referralFormReady?: boolean
+  status?: $Enums.ReferralStatus
+  notes?: string | null
+  escalationReason?: string | null
+  followUpDate?: Date | string | null
+  escalatedTo?: string | null
+  priority?: string | null
+  intakeNotes?: string | null
+  acceptedAt?: Date | string | null
+  resolutionSummary?: string | null
+  resolvedAt?: Date | string | null
+  studentId?: string | null
+  rosterId?: string | null
+  termId: string
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutReferralInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutReferralInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutReferralInput
+  counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutReferralInput
+}
+
+export type ReferralCreateOrConnectWithoutAdmMeetingsInput = {
+  where: Prisma.ReferralWhereUniqueInput
+  create: Prisma.XOR<Prisma.ReferralCreateWithoutAdmMeetingsInput, Prisma.ReferralUncheckedCreateWithoutAdmMeetingsInput>
+}
+
+export type ReferralUpsertWithoutAdmMeetingsInput = {
+  update: Prisma.XOR<Prisma.ReferralUpdateWithoutAdmMeetingsInput, Prisma.ReferralUncheckedUpdateWithoutAdmMeetingsInput>
+  create: Prisma.XOR<Prisma.ReferralCreateWithoutAdmMeetingsInput, Prisma.ReferralUncheckedCreateWithoutAdmMeetingsInput>
+  where?: Prisma.ReferralWhereInput
+}
+
+export type ReferralUpdateToOneWithWhereWithoutAdmMeetingsInput = {
+  where?: Prisma.ReferralWhereInput
+  data: Prisma.XOR<Prisma.ReferralUpdateWithoutAdmMeetingsInput, Prisma.ReferralUncheckedUpdateWithoutAdmMeetingsInput>
+}
+
+export type ReferralUpdateWithoutAdmMeetingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
+  reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  referralFormReady?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  followUpDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  escalatedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  acceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resolutionSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  anecdotalRecord?: Prisma.AnecdotalRecordUpdateOneRequiredWithoutReferralsNestedInput
+  referredByUser?: Prisma.UserUpdateOneRequiredWithoutReferralsMadeNestedInput
+  student?: Prisma.StudentProfileUpdateOneWithoutReferralsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutReferralsNestedInput
+  term?: Prisma.TermUpdateOneRequiredWithoutReferralsNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
+}
+
+export type ReferralUncheckedUpdateWithoutAdmMeetingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anecdotalRecordId?: Prisma.StringFieldUpdateOperationsInput | string
+  referredToRole?: Prisma.EnumReferralTargetFieldUpdateOperationsInput | $Enums.ReferralTarget
+  referredBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reason?: Prisma.StringFieldUpdateOperationsInput | string
+  consultReviewer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  referralFormReady?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  status?: Prisma.EnumReferralStatusFieldUpdateOperationsInput | $Enums.ReferralStatus
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  escalationReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  followUpDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  escalatedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  acceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resolutionSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -1914,6 +2087,7 @@ export type ReferralUpdateWithoutReferredByUserInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -1940,6 +2114,7 @@ export type ReferralUncheckedUpdateWithoutReferredByUserInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -2010,6 +2185,7 @@ export type ReferralUpdateWithoutStudentInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -2036,6 +2212,7 @@ export type ReferralUncheckedUpdateWithoutStudentInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -2106,6 +2283,7 @@ export type ReferralUpdateWithoutTermInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -2132,6 +2310,7 @@ export type ReferralUncheckedUpdateWithoutTermInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -2202,6 +2381,7 @@ export type ReferralUpdateWithoutRosterInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -2228,6 +2408,7 @@ export type ReferralUncheckedUpdateWithoutRosterInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -2298,6 +2479,7 @@ export type ReferralUpdateWithoutAnecdotalRecordInput = {
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutReferralNestedInput
 }
 
@@ -2324,6 +2506,7 @@ export type ReferralUncheckedUpdateWithoutAnecdotalRecordInput = {
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutReferralNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutReferralNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutReferralNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutReferralNestedInput
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutReferralNestedInput
 }
 
@@ -2358,6 +2541,7 @@ export type ReferralCountOutputType = {
   healthRecords: number
   homeVisitations: number
   admProfiles: number
+  admMeetings: number
   counselingSessions: number
 }
 
@@ -2365,6 +2549,7 @@ export type ReferralCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   healthRecords?: boolean | ReferralCountOutputTypeCountHealthRecordsArgs
   homeVisitations?: boolean | ReferralCountOutputTypeCountHomeVisitationsArgs
   admProfiles?: boolean | ReferralCountOutputTypeCountAdmProfilesArgs
+  admMeetings?: boolean | ReferralCountOutputTypeCountAdmMeetingsArgs
   counselingSessions?: boolean | ReferralCountOutputTypeCountCounselingSessionsArgs
 }
 
@@ -2397,6 +2582,13 @@ export type ReferralCountOutputTypeCountHomeVisitationsArgs<ExtArgs extends runt
  */
 export type ReferralCountOutputTypeCountAdmProfilesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AdmLearnerProfileWhereInput
+}
+
+/**
+ * ReferralCountOutputType without action
+ */
+export type ReferralCountOutputTypeCountAdmMeetingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdmParentMeetingWhereInput
 }
 
 /**
@@ -2436,6 +2628,7 @@ export type ReferralSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   healthRecords?: boolean | Prisma.Referral$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.Referral$homeVisitationsArgs<ExtArgs>
   admProfiles?: boolean | Prisma.Referral$admProfilesArgs<ExtArgs>
+  admMeetings?: boolean | Prisma.Referral$admMeetingsArgs<ExtArgs>
   counselingSessions?: boolean | Prisma.Referral$counselingSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.ReferralCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["referral"]>
@@ -2529,6 +2722,7 @@ export type ReferralInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   healthRecords?: boolean | Prisma.Referral$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.Referral$homeVisitationsArgs<ExtArgs>
   admProfiles?: boolean | Prisma.Referral$admProfilesArgs<ExtArgs>
+  admMeetings?: boolean | Prisma.Referral$admMeetingsArgs<ExtArgs>
   counselingSessions?: boolean | Prisma.Referral$counselingSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.ReferralCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -2558,6 +2752,7 @@ export type $ReferralPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     healthRecords: Prisma.$HealthRecordPayload<ExtArgs>[]
     homeVisitations: Prisma.$HomeVisitationRecordPayload<ExtArgs>[]
     admProfiles: Prisma.$AdmLearnerProfilePayload<ExtArgs>[]
+    admMeetings: Prisma.$AdmParentMeetingPayload<ExtArgs>[]
     counselingSessions: Prisma.$CounselingSessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -2983,6 +3178,7 @@ export interface Prisma__ReferralClient<T, Null = never, ExtArgs extends runtime
   healthRecords<T extends Prisma.Referral$healthRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$healthRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HealthRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   homeVisitations<T extends Prisma.Referral$homeVisitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$homeVisitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HomeVisitationRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   admProfiles<T extends Prisma.Referral$admProfilesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$admProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmLearnerProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  admMeetings<T extends Prisma.Referral$admMeetingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$admMeetingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmParentMeetingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   counselingSessions<T extends Prisma.Referral$counselingSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Referral$counselingSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CounselingSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -3541,6 +3737,30 @@ export type Referral$admProfilesArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.AdmLearnerProfileScalarFieldEnum | Prisma.AdmLearnerProfileScalarFieldEnum[]
+}
+
+/**
+ * Referral.admMeetings
+ */
+export type Referral$admMeetingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdmParentMeeting
+   */
+  select?: Prisma.AdmParentMeetingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdmParentMeeting
+   */
+  omit?: Prisma.AdmParentMeetingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdmParentMeetingInclude<ExtArgs> | null
+  where?: Prisma.AdmParentMeetingWhereInput
+  orderBy?: Prisma.AdmParentMeetingOrderByWithRelationInput | Prisma.AdmParentMeetingOrderByWithRelationInput[]
+  cursor?: Prisma.AdmParentMeetingWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdmParentMeetingScalarFieldEnum | Prisma.AdmParentMeetingScalarFieldEnum[]
 }
 
 /**

@@ -501,6 +501,11 @@ export type AdmLearnerProfileMinOrderByAggregateInput = {
   confidentialityLevel?: Prisma.SortOrder
 }
 
+export type AdmLearnerProfileNullableScalarRelationFilter = {
+  is?: Prisma.AdmLearnerProfileWhereInput | null
+  isNot?: Prisma.AdmLearnerProfileWhereInput | null
+}
+
 export type AdmLearnerProfileScalarRelationFilter = {
   is?: Prisma.AdmLearnerProfileWhereInput
   isNot?: Prisma.AdmLearnerProfileWhereInput
@@ -730,10 +735,12 @@ export type AdmLearnerProfileCreateNestedOneWithoutParentMeetingsInput = {
   connect?: Prisma.AdmLearnerProfileWhereUniqueInput
 }
 
-export type AdmLearnerProfileUpdateOneRequiredWithoutParentMeetingsNestedInput = {
+export type AdmLearnerProfileUpdateOneWithoutParentMeetingsNestedInput = {
   create?: Prisma.XOR<Prisma.AdmLearnerProfileCreateWithoutParentMeetingsInput, Prisma.AdmLearnerProfileUncheckedCreateWithoutParentMeetingsInput>
   connectOrCreate?: Prisma.AdmLearnerProfileCreateOrConnectWithoutParentMeetingsInput
   upsert?: Prisma.AdmLearnerProfileUpsertWithoutParentMeetingsInput
+  disconnect?: Prisma.AdmLearnerProfileWhereInput | boolean
+  delete?: Prisma.AdmLearnerProfileWhereInput | boolean
   connect?: Prisma.AdmLearnerProfileWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.AdmLearnerProfileUpdateToOneWithWhereWithoutParentMeetingsInput, Prisma.AdmLearnerProfileUpdateWithoutParentMeetingsInput>, Prisma.AdmLearnerProfileUncheckedUpdateWithoutParentMeetingsInput>
 }

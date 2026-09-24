@@ -153,6 +153,41 @@ router.post(
       await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals"]);
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}${req.body.consultReviewer ? ` (consult reviewer: ${req.body.consultReviewer})` : ""}` });
       res.status(201).json(referral);
+      // Realtime handoff (background, off the adviser critical path): ADM
+      // coordinators get a sileo toast the moment the referral lands — the
+      // row itself already appears via their Referral-table subscription.
+      // Best-effort — never delays the 201.
+      if (req.body.referredToRole === "adm_coordinator") {
+        const actorId = req.user!.id;
+        const referralId = (referral as { id: string }).id;
+        const viaConsult = req.body.consultReviewer
+          ? " (via consultation review)"
+          : "";
+        void (async () => {
+          try {
+            const coordinators = await prisma.user.findMany({
+              where: { role: "adm_coordinator", status: "active" },
+              select: { id: true },
+              take: 10,
+            });
+            await Promise.all(
+              coordinators
+                .filter((c) => c.id !== actorId)
+                .map((c) =>
+                  fanoutNotification({
+                    userId: c.id,
+                    sourceTable: "referrals",
+                    action: "status",
+                    message: `New ADM referral submitted${viaConsult}.`,
+                    sourceId: referralId,
+                  }),
+                ),
+            );
+          } catch {
+            // Notifications are best-effort; the referral already committed.
+          }
+        })();
+      }
     } catch (e) { next(e); }
   }
 );
@@ -759,7 +794,8 @@ const GRADE_LABEL_OC: Record<string, string> = {
 // Full write-up access for the official OCForm-01 print/export. The observer
 // always qualifies; the section adviser qualifies as the required signatory
 // ("ADVISER'S SIGNATURE OVER PRINTED NAME"); the principal owns every case
-// file. Guidance qualifies ONLY for cases an adviser referred to guidance —
+// file. The ADM coordinator qualifies ONLY for cases referred to ADM.
+// Guidance qualifies ONLY for cases an adviser referred to guidance —
 // unreferred filings stay invisible to guidance even by direct id — PLUS
 // ADM-purpose referrals sitting at the guidance-owned consultation stage
 // (referredToRole = "adm_coordinator" with no learner profile yet), which the
@@ -805,8 +841,9 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
   const isPrincipal = requesterRole === "principal";
   const isGuidance = requesterRole === "guidance_counselor";
   const isNurse = requesterRole === "nurse";
-  if (!isObserver && !isSectionAdviser && !isPrincipal && !isGuidance && !isNurse) {
-    throw new AppError(403, "FORBIDDEN", "Only the observer, section adviser, principal, guidance counselor, or school nurse may open the official form");
+  const isAdmCoordinator = requesterRole === "adm_coordinator";
+  if (!isObserver && !isSectionAdviser && !isPrincipal && !isGuidance && !isNurse && !isAdmCoordinator) {
+    throw new AppError(403, "FORBIDDEN", "Only the observer, section adviser, principal, guidance counselor, school nurse, or ADM coordinator may open the official form");
   }
   if (isGuidance && !isObserver && !isSectionAdviser) {
     const referral = await prisma.referral.findFirst({
@@ -849,6 +886,24 @@ async function loadOcForm01Data(recordId: string, requesterId: string, requester
     });
     if (!referral) {
       throw new AppError(403, "FORBIDDEN", "Only cases referred to the clinic may be opened by the school nurse");
+    }
+  }
+  // Same bargain as the other consultation desks: the ADM coordinator
+  // opens only cases routed to ADM (referredToRole = "adm_coordinator") —
+  // at any stage, since endorsed cases already carry a learner profile.
+  // Unreferred filings stay invisible to the coordinator even by direct
+  // id. Without this, every coordinator preview 403s with "could not be
+  // loaded" even though the role gate above lets the request through.
+  if (isAdmCoordinator && !isObserver && !isSectionAdviser) {
+    const referral = await prisma.referral.findFirst({
+      where: {
+        anecdotalRecordId: recordId,
+        referredToRole: "adm_coordinator",
+      },
+      select: { id: true },
+    });
+    if (!referral) {
+      throw new AppError(403, "FORBIDDEN", "Only cases referred to ADM may be opened by the ADM coordinator");
     }
   }
 

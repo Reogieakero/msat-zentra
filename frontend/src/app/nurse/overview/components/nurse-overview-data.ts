@@ -134,6 +134,8 @@ export interface NurseQueueRow {
   // (consultReviewer is only set on ADM-track referrals); otherwise a
   // regular clinic matter.
   type: string;
+  // Teacher-picked ADM consultation reviewer (nurse on this desk).
+  consultReviewer?: string | null;
   // True once the referral form is completed — the alerts page then shows
   // the explicit Endorse & forward button for the case.
   referralReady: boolean;
@@ -185,12 +187,19 @@ export interface NurseBreakdownRow {
   count: number;
 }
 
+export interface NurseTrendPoint {
+  date: string;
+  adm: number;
+  clinic: number;
+}
+
 export interface NurseOverviewData {
   kpis: NurseKpis;
   needsReview: NurseQueueRow[];
   statusBreakdown: NurseBreakdownRow[];
   clinicStatusBreakdown: NurseBreakdownRow[];
   admStatusBreakdown: NurseBreakdownRow[];
+  dailyTrend: NurseTrendPoint[];
 }
 
 export const NURSE_STATUS_LABELS: Record<string, string> = {
@@ -250,6 +259,36 @@ export function deriveActionStatus(
   if (status === "pending") return { key: "needs_review", label: "Needs review" };
   if (status === "escalated") return { key: "escalated", label: "Escalated" };
   return { key: status, label: NURSE_STATUS_LABELS[status] ?? titleCase(status) };
+}
+
+/**
+ * Menu-aligned chart bucket for one referral — the same priority the
+ * timeline watermarks use, collapsed onto the ADM / Clinic action-menu
+ * vocabulary so the overview charts ("Caseload by status", "Clinic
+ * matters caseload", "ADM cases caseload") only ever show labels that
+ * exist in those menus. Every status lands in exactly one bucket:
+ * dismissed → Rejected, resolved → Done, endorsed ADM → Endorsed,
+ * follow-up → Follow-up, scheduled session → Booked session, finished
+ * session → Done, anything awaiting action (pending, escalated,
+ * info-requested, bare in-progress) → Needs review.
+ */
+export function chartBucketFor(
+  type: string,
+  status: string,
+  sessions: { status?: string | null }[],
+): { key: string; label: string } {
+  const list = sessions ?? [];
+  const hasScheduled = list.some((s) => s.status === "scheduled");
+  const hasCompleted = list.some((s) => s.status === "completed");
+
+  if (type === "ADM" && status === "in_progress") return { key: "endorsed", label: "Endorsed" };
+  if (status === "dismissed") return { key: "rejected", label: "Rejected" };
+  if (status === "resolved") return { key: "done", label: "Done" };
+  if (status === "follow_up") return { key: "followup", label: "Follow-up" };
+  if (hasScheduled) return { key: "booked", label: "Booked session" };
+  if (hasCompleted) return { key: "done", label: "Done" };
+  if (list.length > 0) return { key: "booked", label: "Booked session" };
+  return { key: "needs_review", label: "Needs review" };
 }
 
 // A referral belongs on the nurse's desk when:
@@ -321,6 +360,7 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
     id: r.id,
     ...identity,
     type: r.consultReviewer ? "ADM" : "Clinic",
+    consultReviewer: r.consultReviewer ?? null,
     referralReady: r.referralFormReady === true,
     category: anec?.category ? titleCase(anec.category) : "—",
     reason: r.reason?.trim() ? r.reason.trim().slice(0, 140) : "No reason recorded",
@@ -376,14 +416,12 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
     .map(toQueueRow)
     .sort((a, b) => referredTimeMs(a.referredAt) - referredTimeMs(b.referredAt));
 
-  // One action-status grouping, reused for the overall + per-type chart
-  // cards so every chart speaks the same status vocabulary as the table.
   const actionStatusBreakdown = (referrals: RawReferral[]): NurseBreakdownRow[] => {
     const counts = new Map<string, { label: string; count: number }>();
     for (const r of referrals) {
       const type = r.consultReviewer ? "ADM" : "Clinic";
       const sessions = r.counselingSessions ?? [];
-      const action = deriveActionStatus(type, r.status ?? "pending", sessions);
+      const action = chartBucketFor(type, r.status ?? "pending", sessions);
       const existing = counts.get(action.key);
       if (existing) {
         existing.count++;
@@ -400,7 +438,28 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
   const clinicStatusBreakdown = actionStatusBreakdown(scoped.filter((r) => !r.consultReviewer));
   const admStatusBreakdown = actionStatusBreakdown(scoped.filter((r) => r.consultReviewer));
 
-  return { kpis, needsReview, statusBreakdown, clinicStatusBreakdown, admStatusBreakdown };
+  // Trailing 14-day case-load series (referred time → now), split by
+  // type — drives the overview "Case load" line graph. Rows without a
+  // parseable referred time land outside the window and are skipped.
+  const nowMs = Date.now();
+  const dailyTrend: NurseTrendPoint[] = [];
+  const trendIndex = new Map<string, number>();
+  for (let i = 13; i >= 0; i--) {
+    const date = new Date(nowMs - i * DAY_MS).toISOString().slice(0, 10);
+    if (trendIndex.has(date)) continue;
+    trendIndex.set(date, dailyTrend.length);
+    dailyTrend.push({ date, adm: 0, clinic: 0 });
+  }
+  for (const r of scoped) {
+    const at = parseDate(r.referredAt);
+    if (!at) continue;
+    const idx = trendIndex.get(at.toISOString().slice(0, 10));
+    if (idx === undefined) continue;
+    if (r.consultReviewer) dailyTrend[idx].adm += 1;
+    else dailyTrend[idx].clinic += 1;
+  }
+
+  return { kpis, needsReview, statusBreakdown, clinicStatusBreakdown, admStatusBreakdown, dailyTrend };
 }
 
 export async function fetchNurseOverview(): Promise<NurseOverviewData> {
@@ -721,14 +780,22 @@ export function clinicAttachmentError(files: File[]): string | null {
 export async function uploadClinicAttachments(
   referralId: string,
   sessionId: string,
-  files: File[]
+  files: File[],
+  opts?: { signal?: AbortSignal; timeoutMs?: number }
 ): Promise<ClinicAttachment[]> {
   const form = new FormData();
   for (const f of files) form.append("files", f, f.name);
   const { data } = await apiClient.post<ClinicAttachment[]>(
     `/api/referrals/${referralId}/sessions/${sessionId}/attachments`,
     form,
-    { headers: { "Content-Type": "multipart/form-data" } }
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      // Photo uploads (up to 5×5MB) must never hang the spinner forever:
+      // 60s timeout + caller-provided abort on dialog close/unmount.
+      // Never auto-retried — a retry could file duplicates.
+      timeout: opts?.timeoutMs ?? 60_000,
+      ...(opts?.signal ? { signal: opts.signal } : {}),
+    }
   );
   return Array.isArray(data) ? data : [];
 }

@@ -1,0 +1,174 @@
+.timeline {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: 0.625rem;
+  position: relative;
+  padding-bottom: 0.875rem;
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dot {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  border: 2px solid var(--border);
+  background-color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.dotDone {
+  border-color: var(--foreground);
+  background-color: var(--foreground);
+  color: var(--background);
+}
+
+.dotCurrent {
+  border-color: var(--foreground);
+  background-color: var(--background);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--foreground), transparent 85%);
+}
+
+.dotIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.line {
+  width: 2px;
+  flex: 1;
+  min-height: 0.75rem;
+  background-color: var(--border);
+  margin-top: 0.125rem;
+}
+
+.lineLit {
+  background-color: var(--foreground);
+}
+
+.step:last-child .line {
+  display: none;
+}
+
+.body {
+  min-width: 0;
+  padding-bottom: 0.125rem;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.order {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.labelTodo {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.detail {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.desc {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.owner {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.summary {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.summaryStrong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.scrollArea {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  /* Hidden scrollbar — the labeled scroll-down pill below does the job,
+     same as the guidance interventions sheets. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollArea::-webkit-scrollbar {
+  display: none;
+}
+
+/* Labeled scroll-down pill — sticky at the bottom of the scroll viewport
+   while more stages sit below (same pattern as the guidance interventions
+   details sheets: icon + "Scroll down" text, never icon-only). */
+.scrollDownBtn {
+  position: sticky;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: fit-content;
+  margin: 0.75rem auto 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: var(--card);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.scrollDownBtn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}

@@ -34,9 +34,15 @@ interface BookSessionDialogProps {
   description: string;
   /** Shown under the venue field, e.g. where the session is held. */
   venueHint?: string;
+  /** Label for the free-text venue box — defaults to "Venue (optional)".
+      The ADM coordinator reuses it as the logbook-ref field. */
+  venueLabel?: string;
   venuePlaceholder?: string;
   /** Counseling desks pick a kind; the clinic desk books one-on-one only. */
   showSessionType?: boolean;
+  /** Label for the kind dropdown — defaults to "Session kind". The ADM
+      coordinator reuses it as the venue picker ("Venue"). */
+  sessionTypeLabel?: string;
   sessionTypeOptions?: { value: string; label: string }[];
   defaultSessionType?: string;
   /** One-active-session rule: set when a session is already booked. */
@@ -46,6 +52,12 @@ interface BookSessionDialogProps {
   /** Save failure from the caller's API call (shown under validation errors). */
   serverError?: string | null;
   submitLabel?: string;
+  busyLabel?: string;
+  title?: string;
+  initialDate?: string;
+  initialTime?: string;
+  initialVenue?: string;
+  initialSessionType?: string;
   idPrefix?: string;
 }
 
@@ -61,10 +73,11 @@ function toScheduledAt(date: string, time: string): string | null {
 }
 
 /**
- * Shared book-session modal — the same dialog on the nurse clinic desk and
- * the guidance interventions desk. Date + time pickers, optional venue, and
- * an optional session-kind dropdown, with the future-date and
- * one-active-session guards built in. The caller performs the save.
+ * Shared book-session modal — the same dialog on the nurse clinic desk, the
+ * guidance desks, and the ADM coordinator referrals desk. Date + time
+ * pickers, optional venue, and an optional session-kind dropdown, with the
+ * future-date and one-active-session guards built in. The caller performs
+ * the save.
  */
 export function BookSessionDialog({
   open,
@@ -72,8 +85,10 @@ export function BookSessionDialog({
   onSubmit,
   description,
   venueHint,
+  venueLabel = "Venue (optional)",
   venuePlaceholder = "e.g. School clinic",
   showSessionType = false,
+  sessionTypeLabel = "Session kind",
   sessionTypeOptions = [],
   defaultSessionType = "individual",
   hasActiveSession = false,
@@ -81,24 +96,34 @@ export function BookSessionDialog({
   busy = false,
   serverError = null,
   submitLabel = "Book session",
+  busyLabel,
+  title = "Book session",
+  initialDate = "",
+  initialTime = "",
+  initialVenue = "",
+  initialSessionType,
   idPrefix = "book-session",
 }: BookSessionDialogProps) {
-  const [date, setDate] = React.useState("");
-  const [time, setTime] = React.useState("");
-  const [venue, setVenue] = React.useState("");
-  const [sessionType, setSessionType] = React.useState(defaultSessionType);
+  const [date, setDate] = React.useState(initialDate);
+  const [time, setTime] = React.useState(initialTime);
+  const [venue, setVenue] = React.useState(initialVenue);
+  const [sessionType, setSessionType] = React.useState(
+    initialSessionType ?? defaultSessionType,
+  );
   const [error, setError] = React.useState<string | null>(null);
 
   // Fresh form every time the modal opens — synced during render, never
-  // in an effect.
-  const openKey = open ? defaultSessionType : null;
+  // in an effect. Reschedule opens prefill from the booked meeting.
+  const openKey = open
+    ? `${defaultSessionType}|${initialDate}|${initialTime}|${initialVenue}|${initialSessionType ?? ""}`
+    : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
     setPrevOpenKey(openKey);
-    setDate("");
-    setTime("");
-    setVenue("");
-    setSessionType(defaultSessionType);
+    setDate(initialDate);
+    setTime(initialTime);
+    setVenue(initialVenue);
+    setSessionType(initialSessionType ?? defaultSessionType);
     setError(null);
   }
 
@@ -134,7 +159,7 @@ export function BookSessionDialog({
     >
       <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
-          <DialogTitle>Book session</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className={styles.formGrid}>
@@ -154,7 +179,7 @@ export function BookSessionDialog({
           {showSessionType && sessionTypeOptions.length > 0 && (
             <FormDropdown
               id={`${idPrefix}-type`}
-              label="Session kind"
+              label={sessionTypeLabel}
               value={sessionType}
               onChange={setSessionType}
               placeholder="Pick a kind"
@@ -162,7 +187,7 @@ export function BookSessionDialog({
             />
           )}
           <div className={styles.formFull}>
-            <Label htmlFor={`${idPrefix}-venue`}>Venue (optional)</Label>
+            <Label htmlFor={`${idPrefix}-venue`}>{venueLabel}</Label>
             <Input
               id={`${idPrefix}-venue`}
               value={venue}
@@ -184,7 +209,7 @@ export function BookSessionDialog({
           </Button>
           <Button onClick={save} disabled={busy}>
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            {busy ? "Booking…" : submitLabel}
+            {busy ? (busyLabel ?? "Booking…") : submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

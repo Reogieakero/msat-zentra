@@ -206,7 +206,10 @@ export function NurseReferralEntry({
             Sent to the clinic: {row.escalationReason}
           </p>
         ) : null}
-        {row.notes ? (
+        {/* Internal notes stay off ADM rows — the endorsement lives in
+            the GCForm-03 referral form viewer, and the raw note carries
+            internal `[ADM …]` encoding not meant for display. */}
+        {row.notes && !isAdm ? (
           <p className={styles.calloutMuted}>
             <span className={styles.calloutPrefix}>Internal note: </span>
             {row.notes}
@@ -253,18 +256,19 @@ export function NurseReferralEntry({
                 />
               )}
               {/* The filled template is view-only — confirming
-                  already auto-endorsed, so no forward button. */}
-              {row.referralReady && (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="outline"
-                  style={{ height: "32px" }}
-                  onClick={() => onViewForm(row)}
-                >
-                  View referral form
-                </Button>
-              )}
+                  already auto-endorsed, so no forward button.
+                  Shown for every ADM case (pending or endorsed, including
+                  legacy endorsements without the ready flag) so the GCForm-03
+                  matches the guidance ADM "See referral form" behavior. */}
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                style={{ height: "32px" }}
+                onClick={() => onViewForm(row)}
+              >
+                View referral form
+              </Button>
             </>
           ) : (
             <>

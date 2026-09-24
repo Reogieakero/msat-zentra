@@ -1,0 +1,17 @@
+.spin {
+  width: 1rem;
+  height: 1rem;
+  animation: coord-spin 1s linear infinite;
+}
+
+@keyframes coord-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

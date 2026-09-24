@@ -1,0 +1,112 @@
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.25rem 0 1rem;
+}
+
+.sheetSectionTitle {
+  margin: 0 0 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.studentName {
+  margin: 0;
+  font-weight: 600;
+}
+
+.studentSub {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.mono {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.evidenceList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidenceItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.evidenceDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.badgeRow {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.skelList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* Structured meetings loading — badge row + two text lines per meeting,
+   mirroring the loaded meeting entries. */
+.meetingSkel {
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.meetingSkel:last-child {
+  border-bottom: none;
+}
+
+.spin {
+  width: 0.875rem;
+  height: 0.875rem;
+  animation: coord-case-spin 1s linear infinite;
+}
+
+@keyframes coord-case-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+.note {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.sheetActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}

@@ -412,7 +412,7 @@ router.get(
 router.get(
   "/terms",
   requireAuth,
-  requireRole("registrar", "record_keeper"),
+  requireRole("registrar", "record_keeper", "adm_coordinator"),
   cache({ tags: ["registrar", "academics"] }),
   async (req, res, next) => {
     try {

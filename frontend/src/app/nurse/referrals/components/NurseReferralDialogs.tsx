@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/components/ui/sonner";
 import { Download, Loader2, Printer } from "lucide-react";
 import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import { CONCERN_OPTIONS, buildGcForm03Data, type GcForm03Data } from "@/app/guidance/adm/components/gcform03-data";
@@ -31,7 +30,6 @@ import {
   cancelClinicSession,
   clinicAttachmentError,
   completeClinicSession,
-  confirmNurseReferralAndEndorse,
   deleteClinicAttachment,
   deleteClinicSession,
   forwardNurseAdmCase,
@@ -45,6 +43,7 @@ import {
   type NurseQueueRow,
   type NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";
+import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
 import styles from "./NurseReferralDialogs.module.css";
 
 /* Live clock for session-gate checks below — ticks each second while the
@@ -81,36 +80,36 @@ export function ScheduleSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { row: NurseQueueRow }) {
-  const [acting, setActing] = React.useState(false);
-  const [serverError, setServerError] = React.useState<string | null>(null);
-
-  if (!open) return null;
-
-  async function save(fields: { scheduledAt: string; venue: string }) {
-    setActing(true);
-    try {
-      await scheduleClinicSession(row.id, {
+  const bookMutation = useNurseMutation({
+    mutationFn: (fields: { scheduledAt: string; venue: string }) =>
+      scheduleClinicSession(row.id, {
         scheduledAt: fields.scheduledAt,
         ...(fields.venue ? { venue: fields.venue } : {}),
-      });
-      toast.success({ title: "Session booked", description: `Clinic session booked for ${row.student}.` });
+      }),
+    successTitle: "Session booked",
+    successDescription: () => `Clinic session booked for ${row.student}.`,
+    errorFallback: "Could not book the session. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
       onClose();
       onChanged();
-    } catch (err) {
-      setServerError(apiErrorMessage(err, "Could not book the session. Try again."));
-    } finally {
-      setActing(false);
-    }
-  }
+    },
+  });
+  const acting = bookMutation.isPending;
+  const serverError = bookMutation.error
+    ? apiErrorMessage(bookMutation.error, "Could not book the session. Try again.")
+    : null;
+
+  if (!open) return null;
 
   return (
     <BookSessionDialog
       open
       onClose={() => {
         onClose();
-        setServerError(null);
+        bookMutation.reset();
       }}
-      onSubmit={(fields) => void save(fields)}
+      onSubmit={(fields) => bookMutation.mutate(fields)}
       description={`Book a clinic session${row.student ? ` for ${row.student}` : ""}. Held at the school clinic unless another venue is given.`}
       venuePlaceholder="e.g. School clinic"
       hasActiveSession={row.sessions.some((s) => s.status === "scheduled")}
@@ -129,9 +128,53 @@ export function FinishSessionDialog({
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
   const [files, setFiles] = React.useState<File[]>([]);
-  const [acting, setActing] = React.useState(false);
   const [pickError, setPickError] = React.useState<string | null>(null);
-  const [serverError, setServerError] = React.useState<string | null>(null);
+  const finishUploadController = React.useRef<AbortController | null>(null);
+  React.useEffect(() => {
+    return () => finishUploadController.current?.abort();
+  }, []);
+  const finishMutation = useNurseMutation({
+    mutationFn: async (fields: {
+      sessionNotes: string;
+      outcome?: string;
+      followUpSession?: { scheduledAt: string };
+    }) => {
+      // Step 1 — mark the session done (required). Step 2 — file the
+      // optional photos (docs never block Done; a failed upload keeps the
+      // dialog open so the nurse can retry or close anyway).
+      await completeClinicSession(referralId, session.id, {
+        sessionNotes: fields.sessionNotes,
+        ...(fields.outcome ? { outcome: fields.outcome } : {}),
+        ...(fields.followUpSession ? { followUpAt: fields.followUpSession.scheduledAt } : {}),
+      });
+      if (files.length > 0) {
+        finishUploadController.current?.abort();
+        const controller = new AbortController();
+        finishUploadController.current = controller;
+        await uploadClinicAttachments(referralId, session.id, files, {
+          signal: controller.signal,
+        });
+      }
+      return { photoCount: files.length };
+    },
+    successTitle: "Session done",
+    successDescription: (_vars, data) =>
+      data.photoCount > 0
+        ? `Notes saved with ${data.photoCount} photo${data.photoCount === 1 ? "" : "s"} filed.`
+        : "The session was marked done.",
+    errorFallback: "Could not finish the session. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
+      onClose();
+      setFiles([]);
+      setPickError(null);
+      onChanged();
+    },
+  });
+  const acting = finishMutation.isPending;
+  const serverError = finishMutation.error
+    ? apiErrorMessage(finishMutation.error, "Could not finish the session. Try again.")
+    : null;
   const now = useNowTick(open);
 
   if (!open) return null;
@@ -153,7 +196,7 @@ export function FinishSessionDialog({
     setFiles(picked);
   }
 
-  async function save(fields: {
+  function save(fields: {
     sessionNotes: string;
     outcome?: string;
     followUpSession?: { scheduledAt: string };
@@ -165,46 +208,14 @@ export function FinishSessionDialog({
         return;
       }
     }
-    setActing(true);
-    try {
-      // Step 1 — mark the session done (required). Step 2 — file the
-      // optional photos (docs never block Done; a failed upload keeps the
-      // dialog open so the nurse can retry or close anyway).
-      await completeClinicSession(referralId, session.id, {
-        sessionNotes: fields.sessionNotes,
-        ...(fields.outcome ? { outcome: fields.outcome } : {}),
-        ...(fields.followUpSession ? { followUpAt: fields.followUpSession.scheduledAt } : {}),
-      });
-      if (files.length > 0) {
-        try {
-          await uploadClinicAttachments(referralId, session.id, files);
-        } catch (uploadErr) {
-          onChanged();
-          setServerError(apiErrorMessage(uploadErr, "Session is done, but the photos did not upload. Try attaching them again from the session list."));
-          return;
-        }
-      }
-      toast.success({
-        title: "Session done",
-        description: files.length > 0
-          ? `Notes saved with ${files.length} photo${files.length === 1 ? "" : "s"} filed.`
-          : "The session was marked done.",
-      });
-      onClose();
-      setFiles([]);
-      setPickError(null);
-      onChanged();
-    } catch (err) {
-      setServerError(apiErrorMessage(err, "Could not finish the session. Try again."));
-    } finally {
-      setActing(false);
-    }
+    finishMutation.mutate(fields);
   }
 
   function handleClose() {
+    finishUploadController.current?.abort();
     onClose();
     setPickError(null);
-    setServerError(null);
+    finishMutation.reset();
   }
 
   return (
@@ -223,6 +234,7 @@ export function FinishSessionDialog({
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
+            disabled={acting}
             onChange={(e) => onPickFiles(e.target.files)}
           />
           <p style={{ fontSize: "0.8125rem", opacity: 0.75, marginTop: "0.25rem" }}>
@@ -247,33 +259,33 @@ export function MoveSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
-  const [acting, setActing] = React.useState(false);
-  const [serverError, setServerError] = React.useState<string | null>(null);
-
-  if (!open) return null;
-
-  async function save(scheduledAt: string) {
-    setActing(true);
-    try {
-      await rescheduleClinicSession(referralId, session.id, scheduledAt);
-      toast.success({ title: "Session moved", description: "The session was moved." });
+  const moveMutation = useNurseMutation({
+    mutationFn: (scheduledAt: string) =>
+      rescheduleClinicSession(referralId, session.id, scheduledAt),
+    successTitle: "Session moved",
+    successDescription: () => "The session was moved.",
+    errorFallback: "Could not move the session. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
       onClose();
       onChanged();
-    } catch (err) {
-      setServerError(apiErrorMessage(err, "Could not move the session. Try again."));
-    } finally {
-      setActing(false);
-    }
-  }
+    },
+  });
+  const acting = moveMutation.isPending;
+  const serverError = moveMutation.error
+    ? apiErrorMessage(moveMutation.error, "Could not move the session. Try again.")
+    : null;
+
+  if (!open) return null;
 
   return (
     <SharedRescheduleSessionDialog
       open
       onClose={() => {
         onClose();
-        setServerError(null);
+        moveMutation.reset();
       }}
-      onSubmit={(scheduledAt) => void save(scheduledAt)}
+      onSubmit={(scheduledAt) => moveMutation.mutate(scheduledAt)}
       busy={acting}
       serverError={serverError}
       idPrefix="nurse-move"
@@ -288,33 +300,32 @@ export function CancelSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
-  const [acting, setActing] = React.useState(false);
-  const [serverError, setServerError] = React.useState<string | null>(null);
-
-  if (!open) return null;
-
-  async function save(reason?: string) {
-    setActing(true);
-    try {
-      await cancelClinicSession(referralId, session.id, reason);
-      toast.success({ title: "Session cancelled", description: "The session was cancelled." });
+  const cancelMutation = useNurseMutation({
+    mutationFn: (reason?: string) => cancelClinicSession(referralId, session.id, reason),
+    successTitle: "Session cancelled",
+    successDescription: () => "The session was cancelled.",
+    errorFallback: "Could not cancel the session. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
       onClose();
       onChanged();
-    } catch (err) {
-      setServerError(apiErrorMessage(err, "Could not cancel the session. Try again."));
-    } finally {
-      setActing(false);
-    }
-  }
+    },
+  });
+  const acting = cancelMutation.isPending;
+  const serverError = cancelMutation.error
+    ? apiErrorMessage(cancelMutation.error, "Could not cancel the session. Try again.")
+    : null;
+
+  if (!open) return null;
 
   return (
     <SharedCancelSessionDialog
       open
       onClose={() => {
         onClose();
-        setServerError(null);
+        cancelMutation.reset();
       }}
-      onSubmit={(reason) => void save(reason)}
+      onSubmit={(reason) => cancelMutation.mutate(reason)}
       reasonLabel="Why is it cancelled? (optional)"
       busy={acting}
       serverError={serverError}
@@ -330,33 +341,32 @@ export function DeleteSessionDialog({
   onClose,
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
-  const [acting, setActing] = React.useState(false);
-  const [serverError, setServerError] = React.useState<string | null>(null);
-
-  if (!open) return null;
-
-  async function remove() {
-    setActing(true);
-    try {
-      await deleteClinicSession(referralId, session.id);
-      toast.success({ title: "Session deleted", description: "The cancelled session was removed." });
+  const deleteMutation = useNurseMutation({
+    mutationFn: () => deleteClinicSession(referralId, session.id),
+    successTitle: "Session deleted",
+    successDescription: () => "The cancelled session was removed.",
+    errorFallback: "Could not delete the session. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
       onClose();
       onChanged();
-    } catch (err) {
-      setServerError(apiErrorMessage(err, "Could not delete the session. Try again."));
-    } finally {
-      setActing(false);
-    }
-  }
+    },
+  });
+  const acting = deleteMutation.isPending;
+  const serverError = deleteMutation.error
+    ? apiErrorMessage(deleteMutation.error, "Could not delete the session. Try again.")
+    : null;
+
+  if (!open) return null;
 
   return (
     <SharedDeleteSessionDialog
       open
       onClose={() => {
         onClose();
-        setServerError(null);
+        deleteMutation.reset();
       }}
-      onConfirm={() => void remove()}
+      onConfirm={() => deleteMutation.mutate()}
       busy={acting}
       serverError={serverError}
     />
@@ -370,8 +380,25 @@ export function ResolveCaseDialog({
   onChanged,
 }: DialogProps & { row: NurseQueueRow }) {
   const [summary, setSummary] = React.useState("");
-  const [acting, setActing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const resolveMutation = useNurseMutation({
+    mutationFn: (resolutionSummary?: string) =>
+      updateNurseReferralStatus(row.id, "resolved", resolutionSummary),
+    successTitle: "Case closed",
+    successDescription: () => `${row.student}'s case is resolved.`,
+    errorFallback: "Could not resolve this case. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
+      onClose();
+      setSummary("");
+      setError(null);
+      onChanged();
+    },
+  });
+  const acting = resolveMutation.isPending;
+  const serverError = resolveMutation.error
+    ? apiErrorMessage(resolveMutation.error, "Could not resolve this case. Try again.")
+    : null;
 
   if (!open) return null;
 
@@ -381,32 +408,17 @@ export function ResolveCaseDialog({
   const docCount = row.sessions.reduce((n, s) => n + (s.attachments?.length ?? 0), 0);
   const canResolve = completed > 0;
 
-  async function save() {
+  function save() {
     if (!canResolve) {
       setError("Finish at least one clinic session before marking this case done — schedule one, mark it done, then come back.");
       return;
     }
     setError(null);
-    setActing(true);
-    try {
-      await updateNurseReferralStatus(
-        row.id,
-        "resolved",
-        summary.trim() ? summary.trim() : undefined
-      );
-      toast.success({ title: "Case closed", description: `${row.student}'s case is resolved.` });
-      onClose();
-      setSummary("");
-      onChanged();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Could not resolve this case. Try again."));
-    } finally {
-      setActing(false);
-    }
+    resolveMutation.mutate(summary.trim() ? summary.trim() : undefined);
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
+    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); resolveMutation.reset(); } }}>
       <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Finish &amp; close</DialogTitle>
@@ -434,14 +446,14 @@ export function ResolveCaseDialog({
             />
           </div>
         </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
+        {error || serverError ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error ?? serverError}</p></div>) : null}
         <DialogFooter>
-          <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
+          <Button variant="destructive" className={styles.btnRed} onClick={onClose} disabled={acting}>
             Cancel
           </Button>
-          <Button onClick={() => void save()} disabled={acting || !canResolve}>
+          <Button onClick={() => save()} disabled={acting || !canResolve}>
             {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Finish & close
+            {acting ? "Closing…" : "Finish & close"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -462,9 +474,51 @@ export function SessionDocsDialog({
   onChanged,
 }: DialogProps & { referralId: string; session: NurseSessionItem }) {
   const [docs, setDocs] = React.useState<ClinicAttachment[]>(session.attachments ?? []);
-  const [uploading, setUploading] = React.useState(false);
-  const [removingId, setRemovingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const uploadController = React.useRef<AbortController | null>(null);
+  // Abort an in-flight upload if the dialog unmounts — the spinner always
+  // settles instead of hanging forever.
+  React.useEffect(() => {
+    return () => uploadController.current?.abort();
+  }, []);
+  const uploadMutation = useNurseMutation({
+    mutationFn: (picked: File[]) => {
+      uploadController.current?.abort();
+      const controller = new AbortController();
+      uploadController.current = controller;
+      return uploadClinicAttachments(referralId, session.id, picked, {
+        signal: controller.signal,
+      });
+    },
+    successTitle: "Photos filed",
+    successDescription: (_vars, added) =>
+      `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
+    errorFallback: "Could not upload the photos. Try again.",
+    silentError: true,
+    onSuccessExtra: (added) => {
+      setDocs((prev) => [...prev, ...added]);
+      setError(null);
+      onChanged();
+    },
+  });
+  const removeMutation = useNurseMutation({
+    mutationFn: (id: string) => deleteClinicAttachment(referralId, session.id, id),
+    successTitle: "Photo removed",
+    successDescription: () => "The photo was removed from this session.",
+    errorFallback: "Could not remove that photo. Try again.",
+    silentError: true,
+    onSuccessExtra: (_data, id) => {
+      setDocs((prev) => prev.filter((d) => d.id !== id));
+      setError(null);
+      onChanged();
+    },
+  });
+  const uploading = uploadMutation.isPending;
+  const removingId = removeMutation.isPending ? (removeMutation.variables as string | undefined) ?? null : null;
+  const mutationError = uploadMutation.error ?? removeMutation.error;
+  const serverError = mutationError
+    ? apiErrorMessage(mutationError, "Could not update the photos. Try again.")
+    : null;
   const now = useNowTick(open);
 
   if (!open) return null;
@@ -475,7 +529,7 @@ export function SessionDocsDialog({
     session.status === "scheduled" &&
     new Date(session.scheduledAt).getTime() > now;
 
-  async function onPick(list: FileList | null) {
+  function onPick(list: FileList | null) {
     if (!list) return;
     if (docsLocked) {
       setError("This session hasn't started yet — you can file documentation once the scheduled time arrives.");
@@ -488,38 +542,26 @@ export function SessionDocsDialog({
       return;
     }
     setError(null);
-    setUploading(true);
-    try {
-      const added = await uploadClinicAttachments(referralId, session.id, picked);
-      setDocs((prev) => [...prev, ...added]);
-      toast.success({
-        title: "Photos filed",
-        description: `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
-      });
-      onChanged();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Could not upload the photos. Try again."));
-    } finally {
-      setUploading(false);
-    }
+    uploadMutation.mutate(picked);
   }
 
-  async function onRemove(id: string) {
+  function onRemove(id: string) {
     setError(null);
-    setRemovingId(id);
-    try {
-      await deleteClinicAttachment(referralId, session.id, id);
-      setDocs((prev) => prev.filter((d) => d.id !== id));
-      onChanged();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Could not remove that photo. Try again."));
-    } finally {
-      setRemovingId(null);
-    }
+    removeMutation.mutate(id);
+  }
+
+  const displayError = error ?? serverError;
+
+  function closeDocs() {
+    uploadController.current?.abort();
+    onClose();
+    setError(null);
+    uploadMutation.reset();
+    removeMutation.reset();
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
+    <Dialog open onOpenChange={(next) => { if (!next) { closeDocs(); } }}>
       <DialogContent className={styles.dialogScrollHidden}>
         <DialogHeader>
           <DialogTitle>Session documentation</DialogTitle>
@@ -577,9 +619,14 @@ export function SessionDocsDialog({
             />
           </div>
         </div>
-        {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
+        {uploading ? (
+          <p style={{ fontSize: "0.8125rem", opacity: 0.75 }} role="status" aria-live="polite">
+            <Loader2 className="animate-spin" aria-hidden style={{ display: "inline", verticalAlign: "text-bottom" }} /> Uploading photos…
+          </p>
+        ) : null}
+        {displayError ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{displayError}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={() => closeDocs()}>
             Done
           </Button>
         </DialogFooter>
@@ -638,10 +685,23 @@ export function NurseReferralFormViewModal({
   const [built, setBuilt] = React.useState<GcForm03Data | null>(null);
   const [sheetHtml, setSheetHtml] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [downloading, setDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
-  const [endorsing, setEndorsing] = React.useState(false);
-  const [endorseError, setEndorseError] = React.useState<string | null>(null);
+  const endorseMutation = useNurseMutation({
+    mutationFn: () => forwardNurseAdmCase(row.id),
+    successTitle: "Case endorsed",
+    successDescription: () => `${row.student}'s case moves to the ADM coordinator.`,
+    errorFallback: "Could not endorse this case. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
+      onClose();
+      onChanged();
+    },
+  });
+  const endorsing = endorseMutation.isPending;
+  const endorseError = endorseMutation.error
+    ? apiErrorMessage(endorseMutation.error, "Could not endorse this case. Try again.")
+    : null;
+  const [downloadPending, setDownloadPending] = React.useState(false);
 
   // Legacy state only: saved (form ready) but never forwarded, because the
   // save predates auto-endorse. New confirms never land here.
@@ -728,8 +788,8 @@ export function NurseReferralFormViewModal({
   if (!open) return null;
 
   async function download() {
-    if (!built || downloading) return;
-    setDownloading(true);
+    if (!built || downloadPending) return;
+    setDownloadPending(true);
     setDownloadError(null);
     try {
       const { downloadGcForm03 } = await import(
@@ -739,26 +799,12 @@ export function NurseReferralFormViewModal({
     } catch {
       setDownloadError("The .xlsx could not be prepared. Check your connection and try again.");
     } finally {
-      setDownloading(false);
+      setDownloadPending(false);
     }
   }
 
-  async function endorse() {
-    setEndorseError(null);
-    setEndorsing(true);
-    try {
-      await forwardNurseAdmCase(row.id);
-      toast.success({
-        title: "Case endorsed",
-        description: `${row.student}'s case moves to the ADM coordinator.`,
-      });
-      onClose();
-      onChanged();
-    } catch (err) {
-      setEndorseError(apiErrorMessage(err, "Could not endorse this case. Try again."));
-    } finally {
-      setEndorsing(false);
-    }
+  function endorse() {
+    endorseMutation.mutate();
   }
 
   const loading = !sheetHtml && !loadError;
@@ -832,17 +878,17 @@ export function NurseReferralFormViewModal({
               type="button"
               variant="outline"
               size="sm"
-              disabled={!built || downloading}
+              disabled={!built || downloadPending}
               onClick={() => void download()}
             >
               <Download aria-hidden />
-              {downloading ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              Download .xlsx
+              {downloadPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+              {downloadPending ? "Preparing…" : "Download .xlsx"}
             </Button>
             {needsEndorse ? (
-              <Button type="button" size="sm" disabled={endorsing} onClick={() => void endorse()}>
+              <Button type="button" size="sm" disabled={endorsing} onClick={() => endorse()}>
                 {endorsing ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                Confirm & endorse
+                {endorsing ? "Endorsing…" : "Confirm & endorse"}
               </Button>
             ) : null}
           </div>

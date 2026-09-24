@@ -156,6 +156,29 @@
   }
 }
 
+/* Trends section: case-load line (wide) + waiting-time bars. */
+.twoCol {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 1023px) {
+  .twoCol {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lineChart {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.lineChart text {
+  fill: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
 .panelHeadText {
   min-width: 12rem;
 }
@@ -306,6 +329,7 @@
   border-bottom: 1px solid var(--border);
   vertical-align: top;
   color: var(--foreground);
+  font-weight: 700;
 }
 
 .table tr:last-child td {
@@ -593,6 +617,14 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+/* Matches the trends line chart (200px / 12.5rem tall + 0.75rem margin). */
+.skelLine {
+  height: 12.5rem;
+  width: 100%;
+  border-radius: 8px;
   margin-top: 0.75rem;
 }
 

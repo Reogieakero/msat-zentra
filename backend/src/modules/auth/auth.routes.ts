@@ -149,6 +149,21 @@ router.post(
       // invisible until a profile exists. Roster is the canonical source for
       // grade level + section, matching the pending list.
       if (target.role === "student" && target.lrn) {
+        // A provisioned placeholder (auto-created by another desk from the
+        // roster, e.g. ADM) already owns this LRN — adopting it needs a
+        // human identity decision, so stop here instead of crashing on the
+        // unique constraint.
+        const lrnTaken = await prisma.studentProfile.findUnique({
+          where: { lrn: target.lrn },
+          select: { userId: true },
+        });
+        if (lrnTaken && lrnTaken.userId !== target.id) {
+          throw new AppError(
+            409,
+            "LRN_ALREADY_PROVISIONED",
+            "This LRN already has a learner record created by another desk. Ask an administrator to merge the accounts before approving.",
+          );
+        }
         const existingProfile = await prisma.studentProfile.findUnique({
           where: { userId: target.id },
           select: { userId: true },

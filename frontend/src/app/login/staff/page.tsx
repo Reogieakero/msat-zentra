@@ -8,7 +8,7 @@ export default function StaffLoginPage() {
       <LoginForm
         role="staff"
         title="Staff sign in"
-        description="For teachers, advisers, guidance, and school leadership."
+        description="For teachers, advisers, guidance, ADM coordinator, and school leadership."
         emailLabel="School email"
         emailPlaceholder="name@msat.edu"
       />

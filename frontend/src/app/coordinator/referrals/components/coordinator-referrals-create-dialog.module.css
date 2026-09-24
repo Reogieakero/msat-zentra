@@ -1,0 +1,58 @@
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.formLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.select {
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--background);
+  padding: 0 0.625rem;
+  font-size: 0.875rem;
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  animation: coord-spin 1s linear infinite;
+}
+
+@keyframes coord-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+/* Solid red cancel — the theme's destructive variant is only a soft tint. */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+}

@@ -134,21 +134,26 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                     {kindLabel(s.sessionType)}
                   </p>
                   <span className={styles.sessionTopRight}>
-                    <Badge
-                      variant={
-                        s.status === "completed"
-                          ? "success"
+                    {/* No status badge once the session is ongoing —
+                        the live timer beside it already reads "Ongoing",
+                        so a second badge would duplicate it. */}
+                    {isScheduled && started ? null : (
+                      <Badge
+                        variant={
+                          s.status === "completed"
+                            ? "success"
+                            : s.status === "cancelled"
+                              ? "secondary"
+                              : "default"
+                        }
+                      >
+                        {s.status === "completed"
+                          ? "Done"
                           : s.status === "cancelled"
-                            ? "secondary"
-                            : "default"
-                      }
-                    >
-                      {s.status === "completed"
-                        ? "Done"
-                        : s.status === "cancelled"
-                          ? "Cancelled"
-                          : "Upcoming"}
-                    </Badge>
+                            ? "Cancelled"
+                            : "Upcoming"}
+                      </Badge>
+                    )}
                     {isScheduled && Number.isFinite(targetMs) ? (
                       <span
                         className={styles.countdown}

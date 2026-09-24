@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
+import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
 import styles from "./record-teacher.module.css";
 
 function TeacherShell({ children }: { children: React.ReactNode }) {
@@ -28,6 +29,10 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
+  // Live adviser alerts: a sileo toast pops on the current page the moment
+  // another desk acts on their case (e.g. ADM coordinator books a parent
+  // meeting), plus their lists refresh. Single channel per mount.
+  useTeacherRealtime();
 
   const isDark = resolvedTheme === "dark";
 

@@ -1,0 +1,93 @@
+/* Table header labels stay readable (real text) so column structure is
+   visible during load; only the rows shimmer. */
+.thText {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* Row shapes — sized to the real enrolled cell content:
+   two-line student, ADM pill, status pill, eligibility pill,
+   approver name, date, kebab. */
+.name {
+  width: 8.5rem;
+  height: 0.875rem;
+}
+
+.sub {
+  width: 5rem;
+  height: 0.75rem;
+  margin-top: 0.375rem;
+}
+
+.badgeSm {
+  width: 3rem;
+  height: 1.375rem;
+  border-radius: 999px;
+}
+
+.badgeMd {
+  width: 4.5rem;
+  height: 1.375rem;
+  border-radius: 999px;
+}
+
+.badgeLg {
+  width: 7rem;
+  height: 1.375rem;
+  border-radius: 999px;
+}
+
+.approver {
+  width: 6rem;
+  height: 0.875rem;
+}
+
+.dateSm {
+  width: 5.5rem;
+  height: 0.875rem;
+}
+
+.kebab {
+  width: 2rem;
+  height: 2rem;
+  margin-left: auto;
+  border-radius: var(--radius-sm);
+}
+
+/* Pager mirror. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.range {
+  width: 9rem;
+  height: 0.75rem;
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageBtn {
+  width: 4.5rem;
+  height: 1.5rem;
+}
+
+.pageLabel {
+  width: 5.5rem;
+  height: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pager * {
+    animation: none;
+  }
+}

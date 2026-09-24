@@ -1,0 +1,207 @@
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  min-width: 62rem;
+}
+
+.table th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Alerts-queue table treatment — mirrors the nurse/guidance alerts lists:
+   roomy rows, muted small header labels, hairline row dividers. */
+.alertTable th,
+.alertTable td {
+  padding: 0.875rem 1rem;
+}
+
+.alertTable thead th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--muted-foreground);
+}
+
+.alertTable tbody td {
+  font-size: 0.8125rem;
+}
+
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cellTime {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.studentSub {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.meetingCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  min-width: 6rem;
+}
+
+.notBooked {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.meetingBookBtn {
+  padding: 0;
+  height: auto;
+  font-size: 0.75rem;
+}
+
+/* In-cell "Book meeting" — fixed 24px height with inverse theme colors
+   (foreground bg on background text) so it stays contrasting in both
+   light and dark mode. */
+.tdBookBtn {
+  height: 24px;
+  min-height: 24px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 0.75rem;
+  line-height: 1;
+  background-color: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+}
+
+.tdBookBtn:hover {
+  background-color: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+  opacity: 0.8;
+}
+
+.mono {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.emptyText {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+/* Background-sync indicator — rows stay visible and usable beneath it. */
+.syncBar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.errorBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  padding: 1rem;
+}
+
+.errorText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  animation: coord-spin 1s linear infinite;
+}
+
+@keyframes coord-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulsing dot inside the Live meeting badge — grabs the eye without
+   animating the whole badge. */
+.liveDot {
+  display: inline-block;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  margin-right: 0.375rem;
+  border-radius: 999px;
+  background-color: currentColor;
+  vertical-align: baseline;
+  animation: coord-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes coord-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+  .liveDot {
+    animation: none;
+  }
+}

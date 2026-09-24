@@ -59,8 +59,9 @@ const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
 ];
 
 /* Live clock — ticks every 30s; the elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. */
-function useNowTick(): number {
+   minutes only, so per-second ticks would just burn renders. Exported for
+   the nurse ADM referrals queue, which shares this table vocabulary. */
+export function useNowTick(): number {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -70,8 +71,8 @@ function useNowTick(): number {
 }
 
 /* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes only,
-   never seconds. */
-function formatElapsedShort(ms: number): string {
+   never seconds. Shared with the nurse ADM referrals queue. */
+export function formatElapsedShort(ms: number): string {
   const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
   if (totalMinutes < 1) return "just now";
   const days = Math.floor(totalMinutes / 1440);
@@ -95,8 +96,8 @@ function actionTimeOf(alert: NurseAlertItem): number | null {
 }
 
 /* ms from the given action time to now. Null when unparseable — the cell
-   then shows "—". */
-function msSince(time: string, now: number): number | null {
+   then shows "—". Shared with the nurse ADM referrals queue. */
+export function msSince(time: string, now: number): number | null {
   if (!time || time === "—") return null;
   const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
   const t = new Date(iso).getTime();
@@ -104,7 +105,7 @@ function msSince(time: string, now: number): number | null {
   return Math.max(0, now - t);
 }
 
-function statusVariant(
+export function statusVariant(
   status: string
 ): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
   switch (status) {
@@ -129,8 +130,8 @@ function statusVariant(
 
 /* Badge variant per action-derived status key — the same vocabulary the
    overview charts use, so every surface agrees. Unknown keys fall back
-   to the raw-status variant. */
-const ACTION_STATUS_VARIANT: Record<
+   to the raw-status variant. Shared with the nurse ADM referrals queue. */
+export const ACTION_STATUS_VARIANT: Record<
   string,
   "warning" | "default" | "secondary" | "outline" | "destructive" | "success"
 > = {
@@ -144,17 +145,18 @@ const ACTION_STATUS_VARIANT: Record<
   escalated: "destructive",
 };
 
-function RiskBadge({ level }: { level: NurseRiskLevel | undefined }) {
+export function RiskBadge({ level }: { level: NurseRiskLevel | undefined }) {
   if (!level) return <span className={styles.noRisk}>—</span>;
   const variant =
     level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
-type ActionIcon = React.ComponentType<{ className?: string }>;
+export type ActionIcon = React.ComponentType<{ className?: string }>;
 
-/* One icon per latest-action kind, matched by keyword on the action label. */
-function actionIconFor(label: string): ActionIcon {
+/* One icon per latest-action kind, matched by keyword on the action label.
+   Shared with the nurse ADM referrals queue. */
+export function actionIconFor(label: string): ActionIcon {
   const text = label.toLowerCase();
   if (text.includes("booked")) return CalendarPlus;
   if (text.includes("moved")) return CalendarClock;

@@ -183,20 +183,20 @@ export function NurseOverviewBreakdown({
     <div className={styles.threeCol}>
       <DonutPanel
         title="Caseload by status"
-        description="Every case routed to the clinic, by action status."
+        description="Every referred case — ADM and clinic matters — by the same actions as the case lists."
         rows={statusBreakdown}
         emptyText="No cases yet."
         unit={statusBreakdown.reduce((n, r) => n + r.count, 0) === 1 ? "case" : "cases"}
       />
       <BarPanel
         title="Clinic matters caseload"
-        description="Clinic cases, by action status."
+        description="Referred clinic matters, by clinic action."
         rows={clinicStatusBreakdown}
         emptyText="No clinic cases yet."
       />
       <BarPanel
         title="ADM cases caseload"
-        description="ADM cases, by action status."
+        description="Referred ADM cases, by ADM action."
         rows={admStatusBreakdown}
         emptyText="No ADM cases yet."
       />

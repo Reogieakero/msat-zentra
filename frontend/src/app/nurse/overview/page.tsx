@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NurseOverviewKpis } from "./components/NurseOverviewKpis";
 import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
 import { NurseOverviewBreakdown } from "./components/NurseOverviewBreakdown";
+import { NurseOverviewTrends } from "./components/NurseOverviewTrends";
 import { fetchNurseOverview } from "./components/nurse-overview-data";
 import { useQuery } from "@tanstack/react-query";
 import styles from "./components/nurse-overview.module.css";
@@ -86,6 +87,28 @@ export default function NurseOverviewPage() {
             </Card>
           ))}
         </div>
+
+        <hr className={styles.divider} />
+
+        <div className={styles.twoCol}>
+          <Card className={`${styles.panel} ${styles.skelPanel}`}>
+            <Skeleton className={styles.skelCardTitle} />
+            <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
+            <Skeleton className={styles.skelLine} aria-hidden="true" />
+          </Card>
+          <Card className={`${styles.panel} ${styles.skelPanel}`}>
+            <Skeleton className={styles.skelCardTitle} />
+            <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
+            <div className={styles.skelBars}>
+              {[72, 54, 38, 26].map((w) => (
+                <div key={w} className={styles.skelBarRowWrap} aria-hidden="true">
+                  <Skeleton className={styles.skelBarYLabel} />
+                  <Skeleton className={styles.skelBarRow} style={{ width: `${w}%` }} />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </section>
     );
   }
@@ -133,6 +156,10 @@ export default function NurseOverviewPage() {
         clinicStatusBreakdown={data.clinicStatusBreakdown}
         admStatusBreakdown={data.admStatusBreakdown}
       />
+
+      <hr className={styles.divider} />
+
+      <NurseOverviewTrends dailyTrend={data.dailyTrend} needsReview={data.needsReview} />
     </section>
   );
 }

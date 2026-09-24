@@ -22,8 +22,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
+import { AdmTrackDialog } from "@/components/adm-tracker/AdmTrackDialog";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/sonner";
 import { NurseStartHandlingDialog } from "./NurseStartHandlingDialog";
 import {
   addNurseFollowUpNote,
@@ -32,6 +32,7 @@ import {
   type NurseQueueRow,
   type NurseReferralStatus,
 } from "./nurse-overview-data";
+import { useNurseMutation } from "./use-nurse-mutation";
 import { isEndorsed } from "../../referrals/components/nurse-referrals-format";
 import styles from "./nurse-overview.module.css";
 
@@ -61,7 +62,6 @@ export function NurseQueueRowActions({
   // form, View anecdotal report, See more. No status edits, no truncation.
   viewOnly?: boolean;
 }) {
-  const [acting, setActing] = React.useState(false);
   const [startOpen, setStartOpen] = React.useState(false);
   const [resolveOpen, setResolveOpen] = React.useState(false);
   const [noteOpen, setNoteOpen] = React.useState(false);
@@ -71,6 +71,31 @@ export function NurseQueueRowActions({
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [privacyOpen, setPrivacyOpen] = React.useState(false);
   const [endorsedOpen, setEndorsedOpen] = React.useState(false);
+  const [trackOpen, setTrackOpen] = React.useState(false);
+
+  const statusMutation = useNurseMutation({
+    mutationFn: (input: { status: NurseReferralStatus; resolutionSummary?: string }) =>
+      updateNurseReferralStatus(row.id, input.status, input.resolutionSummary),
+    successTitle: "Case updated",
+    successDescription: () => `${row.student} moved to the new status.`,
+    errorFallback: "Could not update this case.",
+    onSuccessExtra: () => onChanged(),
+  });
+  const noteMutation = useNurseMutation({
+    mutationFn: (text: string) => addNurseFollowUpNote(row.anecdotalId!, text),
+    successTitle: "Note added",
+    successDescription: () => `Follow-up note saved for ${row.student}.`,
+    errorFallback: "Could not save the note. Try again.",
+    silentError: true,
+    onSuccessExtra: () => {
+      setNoteOpen(false);
+      setNote("");
+      setDialogError(null);
+      onChanged();
+    },
+  });
+  const statusPending = statusMutation.isPending;
+  const notePending = noteMutation.isPending;
 
   const isClosed = row.status === "resolved" || row.status === "dismissed";
   // Endorsed ADM cases moved to the coordinator with their full report —
@@ -90,22 +115,31 @@ export function NurseQueueRowActions({
     else setPreviewId(row.anecdotalId);
   }
 
-  async function runStatus(status: NurseReferralStatus, resolutionSummary?: string) {
-    setActing(true);
-    try {
-      await updateNurseReferralStatus(row.id, status, resolutionSummary);
-      toast.success({ title: "Case updated", description: `${row.student} moved to the new status.` });
-      onChanged();
-      return true;
-    } catch (err) {
-      toast.error({ title: "Update failed", description: apiErrorMessage(err, "Could not update this case.") });
-      return false;
-    } finally {
-      setActing(false);
-    }
+  function runStatus(status: NurseReferralStatus, resolutionSummary?: string) {
+    statusMutation.mutate(
+      { status, resolutionSummary },
+      {
+        onSuccess: () => {
+          if (status === "resolved") {
+            setResolveOpen(false);
+            setSummary("");
+            setDialogError(null);
+          }
+        },
+        onError: () => {
+          if (status === "resolved") {
+            setDialogError(
+              statusMutation.error
+                ? apiErrorMessage(statusMutation.error, "Could not resolve this case. Try again.")
+                : "Could not resolve this case. Try again."
+            );
+          }
+        },
+      }
+    );
   }
 
-  async function handleResolve() {
+  function handleResolve() {
     setDialogError(null);
     // Mirror the referrals-page gate: Done needs ≥1 completed clinic
     // session (docs stay optional). The server enforces this too — this
@@ -114,34 +148,25 @@ export function NurseQueueRowActions({
       setDialogError("Finish at least one clinic session before marking this case done.");
       return;
     }
-    const ok = await runStatus("resolved", summary.trim() ? summary.trim() : undefined);
-    if (ok) {
-      setResolveOpen(false);
-      setSummary("");
-    } else {
-      setDialogError("Could not resolve this case. Try again.");
-    }
+    runStatus("resolved", summary.trim() ? summary.trim() : undefined);
   }
 
-  async function handleNote() {
+  function handleNote() {
     if (!row.anecdotalId) return;
     if (!note.trim()) {
       setDialogError("Write the note first.");
       return;
     }
     setDialogError(null);
-    setActing(true);
-    try {
-      await addNurseFollowUpNote(row.anecdotalId, note.trim());
-      toast.success({ title: "Note added", description: `Follow-up note saved for ${row.student}.` });
-      setNoteOpen(false);
-      setNote("");
-      onChanged();
-    } catch (err) {
-      setDialogError(apiErrorMessage(err, "Could not save the note. Try again."));
-    } finally {
-      setActing(false);
-    }
+    noteMutation.mutate(note.trim(), {
+      onError: () => {
+        setDialogError(
+          noteMutation.error
+            ? apiErrorMessage(noteMutation.error, "Could not save the note. Try again.")
+            : "Could not save the note. Try again."
+        );
+      },
+    });
   }
 
   const isAdm = row.type === "ADM";
@@ -153,7 +178,6 @@ export function NurseQueueRowActions({
           <Button
             variant="ghost"
             size="icon-sm"
-            disabled={acting}
             aria-label={`Actions for ${row.student}'s case`}
           >
             <MoreHorizontal aria-hidden />
@@ -162,6 +186,14 @@ export function NurseQueueRowActions({
         <DropdownMenuContent align="end" className="min-w-56">
           {viewOnly ? (
             <>
+              {isAdm && (
+                <DropdownMenuItem
+                  className={styles.menuItem}
+                  onSelect={() => setTrackOpen(true)}
+                >
+                  Track ADM referral
+                </DropdownMenuItem>
+              )}
               {viewFormHref && (
                 <DropdownMenuItem asChild className={styles.menuItem}>
                   <Link href={viewFormHref}>View referral form</Link>
@@ -169,7 +201,7 @@ export function NurseQueueRowActions({
               )}
               <DropdownMenuItem
                 className={styles.menuItem}
-                disabled={acting || (!row.anecdotalId && !isEndorsedRow)}
+                disabled={!row.anecdotalId && !isEndorsedRow}
                 onSelect={openReport}
               >
                 View anecdotal report
@@ -199,34 +231,42 @@ export function NurseQueueRowActions({
           )}
           {/* ADM cases follow the consultation review pipeline — raw status
               edits are blocked server-side, so only notes stay here. */}
+          {isAdm && (
+            <DropdownMenuItem
+              disabled={notePending}
+              onSelect={() => setTrackOpen(true)}
+            >
+              Track ADM referral
+            </DropdownMenuItem>
+          )}
           {!isAdm && (
             <>
               {(row.status === "pending" || row.status === "escalated") && !hiddenItems.includes("start") && (
-                <DropdownMenuItem disabled={acting} onSelect={() => setStartOpen(true)}>
+                <DropdownMenuItem disabled={statusPending} onSelect={() => setStartOpen(true)}>
                   Start handling…
                 </DropdownMenuItem>
               )}
               {QUICK_ACTIONS.filter((a) => a.status !== row.status).map((action) => (
                 <DropdownMenuItem
                   key={action.status}
-                  disabled={acting}
-                  onSelect={() => void runStatus(action.status)}
+                  disabled={statusPending}
+                  onSelect={() => runStatus(action.status)}
                 >
-                  {action.label}
+                  {statusPending ? "Updating…" : action.label}
                 </DropdownMenuItem>
               ))}
             </>
           )}
-          <DropdownMenuItem disabled={acting || !row.anecdotalId} onSelect={openReport}>
+          <DropdownMenuItem disabled={notePending || !row.anecdotalId} onSelect={openReport}>
             View anecdotal report…
           </DropdownMenuItem>
-          <DropdownMenuItem disabled={acting || !row.anecdotalId} onSelect={() => setNoteOpen(true)}>
+          <DropdownMenuItem disabled={notePending || !row.anecdotalId} onSelect={() => setNoteOpen(true)}>
             Add follow-up note…
           </DropdownMenuItem>
           {!isAdm && !hiddenItems.includes("resolve") && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={acting} onSelect={() => setResolveOpen(true)}>
+              <DropdownMenuItem disabled={statusPending} onSelect={() => setResolveOpen(true)}>
                 Resolve case…
               </DropdownMenuItem>
             </>
@@ -253,6 +293,7 @@ export function NurseQueueRowActions({
             if (!open) {
               setResolveOpen(false);
               setDialogError(null);
+              statusMutation.reset();
             }
           }}
         >
@@ -278,17 +319,22 @@ export function NurseQueueRowActions({
                 onChange={(e) => setSummary(e.target.value)}
               />
             </div>
-            {dialogError ? <p className={styles.dialogError}>{dialogError}</p> : null}
+            {dialogError || statusMutation.error ? (
+              <p className={styles.dialogError} role="alert">
+                {dialogError ??
+                  apiErrorMessage(statusMutation.error, "Could not resolve this case. Try again.")}
+              </p>
+            ) : null}
             <DialogFooter>
-              <Button variant="destructive" className={styles.btnRed} onClick={() => setResolveOpen(false)}>
+              <Button variant="destructive" className={styles.btnRed} onClick={() => setResolveOpen(false)} disabled={statusPending}>
                 Cancel
               </Button>
               <Button
-                onClick={() => void handleResolve()}
-                disabled={acting || (row.type !== "ADM" && row.completedSessions === 0)}
+                onClick={() => handleResolve()}
+                disabled={statusPending || (row.type !== "ADM" && row.completedSessions === 0)}
               >
-                {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                Resolve case
+                {statusPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {statusPending ? "Resolving…" : "Resolve case"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -302,6 +348,7 @@ export function NurseQueueRowActions({
             if (!open) {
               setNoteOpen(false);
               setDialogError(null);
+              noteMutation.reset();
             }
           }}
         >
@@ -322,14 +369,19 @@ export function NurseQueueRowActions({
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
-            {dialogError ? <p className={styles.dialogError}>{dialogError}</p> : null}
+            {dialogError || noteMutation.error ? (
+              <p className={styles.dialogError} role="alert">
+                {dialogError ??
+                  apiErrorMessage(noteMutation.error, "Could not save the note. Try again.")}
+              </p>
+            ) : null}
             <DialogFooter>
-              <Button variant="destructive" className={styles.btnRed} onClick={() => setNoteOpen(false)}>
+              <Button variant="destructive" className={styles.btnRed} onClick={() => setNoteOpen(false)} disabled={notePending}>
                 Cancel
               </Button>
-              <Button onClick={() => void handleNote()} disabled={acting}>
-                {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                Save note
+              <Button onClick={() => handleNote()} disabled={notePending}>
+                {notePending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {notePending ? "Saving…" : "Save note"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -337,6 +389,25 @@ export function NurseQueueRowActions({
       )}
       {previewId && (
         <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
+      )}
+      {isAdm && trackOpen && (
+        <AdmTrackDialog
+          open={trackOpen}
+          onClose={() => setTrackOpen(false)}
+          caseInfo={{
+            student: row.student,
+            lrn: row.lrn,
+            section: row.section,
+            reason: row.reason,
+          }}
+          track={{
+            referralStatus: row.status,
+            consultReviewer: row.consultReviewer ?? "nurse",
+            referredBy: "Adviser",
+            anecdotalDate: row.anecdotal?.observedAt ?? row.referredAt,
+            referredDate: row.referredAt,
+          }}
+        />
       )}
       <PrivacyNoticeDialog
         open={privacyOpen}

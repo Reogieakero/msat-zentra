@@ -10,6 +10,7 @@ import {
   Stethoscope,
   HeartPulse,
   Flame,
+  Send,
 } from "lucide-react";
 
 import styles from "./nurse-sidebar.module.css";
@@ -28,7 +29,9 @@ type NavGroup = {
 
 // School Nurse nav — Referrals are split into two dedicated pages (ADM
 // Cases and Clinic Matters) so the reader never needs the old case-type
-// filter; each page locks to its own type.
+// filter; each page locks to its own type. ADM Referrals mirrors the
+// guidance ADM Referrals page (reports + review queue) for nurse-scope
+// ADM cases.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -49,6 +52,11 @@ const NAV: NavGroup[] = [
         title: "Clinic Matters",
         href: "/nurse/referrals/clinic",
         icon: Stethoscope,
+      },
+      {
+        title: "ADM Referrals",
+        href: "/nurse/adm",
+        icon: Send,
       },
     ],
   },

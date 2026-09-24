@@ -1,15 +1,14 @@
 "use client";
 
-import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { toast } from "@/components/ui/sonner";
-import { apiErrorMessage } from "../../overview/components/nurse-overview-data";
 import {
   markAllNurseNotificationsRead,
   markNurseNotificationRead,
   type NurseNotificationItem,
 } from "./nurse-alerts-data";
+import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
+import { Loader2 } from "lucide-react";
 import styles from "./nurse-alerts.module.css";
 
 export function NurseNotifications({
@@ -21,37 +20,31 @@ export function NurseNotifications({
   unread: number;
   onChanged: () => void;
 }) {
-  const [acting, setActing] = React.useState(false);
+  const readOneMutation = useNurseMutation({
+    mutationFn: (id: string) => markNurseNotificationRead(id),
+    successTitle: "Notification updated",
+    successDescription: () => "The notification was marked as read.",
+    errorFallback: "Could not mark this notification as read.",
+    onSuccessExtra: () => onChanged(),
+  });
+  const readAllMutation = useNurseMutation({
+    mutationFn: () => markAllNurseNotificationsRead(),
+    successTitle: "All caught up",
+    successDescription: () => "Every notification is marked as read.",
+    errorFallback: "Could not mark notifications as read.",
+    onSuccessExtra: () => onChanged(),
+  });
+  const readingId = readOneMutation.isPending
+    ? ((readOneMutation.variables as string | undefined) ?? null)
+    : null;
+  const readingAll = readAllMutation.isPending;
 
-  async function handleRead(id: string) {
-    setActing(true);
-    try {
-      await markNurseNotificationRead(id);
-      onChanged();
-    } catch (err) {
-      toast.error({
-        title: "Update failed",
-        description: apiErrorMessage(err, "Could not mark this notification as read."),
-      });
-    } finally {
-      setActing(false);
-    }
+  function handleRead(id: string) {
+    readOneMutation.mutate(id);
   }
 
-  async function handleReadAll() {
-    setActing(true);
-    try {
-      await markAllNurseNotificationsRead();
-      toast.success({ title: "All caught up", description: "Every notification is marked as read." });
-      onChanged();
-    } catch (err) {
-      toast.error({
-        title: "Update failed",
-        description: apiErrorMessage(err, "Could not mark notifications as read."),
-      });
-    } finally {
-      setActing(false);
-    }
+  function handleReadAll() {
+    readAllMutation.mutate();
   }
 
   return (
@@ -66,8 +59,9 @@ export function NurseNotifications({
           </p>
         </div>
         {unread > 0 && (
-          <Button variant="outline" size="sm" disabled={acting} onClick={() => void handleReadAll()}>
-            Mark all read
+          <Button variant="outline" size="sm" disabled={readingAll} onClick={() => handleReadAll()}>
+            {readingAll ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            {readingAll ? "Marking…" : "Mark all read"}
           </Button>
         )}
       </div>
@@ -91,10 +85,11 @@ export function NurseNotifications({
                 <Button
                   variant="link"
                   className={styles.linkBtn}
-                  disabled={acting}
-                  onClick={() => void handleRead(n.id)}
+                  disabled={readingId === n.id || readingAll}
+                  onClick={() => handleRead(n.id)}
                 >
-                  Mark read
+                  {readingId === n.id ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                  {readingId === n.id ? "Marking…" : "Mark read"}
                 </Button>
               )}
             </li>

@@ -593,31 +593,48 @@ router.post(
         if (sessionAt.getTime() <= Date.now()) {
           throw new AppError(400, "INVALID_ACTION", "Clinic session must be set in the future");
         }
-        // Accept carries the first session — still blocked when an active
-        // session already exists on this referral.
-        await ensureNoActiveSession(referral.id);
       }
-      const updated = await prisma.referral.update({
-        where: { id: referral.id },
-        data: {
-          status: "in_progress",
-          intakeNotes: req.body.intakeNotes?.trim() ? req.body.intakeNotes.trim() : null,
-          acceptedAt: new Date(),
-        },
-      });
-      let session = null;
-      if (sessionAt) {
-        session = await prisma.counselingSession.create({
+      // Atomic accept: referral flip + first session in one transaction so
+      // a case is never half-accepted, and the active-session check runs
+      // inside the transaction to close the rapid double-click race.
+      const { updated, session } = await prisma.$transaction(async (tx) => {
+        if (sessionAt) {
+          const active = await tx.counselingSession.count({
+            where: { referralId: referral.id, status: "scheduled" },
+          });
+          if (active > 0) {
+            throw new AppError(
+              400,
+              "ACTIVE_SESSION_EXISTS",
+              "This referral already has a session that is not done yet — finish or cancel it before booking another one"
+            );
+          }
+        }
+        const updatedRow = await tx.referral.update({
+          where: { id: referral.id },
           data: {
-            referralId: referral.id,
-            sessionType: "individual",
-            scheduledAt: sessionAt,
-            venue: req.body.clinicSession?.venue?.trim() || "School clinic",
-            status: "scheduled",
-            createdBy: req.user!.id,
+            status: "in_progress",
+            intakeNotes: req.body.intakeNotes?.trim() ? req.body.intakeNotes.trim() : null,
+            acceptedAt: new Date(),
           },
-          include: { creator: { select: { fullName: true } } },
         });
+        let sessionRow = null;
+        if (sessionAt) {
+          sessionRow = await tx.counselingSession.create({
+            data: {
+              referralId: referral.id,
+              sessionType: "individual",
+              scheduledAt: sessionAt,
+              venue: req.body.clinicSession?.venue?.trim() || "School clinic",
+              status: "scheduled",
+              createdBy: req.user!.id,
+            },
+            include: { creator: { select: { fullName: true } } },
+          });
+        }
+        return { updated: updatedRow, session: sessionRow };
+      });
+      if (session) {
         await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: `First clinic session booked on accept`, oldValue: null, newValue: { sessionType: session.sessionType, scheduledAt: session.scheduledAt } });
       }
       await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted by the clinic${session ? " with a clinic session booked" : ""}`, oldValue: { status: referral.status }, newValue: { status: "in_progress" } });
@@ -792,22 +809,53 @@ router.post(
       const formNote = formParts ? `[ADM referral] ${formParts}` : null;
       const notesWithReview = referral.notes ? `${referral.notes}\n${note}` : note;
       const notesWithForm = formNote ? `${notesWithReview}\n${formNote}` : notesWithReview;
-      const updated = await prisma.referral.update({
-        where: { id: referral.id },
-        data:
-          outcome === "endorse"
-            ? {
-                status: "in_progress",
-                notes: notesWithForm,
-              }
-            : {
-                status: "dismissed",
-                notes: notesWithReview,
-              },
+      // Atomic review: status flip + optional session in one transaction.
+      const { updated, session } = await prisma.$transaction(async (tx) => {
+        const updatedRow = await tx.referral.update({
+          where: { id: referral.id },
+          data:
+            outcome === "endorse"
+              ? {
+                  status: "in_progress",
+                  notes: notesWithForm,
+                }
+              : {
+                  status: "dismissed",
+                  notes: notesWithReview,
+                },
+        });
+        let sessionRow = null;
+        if (sessionAt) {
+          const active = await tx.counselingSession.count({
+            where: { referralId: referral.id, status: "scheduled" },
+          });
+          if (active > 0) {
+            throw new AppError(
+              400,
+              "ACTIVE_SESSION_EXISTS",
+              "This referral already has a session that is not done yet — finish or cancel it before booking another one"
+            );
+          }
+          const venue =
+            clinicInput && typeof clinicInput.venue === "string" && clinicInput.venue.trim()
+              ? clinicInput.venue.trim()
+              : "School clinic";
+          sessionRow = await tx.counselingSession.create({
+            data: {
+              referralId: referral.id,
+              sessionType: "individual",
+              scheduledAt: sessionAt,
+              venue,
+              status: "scheduled",
+              createdBy: req.user!.id,
+            },
+            include: { creator: { select: { fullName: true } } },
+          });
+        }
+        return { updated: updatedRow, session: sessionRow };
       });
-      let session = null;
-      if (sessionAt) {
-        session = await createNurseAdmSession(referral.id, req.user!.id, sessionAt, clinicInput, `Clinic session booked on ADM review`);
+      if (session) {
+        await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: `Clinic session booked on ADM review`, oldValue: null, newValue: { sessionType: session.sessionType, scheduledAt: session.scheduledAt } });
       }
       if (outcome === "endorse") {
         await writeAudit({
@@ -859,9 +907,6 @@ router.post(
       if (referral.status !== "pending") {
         throw new AppError(400, "INVALID_ACTION", "Only a new case can be reviewed");
       }
-      // Confirming is blocked while a session is still upcoming — finish
-      // or cancel it first (covers booked sessions and booked follow-ups).
-      await ensureNoActiveSession(referral.id);
       const { recommendation } = req.body as { recommendation: string };
       const clinicInput = (req.body as { clinicSession?: { scheduledAt?: unknown; venue?: unknown } }).clinicSession;
       const sessionAt = parseNurseAdmSession(clinicInput);
@@ -871,15 +916,49 @@ router.post(
         ? `[ADM endorsed] ${recommendation.trim()} | ${formParts}`
         : `[ADM endorsed] ${recommendation.trim()}`;
       const withEndorsement = referral.notes ? `${referral.notes}\n${note}` : note;
-      const updated = await prisma.referral.update({
-        where: { id: referral.id },
-        data: {
-          notes: withEndorsement,
-          referralFormReady: true,
-        },
+      // Atomic form save: note + ready flag + optional session in one
+      // transaction; the upcoming-session guard runs inside so a concurrent
+      // booking cannot slip between check and write.
+      const { updated, session } = await prisma.$transaction(async (tx) => {
+        const active = await tx.counselingSession.count({
+          where: { referralId: referral.id, status: "scheduled" },
+        });
+        if (active > 0) {
+          throw new AppError(
+            400,
+            "ACTIVE_SESSION_EXISTS",
+            "Finish or cancel the upcoming session (or follow-up) before confirming this referral"
+          );
+        }
+        const updatedRow = await tx.referral.update({
+          where: { id: referral.id },
+          data: {
+            notes: withEndorsement,
+            referralFormReady: true,
+          },
+        });
+        let sessionRow = null;
+        if (sessionAt) {
+          const venue =
+            clinicInput && typeof clinicInput.venue === "string" && clinicInput.venue.trim()
+              ? clinicInput.venue.trim()
+              : "School clinic";
+          sessionRow = await tx.counselingSession.create({
+            data: {
+              referralId: referral.id,
+              sessionType: "individual",
+              scheduledAt: sessionAt,
+              venue,
+              status: "scheduled",
+              createdBy: req.user!.id,
+            },
+            include: { creator: { select: { fullName: true } } },
+          });
+        }
+        return { updated: updatedRow, session: sessionRow };
       });
-      if (sessionAt) {
-        await createNurseAdmSession(referral.id, req.user!.id, sessionAt, clinicInput, `Clinic session booked with ADM referral form`);
+      if (session) {
+        await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: `Clinic session booked with ADM referral form`, oldValue: null, newValue: { sessionType: session.sessionType, scheduledAt: session.scheduledAt } });
       }
       await writeAudit({
         userId: req.user!.id,
@@ -1016,32 +1095,45 @@ router.post(
       if (!isSessionType(req.body.sessionType)) {
         throw new AppError(400, "INVALID_ACTION", "Unknown session type");
       }
-      // One active session per referral — finish or cancel the existing
-      // scheduled session before booking another one.
-      await ensureNoActiveSession(referral.id);
-      const created = await prisma.counselingSession.create({
-        data: {
-          referralId: referral.id,
-          sessionType: req.body.sessionType,
-          scheduledAt: parseScheduledAt(req.body.scheduledAt),
-          venue: req.body.venue?.trim() || null,
-          status: "scheduled",
-          createdBy: req.user!.id,
-        },
-        include: {
-          creator: { select: { fullName: true } },
-          attachments: { orderBy: { uploadedAt: "asc" } },
-        },
+      // Atomic booking: active-session guard + create + pending→in_progress
+      // flip in one transaction to close the rapid double-click race.
+      const created = await prisma.$transaction(async (tx) => {
+        const active = await tx.counselingSession.count({
+          where: { referralId: referral.id, status: "scheduled" },
+        });
+        if (active > 0) {
+          throw new AppError(
+            400,
+            "ACTIVE_SESSION_EXISTS",
+            "This referral already has a session that is not done yet — finish or cancel it before booking another one"
+          );
+        }
+        const row = await tx.counselingSession.create({
+          data: {
+            referralId: referral.id,
+            sessionType: req.body.sessionType,
+            scheduledAt: parseScheduledAt(req.body.scheduledAt),
+            venue: req.body.venue?.trim() || null,
+            status: "scheduled",
+            createdBy: req.user!.id,
+          },
+          include: {
+            creator: { select: { fullName: true } },
+            attachments: { orderBy: { uploadedAt: "asc" } },
+          },
+        });
+        // Booking is handling: a still-pending referral leaves "Needs review"
+        // the moment its first session is booked (mirrors nurse-accept).
+        if (referral.status === "pending") {
+          await tx.referral.update({
+            where: { id: referral.id },
+            data: { status: "in_progress" },
+          });
+        }
+        return row;
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: created.id, reason: "Counseling session scheduled", oldValue: null, newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt } });
-      // Booking is handling: a still-pending referral leaves "Needs review"
-      // the moment its first session is booked (mirrors nurse-accept, which
-      // flips pending → in_progress when a session goes with the accept).
       if (referral.status === "pending") {
-        await prisma.referral.update({
-          where: { id: referral.id },
-          data: { status: "in_progress" },
-        });
         await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: "Session booked — case now in progress", oldValue: { status: "pending" }, newValue: { status: "in_progress" } });
       }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);

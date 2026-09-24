@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/sonner";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { ClinicDatePicker, ClinicTimePicker } from "./ClinicDateTimePicker";
 import {
@@ -21,6 +20,7 @@ import {
   apiErrorMessage,
   type NurseQueueRow,
 } from "./nurse-overview-data";
+import { useNurseMutation } from "./use-nurse-mutation";
 import styles from "./nurse-overview.module.css";
 
 /**
@@ -39,22 +39,47 @@ export function NurseStartHandlingDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [acting, setActing] = React.useState(false);
   const [startNote, setStartNote] = React.useState("");
   const [sessionDate, setSessionDate] = React.useState("");
   const [sessionTime, setSessionTime] = React.useState("");
   const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = React.useState(false);
 
+  const acceptMutation = useNurseMutation({
+    mutationFn: (input: { intakeNotes?: string; scheduledAt?: string }) =>
+      acceptNurseCase(row.id, input),
+    successTitle: "Case accepted",
+    successDescription: () => {
+      const hasSession = Boolean(sessionDate && sessionTime);
+      return hasSession
+        ? `${row.student} is now in progress with a clinic session booked.`
+        : `${row.student} is now in progress.`;
+    },
+    errorFallback: "Could not accept this case. Try again.",
+    onSuccessExtra: () => {
+      onClose();
+      setStartNote("");
+      setSessionDate("");
+      setSessionTime("");
+      setDialogError(null);
+      onChanged();
+    },
+  });
+  const acting = acceptMutation.isPending;
+  const serverError = acceptMutation.error
+    ? apiErrorMessage(acceptMutation.error, "Could not accept this case. Try again.")
+    : null;
+
   function todayKey(): string {
     return new Date().toISOString().slice(0, 10);
   }
 
-  async function handleStart() {
+  function handleStart() {
     // Real-world intake in one atomic call: review first, record opening
     // notes, book the first clinic session, then accept. Either everything
     // lands or the dialog stays open with the server's message.
     setDialogError(null);
+    acceptMutation.reset();
     let scheduledAt: string | undefined;
     if (sessionDate || sessionTime) {
       if (!sessionDate || !sessionTime) {
@@ -72,28 +97,10 @@ export function NurseStartHandlingDialog({
       }
       scheduledAt = `${sessionDate}T${sessionTime}:00`;
     }
-    setActing(true);
-    try {
-      await acceptNurseCase(row.id, {
-        intakeNotes: startNote.trim() ? startNote.trim() : undefined,
-        scheduledAt,
-      });
-      toast.success({
-        title: "Case accepted",
-        description: scheduledAt
-          ? `${row.student} is now in progress with a clinic session booked.`
-          : `${row.student} is now in progress.`,
-      });
-      onClose();
-      setStartNote("");
-      setSessionDate("");
-      setSessionTime("");
-      onChanged();
-    } catch (err) {
-      setDialogError(apiErrorMessage(err, "Could not accept this case. Try again."));
-    } finally {
-      setActing(false);
-    }
+    acceptMutation.mutate({
+      ...(startNote.trim() ? { intakeNotes: startNote.trim() } : {}),
+      ...(scheduledAt ? { scheduledAt } : {}),
+    });
   }
 
   if (!open) return null;
@@ -105,6 +112,7 @@ export function NurseStartHandlingDialog({
         if (!isOpen) {
           onClose();
           setDialogError(null);
+          acceptMutation.reset();
         }
       }}
     >
@@ -201,7 +209,11 @@ export function NurseStartHandlingDialog({
           </div>
           <p className={styles.dialogHint}>Held at the school clinic. Leave both empty to accept without booking.</p>
         </div>
-        {dialogError ? <p className={styles.dialogError}>{dialogError}</p> : null}
+        {dialogError || serverError ? (
+          <p className={styles.dialogError} role="alert">
+            {dialogError ?? serverError}
+          </p>
+        ) : null}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
