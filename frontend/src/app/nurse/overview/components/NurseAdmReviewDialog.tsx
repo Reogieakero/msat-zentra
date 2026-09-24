@@ -8,11 +8,11 @@ import {
   type AdmReviewDraft,
 } from "@/components/adm-review/AdmReviewDialog";
 import {
-  apiErrorMessage,
   reviewNurseAdmCase,
   scheduleClinicSession,
   type NurseQueueRow,
 } from "./nurse-overview-data";
+import { useNurseMutation } from "./use-nurse-mutation";
 
 /**
  * ADM consultation review for cases the adviser routed to the nurse —
@@ -21,6 +21,11 @@ import {
  * Reject (turn down) closes the case straight from this dialog.
  * "Start handling" stays clinic-only — this dialog is the nurse's
  * pipeline path for ADM cases.
+ *
+ * Book-session and reject run through useNurseMutation so the buttons get
+ * action-specific pending state, success toasts fire only after the backend
+ * confirms, and errors reset loading + surface inline (shared dialog) without
+ * duplicate toasts.
  */
 export function NurseAdmReviewDialog({
   row,
@@ -29,28 +34,38 @@ export function NurseAdmReviewDialog({
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
-  // Create referral hands the typed recommendation + optional session to
-  // the caller, which opens the fill-up form sheet in place.
   onCreateReferral: (draft: { recommendation: string; scheduledAt?: string }) => void;
 }) {
   const [open, setOpen] = React.useState(false);
 
+  const bookMutation = useNurseMutation({
+    mutationFn: (scheduledAt: string) =>
+      scheduleClinicSession(row.id, { scheduledAt }),
+    successTitle: "Session booked",
+    successDescription: () =>
+      `${row.student}'s case stays pending until you confirm the referral.`,
+    errorFallback: "Could not book the session. Try again.",
+    silentError: true,
+    onSuccessExtra: () => onChanged(),
+  });
+
+  const rejectMutation = useNurseMutation({
+    mutationFn: (recommendation: string) =>
+      reviewNurseAdmCase(row.id, { recommendation, outcome: "reject" }),
+    successTitle: "Case rejected",
+    successDescription: () =>
+      `${row.student}'s case was closed without ADM follow-through.`,
+    errorFallback: "Could not submit your review. Try again.",
+    silentError: true,
+    onSuccessExtra: () => onChanged(),
+  });
+
   async function bookSessionOnly(scheduledAt: string) {
-    await scheduleClinicSession(row.id, { scheduledAt });
-    toast.success({
-      title: "Session booked",
-      description: `${row.student}'s case stays pending until you confirm the referral.`,
-    });
-    onChanged();
+    await bookMutation.mutateAsync(scheduledAt);
   }
 
   async function decideReject(recommendation: string) {
-    await reviewNurseAdmCase(row.id, { recommendation, outcome: "reject" });
-    toast.success({
-      title: "Case rejected",
-      description: `${row.student}'s case was closed without ADM follow-through.`,
-    });
-    onChanged();
+    await rejectMutation.mutateAsync(recommendation);
   }
 
   function goToReferralForm(draft: AdmReviewDraft) {
@@ -62,15 +77,27 @@ export function NurseAdmReviewDialog({
     onCreateReferral(draft);
   }
 
+  const busy = bookMutation.isPending || rejectMutation.isPending;
+
   return (
     <>
-      <Button variant="outline" size="xs" style={{ height: "32px" }} onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        size="xs"
+        style={{ height: "32px" }}
+        onClick={() => setOpen(true)}
+        disabled={busy}
+      >
         Review ADM case
       </Button>
 
       <SharedAdmReviewDialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          bookMutation.reset();
+          rejectMutation.reset();
+        }}
         student={row.student}
         lrn={row.lrn}
         sectionLine={`${row.section} · ${row.grade}`}
@@ -95,9 +122,9 @@ export function NurseAdmReviewDialog({
           askBookEmpty:
             "Pick a date and a time first — or leave both empty and carry the session into the referral form instead.",
           pastSession: "Clinic session must be set in the future.",
+          bookFailed: "Could not book the session. Try again.",
           rejectFailed: "Could not submit your review. Try again.",
         }}
-        formatError={apiErrorMessage}
         onBookSession={bookSessionOnly}
         onReject={decideReject}
         onCreateReferral={goToReferralForm}

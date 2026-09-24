@@ -8,6 +8,7 @@ import { NurseOverviewKpis } from "./components/NurseOverviewKpis";
 import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
 import { NurseOverviewBreakdown } from "./components/NurseOverviewBreakdown";
 import { NurseOverviewTrends } from "./components/NurseOverviewTrends";
+import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import { fetchNurseOverview } from "./components/nurse-overview-data";
 import { useQuery } from "@tanstack/react-query";
 import styles from "./components/nurse-overview.module.css";
@@ -137,8 +138,13 @@ export default function NurseOverviewPage() {
     );
   }
 
+  // Background refetch (staleTime expiry, realtime invalidate, focus):
+  // keep existing data visible + a subtle non-blocking indicator.
+  const refreshing = isFetching && !isPending;
+
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <NurseRefreshBadge label="Refreshing overview…" /> : null}
       <div className={styles.topRow}>
         <div className={styles.mainCol}>
           <NurseNeedsReviewPanel needsReview={data.needsReview} />

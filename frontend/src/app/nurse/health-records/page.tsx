@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchNurseAlerts } from "../alerts/components/nurse-alerts-data";
 import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
+import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./health-records-page.module.css";
 
 /**
@@ -80,8 +81,11 @@ export default function NurseHealthRecordsPage() {
     );
   }
 
+  const refreshing = isRefetching && !isPending;
+
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <NurseRefreshBadge label="Refreshing records…" /> : null}
       <NurseDocumentariesList alerts={data.alerts} />
     </section>
   );

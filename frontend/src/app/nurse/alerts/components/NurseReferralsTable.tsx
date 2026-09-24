@@ -145,7 +145,19 @@ export const ACTION_STATUS_VARIANT: Record<
   escalated: "destructive",
 };
 
-export function RiskBadge({ level }: { level: NurseRiskLevel | undefined }) {
+export function RiskBadge({
+  level,
+  loading = false,
+}: {
+  level: NurseRiskLevel | undefined;
+  loading?: boolean;
+}) {
+  if (loading && !level)
+    return (
+      <span className={styles.noRisk} role="status" aria-label="Loading risk level">
+        …
+      </span>
+    );
   if (!level) return <span className={styles.noRisk}>—</span>;
   const variant =
     level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
@@ -188,10 +200,12 @@ export function actionIconFor(label: string): ActionIcon {
 export function NurseReferralsTable({
   alerts,
   riskByStudent,
+  riskLoading = false,
   onChanged,
 }: {
   alerts: NurseAlertItem[];
   riskByStudent: Record<string, NurseRiskLevel>;
+  riskLoading?: boolean;
   onChanged: () => void;
 }) {
   const [query, setQuery] = React.useState("");
@@ -400,7 +414,7 @@ export function NurseReferralsTable({
                         })()}
                       </TableCell>
                     <TableCell>
-                      <RiskBadge level={riskLevel} />
+                      <RiskBadge level={riskLevel} loading={riskLoading} />
                     </TableCell>
                     <TableCell>
                       <p className={styles.actionLabel}>

@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
+import { markNurseLocalMutation } from "@/lib/realtime/nurseRealtimeMeta";
 import { apiErrorMessage } from "./nurse-overview-data";
 
 /**
@@ -20,6 +21,7 @@ export const NURSE_QUERY_KEYS = [
   ["nurse-overview"],
   ["nurse-risk"],
   ["nurse-risk-levels"],
+  ["nurse-notifications"],
 ] as const;
 
 export function useNurseInvalidate() {
@@ -54,6 +56,9 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onSuccess: (data, variables) => {
+      // Mark the write so inbound realtime echoes within a few seconds are
+      // treated as our own change (no duplicate toast for the initiator).
+      markNurseLocalMutation();
       for (const key of NURSE_QUERY_KEYS) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
       }

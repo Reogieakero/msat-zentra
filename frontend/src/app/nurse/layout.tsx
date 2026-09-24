@@ -18,6 +18,7 @@ import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
 import { NURSE_REFERRAL_DRAFT_KEY } from "./overview/components/nurse-overview-data";
 import { useNurseRealtime } from "@/lib/realtime/nurseChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
+import { NurseNotificationsBell } from "./components/nurse-notifications-bell";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {
@@ -66,6 +67,8 @@ function NurseShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className={styles.spacer} />
+
+        <NurseNotificationsBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

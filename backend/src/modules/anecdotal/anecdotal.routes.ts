@@ -6,7 +6,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
-import { fanoutNotification } from "../../lib/notify.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { resolveActiveTermId, recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import {
   buildOcForm01Buffer,
@@ -153,9 +153,9 @@ router.post(
       await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals"]);
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}${req.body.consultReviewer ? ` (consult reviewer: ${req.body.consultReviewer})` : ""}` });
       res.status(201).json(referral);
-      // Realtime handoff (background, off the adviser critical path): ADM
-      // coordinators get a sileo toast the moment the referral lands — the
-      // row itself already appears via their Referral-table subscription.
+      // Realtime handoff (background, off the adviser critical path): the
+      // receiving desk gets a sileo toast the moment the referral lands —
+      // the row itself already appears via their Referral-table subscription.
       // Best-effort — never delays the 201.
       if (req.body.referredToRole === "adm_coordinator") {
         const actorId = req.user!.id;
@@ -163,30 +163,23 @@ router.post(
         const viaConsult = req.body.consultReviewer
           ? " (via consultation review)"
           : "";
-        void (async () => {
-          try {
-            const coordinators = await prisma.user.findMany({
-              where: { role: "adm_coordinator", status: "active" },
-              select: { id: true },
-              take: 10,
-            });
-            await Promise.all(
-              coordinators
-                .filter((c) => c.id !== actorId)
-                .map((c) =>
-                  fanoutNotification({
-                    userId: c.id,
-                    sourceTable: "referrals",
-                    action: "status",
-                    message: `New ADM referral submitted${viaConsult}.`,
-                    sourceId: referralId,
-                  }),
-                ),
-            );
-          } catch {
-            // Notifications are best-effort; the referral already committed.
-          }
-        })();
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message: `New ADM referral submitted${viaConsult}.`,
+          sourceId: referralId,
+          excludeUserId: actorId,
+        });
+      } else if (req.body.referredToRole === "nurse") {
+        const actorId = req.user!.id;
+        const referralId = (referral as { id: string }).id;
+        void fanoutToRole("nurse", {
+          sourceTable: "referrals",
+          action: "status",
+          message: "New clinic referral submitted.",
+          sourceId: referralId,
+          excludeUserId: actorId,
+        });
       }
     } catch (e) { next(e); }
   }

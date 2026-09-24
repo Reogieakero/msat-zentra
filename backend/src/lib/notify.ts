@@ -17,6 +17,11 @@ const TYPE_MAP: Record<string, string> = {
   "referrals:status": "referral_status_change",
   "adviser_sf10_access_requests:approve": "sf10_access_decision",
   "adviser_sf10_access_requests:deny": "sf10_access_decision",
+  "adm_devices:issue": "device_issued",
+  "adm_devices:return": "device_returned",
+  "adm_parent_meetings:book": "meeting_booked",
+  "adm_parent_meetings:reschedule": "meeting_rescheduled",
+  "adm_parent_meetings:outcome": "meeting_outcome",
 };
 
 export function deriveNotifType(sourceTable: string, action: string): string {
@@ -62,5 +67,39 @@ export async function fanoutNotification(input: NotifyInput) {
     });
   } catch (e) {
     logger.error({ err: e, userId: input.userId }, "notification fanout failed");
+  }
+}
+
+// Role fanout: notify every active user holding `role` (bounded), excluding
+// the actor. Best-effort — never throws, never delays the confirmed response.
+// Callers invoke it with `void` after `res.json`. The 60s per-user dedup in
+// fanoutNotification suppresses doubles when the same recipient is also
+// notified directly (e.g. preparedBy + role fanout).
+export async function fanoutToRole(
+  role: string,
+  input: Omit<NotifyInput, "userId"> & { excludeUserId?: string },
+) {
+  try {
+    const users = await prisma.user.findMany({
+      where: { role: role as never, status: "active" },
+      select: { id: true },
+      take: 10,
+    });
+    await Promise.all(
+      users
+        .filter((u) => u.id !== input.excludeUserId)
+        .map((u) =>
+          fanoutNotification({
+            userId: u.id,
+            sourceTable: input.sourceTable,
+            action: input.action,
+            message: input.message,
+            sourceId: input.sourceId,
+            channel: input.channel,
+          }),
+        ),
+    );
+  } catch (e) {
+    logger.error({ err: e, role }, "role notification fanout failed");
   }
 }

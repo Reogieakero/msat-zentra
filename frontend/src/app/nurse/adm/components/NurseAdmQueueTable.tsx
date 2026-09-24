@@ -34,10 +34,12 @@ import styles from "./nurse-adm.module.css";
 export function NurseAdmQueueTable({
   queue,
   riskByStudent,
+  riskLoading = false,
   onChanged,
 }: {
   queue: NurseAlertItem[];
   riskByStudent: Record<string, NurseRiskLevel>;
+  riskLoading?: boolean;
   onChanged: () => void;
 }) {
   const [formSheet, setFormSheet] = React.useState<{
@@ -116,6 +118,7 @@ export function NurseAdmQueueTable({
         emptyHint="New ADM cases referred to you will appear here."
         rows={rows}
         renderActions={renderActions}
+        riskLoading={riskLoading}
       />
 
       {formSheet && (

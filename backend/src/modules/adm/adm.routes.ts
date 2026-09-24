@@ -9,7 +9,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
-import { fanoutNotification } from "../../lib/notify.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { ADM_STAGE_FLOW, ADM_STAGES, canTransition, evaluateAdmEligibility, type AdmStage } from "../../services/adm.js";
 
 const router = Router();
@@ -957,6 +957,14 @@ router.post(
           sourceId: referral.id,
         });
       }
+      // Every coordinator desk learns a new case exists (all-transactions rule).
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "referrals",
+        action: "status",
+        message: `Learner profile created — parent meeting can now be booked.`,
+        sourceId: referral.id,
+        excludeUserId: me,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -997,6 +1005,17 @@ router.post(
           action: "status",
           message: `ADM case for ${studentName} signed by the Principal.`,
           sourceId: profile.referral.id,
+        });
+      }
+      // The coordinator desk learns the approval (all-transactions rule).
+      {
+        const studentName = profile.student?.user?.fullName ?? "a case";
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message: `ADM case for ${studentName} signed by the Principal — ready for enrollment monitoring.`,
+          sourceId: profile.referral?.id ?? profile.id,
+          excludeUserId: req.user!.id,
         });
       }
     } catch (e) { next(e); }
@@ -1059,6 +1078,15 @@ router.post(
           sourceId: profile.referralId,
         });
       }
+      // Other coordinators on the desk see the return too (dedup suppresses
+      // a second row for preparedBy when they are the only coordinator).
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "referrals",
+        action: "status",
+        message: `ADM case returned by the Principal for revision.`,
+        sourceId: profile.referralId,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) {
       next(e);
     }
@@ -1170,6 +1198,21 @@ router.patch(
               ? `ADM case for ${studentName} endorsed to the Principal.`
               : `ADM case for ${studentName} moved to ${stageWords}.`,
           sourceId: profile.referral.id,
+        });
+      }
+      // Coordinator desk tracks every stage move (all-transactions rule),
+      // including moves the acting coordinator performed themselves.
+      {
+        const stageWords = target.replace(/_/g, " ");
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message:
+            target === "principal_approval"
+              ? `ADM case endorsed to the Principal.`
+              : `ADM case moved to ${stageWords}.`,
+          sourceId: profile.referral?.id ?? profile.id,
+          excludeUserId: req.user!.id,
         });
       }
     } catch (e) {
@@ -1298,6 +1341,13 @@ router.post(
           sourceId: profile.referral.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "referrals",
+        action: "status",
+        message: `ADM case certified and endorsed to the Principal.`,
+        sourceId: profile.referral?.id ?? profile.id,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) {
       next(e);
     }
@@ -1350,6 +1400,13 @@ router.post(
           sourceId: device.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "adm_devices",
+        action: "issue",
+        message: `Learning device ${serial} issued.`,
+        sourceId: device.id,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1393,6 +1450,13 @@ router.post(
           sourceId: device.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "adm_devices",
+        action: "return",
+        message: `Learning device ${device.deviceSerial} marked returned.`,
+        sourceId: device.id,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1585,6 +1649,13 @@ router.post(
           sourceId: meeting.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "adm_parent_meetings",
+        action: "book",
+        message: `Parent meeting booked for ${meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ")}.`,
+        sourceId: meeting.id,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1669,6 +1740,13 @@ router.post(
           sourceId: meeting.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "adm_parent_meetings",
+        action: "book",
+        message: `Parent meeting booked for ${meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ")}.`,
+        sourceId: meeting.id,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1785,6 +1863,13 @@ router.patch(
           sourceId: meeting.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "adm_parent_meetings",
+        action: "reschedule",
+        message: `Parent meeting moved to ${nextAt.toISOString().slice(0, 16).replace("T", " ")}.`,
+        sourceId: meeting.id,
+        excludeUserId: actorId,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -2187,6 +2272,15 @@ router.patch(
           sourceId: meeting.id,
         });
       }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "adm_parent_meetings",
+        action: "outcome",
+        message: attended
+          ? `Parent meeting attended.`
+          : `Parents did not attend — home visitation path applies.`,
+        sourceId: meeting.id,
+        excludeUserId: actorId,
+      });
     } catch (e) { next(e); }
   }
 );

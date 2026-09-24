@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/providers";
+import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import { fetchNurseRiskLevels } from "../alerts/components/nurse-alerts-data";
 import { fetchNurseRisk } from "./components/nurse-risk-data";
 import {
@@ -165,8 +166,13 @@ export default function NurseRiskPage() {
     );
   }
 
+  const fetching = riskQuery.isFetching || levelsQuery.isFetching;
+
+  const refreshing = !riskQuery.isPending && fetching;
+
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <NurseRefreshBadge label="Refreshing risk dashboard…" /> : null}
       <div>
         <p className={styles.eyebrow}>School Nurse · Insights</p>
         <div className={styles.titleRow}>

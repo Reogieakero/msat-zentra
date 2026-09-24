@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NurseReferralsTable } from "./components/NurseReferralsTable";
+import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import { fetchNurseAlerts, fetchNurseRiskLevels } from "./components/nurse-alerts-data";
 import styles from "./components/nurse-alerts.module.css";
 
@@ -29,12 +30,19 @@ export default function NurseAlertsPage() {
     ],
     [data]
   );
-  const { data: riskByStudent } = useQuery({
+  const {
+    data: riskByStudent,
+    isPending: riskPending,
+    isFetching: riskFetching,
+    isError: riskError,
+    refetch: refetchRisk,
+  } = useQuery({
     queryKey: ["nurse-risk-levels", studentIds],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });
+  const riskLoading = studentIds.length > 0 && (riskPending || riskFetching);
 
   if (isPending) {
     return (
@@ -95,11 +103,31 @@ export default function NurseAlertsPage() {
     );
   }
 
+  // Background refetch: keep data visible, show a subtle indicator.
+  // Risk levels load independently — the table renders with "—" shimmer
+  // state instead of blocking, and surfaces retry on failure.
+  const refreshing = isFetching && !isPending;
+
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <NurseRefreshBadge label="Refreshing cases…" /> : null}
+      {riskError && studentIds.length > 0 ? (
+        <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
+          Risk levels couldn&apos;t load.{" "}
+          <button
+            type="button"
+            onClick={() => refetchRisk()}
+            disabled={riskFetching}
+            style={{ textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit" }}
+          >
+            {riskFetching ? "Retrying…" : "Retry"}
+          </button>
+        </p>
+      ) : null}
       <NurseReferralsTable
         alerts={data.alerts}
         riskByStudent={riskByStudent ?? {}}
+        riskLoading={riskLoading}
         onChanged={() => {
           void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
           void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });

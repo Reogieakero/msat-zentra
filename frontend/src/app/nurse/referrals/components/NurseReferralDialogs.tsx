@@ -823,23 +823,50 @@ export function NurseReferralFormViewModal({
 
         {loading ? (
           <div
-            className="flex flex-col gap-3 py-4"
             aria-busy="true"
             role="status"
             aria-label="Loading referral form"
           >
-            {/* Mirrors the GcForm03 sheet: header + field grid + rows. */}
-            <Skeleton className="h-6 w-1/3" aria-hidden="true" />
-            <Skeleton className="h-4 w-2/3" aria-hidden="true" />
-            <div className="grid grid-cols-2 gap-2" aria-hidden="true">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+            {/* Mirrors the GCForm-03 sheet surface: white bordered panel,
+                DepEd-style header, label/field pairs, checkbox block,
+                wide content rows — same proportions as the filled sheet. */}
+            <div
+              className={`gcform03-print-sheet ${sheetStyles.sheetWrap}`}
+              aria-hidden="true"
+            >
+              <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                <Skeleton style={{ width: "9rem", height: "2rem", flexShrink: 0 }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flex: 1 }}>
+                  <Skeleton style={{ width: "70%", height: "1.125rem" }} />
+                  <Skeleton style={{ width: "50%", height: "0.875rem" }} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
+                    <Skeleton style={{ width: "38%", height: "0.8125rem", flexShrink: 0 }} />
+                    <Skeleton style={{ width: "58%", height: "1.25rem" }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} style={{ width: "7rem", height: "1.375rem", borderRadius: "4px" }} />
+                ))}
+              </div>
+              <div style={{ marginTop: "0.75rem" }}>
+                <Skeleton style={{ width: "45%", height: "0.8125rem" }} />
+                <Skeleton style={{ width: "100%", height: "4.5rem", marginTop: "0.3125rem" }} />
+              </div>
+              <div style={{ marginTop: "0.75rem" }}>
+                <Skeleton style={{ width: "55%", height: "0.8125rem" }} />
+                <Skeleton style={{ width: "100%", height: "4.5rem", marginTop: "0.3125rem" }} />
+              </div>
+              <div style={{ marginTop: "0.75rem" }}>
+                <Skeleton style={{ width: "60%", height: "0.8125rem" }} />
+                <Skeleton style={{ width: "100%", height: "1.5rem", marginTop: "0.3125rem" }} />
+              </div>
             </div>
-            <Skeleton className="h-12 w-full" aria-hidden="true" />
-            <Skeleton className="h-12 w-full" aria-hidden="true" />
-            <Skeleton className="h-4 w-[55%]" aria-hidden="true" />
           </div>
         ) : null}
         {loadError ? (

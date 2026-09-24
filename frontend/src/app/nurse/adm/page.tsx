@@ -14,6 +14,7 @@ import {
 import { buildNurseAdmReferrals } from "./components/nurse-adm-data";
 import { NurseAdmReports } from "./components/NurseAdmReports";
 import { NurseAdmQueueTable } from "./components/NurseAdmQueueTable";
+import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./components/nurse-adm.module.css";
 
 /**
@@ -48,12 +49,19 @@ export default function NurseAdmPage() {
     ],
     [data]
   );
-  const { data: riskByStudent } = useQuery({
+  const {
+    data: riskByStudent,
+    isPending: riskPending,
+    isFetching: riskFetching,
+    isError: riskError,
+    refetch: refetchRisk,
+  } = useQuery({
     queryKey: ["nurse-risk-levels", studentIds],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });
+  const riskLoading = studentIds.length > 0 && (riskPending || riskFetching);
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
@@ -63,45 +71,69 @@ export default function NurseAdmPage() {
   }
 
   if (isPending) {
+    // High-fidelity skeleton mirroring NurseAdmReports (donut + legend,
+    // 12-week line + interpretations) + queue panel (head + search +
+    // 8-col thead + rows + pager) so nothing shifts on load.
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.grid} aria-hidden="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading ADM referrals">
+        <div className={styles.skelGrid} aria-hidden="true">
           <Card className={styles.card}>
-            <CardContent>
-              <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
-              <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
-              <Skeleton style={{ width: "100%", height: "168px", marginTop: "0.75rem" }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginTop: "0.5rem" }}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-                    <Skeleton style={{ width: "6rem", height: "0.8125rem" }} />
-                    <Skeleton style={{ width: "2rem", height: "0.8125rem" }} />
-                  </div>
-                ))}
+            <CardContent className={styles.skelCardBody}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelPanelDesc} />
+              <div className={styles.skelSplit}>
+                <Skeleton className={styles.skelDonut} />
+                <div className={styles.skelLegend}>
+                  {[0, 1, 2, 3, 4].map((j) => (
+                    <Skeleton key={j} className={styles.skelLegendRow} />
+                  ))}
+                </div>
               </div>
+              <Skeleton className={styles.skelInterp} />
             </CardContent>
           </Card>
           <Card className={styles.card}>
-            <CardContent>
-              <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
-              <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
-              <Skeleton style={{ width: "100%", height: "200px", marginTop: "0.75rem" }} />
+            <CardContent className={styles.skelCardBody}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelPanelDesc} />
+              <Skeleton className={styles.skelLine} />
+              <Skeleton className={styles.skelInterp} />
             </CardContent>
           </Card>
         </div>
 
         <Card className={styles.card} aria-hidden="true">
-          <CardContent>
-            <Skeleton style={{ width: "12rem", height: "1.125rem" }} />
-            <Skeleton style={{ width: "16rem", height: "0.8125rem", marginTop: "0.25rem" }} />
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", padding: "0.5rem" }}>
-              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} style={{ height: "0.6875rem", flex: 1 }} />
+          <CardContent className={styles.skelPanel}>
+            <div className={styles.skelPanelHead}>
+              <div>
+                <Skeleton className={styles.skelCardTitle} />
+                <Skeleton className={styles.skelPanelDesc} />
+              </div>
+              <div className={styles.skelPanelActions}>
+                <Skeleton className={styles.skelSearch} />
+              </div>
+            </div>
+            <div className={styles.skelThead}>
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <Skeleton key={i} className={styles.skelTheadCell} />
               ))}
             </div>
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} style={{ height: "3.625rem", width: "100%", marginTop: "0.25rem" }} />
+            <div className={styles.skelCards}>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className={styles.skelCardRow} />
+              ))}
+            </div>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className={styles.skelRow} />
             ))}
+            <div className={styles.skelPager}>
+              <Skeleton className={styles.skelRange} />
+              <div className={styles.skelPagerBtns}>
+                <Skeleton className={styles.skelBtn} />
+                <Skeleton className={styles.skelPageLabel} />
+                <Skeleton className={styles.skelBtn} />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -111,10 +143,10 @@ export default function NurseAdmPage() {
   if (isError || !data) {
     return (
       <section className={styles.page}>
-        <div className={styles.errorBlock} role="alert">
-          <p className={styles.errorText}>
-            We couldn&apos;t load the ADM referrals. Please check your internet
-            connection and try again.
+        <div className={styles.pageError} role="alert">
+          <p className={styles.pageErrorTitle}>We couldn&apos;t load the ADM referrals</p>
+          <p className={styles.pageErrorHint}>
+            Please check your internet connection and try again.
           </p>
           <Button
             size="sm"
@@ -125,20 +157,37 @@ export default function NurseAdmPage() {
             {isFetching ? (
               <Loader2 className={styles.spin} aria-hidden="true" />
             ) : null}
-            {isFetching ? "Loading…" : "Try again"}
+            Try again
           </Button>
         </div>
       </section>
     );
   }
 
+  const refreshing = isFetching && !isPending;
+
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <NurseRefreshBadge label="Refreshing ADM referrals…" /> : null}
+      {riskError && studentIds.length > 0 ? (
+        <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
+          Risk levels couldn&apos;t load.{" "}
+          <button
+            type="button"
+            onClick={() => refetchRisk()}
+            disabled={riskFetching}
+            style={{ textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit" }}
+          >
+            {riskFetching ? "Retrying…" : "Retry"}
+          </button>
+        </p>
+      ) : null}
       <NurseAdmReports data={data} />
 
       <NurseAdmQueueTable
         queue={data.queue}
         riskByStudent={riskByStudent ?? {}}
+        riskLoading={riskLoading}
         onChanged={refresh}
       />
     </section>

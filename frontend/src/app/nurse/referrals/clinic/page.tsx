@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { NurseAlertsTable } from "../components/NurseAlertsTable";
 import { NurseReferralsSkeleton } from "../components/NurseReferralsSkeleton";
+import { NurseRefreshBadge } from "../../components/nurse-refresh-badge";
 import { fetchNurseAlerts } from "../../alerts/components/nurse-alerts-data";
 import styles from "../nurse-referrals-page.module.css";
 
@@ -66,8 +67,11 @@ function NurseClinicReferralsView() {
     );
   }
 
+  const refreshing = isRefetching && !isPending;
+
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <NurseRefreshBadge label="Refreshing clinic matters…" /> : null}
       <NurseAlertsTable
         alerts={data.alerts}
         onChanged={refresh}

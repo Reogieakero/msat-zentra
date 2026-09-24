@@ -15,15 +15,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
-import { apiErrorMessage } from "./coordinator-data";
+import { apiErrorMessage } from "../overview/components/nurse-overview-data";
 import {
-  coordinatorNotificationTarget,
   formatBellDate,
+  nurseNotificationTarget,
   prettifyNotificationType,
 } from "@/lib/notifications/label";
-import styles from "../coordinator.module.css";
+import styles from "../nurse.module.css";
 
-interface CoordinatorNotificationItem {
+interface NurseNotificationItem {
   id: string;
   userId: string;
   type: string;
@@ -34,26 +34,23 @@ interface CoordinatorNotificationItem {
   createdAt: string;
 }
 
-async function fetchCoordinatorNotifications(
-  signal?: AbortSignal,
-): Promise<CoordinatorNotificationItem[]> {
-  const { data } = await apiClient.get<CoordinatorNotificationItem[]>(
-    "/api/notifications/",
-    { signal },
-  );
+async function fetchNurseNotifications(signal?: AbortSignal): Promise<NurseNotificationItem[]> {
+  const { data } = await apiClient.get<NurseNotificationItem[]>("/api/notifications/", {
+    signal,
+  });
   return Array.isArray(data) ? data : [];
 }
 
-/* Persistent notification bell — the inbox behind the realtime toasts.
-   Missed toasts stay here with an unread badge; reading reuses the same
-   backend inbox as the other desks. Realtime/poll invalidation keeps the
+/* Persistent notification bell — the sole nurse inbox (bell-only decision).
+   The legacy page-level NurseNotifications panel was removed; missed sileo
+   toasts stay here with an unread badge. Realtime invalidation keeps the
    count live without manual refresh. */
-export function CoordinatorNotificationsBell() {
+export function NurseNotificationsBell() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const notificationsQuery = useQuery({
-    queryKey: ["coordinator-notifications"],
-    queryFn: ({ signal }) => fetchCoordinatorNotifications(signal),
+    queryKey: ["nurse-notifications"],
+    queryFn: ({ signal }) => fetchNurseNotifications(signal),
     staleTime: 30_000,
   });
 
@@ -61,12 +58,9 @@ export function CoordinatorNotificationsBell() {
   const unread = notifications.filter((n) => !n.isRead).length;
 
   const refresh = () => {
-    void queryClient.invalidateQueries({
-      queryKey: ["coordinator-notifications"],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["coordinator-dashboard"],
-    });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-notifications"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
   };
 
   const readOneMutation = useMutation({
@@ -86,7 +80,7 @@ export function CoordinatorNotificationsBell() {
     onError: (err) =>
       toast.error({
         title: "Could not mark as read",
-        description: apiErrorMessage(err),
+        description: apiErrorMessage(err, "Could not mark this notification as read."),
       }),
   });
 
@@ -105,7 +99,7 @@ export function CoordinatorNotificationsBell() {
     onError: (err) =>
       toast.error({
         title: "Could not mark all as read",
-        description: apiErrorMessage(err),
+        description: apiErrorMessage(err, "Could not mark notifications as read."),
       }),
   });
 
@@ -119,11 +113,7 @@ export function CoordinatorNotificationsBell() {
         <button
           type="button"
           className={styles.bellButton}
-          aria-label={
-            unread > 0
-              ? `Notifications, ${unread} unread`
-              : "Notifications"
-          }
+          aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
         >
           <Bell className={styles.bellIcon} aria-hidden="true" />
           {unread > 0 ? (
@@ -171,7 +161,7 @@ export function CoordinatorNotificationsBell() {
           <DropdownMenuItem disabled>No notifications yet.</DropdownMenuItem>
         ) : (
           notifications.slice(0, 10).map((n) => {
-            const target = coordinatorNotificationTarget(n);
+            const target = nurseNotificationTarget(n);
             return (
               <DropdownMenuItem
                 key={n.id}
@@ -179,8 +169,7 @@ export function CoordinatorNotificationsBell() {
                 onSelect={(e) => {
                   e.preventDefault();
                   if (readingId === n.id) return;
-                  if (!n.isRead)
-                    readOneMutation.mutate({ id: n.id, href: target?.href ?? null });
+                  if (!n.isRead) readOneMutation.mutate({ id: n.id, href: target?.href ?? null });
                   else if (target) router.push(target.href);
                 }}
                 className={styles.bellItem}

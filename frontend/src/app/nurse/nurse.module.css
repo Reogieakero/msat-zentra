@@ -71,6 +71,109 @@
   flex: 1;
 }
 
+.bellButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  border-radius: 9999px;
+  cursor: pointer;
+  outline: none;
+  color: var(--foreground);
+  transition: box-shadow 140ms ease-out;
+}
+
+.bellButton:hover {
+  box-shadow: 0 0 0 2px var(--muted);
+}
+
+.bellButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.bellIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.bellBadge {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.0625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.bellMenu {
+  min-width: 20rem;
+  max-width: min(24rem, 90vw);
+}
+
+.bellHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bellItem {
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.bellDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: transparent;
+  flex-shrink: 0;
+  margin-top: 0.3125rem;
+}
+
+.bellDotUnread {
+  background-color: var(--primary);
+}
+
+.bellMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.bellTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.bellMsg {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.bellDate {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
 .search {
   width: 16rem;
   max-width: 40vw;

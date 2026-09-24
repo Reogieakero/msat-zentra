@@ -86,7 +86,13 @@ function msSince(time: string | null, now: number): number | null {
   return Math.max(0, now - t);
 }
 
-function RiskBadge({ level }: { level: AdmQueueRisk | undefined }) {
+function RiskBadge({ level, loading = false }: { level: AdmQueueRisk | undefined; loading?: boolean }) {
+  if (loading && !level)
+    return (
+      <span className={styles.noRisk} role="status" aria-label="Loading risk level">
+        …
+      </span>
+    );
   if (!level) return <span className={styles.noRisk}>—</span>;
   const variant =
     level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
@@ -108,6 +114,7 @@ export function AdmQueueTable({
   emptyHint,
   rows,
   renderActions,
+  riskLoading = false,
 }: {
   title: string;
   description: string;
@@ -116,6 +123,7 @@ export function AdmQueueTable({
   emptyHint: string;
   rows: AdmQueueRowVM[];
   renderActions: (id: string) => React.ReactNode;
+  riskLoading?: boolean;
 }) {
   const [query, setQuery] = React.useState("");
   const now = useNowTick();
@@ -197,7 +205,7 @@ export function AdmQueueTable({
                         <Badge variant={row.statusVariant}>{row.statusLabel}</Badge>
                       </TableCell>
                       <TableCell>
-                        <RiskBadge level={row.riskLevel} />
+                        <RiskBadge level={row.riskLevel} loading={riskLoading} />
                       </TableCell>
                       <TableCell>
                         <p className={styles.actionLabel}>

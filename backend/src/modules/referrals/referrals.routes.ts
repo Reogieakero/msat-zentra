@@ -7,6 +7,7 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
 import { ADM_STAGE_FLOW } from "../../services/adm.js";
 
@@ -171,6 +172,24 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "referral_escalated", sourceTable: "referrals", sourceId: referral.id, reason: req.body.escalationReason, oldValue: { status: referral.status }, newValue: { status: "escalated", escalatedTo: req.body.escalatedTo } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json(updated);
+      // Escalation handoff: the receiving desk learns immediately.
+      if (req.body.escalatedTo === "nurse") {
+        void fanoutToRole("nurse", {
+          sourceTable: "referrals",
+          action: "status",
+          message: "A case was escalated to the clinic.",
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      } else if (req.body.escalatedTo === "adm_coordinator") {
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message: "A case was escalated to ADM.",
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -196,6 +215,24 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "referral_reassigned", sourceTable: "referrals", sourceId: referral.id, reason: `Reassigned to ${req.body.referredToRole}`, oldValue: { referredToRole: referral.referredToRole }, newValue: { referredToRole: req.body.referredToRole } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json(updated);
+      // Reassignment handoff: the new owning desk learns immediately.
+      if (req.body.referredToRole === "nurse") {
+        void fanoutToRole("nurse", {
+          sourceTable: "referrals",
+          action: "status",
+          message: "A case was reassigned to the clinic.",
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      } else if (req.body.referredToRole === "adm_coordinator") {
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message: "A case was reassigned to ADM.",
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -640,6 +677,16 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted by the clinic${session ? " with a clinic session booked" : ""}`, oldValue: { status: referral.status }, newValue: { status: "in_progress" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json({ referral: updated, clinicSession: session ? formatSession(session) : null });
+      // The referring adviser learns the clinic picked the case up.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: "The clinic accepted your referral — now in progress.",
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -880,6 +927,16 @@ router.post(
       }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json(updated);
+      // Nurse consultation endorse hands the case to the ADM coordinators.
+      if (outcome === "endorse") {
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message: "ADM consultation endorsed — ready for the parent meeting.",
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -1013,6 +1070,14 @@ router.post(
       });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       res.json(updated);
+      // Explicit forward hands the case to the ADM coordinators.
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "referrals",
+        action: "status",
+        message: "ADM consultation endorsed — ready for the parent meeting.",
+        sourceId: referral.id,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) { next(e); }
   }
 );
