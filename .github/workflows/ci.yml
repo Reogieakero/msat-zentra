@@ -26,6 +26,21 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npx prisma generate
+      # Applies pending migrations to the live database on main pushes only
+      # (never on PRs — unreviewed migrations must not touch prod). Requires
+      # a `DATABASE_URL` repository secret (Settings > Secrets and variables
+      # > Actions) holding the pooler connection string. Fails loudly when
+      # the secret is missing so setup is never silently skipped.
+      - name: Deploy database migrations (main pushes only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::DATABASE_URL secret is not set. Add the pooler connection string under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run typecheck
       - run: npm test --if-present
       - run: npm run build
