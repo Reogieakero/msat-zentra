@@ -33,6 +33,11 @@ type NavGroup = {
 // Cases) so the reader never needs the track filter; each page locks to
 // its own track. Sub-routes (risk heatmap / behavioral) stay under the
 // Risk Dashboard tab via prefix matching, so no submenu is needed.
+//
+// Shared-concept convention (same label + icon across desks):
+// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
+// ADM Referrals=Send, Anecdotal Records=FilePenLine,
+// Risk Dashboard=Flame.
 const NAV: NavGroup[] = [
   {
     label: "Overview",

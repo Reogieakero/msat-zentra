@@ -10,6 +10,7 @@ export function useRefreshAcademic(): () => void {
     queryClient.invalidateQueries({ queryKey: ["advisee-academic"] });
     queryClient.invalidateQueries({ queryKey: ["advisory-students"] });
     queryClient.invalidateQueries({ queryKey: ["teacher-overview"] });
+    queryClient.invalidateQueries({ queryKey: ["teacher-overview-secondary"] });
   }, [queryClient]);
 }
 

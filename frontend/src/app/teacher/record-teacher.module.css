@@ -1,7 +1,12 @@
 .wrapper {
+  position: relative;
   display: flex;
   min-height: 100vh;
   width: 100%;
+  /* clip (not hidden): still trims horizontal overflow but does not
+     create a scroll container, so sticky descendants (action menu,
+     toolbar) keep sticking to the viewport. */
+  overflow-x: clip;
 }
 
 .shell {
@@ -9,8 +14,8 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  margin-left: 13rem;
-  margin-top: 3rem;
+  margin-left: 0;
+  margin-top: 6rem;
 }
 
 .main {
@@ -19,6 +24,8 @@
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  /* clip (not hidden): see .wrapper — keeps sticky working. */
+  overflow-x: clip;
 }
 
 .topbar {
@@ -26,6 +33,10 @@
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
+  /* Above the tab navbar (35) so the app bar keeps its old
+     topbar-over-navbar order, matching the other desks (40) — still
+     below overlays (Radix dialogs, dropdowns at z-50). */
   z-index: 40;
   display: flex;
   align-items: center;
@@ -34,35 +45,6 @@
   padding-inline: 0.75rem;
   border-bottom: 1px solid var(--border);
   background-color: var(--background);
-}
-
-.menuButton {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-  cursor: pointer;
-  outline: none;
-}
-
-.menuButton:focus-visible {
-  box-shadow: 0 0 0 2px var(--ring);
-}
-
-.menuIcon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-@media (max-width: 767px) {
-  .menuButton {
-    display: inline-flex;
-  }
 }
 
 .brand {
@@ -171,10 +153,11 @@
   color: var(--muted-foreground);
 }
 
+/* Mobile: 8px side gutters, 1rem gap below the navbar */
 @media (max-width: 767px) {
   .shell {
     margin-left: 0;
-    margin-top: 3rem;
+    margin-top: 6rem;
   }
 
   .main {

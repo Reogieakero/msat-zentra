@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { enlistStudent } from "./advisory-students-data";
+import { sileo } from "@/components/ui/sonner";
 import styles from "./AddStudentDialog.module.css";
 
 function apiMessage(e: unknown, fallback: string): string {
@@ -52,15 +54,19 @@ export function AddStudentDialog({ open, sectionName, onOpenChange }: AddStudent
       setError("Fill in the full name and LRN.");
       return;
     }
+    if (saving) return;
     setSaving(true);
     setError(null);
     try {
-      await enlistStudent({ fullName: name.trim(), lrn: lrn.trim() });
+      const enlisted = await enlistStudent({ fullName: name.trim(), lrn: lrn.trim() });
       queryClient.invalidateQueries({ queryKey: ["advisory-students"] });
       reset();
       onOpenChange(false);
+      sileo.success({ title: "Student enlisted", description: `${enlisted.name} was added to your roster.` });
     } catch (e) {
-      setError(apiMessage(e, "Could not enlist the student. Try again."));
+      const message = apiMessage(e, "Could not enlist the student. Try again.");
+      setError(message);
+      sileo.error({ title: "Could not enlist student", description: message });
     } finally {
       setSaving(false);
     }
@@ -111,8 +117,15 @@ export function AddStudentDialog({ open, sectionName, onOpenChange }: AddStudent
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave} disabled={saving}>
-            {saving ? "Enlisting…" : "Add student"}
+          <Button type="button" onClick={handleSave} disabled={saving} aria-busy={saving || undefined}>
+            {saving ? (
+              <>
+                <Loader2 className="animate-spin" aria-hidden />
+                Enlisting…
+              </>
+            ) : (
+              "Add student"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

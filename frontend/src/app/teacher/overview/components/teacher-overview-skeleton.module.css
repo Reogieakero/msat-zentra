@@ -1,0 +1,162 @@
+/* Structural skeleton fills for the teacher overview.
+   Layout/positioning comes from the REAL component classes
+   (teacher-overview-header.module.css, teacher-overview-advisory.module.css);
+   this file only sizes the pulse blocks to the content they stand in for. */
+
+/* --- Profile card (rail) --- */
+.skelAvatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.skelHeroTitle {
+  width: 70%;
+  height: 1.125rem;
+}
+
+.skelAdvisory {
+  width: 90%;
+  height: 0.8125rem;
+}
+
+.skelStatIcon {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+}
+
+.skelStatValue {
+  width: 2rem;
+  height: 1rem;
+}
+
+.skelStatLabel {
+  width: 2.75rem;
+  height: 0.625rem;
+}
+
+/* --- At-risk / risk-chart card --- */
+.skelSectionTitle {
+  width: 7rem;
+  height: 0.8125rem;
+}
+
+.skelSectionMeta {
+  width: 4rem;
+  height: 0.8125rem;
+}
+
+.skelRiskCircle {
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+}
+
+.skelLegendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.skelLegendTop {
+  width: 5.5rem;
+  height: 0.8125rem;
+}
+
+.skelLegendCount {
+  width: 4rem;
+  height: 0.6875rem;
+}
+
+.skelFlipBtn {
+  width: 5.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+/* --- Advisory-students card --- */
+.skelAdvisoryTitle {
+  width: 9rem;
+  height: 0.9375rem;
+}
+
+.skelAdvisoryDesc {
+  width: min(22rem, 90%);
+  height: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.skelSearch {
+  width: 16rem;
+  max-width: 100%;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.skelFilterBtn {
+  width: 5.5rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.skelHeadCell {
+  height: 0.75rem;
+}
+
+.skelName {
+  width: 8rem;
+  max-width: 100%;
+  height: 0.8125rem;
+}
+
+.skelSection {
+  width: 5rem;
+  max-width: 100%;
+  height: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.skelBadge {
+  width: 3.5rem;
+  height: 1.25rem;
+  border-radius: 999px;
+}
+
+.skelFlag {
+  width: 5rem;
+  height: 1.25rem;
+  border-radius: 999px;
+}
+
+.skelRowAction {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  margin-left: auto;
+}
+
+.skelRange {
+  width: 6rem;
+  height: 0.75rem;
+}
+
+.skelPagerBtn {
+  width: 4.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelPageLabel {
+  width: 5rem;
+  height: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .skelSearch {
+    width: 100%;
+  }
+}

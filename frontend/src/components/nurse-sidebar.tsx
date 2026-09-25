@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  FolderOpen,
+  BellRing,
   Inbox,
   Stethoscope,
   HeartPulse,
@@ -32,12 +32,16 @@ type NavGroup = {
 // filter; each page locks to its own type. ADM Referrals mirrors the
 // guidance ADM Referrals page (reports + review queue) for nurse-scope
 // ADM cases.
+//
+// Shared-concept convention (same label + icon across desks):
+// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
+// ADM Referrals=Send, Risk Dashboard=Flame.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
       { title: "Overview", href: "/nurse/overview", icon: LayoutDashboard },
-      { title: "Referred Cases", href: "/nurse/alerts", icon: FolderOpen },
+      { title: "Alerts", href: "/nurse/alerts", icon: BellRing },
     ],
   },
   {

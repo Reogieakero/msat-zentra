@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import {
   type FlagOptions,
   type FlagReason,
 } from "./grade-flags-data";
+import { sileo } from "@/components/ui/sonner";
 import styles from "./RaiseFlagDialog.module.css";
 
 const REASONS = Object.keys(REASON_LABELS) as FlagReason[];
@@ -72,6 +74,7 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
       setError("Choose a class, student, and reason.");
       return;
     }
+    if (submitting) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -86,8 +89,10 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
       reset();
       onOpenChange(false);
       onRaised();
+      sileo.success({ title: "Flag raised", description: "The gradebook owner has been notified." });
     } catch {
       setError("Could not raise the flag. Try again.");
+      sileo.error({ title: "Could not raise flag", description: "Try again." });
     } finally {
       setSubmitting(false);
     }
@@ -186,8 +191,15 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Raising…" : "Raise flag"}
+          <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>
+            {submitting ? (
+              <>
+                <Loader2 className="animate-spin" aria-hidden />
+                Raising…
+              </>
+            ) : (
+              "Raise flag"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

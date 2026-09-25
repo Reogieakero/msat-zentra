@@ -1,32 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { AttendanceSheetHeader, type SheetSession } from "./components/AttendanceSheetHeader";
+import { AttendanceRosterRail } from "./components/AttendanceRosterRail";
 import { AttendanceSheet } from "./components/AttendanceSheet";
-import { isEditableDay, phTodayKey } from "./components/attendance-taking-data";
+import {
+  isEditableDay,
+  phTodayKey,
+  type SheetSession,
+} from "./components/attendance-taking-data";
 import styles from "./components/attendance-sheet.module.css";
 
 export default function TeacherAdvisoryAttendancePage() {
-  const today = phTodayKey();
-  const [date, setDate] = useState(today);
-  const [session, setSession] = useState<SheetSession>("AM");
+  const [date] = useState(phTodayKey);
+  const [session] = useState<SheetSession>("AM");
 
   return (
     <section className={styles.page}>
-      <AttendanceSheetHeader
-        date={date}
-        onDateChange={setDate}
-        session={session}
-        onSessionChange={setSession}
-        maxDate={today}
-      />
-      <hr className={styles.divider} />
-
       <div className={styles.body}>
+        <AttendanceRosterRail date={date} session={session} />
         <AttendanceSheet
           date={date}
           session={session}
-          isToday={date === today}
           editable={isEditableDay(date)}
         />
       </div>

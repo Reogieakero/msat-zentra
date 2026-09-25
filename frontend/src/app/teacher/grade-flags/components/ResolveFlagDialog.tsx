@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import {
   resolveFlag,
   type GradeFlagRow,
 } from "./grade-flags-data";
+import { sileo } from "@/components/ui/sonner";
 import styles from "./ResolveFlagDialog.module.css";
 
 interface ResolveFlagDialogProps {
@@ -42,14 +44,17 @@ export function ResolveFlagDialog({ flag, onClose, onResolved }: ResolveFlagDial
       setError("A resolution note is required.");
       return;
     }
+    if (submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       await resolveFlag(flag.id, note.trim());
       close();
       onResolved();
+      sileo.success({ title: "Flag resolved", description: "The resolution was recorded." });
     } catch {
       setError("Could not resolve the flag. Try again.");
+      sileo.error({ title: "Could not resolve flag", description: "Try again." });
     } finally {
       setSubmitting(false);
     }
@@ -93,8 +98,15 @@ export function ResolveFlagDialog({ flag, onClose, onResolved }: ResolveFlagDial
               <Button type="button" variant="outline" onClick={close}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? "Resolving…" : "Resolve flag"}
+              <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="animate-spin" aria-hidden />
+                    Resolving…
+                  </>
+                ) : (
+                  "Resolve flag"
+                )}
               </Button>
             </DialogFooter>
           </>

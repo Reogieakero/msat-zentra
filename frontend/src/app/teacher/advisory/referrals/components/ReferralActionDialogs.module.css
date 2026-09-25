@@ -1,0 +1,46 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--destructive);
+}
+
+/* Cancel / delete confirms stay solid red in every state (the theme's
+   destructive variant is only a soft tint). */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+}
+
+.spin {
+  width: 1rem;
+  height: 1rem;
+  animation: referral-spin 1s linear infinite;
+}
+
+@keyframes referral-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

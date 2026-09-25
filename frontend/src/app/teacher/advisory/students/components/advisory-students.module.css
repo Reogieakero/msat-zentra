@@ -5,17 +5,25 @@
   min-width: 0;
 }
 
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
+.layout {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  min-width: 0;
 }
 
-.body {
+.main {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
+}
+
+@media (max-width: 64rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .pageError {

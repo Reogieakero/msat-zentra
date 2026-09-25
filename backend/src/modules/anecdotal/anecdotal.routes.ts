@@ -80,6 +80,7 @@ router.post(
         await recomputeRisk(rawStudentId, record.termId);
       }
       await invalidateTags(["risk", "principal", "teacher", "overview"]);
+      res.status(201).json({ id: record.id, folderId: record.folderId ?? null });
     } catch (e) { next(e); }
   }
 );
@@ -141,6 +142,26 @@ router.post(
       }
       if (req.body.consultReviewer && req.body.referredToRole !== "adm_coordinator") {
         throw new AppError(400, "INVALID_ACTION", "A consultation reviewer can only be picked for ADM cases");
+      }
+      // One open ADM case per student: an ADM referral is rejected while the
+      // student already has one that is still open (resolved or cancelled
+      // cases no longer block). Other tracks are unaffected.
+      if (req.body.referredToRole === "adm_coordinator") {
+        const studentMatch = record.studentId
+          ? { studentId: record.studentId }
+          : { rosterId: record.rosterId };
+        const existingAdm = await prisma.referral.findFirst({
+          where: {
+            referredToRole: "adm_coordinator",
+            status: { notIn: ["dismissed", "resolved"] },
+            termId,
+            ...studentMatch,
+          },
+          select: { id: true },
+        });
+        if (existingAdm) {
+          throw new AppError(409, "ADM_CASE_EXISTS", "This student already has an open ADM case — only one ADM referral per student");
+        }
       }
       // The referral carries whichever student identity the record holds —
       // registered profile or roster enlistment (no account needed to file).

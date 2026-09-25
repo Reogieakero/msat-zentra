@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { lockFinalGrade, useRefreshAcademic, type ClassStudent } from "../../components/grading-data";
+import { sileo } from "@/components/ui/sonner";
 import styles from "./FinalsCard.module.css";
 
 type Props = {
@@ -23,27 +25,48 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
   const [lockingIds, setLockingIds] = React.useState<Record<string, boolean>>({});
   const [error, setError] = React.useState<string | null>(null);
 
-  const handleLock = async (finalId: string) => {
+  const handleLock = async (finalId: string, studentName: string) => {
+    if (lockingIds[finalId]) return;
     setLockingIds((prev) => ({ ...prev, [finalId]: true }));
+    setError(null);
     try {
       await lockFinalGrade(finalId);
       onChanged();
       refreshAcademic();
+      sileo.success({ title: "Final grade locked", description: `${studentName}'s grade was submitted for adviser approval.` });
     } catch {
       setError("Failed to lock final grade.");
+      sileo.error({ title: "Could not lock final grade", description: "Try again." });
     } finally {
       setLockingIds((prev) => ({ ...prev, [finalId]: false }));
     }
   };
 
+  const lockedCount = students.filter(
+    (s) => s.final != null && s.final.lockStatus !== "unlocked"
+  ).length;
+
   return (
     <div className={styles.card}>
-      <div className={styles.cardHead}>
-        <h2 className={styles.cardTitle}>Final grades</h2>
-        <p className={styles.cardSub}>
-          Recomputed automatically on every saved score. Lock a row to submit it for adviser approval.
-        </p>
+      <div className={styles.banner}>
+        <div className={styles.cardHead}>
+          <h2 className={styles.cardTitle}>Final grades</h2>
+          <p className={styles.cardSub}>
+            Recomputed automatically on every saved score. Lock a row to submit it for adviser approval.
+          </p>
+        </div>
+        <div className={styles.bannerStats}>
+          <div className={styles.bannerStat}>
+            <span className={styles.bannerValue}>{students.length}</span>
+            <span className={styles.bannerLabel}>Students</span>
+          </div>
+          <div className={styles.bannerStat}>
+            <span className={styles.bannerValue}>{lockedCount}</span>
+            <span className={styles.bannerLabel}>Locked</span>
+          </div>
+        </div>
       </div>
+      <div className={styles.body}>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -76,9 +99,17 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
                           size="xs"
                           variant="outline"
                           disabled={!lockable || !!lockingIds[f.id]}
-                          onClick={() => void handleLock(f.id)}
+                          aria-busy={!!lockingIds[f.id] || undefined}
+                          onClick={() => void handleLock(f.id, s.name)}
                         >
-                          {lockingIds[f.id] ? "Locking…" : "Lock"}
+                          {lockingIds[f.id] ? (
+                            <>
+                              <Loader2 className="animate-spin" aria-hidden />
+                              Locking…
+                            </>
+                          ) : (
+                            "Lock"
+                          )}
                         </Button>
                       ) : null}
                       <Button size="xs" variant="ghost" asChild>
@@ -99,6 +130,7 @@ export function FinalsCard({ assignmentId, students, onChanged }: Props) {
         </table>
       </div>
       {error ? <p className={styles.errorText}>{error}</p> : null}
+      </div>
     </div>
   );
 }

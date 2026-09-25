@@ -16,7 +16,6 @@ import styles from "./AdmCaseCard.module.css";
 interface AdmCaseCardProps {
   caseData: AdmCase;
   onDetails: () => void;
-  onTrack: () => void;
 }
 
 const MAX_TILT = 7;
@@ -25,7 +24,7 @@ const MAX_TILT = 7;
  * Profile-style case card (avatar, handle, status, stats, actions) with a
  * subtle pointer tilt. Read-only — stage and status only.
  */
-export function AdmCaseCard({ caseData, onDetails, onTrack }: AdmCaseCardProps) {
+export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
   const cardRef = React.useRef<HTMLElement>(null);
   const initials = initialsOf(caseData.studentName);
   const tone = toneOf(caseData.lrn || caseData.studentId);
@@ -111,10 +110,7 @@ export function AdmCaseCard({ caseData, onDetails, onTrack }: AdmCaseCardProps) 
       </div>
 
       <div className={styles.actions}>
-        <Button type="button" variant="ghost" size="sm" onClick={onDetails}>
-          Details
-        </Button>
-        <Button type="button" variant="default" size="sm" onClick={onTrack}>
+        <Button type="button" variant="default" size="sm" onClick={onDetails}>
           Track case
         </Button>
       </div>

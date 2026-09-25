@@ -6,8 +6,11 @@ import { logger } from "./pino.js";
 /**
  * Response cache for read-heavy GET routes (Principal/Registrar pages).
  *
- * - Keyed by method + path + query string + caller role so different roles
- *   never share a cached payload (Principal vs Registrar scopes differ).
+ * - Keyed by method + path + query string + caller role + caller user id so
+ *   different roles never share a cached payload (Principal vs Registrar
+ *   scopes differ) and — critically — different users with the same role
+ *   never see each other's user-scoped data (e.g. one teacher's advisory
+ *   section served to another teacher).
  * - On hit, the cached JSON is served and `x-cache: HIT` is set.
  * - On miss, the response is captured via a patched `res.json` and stored with
  *   the configured TTL (seconds), tagged so it can be purged later.
@@ -16,11 +19,13 @@ import { logger } from "./pino.js";
  */
 
 function buildKey(req: Request): string {
-  const role = (req as Request & { user?: { role?: string } }).user?.role ?? "anon";
+  const user = (req as Request & { user?: { id?: string; role?: string } }).user;
+  const role = user?.role ?? "anon";
+  const uid = user?.id ?? "anon";
   const qs = req.originalUrl.includes("?")
     ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
     : "";
-  return `cache:${req.method}:${req.path}${qs}:${role}`;
+  return `cache:${req.method}:${req.path}${qs}:${role}:${uid}`;
 }
 
 function tagKey(tag: string): string {

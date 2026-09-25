@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +18,7 @@ import {
   type ClassComponent,
   type ComponentType,
 } from "../../components/grading-data";
+import { sileo } from "@/components/ui/sonner";
 import { CategoryTabs } from "./CategoryTabs";
 import styles from "./AddAssessmentDialog.module.css";
 
@@ -53,15 +55,17 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
     setError(null);
     setSaving(true);
     try {
-      await createAssessment(assignmentId, {
+      const created = await createAssessment(assignmentId, {
         componentType,
         title: title.trim(),
         maxScore,
         dateGiven: date ? new Date(`${date}T00:00:00Z`).toISOString() : undefined,
       });
       onSaved();
+      sileo.success({ title: "Assessment added", description: `"${created.title}" is ready for score encoding.` });
     } catch {
       setError("Failed to add assessment.");
+      sileo.error({ title: "Could not add assessment", description: "Try again." });
     } finally {
       setSaving(false);
     }
@@ -137,8 +141,15 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Adding…" : "Add assessment"}
+          <Button onClick={() => void handleSave()} disabled={saving} aria-busy={saving || undefined}>
+            {saving ? (
+              <>
+                <Loader2 className="animate-spin" aria-hidden />
+                Adding assessment…
+              </>
+            ) : (
+              "Add assessment"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

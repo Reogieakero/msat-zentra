@@ -5,15 +5,16 @@
   min-width: 0;
 }
 
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 20%) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  min-width: 0;
 }
 
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  min-width: 0;
+@media (max-width: 1023px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
 }

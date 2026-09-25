@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { writeLastViewedReferralId } from "../referrals/last-viewed";
-import { AdmCasesHeader } from "./components/AdmCasesHeader";
 import { AdmCaseCard } from "./components/AdmCaseCard";
 import { AdmCaseDialog } from "./components/AdmCaseDialog";
 import { fetchMyAdmCases, type AdmCase } from "./components/adm-cases-data";
@@ -77,9 +76,6 @@ export default function TeacherAdvisoryAdmCasesPage() {
 
   return (
     <section className={styles.page}>
-      <AdmCasesHeader pending={casesQuery.isPending ? 0 : pendingCount} approved={casesQuery.isPending ? 0 : approvedCount} />
-      <hr className={styles.divider} />
-
       <div className={styles.body}>
         <div className={styles.toolbar}>
           <div className={styles.filters} role="group" aria-label="Filter by approval status">
@@ -173,7 +169,6 @@ export default function TeacherAdvisoryAdmCasesPage() {
                   key={c.id}
                   caseData={c}
                   onDetails={() => setDetailCase(c)}
-                  onTrack={() => handleTrack(c)}
                 />
               ))}
             </div>

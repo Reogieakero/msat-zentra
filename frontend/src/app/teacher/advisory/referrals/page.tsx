@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { sileo } from "@/components/ui/sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ReferralsHeader } from "./components/ReferralsHeader";
-import { ReferralFilters } from "./components/ReferralFilters";
-import { ReferralLibrary } from "./components/ReferralLibrary";
+import { ReferralsSidebar, type TrackFilter } from "./components/ReferralsSidebar";
 import { ReferralCanvas } from "./components/ReferralCanvas";
 import { ReferralComposer } from "./components/ReferralComposer";
+import {
+  ReferralCancelDialog,
+  ReferralDeleteDialog,
+  type ReferralActionTarget,
+} from "./components/ReferralActionDialogs";
 import { readLastViewedReferralId, writeLastViewedReferralId } from "./last-viewed";
 import styles from "./components/referrals.module.css";
 
@@ -25,7 +25,8 @@ interface ReferralData {
   targetRole: string;
   referredBy: string;
   reason: string;
-  status: "pending" | "in_progress" | "resolved";
+  notes?: string | null;
+  status: "pending" | "in_progress" | "resolved" | "dismissed" | "escalated" | "info_requested" | "follow_up";
   referredAt: string;
   resolvedAt: string | null;
   anecdotalId: string;
@@ -76,24 +77,43 @@ export default function TeacherAdvisoryReferralsPage() {
   const isLoading = referralsPending;
   const isComposerLoading = referablesPending;
   const [query, setQuery] = useState("");
+  const [trackFilter, setTrackFilter] = useState<TrackFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(() => readLastViewedReferralId());
-  const [libraryOpen, setLibraryOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<ReferralActionTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ReferralActionTarget | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelPending, setCancelPending] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedId) writeLastViewedReferralId(selectedId);
   }, [selectedId]);
 
-  const needle = query.trim().toLowerCase();
-  const visible = useMemo(
+  const needle = query.trim().toLowerCase();  const visible = useMemo(
     () =>
       referralsData.filter((r) => {
+        if (trackFilter === "adm" && r.track !== "adm") return false;
+        if (trackFilter === "general" && r.track === "adm") return false;
         if (!needle) return true;
         return (
-          r.studentName.toLowerCase().includes(needle) || r.lrn.includes(needle)
+          (r.studentName ?? "").toLowerCase().includes(needle) ||
+          (r.lrn ?? "").toLowerCase().includes(needle) ||
+          (r.targetRole ?? "").toLowerCase().includes(needle)
         );
       }),
-    [referralsData, needle]
+    [referralsData, needle, trackFilter]
+  );
+
+  // LRNs with an open ADM case — the composer disables the ADM track for
+  // these students (one open ADM referral per student).
+  const admActiveLrns = useMemo(
+    () =>
+      referralsData
+        .filter((r) => r.track === "adm" && r.status !== "dismissed" && r.status !== "resolved")
+        .map((r) => r.lrn),
+    [referralsData]
   );
 
   // If the just-submitted id is not in the list yet (refetch in flight),
@@ -112,39 +132,38 @@ export default function TeacherAdvisoryReferralsPage() {
   if (isLoading) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referrals">
-        <div className={styles.skelHeader}>
-          <div className={styles.skelHeaderText}>
-            <Skeleton className={styles.skelTitle} />
-            <Skeleton className={styles.skelSubtitle} />
-          </div>
-          <Skeleton className={styles.skelAction} />
-        </div>
-        <hr className={styles.divider} />
-
-        <div className={styles.body}>
-          <div className={styles.toolbar}>
-            <Skeleton className={styles.skelToolbarBtn} />
-            <Skeleton className={styles.skelViewing} />
-            <Skeleton className={styles.skelSearch} />
-          </div>
-
-          <div className={styles.workspace}>
-            <div className={styles.skelCanvas}>
-              <div className={styles.skelCanvasHead}>
-                <div className={styles.skelCanvasId}>
-                  <Skeleton className={styles.skelCanvasTitle} />
-                  <Skeleton className={styles.skelCanvasSub} />
+        <div className={styles.layout}>
+          <ReferralsSidebar
+            referrals={[]}
+            selectedId={null}
+            onSelect={handleSelect}
+            onNew={handleNewReferral}
+            query={query}
+            onQueryChange={setQuery}
+            trackFilter={trackFilter}
+            onTrackFilterChange={setTrackFilter}
+            loading
+          />
+          <div className={styles.body}>
+            <div className={styles.workspace}>
+              <div className={styles.skelCanvas} aria-busy="true" aria-label="Loading referable records">
+                <div className={styles.skelCanvasHead}>
+                  <div className={styles.skelCanvasId}>
+                    <Skeleton className={styles.skelCanvasTitle} />
+                    <Skeleton className={styles.skelCanvasSub} />
+                  </div>
+                  <Skeleton className={styles.skelCanvasBadge} />
                 </div>
-                <Skeleton className={styles.skelCanvasBadge} />
-              </div>
-              <div className={styles.skelNodes}>
-                <Skeleton className={styles.skelNode} />
-                <Skeleton className={styles.skelNode} />
-                <Skeleton className={styles.skelNode} />
-              </div>
-              <div className={styles.skelCaseFile}>
-                <Skeleton className={styles.skelCaseRow} />
-                <Skeleton className={styles.skelCaseRowShort} />
+                <div className={styles.skelNodes}>
+                  <Skeleton className={styles.skelNode} />
+                  <Skeleton className={styles.skelNode} />
+                  <Skeleton className={styles.skelNode} />
+                  <Skeleton className={styles.skelNode} />
+                </div>
+                <div className={styles.skelCaseFile}>
+                  <Skeleton className={styles.skelCaseCellWide} />
+                  <Skeleton className={styles.skelCaseCellNarrow} />
+                </div>
               </div>
             </div>
           </div>
@@ -155,7 +174,6 @@ export default function TeacherAdvisoryReferralsPage() {
 
   function handleSelect(id: string) {
     setSelectedId(id);
-    setLibraryOpen(false);
   }
 
   function handleNewReferral() {
@@ -186,113 +204,182 @@ export default function TeacherAdvisoryReferralsPage() {
     queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
     setSelectedId(created.id);
     setCreating(false);
+    sileo.success({ title: "Referral submitted", description: "The receiving desk has been notified." });
+  }
+
+  // Backend errors arrive as { error: { code, message } } — surface the
+  // server's message instead of a generic failure notice.
+  function apiErrorMessage(err: unknown, fallback: string): string {
+    if (typeof err === "object" && err !== null && "response" in err) {
+      const message = (err as { response?: { data?: { error?: { message?: string } } } })
+        .response?.data?.error?.message;
+      if (message) return message;
+    }
+    return fallback;
+  }
+
+  function requestCancel(referral: { id: string; studentName: string }): void {
+    setCancelTarget({ id: referral.id, studentName: referral.studentName });
+    setCancelReason("");
+    setActionError(null);
+  }
+
+  async function confirmCancel(): Promise<void> {
+    if (!cancelTarget || cancelReason.trim() === "" || cancelPending) return;
+    setCancelPending(true);
+    setActionError(null);
+    try {
+      await apiClient.post(`/api/referrals/${cancelTarget.id}/cancel`, {
+        reason: cancelReason.trim(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
+      await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+      setCancelTarget(null);
+      setCancelReason("");
+      sileo.success({ title: "Referral cancelled", description: "The case was withdrawn." });
+    } catch (err) {
+      const message = apiErrorMessage(err, "Could not cancel this referral.");
+      setActionError(message);
+      sileo.error({ title: "Could not cancel referral", description: message });
+    } finally {
+      setCancelPending(false);
+    }
+  }
+
+  function requestDelete(referral: { id: string; studentName: string }): void {
+    setDeleteTarget({ id: referral.id, studentName: referral.studentName });
+    setActionError(null);
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (!deleteTarget || deletePending) return;
+    setDeletePending(true);
+    setActionError(null);
+    try {
+      await apiClient.delete(`/api/referrals/${deleteTarget.id}`);
+      const deletedId = deleteTarget.id;
+      await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
+      await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+      // Move selection off the deleted row so the canvas never shows it.
+      setSelectedId((prev) => {
+        if (prev !== deletedId) return prev;
+        const next = visible.find((r) => r.id !== deletedId) ?? null;
+        return next ? next.id : null;
+      });
+      setDeleteTarget(null);
+      sileo.success({ title: "Referral deleted", description: "The case was removed from your list." });
+    } catch (err) {
+      const message = apiErrorMessage(err, "Could not delete this referral.");
+      setActionError(message);
+      sileo.error({ title: "Could not delete referral", description: message });
+    } finally {
+      setDeletePending(false);
+    }
   }
 
   return (
     <section className={styles.page}>
-      <ReferralsHeader referrals={referralsData} onNew={handleNewReferral} />
-      <hr className={styles.divider} />
-
-      <div className={styles.body}>
-        <div className={styles.toolbar}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setLibraryOpen(true)}
-          >
-            <PanelLeft aria-hidden />
-            My referrals
-            <Badge variant="secondary">{visible.length}</Badge>
-          </Button>
+      <div className={styles.layout}>
+        <ReferralsSidebar
+          referrals={referralsData}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          onNew={handleNewReferral}
+          query={query}
+          onQueryChange={setQuery}
+          trackFilter={trackFilter}
+          onTrackFilterChange={setTrackFilter}
+        />
+        <div className={styles.body}>
           {creating ? (
-            <span className={styles.viewing}>Answering new-referral questions</span>
-          ) : (
-            canvasVisible && (
-              <span className={styles.viewing}>
-                Viewing {canvasVisible.studentName}
-              </span>
-            )
-          )}
-          <ReferralFilters
-            query={query}
-            onQueryChange={setQuery}
-          />
-        </div>
-
-        {creating ? (
-          <div className={styles.workspace}>
-            {isComposerLoading ? (
-              <div className={styles.skelCanvas} aria-busy="true" aria-label="Loading referable records">
-                <div className={styles.skelCanvasHead}>
-                  <div className={styles.skelCanvasId}>
-                    <Skeleton className={styles.skelCanvasTitle} />
-                    <Skeleton className={styles.skelCanvasSub} />
+            <div className={styles.workspace}>
+              {isComposerLoading ? (
+                <div className={styles.skelCanvas} aria-busy="true" aria-label="Loading referable records">
+                  <div className={styles.skelCanvasHead}>
+                    <div className={styles.skelCanvasId}>
+                      <Skeleton className={styles.skelCanvasTitle} />
+                      <Skeleton className={styles.skelCanvasSub} />
+                    </div>
+                    <Skeleton className={styles.skelCanvasBadge} />
                   </div>
-                  <Skeleton className={styles.skelCanvasBadge} />
+                  <div className={styles.skelNodes}>
+                    <Skeleton className={styles.skelNode} />
+                    <Skeleton className={styles.skelNode} />
+                    <Skeleton className={styles.skelNode} />
+                    <Skeleton className={styles.skelNode} />
+                  </div>
+                  <div className={styles.skelCaseFile}>
+                    <Skeleton className={styles.skelCaseCellWide} />
+                    <Skeleton className={styles.skelCaseCellNarrow} />
+                  </div>
                 </div>
-                <div className={styles.skelNodes}>
-                  <Skeleton className={styles.skelNode} />
-                  <Skeleton className={styles.skelNode} />
-                  <Skeleton className={styles.skelNode} />
-                </div>
-                <div className={styles.skelCaseFile}>
-                  <Skeleton className={styles.skelCaseRow} />
-                  <Skeleton className={styles.skelCaseRowShort} />
-                </div>
-              </div>
-            ) : (
-              <ReferralComposer
-                referables={referablesData}
-                onCancel={() => setCreating(false)}
-                onCreate={handleCreateReferral}
-                onCreated={handleCreated}
+              ) : (
+                <ReferralComposer
+                  referables={referablesData}
+                  admActiveLrns={admActiveLrns}
+                  onCancel={() => setCreating(false)}
+                  onCreate={handleCreateReferral}
+                  onCreated={handleCreated}
+                />
+              )}
+            </div>
+          ) : referralsData.length === 0 ? (
+            <div className={styles.empty}>
+              <p className={styles.emptyTitle}>No referrals yet</p>
+              <p className={styles.emptyBody}>
+                Refer from one of your anecdotal records to open your first case.
+              </p>
+              <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>
+                New referral
+              </button>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className={styles.empty}>
+              <p className={styles.emptyTitle}>No matches</p>
+              <p className={styles.emptyBody}>
+                {needle
+                  ? `No referrals match "${query.trim()}".`
+                  : "No referrals match the selected filters."}
+              </p>
+            </div>
+          ) : (
+            <div className={styles.workspace}>
+              <ReferralCanvas
+                referral={canvasVisible}
+                onCancelRequest={requestCancel}
+                onDeleteRequest={requestDelete}
               />
-            )}
-          </div>
-        ) : referralsData.length === 0 ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>No referrals yet</p>
-            <p className={styles.emptyBody}>
-              Refer from one of your anecdotal records to open your first case.
-            </p>
-            <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>
-              New referral
-            </button>
-          </div>
-        ) : visible.length === 0 ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>No matches</p>
-            <p className={styles.emptyBody}>
-              {needle
-                ? `No referrals match "${query.trim()}".`
-                : "No referrals match the selected filters."}
-            </p>
-          </div>
-        ) : (
-          <div className={styles.workspace}>
-            <ReferralCanvas referral={canvasVisible} />
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <Sheet open={libraryOpen} onOpenChange={setLibraryOpen}>
-        <SheetContent side="left" className={styles.sheet}>
-          <SheetHeader>
-            <SheetTitle>My referrals</SheetTitle>
-            <SheetDescription>
-              Open a student, then select a specific referral to view its workflow.
-            </SheetDescription>
-          </SheetHeader>
-          <div className={styles.sheetBody}>
-            <ReferralLibrary
-              referrals={visible}
-              selectedId={canvasVisible?.id ?? null}
-              onSelect={handleSelect}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <ReferralCancelDialog
+        target={cancelTarget}
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        pending={cancelPending}
+        error={actionError}
+        onClose={() => {
+          if (!cancelPending) {
+            setCancelTarget(null);
+            setActionError(null);
+          }
+        }}
+        onConfirm={confirmCancel}
+      />
+      <ReferralDeleteDialog
+        target={deleteTarget}
+        pending={deletePending}
+        error={actionError}
+        onClose={() => {
+          if (!deletePending) {
+            setDeleteTarget(null);
+            setActionError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+      />
     </section>
   );
 }

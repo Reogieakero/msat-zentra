@@ -1825,4 +1825,77 @@ router.get(
   }
 );
 
+// Adviser-initiated cancel: the teacher who filed the referral withdraws it
+// at any time while the case is still open (any non-terminal status). Lands
+// on the same terminal "dismissed" state the guidance dismiss flow uses,
+// with the adviser's reason kept in notes.
+const adviserCancelSchema = z.object({
+  reason: z.string().trim().min(1).max(500),
+});
+
+router.post(
+  "/:id/cancel",
+  requireAuth,
+  requireRole("adviser", "subject_teacher"),
+  validate("body", adviserCancelSchema),
+  async (req, res, next) => {
+    try {
+      const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
+      if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      if (referral.referredBy !== req.user!.id) {
+        throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can cancel it");
+      }
+      if (referral.status === "dismissed") {
+        throw new AppError(400, "INVALID_ACTION", "This referral is already cancelled");
+      }
+      if (referral.status === "resolved") {
+        throw new AppError(400, "INVALID_ACTION", "A resolved referral cannot be cancelled");
+      }
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data: { status: "dismissed", notes: req.body.reason },
+      });
+      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
+// Adviser delete: permanently remove the teacher's own referral from their
+// list. Only a cancelled (dismissed) referral can be deleted, and only when
+// nothing was ever recorded against it (no sessions, ADM artefacts, visits,
+// or health records) — otherwise the evidence trail must stay intact.
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRole("adviser", "subject_teacher"),
+  async (req, res, next) => {
+    try {
+      const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
+      if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      if (referral.referredBy !== req.user!.id) {
+        throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can delete it");
+      }
+      if (referral.status !== "dismissed") {
+        throw new AppError(400, "INVALID_ACTION", "Only a cancelled referral can be deleted");
+      }
+      const [sessions, profiles, meetings, visits, records] = await Promise.all([
+        prisma.counselingSession.count({ where: { referralId: referral.id } }),
+        prisma.admLearnerProfile.count({ where: { referralId: referral.id } }),
+        prisma.admParentMeeting.count({ where: { referralId: referral.id } }),
+        prisma.homeVisitationRecord.count({ where: { referralId: referral.id } }),
+        prisma.healthRecord.count({ where: { referralId: referral.id } }),
+      ]);
+      if (sessions + profiles + meetings + visits + records > 0) {
+        throw new AppError(400, "INVALID_ACTION", "This referral already has recorded activity and cannot be deleted");
+      }
+      await prisma.referral.delete({ where: { id: referral.id } });
+      await writeAudit({ userId: req.user!.id, actionType: "delete", sourceTable: "referrals", sourceId: referral.id, reason: "Cancelled referral deleted by the filing teacher", oldValue: { status: referral.status }, newValue: null });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      res.status(204).end();
+    } catch (e) { next(e); }
+  }
+);
+
 export default router;

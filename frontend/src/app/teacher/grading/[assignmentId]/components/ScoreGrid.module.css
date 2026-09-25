@@ -1,150 +1,191 @@
+/* Encode-scores card — outer Card shell with the advisory-students
+   table pattern inside: header row, plain table, status footer. */
+
 .card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 0.75rem);
-  background: var(--card);
+  min-width: 0;
+  border-radius: var(--radius-lg);
 }
 
-.cardTitle {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.cardSub {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.cardHeadRow {
+.header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1rem 0;
 }
 
-.cardHead {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.headerText {
   min-width: 0;
 }
 
-.cardActions {
+.headerActions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.pickerRow {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.625rem;
   flex-wrap: wrap;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 12rem;
-}
-
-.fieldLabel {
-  font-size: 0.75rem;
+.eyebrow {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--muted-foreground);
 }
 
-.filterBtn {
-  gap: 0.375rem;
-  max-width: 16rem;
-  justify-content: flex-start;
-  text-align: left;
+.metaLine {
+  margin: 0.125rem 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.9375rem;
+  color: var(--foreground);
 }
 
-.filterChevron {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.filterActive {
-  border-color: var(--ring);
-}
-
-.filterDot {
-  width: 0.375rem;
-  height: 0.375rem;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background-color: var(--primary);
-}
-
-.filterMenu {
-  min-width: 12rem;
-}
-
-.filterValue {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tableWrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-}
-
-.table th,
-.table td {
-  padding: 0.5rem 0.625rem;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.table thead th {
-  font-size: 0.6875rem;
+.metaLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted-foreground);
-  background: color-mix(in oklch, var(--muted), transparent 55%);
 }
 
-.table tbody tr:last-child th,
-.table tbody tr:last-child td {
+.metaValue {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.metaSep {
+  width: 1px;
+  height: 0.875rem;
+  align-self: center;
+  background-color: var(--border);
+}
+
+.sectionSub {
+  margin: 0.125rem 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.maxInput {
+  width: 3.5rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.lrnCell {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content {
+  padding: 0;
+}
+
+/* Roomier rows — same breathing space as the advisory table. */
+.content th,
+.content td {
+  padding: 0.875rem 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Fixed column widths so the table never shifts when switching assessments. */
+.content th:nth-child(1),
+.content td:nth-child(1) {
+  width: 38%;
+}
+
+.content th:nth-child(2),
+.content td:nth-child(2) {
+  width: 24%;
+}
+
+.content th:nth-child(3),
+.content td:nth-child(3) {
+  width: 22%;
+}
+
+.content th:nth-child(4),
+.content td:nth-child(4) {
+  width: 16%;
+}
+
+.content thead th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  background-color: transparent;
+  white-space: nowrap;
+}
+
+.content tbody td {
+  font-size: 0.8125rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 35%);
+}
+
+.content tbody tr:last-child td {
   border-bottom: none;
 }
 
-.stickyCol {
-  position: sticky;
-  left: 0;
-  background: var(--card);
-  min-width: 10rem;
+.content thead th:first-child,
+.content tbody td:first-child {
+  padding-left: 1rem;
 }
 
-.nameCell {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  flex-wrap: wrap;
+.content thead th:last-child,
+.content tbody td:last-child {
+  padding-right: 1rem;
 }
 
-.scoreCell {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.headMuted {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cellMain {
+  margin: 0;
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .scoreInput {
@@ -164,20 +205,28 @@
 }
 
 .scorePct {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
 
-.footerRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.footer {
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.range {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .errorText {
   margin: 0;
+  padding: 0.75rem 1rem 0;
   font-size: 0.75rem;
   color: var(--destructive);
 }
@@ -190,10 +239,8 @@
 
 .empty {
   margin: 0;
-  padding: 1rem;
+  padding: 2.5rem 1rem;
+  font-size: 0.875rem;
   text-align: center;
-  font-size: 0.8125rem;
   color: var(--muted-foreground);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
 }

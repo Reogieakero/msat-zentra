@@ -6,12 +6,6 @@
   min-height: calc(100vh - 3rem - 2rem);
 }
 
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
-}
-
 .body {
   display: flex;
   flex-direction: column;

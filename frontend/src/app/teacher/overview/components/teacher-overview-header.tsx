@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   PolarGrid,
   RadialBar,
   RadialBarChart,
 } from "recharts";
 import { BookOpen, GraduationCap, Users } from "lucide-react";
-import type { AdvisorySectionInfo } from "./teacher-overview-data";
+import type { AdvisorySectionInfo, TeacherClassRow } from "./teacher-overview-data";
 import styles from "./teacher-overview-header.module.css";
 
 interface TeacherOverviewHeaderProps {
@@ -21,6 +22,10 @@ interface TeacherOverviewHeaderProps {
     behavioral: number;
   };
   atRiskStudents?: number;
+  /** Assigned class sections, shown on the flipped face of the risk card. */
+  classes?: TeacherClassRow[];
+  /** Narrow 20% sidebar rail: stacks identity, advisory and risk vertically. */
+  rail?: boolean;
 }
 
 const RISK_COLORS = ["#171717", "#525252", "#a3a3a3"];
@@ -131,6 +136,8 @@ export function TeacherOverviewHeader({
   studentCount = 0,
   atRiskFactors,
   atRiskStudents = 0,
+  classes = [],
+  rail = false,
 }: TeacherOverviewHeaderProps) {
   const isAdviser = Boolean(advisorySection);
   const initials = React.useMemo(() => {
@@ -145,10 +152,12 @@ export function TeacherOverviewHeader({
   }, [teacherName]);
 
   const riskFactors = atRiskFactors ?? { academic: 0, attendance: 0, behavioral: 0 };
+  const [showClasses, setShowClasses] = React.useState(false);
 
   return (
-    <article className={styles.profile}>
-      <div className={styles.profileBody}>
+    <div className={rail ? styles.railStack : undefined}>
+      <article className={`${styles.profile} ${rail ? styles.rail : ""}`}>
+        <div className={styles.profileBody}>
         <div className={styles.identityBlock}>
           <div className={styles.avatar} aria-hidden>
             <span className={styles.avatarInitials}>{initials || "T"}</span>
@@ -181,40 +190,88 @@ export function TeacherOverviewHeader({
           />
         </div>
       </div>
+      </article>
 
       {isAdviser ? (
-        <aside
-          className={styles.populationPanel}
-          aria-label="Section population and at-risk factors"
-        >
-          <div className={styles.chartsRow}>
-            <section className={styles.chartColumn}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Advisory Section</h2>
-                <span className={styles.sectionMeta}>
-                  {advisorySection?.gradeLevel} · {advisorySection?.name}
-                </span>
-              </header>
-              <div className={styles.populationBody}>
-                <div className={styles.populationStat}>
-                  <span className={styles.populationValue}>{studentCount}</span>
-                  <span className={styles.populationCaption}>students</span>
+        <div className={styles.flip}>
+          <div className={`${styles.flipInner} ${showClasses ? styles.flipped : ""}`}>
+            <aside
+              className={`${styles.populationPanel} ${rail ? styles.railPanel : ""}`}
+              aria-label="At-risk factors"
+            >
+              <section className={styles.chartColumn}>
+                <header className={styles.sectionHead}>
+                  <h2 className={styles.sectionTitle}>At-Risk Factors</h2>
+                  <span className={styles.sectionMeta}>
+                    {atRiskStudents} of {studentCount}
+                  </span>
+                </header>
+                <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} />
+                <div className={styles.flipFoot}>
+                  <button
+                    type="button"
+                    className={styles.flipBtn}
+                    onClick={() => setShowClasses(true)}
+                    aria-label="Show my classes"
+                  >
+                    My classes
+                  </button>
                 </div>
-              </div>
-            </section>
-
-            <section className={styles.chartColumn}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>At-Risk Factors</h2>
-                <span className={styles.sectionMeta}>
-                  {atRiskStudents} of {studentCount}
-                </span>
-              </header>
-              <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} />
-            </section>
+              </section>
+            </aside>
+            <aside
+              className={`${styles.populationPanel} ${rail ? styles.railPanel : ""} ${styles.flipBack}`}
+              aria-label="My classes"
+            >
+              <section className={styles.chartColumn}>
+                <header className={styles.sectionHead}>
+                  <h2 className={styles.sectionTitle}>My Classes</h2>
+                </header>
+                {classes.length === 0 ? (
+                  <p className={styles.classEmpty}>No classes assigned yet.</p>
+                ) : (
+                  <>
+                    <ul className={styles.classList}>
+                      {classes.map((c) => (
+                        <li key={c.id} className={styles.classRow}>
+                          <span className={styles.classText}>
+                            <span className={styles.classSubject}>{c.subject}</span>
+                            <span className={styles.classMeta}>
+                              {c.gradeLevel} · {c.section}
+                            </span>
+                          </span>
+                          <span className={styles.classCount}>
+                            <Users aria-hidden />
+                            {c.studentCount}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className={styles.classActions}>
+                      <Link href="/teacher/attendance" className={styles.classLink}>
+                        Take attendance
+                      </Link>
+                      <Link href="/teacher/classes" className={styles.classLink}>
+                        View all
+                      </Link>
+                    </div>
+                    <div className={styles.flipFoot}>
+                      <button
+                        type="button"
+                        className={styles.flipBackBtn}
+                        onClick={() => setShowClasses(false)}
+                        aria-label="Back to at-risk factors"
+                      >
+                        At-risk
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
+            </aside>
           </div>
-        </aside>
+        </div>
       ) : null}
-    </article>
+    </div>
   );
 }

@@ -1,25 +1,36 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
   min-width: 0;
-  /* Fill the viewport below the topbar so the workflow card can stretch;
-     3rem topbar + 2rem layout main padding. */
-  min-height: calc(100vh - 3rem - 2rem);
+  /* Shell offsets the fixed topbar + tab navbar with margin-top 6rem and
+     main adds 1rem padding; stretch to the viewport and keep exactly a
+     16px gutter at the bottom. */
+  min-height: calc(100dvh - 6rem - 2rem);
+  padding-bottom: 1rem;
 }
 
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
+.layout {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 64rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
   min-width: 0;
   flex: 1;
+  min-height: 0;
 }
 
 .workspace {
@@ -28,6 +39,7 @@
   gap: 0.875rem;
   min-width: 0;
   flex: 1;
+  min-height: 0;
 }
 
 /* Layout main already gives 16px gutters on desktop; on mobile it drops to
@@ -38,36 +50,6 @@
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
   }
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.viewing {
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sheet {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.sheetBody {
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-bottom: 1rem;
 }
 
 .empty {
@@ -147,24 +129,6 @@
   flex-shrink: 0;
 }
 
-.skelToolbarBtn {
-  width: 9.5rem;
-  height: 2rem;
-  flex-shrink: 0;
-}
-
-.skelViewing {
-  width: 10rem;
-  height: 1rem;
-}
-
-.skelSearch {
-  width: 14rem;
-  max-width: 40%;
-  height: 2rem;
-  margin-left: auto;
-}
-
 .skelCanvas {
   display: flex;
   flex-direction: column;
@@ -214,49 +178,51 @@
 }
 
 .skelNodes {
-  display: flex;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
   flex: 1;
-  align-items: center;
-  min-height: 7rem;
+  min-height: 0;
+  min-width: 0;
 }
 
 .skelNode {
-  flex: 1;
-  height: 4.5rem;
+  width: 100%;
+  height: 5.5rem;
 }
 
 .skelCaseFile {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.625rem;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md, 0.375rem);
+  min-width: 0;
 }
 
-.skelCaseRow {
-  width: 100%;
-  height: 2.5rem;
+.skelCaseCellWide {
+  grid-column: span 4;
+  height: 4.5rem;
 }
 
-.skelCaseRowShort {
-  width: 65%;
-  height: 1rem;
+.skelCaseCellNarrow {
+  grid-column: span 2;
+  height: 4.5rem;
+}
+
+@media (max-width: 700px) {
+  .skelCaseFile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .skelCaseCellWide,
+  .skelCaseCellNarrow {
+    grid-column: auto;
+    height: 4rem;
+  }
 }
 
 @media (max-width: 767px) {
-  .skelSearch {
-    max-width: 50%;
-  }
-
-  .skelViewing {
-    display: none;
-  }
-
   .skelNodes {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .skelNode {

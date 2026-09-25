@@ -12,13 +12,14 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { ArrowUp, Bot, Check, ChevronDown, History } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, History, Loader2 } from "lucide-react";
 import {
   REASON_LABELS,
   fetchFlagOptions,
   raiseFlag,
   type FlagReason,
 } from "./grade-flags-data";
+import { sileo } from "@/components/ui/sonner";
 import styles from "./RaiseFlagChat.module.css";
 
 interface FiledDetail {
@@ -200,6 +201,13 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
       setStudentId("");
       setClassKey("");
       queryClient.invalidateQueries({ queryKey: ["grade-flags"] });
+      sileo.success({ title: "Flag filed", description: `${detail.studentName} — ${reasonLabel}.` });
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { id: messageId++, from: "assistant", text: "Could not file the flag. Check your connection and try again." },
+      ]);
+      sileo.error({ title: "Could not file flag", description: "Try again." });
     } finally {
       setSending(false);
     }
@@ -256,7 +264,8 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
           )}
         </div>
 
-        <div className={styles.suggestions} aria-label="Reason categories">
+        <div className={styles.dock}>
+          <div className={styles.suggestions} aria-label="Reason categories">
           {CATEGORIES.map(([value, label]) => (
             <Button
               key={value}
@@ -299,9 +308,10 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
               className={styles.sendBtn}
               disabled={!canSend}
               onClick={handleSend}
-              aria-label="File flag"
+              aria-label={sending ? "Filing flag" : "File flag"}
+              aria-busy={sending || undefined}
             >
-              <ArrowUp aria-hidden />
+              {sending ? <Loader2 className="animate-spin" aria-hidden /> : <ArrowUp aria-hidden />}
             </Button>
           </div>
           <div className={styles.composerBar}>
@@ -502,6 +512,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
               ? `Ready to file — ${student.name} · ${selectedClass.subjectName} (${selectedClass.ownerName ?? "unassigned"})`
               : "Type a reason, pick a student, then pick one of their subjects."}
         </p>
+        </div>
       </div>
     </div>
   );

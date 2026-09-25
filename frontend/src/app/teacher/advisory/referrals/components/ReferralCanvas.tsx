@@ -1,8 +1,11 @@
 "use client";
 
-import { Fragment, useRef } from "react";
-import { Award, BookOpen, Check, ChevronLeft, ChevronRight, Eye, FileText, Home, Landmark, Send, Users } from "lucide-react";
+import { Fragment, useState } from "react";
+import { Award, BookOpen, Check, Eye, FileText, Home, Landmark, Send, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ReadMore } from "./ReadMore";
+import { ReferralStepDialog } from "./ReferralStepDialog";
 import styles from "./ReferralCanvas.module.css";
 
 interface ReferralData {
@@ -11,8 +14,9 @@ interface ReferralData {
   section?: string;
   lrn?: string;
   track?: string;
-  status?: "pending" | "in_progress" | "resolved";
+  status?: "pending" | "in_progress" | "resolved" | "dismissed" | "escalated" | "info_requested" | "follow_up";
   reason?: string;
+  notes?: string | null;
   observationDate?: string;
   category?: string;
   referredToRole?: string;
@@ -35,6 +39,8 @@ interface ReferralData {
 
 interface ReferralCanvasProps {
   referral: ReferralData | null;
+  onCancelRequest?: (referral: { id: string; studentName: string }) => void;
+  onDeleteRequest?: (referral: { id: string; studentName: string }) => void;
 }
 
 type StageState = "done" | "current" | "todo";
@@ -77,6 +83,27 @@ function formatDate(value?: string | null): string {
     year: "numeric",
   });
 }
+
+// Friendly fallback for unmapped codes: no underscores, Title Case
+// (e.g. "guidance_counselor" -> "Guidance Counselor") — plain words for
+// non-technical readers.
+function humanize(value?: string | null): string {
+  const words = (value ?? "").replace(/[_-]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "—";
+  return words
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+const STATUS_BADGE_LABELS: Record<string, string> = {
+  pending: "Pending",
+  in_progress: "In Progress",
+  resolved: "Resolved",
+  dismissed: "Cancelled",
+  escalated: "Escalated",
+  info_requested: "Info Requested",
+  follow_up: "Follow Up",
+};
 
 // Pipeline derivation (teacher tracking, status-only — mirrors the backend
 // ADM state machine in backend/src/services/adm.ts):
@@ -184,8 +211,9 @@ const ELIGIBILITY_LABELS: Record<string, string> = {
 
 function buildStages(referral: ReferralData): Stage[] {
   const status = referral.status ?? "pending";
+  const cancelled = status === "dismissed";
   const targetRole = referral.targetRole ?? referral.referredToRole ?? "";
-  const targetLabel = TARGET_ROLE_LABELS[targetRole] ?? targetRole ?? "Receiving role";
+  const targetLabel = TARGET_ROLE_LABELS[targetRole] ?? (targetRole ? humanize(targetRole) : "Receiving role");
   const resolved = status === "resolved";
 
   if (referral.track === "adm") {
@@ -202,6 +230,9 @@ function buildStages(referral: ReferralData): Stage[] {
     const completed = resolved || stageKey === "completion";
 
     const stateAt = (idx: number): StageState => {
+      // A cancelled case never advances: only the filed step stays done so
+      // no stage is ever marked Current afterwards.
+      if (cancelled) return idx === 0 ? "done" : "todo";
       if (completed) return "done";
       if (idx < currentIdx) return "done";
       if (idx === currentIdx) return "current";
@@ -223,7 +254,7 @@ function buildStages(referral: ReferralData): Stage[] {
         : "If needed",
       home_visitation: homeDone ? "Done" : homeSkipped ? "Skipped" : "If no meeting",
       certification: certified
-        ? (ELIGIBILITY_LABELS[referral.admEligibility ?? ""] ?? "Issued")
+        ? (ELIGIBILITY_LABELS[referral.admEligibility ?? ""] ?? (referral.admEligibility ? humanize(referral.admEligibility) : "Issued"))
         : "Pending issuance",
       principal_approval: approved
         ? `Signed · ${formatDate(referral.admApprovedAt)}`
@@ -277,10 +308,11 @@ function buildStages(referral: ReferralData): Stage[] {
   const meetingDone = !!referral.hasParentMeeting;
   const homeDone = !!referral.hasHomeVisit;
 
-  const reviewState: StageState = resolved || reviewDone ? "done" : "current";
-  const meetingState: StageState = meetingDone || resolved ? "done" : reviewDone ? "current" : "todo";
-  const homeState: StageState = homeDone || resolved ? "done" : meetingDone || reviewDone ? "current" : "todo";
-  const resolvedState: StageState = resolved ? "done" : status === "in_progress" ? "current" : "todo";
+  // A cancelled case never advances: everything past Referred stays To Do.
+  const reviewState: StageState = cancelled ? "todo" : resolved || reviewDone ? "done" : "current";
+  const meetingState: StageState = cancelled ? "todo" : meetingDone || resolved ? "done" : reviewDone ? "current" : "todo";
+  const homeState: StageState = cancelled ? "todo" : homeDone || resolved ? "done" : meetingDone || reviewDone ? "current" : "todo";
+  const resolvedState: StageState = cancelled ? "todo" : resolved ? "done" : status === "in_progress" ? "current" : "todo";
 
   return [
     {
@@ -293,7 +325,7 @@ function buildStages(referral: ReferralData): Stage[] {
     {
       key: "review",
       label: "Review",
-      sub: reviewDone ? (resolved ? "Reviewed" : "Under review") : `Waiting on ${targetLabel}`,
+      sub: cancelled ? "Cancelled" : reviewDone ? (resolved ? "Reviewed" : "Under review") : `Waiting on ${targetLabel}`,
       state: reviewState,
       Icon: Eye,
     },
@@ -321,7 +353,7 @@ function buildStages(referral: ReferralData): Stage[] {
     {
       key: "resolved",
       label: "Resolved",
-      sub: resolved ? formatDate(referral.resolvedAt) : status === "in_progress" ? "In progress" : "Pending",
+      sub: cancelled ? "Cancelled" : resolved ? formatDate(referral.resolvedAt) : status === "in_progress" ? "In Progress" : "Pending",
       state: resolvedState,
       Icon: Check,
     },
@@ -330,12 +362,10 @@ function buildStages(referral: ReferralData): Stage[] {
 
 // Workflow canvas: the selected referral rendered as connected stage nodes on
 // a dotted canvas. Read-only — downstream detail stays with the receiving role.
-export function ReferralCanvas({ referral }: ReferralCanvasProps) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-
-  function scrollBy(dir: 1 | -1) {
-    scrollerRef.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
-  }
+export function ReferralCanvas({ referral, onCancelRequest, onDeleteRequest }: ReferralCanvasProps) {
+  // Step detail overlay: every box opens info for that step (status,
+  // owner, activity time/date and actions executed).
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   if (!referral) {
     return (
@@ -350,6 +380,22 @@ export function ReferralCanvas({ referral }: ReferralCanvasProps) {
 
   const stages = buildStages(referral);
 
+  // Compact rows that fit the canvas: one row up to 5 steps, otherwise
+  // chunks of 4 — boxes joined by arrow connectors, no scrolling.
+  const perRow = stages.length <= 5 ? stages.length : 4;
+  const rows: { stage: Stage; index: number }[][] = [];
+  stages.forEach((stage, index) => {
+    const r = Math.floor(index / perRow);
+    (rows[r] ??= []).push({ stage, index });
+  });
+
+  const activeStage = activeIndex !== null ? (stages[activeIndex] ?? null) : null;
+
+  function edgeLit(i: number): boolean {
+    const s = stages[i].state;
+    return s === "done" || (s === "current" && (i === 0 || stages[i - 1].state === "done"));
+  }
+
   return (
     <div className={styles.canvas} aria-label={`Workflow for ${referral.studentName}`}>
       <div className={styles.canvasHead}>
@@ -361,137 +407,142 @@ export function ReferralCanvas({ referral }: ReferralCanvasProps) {
         </div>
         <div className={styles.canvasBadges}>
           {referral.track === "adm" && <Badge variant="default">ADM case</Badge>}
-          <Badge variant={referral.status === "resolved" ? "success" : "warning"}>
-            {referral.status === "resolved"
-              ? "Resolved"
-              : referral.status === "in_progress"
-                ? "In progress"
-                : "Pending"}
+          <Badge variant={referral.status === "resolved" ? "success" : referral.status === "in_progress" ? "warning" : "secondary"}>
+            {STATUS_BADGE_LABELS[referral.status ?? ""] ?? humanize(referral.status)}
           </Badge>
+          {referral.status !== "dismissed" && referral.status !== "resolved" && onCancelRequest ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className={styles.btnRed}
+              onClick={() =>
+                onCancelRequest({ id: referral.id ?? "", studentName: referral.studentName ?? "" })
+              }
+            >
+              Cancel referral
+            </Button>
+          ) : null}
+          {referral.status === "dismissed" && onDeleteRequest ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className={styles.btnRed}
+              onClick={() =>
+                onDeleteRequest({ id: referral.id ?? "", studentName: referral.studentName ?? "" })
+              }
+            >
+              <Trash2 aria-hidden />
+              Delete
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      <div className={styles.scroll} ref={scrollerRef}>
-        <ol className={styles.nodes} aria-label="Referral progress">
-          {stages.map((stage, i) => {
-            const prevDone = i === 0 || stages[i - 1].state === "done";
-            const lit = stage.state === "done" || (stage.state === "current" && prevDone);
-            const Icon = stage.Icon;
-            return (
-              <Fragment key={stage.key}>
-                {i > 0 && (
-                  <li className={styles.edgeItem} aria-hidden>
-                    <span className={`${styles.wire} ${lit ? styles.wireLit : ""}`} />
-                    <span className={`${styles.head} ${lit ? styles.headLit : ""}`} />
-                  </li>
-                )}
-                <li className={styles.nodeItem}>
-                  <div
-                    className={`${styles.node} ${stage.state === "current" ? styles.nodeCurrent : ""} ${stage.state === "todo" ? styles.nodeTodo : ""}`}
-                    title={stage.description ?? stage.sub}
-                  >
-                    <span
-                      className={`${styles.tile} ${stage.state === "done" ? styles.tileDone : ""} ${stage.state === "current" ? styles.tileCurrent : ""}`}
-                      aria-hidden
+      <div className={styles.flow}>
+        {rows.map((row, r) => (
+          <ol
+            key={r}
+            className={styles.row}
+            style={{
+              gridTemplateColumns: `repeat(${row.length - 1}, minmax(0, 1fr) auto) minmax(0, 1fr)`,
+            }}
+            aria-label={rows.length > 1 ? `Referral progress, row ${r + 1}` : "Referral progress"}
+          >
+            {row.map(({ stage, index: i }) => {
+              const Icon = stage.Icon;
+              const lit = edgeLit(i);
+              const stateText =
+                stage.state === "done" ? "Done" : stage.state === "current" ? "Current" : "Queued";
+              const stateClass =
+                stage.state === "done"
+                  ? styles.stateDone
+                  : stage.state === "current"
+                    ? styles.stateCurrent
+                    : styles.stateTodo;
+              return (
+                <Fragment key={stage.key}>
+                  {i % perRow !== 0 && (
+                    <li className={styles.edge} aria-hidden>
+                      <span className={`${styles.wire} ${lit ? styles.wireLit : ""}`} />
+                      <span className={`${styles.head} ${lit ? styles.headLit : ""}`} />
+                    </li>
+                  )}
+                  <li className={styles.nodeItem}>
+                    <button
+                      type="button"
+                      className={`${styles.node} ${stage.state === "done" ? styles.nodeDone : ""} ${stage.state === "current" ? styles.nodeCurrent : ""} ${stage.state === "todo" ? styles.nodeTodo : ""}`}
+                      title={`${stage.label} — view step details`}
+                      onClick={() => setActiveIndex(i)}
+                      aria-haspopup="dialog"
                     >
-                      <Icon />
-                    </span>
-                    <span className={styles.nodeText}>
-                      <span className={styles.nodeLabel}>
-                        {stage.label}
-                        {stage.optional ? <span className={styles.opt}> (optional)</span> : null}
+                      <span
+                        className={`${styles.tile} ${stage.state === "done" ? styles.tileDone : ""} ${stage.state === "current" ? styles.tileCurrent : ""}`}
+                        aria-hidden
+                      >
+                        <Icon />
                       </span>
-                      <span className={styles.nodeSub}>{stage.sub}</span>
-                      {stage.principalAction ? (
-                        <span className={styles.nodeSub}>Principal action</span>
-                      ) : null}
-                    </span>
-                    {stage.state === "current" && (
-                      <span className={styles.currentTag}>Current</span>
-                    )}
-                  </div>
-                </li>
-              </Fragment>
-            );
-          })}
-        </ol>
-      </div>
-
-      <div className={styles.nav}>
-        <button
-          type="button"
-          className={styles.arrow}
-          onClick={() => scrollBy(-1)}
-          aria-label="Scroll pipeline left"
-        >
-          <ChevronLeft className={styles.arrowIcon} aria-hidden />
-        </button>
-        <button
-          type="button"
-          className={styles.arrow}
-          onClick={() => scrollBy(1)}
-          aria-label="Scroll pipeline right"
-        >
-          <ChevronRight className={styles.arrowIcon} aria-hidden />
-        </button>
+                      <span className={styles.nodeText}>
+                        <span className={styles.nodeStep}>
+                          Step {i + 1} of {stages.length}
+                        </span>
+                        <span className={styles.nodeLabel}>
+                          {stage.label}
+                          {stage.optional ? <span className={styles.opt}> (optional)</span> : null}
+                        </span>
+                        <span className={styles.nodeSub}>{stage.sub}</span>
+                        {stage.principalAction ? (
+                          <span className={styles.nodeSub}>Principal action</span>
+                        ) : null}
+                      </span>
+                      <span className={`${styles.stateTag} ${stateClass}`}>{stateText}</span>
+                    </button>
+                  </li>
+                </Fragment>
+              );
+            })}
+          </ol>
+        ))}
       </div>
 
       <div className={styles.caseFile}>
-        <div className={styles.caseRow}>
-          <span className={styles.caseLabel}>Reason</span>
-          <p className={styles.caseText}>{referral.reason ?? ""}</p>
+        <div className={`${styles.caseRow} ${styles.caseSpanReason}`}>
+          <span className={styles.caseLabel}>
+            <FileText className={styles.caseIcon} aria-hidden />
+            Reason
+          </span>
+          <ReadMore text={referral.reason ?? "—"} maxLines={3} className={styles.caseText} />
         </div>
-        <div className={styles.caseRow}>
-          <span className={styles.caseLabel}>Source anecdotal</span>
+        <div className={`${styles.caseRow} ${styles.caseSpanSource}`}>
+          <span className={styles.caseLabel}>
+            <Eye className={styles.caseIcon} aria-hidden />
+            Source anecdotal
+          </span>
           <p className={styles.caseText}>
             <span className={styles.caseDate}>Observed {referral.observationDate ?? "—"}</span>
           </p>
         </div>
-        <div className={styles.caseRow}>
-          <span className={styles.caseLabel}>Tracking</span>
-          <p className={styles.caseText}>
-            Referred to {TARGET_ROLE_LABELS[referral.targetRole ?? referral.referredToRole ?? ""] ?? referral.targetRole ?? referral.referredToRole ?? "—"} ·{" "}
-            <span className={styles.caseDate}>{formatDate(referral.referredAt)}</span>
-            {referral.track === "adm"
-              ? (() => {
-                  const current =
-                    ADM_META_BY_STAGE.get(referral.admStage ?? "consultation") ??
-                    ADM_META_BY_STAGE.get("consultation")!;
-                  const order = ADM_META_BY_STAGE.get(referral.admStage ?? "consultation")?.order ?? 2;
-                  return (
-                    <>
-                      {" · "}Stage {order} of 8: {current.label} ({current.owner})
-                      <br />
-                      <span className={styles.caseDate}>{current.description}</span>
-                      {referral.admEligibility ? (
-                        <> · {ELIGIBILITY_LABELS[referral.admEligibility] ?? referral.admEligibility}</>
-                      ) : null}
-                      {referral.admApproved ? (
-                        <> · <span className={styles.caseDate}>Principal signed {formatDate(referral.admApprovedAt)}</span></>
-                      ) : (
-                        <> · <span className={styles.caseDate}>Awaiting principal signature</span></>
-                      )}
-                    </>
-                  );
-                })()
-              : null}
-            {(() => {
-              // The "Referred to …" timeline entry duplicates the line above
-              // (and carries the raw role value), so hide it here.
-              const extra = (referral.timeline ?? []).filter(
-                (t) => !/^referred to\b/i.test((t.label ?? "").trim())
-              );
-              if (extra.length === 0) return null;
-              return (
-                <>
-                  {" · "}
-                  {extra.map((t) => `${t.label} (${formatDate(t.date)})`).join(" → ")}
-                </>
-              );
-            })()}
-          </p>
-        </div>
+        {referral.status === "dismissed" && referral.notes ? (
+          <div className={`${styles.caseRow} ${styles.caseSpanFull}`}>
+            <span className={styles.caseLabel}>
+              <Trash2 className={styles.caseIcon} aria-hidden />
+              Cancellation reason
+            </span>
+            <ReadMore text={referral.notes} maxLines={3} className={styles.caseText} />
+          </div>
+        ) : null}
       </div>
+
+      <ReferralStepDialog
+        step={
+          activeStage
+            ? { ...activeStage, index: activeIndex ?? 0, total: stages.length }
+            : null
+        }
+        timeline={referral.timeline ?? []}
+        onClose={() => setActiveIndex(null)}
+      />
     </div>
   );
 }

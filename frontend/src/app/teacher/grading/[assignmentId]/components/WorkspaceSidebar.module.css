@@ -1,0 +1,287 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  position: sticky;
+  top: 4rem;
+  align-self: start;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--card);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.recentHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.viewAllBtn {
+  height: 1.5rem;
+  min-height: 1.5rem;
+  padding-inline: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.weightList,
+.recentList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.weightRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.plainSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding-inline: 0.25rem;
+}
+
+.rowBtn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.375rem 0.25rem;
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.rowBtn:hover {
+  background: var(--muted);
+}
+
+.rowBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.bannerCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  width: 100%;
+  --banner-fg: var(--primary-foreground);
+  --banner-muted: color-mix(in oklch, var(--primary-foreground), transparent 25%);
+  padding: 0.875rem;
+  border: none;
+  border-radius: var(--radius-lg, 0.75rem);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), white 22%),
+    color-mix(in oklch, var(--primary), white 6%)
+  );
+  color: var(--banner-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* Dark mode flips the monochrome brand (primary goes near-white), so the
+   banner uses a dark tinted gradient with near-white ink instead of a
+   washed-out light gradient. */
+:global(.dark) .bannerCard {
+  --banner-fg: oklch(0.97 0 0);
+  --banner-muted: color-mix(in oklch, var(--banner-fg), transparent 30%);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), black 70%),
+    color-mix(in oklch, var(--primary), black 82%)
+  );
+}
+
+.bannerCard:hover {
+  filter: brightness(1.05);
+}
+
+.bannerCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.bannerTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bannerTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--banner-fg);
+}
+
+.bannerCount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--banner-fg);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.bannerSub {
+  font-size: 0.75rem;
+  color: var(--banner-muted);
+}
+
+.bannerAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--banner-fg);
+}
+
+.bannerActionIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.weightName {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weightValue {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.dotWW {
+  background-color: #3b82f6;
+}
+
+.dotPT {
+  background-color: #10b981;
+}
+
+.dotQE {
+  background-color: #f59e0b;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.actionBtn {
+  width: 100%;
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.recentText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.0625rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.recentMax {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  flex-shrink: 0;
+  margin-left: auto;
+  line-height: 1.1;
+}
+
+.recentMaxValue {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.recentMaxLabel {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.recentTitle {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.recentMeta {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 64rem) {
+  .sidebar {
+    position: static;
+  }
+}

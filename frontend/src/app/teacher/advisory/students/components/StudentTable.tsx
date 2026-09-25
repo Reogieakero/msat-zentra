@@ -6,7 +6,6 @@ import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardAction,
   CardContent,
   CardFooter,
@@ -96,7 +95,6 @@ export function StudentTable({ students, loading }: StudentTableProps) {
   );
 
   const hasActiveFilters = filter !== "all";
-  const sectionName = students[0]?.section ?? "";
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -108,10 +106,7 @@ export function StudentTable({ students, loading }: StudentTableProps) {
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>{sectionName ? `${sectionName} · Advisory` : "Advisory"}</CardTitle>
-          <CardDescription>
-            Students in your advisory section. Click a row for details.
-          </CardDescription>
+          <CardTitle>My Advisory List</CardTitle>
         </div>
         <CardAction className={styles.headerActions}>
           <div className={styles.searchWrap}>
@@ -191,7 +186,7 @@ export function StudentTable({ students, loading }: StudentTableProps) {
               <TableHead>LRN</TableHead>
               <TableHead>Birthday</TableHead>
               <TableHead>Gender</TableHead>
-              <TableHead>At-Risk Level</TableHead>
+              <TableHead className={styles.riskCell}>At-Risk Level</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -222,18 +217,13 @@ export function StudentTable({ students, loading }: StudentTableProps) {
                       </span>
                       <span className={styles.nameRow}>
                         <span className={styles.name}>{s.name}</span>
-                        {!s.hasAccount ? (
-                          <Badge variant="outline" className={styles.noAccount}>
-                            No account
-                          </Badge>
-                        ) : null}
                       </span>
                     </span>
                   </TableCell>
                   <TableCell className={styles.lrn}>{s.lrn}</TableCell>
                   <TableCell className={styles.lrn}>{formatBirthdate(s.birthdate)}</TableCell>
                   <TableCell>{s.gender ?? "—"}</TableCell>
-                  <TableCell>
+                  <TableCell className={styles.riskCell}>
                     <Badge variant={RISK_VARIANTS[s.riskLevel]}>{s.riskLevel}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -249,7 +239,7 @@ export function StudentTable({ students, loading }: StudentTableProps) {
                           <MoreHorizontal aria-hidden />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className={styles.rowMenu}>
                         <DropdownMenuLabel>{s.name}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

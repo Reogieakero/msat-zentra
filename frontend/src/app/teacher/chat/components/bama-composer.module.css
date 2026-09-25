@@ -1,0 +1,40 @@
+/* ---- Composer: fixed at the bottom, send sits inside the ask box ---- */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  padding: 0.75rem 0.25rem 0;
+  border-top: 1px solid var(--border);
+  background-color: transparent;
+}
+
+.askWrap {
+  position: relative;
+  min-width: 0;
+}
+
+.ask {
+  width: 100%;
+  min-width: 0;
+  resize: none;
+  padding-right: 3rem;
+  overflow-y: auto;
+  max-height: 12rem;
+}
+
+.sendInside {
+  position: absolute;
+  right: 0.625rem;
+  bottom: 0.625rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}

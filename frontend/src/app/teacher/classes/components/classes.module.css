@@ -2,13 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1rem 0 0.25rem;
-}
-
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
+  /* 16px comes from the layout shell (.main padding); no extra top pad. */
+  padding: 0 0 0.25rem;
 }
 
 .body {

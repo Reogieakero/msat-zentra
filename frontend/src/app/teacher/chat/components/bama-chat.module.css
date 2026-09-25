@@ -1,0 +1,76 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: calc(100dvh - 6rem - 2rem);
+  padding-bottom: 1rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+  /* Dock the sidebar to the viewport's left edge. */
+  margin-left: -1rem;
+}
+
+@media (max-width: 64rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    margin-left: -0.5rem;
+  }
+}
+
+/* ---- Thread shell: no card chrome, fixed height so only messages scroll ---- */
+.body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  height: calc(100dvh - 6rem - 2rem - 1rem);
+  min-height: 30rem;
+  background-color: transparent;
+}
+
+/* Solid red delete confirm (theme destructive is only a soft tint). */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+}
+
+/* Filed sessions are over: no composer, just a way back out. */
+.endedBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+  padding: 0.75rem 0.25rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.endedBarText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 64rem) {
+  .body {
+    height: auto;
+  }
+}

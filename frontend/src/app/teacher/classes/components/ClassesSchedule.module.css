@@ -2,6 +2,9 @@
   min-width: 0;
   border-radius: var(--radius-lg);
   overflow: hidden;
+  /* Card grows to fit the full timetable — no internal vertical
+     scroll. The page is the scroll container. */
+  height: auto;
 }
 
 .header {
@@ -39,30 +42,30 @@
   color: var(--muted-foreground);
 }
 
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.navBtn {
-  height: 2rem;
-  width: 2rem;
-}
-
 .content {
-  overflow: hidden;
+  overflow: visible;
   padding: 0 1rem 1rem;
+}
+
+/* No scroll container on desktop — the card extends to the full
+   timetable height and the page scrolls. Horizontal scroll is only
+   enabled on narrow screens (see media query below). */
+.scroll {
+  overflow: visible;
 }
 
 .table {
   display: grid;
   grid-template-columns: 4.5rem repeat(5, minmax(0, 1fr));
   width: 100%;
+  min-width: 46rem;
 }
 
 .timeGutter {
-  position: relative;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background-color: var(--card);
 }
 
 .timeLabel {
@@ -77,6 +80,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Pin the edge labels inside the gutter so their half-height never
+   overflows the scroll area (that 8px overflow caused a tiny
+   vertical scroll when horizontal scrolling was enabled). */
+.timeGutter .timeLabel:first-child {
+  transform: translateY(0);
+}
+
+.timeGutter .timeLabel:last-child {
+  transform: translateY(-100%);
 }
 
 .dayCol {
@@ -104,6 +118,14 @@
   font-size: 0.6875rem;
   font-weight: 700;
   color: var(--foreground);
+}
+
+.dayToday .dayShort {
+  color: var(--primary);
+}
+
+.dayToday .dayName {
+  color: var(--primary);
 }
 
 .timeline {
@@ -160,6 +182,22 @@
   pointer-events: none;
 }
 
+.nowLive::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--primary);
+}
+
+/* Timetable entries — flat rows with a color spine, no nested cards.
+   --event holds the light-mode base color; --event-ink is the
+   theme-adapted ink (lightened under .dark so dark grays stay
+   readable on dark surfaces). */
 .eventBlock {
   position: absolute;
   left: 50%;
@@ -168,33 +206,39 @@
   z-index: 2;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: 0.125rem;
-  padding: 0.25rem 0.5rem 0.25rem 0.625rem;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background-color: color-mix(in oklch, var(--event), transparent 85%);
-  border: 1px solid color-mix(in oklch, var(--event), transparent 55%);
-  border-left: 3px solid var(--event);
+  justify-content: center;
+  gap: 0.0625rem;
+  padding: 0.25rem 0.375rem 0.25rem 0.5rem;
+  border: none;
+  border-left: 3px solid var(--event-ink);
+  border-radius: 0;
+  background: transparent;
+  --event-ink: var(--event);
   font: inherit;
   text-align: left;
   cursor: pointer;
   appearance: none;
+  overflow: hidden;
+  outline: none;
+  min-height: 0;
+}
+
+:global(.dark) .eventBlock {
+  --event-ink: color-mix(in oklch, var(--event), white 55%);
 }
 
 .eventBlock:hover {
-  background-color: color-mix(in oklch, var(--event), transparent 78%);
+  background-color: color-mix(in oklch, var(--event-ink), transparent 90%);
 }
 
 .eventBlock:focus-visible {
-  outline: 2px solid var(--event);
-  outline-offset: 1px;
+  box-shadow: inset 0 0 0 2px var(--event-ink);
 }
 
 .eventSubject {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--event);
+  color: var(--event-ink);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -202,10 +246,47 @@
 }
 
 .eventMeta {
-  font-size: 0.5625rem;
-  color: color-mix(in oklch, var(--event), var(--foreground) 35%);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--event-ink), var(--foreground) 30%);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.eventTime {
+  font-size: 0.625rem;
+  color: color-mix(in oklch, var(--event-ink), var(--foreground) 45%);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 767px) {
+  .content {
+    padding: 0 0.5rem 0.5rem;
+  }
+
+  .header {
+    padding: 0.875rem 0.75rem 0.625rem;
+  }
+}
+
+/* Narrow screens: the 46rem timetable is wider than the viewport, so
+   allow horizontal swipe inside the card. Vertical stays locked —
+   overflow-y is clipped so no tiny vertical scroll appears. */
+@media (max-width: 50rem) {
+  .scroll {
+    overflow-x: auto;
+    overflow-y: clip;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scroll::-webkit-scrollbar {
+    display: none;
+  }
 }

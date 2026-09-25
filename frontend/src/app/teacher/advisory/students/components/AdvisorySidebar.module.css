@@ -1,0 +1,441 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  min-height: 0;
+  position: sticky;
+  top: 4rem;
+  /* Fill down to 16px above the viewport bottom; the subjects card
+     flexes to take the leftover space and scrolls its list inside. */
+  max-height: calc(100vh - 5rem);
+  max-height: calc(100dvh - 5rem);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background-color: var(--card);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.body {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+
+.bannerAddBtn {
+  height: 1.5rem;
+  min-height: 1.5rem;
+  width: auto;
+  padding-inline: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.bannerAddBtnOnBanner {
+  border: none;
+}
+
+.bannerCard,
+.subjectsCard {
+  --banner-fg: var(--primary-foreground);
+  --banner-muted: color-mix(in oklch, var(--primary-foreground), transparent 25%);
+  --banner-tint: rgba(255, 255, 255, 0.15);
+  --banner-line: rgba(255, 255, 255, 0.35);
+}
+
+/* Dark mode: the monochrome brand flips (primary goes near-white), so use a
+   dark tinted gradient with near-white ink instead of a washed-out light one. */
+:global(.dark) .bannerCard,
+:global(.dark) .subjectsCard {
+  --banner-fg: oklch(0.97 0 0);
+  --banner-muted: color-mix(in oklch, var(--banner-fg), transparent 30%);
+  --banner-tint: rgba(255, 255, 255, 0.08);
+  --banner-line: rgba(255, 255, 255, 0.18);
+}
+
+.bannerCard {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem;
+  border: none;
+  border-radius: var(--radius-lg, 0.75rem);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), white 22%),
+    color-mix(in oklch, var(--primary), white 6%)
+  );
+  color: var(--banner-fg);
+}
+
+:global(.dark) .bannerCard {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), black 70%),
+    color-mix(in oklch, var(--primary), black 82%)
+  );
+}
+
+.bannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.bannerEyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--banner-muted);
+}
+
+.bannerName {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--banner-fg);
+}
+
+.bannerSub {
+  font-size: 0.75rem;
+  color: var(--banner-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.skelEyebrow {
+  height: 0.6875rem;
+  width: 5.5rem;
+  border-radius: 999px;
+  opacity: 0.55;
+}
+
+.skelName {
+  height: 1.5rem;
+  width: 9rem;
+  max-width: 100%;
+  border-radius: var(--radius-sm, 0.375rem);
+  opacity: 0.55;
+}
+
+.skelSub {
+  height: 0.75rem;
+  width: 6.5rem;
+  border-radius: 999px;
+  opacity: 0.55;
+}
+
+.skelRowTitle {
+  height: 0.8125rem;
+  width: 60%;
+  border-radius: var(--radius-sm, 0.375rem);
+}
+
+.skelRowMeta {
+  height: 0.75rem;
+  width: 80%;
+  border-radius: 999px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.subjectsCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background-color: var(--card);
+  overflow: hidden;
+}
+
+.subjectsBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), white 22%),
+    color-mix(in oklch, var(--primary), white 6%)
+  );
+  color: var(--banner-fg);
+}
+
+:global(.dark) .subjectsBanner {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), black 70%),
+    color-mix(in oklch, var(--primary), black 82%)
+  );
+}
+
+.subjectsBannerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bannerTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--banner-fg);
+}
+
+.bannerCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--banner-fg), transparent 80%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--banner-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.bannerSearchWrap {
+  position: relative;
+}
+
+.bannerSearchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--banner-muted);
+  pointer-events: none;
+}
+
+.bannerSearch {
+  width: 100%;
+  height: 2rem;
+  padding: 0 0.625rem 0 2rem;
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid var(--banner-line);
+  background: var(--banner-tint);
+  color: var(--banner-fg);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.bannerSearch::placeholder {
+  color: var(--banner-muted);
+}
+
+.bannerSearch:focus {
+  outline: none;
+  border-color: var(--banner-fg);
+}
+
+.subjectsBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem 1rem 0;
+}
+
+.nestedCard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.5rem);
+  background-color: var(--card);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 150ms ease-out;
+}
+
+.nestedCard:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+}
+
+.nestedCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+/* Active subject gets the banner design; inactive ones stay plain. */
+.nestedCardActive {
+  border: none;
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), white 22%),
+    color-mix(in oklch, var(--primary), white 6%)
+  );
+}
+
+:global(.dark) .nestedCardActive {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), black 70%),
+    color-mix(in oklch, var(--primary), black 82%)
+  );
+}
+
+:global(.dark) .nestedCard {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary), black 70%),
+    color-mix(in oklch, var(--primary), black 82%)
+  );
+}
+
+.nestedText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.nestedLine {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.nestedLabel {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.nestedValue {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nestedCardActive .nestedLabel {
+  color: var(--banner-muted);
+}
+
+.nestedCardActive .nestedValue {
+  color: var(--banner-fg);
+}
+
+.nestedChevron {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--muted-foreground);
+}
+
+.nestedCardActive .nestedChevron {
+  color: var(--banner-muted);
+}
+
+/* Fills the stretched card and scrolls past ~10 subjects, with a 16px
+   breathing gap above the bottom gutter so the last row never sits flush. */
+.subjectList {
+  flex: 1;
+  min-height: 0;
+  max-height: 30rem;
+  overflow-y: auto;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowMeta {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 64rem) {
+  .sidebar {
+    position: static;
+    max-height: none;
+  }
+
+  .subjectsCard {
+    flex: none;
+  }
+}

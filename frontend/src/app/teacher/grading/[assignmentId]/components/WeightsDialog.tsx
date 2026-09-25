@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +24,7 @@ import {
   type ComponentType,
   type WeightPreset,
 } from "../../components/grading-data";
+import { sileo } from "@/components/ui/sonner";
 import { WeightsVisual } from "./WeightsVisual";
 import styles from "./WeightsDialog.module.css";
 
@@ -57,13 +59,16 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
     : WEIGHT_PRESETS.filter((p) => p.key !== "SHS");
 
   const handlePreset = async (preset: WeightPreset) => {
+    if (presetSaving !== null || saving) return;
     setError(null);
     setPresetSaving(preset);
     try {
       await applyWeightPreset(assignment.id, preset);
       onSaved();
+      sileo.success({ title: "Weights applied", description: "DepEd standard weights are now active." });
     } catch {
       setError("Failed to apply DepEd weights.");
+      sileo.error({ title: "Could not apply weights", description: "Try again." });
     } finally {
       setPresetSaving(null);
     }
@@ -90,9 +95,11 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
       );
       if (results.some((r) => r.status === "rejected")) {
         setError("Some weights failed to save — please retry.");
+        sileo.error({ title: "Weights partially saved", description: "Some weights failed — please retry." });
         return;
       }
       onSaved();
+      sileo.success({ title: "Weights saved", description: "Category weights now total 100%." });
     } finally {
       setSaving(false);
     }
@@ -130,9 +137,16 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
                     variant="outline"
                     onClick={() => void handlePreset(p.key)}
                     disabled={presetSaving !== null || saving}
-                    title={p.hint}
+                    aria-busy={presetSaving === p.key || undefined}
                   >
-                    {presetSaving === p.key ? "Applying…" : `${p.label} (${p.hint})`}
+                    {presetSaving === p.key ? (
+                      <>
+                        <Loader2 className="animate-spin" aria-hidden />
+                        Applying…
+                      </>
+                    ) : (
+                      `${p.label} (${p.hint})`
+                    )}
                   </Button>
                 ))}
               </div>
@@ -168,8 +182,15 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
             {editing ? "Cancel" : "Close"}
           </Button>
           {editing ? (
-            <Button onClick={() => void handleSave()} disabled={saving || presetSaving !== null}>
-              {saving ? "Saving…" : "Save weights"}
+            <Button onClick={() => void handleSave()} disabled={saving || presetSaving !== null} aria-busy={saving || undefined}>
+              {saving ? (
+                <>
+                  <Loader2 className="animate-spin" aria-hidden />
+                  Saving weights…
+                </>
+              ) : (
+                "Save weights"
+              )}
             </Button>
           ) : (
             <Button onClick={() => setEditing(true)}>Edit</Button>

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import type {
   ClassAverageRow,
@@ -40,17 +39,6 @@ export function GradebookCards({ classes, assessments, standings }: Props) {
             : 0;
         return (
           <article key={c.id} className={styles.card} aria-label={`${c.subject} · ${c.section}`}>
-            <Image
-              src={`https://picsum.photos/seed/${c.id}/640/480`}
-              alt=""
-              aria-hidden
-              fill
-              sizes="(max-width: 700px) 100vw, 22rem"
-              loading="lazy"
-              className={styles.bannerImg}
-            />
-            <div className={styles.overlay} aria-hidden />
-
             <div className={styles.cardBody}>
               <div className={styles.cardHead}>
                 <h2 className={styles.cardSubject}>{c.subject}</h2>
@@ -68,12 +56,6 @@ export function GradebookCards({ classes, assessments, standings }: Props) {
                   <span className={styles.statValue}>{assessmentCount}</span>
                   <span className={styles.statLabel}>Assessments</span>
                 </div>
-                <div className={styles.stat}>
-                  <span className={styles.statValue}>
-                    {standing ? standing.average.toFixed(1) : "—"}
-                  </span>
-                  <span className={styles.statLabel}>Class average</span>
-                </div>
               </div>
 
               <div
@@ -90,9 +72,11 @@ export function GradebookCards({ classes, assessments, standings }: Props) {
                 {standing?.assessed ?? 0} of {standing?.students ?? c.studentCount} assessed
               </span>
 
-              <Button asChild className={styles.openBtn}>
-                <Link href={`/teacher/grading/${c.id}`}>Open workspace</Link>
-              </Button>
+              <div className={styles.cardFoot}>
+                <Button asChild className={styles.openBtn}>
+                  <Link href={`/teacher/grading/${c.id}`}>Open workspace</Link>
+                </Button>
+              </div>
             </div>
           </article>
         );

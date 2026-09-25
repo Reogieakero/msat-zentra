@@ -35,7 +35,7 @@ export const WEEK_DATES = [
 // afternoon session 1:00 PM – 5:00 PM.
 export const SCHOOL_START = 7 * 60 + 30; // 7:30 AM
 export const SCHOOL_END = 17 * 60; // 5:00 PM
-export const HOUR_HEIGHT = 56; // px per hour
+export const HOUR_HEIGHT = 72; // px per hour
 
 // Time labels: hourly from 7:30 through 11:30 (morning), then 1:00–5:00 (afternoon).
 export const TIMELINE: TimelineSlot[] = [

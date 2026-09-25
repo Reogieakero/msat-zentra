@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Inbox,
-  ClipboardList,
+  GraduationCap,
   Award,
   Tablet,
 } from "lucide-react";
@@ -29,6 +29,9 @@ type NavGroup = {
 // desks. Five tabs only (see ADM_COORDINATOR_REPORT.md §5). Approval
 // tracking lives as sub-tabs inside Certifications, not as its own nav
 // item, to avoid the guidance duplicate-ADM-entry problem.
+//
+// Shared-concept convention (same label + icon across desks):
+// Overview=LayoutDashboard, ADM Cases=Inbox.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -39,13 +42,13 @@ const NAV: NavGroup[] = [
   {
     label: "Intake",
     items: [
-      { title: "Referrals", href: "/coordinator/referrals", icon: Inbox },
+      { title: "ADM Cases", href: "/coordinator/referrals", icon: Inbox },
     ],
   },
   {
     label: "Monitoring",
     items: [
-      { title: "Enrolled", href: "/coordinator/enrolled", icon: ClipboardList },
+      { title: "Enrolled", href: "/coordinator/enrolled", icon: GraduationCap },
     ],
   },
   {

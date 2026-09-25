@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useRefreshAcademic, type ClassDetail } from "../../components/grading-data";
+import { ChevronLeft } from "lucide-react";
+import { useRefreshAcademic, type ClassDetail, type ComponentType } from "../../components/grading-data";
 import { WorkspaceHeader } from "./WorkspaceHeader";
+import { WorkspaceSidebar, type WorkspaceView } from "./WorkspaceSidebar";
 import { AddAssessmentDialog } from "./AddAssessmentDialog";
 import { ScoreGrid } from "./ScoreGrid";
 import { FinalsCard } from "./FinalsCard";
@@ -21,32 +22,63 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
   const refreshAcademic = useRefreshAcademic();
   const [weightsOpen, setWeightsOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
+  const [view, setView] = React.useState<WorkspaceView>("scores");
+  const [encodeCategory, setEncodeCategory] = React.useState<ComponentType>("WRITTEN_WORK");
+  const [encodeAssessmentId, setEncodeAssessmentId] = React.useState("");
+
+  const handleEncodeSelect = (category: ComponentType, assessmentId: string) => {
+    setEncodeCategory(category);
+    setEncodeAssessmentId(assessmentId);
+  };
+
+  const openAssessment = (category: ComponentType, assessmentId: string) => {
+    handleEncodeSelect(category, assessmentId);
+    setView("scores");
+  };
 
   return (
     <section className={styles.page}>
-      <Link href="/teacher/grading" className={styles.back}>
-        <ArrowLeft className={styles.backIcon} />
-        Back to Gradebook
-      </Link>
+      <div className={styles.topRow}>
+        <Link href="/teacher/grading" className={styles.back}>
+          <ChevronLeft className={styles.backIcon} />
+          Back to Gradebook
+        </Link>
 
-      <WorkspaceHeader
-        assignment={assignment}
-        studentCount={students.length}
-        onOpenWeights={() => setWeightsOpen(true)}
-        onAddAssessment={() => setAddOpen(true)}
-      />
+        <WorkspaceHeader assignment={assignment} studentCount={students.length} />
+      </div>
 
-      <ScoreGrid
-        students={students}
-        components={detail.components}
-        onChanged={onMutated}
-      />
+      <div className={styles.layout}>
+        <WorkspaceSidebar
+          assignmentId={assignment.id}
+          components={detail.components}
+          studentCount={students.length}
+          view={view}
+          onSelectView={setView}
+          onOpenAssessment={openAssessment}
+          onOpenWeights={() => setWeightsOpen(true)}
+          onAddAssessment={() => setAddOpen(true)}
+        />
 
-      <FinalsCard
-        assignmentId={assignment.id}
-        students={students}
-        onChanged={onMutated}
-      />
+        <div className={styles.main}>
+          <div className={view === "scores" ? undefined : styles.viewHidden}>
+            <ScoreGrid
+              students={students}
+              components={detail.components}
+              category={encodeCategory}
+              selectedId={encodeAssessmentId}
+              onChanged={onMutated}
+            />
+          </div>
+
+          <div className={view === "finals" ? undefined : styles.viewHidden}>
+            <FinalsCard
+              assignmentId={assignment.id}
+              students={students}
+              onChanged={onMutated}
+            />
+          </div>
+        </div>
+      </div>
 
       {weightsOpen ? (
         <WeightsDialog

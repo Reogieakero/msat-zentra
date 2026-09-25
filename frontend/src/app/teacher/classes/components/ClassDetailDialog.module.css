@@ -14,8 +14,13 @@
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 999px;
-  background-color: var(--detail, var(--primary));
+  --detail-ink: var(--detail, var(--primary));
+  background-color: var(--detail-ink);
   margin-top: 0.25rem;
+}
+
+:global(.dark) .dot {
+  --detail-ink: color-mix(in oklch, var(--detail, var(--primary)), white 55%);
 }
 
 .titleWrap {

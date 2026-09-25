@@ -5,17 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { CheckCircle2, Search, Pencil, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -26,6 +21,7 @@ import {
   type SheetStatus,
   type SheetSession,
 } from "./attendance-taking-data";
+import { sileo } from "@/components/ui/sonner";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -49,11 +45,10 @@ const STATUSES: { value: SheetStatus; label: string }[] = [
 interface AttendanceSheetProps {
   date: string;
   session: SheetSession;
-  isToday: boolean;
   editable: boolean;
 }
 
-export function AttendanceSheet({ date, session, isToday, editable }: AttendanceSheetProps) {
+export function AttendanceSheet({ date, session, editable }: AttendanceSheetProps) {
   const queryClient = useQueryClient();
   const [marks, setMarks] = useState<Record<string, SheetStatus>>({});
   const [query, setQuery] = useState("");
@@ -132,11 +127,11 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
 
   async function handleConfirm() {
     const ctx = contextQuery.data;
-    if (!ctx) return;
+    if (!ctx || submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await submitSheet({
+      const result = await submitSheet({
         sectionId: ctx.sectionId,
         termId: ctx.termId,
         date: `${date}T00:00:00Z`,
@@ -148,9 +143,14 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
       setConfirmOpen(false);
       setSubmitted(true);
       setEditing(false);
+      sileo.success({
+        title: "Attendance saved",
+        description: `${sessionLabel} attendance for ${dateLabel} — ${result.count} record${result.count === 1 ? "" : "s"}.`,
+      });
     } catch {
       setConfirmOpen(false);
       setSubmitError("Could not submit attendance. Try again.");
+      sileo.error({ title: "Could not submit attendance", description: "Try again." });
     } finally {
       setSubmitting(false);
     }
@@ -216,16 +216,6 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
     <>
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
-        <div className={styles.headerText}>
-          <CardTitle>
-            {sessionLabel} session · {date}
-            {!isToday ? <Badge variant="outline" className={styles.pastBadge}>Past day</Badge> : null}
-          </CardTitle>
-          <CardDescription>
-            {counts.present} present · {counts.absent} absent · {counts.late} late ·{" "}
-            {counts.excused} excused
-          </CardDescription>
-        </div>
         <div className={styles.headerActions}>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
@@ -240,7 +230,7 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            className={styles.markAllBtn}
             onClick={() => setAll("present")}
             disabled={!editable || loading}
           >
@@ -261,11 +251,11 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
                     <Skeleton className={styles.skelLrn} />
                   </span>
                 </span>
-                <span className={styles.radios} aria-hidden>
-                  <Skeleton className={styles.skelRadio} />
-                  <Skeleton className={styles.skelRadio} />
-                  <Skeleton className={styles.skelRadio} />
-                  <Skeleton className={styles.skelRadio} />
+                <span className={styles.segTabs} aria-hidden>
+                  <Skeleton className={styles.skelSeg} />
+                  <Skeleton className={styles.skelSeg} />
+                  <Skeleton className={styles.skelSeg} />
+                  <Skeleton className={styles.skelSeg} />
                 </span>
               </li>
             ))}
@@ -281,7 +271,7 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
         ) : (
         <ul className={styles.rows}>
           {visibleStudents.map((s) => (
-            <li key={s.studentId} className={styles.row}>
+            <li key={s.studentId} id={`sheet-row-${s.studentId}`} className={styles.row}>
               <span className={styles.identity}>
                 <span className={styles.avatar} aria-hidden>
                   {initialsOf(s.name)}
@@ -291,26 +281,31 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
                   <span className={styles.lrn}>{s.lrn}</span>
                 </span>
               </span>
-              <RadioGroup
-                value={statusOf(s.studentId)}
-                onValueChange={(v) => {
-                  setMarks((prev) => ({ ...prev, [s.studentId]: v as SheetStatus }));
-                  setSubmitted(false);
-                  setSubmitError(null);
-                }}
-                className={styles.radios}
+              <div
+                className={styles.segTabs}
+                role="group"
                 aria-label={`Attendance for ${s.name}`}
-                disabled={!editable || submitting}
               >
-                {STATUSES.map((st) => (
-                  <span key={st.value} className={styles.radio}>
-                    <RadioGroupItem value={st.value} id={`${s.studentId}-${st.value}`} />
-                    <Label htmlFor={`${s.studentId}-${st.value}`} className={styles.radioLabel}>
+                {STATUSES.map((st) => {
+                  const active = statusOf(s.studentId) === st.value;
+                  return (
+                    <Button
+                      key={st.value}
+                      type="button"
+                      size="sm"
+                      variant={active ? "default" : "ghost"}
+                      disabled={!editable || submitting}
+                      onClick={() => {
+                        setMarks((prev) => ({ ...prev, [s.studentId]: st.value }));
+                        setSubmitted(false);
+                        setSubmitError(null);
+                      }}
+                    >
                       {st.label}
-                    </Label>
-                  </span>
-                ))}
-              </RadioGroup>
+                    </Button>
+                  );
+                })}
+              </div>
             </li>
           ))}
         </ul>
@@ -330,7 +325,8 @@ export function AttendanceSheet({ date, session, isToday, editable }: Attendance
 
       <CardFooter className={styles.footer}>
         <span className={styles.footerInfo}>
-          {students.length} advisees · {contextQuery.data?.sectionName ?? ""}
+          {dateLabel} · {sessionLabel} session · {students.length} advisees ·{" "}
+          {contextQuery.data?.sectionName ?? ""}
         </span>
         <Button
           type="button"

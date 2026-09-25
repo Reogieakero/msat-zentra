@@ -61,6 +61,14 @@ router.get(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
+      // Scope narrows the payload so first paint stays light:
+      // - `critical` skips assessments/standings/activity (heavy aggregations).
+      // - `secondary` skips the advisory risk engine (heavy per-student scans).
+      // - absent scope returns the full legacy shape (backward compatible).
+      const scopeParam = req.query.scope;
+      const scope = scopeParam === "critical" || scopeParam === "secondary" ? scopeParam : "full";
+      const isCriticalOnly = scope === "critical";
+      const isSecondaryOnly = scope === "secondary";
       const termId = await resolveActiveTermId();
       if (!termId) {
         return res.json(EMPTY_RESPONSE);
@@ -85,7 +93,7 @@ router.get(
       const advisorySection = advisorySections[0] ?? null;
 
       const sectionIds = Array.from(new Set(assignments.map((a) => a.section.id)));
-      const [sectionCounts, sectionStudents, openFlags, recentAudits] = await Promise.all([
+      const [sectionCounts, sectionStudents, openFlags] = await Promise.all([
         prisma.studentProfile.groupBy({
           by: ["sectionId"],
           where: { sectionId: { in: sectionIds } },
@@ -96,12 +104,6 @@ router.get(
           select: { userId: true, sectionId: true },
         }),
         prisma.anecdotalRecord.count({ where: { observerId: teacherId, termId } }),
-        prisma.auditLog.findMany({
-          where: { userId: teacherId },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          select: { actionType: true, sourceTable: true, createdAt: true, reason: true },
-        }),
       ]);
 
       // Roster-aware headcounts: enlisted students without accounts count too.
@@ -140,6 +142,36 @@ router.get(
 
       const subjectIds = Array.from(new Set(assignments.map((a) => a.subject.id)));
 
+      // Secondary aggregations (assessments, standings, activity). Skipped
+      // entirely for `critical` scope so first paint only waits on primary data.
+      let assessmentsPayload: {
+        id: string;
+        subject: string;
+        gradeLevel: string;
+        section: string;
+        type: "WW" | "PT" | "QE";
+        title: string;
+        dueDate: string;
+        status: string;
+      }[] = [];
+      let pendingAssessments = 0;
+      let standings: {
+        subject: string;
+        gradeLevel: string;
+        section: string;
+        average: number;
+        assessed: number;
+        students: number;
+      }[] = [];
+      let recentActivity: { action: string; target: string; when: string }[] = [];
+
+      if (!isCriticalOnly) {
+      const recentAudits = await prisma.auditLog.findMany({
+        where: { userId: teacherId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: { actionType: true, sourceTable: true, createdAt: true, reason: true },
+      });
       const [assessments, finals, rosterSections] = await Promise.all([
         prisma.assessment.findMany({
           where: { gradeComponent: { subjectId: { in: subjectIds }, termId } },
@@ -162,7 +194,7 @@ router.get(
       // account-less students count in class standings too.
       const rosterSecById = new Map(rosterSections.map((s) => [`roster:${s.id}`, s.sectionId]));
 
-      const assessmentsPayload = assessments.map((as) => {
+      assessmentsPayload = assessments.map((as) => {
         const secIds = subjectSectionIds.get(as.gradeComponent.subjectId);
         const sectionOfAssessment = secIds ? Array.from(secIds)[0] ?? "" : "";
         const scoredIds = new Set(as.studentGrades.map((g) => g.studentId));
@@ -194,7 +226,7 @@ router.get(
         };
       });
 
-      const pendingAssessments = assessmentsPayload.filter(
+      pendingAssessments = assessmentsPayload.filter(
         (a) => a.status !== "scores_locked"
       ).length;
 
@@ -227,14 +259,6 @@ router.get(
         entry.sum += f._avg.computedAverage ?? 0;
         entry.count += 1;
       }
-      const standings: {
-        subject: string;
-        gradeLevel: string;
-        section: string;
-        average: number;
-        assessed: number;
-        students: number;
-      }[] = [];
       aggMap.forEach((v) => {
         standings.push({
           ...v.meta,
@@ -243,11 +267,12 @@ router.get(
         });
       });
 
-      const recentActivity = recentAudits.map((a) => ({
+      recentActivity = recentAudits.map((a) => ({
         action: ACTION_LABEL[a.actionType] ?? a.actionType.replace(/_/g, " "),
         target: a.reason ?? a.sourceTable,
         when: timeAgo(a.createdAt),
       }));
+      }
 
       let advisoryStudents: {
         studentId: string;
@@ -257,7 +282,9 @@ router.get(
         flag: "academic" | "attendance" | "behavioral" | "none";
         flags: ("academic" | "attendance" | "behavioral")[];
       }[] = [];
-      if (advisorySection) {
+      // Secondary scope skips the advisory risk engine (per-student scans) —
+      // it only needs the secondary aggregations computed above.
+      if (!isSecondaryOnly && advisorySection) {
         const [advisees, rosterEntries] = await Promise.all([
           prisma.studentProfile.findMany({
             where: { sectionId: advisorySection.id },
@@ -436,6 +463,19 @@ router.get(
       // be summed into a percentage.
       const atRiskStudents = advisoryStudents.filter((s) => s.flag !== "none").length;
 
+      // Secondary scope serves the lazy widgets only (grading cards need
+      // assessments/standings; nothing renders kpi counters yet, but they are
+      // included so GradebookKpis can mount without a second round-trip).
+      if (isSecondaryOnly) {
+        return res.json({
+          assessments: assessmentsPayload,
+          standings,
+          recentActivity,
+          pendingAssessments,
+          openFlags,
+        });
+      }
+
       res.json({
         teacherName: user?.fullName ?? "",
         isAdviser,
@@ -456,9 +496,16 @@ router.get(
         atRiskFactors,
         atRiskStudents,
         classes,
-        recentActivity,
         advisory: { students: advisoryStudents },
-        subjectClasses: { assessments: assessmentsPayload, standings },
+        // Critical scope omits the heavy aggregations — the grading desk loads
+        // them progressively via `secondary` scope. Full scope keeps them for
+        // backward compatibility.
+        ...(isCriticalOnly
+          ? {}
+          : {
+              recentActivity,
+              subjectClasses: { assessments: assessmentsPayload, standings },
+            }),
       });
     } catch (e) {
       next(e);

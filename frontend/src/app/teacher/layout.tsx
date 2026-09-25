@@ -3,9 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme, useFont } from "@/components/providers";
 import { TeacherSidebar } from "@/components/teacher-sidebar";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Command,
@@ -19,13 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
 import styles from "./record-teacher.module.css";
 
 function TeacherShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { openMobile, setOpenMobile } = useSidebar();
+  const queryClient = useQueryClient();
   const { resolvedTheme, setTheme } = useTheme();
   const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
@@ -40,26 +40,15 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));
+    // Drop all cached teacher data so the next login can never briefly
+    // render the previous teacher's overview from the query cache.
+    queryClient.clear();
     router.push("/login");
   };
 
   return (
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-label={openMobile ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={openMobile}
-          onClick={() => setOpenMobile(!openMobile)}
-        >
-          {openMobile ? (
-            <X className={styles.menuIcon} />
-          ) : (
-            <Menu className={styles.menuIcon} />
-          )}
-        </button>
-
         <Link href="/teacher/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -186,9 +175,5 @@ export default function TeacherLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <TeacherShell>{children}</TeacherShell>
-    </SidebarProvider>
-  );
+  return <TeacherShell>{children}</TeacherShell>;
 }

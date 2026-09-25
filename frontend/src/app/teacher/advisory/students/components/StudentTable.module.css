@@ -2,6 +2,13 @@
   min-width: 0;
   border-radius: var(--radius-lg);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Stretch to the viewport bottom — the 8rem accounts for the shell offset
+     above plus the 16px bottom gutter (via main padding), so the card ends
+     16px above the viewport edge and the pagination footer sits at its base. */
+  min-height: calc(100vh - 8rem);
+  min-height: calc(100dvh - 8rem);
 }
 
 .header {
@@ -42,6 +49,8 @@
 
 .search {
   padding-left: 2rem;
+  height: 2rem;
+  min-height: 2rem;
 }
 
 .content {
@@ -50,10 +59,13 @@
   gap: 0.875rem;
   padding: 0 1rem 1rem;
   overflow-x: auto;
+  flex: 1 1 auto;
 }
 
 .filterBtn {
   gap: 0.375rem;
+  height: 2rem;
+  min-height: 2rem;
 }
 
 .filterActive {
@@ -73,6 +85,16 @@
 
 .clearBtn {
   gap: 0.375rem;
+  height: 2rem;
+  min-height: 2rem;
+}
+
+.riskCell {
+  text-align: center;
+}
+
+.rowMenu [role="menuitem"] {
+  white-space: nowrap;
 }
 
 .clickableRow {
@@ -114,11 +136,6 @@
   align-items: center;
   gap: 0.375rem;
   min-width: 0;
-}
-
-.noAccount {
-  flex-shrink: 0;
-  font-size: 0.625rem;
 }
 
 .lrn {

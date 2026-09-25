@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/sonner";
 
 const TEACHER_KEYS = [
   ["teacher-overview"],
+  ["teacher-overview-secondary"],
   ["adm-my-cases"],
   ["myReferrals"],
   ["referableAnecdotal"],

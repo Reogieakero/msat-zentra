@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   ClipboardList,
   Landmark,
+  Loader2,
   MessagesSquare,
   Stethoscope,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { sileo } from "@/components/ui/sonner";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import styles from "./ReferralComposer.module.css";
 
@@ -93,6 +95,7 @@ interface AnecdotalRecord {
 
 interface ReferralComposerProps {
   referables: AnecdotalRecord[];
+  admActiveLrns: string[];
   onCancel: () => void;
   onCreate: (draft: {
     anecdotalId: string;
@@ -149,7 +152,7 @@ function groupByStudent(records: AnecdotalRecord[]): StudentFolder[] {
   );
 }
 
-export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: ReferralComposerProps) {
+export function ReferralComposer({ referables, admActiveLrns, onCancel, onCreate, onCreated }: ReferralComposerProps) {
   const [step, setStep] = useState(1);
   const [anecdotalId, setAnecdotalId] = useState<string | null>(null);
   const [selectedStudentKey, setSelectedStudentKey] = useState<string | null>(null);
@@ -166,6 +169,10 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
   const anecdotal = referables.find((a) => a.id === anecdotalId) ?? null;
   const studentFolders = useMemo(() => groupByStudent(referables), [referables]);
   const totalReferable = referables.filter((r) => !r.hasReferral).length;
+  // LRNs with an open ADM case — the ADM track is off-limits for these
+  // students (one open ADM referral per student).
+  const admBlockedSet = useMemo(() => new Set(admActiveLrns), [admActiveLrns]);
+  const admBlocked = anecdotal ? admBlockedSet.has(anecdotal.lrn) : false;
 
   const folderNeedle = folderQuery.trim().toLowerCase();
   const filteredFolders = useMemo(() => {
@@ -237,6 +244,10 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
       setError("Choose whether this is an ADM case or another matter.");
       return;
     }
+    if (step === 2 && track === "adm" && admBlocked) {
+      setError("This student already has an open ADM case — only one ADM referral per student.");
+      return;
+    }
     if (step === 3 && !receiver) {
       setError("Choose who should receive this case.");
       return;
@@ -258,6 +269,10 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
       setError("Add a reason for the referral.");
       return;
     }
+    if (track === "adm" && admBlocked) {
+      setError("This student already has an open ADM case — only one ADM referral per student.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -269,9 +284,26 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
         reason: reason.trim(),
       });
       onCreated(created, anecdotal.id);
+    } catch (err) {
+      // The server re-checks the one-ADM-case rule, so a 409 surfaces here
+      // when the case opened elsewhere after this form loaded.
+      const message = apiErrorMessage(err, "Could not send this referral.");
+      setError(message);
+      sileo.error({ title: "Could not send referral", description: message });
     } finally {
       setSaving(false);
     }
+  }
+
+  // Backend errors arrive as { error: { code, message } } — surface the
+  // server's message instead of a generic failure notice.
+  function apiErrorMessage(err: unknown, fallback: string): string {
+    if (typeof err === "object" && err !== null && "response" in err) {
+      const message = (err as { response?: { data?: { error?: { message?: string } } } })
+        .response?.data?.error?.message;
+      if (message) return message;
+    }
+    return fallback;
   }
 
   return (
@@ -374,6 +406,9 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
                                     {folder.referableCount} of {folder.records.length} referable
                                   </Badge>
                                 )}
+                                {admBlockedSet.has(folder.lrn) ? (
+                                  <Badge variant="default">ADM case open</Badge>
+                                ) : null}
                               </span>
                             </button>
                           );
@@ -449,17 +484,34 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
             <legend className={styles.prompt}>
               Is this for an ADM case or another matter?
             </legend>
+            {admBlocked ? (
+              <p className={styles.notice}>
+                {anecdotal?.studentName ?? "This student"} already has an open
+                ADM case — only one ADM referral per student. Choose another
+                matter, or pick a different student.
+              </p>
+            ) : null}
             <div className={styles.trackGrid}>
               {TRACK_OPTIONS.map((t) => {
                 const Icon = t.icon;
                 const selected = track === t.key;
+                // The ADM track is off-limits while the student has an open
+                // ADM case; other matters stay available.
+                const disabled = t.key === "adm" && admBlocked;
                 return (
                   <button
                     key={t.key}
                     type="button"
                     aria-pressed={selected}
-                    className={`${styles.role} ${selected ? styles.roleSelected : ""}`}
+                    disabled={disabled}
+                    aria-disabled={disabled}
+                    title={disabled ? "This student already has an open ADM case" : undefined}
+                    className={`${styles.role} ${selected ? styles.roleSelected : ""} ${disabled ? styles.roleDisabled : ""}`}
                     onClick={() => {
+                      if (disabled) {
+                        setError("This student already has an open ADM case — only one ADM referral per student.");
+                        return;
+                      }
                       setTrack(t.key);
                       setAdmReceiver(null);
                       setTargetRole(null);
@@ -572,8 +624,15 @@ export function ReferralComposer({ referables, onCancel, onCreate, onCreated }: 
               Continue
             </Button>
           ) : (
-            <Button type="button" onClick={handleSend} disabled={saving}>
-              {saving ? "Sending…" : "Send referral"}
+            <Button type="button" onClick={handleSend} disabled={saving} aria-busy={saving || undefined}>
+              {saving ? (
+                <>
+                  <Loader2 className="animate-spin" aria-hidden />
+                  Sending referral…
+                </>
+              ) : (
+                "Send referral"
+              )}
             </Button>
           )}
         </div>

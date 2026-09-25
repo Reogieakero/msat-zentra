@@ -66,86 +66,61 @@
 .canvasBadges {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.375rem;
   flex-shrink: 0;
 }
 
-.scroll {
-  flex: 1;
+/* Cancel / delete buttons stay solid red in every state (the theme's
+   destructive variant is only a soft tint). */
+.btnRed,
+.btnRed:disabled {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.btnRed:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+}
+
+/* Compact step flow: rows of small boxes joined by arrow connectors —
+   centered in the canvas with the case cards pinned at the bottom. */
+.flow {
   display: flex;
-  align-items: center;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0.5rem 0.125rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.375rem;
-}
-
-.arrow {
-  display: inline-flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background-color: var(--card);
-  color: var(--foreground);
-  box-shadow: 0 4px 12px -6px rgb(0 0 0 / 0.25);
-  cursor: pointer;
-  transition: color 150ms ease-out, background-color 150ms ease-out,
-    border-color 150ms ease-out;
+  gap: 0.625rem;
+  min-width: 0;
+  flex: 1;
+  padding: 0.25rem;
 }
 
-.arrow:hover {
-  color: var(--foreground);
-  background-color: color-mix(in oklch, var(--primary), transparent 90%);
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-}
-
-.arrow:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring, var(--primary));
-}
-
-.arrowIcon {
-  width: 18px;
-  height: 18px;
-}
-
-.nodes {
-  margin: auto;
+.row {
+  margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
+  display: grid;
   align-items: stretch;
-  width: max-content;
-  min-width: 100%;
+  min-width: 0;
 }
 
 .nodeItem {
   display: flex;
   min-width: 0;
-  flex: 0 0 12.5rem;
+  list-style: none;
 }
 
-.edgeItem {
+/* Connector between two boxes in a row: short line + arrowhead. */
+.edge {
   display: flex;
   align-items: center;
-  min-width: 1.5rem;
-  flex: 1 1 1.5rem;
+  width: 1rem;
+  min-width: 0;
   list-style: none;
 }
 
@@ -174,17 +149,104 @@
   border-left-color: color-mix(in oklch, var(--primary), transparent 25%);
 }
 
+@media (max-width: 700px) {
+  /* Narrow screens: each row becomes a vertical chain, bridged by a
+     short connector so the flow reads continuously. */
+  .flow {
+    gap: 0;
+  }
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row + .row {
+    position: relative;
+    margin-top: 1.25rem;
+  }
+
+  .row + .row::before {
+    content: "";
+    position: absolute;
+    top: -1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 1.25rem;
+    background-color: var(--border);
+  }
+
+  .row + .row::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--border);
+  }
+
+  .edge {
+    width: auto;
+    min-height: 1.25rem;
+    flex-direction: column;
+  }
+
+  .wire {
+    flex: 1;
+    width: 2px;
+    height: auto;
+    min-height: 0.5rem;
+  }
+
+  .head {
+    margin-top: -1px;
+    margin-left: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--border);
+    border-bottom: none;
+  }
+
+  .headLit {
+    border-top-color: color-mix(in oklch, var(--primary), transparent 25%);
+    border-left-color: transparent;
+  }
+}
+
 .node {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   flex: 1;
   min-width: 0;
-  padding: 0.75rem;
+  width: 100%;
+  padding: 0.625rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 0.375rem);
   background-color: var(--card);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.node:not(.nodeCurrent):hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+}
+
+.node:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.nodeDone {
+  border-color: color-mix(in oklch, var(--primary), transparent 65%);
 }
 
 .nodeTodo {
@@ -193,6 +255,8 @@
 
 .nodeCurrent {
   border-color: color-mix(in oklch, var(--primary), transparent 40%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 40%),
+    0 8px 24px -12px color-mix(in oklch, var(--primary), transparent 40%);
 }
 
 .tile {
@@ -232,6 +296,15 @@
   flex: 1;
 }
 
+.nodeStep {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
 .nodeLabel {
   font-size: 0.8125rem;
   font-weight: 600;
@@ -255,23 +328,32 @@
   white-space: nowrap;
 }
 
-.currentTag {
+.stateTag {
   flex-shrink: 0;
-  padding: 0.0625rem 0.4375rem;
+  padding: 0.125rem 0.5rem;
   border-radius: 999px;
-  background-color: var(--primary);
-  color: var(--primary-foreground);
   font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-@media (max-width: 560px) {
-  .nodeItem {
-    flex-basis: 10.5rem;
-  }
+.stateDone {
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
 
+.stateCurrent {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.stateTodo {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 560px) {
   .node {
     gap: 0.4375rem;
     padding: 0.5625rem;
@@ -284,28 +366,64 @@
 }
 
 .caseFile {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.625rem;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md, 0.375rem);
-  background-color: var(--card);
+  min-width: 0;
 }
 
 .caseRow {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.375rem;
   min-width: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.375rem);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.caseSpanReason {
+  grid-column: span 4;
+}
+
+.caseSpanSource {
+  grid-column: span 2;
+}
+
+.caseSpanFull {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+  .caseFile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .caseSpanReason,
+  .caseSpanSource,
+  .caseSpanFull {
+    grid-column: auto;
+  }
 }
 
 .caseLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted-foreground);
+}
+
+.caseIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: var(--primary);
 }
 
 .caseText {

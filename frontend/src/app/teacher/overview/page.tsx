@@ -1,78 +1,29 @@
 ﻿"use client";
 
-import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CalendarClock, ClipboardCheck, Flag, Send } from "lucide-react";
 import { TeacherOverviewHeader } from "./components/teacher-overview-header";
-import { TeacherOverviewClasses } from "./components/teacher-overview-classes";
-import { TeacherOverviewActivity } from "./components/teacher-overview-activity";
 import { TeacherOverviewAdvisory } from "./components/teacher-overview-advisory";
 import { TeacherOverviewActions } from "./components/teacher-overview-actions";
-import { fetchTeacherOverview } from "./components/teacher-overview-data";
+import { TeacherOverviewSkeleton } from "./components/teacher-overview-skeleton";
+import { useTeacherOverview } from "./components/teacher-overview-data";
 import styles from "./components/teacher-overview.module.css";
 
+const QUICK_ACTIONS = [
+  { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
+  { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
+  { title: "Flag Student", description: "Raise a concern for an advisee", href: "/teacher/grade-flags", icon: Flag },
+  { title: "New Referral", description: "Refer from an anecdotal record", href: "/teacher/advisory/referrals", icon: Send },
+];
+
 export default function TeacherOverviewPage() {
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["teacher-overview"],
-    queryFn: fetchTeacherOverview,
-  });
+  // Teacher-scoped key: cached data renders instantly when navigating back,
+  // and one teacher's overview can never leak to another teacher's session.
+  // Stale data (>30s) refetches silently in the background — the loaded UI
+  // stays visible, so isPending below is only true on a genuine first load.
+  const { data, isPending, isError } = useTeacherOverview();
 
   if (isPending) {
-    return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.skelHeader}>
-          <div className={styles.skelAvatar}>
-            <Skeleton className={styles.skelAvatarInner} />
-          </div>
-          <div className={styles.skelIdentity}>
-            <Skeleton className={styles.skelTitle} />
-            <Skeleton className={styles.skelSubtitle} />
-            <div className={styles.skelChips}>
-              <Skeleton className={styles.skelChip} />
-              <Skeleton className={styles.skelChip} />
-              <Skeleton className={styles.skelChip} />
-            </div>
-          </div>
-        </div>
-
-        <hr className={styles.divider} />
-
-        <div className={styles.body}>
-          <div className={styles.mainCol}>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <div className={styles.skelCardList}>
-                <Skeleton className={styles.skelRow} />
-                <Skeleton className={styles.skelRow} />
-                <Skeleton className={styles.skelRow} />
-              </div>
-            </div>
-          </div>
-
-          <aside className={styles.sideCol}>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <div className={styles.skelCardList}>
-                <Skeleton className={styles.skelRow} />
-                <Skeleton className={styles.skelRow} />
-                <Skeleton className={styles.skelRow} />
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        <hr className={styles.divider} />
-
-        <div className={styles.skelCard}>
-          <Skeleton className={styles.skelCardTitle} />
-          <div className={styles.skelCardList}>
-            <Skeleton className={styles.skelRow} />
-            <Skeleton className={styles.skelRow} />
-            <Skeleton className={styles.skelRow} />
-          </div>
-        </div>
-      </section>
-    );
+    return <TeacherOverviewSkeleton actions={QUICK_ACTIONS} />;
   }
 
   if (isError || !data) {
@@ -85,38 +36,25 @@ export default function TeacherOverviewPage() {
 
   return (
     <section className={styles.page}>
-      <TeacherOverviewHeader
-        teacherName={data.teacherName}
-        advisorySection={data.advisorySection}
-        classCount={data.kpi.classCount}
-        studentCount={data.kpi.studentCount}
-        atRiskFactors={data.atRiskFactors}
-        atRiskStudents={data.atRiskStudents}
-      />
-
-      <hr className={styles.divider} />
-
       <div className={styles.body}>
-        <div className={styles.mainCol}>
-          <TeacherOverviewClasses classes={data.classes} />
-        </div>
-
         <aside className={styles.sideCol}>
-          <TeacherOverviewActions
-            actions={[
-              { title: "Enter Scores", description: "Log grades for your classes" },
-              { title: "Take Attendance", description: "Record today's attendance" },
-              { title: "Flag Student", description: "Raise a concern for an advisee" },
-            ]}
+          <TeacherOverviewHeader
+            teacherName={data.teacherName}
+            advisorySection={data.advisorySection}
+            classCount={data.kpi.classCount}
+            studentCount={data.kpi.studentCount}
+            atRiskFactors={data.atRiskFactors}
+            atRiskStudents={data.atRiskStudents}
+            classes={data.classes}
+            rail
           />
+
+          <TeacherOverviewActions actions={QUICK_ACTIONS} compact />
         </aside>
-      </div>
 
-      <hr className={styles.divider} />
-
-      <div className={styles.advisoryBlock}>
-        <TeacherOverviewAdvisory students={data.advisory.students} />
-        <TeacherOverviewActivity activity={data.recentActivity} />
+        <div className={styles.mainCol}>
+          <TeacherOverviewAdvisory students={data.advisory.students} />
+        </div>
       </div>
     </section>
   );

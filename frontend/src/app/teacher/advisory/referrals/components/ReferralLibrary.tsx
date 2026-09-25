@@ -21,8 +21,9 @@ const TARGET_ROLE_LABELS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
-  in_progress: "In progress",
+  in_progress: "In Progress",
   resolved: "Resolved",
+  dismissed: "Cancelled",
 };
 
 interface ReferralData {

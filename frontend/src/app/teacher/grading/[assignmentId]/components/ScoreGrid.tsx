@@ -1,25 +1,34 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   COMPONENT_NAMES,
-  COMPONENT_ORDER,
   submitScore,
+  updateAssessment,
   useRefreshAcademic,
   type ClassAssessment,
   type ClassComponent,
   type ClassStudent,
   type ComponentType,
 } from "../../components/grading-data";
+import { sileo } from "@/components/ui/sonner";
 import styles from "./ScoreGrid.module.css";
 
 const SHORT: Record<ComponentType, string> = {
@@ -31,16 +40,17 @@ const SHORT: Record<ComponentType, string> = {
 type Props = {
   students: ClassStudent[];
   components: ClassComponent[];
+  category: ComponentType;
+  selectedId: string;
   onChanged: () => void;
 };
 
-export function ScoreGrid({ students, components, onChanged }: Props) {
+export function ScoreGrid({ students, components, category, selectedId, onChanged }: Props) {
   const refreshAcademic = useRefreshAcademic();
   const unregistered = students.filter((s) => !s.hasAccount);
-  const [category, setCategory] = React.useState<ComponentType>("WRITTEN_WORK");
-  const [selectedId, setSelectedId] = React.useState("");
   const [editing, setEditing] = React.useState(false);
   const [drafts, setDrafts] = React.useState<Record<string, Record<string, string>>>({});
+  const [maxDraft, setMaxDraft] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -50,11 +60,25 @@ export function ScoreGrid({ students, components, onChanged }: Props) {
   );
   const selected = assessments.find((a) => a.id === selectedId) ?? assessments[0] ?? null;
 
-  const countFor = (t: ComponentType) =>
-    components.find((c) => c.type === t)?.assessments.length ?? 0;
+  // Selection now comes from the sidebar — reset any in-progress edit
+  // (including the max draft) whenever the assessment changes.
+  const selectedKey = selected?.id ?? "";
+  React.useEffect(() => {
+    setEditing(false);
+    setMaxDraft(null);
+    setError(null);
+  }, [selectedKey]);
 
   const savedOf = (assessment: ClassAssessment, studentId: string) =>
     assessment.scores[studentId] != null ? String(assessment.scores[studentId]) : "";
+
+  // Score inputs accept numbers only — strip any letters or symbols,
+  // keeping digits and a single decimal point.
+  const sanitizeDraft = (value: string) => {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".");
+    return parts.length <= 2 ? cleaned : `${parts[0]}.${parts.slice(1).join("")}`;
+  };
 
   const startEdit = () => {
     if (!selected) return;
@@ -62,6 +86,7 @@ export function ScoreGrid({ students, components, onChanged }: Props) {
       ...prev,
       [selected.id]: Object.fromEntries(students.map((s) => [s.id, savedOf(selected, s.id)])),
     }));
+    setMaxDraft(String(selected.maxScore));
     setError(null);
     setEditing(true);
   };
@@ -69,37 +94,71 @@ export function ScoreGrid({ students, components, onChanged }: Props) {
   const cancelEdit = () => {
     setError(null);
     setEditing(false);
+    setMaxDraft(null);
   };
 
   const handleSaveAll = async () => {
     if (!selected) return;
+    // Resolve the edited max score first — scores validate against it.
+    let effectiveMax = selected.maxScore;
+    if (maxDraft !== null) {
+      if (maxDraft.trim() === "") {
+        setError("Max score must be a number greater than 0.");
+        return;
+      }
+      const parsed = Number(maxDraft);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        setError("Max score must be a number greater than 0.");
+        return;
+      }
+      effectiveMax = parsed;
+    }
     const table = drafts[selected.id] ?? {};
     const jobs: { studentId: string; raw: number }[] = [];
     for (const s of students) {
       const raw = (table[s.id] ?? "").trim();
       if (raw === "") continue;
       const value = Number(raw);
-      if (!Number.isFinite(value) || value < 0 || value > selected.maxScore) {
-        setError(`${s.name}: scores must be numbers from 0 to ${selected.maxScore}.`);
+      if (!Number.isFinite(value) || value < 0 || value > effectiveMax) {
+        setError(`${s.name}: scores must be numbers from 0 to ${effectiveMax}.`);
         return;
       }
       jobs.push({ studentId: s.id, raw: value });
     }
-    if (jobs.length === 0) {
+    if (jobs.length === 0 && effectiveMax === selected.maxScore) {
       setError("Enter at least one score before saving.");
       return;
     }
     setError(null);
     setSaving(true);
     try {
+      if (effectiveMax !== selected.maxScore) {
+        try {
+          await updateAssessment(selected.id, { maxScore: effectiveMax });
+        } catch {
+          setError("Failed to update max score.");
+          sileo.error({ title: "Could not update max score", description: "Try again." });
+          return;
+        }
+      }
       const results = await Promise.allSettled(
         jobs.map((j) => submitScore(selected.id, { studentId: j.studentId, rawScore: j.raw })),
       );
       const failed = results.filter((r) => r.status === "rejected").length;
       if (failed > 0) {
-        setError(`${failed} score${failed === 1 ? "" : "s"} failed to save — the rest were saved.`);
+        const message = `${failed} score${failed === 1 ? "" : "s"} failed to save — the rest were saved.`;
+        setError(message);
+        sileo.warning({ title: "Scores partially saved", description: message });
       } else {
         setEditing(false);
+        setMaxDraft(null);
+        sileo.success({
+          title: "Scores saved",
+          description:
+            jobs.length > 0
+              ? `${jobs.length} score${jobs.length === 1 ? "" : "s"} saved for ${selected.title}.`
+              : `Max score updated for ${selected.title}.`,
+        });
       }
       onChanged();
       refreshAcademic();
@@ -108,21 +167,68 @@ export function ScoreGrid({ students, components, onChanged }: Props) {
     }
   };
 
+  const scoredCount = selected
+    ? students.filter((s) => selected.scores[s.id] != null).length
+    : 0;
+
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeadRow}>
-        <div className={styles.cardHead}>
-          <h2 className={styles.cardTitle}>Encode scores</h2>
-          <p className={styles.cardSub}>
-            Pick the category, then the assessment — enter raw scores and save them all at once.
-          </p>
+    <Card className={styles.card} aria-label="Encode scores">
+      <CardHeader className={styles.header}>
+        <div className={styles.headerText}>
+          <p className={styles.eyebrow}>Encode scores</p>
+          {selected ? (
+            <>
+              <h2 className={styles.metaLine}>
+                <span className={styles.metaLabel}>Assessment</span>
+                <span className={styles.metaValue}>{selected.title}</span>
+                <span className={styles.metaSep} aria-hidden />
+                <span className={styles.metaLabel}>Category</span>
+                <span className={styles.metaValue}>
+                  {SHORT[category]} {COMPONENT_NAMES[category]}
+                </span>
+              </h2>
+              <p className={styles.sectionSub}>
+                Given {selected.dateGiven}, max{" "}
+                {editing ? (
+                  <input
+                    className={styles.maxInput}
+                    inputMode="numeric"
+                    aria-label="Max score"
+                    value={maxDraft ?? ""}
+                    onChange={(e) => setMaxDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                  />
+                ) : (
+                  selected.maxScore
+                )}
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className={styles.metaLine}>
+                <span className={styles.metaLabel}>Category</span>
+                <span className={styles.metaValue}>
+                  {SHORT[category]} {COMPONENT_NAMES[category]}
+                </span>
+              </h2>
+              <p className={styles.sectionSub}>
+                No assessment yet — use Add assessment in the sidebar to create one.
+              </p>
+            </>
+          )}
         </div>
         {assessments.length > 0 && selected ? (
-          <div className={styles.cardActions}>
+          <CardAction className={styles.headerActions}>
             {editing ? (
               <>
-                <Button onClick={() => void handleSaveAll()} disabled={saving}>
-                  {saving ? "Saving…" : "Save"}
+                <Button onClick={() => void handleSaveAll()} disabled={saving} aria-busy={saving || undefined}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="animate-spin" aria-hidden />
+                      Saving scores…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
                 <Button variant="outline" onClick={cancelEdit} disabled={saving}>
                   Cancel
@@ -133,112 +239,44 @@ export function ScoreGrid({ students, components, onChanged }: Props) {
                 Edit scores
               </Button>
             )}
-          </div>
+          </CardAction>
         ) : null}
-      </div>
+      </CardHeader>
 
-      <div className={styles.pickerRow}>
-        <div className={styles.field}>
-          <span className={styles.fieldLabel} id="encode-category-label">
-            Category
-          </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${category !== "WRITTEN_WORK" ? styles.filterActive : ""}`}
-                aria-labelledby="encode-category-label"
-              >
-                {SHORT[category]}
-                {category !== "WRITTEN_WORK" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden className={styles.filterChevron} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className={styles.filterMenu}>
-              {COMPONENT_ORDER.map((t) => (
-                <DropdownMenuCheckboxItem
-                  key={t}
-                  checked={category === t}
-                  onCheckedChange={() => {
-                    setCategory(t);
-                    setSelectedId("");
-                    setEditing(false);
-                    setError(null);
-                  }}
-                >
-                  {SHORT[t]} · {COMPONENT_NAMES[t]} ({countFor(t)})
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className={styles.field}>
-          <span className={styles.fieldLabel} id="encode-assessment-label">
-            Assessment
-          </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={styles.filterBtn}
-                disabled={assessments.length === 0}
-                aria-labelledby="encode-assessment-label"
-              >
-                <span className={styles.filterValue}>
-                  {selected ? selected.title : "Select assessment"}
-                </span>
-                <ChevronDown aria-hidden className={styles.filterChevron} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className={styles.filterMenu}>
-              {assessments.map((a) => (
-                <DropdownMenuCheckboxItem
-                  key={a.id}
-                  checked={selected?.id === a.id}
-                  onCheckedChange={() => {
-                    setSelectedId(a.id);
-                    setEditing(false);
-                    setError(null);
-                  }}
-                >
-                  {a.title}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <CardContent className={styles.content}>
+        {error ? <p className={styles.errorText}>{error}</p> : null}
 
-      {error ? <p className={styles.errorText}>{error}</p> : null}
+        {assessments.length === 0 || !selected ? (
+          <p className={styles.empty}>
+            No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use Add assessment in the sidebar.
+          </p>
+        ) : (
+          <ScoreTable
+            assessment={selected}
+            students={students}
+            editing={editing}
+            drafts={drafts[selected.id] ?? {}}
+            onDraftChange={(studentId, value) =>
+              setDrafts((prev) => ({
+                ...prev,
+                [selected.id]: { ...(prev[selected.id] ?? {}), [studentId]: sanitizeDraft(value) },
+              }))
+            }
+          />
+        )}
+      </CardContent>
 
-      {assessments.length === 0 ? (
-        <p className={styles.empty}>
-          No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use Add assessment above.
+      <CardFooter className={styles.footer}>
+        <p className={styles.range}>
+          {scoredCount} of {students.length} scored
         </p>
-      ) : selected ? (
-        <ScoreTable
-          assessment={selected}
-          students={students}
-          editing={editing}
-          drafts={drafts[selected.id] ?? {}}
-          onDraftChange={(studentId, value) =>
-            setDrafts((prev) => ({
-              ...prev,
-              [selected.id]: { ...(prev[selected.id] ?? {}), [studentId]: value },
-            }))
-          }
-        />
-      ) : null}
-
-      {unregistered.length > 0 ? (
-        <p className={styles.hint}>
-          {unregistered.length} enlisted student{unregistered.length === 1 ? "" : "s"} ({unregistered.map((u) => u.name).join(", ")}){" "}
-          {unregistered.length === 1 ? "has" : "have"} no account yet — scores are kept and carry over on registration.
-        </p>
-      ) : null}
-    </div>
+        {unregistered.length > 0 ? (
+          <p className={styles.hint}>
+            {unregistered.length} without account — scores carry over on registration.
+          </p>
+        ) : null}
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -268,57 +306,53 @@ function ScoreTable({
         : "";
 
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th className={styles.stickyCol}>Student</th>
-            <th>
-              Score <span className={styles.scorePct}>/ {assessment.maxScore}</span>
-            </th>
-            <th>%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((s) => {
-            const val = shownOf(s.id);
-            const num = Number(val);
-            const pct =
-              val.trim() !== "" && Number.isFinite(num) && assessment.maxScore > 0
-                ? `${((num / assessment.maxScore) * 100).toFixed(1)}%`
-                : "—";
-            return (
-              <tr key={s.id}>
-                <th className={styles.stickyCol} scope="row">
-                  <div className={styles.nameCell}>
-                    <span>{s.name}</span>
-                    {!s.hasAccount ? (
-                      <Badge variant="outline">No account</Badge>
-                    ) : null}
-                  </div>
-                  <div className={styles.scorePct}>{s.lrn}</div>
-                </th>
-                <td>
-                  {editing ? (
-                    <input
-                      className={styles.scoreInput}
-                      inputMode="decimal"
-                      aria-label={`${assessment.title} score for ${s.name}`}
-                      value={val}
-                      onChange={(e) => onDraftChange(s.id, e.target.value)}
-                    />
-                  ) : (
-                    <span className={styles.scoreValue}>{val.trim() === "" ? "—" : val}</span>
-                  )}
-                </td>
-                <td>
-                  <span className={styles.scorePct}>{pct}</span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Table aria-label={`Scores for ${assessment.title}`}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Student</TableHead>
+          <TableHead>LRN</TableHead>
+          <TableHead>
+            Score <span className={styles.headMuted}>/ {assessment.maxScore}</span>
+          </TableHead>
+          <TableHead>%</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {students.map((s) => {
+          const val = shownOf(s.id);
+          const num = Number(val);
+          const pct =
+            val.trim() !== "" && Number.isFinite(num) && assessment.maxScore > 0
+              ? `${((num / assessment.maxScore) * 100).toFixed(1)}%`
+              : "—";
+          return (
+            <TableRow key={s.id}>
+              <TableCell>
+                <p className={styles.cellMain}>{s.name}</p>
+              </TableCell>
+              <TableCell>
+                <span className={styles.lrnCell}>{s.lrn}</span>
+              </TableCell>
+              <TableCell>
+                {editing ? (
+                  <input
+                    className={styles.scoreInput}
+                    inputMode="decimal"
+                    aria-label={`${assessment.title} score for ${s.name}`}
+                    value={val}
+                    onChange={(e) => onDraftChange(s.id, e.target.value)}
+                  />
+                ) : (
+                  <span className={styles.scoreValue}>{val.trim() === "" ? "—" : val}</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <span className={styles.scorePct}>{pct}</span>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }
