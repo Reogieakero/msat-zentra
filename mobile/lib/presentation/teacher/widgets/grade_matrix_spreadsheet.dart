@@ -9,6 +9,7 @@ import '../../../data/repositories/grades_repository.dart';
 import '../../../providers/grades_provider.dart';
 import '../../shared/widgets/custom_card.dart';
 import '../../shared/widgets/status_badge.dart';
+import '../assessment_score_entry_screen.dart';
 
 enum AssessmentCategoryType {
   ww('WW', 'Written Works', ComponentType.WRITTEN_WORK, Color(0xFF00B4D8)),
@@ -559,44 +560,57 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
                                           final isLastInGroup = idx == group.assessments.length - 1;
 
                                           return Tooltip(
-                                            message: '${asm.title}\nHighest Possible Score: ${asm.maxScore.toInt()}',
-                                            child: Container(
-                                              width: itemWidth,
-                                              height: 38,
-                                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                                              alignment: Alignment.center,
-                                              decoration: BoxDecoration(
-                                                color: AppColors.surfaceElevated,
-                                                border: Border(
-                                                  right: BorderSide(
-                                                    color: isLastInGroup
-                                                        ? group.category.accentColor.withOpacity(0.4)
-                                                        : AppColors.borderSubtle,
-                                                    width: isLastInGroup ? 1.5 : 0.8,
+                                            message: '${asm.title}\nHighest Possible Score: ${asm.maxScore.toInt()}\nTap to grade all students',
+                                            child: InkWell(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => AssessmentScoreEntryScreen(
+                                                      assessment: asm,
+                                                      category: group.category,
+                                                    ),
                                                   ),
-                                                  bottom: const BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                                );
+                                              },
+                                              child: Container(
+                                                width: itemWidth,
+                                                height: 38,
+                                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                                alignment: Alignment.center,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.surfaceElevated,
+                                                  border: Border(
+                                                    right: BorderSide(
+                                                      color: isLastInGroup
+                                                          ? group.category.accentColor.withOpacity(0.4)
+                                                          : AppColors.borderSubtle,
+                                                      width: isLastInGroup ? 1.5 : 0.8,
+                                                    ),
+                                                    bottom: const BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                                  ),
                                                 ),
-                                              ),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    '${group.category.prefix}${idx + 1}',
-                                                    style: GoogleFonts.inter(
-                                                      color: AppColors.textPrimary,
-                                                      fontSize: 11.5,
-                                                      fontWeight: FontWeight.bold,
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      '${group.category.prefix}${idx + 1}',
+                                                      style: GoogleFonts.inter(
+                                                        color: AppColors.textPrimary,
+                                                        fontSize: 11.5,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                  Text(
-                                                    'Max: ${asm.maxScore.toInt()}',
-                                                    style: GoogleFonts.robotoMono(
-                                                      color: AppColors.primaryEmerald,
-                                                      fontSize: 9.5,
+                                                    Text(
+                                                      'Max: ${asm.maxScore.toInt()}',
+                                                      style: GoogleFonts.robotoMono(
+                                                        color: AppColors.primaryEmerald,
+                                                        fontSize: 9.5,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           );
@@ -1014,19 +1028,21 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
 
                           notifier.addAssessment(newAsm);
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppColors.surfaceElevated,
-                              content: Text(
-                                'Added $title (Max: ${maxScore.toInt()}) to grade matrix.',
-                                style: GoogleFonts.inter(color: AppColors.primaryEmerald),
+
+                          // Automatically navigate to dedicated score entry screen for the new assessment!
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AssessmentScoreEntryScreen(
+                                assessment: newAsm,
+                                category: selectedCategory,
                               ),
                             ),
                           );
                         }
                       },
                       child: Text(
-                        'Add Assessment Column',
+                        'Add & Grade Students',
                         style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),

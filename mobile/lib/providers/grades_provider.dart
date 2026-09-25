@@ -109,6 +109,26 @@ class GradesNotifier extends StateNotifier<AsyncValue<GradeMatrixState>> {
     );
   }
 
+  Future<void> batchUpdateScores(String assessmentId, Map<String, double> studentScores) async {
+    final currentState = state.value;
+    if (currentState == null || currentState.lockStatus != LockStatus.unlocked) return;
+
+    final updatedScores = Map<String, double>.from(currentState.rawScores);
+    for (final entry in studentScores.entries) {
+      final key = '${entry.key}_$assessmentId';
+      updatedScores[key] = entry.value;
+      await _repository.updateRawScore(entry.key, assessmentId, entry.value);
+    }
+
+    state = AsyncValue.data(currentState.copyWith(rawScores: updatedScores));
+
+    _ref.read(syncProvider.notifier).registerMutation(
+      'POST',
+      '/api/grades/raw/batch',
+      {'assessmentId': assessmentId, 'updatedCount': studentScores.length},
+    );
+  }
+
   Future<void> lockGrades(String sectionId, String subjectId) async {
     final currentState = state.value;
     if (currentState == null) return;
