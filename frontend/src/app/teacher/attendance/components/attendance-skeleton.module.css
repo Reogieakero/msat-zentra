@@ -1,0 +1,41 @@
+/* Structural skeleton fills for the attendance sheet.
+   Layout comes from the REAL component classes
+   (AttendanceRosterRail.module.css, AttendanceSheet.module.css);
+   this file only sizes the pulse blocks to the content they stand in for. */
+
+.skelRate {
+  width: 2.25rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.skelDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Segmented status buttons at their real label widths
+   (0.75rem labels + 0.625rem inline padding per side). */
+.skelSeg {
+  height: 1.5rem;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.skelSegPresent {
+  width: 4.25rem;
+}
+
+.skelSegAbsent {
+  width: 4rem;
+}
+
+.skelSegLate {
+  width: 3.25rem;
+}
+
+.skelSegExcused {
+  width: 4.5rem;
+}

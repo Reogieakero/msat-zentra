@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardHeader,
@@ -10,13 +10,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, Search, Pencil, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import {
-  fetchSheetContext,
-  fetchSheetMarks,
   submitSheet,
+  useSheetContext,
+  useSheetMarks,
   initialsOf,
   type SheetStatus,
   type SheetSession,
@@ -33,6 +32,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { SubmitConfirmDialog } from "./SubmitConfirmDialog";
+import { SheetRowsSkeleton } from "./attendance-skeleton";
 import styles from "./AttendanceSheet.module.css";
 
 const STATUSES: { value: SheetStatus; label: string }[] = [
@@ -73,15 +73,8 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
     setSubmitError(null);
   }
 
-  const contextQuery = useQuery({
-    queryKey: ["attendance-sheet-context"],
-    queryFn: fetchSheetContext,
-    retry: false,
-  });
-  const marksQuery = useQuery({
-    queryKey: ["attendance-sheet-marks", date, session],
-    queryFn: () => fetchSheetMarks(`${date}T00:00:00Z`, session),
-  });
+  const contextQuery = useSheetContext();
+  const marksQuery = useSheetMarks(date, session);
 
   const students = useMemo(() => contextQuery.data?.students ?? [], [contextQuery.data]);
   const serverMarks = useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
@@ -241,25 +234,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
 
       <CardContent className={styles.content}>
         {loading ? (
-          <ul className={styles.rows} aria-busy="true" aria-label="Loading roster">
-            {[0, 1, 2, 3].map((i) => (
-              <li key={i} className={styles.row} aria-hidden>
-                <span className={styles.identity}>
-                  <Skeleton className={styles.skelAvatar} />
-                  <span className={styles.nameWrap}>
-                    <Skeleton className={styles.skelName} />
-                    <Skeleton className={styles.skelLrn} />
-                  </span>
-                </span>
-                <span className={styles.segTabs} aria-hidden>
-                  <Skeleton className={styles.skelSeg} />
-                  <Skeleton className={styles.skelSeg} />
-                  <Skeleton className={styles.skelSeg} />
-                  <Skeleton className={styles.skelSeg} />
-                </span>
-              </li>
-            ))}
-          </ul>
+          <SheetRowsSkeleton />
         ) : loadError ? (
           <p className={styles.empty}>
             Could not load your roster. Check your connection and try again.

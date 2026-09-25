@@ -46,7 +46,8 @@ export function SubmitConfirmDialog({
           </DialogDescription>
         </DialogHeader>
         <p className={styles.note}>
-          This locks the sheet for this session. You can still edit it afterwards from here.
+          This locks the sheet for this session. Students you did not mark
+          are submitted as Present. You can still edit it afterwards from here.
         </p>
         <DialogFooter>
           <Button

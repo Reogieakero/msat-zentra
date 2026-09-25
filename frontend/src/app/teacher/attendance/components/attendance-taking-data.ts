@@ -1,5 +1,13 @@
+"use client";
+
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import { fetchAdvisoryRoster } from "../../advisory/students/components/advisory-students-data";
+import { useSession } from "@/lib/auth/useSession";
+import {
+  advisoryRosterKey,
+  fetchAdvisoryRoster,
+  type AdvisoryRoster,
+} from "../../advisory/students/components/advisory-students-data";
 
 export type SheetStatus = "present" | "absent" | "late" | "excused";
 export type SheetSession = "AM" | "PM";
@@ -18,8 +26,7 @@ export interface SheetContext {
   students: SheetStudent[];
 }
 
-export async function fetchSheetContext(): Promise<SheetContext> {
-  const roster = await fetchAdvisoryRoster();
+function toSheetContext(roster: AdvisoryRoster): SheetContext {
   const section = roster.advisorySections[0];
   if (!section || !roster.termId) {
     throw new Error("No advisory section assigned");
@@ -38,6 +45,54 @@ export async function fetchSheetContext(): Promise<SheetContext> {
       attendanceRate: s.attendanceRate,
     })),
   };
+}
+
+// Same lifetime as the roster entry below (stale 30s, gc 5min). Prefix
+// invalidations on ["attendance-sheet-marks"] still match scoped keys.
+const SHEET_STALE_MS = 30_000;
+const SHEET_GC_MS = 5 * 60_000;
+
+/** Teacher-scoped marks key. The endpoint already scopes server-side to the
+ *  caller's advisory sections, so teacher + date + session fully determines
+ *  the payload — no section can leak across teachers or days. */
+export function sheetMarksKey(
+  teacherId: string | null | undefined,
+  date: string,
+  session: SheetSession,
+) {
+  return ["attendance-sheet-marks", teacherId ?? "anon", date, session] as const;
+}
+
+/** Sheet context derived from the SHARED roster entry — the rail, the sheet,
+ *  and the students page all read one cached roster per teacher. */
+export function useSheetContext() {
+  const session = useSession();
+  const teacherId = session?.sub ?? null;
+  return useQuery({
+    queryKey: advisoryRosterKey(teacherId),
+    queryFn: fetchAdvisoryRoster,
+    enabled: !!teacherId,
+    retry: false,
+    staleTime: SHEET_STALE_MS,
+    gcTime: SHEET_GC_MS,
+    select: toSheetContext,
+  });
+}
+
+/** Submitted marks for one date + session. keepPreviousData keeps the last
+ *  sheet visible while a new date/session loads instead of flashing a
+ *  full skeleton. */
+export function useSheetMarks(date: string, session: SheetSession) {
+  const auth = useSession();
+  const teacherId = auth?.sub ?? null;
+  return useQuery({
+    queryKey: sheetMarksKey(teacherId, date, session),
+    queryFn: () => fetchSheetMarks(`${date}T00:00:00Z`, session),
+    enabled: !!teacherId,
+    staleTime: SHEET_STALE_MS,
+    gcTime: SHEET_GC_MS,
+    placeholderData: keepPreviousData,
+  });
 }
 
 export async function fetchSheetMarks(

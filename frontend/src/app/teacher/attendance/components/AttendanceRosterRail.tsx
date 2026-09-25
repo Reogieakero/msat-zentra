@@ -1,17 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  fetchSheetContext,
-  fetchSheetMarks,
+  useSheetContext,
+  useSheetMarks,
   initialsOf,
   type SheetSession,
   type SheetStatus,
 } from "./attendance-taking-data";
+import { RosterRailListSkeleton, RosterRailSummarySkeleton } from "./attendance-skeleton";
 import sheetStyles from "./AttendanceSheet.module.css";
 import styles from "./AttendanceRosterRail.module.css";
 
@@ -32,15 +31,8 @@ interface AttendanceRosterRailProps {
    flashes it. Reads the same cached queries as the sheet, so it never
    fires duplicate requests. Status dots reflect submitted marks. */
 export function AttendanceRosterRail({ date, session }: AttendanceRosterRailProps) {
-  const contextQuery = useQuery({
-    queryKey: ["attendance-sheet-context"],
-    queryFn: fetchSheetContext,
-    retry: false,
-  });
-  const marksQuery = useQuery({
-    queryKey: ["attendance-sheet-marks", date, session],
-    queryFn: () => fetchSheetMarks(`${date}T00:00:00Z`, session),
-  });
+  const contextQuery = useSheetContext();
+  const marksQuery = useSheetMarks(date, session);
 
   const students = React.useMemo(
     () => contextQuery.data?.students ?? [],
@@ -76,21 +68,16 @@ export function AttendanceRosterRail({ date, session }: AttendanceRosterRailProp
 
   return (
     <aside className={styles.rail} aria-label="Class roster">
-      <div className={styles.summary}>
-        {loading ? (
-          <>
-            <Skeleton className={styles.skelSection} />
-            <Skeleton className={styles.skelMeta} />
-          </>
-        ) : (
-          <>
-            <p className={styles.section}>{contextQuery.data?.sectionName ?? "Advisory"}</p>
-            <p className={styles.meta}>
-              {students.length} student{students.length === 1 ? "" : "s"} · {sessionLabel}
-            </p>
-          </>
-        )}
-      </div>
+      {loading ? (
+        <RosterRailSummarySkeleton />
+      ) : (
+        <div className={styles.summary}>
+          <p className={styles.section}>{contextQuery.data?.sectionName ?? "Advisory"}</p>
+          <p className={styles.meta}>
+            {students.length} student{students.length === 1 ? "" : "s"} · {sessionLabel}
+          </p>
+        </div>
+      )}
 
       <div className={styles.searchWrap}>
         <Search className={styles.searchIcon} aria-hidden />
@@ -104,14 +91,7 @@ export function AttendanceRosterRail({ date, session }: AttendanceRosterRailProp
       </div>
 
       {loading ? (
-        <ul className={styles.list} aria-hidden="true">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <li key={i} className={styles.skelItem}>
-              <Skeleton className={styles.skelAvatar} />
-              <Skeleton className={styles.skelName} />
-            </li>
-          ))}
-        </ul>
+        <RosterRailListSkeleton />
       ) : visibleStudents.length === 0 ? (
         <p className={styles.empty}>
           {needle.trim() ? `No students match "${needle.trim()}".` : "No students."}
