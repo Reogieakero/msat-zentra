@@ -458,9 +458,12 @@ router.get(
 );
 
 // Accounts breakdown per grade level + section (registrar G11–G12 band). The source
-// of truth is the decoupled StudentRoster (enrolled students). "withAccount" = roster
-// LRN matched by a student whose user is active; "pending" = matched but user still
-// pending (signed up, awaiting registrar approval). Computed live; no mocked data.
+// of truth is the advisory student list: every StudentProfile in the band plus
+// every active-year StudentRoster enlistment whose LRN has no profile yet
+// (matched by LRN, mirroring the adviser roster list). "withAccount" = profile
+// is active/suspended, "pending" = profile still pending, "noAccount" = roster-
+// only enlistment with no login account yet. "total" = advisory population for
+// the section (withAccount + pending + noAccount). Computed live; no mocked data.
 router.get(
   "/account-breakdown",
   requireAuth,
@@ -494,33 +497,51 @@ router.get(
 
       const groups = new Map<
         string,
-        { label: string; grade: string; withAccount: number; pending: number }
+        { label: string; grade: string; withAccount: number; pending: number; noAccount: number; total: number }
       >();
+      const ensureGroup = (gradeLevel: string, sectionName?: string | null) => {
+        const label = `${gradeLabel(gradeLevel)} · ${sectionName ?? "Unsectioned"}`;
+        if (!groups.has(label))
+          groups.set(label, { label, grade: gradeLabel(gradeLevel), withAccount: 0, pending: 0, noAccount: 0, total: 0 });
+        return groups.get(label)!;
+      };
       for (const r of roster) {
-        const label = `${gradeLabel(r.gradeLevel)} · ${r.section?.name ?? "Unsectioned"}`;
-        if (!groups.has(label))
-          groups.set(label, { label, grade: gradeLabel(r.gradeLevel), withAccount: 0, pending: 0 });
-        const g = groups.get(label)!;
+        const g = ensureGroup(r.gradeLevel, r.section?.name);
         const status = statusByLrn.get(r.lrn);
-        if (status === "active") g.withAccount++;
+        if (status === "active" || status === "suspended") g.withAccount++;
         else if (status === "pending") g.pending++;
+        else g.noAccount++;
       }
 
-      // Pending sign-ups that have no roster entry yet (e.g. just registered) still
-      // count toward the pending total shown in the Pending Students table, so the
-      // breakdown and the table reconcile. Attribute them by their profile grade/section.
-      const pendingUsers = await prisma.studentProfile.findMany({
-        where: { gradeLevel: { in: GRADE_BAND }, user: { status: "pending" }, lrn: { notIn: Array.from(rosteredLrns) } },
-        select: { gradeLevel: true, section: { select: { name: true } } },
+      // Profiles in the band with no active-year roster entry yet (e.g. just
+      // registered, transferred, or seeded without a roster row) still belong
+      // to the advisory population, so attribute them by profile grade/section.
+      // This keeps the grade chart (advisory headcount) reconciled with the
+      // section rosters instead of dropping students missing a roster row.
+      const profilesWithoutRoster = await prisma.studentProfile.findMany({
+        where: {
+          gradeLevel: { in: GRADE_BAND },
+          ...(rosteredLrns.size > 0
+            ? { lrn: { notIn: Array.from(rosteredLrns) } }
+            : {}),
+        },
+        select: {
+          gradeLevel: true,
+          section: { select: { name: true } },
+          user: { select: { status: true } },
+        },
       });
-      for (const p of pendingUsers) {
-        const label = `${gradeLabel(p.gradeLevel)} · ${p.section?.name ?? "Unsectioned"}`;
-        if (!groups.has(label))
-          groups.set(label, { label, grade: gradeLabel(p.gradeLevel), withAccount: 0, pending: 0 });
-        groups.get(label)!.pending++;
+      for (const p of profilesWithoutRoster) {
+        const g = ensureGroup(p.gradeLevel, p.section?.name);
+        if (p.user.status === "pending") g.pending++;
+        else g.withAccount++;
       }
 
-      const data = Array.from(groups.values()).map((g, i) => ({ id: `g${i}-${g.label}`, ...g }));
+      const data = Array.from(groups.values()).map((g, i) => ({
+        id: `g${i}-${g.label}`,
+        ...g,
+        total: g.withAccount + g.pending + g.noAccount,
+      }));
       res.json({ data });
     } catch (e) {
       next(e);

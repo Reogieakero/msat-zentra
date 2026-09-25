@@ -1,6 +1,9 @@
+"use client";
+
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { useSession } from "@/lib/auth/useSession";
 
 /** Invalidate every academic read so scores/locks surface everywhere at once:
  *  advisee records, advisory lists, and teacher overviews. */
@@ -85,6 +88,32 @@ export interface ClassDetail {
 export async function fetchClassDetail(assignmentId: string): Promise<ClassDetail> {
   const { data } = await apiClient.get<ClassDetail>(`/api/teacher/grading/classes/${assignmentId}`);
   return data;
+}
+
+/** Teacher-scoped class key — one teacher's class detail must never leak to
+ *  another teacher's session. Prefix invalidations on
+ *  ["teacher-grading-class"] still match. */
+export function classDetailKey(
+  teacherId: string | null | undefined,
+  assignmentId: string,
+) {
+  return ["teacher-grading-class", teacherId ?? "anon", assignmentId] as const;
+}
+
+/** Class workspace detail. Keeps the previous class on screen while the next
+ *  one loads so switching classes never flashes a full-page skeleton. */
+export function useClassDetail(assignmentId: string) {
+  const session = useSession();
+  const teacherId = session?.sub ?? null;
+  return useQuery({
+    queryKey: classDetailKey(teacherId, assignmentId),
+    queryFn: () => fetchClassDetail(assignmentId),
+    enabled: !!teacherId && !!assignmentId,
+    // Keep the previous class on screen while the next one loads so
+    // switching classes never flashes a full-page skeleton.
+    placeholderData: (previous) => previous,
+    staleTime: 15_000,
+  });
 }
 
 export async function saveComponentWeight(

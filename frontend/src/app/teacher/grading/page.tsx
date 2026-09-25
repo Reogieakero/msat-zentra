@@ -10,10 +10,10 @@ import { GradebookCards } from "./components/GradebookCards";
 import styles from "./components/gradebook.module.css";
 
 export default function TeacherGradebookPage() {
-  // Critical (identity + classes) paints first; assessments/standings stream
-  // in progressively so the first usable UI never waits on aggregations.
+  // Critical and secondary are independent endpoints, so both fire together;
+  // the UI still paints progressively (cards first, assessments streaming in).
   const critical = useTeacherOverview();
-  const secondary = useTeacherOverviewSecondary(critical.isSuccess);
+  const secondary = useTeacherOverviewSecondary(true);
 
   if (critical.isPending) {
     return (
@@ -24,10 +24,15 @@ export default function TeacherGradebookPage() {
               <Skeleton className={styles.skelSubject} />
               <Skeleton className={styles.skelMeta} />
               <div className={styles.skelStats}>
-                <Skeleton className={styles.skelStat} />
-                <Skeleton className={styles.skelStat} />
+                {[0, 1].map((s) => (
+                  <div key={s} className={styles.skelStatCol}>
+                    <Skeleton className={styles.skelStatValue} />
+                    <Skeleton className={styles.skelStatLabel} />
+                  </div>
+                ))}
               </div>
               <Skeleton className={styles.skelBar} />
+              <Skeleton className={styles.skelProgressLabel} />
               <div className={styles.skelFoot}>
                 <Skeleton className={styles.skelBtn} />
               </div>

@@ -21,8 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { formatGrade, formatSection } from "@/lib/utils";
 import type { LrnMatchResult, PendingStudent } from "./types";
@@ -123,11 +121,6 @@ export function LrnVerifyButton({ student, onApprove, approving }: Props) {
             />
           )}
 
-          <DialogFooter showCloseButton>
-            <DialogClose asChild>
-              <Button variant="outline">Close</Button>
-            </DialogClose>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

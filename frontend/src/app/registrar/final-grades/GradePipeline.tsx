@@ -36,30 +36,32 @@ export type GradePipelineCounts = {
 interface GradePipelineProps {
   counts: GradePipelineCounts;
   isLoading?: boolean;
+  orientation?: "horizontal" | "vertical";
 }
 
-export function GradePipeline({ counts, isLoading }: GradePipelineProps) {
+export function GradePipeline({ counts, isLoading, orientation = "horizontal" }: GradePipelineProps) {
+  const vertical = orientation === "vertical";
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} ${vertical ? styles.sectionVertical : ""}`}>
       <h2 className={styles.heading}>Final Grade Approval Pipeline</h2>
       <p className={styles.subheading}>
         Grades move from the subject teacher to the adviser; the registrar is view-only
         once a student&apos;s full term is adviser-approved.
       </p>
-      <div className={styles.track}>
+      <div className={`${styles.track} ${vertical ? styles.trackVertical : ""}`}>
         {STAGES.map((step, i) => {
           const isLast = i === STAGES.length - 1;
           const count = counts[step.key];
           return (
             <React.Fragment key={step.key}>
-              <div className={styles.stage}>
+              <div className={`${styles.stage} ${vertical ? styles.stageVertical : ""}`}>
                 <span
                   className={styles.marker}
                   style={{ backgroundColor: step.color }}
                 >
                   {step.order}
                 </span>
-                <div className={styles.body}>
+                <div className={`${styles.body} ${vertical ? styles.bodyVertical : ""}`}>
                   <span className={styles.label}>{step.label}</span>
                   <span className={styles.owner}>{step.owner}</span>
                   <span className={styles.count}>
@@ -67,7 +69,12 @@ export function GradePipeline({ counts, isLoading }: GradePipelineProps) {
                   </span>
                 </div>
               </div>
-              {!isLast && <span className={styles.connector} aria-hidden />}
+              {!isLast && (
+                <span
+                  className={`${styles.connector} ${vertical ? styles.connectorVertical : ""}`}
+                  aria-hidden
+                />
+              )}
             </React.Fragment>
           );
         })}

@@ -8,12 +8,9 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardAction,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
@@ -76,11 +73,6 @@ export function FinalGradeApprovals() {
             Students whose grades are fully adviser-approved and ready for you to view.
           </CardDescription>
         </div>
-        <CardAction>
-          <Badge variant="default" className={styles.pendingBadge}>
-            {isPending ? "…" : data?.complete ?? 0}
-          </Badge>
-        </CardAction>
       </CardHeader>
       <CardContent className={styles.content}>
         {isPending ? (
@@ -111,11 +103,11 @@ export function FinalGradeApprovals() {
           </ul>
         )}
       </CardContent>
-      <CardFooter className={styles.footer}>
-        <Button variant="outline" className={styles.footerBtn} onClick={goFinals}>
+      <div className={styles.footer}>
+        <Button className={styles.footerBtn} onClick={goFinals}>
           View all finals
         </Button>
-      </CardFooter>
+      </div>
     </Card>
   );
 }

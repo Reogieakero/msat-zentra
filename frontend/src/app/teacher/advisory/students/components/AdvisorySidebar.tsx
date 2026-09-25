@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { TeacherClassRow } from "../../../overview/components/teacher-overview-data";
 import type { AdvisorySectionInfo } from "./advisory-students-data";
 import styles from "./AdvisorySidebar.module.css";
+import skel from "./advisory-students-skeleton.module.css";
 
 interface AdvisorySidebarProps {
   sections: AdvisorySectionInfo[];
@@ -50,6 +51,7 @@ export function AdvisorySidebar({ sections, classes, loading, subjectsLoading, a
             <Skeleton className={styles.skelName} />
             <Skeleton className={styles.skelSub} />
           </div>
+          <Skeleton className={skel.addBtn} />
         </article>
       ) : sections.length === 0 ? (
         <article className={styles.card}>
@@ -105,10 +107,19 @@ export function AdvisorySidebar({ sections, classes, loading, subjectsLoading, a
         <div className={styles.subjectsBody}>
           {subjectsLoading ? (
             <ul className={`${styles.list} ${styles.subjectList}`}>
-              {Array.from({ length: 3 }).map((_, i) => (
+              {Array.from({ length: 4 }).map((_, i) => (
                 <li key={i} className={styles.nestedCard} aria-hidden>
-                  <Skeleton className={styles.skelRowTitle} />
-                  <Skeleton className={styles.skelRowMeta} />
+                  <span className={styles.nestedText}>
+                    <span className={styles.nestedLine}>
+                      <Skeleton className={skel.nestedLabel} />
+                      <Skeleton className={skel.nestedValue} />
+                    </span>
+                    <span className={styles.nestedLine}>
+                      <Skeleton className={skel.nestedLabel} />
+                      <Skeleton className={skel.nestedValue} />
+                    </span>
+                  </span>
+                  <Skeleton className={skel.nestedChevron} />
                 </li>
               ))}
             </ul>

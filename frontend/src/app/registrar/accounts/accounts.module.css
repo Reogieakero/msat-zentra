@@ -1,8 +1,130 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1rem 0.25rem 0.25rem;
+  gap: 1rem;
+  /* 0 padding: shell .main already gives exactly 16px gutters. */
+  padding: 0;
+  min-width: 0;
+}
+
+/* Sidebar layout — narrow rail on the left, main content on the right. */
+.body {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  align-self: start;
+}
+
+.sideCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.sideDesc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.sideList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.sideRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.sideRow + .sideRow {
+  border-top: 1px solid var(--border);
+}
+
+.sideLabel {
+  color: var(--muted-foreground);
+}
+
+.sideValue {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+/* Previous header guide cards — compact stacked versions of the
+   AccountsHeader carousel slides for the left rail. */
+.guideCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.guideHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.guideIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.guideTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.guideBody {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   min-width: 0;
 }
 
@@ -59,6 +181,7 @@
 
 .clearBtn {
   height: 2rem;
+  gap: 0.375rem;
   color: var(--muted-foreground);
 }
 
@@ -106,12 +229,7 @@
 }
 
 .row {
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-
-.row:hover {
-  background-color: color-mix(in oklch, var(--primary), transparent 94%);
+  /* Rows are not clickable — no hover tint, same as guidance alerts. */
 }
 
 /* Flush table — no gutters */
@@ -197,6 +315,223 @@
   height: 0.75rem;
 }
 
+/* Pending queue — guidance/alerts pattern: plain section header,
+   bordered table, pager (no card chrome). */
+
+.queueHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.queueHeadText {
+  min-width: 0;
+}
+
+.queueTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.queueDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.queueActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.qSearchWrap {
+  position: relative;
+  width: 16rem;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.qSearchWrap .searchIcon {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.search {
+  width: 100%;
+  height: 2rem;
+  padding-left: 2rem;
+}
+
+/* Queue table — plain list with a solid border, roomier rows,
+   same as guidance alerts. Holds a min-height so a short queue
+   (e.g. 1 pending) doesn't collapse. */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-top: 0.75rem;
+  min-height: 26rem;
+}
+
+.tableWrap :global(table) {
+  width: 100%;
+  font-size: 0.8125rem;
+  border-collapse: collapse;
+}
+
+.tableWrap :global(thead) {
+  border-bottom: 1px solid var(--border);
+}
+
+.tableWrap :global(thead th) {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  background-color: transparent;
+  padding: 0.875rem 1rem;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tableWrap :global(tbody td) {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 35%);
+  vertical-align: middle;
+  line-height: 1.5;
+}
+
+.tableWrap :global(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.lrn {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pager — guidance layout. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.range {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Centered empty panel — no table header, icon + message.
+   Same min-height as the table so the section never collapses. */
+.emptyPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-top: 0.75rem;
+  min-height: 26rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  margin-bottom: 0.375rem;
+}
+
+.emptyIcon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.emptyHint {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
 @media (max-width: 640px) {
   .header {
     flex-direction: column;
@@ -205,5 +540,15 @@
 
   .search {
     width: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
   }
 }

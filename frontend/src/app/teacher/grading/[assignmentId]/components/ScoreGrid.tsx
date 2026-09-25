@@ -62,12 +62,15 @@ export function ScoreGrid({ students, components, category, selectedId, onChange
 
   // Selection now comes from the sidebar — reset any in-progress edit
   // (including the max draft) whenever the assessment changes.
+  // (Render-phase reset: allowed because it is conditional on prop change.)
   const selectedKey = selected?.id ?? "";
-  React.useEffect(() => {
+  const [resetKey, setResetKey] = React.useState(selectedKey);
+  if (resetKey !== selectedKey) {
+    setResetKey(selectedKey);
     setEditing(false);
     setMaxDraft(null);
     setError(null);
-  }, [selectedKey]);
+  }
 
   const savedOf = (assessment: ClassAssessment, studentId: string) =>
     assessment.scores[studentId] != null ? String(assessment.scores[studentId]) : "";

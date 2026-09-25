@@ -114,7 +114,7 @@ export function AddStudentDialog({ open, sectionName, onOpenChange }: AddStudent
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={saving} aria-busy={saving || undefined}>

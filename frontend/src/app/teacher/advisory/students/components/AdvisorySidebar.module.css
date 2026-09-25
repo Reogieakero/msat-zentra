@@ -162,18 +162,6 @@
   opacity: 0.55;
 }
 
-.skelRowTitle {
-  height: 0.8125rem;
-  width: 60%;
-  border-radius: var(--radius-sm, 0.375rem);
-}
-
-.skelRowMeta {
-  height: 0.75rem;
-  width: 80%;
-  border-radius: 999px;
-}
-
 .list {
   margin: 0;
   padding: 0;

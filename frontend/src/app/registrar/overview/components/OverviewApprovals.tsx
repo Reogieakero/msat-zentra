@@ -7,13 +7,8 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  FileSignature,
-  FileStack,
-  GraduationCap,
   MoreHorizontal,
   Search,
-  ShieldQuestion,
-  UserCog,
 } from "lucide-react";
 import {
   Card,
@@ -47,15 +42,6 @@ import styles from "./OverviewApprovals.module.css";
 
 const PAGE_SIZE = 5;
 
-interface ActionItem {
-  key: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  count: number;
-  href: string;
-  cta: string;
-}
-
 export function OverviewApprovals() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
@@ -65,41 +51,6 @@ export function OverviewApprovals() {
     queryKey: ["registrar-overview"],
     queryFn: fetchRegistrarOverview,
   });
-
-  const actions: ActionItem[] = [
-    {
-      key: "finals",
-      icon: FileSignature,
-      title: "Final Grade Approvals",
-      count: data?.lockedFinalsAwaiting ?? 0,
-      href: "/registrar/final-grades",
-      cta: "View finals",
-    },
-    {
-      key: "students",
-      icon: GraduationCap,
-      title: "Pending Students",
-      count: data?.pendingStudents.length ?? 0,
-      href: "/registrar/accounts",
-      cta: "Approve enrollments",
-    },
-    {
-      key: "adviser",
-      icon: ShieldQuestion,
-      title: "Adviser Access",
-      count: data?.pendingAdviserAccess ?? 0,
-      href: "/registrar/adviser-access",
-      cta: "Grant access",
-    },
-    {
-      key: "sf10",
-      icon: FileStack,
-      title: "SF10 Records to Attach",
-      count: data?.latestAttachments.length ?? 0,
-      href: "/registrar/sf10",
-      cta: "Process records",
-    },
-  ];
 
   const goAccounts = React.useCallback(() => {
     router.push("/registrar/accounts");
@@ -152,54 +103,13 @@ export function OverviewApprovals() {
       </CardHeader>
       <CardContent className={styles.content}>
         {isPending ? (
-          <div className={styles.sectionBlock}>
-            <div className={styles.actionGrid}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className={styles.actionSkel} />
-              ))}
-            </div>
+          <div className={styles.tableWrap}>
+            <Skeleton className={styles.tableSkel} />
           </div>
         ) : isError ? (
           <p className={styles.empty}>Could not load overview figures.</p>
         ) : (
-          <>
-            <div className={styles.sectionBlock}>
-              <div className={styles.actionGrid}>
-                {actions.map((a) => {
-                  const Icon = a.icon;
-                  const empty = a.count === 0;
-                  return (
-                    <button
-                      type="button"
-                      key={a.key}
-                      className={styles.actionItem}
-                      onClick={() => router.push(a.href)}
-                      aria-label={
-                        empty ? `${a.title}: all caught up` : `${a.title}: ${a.count} pending`
-                      }
-                    >
-                      <span className={styles.actionHead}>
-                        <span className={styles.actionIcon}>
-                          <Icon className={styles.actionIconSvg} aria-hidden />
-                        </span>
-                        <span className={styles.actionCount}>{a.count}</span>
-                      </span>
-                      <span className={styles.actionTitle}>{a.title}</span>
-                      <span className={styles.actionCta}>
-                        {empty ? "View" : a.cta}
-                        <ArrowRight className={styles.actionCtaIcon} aria-hidden />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className={styles.footnote}>
-                <UserCog className={styles.footnoteIcon} aria-hidden />
-                {data?.pendingAccounts ?? 0} pending account request
-                {(data?.pendingAccounts ?? 0) !== 1 ? "s" : ""} across the grade band.
-              </p>
-            </div>
-
+          <div className={styles.tableWrap}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -259,7 +169,7 @@ export function OverviewApprovals() {
                 )}
               </TableBody>
             </Table>
-          </>
+          </div>
         )}
       </CardContent>
       <CardFooter className={styles.footer}>

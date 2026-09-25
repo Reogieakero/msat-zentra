@@ -30,7 +30,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { StudentTableRowsSkeleton } from "./advisory-students-skeleton";
 import {
   Search,
   MoreHorizontal,
@@ -192,7 +192,7 @@ export function StudentTable({ students, loading }: StudentTableProps) {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <SkeletonRows />
+              <StudentTableRowsSkeleton />
             ) : pageRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className={styles.empty}>
@@ -302,35 +302,5 @@ export function StudentTable({ students, loading }: StudentTableProps) {
         </div>
       </CardFooter>
     </Card>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <span className={styles.student}>
-              <Skeleton className={styles.skelAvatar} />
-              <Skeleton className={styles.skelName} />
-            </span>
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "60%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "40%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "45%" }} />
-          </TableCell>
-          <TableCell />
-        </TableRow>
-      ))}
-    </>
   );
 }

@@ -1,36 +1,31 @@
 "use client";
 
-import { OverviewHeader } from "./components/OverviewHeader";
-import { OverviewApprovals } from "./components/OverviewApprovals";
+import { OverviewShortcuts } from "./components/OverviewShortcuts";
 import { Sf10AttachFeed } from "./components/Sf10AttachFeed";
+import { OverviewGradeChart } from "./components/OverviewGradeChart";
 import { FinalGradeApprovals } from "./components/FinalGradeApprovals";
 import { Sf10Coverage } from "./components/Sf10Coverage";
-import { AccountBreakdown } from "./components/AccountBreakdown";
+import { OverviewSectionsSubjects } from "./components/OverviewSectionsSubjects";
 import styles from "./components/overview.module.css";
 
 export default function RegistrarOverviewPage() {
   return (
     <section className={styles.page}>
-      <OverviewHeader />
+      <div className={styles.body}>
+        <aside className={styles.sidebar} aria-label="Overview sidebar">
+          <OverviewShortcuts />
+          <OverviewGradeChart />
+        </aside>
 
-      <hr className={styles.divider} />
-
-      <OverviewApprovals />
-
-      <hr className={styles.divider} />
-
-      <div className={styles.row}>
-        <Sf10AttachFeed />
-        <FinalGradeApprovals />
+        <div className={styles.main}>
+          <Sf10Coverage />
+          <Sf10AttachFeed />
+          <div className={styles.duo}>
+            <FinalGradeApprovals />
+            <OverviewSectionsSubjects />
+          </div>
+        </div>
       </div>
-
-      <hr className={styles.divider} />
-
-      <Sf10Coverage />
-
-      <hr className={styles.divider} />
-
-      <AccountBreakdown />
     </section>
   );
 }

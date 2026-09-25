@@ -64,68 +64,6 @@
   align-items: flex-end;
 }
 
-.skelTitle {
-  height: 1.5rem;
-  width: 16rem;
-  max-width: 40vw;
-}
-
-.skelSub {
-  height: 0.875rem;
-  width: 11rem;
-  max-width: 30vw;
-}
-
-.skelSide {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 0.75rem);
-  background: var(--card);
-}
-
-.skelSideRow {
-  height: 2.25rem;
-  width: 100%;
-}
-
-.skelMain {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 0.75rem);
-  background: var(--card);
-}
-
-.skelTableHead {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 0.75fr;
-  gap: 0.75rem;
-}
-
-.skelCell {
-  height: 0.875rem;
-  width: 100%;
-}
-
-.skelRow {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 0.75fr;
-  gap: 0.75rem;
-  padding-block: 0.625rem;
-  border-top: 1px solid var(--border);
-}
-
-.skelFoot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .skelSync {
   margin: 0;
   font-size: 0.75rem;

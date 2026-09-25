@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Award,
@@ -11,24 +11,15 @@ import {
   GraduationCap,
   FileBarChart,
   FileText,
-  ChevronDown,
 } from "lucide-react";
 
-import { useSidebar } from "@/components/ui/sidebar";
 import styles from "./registrar-sidebar.module.css";
-
-type NavSubItem = {
-  title: string;
-  href: string;
-  badge?: string;
-};
 
 type NavItem = {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
-  subItems?: NavSubItem[];
 };
 
 type NavGroup = {
@@ -36,6 +27,9 @@ type NavGroup = {
   items: NavItem[];
 };
 
+// Registrar nav — same GitHub-style top tab bar pattern as the nurse role.
+// Groups only group the source data; every section is flattened into one
+// row under the topbar.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -48,13 +42,25 @@ const NAV: NavGroup[] = [
     items: [
       { title: "Final Grades", href: "/registrar/final-grades", icon: Award },
       { title: "Account Approvals", href: "/registrar/accounts", icon: UserCheck },
-      { title: "Adviser Access Requests", href: "/registrar/adviser-access", icon: ShieldQuestion },
-      { title: "Sections & Subjects", href: "/registrar/academics", icon: GraduationCap },
+      {
+        title: "Adviser Access Requests",
+        href: "/registrar/adviser-access",
+        icon: ShieldQuestion,
+      },
+      {
+        title: "Sections & Subjects",
+        href: "/registrar/academics",
+        icon: GraduationCap,
+      },
       { title: "Report Cards", href: "/registrar/report-cards", icon: FileBarChart },
       { title: "SF10 Records", href: "/registrar/sf10", icon: FileText },
     ],
   },
 ];
+
+// GitHub-style tab bar: every section flattened into one row under the
+// topbar. Groups only group the source data, not the rendered tabs.
+const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {
   const pathname = usePathname();
@@ -67,84 +73,33 @@ function useIsActive() {
   );
 }
 
-function SidebarNav() {
+function RegistrarNavbar() {
   const isActive = useIsActive();
-  const router = useRouter();
-
-  const renderItem = (item: NavItem, nested = false) => {
-    const active = isActive(item.href);
-    const hasSub = !!item.subItems?.length;
-
-    if (hasSub && !nested) {
-      return (
-        <li key={item.href}>
-          <button
-            type="button"
-            className={`${styles.item} ${active ? styles.itemActive : ""}`}
-            onClick={() => router.push(item.href)}
-            aria-expanded={false}
-          >
-            <item.icon className={styles.itemIcon} />
-            <span className={styles.itemLabel}>{item.title}</span>
-            {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
-            <ChevronDown className={styles.itemChevron} />
-          </button>
-        </li>
-      );
-    }
-
-    return (
-      <li key={item.href}>
-        <Link
-          href={item.href}
-          className={`${styles.item} ${nested ? styles.subitem : ""} ${
-            active ? styles.itemActive : ""
-          }`}
-          aria-current={active ? "page" : undefined}
-        >
-          <item.icon className={styles.itemIcon} />
-          <span className={styles.itemLabel}>{item.title}</span>
-          {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
-        </Link>
-      </li>
-    );
-  };
 
   return (
-    <ul className={styles.menu}>
-      {NAV.flatMap((group) => group.items.map((item) => renderItem(item)))}
-    </ul>
+    <nav className={styles.navbar} aria-label="Registrar sections">
+      <ul className={styles.tabs}>
+        {TABS.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <li key={item.href} className={styles.tabItem}>
+              <Link
+                href={item.href}
+                className={`${styles.tab} ${active ? styles.tabActive : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
+                <item.icon className={styles.tabIcon} aria-hidden="true" />
+                <span className={styles.tabLabel}>{item.title}</span>
+                {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
-}
-
-function SidebarShell() {
-  const { isMobile, openMobile, setOpenMobile } = useSidebar();
-
-  const aside = (
-    <aside className={styles.sidebar}>
-      <nav className={styles.content}>
-        <SidebarNav />
-      </nav>
-    </aside>
-  );
-
-  if (isMobile) {
-    return (
-      <>
-        <div
-          className={`${styles.scrim} ${openMobile ? styles.scrimOpen : ""}`}
-          onClick={() => setOpenMobile(false)}
-        />
-        <div className={`${styles.mobile} ${openMobile ? styles.mobileOpen : ""}`}>
-          {aside}
-        </div>
-      </>
-    );
-  }
-
-  return aside;
 }
 
 export function RegistrarSidebar() {
-  return <SidebarShell />;
+  return <RegistrarNavbar />;
 }

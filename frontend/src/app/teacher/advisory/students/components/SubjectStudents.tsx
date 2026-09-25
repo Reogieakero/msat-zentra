@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SubjectGradesSkeleton } from "./advisory-students-skeleton";
 import {
   Table,
   TableBody,
@@ -29,10 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  classDetailKey,
   fetchClassDetail,
   type ClassDetail,
   type ClassStudent,
 } from "../../../grading/components/grading-data";
+import { useSession } from "@/lib/auth/useSession";
 import { StudentGradesSheet } from "./StudentGradesSheet";
 import styles from "./SubjectStudents.module.css";
 
@@ -65,13 +67,19 @@ interface SubjectStudentsProps {
 }
 
 export function SubjectStudents({ subject, targets }: SubjectStudentsProps) {
+  const session = useSession();
+  const teacherId = session?.sub ?? null;
   const assignmentIds = targets.map((t) => t.id);
   const sections = [...new Set(targets.map((t) => t.section))];
+  // Teacher-scoped keys shared with the class workspace — opening a
+  // workspace after viewing its subject reuses cached detail.
   const details = useQueries({
     queries: assignmentIds.map((id) => ({
-      queryKey: ["teacher-grading-class", id],
+      queryKey: classDetailKey(teacherId, id),
       queryFn: () => fetchClassDetail(id),
+      enabled: !!teacherId,
       retry: false,
+      staleTime: 15_000,
     })),
   });
 
@@ -79,10 +87,13 @@ export function SubjectStudents({ subject, targets }: SubjectStudentsProps) {
   const [activeStudentId, setActiveStudentId] = React.useState<string | null>(null);
 
   // Fresh subject selection starts clean — no stale search or open sheet.
-  React.useEffect(() => {
+  // (Render-phase reset: allowed because it is conditional on prop change.)
+  const [resetSubject, setResetSubject] = React.useState(subject);
+  if (resetSubject !== subject) {
+    setResetSubject(subject);
     setQuery("");
     setActiveStudentId(null);
-  }, [subject]);
+  }
 
   const pending = details.some((d) => d.isPending);
   const failed = details.some((d) => d.isError);
@@ -165,11 +176,7 @@ export function SubjectStudents({ subject, targets }: SubjectStudentsProps) {
 
       <CardContent className={styles.content}>
         {pending ? (
-          <div className={styles.skelWrap} aria-busy="true" aria-label="Loading grades">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className={styles.skelRow} />
-            ))}
-          </div>
+          <SubjectGradesSkeleton />
         ) : failed || assignmentIds.length === 0 ? (
           <p className={styles.empty}>
             Could not load grades for this subject. Check your connection and try again.

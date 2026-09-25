@@ -8,12 +8,9 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardAction,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { fetchRegistrarOverview } from "./overview-data";
@@ -86,11 +83,6 @@ export function Sf10AttachFeed() {
             Most recent SF10 records pulled into G11–12 student files this term.
           </CardDescription>
         </div>
-        <CardAction>
-          <Badge variant="warning" className={styles.attachBadge}>
-            {isPending ? "…" : data?.sf10.attach ?? 0}
-          </Badge>
-        </CardAction>
       </CardHeader>
       <CardContent className={styles.content}>
         {isPending ? (
@@ -124,11 +116,11 @@ export function Sf10AttachFeed() {
           </div>
         )}
       </CardContent>
-      <CardFooter className={styles.footer}>
+      <div className={styles.footer}>
         <Button className={styles.footerBtn} onClick={goSf10}>
           View all attachments
         </Button>
-      </CardFooter>
+      </div>
     </Card>
   );
 }

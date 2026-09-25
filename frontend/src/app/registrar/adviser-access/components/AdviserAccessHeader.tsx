@@ -13,13 +13,13 @@ import {
 } from "lucide-react";
 import styles from "./AdviserAccessHeader.module.css";
 
-type Slide = {
+export type Slide = {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   body: string;
 };
 
-const SLIDES: Slide[] = [
+export const SLIDES: Slide[] = [
   {
     icon: ShieldQuestion,
     title: "Access Requests",

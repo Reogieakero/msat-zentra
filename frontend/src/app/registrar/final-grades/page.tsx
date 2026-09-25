@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Search, MoreHorizontal, Eye, X } from "lucide-react";
+import { Search, MoreHorizontal, Eye, X, GraduationCap } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -112,44 +112,47 @@ export default function FinalGradeApprovalsPage() {
 
   return (
     <section className={styles.page}>
-      <div className={styles.statsRow}>
-        {isPending ? (
-          <>
-            <Skeleton className={styles.statSkel} />
-            <Skeleton className={styles.statSkel} />
-            <Skeleton className={styles.statSkel} />
-          </>
-        ) : (
-          <>
-            <Stat
-              value={stats.ready}
-              label="Ready subjects"
-              hint="Adviser-approved final grades, viewable"
-            />
-            <Stat
-              value={stats.complete}
-              label="Complete sets"
-              hint="Students with a fully approved term"
-            />
-            <Stat value={stats.total} label="Total rows" hint="G11–12 grade entries" />
-          </>
-        )}
-      </div>
+      <div className={styles.body}>
+        <aside className={styles.sidebar} aria-label="Grade pipeline sidebar">
+          <GradePipeline
+            counts={{
+              locked: data?.locked,
+              adviserApproved: data?.adviserApproved,
+              complete: data?.complete,
+            }}
+            isLoading={isPending}
+            orientation="vertical"
+          />
+        </aside>
 
-      <hr className={styles.divider} />
+        <div className={styles.main}>
+          <div className={styles.statsRow}>
+            {isPending ? (
+              <>
+                <Skeleton className={styles.statSkel} />
+                <Skeleton className={styles.statSkel} />
+                <Skeleton className={styles.statSkel} />
+              </>
+            ) : (
+              <>
+                <Stat
+                  value={stats.ready}
+                  label="Ready subjects"
+                  hint="Adviser-approved final grades, viewable"
+                />
+                <Stat
+                  value={stats.complete}
+                  label="Complete sets"
+                  hint="Students with a fully approved term"
+                />
+                <Stat value={stats.total} label="Total rows" hint="G11–12 grade entries" />
+              </>
+            )}
+          </div>
 
-      <GradePipeline
-        counts={{
-          locked: data?.locked,
-          adviserApproved: data?.adviserApproved,
-          complete: data?.complete,
-        }}
-        isLoading={isPending}
-      />
+          <hr className={styles.divider} />
 
-      <hr className={styles.divider} />
-
-      <div className={styles.listCard}>
+          <div className={styles.listCard}>
         <div className={styles.listHead}>
           <div className={styles.listHeadText}>
             <h2 className={styles.listTitle}>Final Grade Approvals</h2>
@@ -189,84 +192,117 @@ export default function FinalGradeApprovalsPage() {
           </div>
         </div>
 
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Section</th>
-              <th>Term</th>
-              <th>Overall Avg</th>
-              <th>Status</th>
-              <th className={styles.thAction} />
-            </tr>
-          </thead>
-          <tbody>
-            {isPending ? (
-              <SkeletonRows />
-            ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className={styles.empty}>
-                  {query.trim()
-                    ? `No complete grade sets match "${query}".`
-                    : "No complete grade sets yet. Students appear once every subject is adviser-approved."}
-                </td>
-              </tr>
-            ) : (
-              pageRows.map((s) => (
-                <tr key={s.id} className={styles.tableRow}>
-                  <td>
-                    <div className={styles.studentCell}>
-                      <span className={styles.studentName}>{s.name}</span>
-                      <span className={styles.studentLrn}>{s.lrn}</span>
-                    </div>
-                  </td>
-                  <td className={styles.cell}>{formatSection(s.section)}</td>
-                  <td className={styles.cell}>{s.term}</td>
-                   <td className={styles.leftCell}>{s.overall}</td>
-                  <td>
-                    <Badge variant="default" className={styles.statusBadge}>
-                      Complete
-                    </Badge>
-                  </td>
-                  <td className={styles.actionCell}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/registrar/final-grades/${s.id}`)}>
-                          <Eye aria-hidden />
-                          View grade details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem disabled>Registrar approval is not required</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
+        {isPending ? (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Section</th>
+                  <th>Term</th>
+                  <th>Overall Avg</th>
+                  <th>Status</th>
+                  <th>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                <SkeletonRows />
+              </tbody>
+            </table>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className={styles.emptyPanel}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <GraduationCap />
+            </span>
+            <p className={styles.emptyTitle}>
+              {query.trim()
+                ? "No matching grade sets"
+                : "No complete grade sets yet"}
+            </p>
+            <p className={styles.emptyHint}>
+              {query.trim()
+                ? `No complete grade sets match "${query}".`
+                : "Students appear once every subject is adviser-approved."}
+            </p>
+          </div>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Section</th>
+                  <th>Term</th>
+                  <th>Overall Avg</th>
+                  <th>Status</th>
+                  <th>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((s) => (
+                  <tr key={s.id} className={styles.tableRow}>
+                    <td>
+                      <p className={styles.cellMain}>{s.name}</p>
+                      <p className={styles.cellSub}>
+                        <span className={styles.lrn}>{s.lrn}</span>
+                      </p>
+                    </td>
+                    <td className={styles.cell}>{formatSection(s.section)}</td>
+                    <td className={styles.cell}>{s.term}</td>
+                    <td className={styles.cell}>{s.overall}</td>
+                    <td>
+                      <Badge variant="default" className={styles.statusBadge}>
+                        Complete
+                      </Badge>
+                    </td>
+                    <td className={styles.actionCell}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontal aria-hidden />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/registrar/final-grades/${s.id}`)}>
+                            <Eye aria-hidden />
+                            View grade details
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled>Registrar approval is not required</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className={styles.footer}>
-          <span className={styles.footerInfo}>
-            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-          </span>
+          <p className={styles.footerInfo}>
+            Showing {filtered.length > 0 ? `${start}–${end}` : "0"} of {filtered.length}
+          </p>
           <div className={styles.footerActions}>
             <Button
+              size="xs"
               variant="outline"
-              size="sm"
               disabled={safePage <= 1 || filtered.length === 0}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               Previous
             </Button>
+            <span className={styles.pageLabel} aria-live="polite">
+              Page {safePage} of {totalPages}
+            </span>
             <Button
+              size="xs"
               variant="outline"
-              size="sm"
               disabled={safePage >= totalPages || filtered.length === 0}
               onClick={() => setPage((p) => p + 1)}
             >
@@ -274,9 +310,9 @@ export default function FinalGradeApprovalsPage() {
             </Button>
           </div>
         </div>
+        </div>
+        </div>
       </div>
-
-      <hr className={styles.divider} />
     </section>
   );
 }

@@ -8,6 +8,8 @@ export type AccountBreakdown = {
   label: string; // e.g. "Grade 11 · 11-A (STEM)"
   withAccount: number;
   pending: number;
+  noAccount?: number;
+  total?: number;
 };
 
 export function AccountsBreakdown({
@@ -46,24 +48,24 @@ export function AccountsBreakdown({
       <header className={styles.header}>
         <h2 className={styles.title}>Accounts Breakdown</h2>
         <p className={styles.subtitle}>
-          Student accounts by grade level and section
+          Section roster totals with account status — with account, pending, and no account yet
         </p>
       </header>
 
       <div className={styles.grid}>
         {data.map((d) => {
-          const total = d.withAccount + d.pending;
+          const noAccount = d.noAccount ?? 0;
           return (
             <article key={d.id} className={styles.card}>
               <header className={styles.cardHead}>
                 <h3 className={styles.cardTitle}>{d.label}</h3>
-                <span className={styles.total}>{total}</span>
               </header>
 
               <div className={styles.body}>
                 <Donut
                   withAccount={d.withAccount}
                   pending={d.pending}
+                  noAccount={noAccount}
                 />
                 <ul className={styles.legend}>
                   <LegendItem
@@ -75,6 +77,11 @@ export function AccountsBreakdown({
                     color="var(--warn, #d97706)"
                     label="Pending"
                     value={d.pending}
+                  />
+                  <LegendItem
+                    color="var(--muted-foreground)"
+                    label="No account"
+                    value={noAccount}
                   />
                 </ul>
               </div>

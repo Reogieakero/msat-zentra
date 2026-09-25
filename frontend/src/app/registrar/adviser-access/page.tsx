@@ -7,7 +7,7 @@ import {
   AdviserAccessGridSkeleton,
 } from "./components/AdviserAccessGrid";
 import { AdviseePanel } from "./components/AdviseePanel";
-import { AdviserAccessHeader } from "./components/AdviserAccessHeader";
+import { SLIDES } from "./components/AdviserAccessHeader";
 import { apiClient } from "@/lib/api/client";
 import type { AdviserAccessRequest, AccessRequestStatus } from "./components/types";
 import styles from "./adviser-access.module.css";
@@ -110,8 +110,12 @@ export default function AdviserAccessPage() {
   if (error) {
     return (
       <section className={styles.page}>
-        <AdviserAccessHeader />
-        <p className={styles.error}>{error}</p>
+        <div className={styles.body}>
+          <Rail />
+          <div className={styles.main}>
+            <p className={styles.error}>{error}</p>
+          </div>
+        </div>
       </section>
     );
   }
@@ -119,8 +123,12 @@ export default function AdviserAccessPage() {
   if (loading) {
     return (
       <section className={styles.page}>
-        <AdviserAccessHeader />
-        <AdviserAccessGridSkeleton />
+        <div className={styles.body}>
+          <Rail />
+          <div className={styles.main}>
+            <AdviserAccessGridSkeleton />
+          </div>
+        </div>
       </section>
     );
   }
@@ -128,10 +136,14 @@ export default function AdviserAccessPage() {
   if (requests.length === 0) {
     return (
       <section className={styles.page}>
-        <AdviserAccessHeader />
-        <div className={styles.empty}>
-          <ShieldQuestion className={styles.emptyIcon} />
-          <p className={styles.emptyText}>No adviser access requests for grades 11–12.</p>
+        <div className={styles.body}>
+          <Rail />
+          <div className={styles.main}>
+            <div className={styles.empty}>
+              <ShieldQuestion className={styles.emptyIcon} />
+              <p className={styles.emptyText}>No adviser access requests for grades 11–12.</p>
+            </div>
+          </div>
         </div>
       </section>
     );
@@ -139,53 +151,73 @@ export default function AdviserAccessPage() {
 
   return (
     <section className={styles.page}>
-      <AdviserAccessHeader />
+      <div className={styles.body}>
+        <Rail />
 
-      <div className={styles.layout} data-selected={selectedId ? "true" : "false"}>
-        <div className={styles.listCol}>
-          <div className={styles.sections}>
-            {SECTIONS.map((section) => {
-              const items = grouped[section.status];
-              return (
-                <section key={section.status} className={styles.sectionBlock}>
-                  <header className={styles.sectionHeader}>
-                    <div>
-                      <h2 className={styles.sectionTitle}>{section.title}</h2>
-                      <p className={styles.sectionDesc}>{section.description}</p>
-                    </div>
-                    <span
-                      className={styles.sectionCount}
-                      data-status={section.status}
-                    >
-                      {items.length}
-                    </span>
-                  </header>
+        <div className={styles.main}>
+          <div className={styles.layout} data-selected={selectedId ? "true" : "false"}>
+            <div className={styles.listCol}>
+              <div className={styles.sections}>
+                {SECTIONS.map((section) => {
+                  const items = grouped[section.status];
+                  return (
+                    <section key={section.status} className={styles.sectionBlock}>
+                      <header className={styles.sectionHeader}>
+                        <div>
+                          <h2 className={styles.sectionTitle}>{section.title}</h2>
+                          <p className={styles.sectionDesc}>{section.description}</p>
+                        </div>
+                        <span
+                          className={styles.sectionCount}
+                          data-status={section.status}
+                        >
+                          {items.length}
+                        </span>
+                      </header>
 
-                  {items.length === 0 ? (
-                    <div className={styles.sectionEmpty}>
-                      <p>Nothing here.</p>
-                    </div>
-                  ) : (
-                    <AdviserAccessGrid
-                      requests={items}
-                      actingId={acting}
-                      onViewAdvisees={(id) => setSelectedId(id)}
-                      onActed={handleActed}
-                    />
-                  )}
-                </section>
-              );
-            })}
+                      {items.length === 0 ? (
+                        <div className={styles.sectionEmpty}>
+                          <p>Nothing here.</p>
+                        </div>
+                      ) : (
+                        <AdviserAccessGrid
+                          requests={items}
+                          actingId={acting}
+                          onViewAdvisees={(id) => setSelectedId(id)}
+                          onActed={handleActed}
+                        />
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+
+            <aside className={styles.sidebar}>
+              <AdviseePanel
+                request={requests.find((r) => r.id === selectedId) ?? null}
+                onClose={() => setSelectedId(null)}
+              />
+            </aside>
           </div>
         </div>
-
-        <aside className={styles.sidebar}>
-          <AdviseePanel
-            request={requests.find((r) => r.id === selectedId) ?? null}
-            onClose={() => setSelectedId(null)}
-          />
-        </aside>
       </div>
     </section>
+  );
+}
+
+function Rail() {
+  return (
+    <aside className={styles.rail} aria-label="Adviser access guide">
+      {SLIDES.map((slide) => (
+        <article key={slide.title} className={styles.guideCard}>
+          <div className={styles.guideHead}>
+            <slide.icon className={styles.guideIcon} aria-hidden />
+            <h3 className={styles.guideTitle}>{slide.title}</h3>
+          </div>
+          <p className={styles.guideBody}>{slide.body}</p>
+        </article>
+      ))}
+    </aside>
   );
 }

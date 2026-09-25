@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Search, MoreHorizontal, X, Eye } from "lucide-react";
+import { Search, MoreHorizontal, X, Eye, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -50,71 +49,94 @@ export function TeachersSection({ teachers, loading }: Props) {
 
   return (
     <section className={styles.section} aria-label="Teachers">
-      <div className={styles.listCard}>
-        <div className={styles.listHead}>
-          <div className={styles.listHeadText}>
-            <h2 className={styles.listTitle}>Teachers</h2>
-            <p className={styles.listDesc}>
-              Active teachers with their current subject loads for grades 11–12.
-            </p>
-          </div>
-
-          <div className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                placeholder="Search teacher or subject…"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Search teachers"
-              />
-            </div>
-
-            {query && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={styles.clearBtn}
-                onClick={() => {
-                  setQuery("");
-                  setPage(1);
-                }}
-              >
-                <X aria-hidden />
-                Clear
-              </Button>
-            )}
-          </div>
+      <div className={styles.listHead}>
+        <div className={styles.listHeadText}>
+          <h2 className={styles.listTitle}>Teachers</h2>
+          <p className={styles.listDesc}>
+            Active teachers with their current subject loads for grades 11–12 —{" "}
+            {loading ? "…" : `${filtered.length} shown`}.
+          </p>
         </div>
 
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Teacher</th>
-              <th>Subjects</th>
-              <th>Sections</th>
-              <th className={styles.thAction} />
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonRows />
-            ) : filtered.length === 0 ? (
+        <div className={styles.headerActions}>
+          <div className={styles.searchWrap}>
+            <Search className={styles.searchIcon} aria-hidden />
+            <Input
+              className={styles.search}
+              placeholder="Search teacher or subject…"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Search teachers"
+            />
+          </div>
+
+          {query && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={styles.clearBtn}
+              onClick={() => {
+                setQuery("");
+                setPage(1);
+              }}
+            >
+              <X aria-hidden />
+              Show all
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
               <tr>
-                <td colSpan={4} className={styles.empty}>
-                  {loading
-                    ? "Loading…"
-                    : query.trim()
-                      ? `No teachers match "${query}".`
-                      : "No active teachers to show."}
-                </td>
+                <th>Teacher</th>
+                <th>Subjects</th>
+                <th>Sections</th>
+                <th>
+                  <span className={styles.srOnly}>Row actions</span>
+                </th>
               </tr>
-            ) : (
-              pageRows.map((t) => {
+            </thead>
+            <tbody>
+              <SkeletonRows />
+            </tbody>
+          </table>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className={styles.emptyPanel}>
+          <span className={styles.emptyIcon} aria-hidden>
+            <UserRound />
+          </span>
+          <p className={styles.emptyTitle}>
+            {query.trim() ? "No matching teachers" : "No teachers to show"}
+          </p>
+          <p className={styles.emptyHint}>
+            {query.trim()
+              ? `No teachers match "${query}".`
+              : "No active teachers to show."}
+          </p>
+        </div>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Teacher</th>
+                <th>Subjects</th>
+                <th>Sections</th>
+                <th>
+                  <span className={styles.srOnly}>Row actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageRows.map((t) => {
                 const subjectCount = t.loads.length;
                 const sectionTotal = t.loads.reduce((s, l) => s + l.sections.length, 0);
                 return (
@@ -124,19 +146,17 @@ export function TeachersSection({ teachers, loading }: Props) {
                     onClick={() => router.push(`/registrar/academics/teachers/${t.id}`)}
                   >
                     <td>
-                      <div className={styles.studentCell}>
-                        <span className={styles.studentName}>{t.name}</span>
-                        <span className={styles.studentLrn}>
-                          {t.loads
-                            .map((l) => l.code)
-                            .filter((v, i, a) => a.indexOf(v) === i)
-                            .slice(0, 3)
-                            .join(" · ") || "No load yet"}
-                        </span>
-                      </div>
+                      <p className={styles.cellMain}>{t.name}</p>
+                      <p className={styles.cellSub}>
+                        {t.loads
+                          .map((l) => l.code)
+                          .filter((v, i, a) => a.indexOf(v) === i)
+                          .slice(0, 3)
+                          .join(" · ") || "No load yet"}
+                      </p>
                     </td>
                     <td className={styles.cell}>
-                      {subjectCount === 0 ? "—" : <Badge variant="outline">{subjectCount}</Badge>}
+                      {subjectCount === 0 ? "—" : subjectCount}
                     </td>
                     <td className={styles.cell}>
                       {sectionTotal === 0 ? "—" : `${sectionTotal} section${sectionTotal === 1 ? "" : "s"}`}
@@ -150,9 +170,11 @@ export function TeachersSection({ teachers, loading }: Props) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
+                          className={styles.menu}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <DropdownMenuItem
+                            className={styles.menuItem}
                             onClick={() => router.push(`/registrar/academics/teachers/${t.id}`)}
                           >
                             <Eye aria-hidden />
@@ -160,6 +182,7 @@ export function TeachersSection({ teachers, loading }: Props) {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
+                            className={styles.menuItem}
                             disabled={subjectCount === 0}
                           >
                             {subjectCount === 0 ? "No assignments yet" : `${subjectCount} subjects assigned`}
@@ -169,33 +192,36 @@ export function TeachersSection({ teachers, loading }: Props) {
                     </td>
                   </tr>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        <div className={styles.footer}>
-          <span className={styles.footerInfo}>
-            {loading ? "Loading…" : `${start}–${end} of ${filtered.length}`}
+      <div className={styles.footer}>
+        <p className={styles.footerInfo}>
+          Showing {filtered.length > 0 ? `${start}–${end}` : "0"} of {filtered.length}
+        </p>
+        <div className={styles.footerActions}>
+          <Button
+            size="xs"
+            variant="outline"
+            disabled={safePage <= 1 || filtered.length === 0}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className={styles.pageLabel} aria-live="polite">
+            Page {safePage} of {totalPages}
           </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || filtered.length === 0}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || filtered.length === 0}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          <Button
+            size="xs"
+            variant="outline"
+            disabled={safePage >= totalPages || filtered.length === 0}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
         </div>
       </div>
     </section>
@@ -208,7 +234,7 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <tr key={i}>
           <td>
-            <div className={styles.studentCell}>
+            <div className={styles.skelLines}>
               <Skeleton className={styles.skelName} />
               <Skeleton className={styles.skelCell} style={{ width: "45%", marginTop: "0.25rem" }} />
             </div>

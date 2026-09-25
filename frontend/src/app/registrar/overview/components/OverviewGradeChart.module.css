@@ -1,0 +1,87 @@
+.card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.875rem 0.5rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.875rem 0.75rem;
+}
+
+.chartWrap {
+  height: 8rem;
+  min-width: 0;
+}
+
+.skel {
+  height: 8rem;
+  border-radius: var(--radius-md);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  color: var(--muted-foreground);
+}
+
+.legendCount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 1.5rem 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}

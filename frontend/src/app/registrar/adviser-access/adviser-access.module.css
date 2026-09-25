@@ -1,8 +1,130 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1rem 0 0.25rem;
+  gap: 1rem;
+  /* 0 padding: shell .main already gives exactly 16px gutters. */
+  padding: 0;
+}
+
+/* Page layout — narrow rail on the left, main content on the right.
+   Stretched so the main column (and the empty card in it) always matches
+   the accumulated height of the rail cards. */
+.body {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.rail {
+  position: sticky;
+  top: 7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  align-self: start;
+}
+
+.railCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.railTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.railDesc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.railList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.railRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.railRow + .railRow {
+  border-top: 1px solid var(--border);
+}
+
+.railLabel {
+  color: var(--muted-foreground);
+}
+
+.railValue {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.guideCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+}
+
+.guideHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.guideIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.guideTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.guideBody {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .error {
@@ -287,6 +409,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  flex: 1;
   min-height: 240px;
   padding: 2rem;
   border: 1px dashed var(--border);
@@ -307,6 +430,12 @@
 }
 
 @media (max-width: 900px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+  .rail {
+    position: static;
+  }
   .layout[data-selected="true"] {
     grid-template-columns: minmax(0, 1fr);
   }

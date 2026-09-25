@@ -4,6 +4,11 @@
   gap: 16px;
 }
 
+/* Vertical mode — separate action cards stacked in the left sidebar. */
+.gridVertical {
+  grid-template-columns: 1fr;
+}
+
 .card {
   appearance: none;
   display: flex;

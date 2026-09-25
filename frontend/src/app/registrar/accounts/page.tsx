@@ -5,21 +5,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
   Check,
   X,
+  UserPlus,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,10 +22,9 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { AccountsHeader } from "./components/AccountsHeader";
+import { SLIDES } from "./components/AccountsHeader";
 import { LrnVerifyButton } from "./components/LrnVerifyButton";
 import { AccountsBreakdown, type AccountBreakdown } from "./components/AccountsBreakdown";
-import { AccountsAudit } from "./components/AccountsAudit";
 import { formatGrade, formatSection } from "@/lib/utils";
 import type { PendingStudent, PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
@@ -101,23 +90,75 @@ export default function AccountApprovalsPage() {
   const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, filtered.length);
 
+  const sideStats = React.useMemo(() => {
+    const rows = breakdownData ?? [];
+    return {
+      withAccount: rows.reduce((s, r) => s + r.withAccount, 0),
+      pendingSignup: rows.reduce((s, r) => s + r.pending, 0),
+      sections: rows.length,
+    };
+  }, [breakdownData]);
+
   return (
     <section className={styles.page}>
-      <AccountsHeader />
-
-      <Card className={styles.card}>
-        <CardHeader className={styles.header}>
-          <div className={styles.headerText}>
-            <CardTitle>Pending Students</CardTitle>
-            <CardDescription>
-              Approve or reject student account requests for grades 11–12.
-            </CardDescription>
+      <div className={styles.body}>
+        <aside className={styles.sidebar} aria-label="Accounts summary">
+          <div className={styles.sideCard}>
+            <h2 className={styles.sideTitle}>Accounts</h2>
+            <p className={styles.sideDesc}>
+              G11–12 sign-ups and section coverage.
+            </p>
+            <ul className={styles.sideList}>
+              <li className={styles.sideRow}>
+                <span className={styles.sideLabel}>Pending approval</span>
+                <span className={styles.sideValue}>
+                  {isPending ? "…" : students.length}
+                </span>
+              </li>
+              <li className={styles.sideRow}>
+                <span className={styles.sideLabel}>With account</span>
+                <span className={styles.sideValue}>
+                  {breakdownPending ? "…" : sideStats.withAccount}
+                </span>
+              </li>
+              <li className={styles.sideRow}>
+                <span className={styles.sideLabel}>Pending sign-up</span>
+                <span className={styles.sideValue}>
+                  {breakdownPending ? "…" : sideStats.pendingSignup}
+                </span>
+              </li>
+              <li className={styles.sideRow}>
+                <span className={styles.sideLabel}>Sections tracked</span>
+                <span className={styles.sideValue}>
+                  {breakdownPending ? "…" : sideStats.sections}
+                </span>
+              </li>
+            </ul>
           </div>
-          <CardAction className={styles.headerActions}>
-            <Badge variant="warning" className={styles.countBadge}>
-              {isPending ? "…" : students.length} pending
-            </Badge>
-            <div className={styles.searchWrap}>
+
+          {SLIDES.map((slide) => (
+            <article key={slide.title} className={styles.guideCard}>
+              <div className={styles.guideHead}>
+                <slide.icon className={styles.guideIcon} aria-hidden />
+                <h3 className={styles.guideTitle}>{slide.title}</h3>
+              </div>
+              <p className={styles.guideBody}>{slide.body}</p>
+            </article>
+          ))}
+        </aside>
+
+        <div className={styles.main}>
+          <section aria-label="Pending student accounts">
+        <div className={styles.queueHead}>
+          <div className={styles.queueHeadText}>
+            <h2 className={styles.queueTitle}>Pending Students</h2>
+            <p className={styles.queueDesc}>
+              Approve or reject student account requests for grades 11–12 —{" "}
+              {isPending ? "…" : `${students.length} pending`}.
+            </p>
+          </div>
+          <div className={styles.queueActions}>
+            <div className={styles.qSearchWrap}>
               <Search className={styles.searchIcon} aria-hidden />
               <Input
                 className={styles.search}
@@ -141,52 +182,83 @@ export default function AccountApprovalsPage() {
                 }}
               >
                 <X aria-hidden />
-                Clear
+                Show all
               </Button>
             )}
-          </CardAction>
-        </CardHeader>
+          </div>
+        </div>
 
-        <CardContent className={styles.content}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Section</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Requested</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Verification</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isPending ? (
-                <SkeletonRows />
-              ) : filtered.length === 0 ? (
+        {isPending ? (
+          <div className={styles.tableWrap}>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className={styles.empty}>
-                    {students.length === 0
-                      ? "No pending student accounts for grades 11–12."
-                      : query.trim()
-                        ? `No students match "${query}".`
-                        : "No pending students found."}
-                  </TableCell>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Section</TableHead>
+                  <TableHead>Grade</TableHead>
+                  <TableHead>Requested</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Verification</TableHead>
+                  <TableHead>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </TableHead>
                 </TableRow>
-              ) : (
-                pageRows.map((s) => (
+              </TableHeader>
+              <TableBody>
+                <SkeletonRows />
+              </TableBody>
+            </Table>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className={styles.emptyPanel}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <UserPlus />
+            </span>
+            <p className={styles.emptyTitle}>
+              {students.length === 0
+                ? "No pending student accounts"
+                : query.trim()
+                  ? "No matching students"
+                  : "No pending students found"}
+            </p>
+            <p className={styles.emptyHint}>
+              {students.length === 0
+                ? "New G11–12 sign-ups awaiting registrar sign-off will appear here."
+                : query.trim()
+                  ? `No students match "${query}".`
+                  : "All caught up — nothing needs approval right now."}
+            </p>
+          </div>
+        ) : (
+          <div className={styles.tableWrap}>
+            <Table aria-label="Pending student accounts">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Section</TableHead>
+                  <TableHead>Grade</TableHead>
+                  <TableHead>Requested</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Verification</TableHead>
+                  <TableHead>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map((s) => (
                   <TableRow key={s.id} className={styles.row}>
                     <TableCell>
-                      <div className={styles.studentCell}>
-                        <span className={styles.studentName}>{s.name}</span>
-                        <span className={styles.studentLrn}>{s.lrn}</span>
-                      </div>
+                      <p className={styles.cellMain}>{s.name}</p>
+                      <p className={styles.cellSub}>
+                        <span className={styles.lrn}>{s.lrn}</span>
+                      </p>
                     </TableCell>
-                    <TableCell className={styles.section}>
+                    <TableCell className={styles.cell}>
                       {formatSection(s.section)}
                     </TableCell>
-                    <TableCell className={styles.section}>{formatGrade(s.gradeLevel)}</TableCell>
-                    <TableCell className={styles.section}>
+                    <TableCell className={styles.cell}>{formatGrade(s.gradeLevel)}</TableCell>
+                    <TableCell className={styles.cell}>
                       <span className={styles.requested}>{formatRelativeTime(s.requestedAt)}</span>
                     </TableCell>
                     <TableCell>
@@ -222,42 +294,43 @@ export default function AccountApprovalsPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
-        <CardFooter className={styles.footer}>
-          <span className={styles.footerInfo}>
-            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-          </span>
-          <div className={styles.footerActions}>
+        <div className={styles.pager}>
+          <p className={styles.range}>
+            Showing {filtered.length > 0 ? `${start}–${end}` : "0"} of {filtered.length}
+          </p>
+          <div className={styles.pagerButtons}>
             <Button
+              size="xs"
               variant="outline"
-              size="sm"
               disabled={safePage <= 1 || filtered.length === 0}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
-              <ChevronLeft aria-hidden />
               Previous
             </Button>
+            <span className={styles.pageLabel} aria-live="polite">
+              Page {safePage} of {totalPages}
+            </span>
             <Button
+              size="xs"
               variant="outline"
-              size="sm"
               disabled={safePage >= totalPages || filtered.length === 0}
               onClick={() => setPage((p) => p + 1)}
             >
               Next
-              <ChevronRight aria-hidden />
             </Button>
           </div>
-        </CardFooter>
-      </Card>
+        </div>
+      </section>
 
       <AccountsBreakdown data={breakdownData ?? []} loading={breakdownPending} />
-
-      <AccountsAudit />
+        </div>
+      </div>
     </section>
   );
 }

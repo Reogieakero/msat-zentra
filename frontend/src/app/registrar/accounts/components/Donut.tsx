@@ -4,15 +4,17 @@ import styles from "./donut.module.css";
 type Props = {
   withAccount: number;
   pending: number;
+  noAccount?: number;
 };
 
 const COLORS = {
   withAccount: "var(--primary)",
-  pending: "var(--muted-foreground)",
+  pending: "var(--warn, #d97706)",
+  noAccount: "var(--muted-foreground)",
 };
 
-export function Donut({ withAccount, pending }: Props) {
-  const total = withAccount + pending;
+export function Donut({ withAccount, pending, noAccount = 0 }: Props) {
+  const total = withAccount + pending + noAccount;
   const size = 96;
   const stroke = 12;
   const radius = (size - stroke) / 2;
@@ -21,6 +23,7 @@ export function Donut({ withAccount, pending }: Props) {
   const segments = [
     { value: withAccount, color: COLORS.withAccount },
     { value: pending, color: COLORS.pending },
+    { value: noAccount, color: COLORS.noAccount },
   ].filter((s) => s.value > 0);
 
   let offset = 0;

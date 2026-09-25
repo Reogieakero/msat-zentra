@@ -9,11 +9,9 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardAction,
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -67,11 +65,6 @@ export function Sf10Coverage() {
             Custody status and where G11–12 SF10 records are still missing this term.
           </CardDescription>
         </div>
-        <CardAction>
-          <Badge variant="destructive" className={styles.missingBadge}>
-            {isPending ? "…" : `${missing.length} missing`}
-          </Badge>
-        </CardAction>
       </CardHeader>
       <CardContent className={styles.content}>
         {isPending ? (
@@ -166,43 +159,45 @@ export function Sf10Coverage() {
                 </div>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Grade</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
+              <div className={styles.tableWrap}>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={3} className={styles.empty}>
-                        {missing.length === 0
-                          ? "All G11–12 students have an SF10 record on file."
-                          : query.trim()
-                            ? `No students match "${query}".`
-                            : "Nothing missing."}
-                      </TableCell>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Section</TableHead>
+                      <TableHead>Grade</TableHead>
                     </TableRow>
-                  ) : (
-                    filtered.slice(0, LIST_LIMIT).map((m) => (
-                      <TableRow key={m.lrn} className={styles.clickableRow} onClick={goSf10}>
-                        <TableCell>
-                          <div className={styles.studentCell}>
-                            <span className={styles.studentName}>{m.student}</span>
-                            <span className={styles.studentLrn}>{m.lrn}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={styles.sectionCell}>{m.section}</TableCell>
-                        <TableCell>
-                          <span className={styles.gradeTag}>{m.grade}</span>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className={styles.empty}>
+                          {missing.length === 0
+                            ? "All G11–12 students have an SF10 record on file."
+                            : query.trim()
+                              ? `No students match "${query}".`
+                              : "Nothing missing."}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      filtered.slice(0, LIST_LIMIT).map((m) => (
+                        <TableRow key={m.lrn} className={styles.clickableRow} onClick={goSf10}>
+                          <TableCell>
+                            <div className={styles.studentCell}>
+                              <span className={styles.studentName}>{m.student}</span>
+                              <span className={styles.studentLrn}>{m.lrn}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className={styles.sectionCell}>{m.section}</TableCell>
+                          <TableCell>
+                            <span className={styles.gradeTag}>{m.grade}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
               <div className={styles.missingFooter}>
                 {missing.length > LIST_LIMIT && (
@@ -210,7 +205,7 @@ export function Sf10Coverage() {
                     Showing {Math.min(LIST_LIMIT, filtered.length)} of {filtered.length}
                   </span>
                 )}
-                <Button variant="outline" size="sm" onClick={goSf10}>
+                <Button className={styles.missingFooterBtn} onClick={goSf10}>
                   View all students
                 </Button>
               </div>

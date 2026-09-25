@@ -13,6 +13,18 @@
   --donut-7: #e5e5e5;
 }
 
+/* Dark mode — inverted ramp so bars stay legible on dark cards. */
+:global(.dark) .root {
+  --donut-0: #fafafa;
+  --donut-1: #e5e5e5;
+  --donut-2: #d4d4d4;
+  --donut-3: #a3a3a3;
+  --donut-4: #8a8a8a;
+  --donut-5: #737373;
+  --donut-6: #525252;
+  --donut-7: #404040;
+}
+
 .topBar {
   display: flex;
   align-items: center;
@@ -87,6 +99,60 @@
 
 .filterMenu {
   min-width: 12rem;
+}
+
+/* Chart tooltip — every token theme-aware for dark + light mode. */
+.tooltip {
+  background-color: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px -6px rgb(0 0 0 / 0.25);
+  padding: 0.5rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--popover-foreground);
+  max-width: 16rem;
+}
+
+.tooltipLabel {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  color: var(--popover-foreground);
+}
+
+.tooltipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.tooltipItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.tooltipDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  background-color: var(--muted-foreground);
+}
+
+.tooltipName {
+  color: var(--muted-foreground);
+}
+
+.tooltipValue {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--popover-foreground);
+  white-space: nowrap;
 }
 
 .grid {

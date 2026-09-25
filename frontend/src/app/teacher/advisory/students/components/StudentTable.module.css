@@ -179,12 +179,3 @@
   border-radius: 999px;
   flex-shrink: 0;
 }
-
-.skelName {
-  height: 0.875rem;
-  width: 8rem;
-}
-
-.skelCell {
-  height: 0.75rem;
-}

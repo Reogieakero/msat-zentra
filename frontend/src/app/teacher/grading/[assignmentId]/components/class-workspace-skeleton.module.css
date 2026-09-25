@@ -1,0 +1,158 @@
+/* Structural skeleton fills for the class workspace.
+   Layout comes from the REAL component classes
+   (ClassWorkspace, WorkspaceSidebar, ScoreGrid modules); this file only
+   sizes the pulse blocks to the content they stand in for. */
+
+/* --- Top header --- */
+.headTitle {
+  height: 1.25rem;
+  width: 14rem;
+  max-width: 40vw;
+}
+
+.headSub {
+  height: 0.8125rem;
+  width: 18rem;
+  max-width: 50vw;
+}
+
+/* --- Sidebar cards --- */
+.cardTitle {
+  height: 0.875rem;
+  width: 7rem;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.weightName {
+  height: 0.8125rem;
+  flex: 1;
+}
+
+.weightValue {
+  height: 0.8125rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.viewAllBtn {
+  height: 1.5rem;
+  width: 4.5rem;
+  border-radius: var(--radius-md, 0.5rem);
+  flex-shrink: 0;
+}
+
+.recentTitle {
+  height: 0.8125rem;
+  width: 85%;
+}
+
+.recentMeta {
+  height: 0.75rem;
+  width: 60%;
+  margin-top: 0.25rem;
+}
+
+.recentMaxValue {
+  height: 0.9375rem;
+  width: 2rem;
+}
+
+.recentMaxLabel {
+  height: 0.625rem;
+  width: 2.5rem;
+}
+
+.bannerTitle {
+  height: 0.875rem;
+  width: 6rem;
+}
+
+.bannerCount {
+  height: 1.5rem;
+  width: 2rem;
+  flex-shrink: 0;
+}
+
+.bannerSub {
+  height: 0.75rem;
+  width: 70%;
+}
+
+.bannerAction {
+  height: 0.8125rem;
+  width: 7rem;
+  margin-top: 0.375rem;
+}
+
+/* --- Encode-scores card --- */
+.eyebrow {
+  height: 0.6875rem;
+  width: 6rem;
+}
+
+.metaLine {
+  height: 0.9375rem;
+  width: min(20rem, 85%);
+  margin-top: 0.125rem;
+}
+
+.sectionSub {
+  height: 0.75rem;
+  width: min(16rem, 70%);
+  margin-top: 0.125rem;
+}
+
+.editBtn {
+  height: 2.25rem;
+  width: 6.5rem;
+  border-radius: var(--radius-md, 0.5rem);
+  flex-shrink: 0;
+}
+
+.headCell {
+  height: 0.75rem;
+}
+
+.cellName {
+  height: 0.8125rem;
+}
+
+.cellLrn {
+  height: 0.8125rem;
+  width: 70%;
+}
+
+/* Read-mode score text (the sheet loads non-editing; inputs only appear
+   after Edit scores, which legitimately grows the rows). */
+.cellScore {
+  height: 0.8125rem;
+  width: 3rem;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.cellPct {
+  height: 0.75rem;
+  width: 2.5rem;
+}
+
+.footRange {
+  height: 0.75rem;
+  width: 8rem;
+}
+
+.footHint {
+  height: 0.75rem;
+  width: 12rem;
+}

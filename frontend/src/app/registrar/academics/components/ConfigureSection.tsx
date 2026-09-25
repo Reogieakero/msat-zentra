@@ -6,11 +6,12 @@ type Props = {
   onAddSubject: () => void;
   onAddSection: () => void;
   onAssignSubjects: () => void;
+  orientation?: "horizontal" | "vertical";
 };
 
-export function ConfigureSection({ onAddSubject, onAddSection, onAssignSubjects }: Props) {
+export function ConfigureSection({ onAddSubject, onAddSection, onAssignSubjects, orientation = "horizontal" }: Props) {
   return (
-    <div className={styles.grid}>
+    <div className={`${styles.grid} ${orientation === "vertical" ? styles.gridVertical : ""}`}>
       <button type="button" className={styles.card} onClick={onAddSubject}>
         <span className={styles.iconWrap}>
           <BookOpen className={styles.icon} />

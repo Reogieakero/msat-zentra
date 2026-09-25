@@ -50,122 +50,15 @@
   overflow: hidden;
 }
 
-.sectionBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 0 1rem 1rem;
-}
-
-.actionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.75rem;
-}
-
-.actionSkel {
-  height: 8.5rem;
+.tableWrap {
   min-width: 0;
+  overflow-x: auto;
+}
+
+.tableSkel {
+  height: 18rem;
+  margin: 1rem;
   border-radius: var(--radius-lg);
-}
-
-.actionItem {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  color: var(--foreground);
-  text-align: left;
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 97%);
-  cursor: pointer;
-  transition: border-color 150ms ease-out, box-shadow 150ms ease-out,
-    transform 150ms ease-out;
-}
-
-.actionItem:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
-}
-
-.actionItem:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring, var(--primary));
-}
-
-.actionHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.actionIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radius-sm);
-  background-color: color-mix(in oklch, var(--primary), transparent 90%);
-  color: var(--primary);
-}
-
-.actionIconSvg {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-.actionCount {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--foreground);
-}
-
-.actionTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.actionCta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--primary);
-}
-
-.actionCtaIcon {
-  width: 0.875rem;
-  height: 0.875rem;
-  transition: transform 150ms ease-out;
-}
-
-.actionItem:hover .actionCtaIcon {
-  transform: translateX(2px);
-}
-
-.footnote {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.footnoteIcon {
-  width: 0.875rem;
-  height: 0.875rem;
 }
 
 /* Flush table — no gutters */
@@ -299,8 +192,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .actionItem,
-  .actionCtaIcon,
   .clickableRow {
     transition: none;
   }
