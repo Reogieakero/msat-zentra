@@ -11,16 +11,39 @@ import '../../shared/widgets/custom_card.dart';
 import '../../shared/widgets/status_badge.dart';
 
 enum AssessmentCategoryType {
-  ww('WW', 'Oral / Written Works (WWs)', ComponentType.WRITTEN_WORK),
-  pt('PT', 'Product / Performance Task (PTs)', ComponentType.PERFORMANCE_TASK),
-  st('ST', 'Summative Test (ST)', ComponentType.WRITTEN_WORK),
-  te('TE', 'Term Exam (TE)', ComponentType.QUARTERLY_EXAM);
+  ww('WW', 'Written Works', ComponentType.WRITTEN_WORK, Color(0xFF00B4D8)),
+  pt('PT', 'Performance Task', ComponentType.PERFORMANCE_TASK, Color(0xFF7209B7)),
+  st('ST', 'Summative Test', ComponentType.WRITTEN_WORK, Color(0xFFFF9F1C)),
+  te('TE', 'Term Exam', ComponentType.QUARTERLY_EXAM, Color(0xFFE63946));
 
   final String prefix;
   final String label;
   final ComponentType componentType;
+  final Color accentColor;
 
-  const AssessmentCategoryType(this.prefix, this.label, this.componentType);
+  const AssessmentCategoryType(this.prefix, this.label, this.componentType, this.accentColor);
+}
+
+class CategoryGroupData {
+  final AssessmentCategoryType category;
+  final List<AssessmentModel> assessments;
+
+  CategoryGroupData({
+    required this.category,
+    required this.assessments,
+  });
+
+  int get columnCount => assessments.isEmpty ? 1 : assessments.length;
+
+  static const double defaultItemWidth = 115.0;
+  static const double minCategoryWidth = 170.0;
+
+  double get totalWidth {
+    final rawWidth = columnCount * defaultItemWidth;
+    return rawWidth < minCategoryWidth ? minCategoryWidth : rawWidth;
+  }
+
+  double get individualColumnWidth => totalWidth / columnCount;
 }
 
 enum GradeSortOption {
@@ -67,6 +90,44 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
     super.dispose();
   }
 
+  AssessmentCategoryType _getCategoryForAssessment(AssessmentModel asm) {
+    final titleUpper = asm.title.trim().toUpperCase();
+    if (titleUpper.startsWith('WW')) return AssessmentCategoryType.ww;
+    if (titleUpper.startsWith('PT')) return AssessmentCategoryType.pt;
+    if (titleUpper.startsWith('ST')) return AssessmentCategoryType.st;
+    if (titleUpper.startsWith('TE') || titleUpper.startsWith('QE')) return AssessmentCategoryType.te;
+
+    switch (asm.componentType) {
+      case ComponentType.WRITTEN_WORK:
+        return AssessmentCategoryType.ww;
+      case ComponentType.PERFORMANCE_TASK:
+        return AssessmentCategoryType.pt;
+      case ComponentType.QUARTERLY_EXAM:
+        return AssessmentCategoryType.te;
+    }
+  }
+
+  List<CategoryGroupData> _buildCategoryGroups(List<AssessmentModel> allAssessments) {
+    final map = <AssessmentCategoryType, List<AssessmentModel>>{
+      AssessmentCategoryType.ww: [],
+      AssessmentCategoryType.pt: [],
+      AssessmentCategoryType.st: [],
+      AssessmentCategoryType.te: [],
+    };
+
+    for (final asm in allAssessments) {
+      final cat = _getCategoryForAssessment(asm);
+      map[cat]?.add(asm);
+    }
+
+    return [
+      CategoryGroupData(category: AssessmentCategoryType.ww, assessments: map[AssessmentCategoryType.ww]!),
+      CategoryGroupData(category: AssessmentCategoryType.pt, assessments: map[AssessmentCategoryType.pt]!),
+      CategoryGroupData(category: AssessmentCategoryType.st, assessments: map[AssessmentCategoryType.st]!),
+      CategoryGroupData(category: AssessmentCategoryType.te, assessments: map[AssessmentCategoryType.te]!),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final gradesAsync = ref.watch(gradesProvider);
@@ -77,6 +138,7 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
       error: (err, stack) => Center(child: Text('Error loading grade matrix: $err')),
       data: (matrixState) {
         final isLocked = matrixState.lockStatus != LockStatus.unlocked;
+        final categoryGroups = _buildCategoryGroups(matrixState.assessments);
 
         // Build & Sort Student Row Data
         final studentRows = matrixState.students.map((student) {
@@ -122,6 +184,10 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
               return a.rawAvgPercentage.compareTo(b.rawAvgPercentage);
           }
         });
+
+        // Compute width of horizontal scroll area (115 for RAW AVG %, 125 for TRANSMUTED)
+        final double totalCategoryWidths = categoryGroups.fold<double>(0.0, (sum, g) => sum + g.totalWidth);
+        final double totalRightPaneWidth = totalCategoryWidths + 115.0 + 125.0;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -190,143 +256,173 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
                             ),
                           ),
                         ] else
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.riskHigh.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
-                          ),
-                          child: Text(
-                            'LOCKED',
-                            style: GoogleFonts.robotoMono(
-                              color: AppColors.riskHigh,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.riskHigh.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
                             ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Sorting Selector Toolbar Pill
-                  Row(
-                    children: [
-                      const Icon(Icons.sort, size: 16, color: AppColors.primaryEmerald),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Sort Matrix:',
-                        style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: AppColors.borderSubtle),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<GradeSortOption>(
-                              value: _sortOption,
-                              isDense: true,
-                              dropdownColor: AppColors.surfaceDark,
-                              icon: const Icon(Icons.arrow_drop_down, color: AppColors.primaryEmerald),
+                            child: Text(
+                              'LOCKED',
                               style: GoogleFonts.robotoMono(
-                                color: AppColors.primaryEmerald,
+                                color: AppColors.riskHigh,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
-                              items: GradeSortOption.values.map((opt) {
-                                return DropdownMenuItem<GradeSortOption>(
-                                  value: opt,
-                                  child: Row(
-                                    children: [
-                                      Icon(opt.icon, size: 14, color: AppColors.primaryEmerald),
-                                      const SizedBox(width: 6),
-                                      Text(opt.label),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) setState(() => _sortOption = val);
-                              },
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
 
-            // Two-Pane Sticky Column Data Grid Layout
-            Expanded(
-              child: CustomCard(
-                padding: EdgeInsets.zero,
-                child: SingleChildScrollView(
-                  controller: _verticalScrollController,
-                  scrollDirection: Axis.vertical,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. LEFT FIXED PANE (Sticky Student Name Column)
-                      Container(
-                        width: 145,
-                        decoration: const BoxDecoration(
-                          color: AppColors.surfaceCard,
-                          border: Border(
-                            right: BorderSide(color: AppColors.primaryEmerald, width: 1.5),
-                          ),
+                    // Sorting Selector Toolbar Pill
+                    Row(
+                      children: [
+                        const Icon(Icons.sort, size: 16, color: AppColors.primaryEmerald),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Sort Matrix:',
+                          style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
                         ),
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(AppColors.surfaceElevated),
-                          dataRowMinHeight: 44,
-                          dataRowMaxHeight: 48,
-                          columnSpacing: 8,
-                          horizontalMargin: 8,
-                          border: const TableBorder(
-                            horizontalInside: BorderSide(color: AppColors.borderSubtle, width: 1),
-                          ),
-                          columns: [
-                            DataColumn(
-                              onSort: (_, __) {
-                                setState(() {
-                                  _sortOption = _sortOption == GradeSortOption.nameAsc
-                                      ? GradeSortOption.nameDesc
-                                      : GradeSortOption.nameAsc;
-                                });
-                              },
-                              label: Row(
-                                children: [
-                                  Text(
-                                    'STUDENT NAME',
-                                    style: GoogleFonts.inter(
-                                      color: (_sortOption == GradeSortOption.nameAsc || _sortOption == GradeSortOption.nameDesc)
-                                          ? AppColors.primaryEmerald
-                                          : AppColors.textSecondary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.borderSubtle),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<GradeSortOption>(
+                                value: _sortOption,
+                                isDense: true,
+                                dropdownColor: AppColors.surfaceDark,
+                                icon: const Icon(Icons.arrow_drop_down, color: AppColors.primaryEmerald),
+                                style: GoogleFonts.robotoMono(
+                                  color: AppColors.primaryEmerald,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                items: GradeSortOption.values.map((opt) {
+                                  return DropdownMenuItem<GradeSortOption>(
+                                    value: opt,
+                                    child: Row(
+                                      children: [
+                                        Icon(opt.icon, size: 14, color: AppColors.primaryEmerald),
+                                        const SizedBox(width: 6),
+                                        Text(opt.label),
+                                      ],
                                     ),
-                                  ),
-                                  if (_sortOption == GradeSortOption.nameAsc)
-                                    const Icon(Icons.arrow_drop_up, size: 14, color: AppColors.primaryEmerald),
-                                  if (_sortOption == GradeSortOption.nameDesc)
-                                    const Icon(Icons.arrow_drop_down, size: 14, color: AppColors.primaryEmerald),
-                                ],
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _sortOption = val);
+                                },
                               ),
                             ),
-                          ],
-                          rows: studentRows.map((rowData) {
-                            return DataRow(
-                              cells: [
-                                DataCell(
-                                  Column(
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Grouped 2-Tier Header Spreadsheet Matrix Grid
+              Expanded(
+                child: CustomCard(
+                  padding: EdgeInsets.zero,
+                  child: SingleChildScrollView(
+                    controller: _verticalScrollController,
+                    scrollDirection: Axis.vertical,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // -----------------------------------------------------
+                        // 1. LEFT FIXED PANE (Sticky Student Name Header & Rows)
+                        // -----------------------------------------------------
+                        Container(
+                          width: 175, // Increased width for full student name visibility
+                          decoration: const BoxDecoration(
+                            color: AppColors.surfaceCard,
+                            border: Border(
+                              right: BorderSide(color: AppColors.primaryEmerald, width: 1.5),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Left Pane 2-Tier Header Cell (Combined Height: 72 = Tier1 34 + Tier2 38)
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _sortOption = _sortOption == GradeSortOption.nameAsc
+                                        ? GradeSortOption.nameDesc
+                                        : GradeSortOption.nameAsc;
+                                  });
+                                },
+                                child: Container(
+                                  height: 72,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.surfaceElevated,
+                                    border: Border(
+                                      bottom: BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'STUDENT NAME',
+                                              style: GoogleFonts.inter(
+                                                color: (_sortOption == GradeSortOption.nameAsc ||
+                                                        _sortOption == GradeSortOption.nameDesc)
+                                                    ? AppColors.primaryEmerald
+                                                    : AppColors.textPrimary,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (_sortOption == GradeSortOption.nameAsc)
+                                            const Icon(Icons.arrow_drop_up, size: 14, color: AppColors.primaryEmerald),
+                                          if (_sortOption == GradeSortOption.nameDesc)
+                                            const Icon(Icons.arrow_drop_down, size: 14, color: AppColors.primaryEmerald),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'LRN / Student ID',
+                                        style: GoogleFonts.robotoMono(
+                                          color: AppColors.textMuted,
+                                          fontSize: 9.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // Left Student Data Cells
+                              ...studentRows.map((rowData) {
+                                return Container(
+                                  height: 46,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: const BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                    ),
+                                  ),
+                                  child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -335,7 +431,7 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
                                         style: GoogleFonts.inter(
                                           color: AppColors.textPrimary,
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 12,
+                                          fontSize: 12.5,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -343,190 +439,410 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
                                         rowData.student.lrn,
                                         style: GoogleFonts.robotoMono(
                                           color: AppColors.textMuted,
-                                          fontSize: 9,
+                                          fontSize: 9.5,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
+                                );
+                              }),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      // 2. RIGHT SCROLLABLE PANE (Horizontally Scrollable Assessment Score Columns)
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
-                            headingRowColor: WidgetStateProperty.all(AppColors.surfaceElevated),
-                            dataRowMinHeight: 44,
-                            dataRowMaxHeight: 48,
-                            columnSpacing: 18,
-                            horizontalMargin: 12,
-                            border: const TableBorder(
-                              horizontalInside: BorderSide(color: AppColors.borderSubtle, width: 1),
-                              verticalInside: BorderSide(color: AppColors.borderSubtle, width: 1),
-                            ),
-                            columns: [
-                              ...matrixState.assessments.map((asm) => DataColumn(
-                                    label: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          asm.title,
-                                          style: GoogleFonts.inter(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
+                        // -----------------------------------------------------
+                        // 2. RIGHT SCROLLABLE PANE (Grouped Assessment Grid)
+                        // -----------------------------------------------------
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: totalRightPaneWidth,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // -------------------------------------------
+                                  // TIER 1: Merged Category Group Top Headers
+                                  // -------------------------------------------
+                                  Row(
+                                    children: [
+                                      ...categoryGroups.map((group) {
+                                        return Container(
+                                          width: group.totalWidth,
+                                          height: 34,
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: group.category.accentColor.withOpacity(0.15),
+                                            border: Border(
+                                              right: BorderSide(
+                                                color: group.category.accentColor.withOpacity(0.4),
+                                                width: 1.5,
+                                              ),
+                                              bottom: const BorderSide(color: AppColors.borderSubtle, width: 1),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${group.category.label} (${group.category.prefix})',
+                                            style: GoogleFonts.inter(
+                                              color: group.category.accentColor,
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.3,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }),
+
+                                      // Summary Tier 1 Merged Top Header
+                                      Container(
+                                        width: 240, // 115 RAW AVG + 125 TRANSMUTED
+                                        height: 34,
+                                        alignment: Alignment.center,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.surfaceElevated,
+                                          border: Border(
+                                            bottom: BorderSide(color: AppColors.borderSubtle, width: 1),
                                           ),
                                         ),
-                                        Text(
-                                          'Max: ${asm.maxScore.toInt()}',
-                                          style: GoogleFonts.robotoMono(
-                                            color: AppColors.primaryEmerald,
-                                            fontSize: 10,
+                                        child: Text(
+                                          'FINAL GRADE',
+                                          style: GoogleFonts.inter(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  // -------------------------------------------
+                                  // TIER 2: Sub-column Assessment Headers
+                                  // -------------------------------------------
+                                  Row(
+                                    children: [
+                                      ...categoryGroups.expand((group) {
+                                        final itemWidth = group.individualColumnWidth;
+
+                                        if (group.assessments.isEmpty) {
+                                          return [
+                                            Container(
+                                              width: itemWidth,
+                                              height: 38,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.surfaceDark.withOpacity(0.5),
+                                                border: Border(
+                                                  right: BorderSide(
+                                                    color: group.category.accentColor.withOpacity(0.4),
+                                                    width: 1.5,
+                                                  ),
+                                                  bottom: const BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '—',
+                                                style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                                              ),
+                                            ),
+                                          ];
+                                        }
+
+                                        return group.assessments.asMap().entries.map((entry) {
+                                          final idx = entry.key;
+                                          final asm = entry.value;
+                                          final isLastInGroup = idx == group.assessments.length - 1;
+
+                                          return Tooltip(
+                                            message: '${asm.title}\nHighest Possible Score: ${asm.maxScore.toInt()}',
+                                            child: Container(
+                                              width: itemWidth,
+                                              height: 38,
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.surfaceElevated,
+                                                border: Border(
+                                                  right: BorderSide(
+                                                    color: isLastInGroup
+                                                        ? group.category.accentColor.withOpacity(0.4)
+                                                        : AppColors.borderSubtle,
+                                                    width: isLastInGroup ? 1.5 : 0.8,
+                                                  ),
+                                                  bottom: const BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                                ),
+                                              ),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    '${group.category.prefix}${idx + 1}',
+                                                    style: GoogleFonts.inter(
+                                                      color: AppColors.textPrimary,
+                                                      fontSize: 11.5,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  Text(
+                                                    'Max: ${asm.maxScore.toInt()}',
+                                                    style: GoogleFonts.robotoMono(
+                                                      color: AppColors.primaryEmerald,
+                                                      fontSize: 9.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        });
+                                      }),
+
+                                      // Sub-header: RAW AVG % Column
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _sortOption = _sortOption == GradeSortOption.rawAvgDesc
+                                                ? GradeSortOption.rawAvgAsc
+                                                : GradeSortOption.rawAvgDesc;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 115,
+                                          height: 38,
+                                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                                          alignment: Alignment.center,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.surfaceElevated,
+                                            border: Border(
+                                              right: BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                              bottom: BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'RAW AVG %',
+                                                style: GoogleFonts.inter(
+                                                  color: (_sortOption == GradeSortOption.rawAvgDesc ||
+                                                          _sortOption == GradeSortOption.rawAvgAsc)
+                                                      ? AppColors.primaryEmerald
+                                                      : AppColors.textSecondary,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              if (_sortOption == GradeSortOption.rawAvgAsc)
+                                                const Icon(Icons.arrow_drop_up, size: 14, color: AppColors.primaryEmerald),
+                                              if (_sortOption == GradeSortOption.rawAvgDesc)
+                                                const Icon(Icons.arrow_drop_down, size: 14, color: AppColors.primaryEmerald),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Sub-header: TRANSMUTED Column
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _sortOption = _sortOption == GradeSortOption.transmutedDesc
+                                                ? GradeSortOption.transmutedAsc
+                                                : GradeSortOption.transmutedDesc;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 125,
+                                          height: 38,
+                                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                                          alignment: Alignment.center,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.surfaceElevated,
+                                            border: Border(
+                                              bottom: BorderSide(color: AppColors.borderSubtle, width: 1.5),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'TRANSMUTED',
+                                                style: GoogleFonts.inter(
+                                                  color: (_sortOption == GradeSortOption.transmutedDesc ||
+                                                          _sortOption == GradeSortOption.transmutedAsc)
+                                                      ? AppColors.primaryEmerald
+                                                      : AppColors.textSecondary,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              if (_sortOption == GradeSortOption.transmutedAsc)
+                                                const Icon(Icons.arrow_drop_up, size: 14, color: AppColors.primaryEmerald),
+                                              if (_sortOption == GradeSortOption.transmutedDesc)
+                                                const Icon(Icons.arrow_drop_down, size: 14, color: AppColors.primaryEmerald),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  // -------------------------------------------
+                                  // Data Rows (Score Cells & Final Grade Summary)
+                                  // -------------------------------------------
+                                  ...studentRows.map((rowData) {
+                                    final student = rowData.student;
+                                    final isPassing = rowData.transmutedGrade >= 75;
+
+                                    return Row(
+                                      children: [
+                                        // Category Score Cells
+                                        ...categoryGroups.expand((group) {
+                                          final itemWidth = group.individualColumnWidth;
+
+                                          if (group.assessments.isEmpty) {
+                                            return [
+                                              Container(
+                                                width: itemWidth,
+                                                height: 46,
+                                                alignment: Alignment.center,
+                                                decoration: BoxDecoration(
+                                                  border: Border(
+                                                    right: BorderSide(
+                                                      color: group.category.accentColor.withOpacity(0.4),
+                                                      width: 1.5,
+                                                    ),
+                                                    bottom: const BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  '—',
+                                                  style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 11),
+                                                ),
+                                              ),
+                                            ];
+                                          }
+
+                                          return group.assessments.asMap().entries.map((entry) {
+                                            final idx = entry.key;
+                                            final asm = entry.value;
+                                            final isLastInGroup = idx == group.assessments.length - 1;
+                                            final key = '${student.id}_${asm.id}';
+                                            final currentScore = matrixState.rawScores[key] ?? 0.0;
+
+                                            return Container(
+                                              width: itemWidth,
+                                              height: 46,
+                                              alignment: Alignment.center,
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                border: Border(
+                                                  right: BorderSide(
+                                                    color: isLastInGroup
+                                                        ? group.category.accentColor.withOpacity(0.4)
+                                                        : AppColors.borderSubtle,
+                                                    width: isLastInGroup ? 1.5 : 0.8,
+                                                  ),
+                                                  bottom: const BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                                ),
+                                              ),
+                                              child: GestureDetector(
+                                                onTap: isLocked
+                                                    ? null
+                                                    : () => _editScoreDialog(context, student, asm, currentScore, gradesNotifier),
+                                                child: Container(
+                                                  width: 75,
+                                                  alignment: Alignment.center,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: isLocked ? Colors.transparent : AppColors.surfaceElevated,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(
+                                                      color: isLocked
+                                                          ? Colors.transparent
+                                                          : AppColors.borderSubtle,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    currentScore.toStringAsFixed(1),
+                                                    style: AppTheme.mono(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          });
+                                        }),
+
+                                        // Raw Avg % Cell
+                                        Container(
+                                          width: 115,
+                                          height: 46,
+                                          alignment: Alignment.center,
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              right: BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                              bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${rowData.rawAvgPercentage.toStringAsFixed(1)}%',
+                                            style: AppTheme.mono(color: AppColors.textSecondary, fontSize: 12),
+                                          ),
+                                        ),
+
+                                        // Transmuted Grade Cell
+                                        Container(
+                                          width: 125,
+                                          height: 46,
+                                          alignment: Alignment.center,
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8),
+                                            ),
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: (isPassing ? AppColors.primaryEmerald : AppColors.riskHigh).withOpacity(0.15),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: (isPassing ? AppColors.primaryEmerald : AppColors.riskHigh).withOpacity(0.4),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              '${rowData.transmutedGrade}',
+                                              style: AppTheme.mono(
+                                                color: isPassing ? AppColors.primaryEmerald : AppColors.riskHigh,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  )),
-                              // RAW AVG % Column
-                              DataColumn(
-                                onSort: (_, __) {
-                                  setState(() {
-                                    _sortOption = _sortOption == GradeSortOption.rawAvgDesc
-                                        ? GradeSortOption.rawAvgAsc
-                                        : GradeSortOption.rawAvgDesc;
-                                  });
-                                },
-                                label: Row(
-                                  children: [
-                                    Text(
-                                      'RAW AVG %',
-                                      style: GoogleFonts.inter(
-                                        color: (_sortOption == GradeSortOption.rawAvgDesc || _sortOption == GradeSortOption.rawAvgAsc)
-                                            ? AppColors.primaryEmerald
-                                            : AppColors.textSecondary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (_sortOption == GradeSortOption.rawAvgAsc)
-                                      const Icon(Icons.arrow_drop_up, size: 16, color: AppColors.primaryEmerald),
-                                    if (_sortOption == GradeSortOption.rawAvgDesc)
-                                      const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.primaryEmerald),
-                                  ],
-                                ),
-                              ),
-                              // TRANSMUTED Column
-                              DataColumn(
-                                onSort: (_, __) {
-                                  setState(() {
-                                    _sortOption = _sortOption == GradeSortOption.transmutedDesc
-                                        ? GradeSortOption.transmutedAsc
-                                        : GradeSortOption.transmutedDesc;
-                                  });
-                                },
-                                label: Row(
-                                  children: [
-                                    Text(
-                                      'TRANSMUTED',
-                                      style: GoogleFonts.inter(
-                                        color: (_sortOption == GradeSortOption.transmutedDesc || _sortOption == GradeSortOption.transmutedAsc)
-                                            ? AppColors.primaryEmerald
-                                            : AppColors.textSecondary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (_sortOption == GradeSortOption.transmutedAsc)
-                                      const Icon(Icons.arrow_drop_up, size: 16, color: AppColors.primaryEmerald),
-                                    if (_sortOption == GradeSortOption.transmutedDesc)
-                                      const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.primaryEmerald),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            rows: studentRows.map((rowData) {
-                              final student = rowData.student;
-                              final isPassing = rowData.transmutedGrade >= 75;
-
-                              final scoreCells = matrixState.assessments.asMap().entries.map((entry) {
-                                final idx = entry.key;
-                                final asm = entry.value;
-                                final currentScore = idx < rowData.scoreList.length ? rowData.scoreList[idx] : 0.0;
-
-                                return DataCell(
-                                  GestureDetector(
-                                    onTap: isLocked
-                                        ? null
-                                        : () => _editScoreDialog(context, student, asm, currentScore, gradesNotifier),
-                                    child: Container(
-                                      alignment: Alignment.center,
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: isLocked ? Colors.transparent : AppColors.surfaceElevated,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        currentScore.toStringAsFixed(1),
-                                        style: AppTheme.mono(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList();
-
-                              return DataRow(
-                                cells: [
-                                  ...scoreCells,
-                                  DataCell(
-                                    Text(
-                                      '${rowData.rawAvgPercentage.toStringAsFixed(1)}%',
-                                      style: AppTheme.mono(color: AppColors.textSecondary, fontSize: 12),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: (isPassing ? AppColors.primaryEmerald : AppColors.riskHigh).withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: (isPassing ? AppColors.primaryEmerald : AppColors.riskHigh).withOpacity(0.4),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '${rowData.transmutedGrade}',
-                                        style: AppTheme.mono(
-                                          color: isPassing ? AppColors.primaryEmerald : AppColors.riskHigh,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                    );
+                                  }),
                                 ],
-                              );
-                            }).toList(),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      );
+            ],
+          ),
+        );
       },
     );
   }
@@ -614,21 +930,21 @@ class _GradeMatrixSpreadsheetState extends ConsumerState<GradeMatrixSpreadsheet>
                       return Container(
                         margin: const EdgeInsets.only(bottom: 6),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primaryEmerald.withOpacity(0.12) : AppColors.surfaceCard,
+                          color: isSelected ? cat.accentColor.withOpacity(0.12) : AppColors.surfaceCard,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: isSelected ? AppColors.primaryEmerald : AppColors.borderSubtle,
+                            color: isSelected ? cat.accentColor : AppColors.borderSubtle,
                           ),
                         ),
                         child: RadioListTile<AssessmentCategoryType>(
                           value: cat,
                           groupValue: selectedCategory,
-                          activeColor: AppColors.primaryEmerald,
+                          activeColor: cat.accentColor,
                           dense: true,
                           title: Text(
                             cat.label,
                             style: GoogleFonts.inter(
-                              color: isSelected ? AppColors.primaryEmerald : AppColors.textPrimary,
+                              color: isSelected ? cat.accentColor : AppColors.textPrimary,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                               fontSize: 13,
                             ),
