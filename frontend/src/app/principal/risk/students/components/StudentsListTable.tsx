@@ -5,23 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../../grade-mode-context";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -52,7 +41,7 @@ const gradeNum = (name: string) => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 20;
 
 const RISK_BADGE: Record<RiskLevelKey, "destructive" | "warning" | "outline"> = {
   High: "destructive",
@@ -122,30 +111,40 @@ export function StudentsListTable({
     });
   }, [students, query, selectedSection, riskFilter]);
 
-  const hasActiveFilters = selectedSection !== "all" || riskFilter !== "all";
+  const hasActiveFilters =
+    query.trim() !== "" || selectedSection !== "all" || riskFilter !== "all";
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
+  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, total);
+
+  const clearFilters = React.useCallback(() => {
+    setQuery("");
+    onSectionChange("all");
+    setRiskFilter("all");
+    setPage(1);
+  }, [onSectionChange, setQuery, setRiskFilter]);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section aria-label="At-risk students">
+      <div className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>At-Risk Students</CardTitle>
-          <CardDescription>
+          <h2 className={styles.sectionTitle}>At-Risk Students</h2>
+          <p className={styles.sectionDesc}>
             {selectedSection === "all"
-              ? "All at-risk learners across every section."
-              : `At-risk learners in ${selectedSection}.`}
-          </CardDescription>
+              ? `All at-risk learners across every section — ${total} student${total === 1 ? "" : "s"}.`
+              : `At-risk learners in ${selectedSection} — ${total} student${total === 1 ? "" : "s"}.`}
+          </p>
         </div>
-        <CardAction className={styles.headerActions}>
+        <div className={styles.headerActions}>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
               className={styles.search}
+              style={{ height: "2rem" }}
               placeholder="Search name or LRN…"
               value={query}
               onChange={(e) => {
@@ -161,11 +160,13 @@ export function StudentsListTable({
               <Button
                 variant="outline"
                 size="sm"
+                style={{ height: "2rem" }}
+                aria-label={`Filter students by section, currently showing: ${selectedSection === "all" ? "All sections" : selectedSection}`}
                 className={`${styles.filterBtn} ${
                   selectedSection !== "all" ? styles.filterActive : ""
                 }`}
               >
-                Section
+                {selectedSection === "all" ? "Section" : selectedSection}
                 {selectedSection !== "all" && <span className={styles.filterDot} aria-hidden />}
                 <ChevronDown aria-hidden />
               </Button>
@@ -210,11 +211,13 @@ export function StudentsListTable({
               <Button
                 variant="outline"
                 size="sm"
+                style={{ height: "2rem" }}
+                aria-label={`Filter students by risk level, currently showing: ${riskFilter === "all" ? "All levels" : riskFilter}`}
                 className={`${styles.filterBtn} ${
                   riskFilter !== "all" ? styles.filterActive : ""
                 }`}
               >
-                Risk
+                {riskFilter === "all" ? "Risk" : riskFilter}
                 {riskFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
                 <ChevronDown aria-hidden />
               </Button>
@@ -246,122 +249,132 @@ export function StudentsListTable({
           </DropdownMenu>
 
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={styles.clearBtn}
-              onClick={() => {
-                onSectionChange("all");
-                setRiskFilter("all");
-                setPage(1);
-              }}
-            >
+            <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
               <X aria-hidden />
-              Clear
+              Show all
             </Button>
           )}
-        </CardAction>
-      </CardHeader>
-
-      <CardContent className={styles.content}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Section</TableHead>
-              <TableHead>Risk</TableHead>
-              <TableHead>Factors</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <SkeletonRows />
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className={styles.empty}>
-                  {query.trim()
-                    ? `No students match “${query}”.`
-                    : hasActiveFilters
-                      ? "No students match the selected filters."
-                      : "No at-risk students."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageRows.map((s) => (
-                <TableRow key={s.studentId}>
-                  <TableCell>
-                    <div className={styles.studentCell}>
-                      <span className={styles.studentName}>{s.name}</span>
-                      <span className={styles.studentLrn}>{s.lrn}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className={styles.section}>{s.section}</TableCell>
-                  <TableCell>
-                    <Badge variant={RISK_BADGE[s.riskLevel]}>{s.riskLevel}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className={styles.factors}>
-                      {(Object.keys(s.factors) as RiskFactor[]).map((f) => (
-                        <span
-                          key={f}
-                          className={`${styles.factorChip} ${
-                            s.factors[f] ? styles.factorOn : styles.factorOff
-                          }`}
-                        >
-                          {FACTOR_LABELS[f]}
-                        </span>
-                      ))}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View details</DropdownMenuItem>
-                        <DropdownMenuItem>Assign intervention</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Send alert</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-
-      <CardFooter className={styles.footer}>
-        <span className={styles.footerInfo}>
-          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1 || filtered.length === 0}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages || filtered.length === 0}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+
+      <div className={styles.tableBody}>
+        {isPending ? (
+          <div className={styles.tableWrap}>
+            <Table aria-label="At-risk students">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>LRN</TableHead>
+                  <TableHead>Risk</TableHead>
+                  <TableHead>Factors</TableHead>
+                  <TableHead>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <SkeletonRows />
+              </TableBody>
+            </Table>
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className={styles.empty}>
+            {query.trim()
+              ? `No students match “${query}”.`
+              : hasActiveFilters
+                ? "No students match the selected filters."
+                : "No at-risk students — nothing needs attention right now."}
+          </p>
+        ) : (
+          <div className={styles.tableWrap}>
+            <Table aria-label="At-risk students">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>LRN</TableHead>
+                  <TableHead>Risk</TableHead>
+                  <TableHead>Factors</TableHead>
+                  <TableHead>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map((s) => (
+                  <TableRow key={s.studentId}>
+                    <TableCell>
+                      <p className={styles.cellMain}>
+                        <span className={styles.lrn}>{s.lrn}</span>
+                      </p>
+                      <p className={styles.cellSub}>
+                        {s.name} · {s.section}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={RISK_BADGE[s.riskLevel]}>{s.riskLevel}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className={styles.factors}>
+                        {(Object.keys(s.factors) as RiskFactor[]).map((f) => (
+                          <span
+                            key={f}
+                            className={`${styles.factorChip} ${
+                              s.factors[f] ? styles.factorOn : styles.factorOff
+                            }`}
+                          >
+                            {FACTOR_LABELS[f]}
+                          </span>
+                        ))}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8" aria-label={`Actions for ${s.name}`}>
+                            <MoreHorizontal aria-hidden />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>View details</DropdownMenuItem>
+                          <DropdownMenuItem>Assign intervention</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem>Send alert</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        <div className={styles.pager}>
+          <p className={styles.range}>
+            Showing {start}–{end} of {total}
+          </p>
+          <div className={styles.pagerButtons}>
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={safePage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <span className={styles.pageLabel} aria-live="polite">
+              Page {safePage} of {totalPages}
+            </span>
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -371,13 +384,8 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <TableRow key={i}>
           <TableCell>
-            <div className={styles.studentCell}>
-              <span className={styles.skelName} />
-              <span className={styles.skelLrn} />
-            </div>
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelCell} style={{ width: "50%" }} />
+            <span className={styles.skelName} />
+            <span className={styles.skelLrn} />
           </TableCell>
           <TableCell>
             <span className={styles.skelCell} style={{ width: "38%" }} />

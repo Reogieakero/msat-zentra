@@ -84,7 +84,7 @@ export type Session = (typeof Session)[keyof typeof Session]
 export const ComponentType = {
   WRITTEN_WORK: 'WRITTEN_WORK',
   PERFORMANCE_TASK: 'PERFORMANCE_TASK',
-  QUARTERLY_EXAM: 'QUARTERLY_EXAM'
+  EXAM: 'EXAM'
 } as const
 
 export type ComponentType = (typeof ComponentType)[keyof typeof ComponentType]
@@ -305,6 +305,15 @@ export const SubjectCategory = {
 } as const
 
 export type SubjectCategory = (typeof SubjectCategory)[keyof typeof SubjectCategory]
+
+
+export const TimetableStatus = {
+  DRAFT: 'DRAFT',
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED'
+} as const
+
+export type TimetableStatus = (typeof TimetableStatus)[keyof typeof TimetableStatus]
 
 
 export const AdmFormStatus = {

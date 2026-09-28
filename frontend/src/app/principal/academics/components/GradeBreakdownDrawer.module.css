@@ -25,19 +25,6 @@
   gap: 0.5rem;
 }
 
-.metaPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
-  background-color: var(--card);
-}
-
 .metaValue {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 600;
@@ -94,6 +81,88 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--foreground);
+}
+
+/* ---- Per-subject performance bars ---- */
+.barsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.barName {
+  flex-shrink: 0;
+  width: 7.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barTrack {
+  position: relative;
+  flex: 1;
+  height: 0.625rem;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--muted), transparent 55%);
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--primary);
+  transition: width 300ms ease-out;
+}
+
+.barFillFail {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklch, var(--foreground), transparent 30%),
+    color-mix(in oklch, var(--foreground), transparent 30%) 4px,
+    color-mix(in oklch, var(--foreground), transparent 60%) 4px,
+    color-mix(in oklch, var(--foreground), transparent 60%) 8px
+  );
+}
+
+.barMarker {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: 75%;
+  width: 2px;
+  border-radius: 1px;
+  background-color: var(--background);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 55%);
+  pointer-events: none;
+}
+
+.barValue {
+  flex-shrink: 0;
+  width: 2.75rem;
+  text-align: right;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.barValueFail {
+  color: var(--destructive);
 }
 
 .weights {

@@ -106,6 +106,9 @@ router.get(
     try {
       const teacherId = req.user!.id;
       const { scope, status, q } = req.query as unknown as z.infer<typeof listQuerySchema>;
+      // Flag queues are scoped to the session's active term.
+      const scopeTermId = req.termScope?.termId ?? null;
+      const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
       await runEscalation();
 
@@ -127,6 +130,7 @@ router.get(
           where: {
             studentId: { in: adviseeIds },
             ...(status ? { status } : {}),
+            ...termFilter,
           },
           include: flagInclude(),
           orderBy: { createdAt: "desc" },
@@ -139,7 +143,7 @@ router.get(
           ? { raisedBy: teacherId }
           : { ownerId: teacherId };
       const flags = await prisma.gradeFlag.findMany({
-        where: { ...where, ...(status ? { status } : {}) },
+        where: { ...where, ...(status ? { status } : {}), ...termFilter },
         include: flagInclude(),
         orderBy: { createdAt: "desc" },
       });
@@ -175,6 +179,8 @@ function filterByQuery<T extends FlagRow>(flags: T[], q?: string): T[] {
 }
 
 // GET /api/teacher/grade-flags/options — scoped pickers for the raise dialog.
+// Class options are limited to the session's active term so filings always
+// land in the selected scope — the dialog never picks a term itself.
 router.get(
   "/options",
   requireAuth,
@@ -184,6 +190,9 @@ router.get(
       const teacherId = req.user!.id;
       const { assignedSectionIds, advisedSectionIds } = await teacherScope(teacherId);
       const sectionIds = Array.from(new Set([...assignedSectionIds, ...advisedSectionIds]));
+      // Session's active term — class/section options follow it.
+      const scopeTermId = req.termScope?.termId ?? null;
+      const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
       const [profiles, rosterEntries, assignments, sectionClasses] = await Promise.all([
         prisma.studentProfile.findMany({
@@ -205,7 +214,7 @@ router.get(
           orderBy: { fullName: "asc" },
         }),
         prisma.teacherSubjectAssignment.findMany({
-          where: { teacherId },
+          where: { teacherId, ...termFilter },
           include: {
             subject: { select: { id: true, name: true } },
             section: { select: { id: true, name: true } },
@@ -216,7 +225,7 @@ router.get(
         // flag can target any of the student's subjects, not just the
         // teacher's own assignments.
         prisma.teacherSubjectAssignment.findMany({
-          where: { sectionId: { in: sectionIds } },
+          where: { sectionId: { in: sectionIds }, ...termFilter },
           include: {
             subject: { select: { id: true, name: true } },
             section: { select: { id: true, name: true } },
@@ -282,19 +291,22 @@ router.post(
     try {
       const teacherId = req.user!.id;
       const body = req.body as z.infer<typeof raiseSchema>;
+      // Flags are always filed under the session's active term — the client
+      // never picks a term per action.
+      const termId = req.termScope?.termId ?? body.termId;
 
       const [student, subject, section, term] = await Promise.all([
         prisma.studentProfile.findUnique({ where: { userId: body.studentId } }),
         prisma.subject.findUnique({ where: { id: body.subjectId } }),
         prisma.section.findUnique({ where: { id: body.sectionId } }),
-        prisma.term.findUnique({ where: { id: body.termId } }),
+        prisma.term.findUnique({ where: { id: termId } }),
       ]);
       if (!student || !subject || !section || !term) {
         throw new AppError(404, "FLAG_TARGET_NOT_FOUND", "Student, subject, section, or term not found");
       }
 
       const ownerAssignment = await prisma.teacherSubjectAssignment.findFirst({
-        where: { subjectId: body.subjectId, sectionId: body.sectionId, termId: body.termId },
+        where: { subjectId: body.subjectId, sectionId: body.sectionId, termId },
         select: { teacherId: true },
       });
 
@@ -303,7 +315,7 @@ router.post(
           studentId: body.studentId,
           subjectId: body.subjectId,
           sectionId: body.sectionId,
-          termId: body.termId,
+          termId,
           reason: body.reason,
           note: body.note,
           raisedBy: teacherId,

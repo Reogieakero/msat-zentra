@@ -31,26 +31,13 @@
   gap: 0.75rem;
 }
 
-.card {
+.iconRow {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
-  text-decoration: none;
-  outline: none;
-  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
 }
 
-.card:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-}
-
-.card:focus-visible {
-  box-shadow: 0 0 0 2px var(--ring);
+.cardBtn {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .iconWrap {
@@ -101,6 +88,38 @@
   height: 1rem;
   flex-shrink: 0;
   color: var(--muted-foreground);
+}
+
+/* Single row only: all 4 cards across at every width, shrinking to fit
+   instead of wrapping or scrolling. */
+.row .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.row .card {
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.row .iconWrap {
+  width: 2rem;
+  height: 2rem;
+}
+
+.row .text {
+  min-width: 0;
+}
+
+.row .cardTitle {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row .cardDesc,
+.row .arrow {
+  display: none;
 }
 
 /* Compact tiles: 2 per row, icon above label, no description/arrow. */

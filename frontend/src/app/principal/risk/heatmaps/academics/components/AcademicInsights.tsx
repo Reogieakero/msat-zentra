@@ -9,19 +9,24 @@ import {
   Gauge,
   BookOpen,
   X,
+  ChevronDown,
+  Maximize2,
+  ArrowDown,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import {
-  Card,
-  CardHeader,
   CardTitle,
   CardDescription,
-  CardAction,
-  CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   ChartContainer,
   ChartTooltip,
@@ -74,9 +79,12 @@ const subjectStackConfig = {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const pct = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 100) : 0);
+// Backend grade labels already include the prefix ("Grade 7"); avoid "Grade Grade 7".
+const gradeName = (g: string) => (g.startsWith("Grade ") ? g : `Grade ${g}`);
 
 function studentBelow75(st: BackendStudent): boolean {
-  return st.overallAverage < 75;
+  // Gradeless roster members (overallAverage 0, no subjects) are not failing.
+  return st.subjects.length > 0 && st.overallAverage < 75;
 }
 
 function toneWord(p: number): string {
@@ -444,12 +452,12 @@ export function AcademicInsights({
       },
       {
         tone: "good",
-        title: `Grade ${best.grade} leads`,
+        title: `${gradeName(best.grade)} leads`,
         body: `${pct(best.passed, best.passed + best.failed)}% of its ${best.passed + best.failed} graded students passed — the strongest level this term.`,
       },
       {
         tone: "warn",
-        title: `Grade ${worst.grade} lags`,
+        title: `${gradeName(worst.grade)} lags`,
         body: `${pct(worst.passed, worst.passed + worst.failed)}% of its ${worst.passed + worst.failed} graded students passed — the weakest level this term.`,
       },
     ];
@@ -458,7 +466,7 @@ export function AcademicInsights({
       list.push({
         tone: "warn",
         title: "Below the passing threshold",
-        body: `Grade ${worst.grade} sits under the 75% passing mark and is flagged for review.`,
+        body: `${gradeName(worst.grade)} sits under the 75% passing mark and is flagged for review.`,
       });
     } else {
       list.push({
@@ -511,37 +519,87 @@ export function AcademicInsights({
     />
   ));
 
+  type ExpandedPanel = "sections" | "subjects" | "passRates" | "composition" | "spread" | null;
+  const [expanded, setExpanded] = React.useState<ExpandedPanel>(null);
+  const closeExpanded = React.useCallback(() => setExpanded(null), []);
+
+  const modalBodyRef = React.useRef<HTMLDivElement>(null);
+  const [showScrollHint, setShowScrollHint] = React.useState(false);
+
+  const updateScrollHint = React.useCallback(() => {
+    const el = modalBodyRef.current;
+    if (!el) {
+      setShowScrollHint(false);
+      return;
+    }
+    const canScroll = el.scrollHeight - el.clientHeight > 8;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+    setShowScrollHint(canScroll && !atBottom);
+  }, []);
+
+  const scrollModalDown = React.useCallback(() => {
+    const el = modalBodyRef.current;
+    if (!el) return;
+    el.scrollBy({ top: Math.max(240, el.clientHeight * 0.8), behavior: "smooth" });
+  }, []);
+
+  React.useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(null);
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [expanded]);
+
+  React.useEffect(() => {
+    if (!expanded) {
+      setShowScrollHint(false);
+      return;
+    }
+    if (modalBodyRef.current) modalBodyRef.current.scrollTop = 0;
+    // Re-check after paint (and again once charts settle) whether the
+    // modal body actually overflows.
+    const raf = requestAnimationFrame(() => updateScrollHint());
+    const t = window.setTimeout(updateScrollHint, 400);
+    window.addEventListener("resize", updateScrollHint);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t);
+      window.removeEventListener("resize", updateScrollHint);
+    };
+  }, [expanded, updateScrollHint]);
+
+  const expandedTitle =
+    expanded === "sections"
+      ? "Sections by average"
+      : expanded === "subjects"
+        ? "Subjects by failure count"
+        : expanded === "passRates"
+          ? "Section pass rates"
+          : expanded === "composition"
+            ? "Composition per subject"
+            : expanded === "spread"
+              ? "Student-average spread"
+              : "";
+
   const isLoading = isPending;
 
   return (
-    <div className={styles.stack}>
-      {/* Headline KPIs */}
-      <Card className={styles.card}>
-        <CardHeader className={styles.header}>
-          <div className={styles.headerText}>
-            <CardTitle>Performance insights</CardTitle>
-            <CardDescription>
-              {data?.schoolYear ?? "…"} &middot; {data?.termLabel ?? "…"} &middot;{" "}
-              {gradeMode === "final" ? "finalized grades only" : "all graded rows (preview)"}
-            </CardDescription>
-          </div>
-          <CardAction className={styles.headerActions}>
-            <Tabs value={gradeMode} onValueChange={(v) => setGradeMode(v as "raw" | "final")}>
-              <TabsList className={styles.tabList}>
-                <TabsTrigger value="final" className={styles.tabTrigger}>
-                  Finalized
-                </TabsTrigger>
-                <TabsTrigger value="raw" className={styles.tabTrigger}>
-                  All rows
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {selected ? (
+    <div className={styles.layout}>
+      {/* Left sidebar — KPIs (no header, watermark icons) */}
+      <aside className={styles.sidebar} aria-label="Performance insights">
+        <div className={`${styles.sidePlain} ${styles.sideCard}`}>
+          {selected ? (
+            <div className={styles.headerActions}>
               <Badge variant="secondary">{selected.section}</Badge>
-            ) : null}
-          </CardAction>
-        </CardHeader>
-        <CardContent className={styles.content}>
+            </div>
+          ) : null}
           <div className={styles.kpiGrid}>
             {isLoading
               ? Array.from({ length: 4 }).map((_, i) => (
@@ -551,24 +609,131 @@ export function AcademicInsights({
                 ))
               : kpiTiles.map((k) => (
                   <div key={k.label} className={`${styles.kpiCard} ${styles[`tone_${k.tone}`]}`}>
-                    <div className={styles.kpiHead}>
-                      <div className={styles.kpiIcon}>
-                        <k.icon className={styles.kpiIconSvg} aria-hidden />
-                      </div>
-                      {k.chart}
-                    </div>
+                    <div className={styles.kpiHead}>{k.chart}</div>
                     <div className={styles.kpiBody}>
                       <span className={styles.kpiValue}>{k.value}</span>
                       <span className={styles.kpiLabel}>{k.label}</span>
                       <span className={styles.kpiSub}>{k.sub}</span>
                     </div>
                     <p className={styles.kpiText}>{k.text}</p>
+                    <k.icon className={styles.kpiWatermark} aria-hidden />
                   </div>
                 ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </aside>
 
+      <div className={styles.main}>
+      {/* Ranked action cards (on top, no header, no card chrome) */}
+      <div className={styles.rankWrap}>
+        <div className={styles.content}>
+          {selected ? (
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                  onClick={() => onClearSection()}
+              >
+                <X className={styles.closeIcon} aria-hidden />
+                Close
+              </button>
+            </div>
+          ) : null}
+          {isLoading ? (
+            <div className={styles.rankSkel}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className={styles.rankSkelRow} />
+              ))}
+            </div>
+          ) : selected ? (
+            <Table>
+              {[...selected.students]
+                .sort((a, b) => a.overallAverage - b.overallAverage)
+                .map((st) => (
+                  <tr key={st.studentId}>
+                    <td className={styles.colLeft}>{st.name}</td>
+                    <td>
+                      <Badge variant={st.overallAverage < 75 ? "destructive" : "outline"}>
+                        {st.overallAverage}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge variant={st.riskLevel === "High" ? "destructive" : st.riskLevel === "Moderate" ? "secondary" : "outline"}>
+                        {st.riskLevel}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+            </Table>
+          ) : (
+            <div className={styles.gallery}>
+              {/* Action card grid — 5 cards in one row, each button overlays its full contents */}
+              <div className={`${styles.galleryFull} ${styles.actionGrid}`}>
+                <button
+                  type="button"
+                  className={styles.actionCard}
+                  onClick={() => setExpanded("sections")}
+                  aria-label="Open Sections by average"
+                >
+                  <span className={styles.actionText}>
+                    <span className={styles.actionTitle}>Sections by average</span>
+                    <span className={styles.actionHint}>Section averages vs 75 target</span>
+                  </span>
+                  <Maximize2 className={styles.expandIcon} aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionCard}
+                  onClick={() => setExpanded("subjects")}
+                  aria-label="Open Subjects by failure count"
+                >
+                  <span className={styles.actionText}>
+                    <span className={styles.actionTitle}>Subjects by failure count</span>
+                    <span className={styles.actionHint}>Top 8 subjects with most below-75</span>
+                  </span>
+                  <Maximize2 className={styles.expandIcon} aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionCard}
+                  onClick={() => setExpanded("passRates")}
+                  aria-label="Open Section pass rates"
+                >
+                  <span className={styles.actionText}>
+                    <span className={styles.actionTitle}>Section pass rates</span>
+                    <span className={styles.actionHint}>Pass % per section vs 75% target</span>
+                  </span>
+                  <Maximize2 className={styles.expandIcon} aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionCard}
+                  onClick={() => setExpanded("composition")}
+                  aria-label="Open Composition per subject"
+                >
+                  <span className={styles.actionText}>
+                    <span className={styles.actionTitle}>Composition per subject</span>
+                    <span className={styles.actionHint}>Passed vs below-75 split</span>
+                  </span>
+                  <Maximize2 className={styles.expandIcon} aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionCard}
+                  onClick={() => setExpanded("spread")}
+                  aria-label="Open Student-average spread"
+                >
+                  <span className={styles.actionText}>
+                    <span className={styles.actionTitle}>Student-average spread</span>
+                    <span className={styles.actionHint}>Min–avg–max per section</span>
+                  </span>
+                  <Maximize2 className={styles.expandIcon} aria-hidden />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       {/* Pass/fail insights (plain text) + chart (card) */}
       <section className={styles.section}>
         <div className={styles.header}>
@@ -577,6 +742,35 @@ export function AcademicInsights({
             <CardDescription>
               Students per grade level that passed or failed this term
             </CardDescription>
+          </div>
+          <div className={styles.headerActions} role="group" aria-label="Grade basis filter">
+            <span className={styles.toolbarLabel}>Grade basis</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className={styles.toolbarBtn}>
+                  {gradeMode === "final" ? "Finalized" : "Raw"}
+                  <ChevronDown aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuCheckboxItem
+                  checked={gradeMode === "final"}
+                  onCheckedChange={(checked) => {
+                    if (checked) setGradeMode("final");
+                  }}
+                >
+                  Finalized
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={gradeMode === "raw"}
+                  onCheckedChange={(checked) => {
+                    if (checked) setGradeMode("raw");
+                  }}
+                >
+                  Raw
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <div className={styles.content}>
@@ -608,14 +802,70 @@ export function AcademicInsights({
               </div>
 
               <div className={styles.chartCol}>
+                <div className={styles.chartLegend} aria-hidden>
+                  <span className={styles.legendItem}>
+                    <span
+                      className={styles.legendDot}
+                      style={{ backgroundColor: "var(--primary)" }}
+                    />
+                    Passed
+                  </span>
+                  <span className={styles.legendItem}>
+                    <span
+                      className={styles.legendDot}
+                      style={{ backgroundColor: "var(--destructive)" }}
+                    />
+                    Failed
+                  </span>
+                </div>
                 <ChartContainer config={passFailConfig} className={styles.chart}>
-                  <BarChart data={passFailByGrade} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="grade" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="passed" stackId="a" fill="var(--primary)" />
-                    <Bar dataKey="failed" stackId="a" radius={[3, 3, 0, 0]} fill="var(--destructive)" />
+                  <BarChart
+                    data={passFailByGrade}
+                    margin={{ top: 8, right: 8, bottom: 0, left: -12 }}
+                    barCategoryGap="28%"
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="var(--border)"
+                      strokeOpacity={0.7}
+                    />
+                    <XAxis
+                      dataKey="grade"
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--border)", strokeOpacity: 0.7 }}
+                      tickMargin={8}
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                      width={36}
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                    />
+                    <ChartTooltip
+                      content={<ChartTooltipContent />}
+                      cursor={{ fill: "var(--muted)", opacity: 0.25 }}
+                    />
+                    <Bar
+                      dataKey="passed"
+                      stackId="a"
+                      fill="var(--primary)"
+                      stroke="var(--background)"
+                      strokeWidth={1}
+                      maxBarSize={44}
+                    />
+                    <Bar
+                      dataKey="failed"
+                      stackId="a"
+                      radius={[6, 6, 0, 0]}
+                      fill="var(--destructive)"
+                      fillOpacity={0.9}
+                      stroke="var(--background)"
+                      strokeWidth={1}
+                      maxBarSize={44}
+                    />
                   </BarChart>
                 </ChartContainer>
               </div>
@@ -624,220 +874,208 @@ export function AcademicInsights({
         </div>
       </section>
 
-      {/* Ranked bars with commentary */}
-      <Card className={styles.card}>
-        <CardHeader className={styles.header}>
-          <div className={styles.headerText}>
-            <CardTitle>Rankings</CardTitle>
-            <CardDescription>
-              {selected
-                ? "Per-student in this section"
-                : "Section averages and pass rates, plus subject failure and composition"}
-            </CardDescription>
-          </div>
-          {selected ? (
-            <CardAction className={styles.headerActions}>
+      </div>
+
+      {expanded ? (
+        <div
+          className={styles.overlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label={expandedTitle}
+          onClick={closeExpanded}
+        >
+          <div
+            className={styles.modal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHead}>
+              <h2 className={styles.modalTitle}>{expandedTitle}</h2>
               <button
                 type="button"
-                className={styles.closeBtn}
-                  onClick={() => onClearSection()}
+                className={styles.modalClose}
+                onClick={closeExpanded}
+                aria-label="Close"
               >
-                <X className={styles.closeIcon} aria-hidden />
-                Close
+                <X className={styles.modalCloseIcon} aria-hidden />
               </button>
-            </CardAction>
-          ) : null}
-        </CardHeader>
-        <CardContent className={styles.content}>
-          {isLoading ? (
-            <div className={styles.rankSkel}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className={styles.rankSkelRow} />
-              ))}
             </div>
-          ) : selected ? (
-            <Table>
-              {[...selected.students]
-                .sort((a, b) => a.overallAverage - b.overallAverage)
-                .map((st) => (
-                  <tr key={st.studentId}>
-                    <td className={styles.colLeft}>{st.name}</td>
-                    <td>
-                      <Badge variant={st.overallAverage < 75 ? "destructive" : "outline"}>
-                        {st.overallAverage}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Badge variant={st.riskLevel === "High" ? "destructive" : st.riskLevel === "Moderate" ? "secondary" : "outline"}>
-                        {st.riskLevel}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-            </Table>
-          ) : (
-            <div className={styles.gallery}>
-              {/* Threshold bars: sections by average */}
-              <section className={`${styles.panel} ${styles.galleryFull}`}>
-                <h3 className={styles.panelTitle}>Sections by average</h3>
-                <ul className={styles.rankList}>
-                  {sectionRanking.map((s, i) => {
-                    const w =
-                      sectionHi === sectionLo
-                        ? 100
-                        : (s.avgTransmuted - sectionLo) / (sectionHi - sectionLo) * 100;
-                    return (
-                      <li key={s.sectionId} className={styles.rankItem}>
-                        <button
-                          type="button"
-                          className={`${styles.rankHead} ${selectedId === s.sectionId ? styles.rankOn : ""}`}
-                          onClick={() => onSelectId(s.sectionId === selectedId ? null : s.sectionId)}
-                        >
-                          <span className={styles.rankNo}>{i + 1}</span>
-                          <span className={styles.rankLabel}>{s.section}</span>
-                          <span className={styles.rankMeta}>
-                            {s.avgTransmuted} avg &middot; {s.passPct}% passing
-                            {s.atRiskCount > 0 ? ` · ${s.atRiskCount} at risk` : ""}
-                          </span>
-                        </button>
-                        <div className={styles.barTrack}>
-                          <div
-                            className={styles.barFill}
-                            style={{
-                              width: `${Math.max(3, Math.min(100, w))}%`,
-                              background: s.avgTransmuted < 75 ? "var(--destructive)" : "var(--primary)",
-                            }}
-                          />
-                          <span className={styles.threshLine} style={{ left: `${refPos}%` }} />
-                        </div>
-                        <div className={styles.barFoot}>
-                          <span className={styles.barValue}>{s.avgTransmuted}</span>
-                          <span className={styles.barHint}>
-                            {s.avgTransmuted >= 75 ? "≥75 · passing" : "below 75 · at risk"}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className={styles.panelFootnote}>Dashed line marks the 75 passing target.</p>
-              </section>
-
-              {/* Lollipop: subjects by failure count */}
-              <section className={styles.panel}>
-                <h3 className={styles.panelTitle}>Subjects by failure count</h3>
-                <ul className={styles.lolliList} {...subjectLolliProps}>
-                  {subjectRanking.slice(0, 8).map((subj, i) => {
-                    const pos = maxSubjectCount > 0 ? (subj.count / maxSubjectCount) * 100 : 0;
-                    return (
-                      <li key={subj.subject} className={styles.lolliItem} data-tip-index={i}>
-                        <span className={styles.lolliLabel}>{subj.subject}</span>
+            <div
+              ref={modalBodyRef}
+              onScroll={updateScrollHint}
+              className={styles.modalBody}
+            >
+              {expanded === "sections" ? (
+                <div className={`${styles.panel} ${styles.modalPanel}`}>
+                  <ul className={styles.rankList}>
+                    {sectionRanking.map((s, i) => {
+                      const w =
+                        sectionHi === sectionLo
+                          ? 100
+                          : (s.avgTransmuted - sectionLo) / (sectionHi - sectionLo) * 100;
+                      return (
+                        <li key={s.sectionId} className={styles.rankItem}>
+                          <button
+                            type="button"
+                            className={`${styles.rankHead} ${selectedId === s.sectionId ? styles.rankOn : ""}`}
+                            onClick={() => onSelectId(s.sectionId === selectedId ? null : s.sectionId)}
+                          >
+                            <span className={styles.rankNo}>{i + 1}</span>
+                            <span className={styles.rankLabel}>{s.section}</span>
+                            <span className={styles.rankMeta}>
+                              {s.avgTransmuted} avg &middot; {s.passPct}% passing
+                              {s.atRiskCount > 0 ? ` · ${s.atRiskCount} at risk` : ""}
+                            </span>
+                          </button>
+                          <div className={styles.barTrack}>
+                            <div
+                              className={styles.barFill}
+                              style={{
+                                width: `${Math.max(3, Math.min(100, w))}%`,
+                                background: s.avgTransmuted < 75 ? "var(--destructive)" : "var(--primary)",
+                              }}
+                            />
+                            <span className={styles.threshLine} style={{ left: `${refPos}%` }} />
+                          </div>
+                          <div className={styles.barFoot}>
+                            <span className={styles.barValue}>{s.avgTransmuted}</span>
+                            <span className={styles.barHint}>
+                              {s.avgTransmuted >= 75 ? "≥75 · passing" : "below 75 · at risk"}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className={styles.panelFootnote}>Dashed line marks the 75 passing target.</p>
+                </div>
+              ) : expanded === "subjects" ? (
+                <div className={`${styles.panel} ${styles.modalPanel}`}>
+                  <ul className={styles.lolliList} {...subjectLolliProps}>
+                    {subjectRanking.slice(0, 8).map((subj, i) => {
+                      const pos = maxSubjectCount > 0 ? (subj.count / maxSubjectCount) * 100 : 0;
+                      return (
+                        <li key={subj.subject} className={styles.lolliItem} data-tip-index={i}>
+                          <span className={styles.lolliLabel}>{subj.subject}</span>
+                          <div className={styles.lolliTrack}>
+                            <span
+                              className={styles.lolliDot}
+                              style={{ left: `calc(${Math.max(0, Math.min(100, pos))}% - 7px)` }}
+                            />
+                          </div>
+                          <span className={styles.lolliValue}>{subj.count}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <ChartFloater tip={subjectLolliTip} />
+                  <div className={styles.chartNote}>
+                    <p className={styles.chartNoteText}>
+                      <strong className={styles.chartNoteLabel}>What it means · </strong>
+                      {subjectInterpretation}
+                    </p>
+                  </div>
+                </div>
+              ) : expanded === "passRates" ? (
+                <div className={`${styles.panel} ${styles.modalPanel}`}>
+                  <ul className={styles.lolliList} {...passRateProps}>
+                    {sectionRanking.map((s, i) => (
+                      <li key={s.sectionId} className={styles.lolliItem} data-tip-index={i}>
+                        <span className={styles.lolliLabel}>{s.section}</span>
                         <div className={styles.lolliTrack}>
+                          <span className={styles.dotPlotTarget} />
                           <span
-                            className={styles.lolliDot}
-                            style={{ left: `calc(${Math.max(0, Math.min(100, pos))}% - 7px)` }}
+                            className={`${styles.lolliDot} ${s.passPct < 75 ? styles.lolliDotBelow : ""}`}
+                            style={{ left: `calc(${Math.max(0, Math.min(100, s.passPct))}% - 7px)` }}
                           />
                         </div>
-                        <span className={styles.lolliValue}>{subj.count}</span>
+                        <span className={styles.lolliValue}>{s.passPct}%</span>
                       </li>
-                    );
-                  })}
-                </ul>
-                <ChartFloater tip={subjectLolliTip} />
-                <div className={styles.chartNote}>
-                  <p className={styles.chartNoteText}>
-                    <strong className={styles.chartNoteLabel}>What it means · </strong>
-                    {subjectInterpretation}
-                  </p>
+                    ))}
+                  </ul>
+                  <ChartFloater tip={passRateTip} />
+                  <div className={styles.chartNote}>
+                    <p className={styles.chartNoteText}>
+                      <strong className={styles.chartNoteLabel}>What it means · </strong>
+                      {passRateInterpretation}
+                    </p>
+                  </div>
                 </div>
-              </section>
-
-              {/* Dot plot: section pass rates on a 0-100 axis */}
-              <section className={styles.panel}>
-                <h3 className={styles.panelTitle}>Section pass rates</h3>
-<ul className={styles.lolliList} {...passRateProps}>
-                  {sectionRanking.map((s, i) => (
-                    <li key={s.sectionId} className={styles.lolliItem} data-tip-index={i}>
-                      <span className={styles.lolliLabel}>{s.section}</span>
-                      <div className={styles.lolliTrack}>
-                        <span className={styles.dotPlotTarget} />
-                        <span
-                          className={`${styles.lolliDot} ${s.passPct < 75 ? styles.lolliDotBelow : ""}`}
-                          style={{ left: `calc(${Math.max(0, Math.min(100, s.passPct))}% - 7px)` }}
-                        />
-                      </div>
-                      <span className={styles.lolliValue}>{s.passPct}%</span>
-                    </li>
-                  ))}
-                </ul>
-                <ChartFloater tip={passRateTip} />
-                <div className={styles.chartNote}>
-                  <p className={styles.chartNoteText}>
-                    <strong className={styles.chartNoteLabel}>What it means · </strong>
-                    {passRateInterpretation}
-                  </p>
+              ) : expanded === "composition" ? (
+                <div className={`${styles.panel} ${styles.modalPanel}`}>
+                  <ChartContainer config={subjectStackConfig} className={styles.modalChart}>
+                    <BarChart data={subjectComposition} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                      <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="subject"
+                        tickLine={false}
+                        axisLine={false}
+                        width={120}
+                        tickMargin={6}
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="passed" stackId="a" fill="var(--primary)" />
+                      <Bar dataKey="below" stackId="a" radius={[0, 3, 3, 0]} fill="var(--destructive)" />
+                    </BarChart>
+                  </ChartContainer>
+                  <div className={styles.chartNote}>
+                    <p className={styles.chartNoteText}>
+                      <strong className={styles.chartNoteLabel}>What it means · </strong>
+                      {subjectCompositionInterpretation}
+                    </p>
+                  </div>
                 </div>
-              </section>
-
-              {/* Stacked bars: composition per subject */}
-              <section className={styles.panel}>
-                <h3 className={styles.panelTitle}>Composition per subject</h3>
-                <ChartContainer config={subjectStackConfig} className={styles.stackChart}>
-                  <BarChart data={subjectComposition} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                    <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
-                    <YAxis type="category" dataKey="subject" tickLine={false} axisLine={false} width={110} tickMargin={6} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="passed" stackId="a" fill="var(--primary)" />
-                    <Bar dataKey="below" stackId="a" radius={[0, 3, 3, 0]} fill="var(--destructive)" />
-                  </BarChart>
-                </ChartContainer>
-                <div className={styles.chartNote}>
-                  <p className={styles.chartNoteText}>
-                    <strong className={styles.chartNoteLabel}>What it means · </strong>
-                    {subjectCompositionInterpretation}
-                  </p>
+              ) : (
+                <div className={`${styles.panel} ${styles.modalPanel}`}>
+                  <ul className={styles.dumbList} {...spreadProps}>
+                    {sectionSpread.map((s, i) => (
+                      <li key={s.section} className={styles.dumbItem} data-tip-index={i}>
+                        <span className={styles.dumbLabel}>{s.section}</span>
+                        <div className={styles.dumbTrack}>
+                          <span
+                            className={styles.dumbRange}
+                            style={{ left: `${s.minPct}%`, width: `${Math.max(0.5, s.maxPct - s.minPct)}%` }}
+                          />
+                          <span
+                            className={`${styles.dumbDot} ${s.min < 75 ? styles.dumbDotBelow : ""}`}
+                            style={{ left: `calc(${s.minPct}% - 5px)` }}
+                          />
+                          <span
+                            className={`${styles.dumbAvg} ${s.avg < 75 ? styles.dumbAvgBelow : ""}`}
+                            style={{ left: `calc(${s.avgPct}% - 5px)` }}
+                          />
+                          <span className={styles.dumbDot} style={{ left: `calc(${s.maxPct}% - 5px)` }} />
+                        </div>
+                        <span className={styles.dumbValue}>{s.min}–{s.max}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <ChartFloater tip={spreadTip} />
+                  <div className={styles.chartNote}>
+                    <p className={styles.chartNoteText}>
+                      <strong className={styles.chartNoteLabel}>What it means · </strong>
+                      {spreadInterpretation}
+                    </p>
+                  </div>
                 </div>
-              </section>
-
-              {/* Dumbbell: student-average spread per section */}
-              <section className={styles.panel}>
-                <h3 className={styles.panelTitle}>Student-average spread</h3>
-<ul className={styles.dumbList} {...spreadProps}>
-                  {sectionSpread.map((s, i) => (
-                    <li key={s.section} className={styles.dumbItem} data-tip-index={i}>
-                      <span className={styles.dumbLabel}>{s.section}</span>
-                      <div className={styles.dumbTrack}>
-                        <span
-                          className={styles.dumbRange}
-                          style={{ left: `${s.minPct}%`, width: `${Math.max(0.5, s.maxPct - s.minPct)}%` }}
-                        />
-                        <span
-                          className={`${styles.dumbDot} ${s.min < 75 ? styles.dumbDotBelow : ""}`}
-                          style={{ left: `calc(${s.minPct}% - 5px)` }}
-                        />
-                        <span
-                          className={`${styles.dumbAvg} ${s.avg < 75 ? styles.dumbAvgBelow : ""}`}
-                          style={{ left: `calc(${s.avgPct}% - 5px)` }}
-                        />
-                        <span className={styles.dumbDot} style={{ left: `calc(${s.maxPct}% - 5px)` }} />
-                      </div>
-                      <span className={styles.dumbValue}>{s.min}–{s.max}</span>
-                    </li>
-                  ))}
-                </ul>
-                <ChartFloater tip={spreadTip} />
-                <div className={styles.chartNote}>
-                  <p className={styles.chartNoteText}>
-                    <strong className={styles.chartNoteLabel}>What it means · </strong>
-                    {spreadInterpretation}
-                  </p>
-                </div>
-              </section>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {showScrollHint ? (
+              <button
+                type="button"
+                className={styles.scrollHint}
+                onClick={scrollModalDown}
+                aria-label="Scroll down"
+              >
+                <ArrowDown className={styles.scrollHintIcon} aria-hidden />
+                Scroll down
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

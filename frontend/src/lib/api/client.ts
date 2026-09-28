@@ -6,11 +6,21 @@ export const apiClient: AxiosInstance = axios.create({
   withCredentials: false,
 });
 
-// Attach the access token (stored by the auth layer) to every request.
+// Attach the access token (stored by the auth layer) to every request,
+// plus the session's active School Year + Term (chosen once after login).
+// The backend scopes all reads to this selection and saves all writes
+// under it — pages never pick a year/term per action.
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const scope = getActiveTermScope();
+  if (scope?.schoolYearId) {
+    (config.headers as Record<string, string>)["x-school-year-id"] = scope.schoolYearId;
+  }
+  if (scope?.termId) {
+    (config.headers as Record<string, string>)["x-term-id"] = scope.termId;
   }
   return config;
 });
@@ -48,6 +58,29 @@ function redirectToUnauthorized() {
   window.localStorage.removeItem("zentra.refresh");
   if (window.location.pathname !== "/errors/403") {
     window.location.href = "/errors/403";
+  }
+}
+
+// --- active term scope (Login → select → session context) ---
+const TERM_SCOPE_KEY = "zentra.activeTerm";
+
+export interface ActiveTermScope {
+  schoolYearId: string;
+  schoolYearName: string;
+  termId: string;
+  termNumber: number;
+}
+
+export function getActiveTermScope(): ActiveTermScope | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(TERM_SCOPE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ActiveTermScope;
+    if (!parsed.schoolYearId || !parsed.termId) return null;
+    return parsed;
+  } catch {
+    return null;
   }
 }
 

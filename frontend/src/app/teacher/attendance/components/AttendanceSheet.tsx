@@ -17,8 +17,8 @@ import {
   useSheetContext,
   useSheetMarks,
   initialsOf,
+  type SheetContext,
   type SheetStatus,
-  type SheetSession,
 } from "./attendance-taking-data";
 import { sileo } from "@/components/ui/sonner";
 import {
@@ -44,11 +44,25 @@ const STATUSES: { value: SheetStatus; label: string }[] = [
 
 interface AttendanceSheetProps {
   date: string;
-  session: SheetSession;
+  subjectId: string | undefined;
+  assignmentId: string | undefined;
+  slot: number;
+  subjectLabel: string;
   editable: boolean;
+  /** Explicit section roster (code-claimed flow). When provided, the sheet
+   *  reads students + section/term from it instead of the advisory context. */
+  roster?: { ctx: SheetContext | null; pending: boolean; error: boolean };
 }
 
-export function AttendanceSheet({ date, session, editable }: AttendanceSheetProps) {
+export function AttendanceSheet({
+  date,
+  subjectId,
+  assignmentId,
+  slot,
+  subjectLabel,
+  editable,
+  roster,
+}: AttendanceSheetProps) {
   const queryClient = useQueryClient();
   const [marks, setMarks] = useState<Record<string, SheetStatus>>({});
   const [query, setQuery] = useState("");
@@ -56,14 +70,14 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
   const [editConfirmOpen, setEditConfirmOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [sheetKey, setSheetKey] = useState(`${date}|${session}`);
+  const [sheetKey, setSheetKey] = useState(`${date}|${subjectId ?? "none"}|${slot}`);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // A different date/session is a different sheet — drop local state.
+  // A different date/subject/period is a different sheet — drop local state.
   // (Render-phase reset: allowed because it is conditional on prop change.)
-  if (sheetKey !== `${date}|${session}`) {
-    setSheetKey(`${date}|${session}`);
+  if (sheetKey !== `${date}|${subjectId ?? "none"}|${slot}`) {
+    setSheetKey(`${date}|${subjectId ?? "none"}|${slot}`);
     setMarks({});
     setQuery("");
     setSubmitted(false);
@@ -74,12 +88,13 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
   }
 
   const contextQuery = useSheetContext();
-  const marksQuery = useSheetMarks(date, session);
+  const effectiveCtx = roster ? roster.ctx : (contextQuery.data ?? null);
+  const marksQuery = useSheetMarks(date, subjectId, slot, effectiveCtx?.sectionId ?? null);
 
-  const students = useMemo(() => contextQuery.data?.students ?? [], [contextQuery.data]);
+  const students = useMemo(() => effectiveCtx?.students ?? [], [effectiveCtx]);
   const serverMarks = useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
-  const loading = contextQuery.isPending || marksQuery.isPending;
-  const loadError = contextQuery.isError || marksQuery.isError;
+  const loading = (roster ? roster.pending : contextQuery.isPending) || marksQuery.isPending;
+  const loadError = (roster ? roster.error : contextQuery.isError) || marksQuery.isError;
   // Done persists across refresh: submitted sheets have server-side marks,
   // so a sheet with existing marks opens on the done panel until edited.
   const serverSubmitted = Object.keys(serverMarks).length > 0;
@@ -93,7 +108,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
     for (const s of students) c[statusOf(s.studentId)] += 1;
     return c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marks, serverMarks, students, date, session]);
+  }, [marks, serverMarks, students, date, subjectId, slot]);
 
   const needle = query.trim().toLowerCase();
   const visibleStudents = students.filter((s) => {
@@ -112,15 +127,16 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
     setSubmitError(null);
   }
 
-  const sessionLabel = session === "AM" ? "Morning" : "Afternoon";
+  const contextLabel =
+    slot > 1 ? `${subjectLabel} · Period ${slot}` : subjectLabel;
   const dateLabel = format(new Date(`${date}T00:00:00`), "MMM d, yyyy");
   const breakdown = STATUSES.filter((s) => counts[s.value] > 0)
     .map((s) => `${counts[s.value]} ${s.label.toLowerCase()}`)
     .join(", ");
 
   async function handleConfirm() {
-    const ctx = contextQuery.data;
-    if (!ctx || submitting) return;
+    const ctx = roster ? roster.ctx : contextQuery.data;
+    if (!ctx || !subjectId || submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -128,17 +144,20 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
         sectionId: ctx.sectionId,
         termId: ctx.termId,
         date: `${date}T00:00:00Z`,
-        session,
+        subjectId,
+        assignmentId,
+        slot,
         records: students.map((s) => ({ studentId: s.studentId, status: statusOf(s.studentId) })),
       });
       queryClient.invalidateQueries({ queryKey: ["attendance-sheet-marks"] });
       queryClient.invalidateQueries({ queryKey: ["advisory-students"] });
+      queryClient.invalidateQueries({ queryKey: ["advisee-attendance"] });
       setConfirmOpen(false);
       setSubmitted(true);
       setEditing(false);
       sileo.success({
         title: "Attendance saved",
-        description: `${sessionLabel} attendance for ${dateLabel} — ${result.count} record${result.count === 1 ? "" : "s"}.`,
+        description: `${contextLabel} for ${dateLabel} — ${result.count} record${result.count === 1 ? "" : "s"}.`,
       });
     } catch {
       setConfirmOpen(false);
@@ -149,6 +168,21 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
     }
   }
 
+  if (!subjectId) {
+    return (
+      <Card className={styles.card}>
+        <CardContent className={styles.success}>
+          <p className={styles.successTitle}>Select a subject to take attendance</p>
+          <p className={styles.successSub}>
+            {loading
+              ? "Loading your offered subjects…"
+              : "No offered subjects found for this section and term."}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (showDone) {
     return (
       <>
@@ -156,7 +190,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
           <CardContent className={styles.success}>
             <CheckCircle2 className={styles.successIcon} aria-hidden />
             <p className={styles.successTitle}>
-              {sessionLabel} attendance for {dateLabel} saved
+              {contextLabel} for {dateLabel} saved
             </p>
             <p className={styles.successSub}>{breakdown}.</p>
             <Button
@@ -195,7 +229,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
         <SubmitConfirmDialog
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
-          sessionLabel={sessionLabel}
+          contextLabel={contextLabel}
           dateLabel={dateLabel}
           counts={counts}
           confirming={submitting}
@@ -300,7 +334,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
 
       <CardFooter className={styles.footer}>
         <span className={styles.footerInfo}>
-          {dateLabel} · {sessionLabel} session · {students.length} advisees ·{" "}
+          {dateLabel} · {contextLabel} · {students.length} advisees ·{" "}
           {contextQuery.data?.sectionName ?? ""}
         </span>
         <Button
@@ -314,7 +348,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
               Submitting…
             </>
           ) : (
-            <>Submit {session === "AM" ? "morning" : "afternoon"} attendance</>
+            <>Submit {subjectLabel} attendance</>
           )}
         </Button>
       </CardFooter>
@@ -322,7 +356,7 @@ export function AttendanceSheet({ date, session, editable }: AttendanceSheetProp
     <SubmitConfirmDialog
       open={confirmOpen}
       onOpenChange={setConfirmOpen}
-      sessionLabel={sessionLabel}
+      contextLabel={contextLabel}
       dateLabel={dateLabel}
       counts={counts}
       confirming={submitting}

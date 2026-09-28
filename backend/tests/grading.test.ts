@@ -55,12 +55,12 @@ describe("DepEd transmutation (DO 8, s. 2015)", () => {
 });
 
 describe("DepEd weight presets (DO 8, s. 2015)", () => {
-  it("SHS weights total 100 (WW 25 / PT 45 / QA 30)", () => {
-    expect(DEPED_SHS_WEIGHTS).toEqual({ WRITTEN_WORK: 25, PERFORMANCE_TASK: 45, QUARTERLY_EXAM: 30 });
+  it("SHS weights total 100 (WW 25 / PT 45 / E 30)", () => {
+    expect(DEPED_SHS_WEIGHTS).toEqual({ WRITTEN_WORK: 25, PERFORMANCE_TASK: 45, EXAM: 30 });
   });
   it("every JHS area preset totals 100", () => {
     for (const { weights } of DEPED_JHS_WEIGHTS) {
-      expect(weights.WRITTEN_WORK + weights.PERFORMANCE_TASK + weights.QUARTERLY_EXAM).toBe(100);
+      expect(weights.WRITTEN_WORK + weights.PERFORMANCE_TASK + weights.EXAM).toBe(100);
     }
   });
 });

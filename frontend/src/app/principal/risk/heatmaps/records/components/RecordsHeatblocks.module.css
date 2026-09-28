@@ -41,77 +41,40 @@
   padding-left: 2rem;
 }
 
-.dropdown {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-width: 10rem;
-  height: 2.125rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  color: var(--foreground);
-  font-size: 0.8125rem;
-  cursor: pointer;
-  transition: border-color 150ms ease-out, background-color 150ms ease-out;
-}
-
-.dropdown:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  background-color: color-mix(in oklch, var(--muted), transparent 70%);
-}
-
-.dropdown:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring, var(--primary));
-}
-
-.dropdownIcon {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  color: var(--muted-foreground);
-}
-
-.dropdownMenu {
-  min-width: 12rem;
-}
-
-.dropdownItem {
+/* Pinned to the card bottom — stays in place while the folders scroll. */
+.pager {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.625rem 0 0.125rem;
+  border-top: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--card) 90%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.range {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
 }
-
-.dropdownCheck {
-  width: 1rem;
-  height: 1rem;
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
 
 .content {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow: hidden;
-}
-
-.bands {
-  display: flex;
-  flex-direction: column;
-  gap: 1.375rem;
-}
-
-.band {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  /* Visible (not hidden) so the sticky pager can pin to the viewport. */
+  overflow: visible;
 }
 
 .head {
@@ -119,13 +82,6 @@
   align-items: center;
   gap: 0.5rem;
   min-height: 1.75rem;
-}
-
-.headTitle {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--foreground);
 }
 
 .headCount {
@@ -136,46 +92,40 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 1rem 0.75rem;
 }
 
-.block {
+.folderBtn {
   display: flex;
-  align-items: center;
-  gap: 0.4375rem;
-  min-height: 52px;
-  padding: 0.4375rem 0.625rem;
-  border: 1px solid var(--border);
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
   border-radius: var(--radius-md);
-  background-color: var(--card);
+  background: transparent;
   cursor: pointer;
-  text-align: left;
   font: inherit;
-  color: var(--foreground);
-  transition: transform 150ms ease-out, box-shadow 150ms ease-out,
-    border-color 150ms ease-out, background-color 150ms ease-out;
   animation: rise 240ms ease-out both;
   will-change: transform;
 }
 
-.block:hover {
+.folderBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.3);
-  border-color: color-mix(in oklch, var(--primary), transparent 50%);
 }
 
-.block:focus-visible {
+.folderBtn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--ring, var(--primary));
-  border-color: var(--primary);
 }
 
-.blockSelected {
-  border-color: var(--primary);
-  background-color: color-mix(in oklch, var(--primary), transparent 92%);
-  box-shadow: 0 0 0 1px var(--primary), 0 6px 16px -10px rgba(0, 0, 0, 0.4);
-  transform: translateY(-1px);
+/* Invisible filler slots — keep every page's grid height identical so the
+   sticky pager never moves when turning pages. */
+.gridFiller {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @keyframes rise {
@@ -187,72 +137,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.blockText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.0625rem;
-  min-width: 0;
-}
-
-.blockName {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.blockLrn {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--muted-foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.legend {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  flex-wrap: wrap;
-  padding-top: 0.875rem;
-  border-top: 1px solid var(--border);
-}
-
-.legendTitle {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted-foreground);
-}
-
-.legendItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3125rem;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.legendDot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  flex-shrink: 0;
 }
 
 .empty {
@@ -273,57 +157,32 @@
   height: 1.5rem;
 }
 
-.skelHead {
-  width: 120px;
-  height: 1rem;
-  border-radius: 3px;
-}
-
-.skelBlock {
-  display: flex;
-  align-items: center;
-  gap: 0.4375rem;
-  min-height: 52px;
-  padding: 0.4375rem 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-}
-
-.skelDot {
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.skelText {
+.skelFolder {
   display: flex;
   flex-direction: column;
-  gap: 0.3125rem;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem;
 }
 
-.skelName {
-  width: 70%;
+.skelFolderShape {
+  width: 120px;
+  height: 100px;
+  border-radius: 6px;
+}
+
+.skelFolderLabel {
+  width: 80px;
   height: 0.75rem;
   border-radius: 3px;
 }
 
-.skelLrn {
-  width: 45%;
-  height: 0.625rem;
-  border-radius: 3px;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .block {
+  .folderBtn {
     animation: none !important;
   }
 
-  .block:hover,
-  .blockSelected {
+  .folderBtn:hover {
     transform: none;
   }
 }

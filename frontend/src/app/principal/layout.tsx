@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/providers";
-import { StaffSidebar } from "@/components/staff-sidebar";
+import { PrincipalNavbar } from "@/components/principal-navbar";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -20,6 +20,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
+import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { PrincipalBell } from "./components/PrincipalBell";
+import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
 import { GradeModeProvider, useGradeMode } from "./grade-mode-context";
 import styles from "./principal.module.css";
 
@@ -52,10 +55,14 @@ function GradeBasisSelector() {
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isMobile, openMobile, setOpenMobile } = useSidebar();
+  const { openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  // Live inbox: a toast pops on the current page the moment something lands
+  // (e.g. a master teacher sends slots for review), plus the bell and the
+  // approval queue refresh. Single channel per mount.
+  usePrincipalRealtime();
 
   React.useEffect(() => {
     setMounted(true);
@@ -76,7 +83,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           className={styles.menuButton}
-          aria-label={openMobile ? "Close sidebar" : "Open sidebar"}
+          aria-label={openMobile ? "Close navigation" : "Open navigation"}
           aria-expanded={openMobile}
           onClick={() => setOpenMobile(!openMobile)}
         >
@@ -93,6 +100,8 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
 
         <div className={styles.spacer} />
 
+        <ActiveTermBadge />
+
         <div className={styles.search}>
           <Command shouldFilter={false} className={styles.searchCommand}>
             <CommandInput
@@ -102,6 +111,8 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
             />
           </Command>
         </div>
+
+        <PrincipalBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -173,10 +184,8 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <StaffSidebar />
-      <div
-        className={`${styles.shell} ${!isMobile ? styles.shellExpanded : ""}`}
-      >
+      <PrincipalNavbar />
+      <div className={styles.shell}>
         <main className={styles.main}>{children}</main>
       </div>
     </div>

@@ -35,7 +35,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 17.5rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 20rem;
   gap: 1.25rem;
   align-items: start;
   min-width: 0;

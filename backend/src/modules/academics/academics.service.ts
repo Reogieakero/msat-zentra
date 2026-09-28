@@ -96,13 +96,37 @@ export interface HonorRollCandidateDTO {
 }
 
 export async function getAcademicsSummary(
-  mode: "raw" | "final" = "final"
+  mode: "raw" | "final" = "final",
+  scope?: { schoolYearId?: string | null; termId?: string | null },
 ): Promise<AcademicsSummary> {
-  const activeTerm = await prisma.term.findFirst({
-    where: { schoolYear: { isActive: true } },
-    orderBy: { termNumber: "asc" },
-    select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
-  });
+  // Scoped to the session's active School Year + Term (req.termScope).
+  // Falls back to the database-active year so legacy callers keep working.
+  let activeTerm: {
+    id: string;
+    termNumber: number;
+    startDate: Date | null;
+    schoolYear: { name: string };
+  } | null = null;
+  if (scope?.termId) {
+    activeTerm = await prisma.term.findUnique({
+      where: { id: scope.termId },
+      select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
+    });
+  }
+  if (!activeTerm && scope?.schoolYearId) {
+    activeTerm = await prisma.term.findFirst({
+      where: { schoolYearId: scope.schoolYearId },
+      orderBy: { termNumber: "asc" },
+      select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
+    });
+  }
+  if (!activeTerm) {
+    activeTerm = await prisma.term.findFirst({
+      where: { schoolYear: { isActive: true } },
+      orderBy: { termNumber: "asc" },
+      select: { id: true, termNumber: true, startDate: true, schoolYear: { select: { name: true } } },
+    });
+  }
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
   const schoolYear = activeTerm?.schoolYear?.name ?? "No active school year";
@@ -231,7 +255,10 @@ export async function getAcademicsSummary(
             : true
         )
         .filter((f) => f.transmutedGrade != null && f.computedAverage != null);
-      if (finals.length === 0) continue;
+      // Every name on the advisory roster (registered profile or enlisted
+      // roster entry) is listed — account or grade status never excludes
+      // anyone. Students without encoded grades get an empty subject list.
+      const hasGrades = finals.length > 0;
 
       const subjects: StudentSubjectDTO[] = finals.map((f) => {
         const transmutedGrade = f.transmutedGrade as number;
@@ -245,12 +272,17 @@ export async function getAcademicsSummary(
         };
       });
 
-      const overallAverage = round1(
-        subjects.reduce((a, s) => a + s.transmutedGrade, 0) / subjects.length
-      );
+      const overallAverage = hasGrades
+        ? round1(
+            subjects.reduce((a, s) => a + s.transmutedGrade, 0) / subjects.length
+          )
+        : 0;
 
-      if (overallAverage >= 75) gradeAcc.passed += 1;
-      else gradeAcc.failed += 1;
+      // Pass/fail only counts students with encoded grades.
+      if (hasGrades) {
+        if (overallAverage >= 75) gradeAcc.passed += 1;
+        else gradeAcc.failed += 1;
+      }
 
       // Live risk level via the shared engine (do NOT trust the stale stored
       // riskLevel column — must match the Risk board/students pages).
@@ -289,61 +321,69 @@ export async function getAcademicsSummary(
         subjects,
       });
 
-      // Honor roll (DepEd): only when every subject grade is locked/finalized,
-      // and the student is not High risk.
-      const allLocked = finals.every(
-        (f) => f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
-      );
-      if (allLocked && liveLevel !== "High") {
-        const lowestSubject = subjects.reduce(
-          (min, s) => Math.min(min, s.transmutedGrade),
-          Infinity
+      // Honor roll (DepEd): only students with encoded grades, every subject
+      // grade locked/finalized, and the student is not High risk.
+      if (hasGrades) {
+        const allLocked = finals.every(
+          (f) => f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
         );
-        const tier = classifyHonorRoll(overallAverage, lowestSubject);
-        if (tier) {
-          honorRollPool.push({
-            studentId: student.userId,
-            name: student.fullName,
-            overallAverage,
-            tier,
-          });
-        }
-      } else if (!allLocked && liveLevel !== "High") {
-        // Potential engine: current raw partial grades already meet a band, so the
-        // student can still reach the honor roll once remaining grades are locked.
-        const lowestSubject = subjects.reduce(
-          (min, s) => Math.min(min, s.transmutedGrade),
-          Infinity
-        );
-        const tier = classifyHonorRoll(overallAverage, lowestSubject);
-        if (tier) {
-          const unlockedSubjects = finals.filter(
-            (f) =>
-              f.lockStatus !== "locked" &&
-              f.lockStatus !== "adviser_approved" &&
-              f.finalizedAt == null
-          ).length;
-          potentialPool.push({
-            studentId: student.userId,
-            name: student.fullName,
-            overallAverage,
-            tier,
-            unlockedSubjects,
-          });
+        if (allLocked && liveLevel !== "High") {
+          const lowestSubject = subjects.reduce(
+            (min, s) => Math.min(min, s.transmutedGrade),
+            Infinity
+          );
+          const tier = classifyHonorRoll(overallAverage, lowestSubject);
+          if (tier) {
+            honorRollPool.push({
+              studentId: student.userId,
+              name: student.fullName,
+              overallAverage,
+              tier,
+            });
+          }
+        } else if (!allLocked && liveLevel !== "High") {
+          // Potential engine: current raw partial grades already meet a band, so the
+          // student can still reach the honor roll once remaining grades are locked.
+          const lowestSubject = subjects.reduce(
+            (min, s) => Math.min(min, s.transmutedGrade),
+            Infinity
+          );
+          const tier = classifyHonorRoll(overallAverage, lowestSubject);
+          if (tier) {
+            const unlockedSubjects = finals.filter(
+              (f) =>
+                f.lockStatus !== "locked" &&
+                f.lockStatus !== "adviser_approved" &&
+                f.finalizedAt == null
+            ).length;
+            potentialPool.push({
+              studentId: student.userId,
+              name: student.fullName,
+              overallAverage,
+              tier,
+              unlockedSubjects,
+            });
+          }
         }
       }
     }
 
     passFailMap.set(grade, gradeAcc);
 
-    if (students.length === 0) continue;
-
-    const avgTransmuted = round1(
-      students.reduce((a, s) => a + s.overallAverage, 0) / students.length
-    );
-    const failed = students.filter((s) => s.overallAverage < 75).length;
-    const failPct = round1((failed / students.length) * 100);
-    const passPct = round1(100 - failPct);
+    // Section aggregates only cover students with encoded grades, so
+    // gradeless roster members never drag averages or pass rates. Sections
+    // are always listed, even when nobody has grades yet.
+    const graded = students.filter((s) => s.subjects.length > 0);
+    const avgTransmuted =
+      graded.length > 0
+        ? round1(
+            graded.reduce((a, s) => a + s.overallAverage, 0) / graded.length
+          )
+        : 0;
+    const failed = graded.filter((s) => s.overallAverage < 75).length;
+    const failPct =
+      graded.length > 0 ? round1((failed / graded.length) * 100) : 0;
+    const passPct = graded.length > 0 ? round1(100 - failPct) : 0;
     const atRiskCount = students.filter(
       (s) => s.riskLevel === "High" || s.riskLevel === "Moderate"
     ).length;

@@ -1,19 +1,20 @@
 "use client";
 
-import * as React from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Cat, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchMyRecords } from "@/components/ocform01/folders";
-import { AnecdotalRepoSidebar } from "./components/AnecdotalRepoSidebar";
 import { AnecdotalRepoFolders } from "./components/AnecdotalRepoFolders";
+import { FolderLegendCard, TopAttentionCard } from "./components/AnecdotalSideRail";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/anecdotal-repo.module.css";
 
 /**
- * Teacher anecdotal repository: every anecdotal record the adviser filed,
- * with the same sidebar + folder-grid layout as the guidance desk.
- * Filing happens in Chat with Bama (New record button).
+ * Teacher anecdotal repository: a stored-files message when nothing is
+ * filed yet; the sidebar + folder grid once records exist. Filing happens
+ * in Chat with Bama (New record button).
  */
 export default function TeacherAnecdotalPage() {
   const recordsQuery = useQuery({
@@ -24,77 +25,14 @@ export default function TeacherAnecdotalPage() {
   });
   const records = recordsQuery.data ?? [];
 
-  // The panel inherits the sidebar stack's accumulated height exactly
-  // The panel inherits the sidebar stack's accumulated height exactly:
-  // measure the inner content stack (never the stretched grid item, which
-  // can only ratchet upward) and pin the main column to it — the folder
-  // grid scrolls inside. Disabled on mobile where the columns stack.
-  const sideRef = React.useRef<HTMLDivElement>(null);
-  const [panelHeight, setPanelHeight] = React.useState<number | null>(null);
-
-  React.useEffect(() => {
-    const el = sideRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const update = () => {
-      if (window.innerWidth < 900) {
-        setPanelHeight(null);
-        return;
-      }
-      const h = el.offsetHeight;
-      setPanelHeight((prev) => (prev === h ? prev : h));
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  });
-
   if (recordsQuery.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading filed records">
-        <div className={styles.layout}>
-          <aside className={styles.side}>
-            <div ref={sideRef} className={styles.sideInner}>
-            <div className={styles.skelCard} aria-hidden>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <Skeleton className={styles.skelDonut} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendDot} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={styles.skelCard} aria-hidden>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <Skeleton className={styles.skelBar} />
-              <Skeleton className={styles.skelBar} />
-            </div>
-            </div>
-          </aside>
-          <div className={styles.main} style={panelHeight ? { height: panelHeight } : undefined}>
-            <div className={styles.skelPanel} aria-hidden>
-              <Skeleton className={styles.skelPanelTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
-              <div className={styles.skelActions}>
-                <Skeleton className={styles.skelSearch} />
-                <Skeleton className={styles.skelDrop} />
-                <Skeleton className={styles.skelBtn} />
-              </div>
-              <div className={styles.skelFolderGrid}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i}>
-                    <Skeleton className={styles.skelFolder} />
-                    <Skeleton className={styles.skelFolderLabel} />
-                    <Skeleton className={styles.skelFolderSub} />
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className={assign.card} aria-hidden>
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-64" />
           </div>
         </div>
       </section>
@@ -124,17 +62,50 @@ export default function TeacherAnecdotalPage() {
     );
   }
 
+  if (records.length === 0) {
+    return (
+      <section className={`${styles.page} flex min-h-[60vh] flex-1 flex-col justify-center`}>
+        <div className={`${assign.card} mx-auto w-full max-w-md`}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center gap-2 py-8 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <FolderOpen size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">No files stored yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Files you file through Chat with Bama will appear here once stored.
+            </p>
+            <Button asChild size="sm" className="mt-2">
+              <Link href="/teacher/chat">
+                <Cat size={16} aria-hidden="true" />
+                Chat with Bama
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.page}>
-      <div className={styles.layout}>
-        <aside className={styles.side}>
-          <div ref={sideRef} className={styles.sideInner}>
-          <AnecdotalRepoSidebar records={records} />
-          </div>
-        </aside>
-        <div className={styles.main} style={panelHeight ? { height: panelHeight } : undefined}>
+      <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className={`${styles.main} flex min-w-0 flex-col`}>
           <AnecdotalRepoFolders records={records} />
         </div>
+        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
+          <TopAttentionCard records={records} />
+          <FolderLegendCard />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-4 lg:hidden">
+        <TopAttentionCard records={records} />
+        <FolderLegendCard />
       </div>
     </section>
   );

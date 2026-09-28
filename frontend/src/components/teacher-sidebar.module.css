@@ -100,3 +100,47 @@
     transition: none;
   }
 }
+
+/* CardNav floating top bar (navbar links layout): fixed under the real
+   topbar; the menu expands over page content, below dialogs. */
+.cardNavWrap {
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  right: 0;
+  z-index: 35;
+  pointer-events: none;
+}
+
+.cardNavWrap nav {
+  pointer-events: auto;
+}
+
+/* Branched left rail (sidebar links layout): fixed under the topbar,
+   above page content but below the topbar, tab bar, and overlays. */
+.rail {
+  display: none;
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  bottom: 0;
+  width: 16rem;
+  z-index: 31;
+  overflow-y: auto;
+  background-color: var(--background);
+  padding: 1rem 0.75rem 2rem 1.25rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.tabsMobile {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .railDesktop {
+    display: block;
+  }
+  .tabsMobile {
+    display: none;
+  }
+}

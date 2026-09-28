@@ -186,6 +186,8 @@ export type SubjectWhereInput = {
   finalGrades?: Prisma.FinalGradeListRelationFilter
   assignments?: Prisma.TeacherSubjectAssignmentListRelationFilter
   gradeFlags?: Prisma.GradeFlagListRelationFilter
+  timetableEntries?: Prisma.SectionTimetableEntryListRelationFilter
+  attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
 }
 
 export type SubjectOrderByWithRelationInput = {
@@ -198,6 +200,8 @@ export type SubjectOrderByWithRelationInput = {
   finalGrades?: Prisma.FinalGradeOrderByRelationAggregateInput
   assignments?: Prisma.TeacherSubjectAssignmentOrderByRelationAggregateInput
   gradeFlags?: Prisma.GradeFlagOrderByRelationAggregateInput
+  timetableEntries?: Prisma.SectionTimetableEntryOrderByRelationAggregateInput
+  attendanceRecords?: Prisma.AttendanceRecordOrderByRelationAggregateInput
 }
 
 export type SubjectWhereUniqueInput = Prisma.AtLeast<{
@@ -214,6 +218,8 @@ export type SubjectWhereUniqueInput = Prisma.AtLeast<{
   finalGrades?: Prisma.FinalGradeListRelationFilter
   assignments?: Prisma.TeacherSubjectAssignmentListRelationFilter
   gradeFlags?: Prisma.GradeFlagListRelationFilter
+  timetableEntries?: Prisma.SectionTimetableEntryListRelationFilter
+  attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
 }, "id" | "code_gradeLevel">
 
 export type SubjectOrderByWithAggregationInput = {
@@ -248,6 +254,8 @@ export type SubjectCreateInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectUncheckedCreateInput = {
@@ -260,6 +268,8 @@ export type SubjectUncheckedCreateInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectUpdateInput = {
@@ -272,6 +282,8 @@ export type SubjectUpdateInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectUncheckedUpdateInput = {
@@ -284,6 +296,8 @@ export type SubjectUncheckedUpdateInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectCreateManyInput = {
@@ -344,6 +358,11 @@ export type SubjectScalarRelationFilter = {
   isNot?: Prisma.SubjectWhereInput
 }
 
+export type SubjectNullableScalarRelationFilter = {
+  is?: Prisma.SubjectWhereInput | null
+  isNot?: Prisma.SubjectWhereInput | null
+}
+
 export type EnumSubjectCategoryFieldUpdateOperationsInput = {
   set?: $Enums.SubjectCategory
 }
@@ -360,6 +379,20 @@ export type SubjectUpdateOneRequiredWithoutAssignmentsNestedInput = {
   upsert?: Prisma.SubjectUpsertWithoutAssignmentsInput
   connect?: Prisma.SubjectWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.SubjectUpdateToOneWithWhereWithoutAssignmentsInput, Prisma.SubjectUpdateWithoutAssignmentsInput>, Prisma.SubjectUncheckedUpdateWithoutAssignmentsInput>
+}
+
+export type SubjectCreateNestedOneWithoutTimetableEntriesInput = {
+  create?: Prisma.XOR<Prisma.SubjectCreateWithoutTimetableEntriesInput, Prisma.SubjectUncheckedCreateWithoutTimetableEntriesInput>
+  connectOrCreate?: Prisma.SubjectCreateOrConnectWithoutTimetableEntriesInput
+  connect?: Prisma.SubjectWhereUniqueInput
+}
+
+export type SubjectUpdateOneRequiredWithoutTimetableEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.SubjectCreateWithoutTimetableEntriesInput, Prisma.SubjectUncheckedCreateWithoutTimetableEntriesInput>
+  connectOrCreate?: Prisma.SubjectCreateOrConnectWithoutTimetableEntriesInput
+  upsert?: Prisma.SubjectUpsertWithoutTimetableEntriesInput
+  connect?: Prisma.SubjectWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SubjectUpdateToOneWithWhereWithoutTimetableEntriesInput, Prisma.SubjectUpdateWithoutTimetableEntriesInput>, Prisma.SubjectUncheckedUpdateWithoutTimetableEntriesInput>
 }
 
 export type SubjectCreateNestedOneWithoutGradeComponentsInput = {
@@ -404,6 +437,22 @@ export type SubjectUpdateOneRequiredWithoutGradeFlagsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SubjectUpdateToOneWithWhereWithoutGradeFlagsInput, Prisma.SubjectUpdateWithoutGradeFlagsInput>, Prisma.SubjectUncheckedUpdateWithoutGradeFlagsInput>
 }
 
+export type SubjectCreateNestedOneWithoutAttendanceRecordsInput = {
+  create?: Prisma.XOR<Prisma.SubjectCreateWithoutAttendanceRecordsInput, Prisma.SubjectUncheckedCreateWithoutAttendanceRecordsInput>
+  connectOrCreate?: Prisma.SubjectCreateOrConnectWithoutAttendanceRecordsInput
+  connect?: Prisma.SubjectWhereUniqueInput
+}
+
+export type SubjectUpdateOneWithoutAttendanceRecordsNestedInput = {
+  create?: Prisma.XOR<Prisma.SubjectCreateWithoutAttendanceRecordsInput, Prisma.SubjectUncheckedCreateWithoutAttendanceRecordsInput>
+  connectOrCreate?: Prisma.SubjectCreateOrConnectWithoutAttendanceRecordsInput
+  upsert?: Prisma.SubjectUpsertWithoutAttendanceRecordsInput
+  disconnect?: Prisma.SubjectWhereInput | boolean
+  delete?: Prisma.SubjectWhereInput | boolean
+  connect?: Prisma.SubjectWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SubjectUpdateToOneWithWhereWithoutAttendanceRecordsInput, Prisma.SubjectUpdateWithoutAttendanceRecordsInput>, Prisma.SubjectUncheckedUpdateWithoutAttendanceRecordsInput>
+}
+
 export type SubjectCreateWithoutAssignmentsInput = {
   id?: string
   name: string
@@ -413,6 +462,8 @@ export type SubjectCreateWithoutAssignmentsInput = {
   gradeComponents?: Prisma.GradeComponentCreateNestedManyWithoutSubjectInput
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectUncheckedCreateWithoutAssignmentsInput = {
@@ -424,6 +475,8 @@ export type SubjectUncheckedCreateWithoutAssignmentsInput = {
   gradeComponents?: Prisma.GradeComponentUncheckedCreateNestedManyWithoutSubjectInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectCreateOrConnectWithoutAssignmentsInput = {
@@ -451,6 +504,8 @@ export type SubjectUpdateWithoutAssignmentsInput = {
   gradeComponents?: Prisma.GradeComponentUpdateManyWithoutSubjectNestedInput
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectUncheckedUpdateWithoutAssignmentsInput = {
@@ -462,6 +517,76 @@ export type SubjectUncheckedUpdateWithoutAssignmentsInput = {
   gradeComponents?: Prisma.GradeComponentUncheckedUpdateManyWithoutSubjectNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSubjectNestedInput
+}
+
+export type SubjectCreateWithoutTimetableEntriesInput = {
+  id?: string
+  name: string
+  code: string
+  gradeLevel: $Enums.GradeLevel
+  category?: $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentCreateNestedManyWithoutSubjectInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutSubjectInput
+  assignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSubjectInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSubjectInput
+}
+
+export type SubjectUncheckedCreateWithoutTimetableEntriesInput = {
+  id?: string
+  name: string
+  code: string
+  gradeLevel: $Enums.GradeLevel
+  category?: $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentUncheckedCreateNestedManyWithoutSubjectInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutSubjectInput
+  assignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSubjectInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSubjectInput
+}
+
+export type SubjectCreateOrConnectWithoutTimetableEntriesInput = {
+  where: Prisma.SubjectWhereUniqueInput
+  create: Prisma.XOR<Prisma.SubjectCreateWithoutTimetableEntriesInput, Prisma.SubjectUncheckedCreateWithoutTimetableEntriesInput>
+}
+
+export type SubjectUpsertWithoutTimetableEntriesInput = {
+  update: Prisma.XOR<Prisma.SubjectUpdateWithoutTimetableEntriesInput, Prisma.SubjectUncheckedUpdateWithoutTimetableEntriesInput>
+  create: Prisma.XOR<Prisma.SubjectCreateWithoutTimetableEntriesInput, Prisma.SubjectUncheckedCreateWithoutTimetableEntriesInput>
+  where?: Prisma.SubjectWhereInput
+}
+
+export type SubjectUpdateToOneWithWhereWithoutTimetableEntriesInput = {
+  where?: Prisma.SubjectWhereInput
+  data: Prisma.XOR<Prisma.SubjectUpdateWithoutTimetableEntriesInput, Prisma.SubjectUncheckedUpdateWithoutTimetableEntriesInput>
+}
+
+export type SubjectUpdateWithoutTimetableEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  category?: Prisma.EnumSubjectCategoryFieldUpdateOperationsInput | $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentUpdateManyWithoutSubjectNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutSubjectNestedInput
+  assignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSubjectNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSubjectNestedInput
+}
+
+export type SubjectUncheckedUpdateWithoutTimetableEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  category?: Prisma.EnumSubjectCategoryFieldUpdateOperationsInput | $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentUncheckedUpdateManyWithoutSubjectNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput
+  assignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSubjectNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectCreateWithoutGradeComponentsInput = {
@@ -473,6 +598,8 @@ export type SubjectCreateWithoutGradeComponentsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectUncheckedCreateWithoutGradeComponentsInput = {
@@ -484,6 +611,8 @@ export type SubjectUncheckedCreateWithoutGradeComponentsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectCreateOrConnectWithoutGradeComponentsInput = {
@@ -511,6 +640,8 @@ export type SubjectUpdateWithoutGradeComponentsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectUncheckedUpdateWithoutGradeComponentsInput = {
@@ -522,6 +653,8 @@ export type SubjectUncheckedUpdateWithoutGradeComponentsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectCreateWithoutFinalGradesInput = {
@@ -533,6 +666,8 @@ export type SubjectCreateWithoutFinalGradesInput = {
   gradeComponents?: Prisma.GradeComponentCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectUncheckedCreateWithoutFinalGradesInput = {
@@ -544,6 +679,8 @@ export type SubjectUncheckedCreateWithoutFinalGradesInput = {
   gradeComponents?: Prisma.GradeComponentUncheckedCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSubjectInput
   gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectCreateOrConnectWithoutFinalGradesInput = {
@@ -571,6 +708,8 @@ export type SubjectUpdateWithoutFinalGradesInput = {
   gradeComponents?: Prisma.GradeComponentUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectUncheckedUpdateWithoutFinalGradesInput = {
@@ -582,6 +721,8 @@ export type SubjectUncheckedUpdateWithoutFinalGradesInput = {
   gradeComponents?: Prisma.GradeComponentUncheckedUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSubjectNestedInput
   gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectCreateWithoutGradeFlagsInput = {
@@ -593,6 +734,8 @@ export type SubjectCreateWithoutGradeFlagsInput = {
   gradeComponents?: Prisma.GradeComponentCreateNestedManyWithoutSubjectInput
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectUncheckedCreateWithoutGradeFlagsInput = {
@@ -604,6 +747,8 @@ export type SubjectUncheckedCreateWithoutGradeFlagsInput = {
   gradeComponents?: Prisma.GradeComponentUncheckedCreateNestedManyWithoutSubjectInput
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutSubjectInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubjectInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSubjectInput
 }
 
 export type SubjectCreateOrConnectWithoutGradeFlagsInput = {
@@ -631,6 +776,8 @@ export type SubjectUpdateWithoutGradeFlagsInput = {
   gradeComponents?: Prisma.GradeComponentUpdateManyWithoutSubjectNestedInput
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSubjectNestedInput
 }
 
 export type SubjectUncheckedUpdateWithoutGradeFlagsInput = {
@@ -642,6 +789,76 @@ export type SubjectUncheckedUpdateWithoutGradeFlagsInput = {
   gradeComponents?: Prisma.GradeComponentUncheckedUpdateManyWithoutSubjectNestedInput
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput
   assignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubjectNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSubjectNestedInput
+}
+
+export type SubjectCreateWithoutAttendanceRecordsInput = {
+  id?: string
+  name: string
+  code: string
+  gradeLevel: $Enums.GradeLevel
+  category?: $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentCreateNestedManyWithoutSubjectInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutSubjectInput
+  assignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutSubjectInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubjectInput
+}
+
+export type SubjectUncheckedCreateWithoutAttendanceRecordsInput = {
+  id?: string
+  name: string
+  code: string
+  gradeLevel: $Enums.GradeLevel
+  category?: $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentUncheckedCreateNestedManyWithoutSubjectInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutSubjectInput
+  assignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSubjectInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutSubjectInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubjectInput
+}
+
+export type SubjectCreateOrConnectWithoutAttendanceRecordsInput = {
+  where: Prisma.SubjectWhereUniqueInput
+  create: Prisma.XOR<Prisma.SubjectCreateWithoutAttendanceRecordsInput, Prisma.SubjectUncheckedCreateWithoutAttendanceRecordsInput>
+}
+
+export type SubjectUpsertWithoutAttendanceRecordsInput = {
+  update: Prisma.XOR<Prisma.SubjectUpdateWithoutAttendanceRecordsInput, Prisma.SubjectUncheckedUpdateWithoutAttendanceRecordsInput>
+  create: Prisma.XOR<Prisma.SubjectCreateWithoutAttendanceRecordsInput, Prisma.SubjectUncheckedCreateWithoutAttendanceRecordsInput>
+  where?: Prisma.SubjectWhereInput
+}
+
+export type SubjectUpdateToOneWithWhereWithoutAttendanceRecordsInput = {
+  where?: Prisma.SubjectWhereInput
+  data: Prisma.XOR<Prisma.SubjectUpdateWithoutAttendanceRecordsInput, Prisma.SubjectUncheckedUpdateWithoutAttendanceRecordsInput>
+}
+
+export type SubjectUpdateWithoutAttendanceRecordsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  category?: Prisma.EnumSubjectCategoryFieldUpdateOperationsInput | $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentUpdateManyWithoutSubjectNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutSubjectNestedInput
+  assignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutSubjectNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutSubjectNestedInput
+}
+
+export type SubjectUncheckedUpdateWithoutAttendanceRecordsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
+  category?: Prisma.EnumSubjectCategoryFieldUpdateOperationsInput | $Enums.SubjectCategory
+  gradeComponents?: Prisma.GradeComponentUncheckedUpdateManyWithoutSubjectNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutSubjectNestedInput
+  assignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSubjectNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutSubjectNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubjectNestedInput
 }
 
 
@@ -654,6 +871,8 @@ export type SubjectCountOutputType = {
   finalGrades: number
   assignments: number
   gradeFlags: number
+  timetableEntries: number
+  attendanceRecords: number
 }
 
 export type SubjectCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -661,6 +880,8 @@ export type SubjectCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   finalGrades?: boolean | SubjectCountOutputTypeCountFinalGradesArgs
   assignments?: boolean | SubjectCountOutputTypeCountAssignmentsArgs
   gradeFlags?: boolean | SubjectCountOutputTypeCountGradeFlagsArgs
+  timetableEntries?: boolean | SubjectCountOutputTypeCountTimetableEntriesArgs
+  attendanceRecords?: boolean | SubjectCountOutputTypeCountAttendanceRecordsArgs
 }
 
 /**
@@ -701,6 +922,20 @@ export type SubjectCountOutputTypeCountGradeFlagsArgs<ExtArgs extends runtime.Ty
   where?: Prisma.GradeFlagWhereInput
 }
 
+/**
+ * SubjectCountOutputType without action
+ */
+export type SubjectCountOutputTypeCountTimetableEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SectionTimetableEntryWhereInput
+}
+
+/**
+ * SubjectCountOutputType without action
+ */
+export type SubjectCountOutputTypeCountAttendanceRecordsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AttendanceRecordWhereInput
+}
+
 
 export type SubjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -712,6 +947,8 @@ export type SubjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   finalGrades?: boolean | Prisma.Subject$finalGradesArgs<ExtArgs>
   assignments?: boolean | Prisma.Subject$assignmentsArgs<ExtArgs>
   gradeFlags?: boolean | Prisma.Subject$gradeFlagsArgs<ExtArgs>
+  timetableEntries?: boolean | Prisma.Subject$timetableEntriesArgs<ExtArgs>
+  attendanceRecords?: boolean | Prisma.Subject$attendanceRecordsArgs<ExtArgs>
   _count?: boolean | Prisma.SubjectCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["subject"]>
 
@@ -745,6 +982,8 @@ export type SubjectInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   finalGrades?: boolean | Prisma.Subject$finalGradesArgs<ExtArgs>
   assignments?: boolean | Prisma.Subject$assignmentsArgs<ExtArgs>
   gradeFlags?: boolean | Prisma.Subject$gradeFlagsArgs<ExtArgs>
+  timetableEntries?: boolean | Prisma.Subject$timetableEntriesArgs<ExtArgs>
+  attendanceRecords?: boolean | Prisma.Subject$attendanceRecordsArgs<ExtArgs>
   _count?: boolean | Prisma.SubjectCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SubjectIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -757,6 +996,8 @@ export type $SubjectPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     finalGrades: Prisma.$FinalGradePayload<ExtArgs>[]
     assignments: Prisma.$TeacherSubjectAssignmentPayload<ExtArgs>[]
     gradeFlags: Prisma.$GradeFlagPayload<ExtArgs>[]
+    timetableEntries: Prisma.$SectionTimetableEntryPayload<ExtArgs>[]
+    attendanceRecords: Prisma.$AttendanceRecordPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1162,6 +1403,8 @@ export interface Prisma__SubjectClient<T, Null = never, ExtArgs extends runtime.
   finalGrades<T extends Prisma.Subject$finalGradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Subject$finalGradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FinalGradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assignments<T extends Prisma.Subject$assignmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Subject$assignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeacherSubjectAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlags<T extends Prisma.Subject$gradeFlagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Subject$gradeFlagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  timetableEntries<T extends Prisma.Subject$timetableEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Subject$timetableEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SectionTimetableEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  attendanceRecords<T extends Prisma.Subject$attendanceRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Subject$attendanceRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttendanceRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1682,6 +1925,54 @@ export type Subject$gradeFlagsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.GradeFlagScalarFieldEnum | Prisma.GradeFlagScalarFieldEnum[]
+}
+
+/**
+ * Subject.timetableEntries
+ */
+export type Subject$timetableEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SectionTimetableEntry
+   */
+  select?: Prisma.SectionTimetableEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SectionTimetableEntry
+   */
+  omit?: Prisma.SectionTimetableEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SectionTimetableEntryInclude<ExtArgs> | null
+  where?: Prisma.SectionTimetableEntryWhereInput
+  orderBy?: Prisma.SectionTimetableEntryOrderByWithRelationInput | Prisma.SectionTimetableEntryOrderByWithRelationInput[]
+  cursor?: Prisma.SectionTimetableEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SectionTimetableEntryScalarFieldEnum | Prisma.SectionTimetableEntryScalarFieldEnum[]
+}
+
+/**
+ * Subject.attendanceRecords
+ */
+export type Subject$attendanceRecordsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AttendanceRecord
+   */
+  select?: Prisma.AttendanceRecordSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AttendanceRecord
+   */
+  omit?: Prisma.AttendanceRecordOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AttendanceRecordInclude<ExtArgs> | null
+  where?: Prisma.AttendanceRecordWhereInput
+  orderBy?: Prisma.AttendanceRecordOrderByWithRelationInput | Prisma.AttendanceRecordOrderByWithRelationInput[]
+  cursor?: Prisma.AttendanceRecordWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AttendanceRecordScalarFieldEnum | Prisma.AttendanceRecordScalarFieldEnum[]
 }
 
 /**

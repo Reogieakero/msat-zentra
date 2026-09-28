@@ -14,6 +14,13 @@ export interface AdvisorySectionInfo {
   gradeLevel: string;
 }
 
+export interface AdviseeSubjectGrade {
+  subject: string;
+  code: string;
+  computedAverage: number | null;
+  transmutedGrade: number | null;
+}
+
 export interface AdviseeRow {
   studentId: string;
   name: string;
@@ -29,12 +36,19 @@ export interface AdviseeRow {
   hasOpenFlag: boolean;
   openFlagCount: number;
   hasAccount: boolean;
+  grades: AdviseeSubjectGrade[];
+}
+
+export interface AdvisoryRosterSubject {
+  name: string;
+  code: string;
 }
 
 export interface AdvisoryRoster {
   advisorySections: AdvisorySectionInfo[];
   termId: string | null;
   students: AdviseeRow[];
+  subjects: AdvisoryRosterSubject[];
 }
 
 export interface AdviseeGrade {

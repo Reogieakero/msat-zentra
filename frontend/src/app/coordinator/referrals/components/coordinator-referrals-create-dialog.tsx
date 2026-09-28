@@ -2,7 +2,6 @@
 
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -16,9 +15,8 @@ import styles from "./coordinator-referrals-create-dialog.module.css";
 
 interface CoordinatorReferralsCreateDialogProps {
   target: AdmCaseRow | null;
-  terms: { id: string; termNumber: number }[];
-  termId: string;
-  onTermChange: (v: string) => void;
+  /** Read-only session scope the profile will be filed under. */
+  scopeLabel: string;
   onClose: () => void;
   onConfirm: () => void;
   pending: boolean;
@@ -27,9 +25,7 @@ interface CoordinatorReferralsCreateDialogProps {
 
 export function CoordinatorReferralsCreateDialog({
   target,
-  terms,
-  termId,
-  onTermChange,
+  scopeLabel,
   onClose,
   onConfirm,
   pending,
@@ -50,24 +46,10 @@ export function CoordinatorReferralsCreateDialog({
           </DialogDescription>
         </DialogHeader>
         <div className={styles.formGrid}>
-          <div className={styles.formField}>
-            <Label className={styles.formLabel} htmlFor="coord-term">
-              Term
-            </Label>
-            <select
-              id="coord-term"
-              value={termId}
-              onChange={(e) => onTermChange(e.target.value)}
-              className={styles.select}
-              disabled={pending}
-            >
-              {terms.map((t) => (
-                <option key={t.id} value={t.id}>
-                  Term {t.termNumber}
-                </option>
-              ))}
-            </select>
-          </div>
+          <p className={styles.scopeNote}>
+            Filed under <strong>{scopeLabel}</strong> — the session&apos;s active
+            scope. Change it from the top-bar badge.
+          </p>
         </div>
         <DialogFooter>
           <Button

@@ -19,7 +19,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import header from "../../../adm/components/AdmHeader.module.css";
 import { fetchAdmApprovals, type AdmApprovalRow } from "../../../adm/api";
 import styles from "./all.module.css";
 
@@ -158,12 +157,12 @@ export default function PrincipalAdmApprovalsAllPage() {
     }
     if (gradeTotal === 0) {
       return [
-        "No ADM approvals on record yet — the queue populates after a profile is signed.",
+        "No ADM reports on record yet — the queue populates after a profile is signed.",
         "Eligible, pending, and ineligible counts will surface once data is available.",
       ];
     }
     const items: string[] = [
-      `${gradeTotal} total approval${gradeTotal === 1 ? "" : "s"} on record across ${
+      `${gradeTotal} total report${gradeTotal === 1 ? "" : "s"} on record across ${
         gradeBreakdown.length
       } grade level${gradeBreakdown.length === 1 ? "" : "s"}.`,
       `${eligibilityBreakdown.eligible} eligible (${eligibleShare}%), ${eligibilityBreakdown.pending} pending (${pendingShare}%), ${eligibilityBreakdown.ineligible} ineligible (${ineligibleShare}%).`,
@@ -173,7 +172,7 @@ export default function PrincipalAdmApprovalsAllPage() {
       items.push(
         `${topGrade.grade} leads with ${topGrade.count} case${
           topGrade.count === 1 ? "" : "s"
-        } — ${pct}% of all approvals.`
+        } — ${pct}% of all reports.`
       );
     }
     if (leastGrade && topGrade && leastGrade.grade !== topGrade.grade) {
@@ -212,20 +211,19 @@ export default function PrincipalAdmApprovalsAllPage() {
 
   return (
     <section className={styles.page}>
-      <div className={header.hero}>
-        <h1 className={header.heroTitle}>ADM Cases – Approvals</h1>
-        <p className={header.heroSubtitle}>
-          Cases awaiting your final signature — review, sign, and authorize ADM
-          module release.
+      <div className={styles.pageHead}>
+        <h1 className={styles.pageTitle}>ADM Reports</h1>
+        <p className={styles.pageSub}>
+          Per-case reports with monitoring progress and academic tracking.
         </p>
       </div>
 
       <div className={styles.chartCard}>
         <div className={styles.chartHeader}>
           <div>
-            <h2 className={styles.chartTitle}>Approvals by Grade Level</h2>
+            <h2 className={styles.chartTitle}>Reports by Grade Level</h2>
             <p className={styles.chartSubtitle}>
-              Distribution of signed ADM profiles across grade levels.
+              Distribution of reported ADM profiles across grade levels.
             </p>
           </div>
           <div>
@@ -275,7 +273,7 @@ export default function PrincipalAdmApprovalsAllPage() {
                   </ResponsiveContainer>
                   <div className={styles.donutCenter}>
                     <span className={styles.donutTotal}>{total}</span>
-                    <span className={styles.donutUnit}>total signed</span>
+                    <span className={styles.donutUnit}>reports</span>
                   </div>
                 </>
               )}
@@ -323,10 +321,10 @@ export default function PrincipalAdmApprovalsAllPage() {
       <div className={styles.gridSection}>
         <div className={styles.gridHeader}>
           <div>
-            <h2 className={styles.chartTitle}>Approved ADM Profiles</h2>
+            <h2 className={styles.chartTitle}>ADM Case Reports</h2>
             <p className={styles.chartSubtitle}>
-              Learners you&apos;ve signed and the documents attached to their ADM
-              file.
+              Signed profiles with monitoring progress, academic tracking, and
+              the documents attached to their ADM file.
             </p>
           </div>
           <div className={styles.gridControls}>
@@ -392,10 +390,10 @@ export default function PrincipalAdmApprovalsAllPage() {
           ) : filteredRows.length === 0 ? (
             <div className={styles.gridEmpty}>
               {search.trim()
-                ? `No approved profiles match "${search}".`
+                ? `No ADM reports match "${search}".`
                 : gradeFilter === "all"
-                  ? "No approved ADM profiles yet."
-                  : `No approved profiles in ${gradeFilter}.`}
+                  ? "No ADM reports yet."
+                  : `No ADM reports in ${gradeFilter}.`}
             </div>
           ) : (
             filteredRows.map((r) => (
@@ -408,7 +406,10 @@ export default function PrincipalAdmApprovalsAllPage() {
                     <span className={styles.profileName}>{r.student}</span>
                     <span className={styles.profileLrn}>{r.lrn}</span>
                   </div>
-                  <span className={styles.gradeText}>{r.grade}</span>
+                  <span className={styles.gradeText}>
+                    {r.grade}
+                    {r.sectionName ? ` · ${r.sectionName}` : ""}
+                  </span>
                 </header>
 
                 <div className={styles.profileMeta}>
@@ -436,7 +437,55 @@ export default function PrincipalAdmApprovalsAllPage() {
                           : "Pending"}
                     </span>
                   </div>
+                  <div className={styles.metaRow}>
+                    <span className={styles.metaLabel}>Monitoring</span>
+                    <span className={styles.metaValue}>
+                      {r.modulesTotal > 0
+                        ? `${r.modulesSubmitted}/${r.modulesTotal} modules`
+                        : "No modules released"}
+                      {r.devicesIssued > 0
+                        ? ` · ${r.devicesIssued} device${r.devicesIssued === 1 ? "" : "s"}`
+                        : ""}
+                    </span>
+                  </div>
                 </div>
+
+                <details className={styles.docs}>
+                  <summary className={styles.docsSummary}>
+                    <span className={styles.docsSummaryLabel}>
+                      <FileText aria-hidden />
+                      Subject grades
+                      <span className={styles.docCount}>
+                        {r.subjectGrades?.length ?? 0}
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={styles.docsChevron}
+                      aria-hidden
+                    />
+                  </summary>
+                  <div className={styles.docsBody}>
+                    {r.subjectGrades && r.subjectGrades.length > 0 ? (
+                      <ul className={styles.gradeList}>
+                        {r.subjectGrades.map((g) => (
+                          <li key={g.code} className={styles.gradeRow}>
+                            <span className={styles.gradeName}>{g.subject}</span>
+                            <span className={styles.gradeAvg}>
+                              {g.transmutedGrade ?? "—"}
+                              {g.belowThreshold ? (
+                                <span className={styles.gradeFlag}>below 75</span>
+                              ) : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className={styles.docEmpty}>
+                        No graded subjects this term.
+                      </span>
+                    )}
+                  </div>
+                </details>
 
                 <details className={styles.docs}>
                   <summary className={styles.docsSummary}>

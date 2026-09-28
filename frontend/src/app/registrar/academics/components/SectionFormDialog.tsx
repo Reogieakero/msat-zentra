@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownSelect } from "./DropdownSelect";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   type GradeLevel,
   type Section,
@@ -11,9 +12,7 @@ import {
 } from "../data";
 import {
   createSection,
-  fetchSchoolYears,
   updateSection,
-  type SchoolYearOption,
 } from "../api";
 import { toast } from "@/components/ui/sonner";
 import styles from "./form.module.css";
@@ -23,8 +22,6 @@ type Props = {
   open: boolean;
   section: Section | null;
   teachers: Teacher[];
-  // When omitted, the dialog loads the year list from the database itself.
-  schoolYears?: SchoolYearOption[];
   onOpenChange: (open: boolean) => void;
   onSave: (section: Section) => void;
 };
@@ -43,23 +40,22 @@ export function SectionFormDialog({
   open,
   section,
   teachers,
-  schoolYears: schoolYearsProp,
   onOpenChange,
   onSave,
 }: Props) {
+  // New sections are always created under the session's active School Year
+  // (Login → select → scope). This dialog never asks for a year.
+  const { activeTerm } = useTerm();
   const isEdit = !!section;
   const [name, setName] = React.useState(section?.name ?? "");
   const [gradeLevel, setGradeLevel] = React.useState<GradeLevel>(section?.gradeLevel ?? 11);
-  const [schoolYear, setSchoolYear] = React.useState<string>(section?.schoolYear ?? "");
   const [adviserId, setAdviserId] = React.useState<string>(section?.adviserId ?? "");
-  const [years, setYears] = React.useState<SchoolYearOption[]>(schoolYearsProp ?? []);
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
   // Reset the form every time the dialog opens so edits never leak into "new".
   // Subject assignment lives in the separate "Assign Subjects" dialog, not here.
-  // (Synced during render keyed by open + section id — never in an effect.
-  // The school-year fetch below stays in an effect: only async work lives there.)
+  // (Synced during render keyed by open + section id — never in an effect.)
   const [prevOpen, setPrevOpen] = React.useState(open);
   const [prevSectionId, setPrevSectionId] = React.useState<string | null>(
     section?.id ?? null
@@ -69,26 +65,16 @@ export function SectionFormDialog({
     setPrevSectionId(section?.id ?? null);
     setName(section?.name ?? "");
     setGradeLevel(section?.gradeLevel ?? 11);
-    setSchoolYear(section?.schoolYear ?? "");
     setAdviserId(section?.adviserId ?? "");
     setError(null);
-    if (schoolYearsProp) setYears(schoolYearsProp);
   } else if (!open && prevOpen) {
     setPrevOpen(false);
   }
 
-  React.useEffect(() => {
-    if (!open || schoolYearsProp) return;
-    const ctrl = new AbortController();
-    fetchSchoolYears(ctrl.signal)
-      .then((list) => setYears(list))
-      .catch(() => setYears([]));
-    return () => ctrl.abort();
-  }, [open, schoolYearsProp]);
-
-  // Default the year picker to the section's year, then the active DB year.
-  const effectiveYear =
-    schoolYear || years.find((y) => y.isActive)?.name || years[0]?.name || "";
+  // Editing keeps the section's own year; creating uses the active scope.
+  const effectiveYear = isEdit
+    ? (section?.schoolYear ?? "")
+    : (activeTerm?.schoolYearName ?? "");
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -100,7 +86,7 @@ export function SectionFormDialog({
       return;
     }
     if (!isEdit && !effectiveYear) {
-      setError("No school year available. Ask your admin to add one first.");
+      setError("No active term selected. Pick one from the top-bar badge first.");
       return;
     }
     setError(null);
@@ -142,7 +128,7 @@ export function SectionFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Section" : "New Section"}</DialogTitle>
           <DialogDescription>
-            Create a class section for grades 11–12 within a school year.
+            Create a class section for grades 11–12 within {effectiveYear || "the active school year"}.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,14 +164,9 @@ export function SectionFormDialog({
               <Label className={styles.label} htmlFor="section-year">
                 School Year
               </Label>
-              <DropdownSelect
-                id="section-year"
-                ariaLabel="School year"
-                value={effectiveYear}
-                onValueChange={setSchoolYear}
-                options={years.map((y) => ({ value: y.name, label: y.name }))}
-                placeholder={years.length === 0 ? "No school years found" : "Select year"}
-              />
+              <span className={styles.staticValue} id="section-year">
+                {effectiveYear || "No active term — pick one from the top-bar badge"}
+              </span>
             </div>
           </div>
 

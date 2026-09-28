@@ -116,11 +116,13 @@ export function Sf10AttachFeed() {
           </div>
         )}
       </CardContent>
-      <div className={styles.footer}>
-        <Button className={styles.footerBtn} onClick={goSf10}>
-          View all attachments
-        </Button>
-      </div>
+      {feed.length > 0 && (
+        <div className={styles.footer}>
+          <Button className={styles.footerBtn} onClick={goSf10}>
+            View all attachments
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

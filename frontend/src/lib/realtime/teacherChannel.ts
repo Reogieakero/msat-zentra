@@ -14,6 +14,26 @@ const TEACHER_KEYS = [
   ["referableAnecdotal"],
   ["advisory-students"],
   ["anecdotal-mine"],
+  ["teacher-notifications"],
+  // Scheduling workspace — each key listed explicitly (TanStack matches
+  // query keys element-wise, so ["teacher-schedule"] alone would NOT cover
+  // the catalog/config keys). Keeps the grid, catalogs, and linked states
+  // live on verdicts and code claims with no manual refresh.
+  ["teacher-schedule"],
+  ["teacher-schedule-subjects"],
+  ["teacher-schedule-teachers"],
+  ["teacher-schedule-config"],
+  // Attendance taking — marks, offered subjects, rosters, and linked slots
+  // repaint on every related event with no manual refresh.
+  ["attendance-sheet-marks"],
+  ["attendance-subject-days"],
+  ["attendance-section-summary"],
+  ["attendance-section-matrix"],
+  ["teacher-anecdotes"],
+  ["offered-subjects"],
+  ["advisory-students"],
+  ["attendance-section-roster"],
+  ["teacher-my-slots"],
 ] as const;
 
 interface TeacherNotification {
@@ -26,10 +46,13 @@ interface TeacherNotification {
   createdAt?: string;
 }
 
-// Safety-net poll cadence: only fires when Realtime hasn't delivered (e.g.
-// table missing from the realtime publication). Cheap indexed query, and
-// rows already toasted via Realtime are skipped through `seenIds`.
-const FALLBACK_POLL_MS = 30_000;
+// Poll cadence — this is the actual delivery transport, not just a safety
+// net: the browser Supabase client authenticates as anon (the app's sessions
+// are backend-signed JWTs, not Supabase Auth), so row-scoped Realtime events
+// never reach it even with the table published. Cheap indexed query, and
+// rows already toasted are skipped through `seenIds`. Kept short so
+// principal verdicts surface within seconds.
+const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
 
 /** Current user id from the stored access JWT (backend signs `sub`). */
@@ -59,6 +82,23 @@ function toastTitleFor(n: TeacherNotification): string {
   }
   if (n.type === "referral_status_change") return "Referral update";
   if (n.type === "new_followup") return "New follow-up";
+  // Backend derives these types from sourceTable+action (see notify.ts
+  // TYPE_MAP): section_timetable_entries:approve → schedule_approved, etc.
+  if (n.sourceTable === "section_timetable_entries") {
+    if (n.type === "schedule_approved") return "Schedule approved";
+    if (n.type === "schedule_rejected") return "Schedule sent back";
+    return "Schedule update";
+  }
+  if (n.sourceTable === "teacher_names") {
+    if (n.type === "teacher_code_claimed") return "Teacher code linked";
+    if (n.type === "teacher_code_released") return "Teacher code unlinked";
+    if (n.type === "attendance_unlocked") return "Attendance unlocked";
+    return "Teacher list update";
+  }
+  if (n.sourceTable === "attendance_records") {
+    if (n.type === "attendance_submitted") return "Attendance submitted";
+    return "Attendance update";
+  }
   return "New notification";
 }
 
@@ -69,11 +109,11 @@ function toastTitleFor(n: TeacherNotification): string {
  * (e.g. the moment the ADM coordinator books a parent meeting), plus
  * invalidates the teacher query prefixes so lists refresh.
  *
- * Delivery is two-layer: Supabase Realtime first, plus a 30s polling
- * safety net that toasts anything Realtime failed to deliver (previously a
- * missing realtime publication meant adviser toasts never arrived at all).
- * Rows are deduped by id across both layers, so a healthy connection never
- * double-toasts.
+ * Delivery is two-layer: a 5s backend poll (the working transport — the
+ * anon Supabase client never receives row-scoped Realtime events for
+ * backend-signed sessions) plus the Supabase Realtime subscription as a
+ * bonus path where policies allow. Rows are deduped by id across both
+ * layers, so a healthy connection never double-toasts.
  */
 export function useTeacherRealtime(enabled = true) {
   const queryClient = useQueryClient();
@@ -156,9 +196,16 @@ export function useTeacherRealtime(enabled = true) {
       }
     }
     const timer = window.setInterval(poll, FALLBACK_POLL_MS);
-    // Seed soon after mount so the fallback window is small even when
-    // Realtime connects fine (seed itself never toasts).
-    const seedTimer = window.setTimeout(poll, 5_000);
+    // Seed soon after mount so the missed-toast window is tiny (seed itself
+    // never toasts).
+    const seedTimer = window.setTimeout(poll, 1_000);
+    // Poll the moment the tab regains focus — verdicts that landed while
+    // away surface immediately with no manual refresh.
+    const onFocus = () => {
+      void poll();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
 
     function invalidate() {
       // Throttle bursts to one invalidate per 2s (toasts still fire per row).
@@ -174,6 +221,8 @@ export function useTeacherRealtime(enabled = true) {
       cancelled = true;
       window.clearInterval(timer);
       window.clearTimeout(seedTimer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       try {
         channel?.unsubscribe();
       } catch {

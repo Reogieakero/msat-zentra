@@ -20,8 +20,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import { AdviserClaimGate } from "./components/AdviserClaimGate";
+import { useLinksLayout } from "@/lib/links-layout";
+import { TeacherNotificationsBell } from "./components/TeacherNotificationsBell";
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
 import styles from "./record-teacher.module.css";
+
+/* Per-page breadcrumb slot inside the top navbar (left-aligned with the
+   main panel). Pages publish a memoized node; unmount clears it. */
+const TopbarCrumbContext = React.createContext<{
+  setCrumb: (node: React.ReactNode) => void;
+}>({ setCrumb: () => {} });
+
+export function useTopbarCrumb(crumb: React.ReactNode) {
+  const { setCrumb } = React.useContext(TopbarCrumbContext);
+  React.useEffect(() => {
+    setCrumb(crumb);
+    return () => setCrumb(null);
+  }, [crumb, setCrumb]);
+}
 
 function TeacherShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -33,6 +51,14 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
   // another desk acts on their case (e.g. ADM coordinator books a parent
   // meeting), plus their lists refresh. Single channel per mount.
   useTeacherRealtime();
+
+  const [linksLayout] = useLinksLayout();
+  const railOn = linksLayout === "sidebar";
+  const [topbarCrumb, setTopbarCrumb] = React.useState<React.ReactNode>(null);
+  const setCrumb = React.useCallback(
+    (node: React.ReactNode) => setTopbarCrumb(node),
+    [],
+  );
 
   const isDark = resolvedTheme === "dark";
 
@@ -47,13 +73,18 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
+    <TopbarCrumbContext.Provider value={{ setCrumb }}>
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
         <Link href="/teacher/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
 
+        {topbarCrumb ? <div className={styles.crumb}>{topbarCrumb}</div> : null}
+
         <div className={styles.spacer} />
+
+        <ActiveTermBadge />
 
         <div className={styles.search}>
           <Command shouldFilter={false} className={styles.searchCommand}>
@@ -64,6 +95,8 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
             />
           </Command>
         </div>
+
+        <TeacherNotificationsBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -82,7 +115,13 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
           <DropdownMenuContent align="end" className={styles.accountMenu}>
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={styles.accountItem}>
+            <DropdownMenuItem
+              className={styles.accountItem}
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/teacher/settings");
+              }}
+            >
               <Settings className={styles.accountIcon} />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -163,10 +202,14 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
         </DropdownMenu>
       </header>
       <TeacherSidebar />
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${railOn ? styles.shellWithRail : ""}`}>
         <main className={styles.main}>{children}</main>
       </div>
+      {/* First-login self-onboarding: asks new teachers if they advise, and
+          links their account to the principal-listed section on claim. */}
+      <AdviserClaimGate />
     </div>
+    </TopbarCrumbContext.Provider>
   );
 }
 

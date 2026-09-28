@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
@@ -28,6 +29,7 @@ export interface TeacherActivityRow {
 export interface AdvisoryStatusRow {
   studentId: string;
   name: string;
+  lrn: string;
   section: string;
   riskLevel: "Low" | "Moderate" | "High";
   flag: "academic" | "attendance" | "behavioral" | "none";
@@ -39,7 +41,7 @@ export interface SubjectAssessmentRow {
   subject: string;
   gradeLevel: string;
   section: string;
-  type: "WW" | "PT" | "QE";
+  type: "WW" | "PT" | "E";
   title: string;
   dueDate: string;
   status: string;
@@ -63,6 +65,8 @@ export interface AdvisorySectionInfo {
 export interface TeacherOverviewData {
   teacherName: string;
   isAdviser: boolean;
+  isMasterTeacher: boolean;
+  masterTeacherEligible: boolean;
   advisorySection: AdvisorySectionInfo | null;
   kpi: TeacherKpiRow;
   atRiskFactors: {
@@ -86,6 +90,8 @@ export interface TeacherOverviewData {
 export interface TeacherOverviewCritical {
   teacherName: string;
   isAdviser: boolean;
+  isMasterTeacher: boolean;
+  masterTeacherEligible: boolean;
   advisorySection: AdvisorySectionInfo | null;
   kpi: TeacherKpiRow;
   atRiskFactors: {
@@ -136,6 +142,61 @@ export function teacherOverviewKey(teacherId: string | null | undefined) {
   return ["teacher-overview", teacherId ?? "anon"] as const;
 }
 
+// Master-Teacher flag mirrored per teacher in localStorage so the sidebar
+// tab and the schedule gate paint correctly on the very first frame after a
+// hard refresh — before the overview query resolves. Keys are teacher-scoped
+// and logout wipes every `zentra.*` key, so a flag can never leak across
+// accounts. The live overview always overwrites this on fetch.
+function masterTeacherCacheKey(teacherId: string | null | undefined): string | null {
+  return teacherId ? `zentra.masterTeacher.${teacherId}` : null;
+}
+
+export function readCachedMasterTeacher(teacherId: string | null | undefined): boolean {
+  if (typeof window === "undefined") return false;
+  const key = masterTeacherCacheKey(teacherId);
+  if (!key) return false;
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeCachedMasterTeacher(
+  teacherId: string | null | undefined,
+  value: boolean,
+): void {
+  const key = masterTeacherCacheKey(teacherId);
+  if (!key || typeof window === "undefined") return;
+  try {
+    if (value) window.localStorage.setItem(key, "1");
+    else window.localStorage.removeItem(key);
+  } catch {
+    // Private mode / blocked storage — the live overview stays authoritative.
+  }
+}
+
+function subscribeMasterTeacherCache(onChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+// Hydration-safe first-frame flag. A `useState` initializer reading
+// localStorage renders different tabs on the server (no window) vs the
+// client (cached "1") — a hydration mismatch. `useSyncExternalStore` renders
+// the server snapshot (false) through hydration, then flips to the cached
+// value on the client with a normal re-render. Same-tab toggles flow through
+// the overview query cache; the `storage` listener keeps other open tabs in
+// sync for free.
+export function useCachedMasterTeacher(teacherId: string | null | undefined): boolean {
+  return useSyncExternalStore(
+    subscribeMasterTeacherCache,
+    () => readCachedMasterTeacher(teacherId),
+    () => false,
+  );
+}
+
 export function teacherOverviewSecondaryKey(
   teacherId: string | null | undefined,
 ) {
@@ -149,7 +210,11 @@ export function useTeacherOverview() {
   const teacherId = session?.sub ?? null;
   return useQuery({
     queryKey: teacherOverviewKey(teacherId),
-    queryFn: fetchTeacherOverview,
+    queryFn: async () => {
+      const payload = await fetchTeacherOverview();
+      writeCachedMasterTeacher(teacherId, payload.isMasterTeacher);
+      return payload;
+    },
     enabled: !!teacherId,
     staleTime: OVERVIEW_STALE_MS,
     gcTime: OVERVIEW_GC_MS,

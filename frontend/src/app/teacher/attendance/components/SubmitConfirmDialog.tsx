@@ -16,7 +16,7 @@ import styles from "./SubmitConfirmDialog.module.css";
 interface SubmitConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sessionLabel: string;
+  contextLabel: string;
   dateLabel: string;
   counts: Record<SheetStatus, number>;
   confirming?: boolean;
@@ -26,7 +26,7 @@ interface SubmitConfirmDialogProps {
 export function SubmitConfirmDialog({
   open,
   onOpenChange,
-  sessionLabel,
+  contextLabel,
   dateLabel,
   counts,
   confirming = false,
@@ -42,12 +42,13 @@ export function SubmitConfirmDialog({
         <DialogHeader>
           <DialogTitle>Submit attendance?</DialogTitle>
           <DialogDescription>
-            {sessionLabel} session for {dateLabel} — {parts.join(", ")}.
+            {contextLabel} for {dateLabel} — {parts.join(", ")}.
           </DialogDescription>
         </DialogHeader>
         <p className={styles.note}>
-          This locks the sheet for this session. Students you did not mark
-          are submitted as Present. You can still edit it afterwards from here.
+          This locks the sheet for this subject and period. Students you did
+          not mark are submitted as Present. You can still edit it afterwards
+          from here.
         </p>
         <DialogFooter>
           <Button

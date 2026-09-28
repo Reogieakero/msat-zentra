@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel, OutcomeStatus } from "../../generated/prisma/client.js";
 import { resolveActiveTermId, type GradeMode } from "../../services/risk.js";
+import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface RiskBoardResult {
   kpis: {
@@ -22,18 +23,22 @@ export interface RiskBoardResult {
   }[];
 }
 
-// PLAN.md §6.3 — principal board overview (O4). Aggregates the active school
-// year's student risk state plus per-term snapshots for the trend line.
-// `gradeMode` selects whether the academic factor uses final (transmuted) or
-// raw computed averages.
+// PLAN.md §6.3 — principal board overview (O4). Aggregates the session's
+// active school year student risk state plus per-term snapshots for the trend
+// line. `gradeMode` selects whether the academic factor uses final
+// (transmuted) or raw computed averages.
 export async function getRiskBoard(
-  gradeMode: GradeMode = "final"
+  gradeMode: GradeMode = "final",
+  scope?: TermScopeInput,
 ): Promise<RiskBoardResult> {
-  const activeYear = await prisma.schoolYear.findFirst({
-    where: { isActive: true },
-    select: { id: true },
-  });
-  const schoolYearId = activeYear?.id;
+  const schoolYearId =
+    scope?.schoolYearId ??
+    (
+      await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      })
+    )?.id;
 
   const terms: {
     id: string;
@@ -47,9 +52,9 @@ export async function getRiskBoard(
       })
     : [];
 
-  // Live risk recompute uses the single active-term resolver (same source of
+  // Live risk recompute uses the session's active term (same source of
   // truth as the heatmap/students endpoints) so the board never drifts.
-  const activeTermId = await resolveActiveTermId();
+  const activeTermId = scope?.termId ?? (await resolveActiveTermId());
 
   const [profileStudents, rosterStudents] = await Promise.all([
     prisma.studentProfile.findMany({

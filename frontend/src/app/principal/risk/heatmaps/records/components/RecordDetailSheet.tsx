@@ -209,11 +209,11 @@ export function RecordDetailSheet({
             )}
 
             <div className={styles.sectionHead}>
-              <h3 className={styles.sectionTitle}>Behavioral records</h3>
+              <h3 className={styles.sectionTitle}>Anecdotal records</h3>
             </div>
 
             {student.behavioral.length === 0 ? (
-              <p className={styles.empty}>No behavioral records on file.</p>
+              <p className={styles.empty}>No anecdotal records on file.</p>
             ) : (
               <ol className={styles.timeline}>
                 {student.behavioral.map((rec) => (

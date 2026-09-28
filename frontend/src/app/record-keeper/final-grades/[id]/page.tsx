@@ -220,7 +220,7 @@ export default function FinalGradeDetailPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-current" />
-                  <span>Grades are computed from written works, performance tasks, and quarterly exams.</span>
+                  <span>Grades are computed from written works, performance tasks, and Exams.</span>
                 </li>
               </ul>
             </section>

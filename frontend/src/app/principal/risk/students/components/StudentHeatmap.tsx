@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Grid3X3, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import { FACTOR_CHIP, type BackendHeatmap, type RiskFactor } from "../api";
 import styles from "./StudentHeatmap.module.css";
 
@@ -46,18 +45,17 @@ export function StudentHeatmap({
   const sections = heat?.sections ?? [];
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section aria-label="Section heatmap">
+      <div className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>Section Heatmap</CardTitle>
-          <CardDescription>
+          <h2 className={styles.sectionTitle}>Section Heatmap</h2>
+          <p className={styles.sectionDesc}>
             Intensity of academic, attendance, and behavioral flags per section.
             Select a row to drill into its students.
-          </CardDescription>
+          </p>
         </div>
-        <Grid3X3 className={styles.headerIcon} aria-hidden />
-      </CardHeader>
-      <CardContent className={styles.content}>
+      </div>
+      <div className={styles.tableBody}>
         {loading ? (
           <div className={styles.state}>
             <Loader2 className={styles.spinner} aria-hidden />
@@ -119,7 +117,7 @@ export function StudentHeatmap({
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

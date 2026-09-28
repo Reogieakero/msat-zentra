@@ -114,6 +114,13 @@
   white-space: nowrap;
 }
 
+.subjectChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 .sessionEmpty {
   font-size: 0.6875rem;
   font-style: italic;

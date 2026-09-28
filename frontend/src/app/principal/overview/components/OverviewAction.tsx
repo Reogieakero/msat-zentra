@@ -8,7 +8,6 @@ import {
   CalendarX,
   Award,
   ShieldAlert,
-  ArrowRight,
   UserCog,
 } from "lucide-react";
 import {
@@ -117,7 +116,6 @@ export function OverviewAction() {
                     <span className={styles.actionTitle}>{a.title}</span>
                     <span className={styles.actionCta}>
                       {empty ? "View" : a.cta}
-                      <ArrowRight className={styles.actionCtaIcon} aria-hidden />
                     </span>
                   </button>
                 );

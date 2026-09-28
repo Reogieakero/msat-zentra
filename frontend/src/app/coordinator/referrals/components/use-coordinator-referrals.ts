@@ -15,6 +15,7 @@ import {
   type AdmMeeting,
 } from "../../components/coordinator-data";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
+import { useTerm } from "@/lib/term/TermContext";
 import { ELIG_OPTIONS } from "./coordinator-referrals-constants";
 
 export interface CoordinatorReferralsModel
@@ -83,9 +84,9 @@ interface CoordinatorReferralsDialogs {
   setAdvanceTarget: (r: AdmCaseRow | null) => void;
   createTarget: AdmCaseRow | null;
   setCreateTarget: (r: AdmCaseRow | null) => void;
+  /** Session's active term — profiles are filed under it, never picked here. */
   termId: string;
-  setTermId: (v: string) => void;
-  terms: { id: string; termNumber: number }[];
+  scopeLabel: string;
 }
 
 interface CoordinatorReferralsActions {
@@ -156,10 +157,13 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   );
   const [prepareCreatePending, setPrepareCreatePending] =
     React.useState(false);
-  const [termId, setTermId] = React.useState("");
-  const [terms, setTerms] = React.useState<{ id: string; termNumber: number }[]>(
-    [],
-  );
+  // Global session scope (Login → select → active term). Profiles are filed
+  // under it automatically — no per-action term picker.
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? "";
+  const scopeLabel = activeTerm
+    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
+    : "No active term";
 
   function openBook() {
     // From the open case sheet — book for the sheet's case. Sheet stays
@@ -282,22 +286,19 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       }),
   });
 
-  // Create-profile pre-step: existence check on the targeted case endpoint
-  // (no full-list fetch) in parallel with the terms lookup. Tracked with
-  // its own pending flag so the button shows Preparing… and double clicks
-  // can't fire parallel resolves. studentId is intentionally omitted — the
-  // backend derives (or provisions) the student from the referral itself.
+  // Create-profile pre-step: existence check on the targeted case endpoint.
+  // Tracked with its own pending flag so the button shows Preparing… and
+  // double clicks can't fire parallel resolves. studentId is intentionally
+  // omitted — the backend derives (or provisions) the student from the
+  // referral itself, and files the profile under the session's active term.
   async function prepareCreate(row: AdmCaseRow) {
     if (prepareCreatePending) return;
     setPrepareCreatePending(true);
     try {
       const referralId = row.id.replace(/^referral:/, "");
-      const [caseRes, termRes] = await Promise.all([
-        apiClient.get(
-          `/api/adm/case/${encodeURIComponent(`referral:${referralId}`)}`,
-        ),
-        apiClient.get("/api/registrar/academics/terms"),
-      ]);
+      const caseRes = await apiClient.get(
+        `/api/adm/case/${encodeURIComponent(`referral:${referralId}`)}`,
+      );
       if (!caseRes.data) {
         toast.error({
           title: "Referral not found",
@@ -305,12 +306,6 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
         });
         return;
       }
-      const list = (termRes.data?.terms ?? []) as {
-        id: string;
-        termNumber: number;
-      }[];
-      setTerms(list);
-      setTermId(list[0]?.id ?? "");
       setCreateTarget({ ...row, studentId: "" });
     } catch (err) {
       toast.error({
@@ -570,8 +565,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     createTarget,
     setCreateTarget,
     termId,
-    setTermId,
-    terms,
+    scopeLabel,
     openBook,
     bookForRow,
     closeBook,

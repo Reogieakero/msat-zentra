@@ -107,6 +107,46 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
 });
 
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+// Self-service password change for any authenticated account (used by the
+// teacher settings page, safe for all roles).
+router.post(
+  "/change-password",
+  requireAuth,
+  validate("body", changePasswordSchema),
+  async (req, res, next) => {
+    try {
+      const { currentPassword, newPassword } = req.body as {
+        currentPassword: string;
+        newPassword: string;
+      };
+      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+      if (!user) throw new AppError(401, "UNAUTHORIZED", "Account not found");
+      const ok = await argon2.verify(user.passwordHash, currentPassword);
+      if (!ok) throw new AppError(403, "WRONG_PASSWORD", "Current password is incorrect");
+      if (currentPassword === newPassword) {
+        throw new AppError(400, "SAME_PASSWORD", "New password must be different from the current one");
+      }
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await argon2.hash(newPassword) },
+      });
+      await writeAudit({
+        userId: user.id,
+        actionType: "update",
+        sourceTable: "users",
+        sourceId: user.id,
+        reason: "Account changed own password",
+      });
+      res.json({ changed: true });
+    } catch (e) { next(e); }
+  }
+);
 router.post("/refresh", validate("body", refreshSchema), async (req, res, next) => {
   try {
     const { verifyRefresh, signAccess, signRefresh } = await import("../../lib/jwt.js");

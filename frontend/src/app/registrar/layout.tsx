@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import styles from "./registrar.module.css";
 
 function RegistrarShell({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,8 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className={styles.spacer} />
+
+        <ActiveTermBadge />
 
         <div className={styles.search}>
           <Command shouldFilter={false} className={styles.searchCommand}>

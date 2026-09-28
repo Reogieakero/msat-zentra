@@ -1,16 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import {
   useSheetContext,
   useSheetMarks,
   initialsOf,
-  type SheetSession,
+  type SheetContext,
   type SheetStatus,
 } from "./attendance-taking-data";
-import { RosterRailListSkeleton, RosterRailSummarySkeleton } from "./attendance-skeleton";
+import { RosterRailListSkeleton } from "./attendance-skeleton";
 import sheetStyles from "./AttendanceSheet.module.css";
 import styles from "./AttendanceRosterRail.module.css";
 
@@ -23,32 +21,33 @@ const DOT_TITLES: Record<SheetStatus, string> = {
 
 interface AttendanceRosterRailProps {
   date: string;
-  session: SheetSession;
+  subjectId: string | undefined;
+  slot: number;
+  /** Explicit section roster (code-claimed flow). When provided, the rail
+   *  reads from it instead of the advisory context. */
+  roster?: { ctx: SheetContext | null; pending: boolean; error: boolean };
 }
 
 /* Narrow roster rail for the attendance sheet: section summary plus a
    clickable class list that scrolls to the student's marking row and
    flashes it. Reads the same cached queries as the sheet, so it never
    fires duplicate requests. Status dots reflect submitted marks. */
-export function AttendanceRosterRail({ date, session }: AttendanceRosterRailProps) {
+export function AttendanceRosterRail({
+  date,
+  subjectId,
+  slot,
+  roster,
+}: AttendanceRosterRailProps) {
   const contextQuery = useSheetContext();
-  const marksQuery = useSheetMarks(date, session);
+  const effectiveCtx = roster ? roster.ctx : (contextQuery.data ?? null);
+  const marksQuery = useSheetMarks(date, subjectId, slot, effectiveCtx?.sectionId ?? null);
 
   const students = React.useMemo(
-    () => contextQuery.data?.students ?? [],
-    [contextQuery.data]
+    () => effectiveCtx?.students ?? [],
+    [effectiveCtx]
   );
   const serverMarks = React.useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
-  const loading = contextQuery.isPending || marksQuery.isPending;
-  const [needle, setNeedle] = React.useState("");
-
-  const visibleStudents = React.useMemo(() => {
-    const q = needle.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.lrn.toLowerCase().includes(q)
-    );
-  }, [students, needle]);
+  const loading = (roster ? roster.pending : contextQuery.isPending) || marksQuery.isPending;
 
   function jumpTo(studentId: string) {
     const el = document.getElementById(`sheet-row-${studentId}`);
@@ -64,41 +63,15 @@ export function AttendanceRosterRail({ date, session }: AttendanceRosterRailProp
     window.setTimeout(() => el.classList.remove(sheetStyles.rowFlash), 1600);
   }
 
-  const sessionLabel = session === "AM" ? "Morning" : "Afternoon";
-
   return (
     <aside className={styles.rail} aria-label="Class roster">
       {loading ? (
-        <RosterRailSummarySkeleton />
-      ) : (
-        <div className={styles.summary}>
-          <p className={styles.section}>{contextQuery.data?.sectionName ?? "Advisory"}</p>
-          <p className={styles.meta}>
-            {students.length} student{students.length === 1 ? "" : "s"} · {sessionLabel}
-          </p>
-        </div>
-      )}
-
-      <div className={styles.searchWrap}>
-        <Search className={styles.searchIcon} aria-hidden />
-        <Input
-          className={styles.search}
-          placeholder="Search student…"
-          value={needle}
-          onChange={(e) => setNeedle(e.target.value)}
-          aria-label="Search class list"
-        />
-      </div>
-
-      {loading ? (
         <RosterRailListSkeleton />
-      ) : visibleStudents.length === 0 ? (
-        <p className={styles.empty}>
-          {needle.trim() ? `No students match "${needle.trim()}".` : "No students."}
-        </p>
+      ) : students.length === 0 ? (
+        <p className={styles.empty}>No students.</p>
       ) : (
         <ul className={styles.list}>
-          {visibleStudents.map((s) => {
+          {students.map((s) => {
             const status: SheetStatus = serverMarks[s.studentId] ?? "present";
             const pct = Math.round(s.attendanceRate * 100);
             const band = s.attendanceRate >= 0.9 ? "good" : s.attendanceRate >= 0.75 ? "warn" : "bad";

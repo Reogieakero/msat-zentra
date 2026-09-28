@@ -23,6 +23,7 @@ import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
 import { useCoordinatorRealtime } from "@/lib/realtime/coordinatorChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { CoordinatorNotificationsBell } from "./components/coordinator-notifications-bell";
+import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import styles from "./coordinator.module.css";
 
 function CoordinatorShell({ children }: { children: React.ReactNode }) {
@@ -69,6 +70,8 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className={styles.spacer} />
+
+        <ActiveTermBadge />
 
         <div className={styles.search}>
           <Command shouldFilter={false} className={styles.searchCommand}>

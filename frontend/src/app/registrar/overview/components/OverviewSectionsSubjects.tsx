@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { LayoutGrid } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -61,6 +62,10 @@ export function OverviewSectionsSubjects() {
     };
   }, [rows]);
 
+  // The API zero-fills every grade in the band, so an empty database still
+  // returns rows — only all-zero totals mean there is genuinely no data.
+  const hasData = totals.subjects > 0 || totals.sections > 0;
+
   return (
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
@@ -76,8 +81,16 @@ export function OverviewSectionsSubjects() {
           <Skeleton className={styles.skel} />
         ) : isError ? (
           <p className={styles.empty}>Could not load structure counts.</p>
-        ) : rows.length === 0 ? (
-          <p className={styles.empty}>No sections or subjects on record.</p>
+        ) : !hasData ? (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <LayoutGrid />
+            </span>
+            <p className={styles.emptyTitle}>No data to display yet</p>
+            <p className={styles.emptyHint}>
+              Sections and subjects appear once the academic structure is set up.
+            </p>
+          </div>
         ) : (
           <>
             <div className={styles.barWrap}>

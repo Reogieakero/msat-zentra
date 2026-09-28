@@ -2,14 +2,25 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ArrowLeft, HomeIcon } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { useTopbarCrumb } from "@/app/teacher/layout";
+import { Button } from "@/components/ui/button";
 import { useRefreshAcademic, type ClassDetail, type ComponentType } from "../../components/grading-data";
-import { WorkspaceHeader } from "./WorkspaceHeader";
-import { WorkspaceSidebar, type WorkspaceView } from "./WorkspaceSidebar";
+import { WorkspaceRail, type WorkspaceView } from "./WorkspaceRail";
+import { AssessmentList } from "./AssessmentList";
 import { AddAssessmentDialog } from "./AddAssessmentDialog";
 import { ScoreGrid } from "./ScoreGrid";
 import { FinalsCard } from "./FinalsCard";
 import { WeightsDialog } from "./WeightsDialog";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./ClassWorkspace.module.css";
 
 type Props = {
@@ -22,44 +33,110 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
   const refreshAcademic = useRefreshAcademic();
   const [weightsOpen, setWeightsOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
-  const [view, setView] = React.useState<WorkspaceView>("scores");
+  const [view] = React.useState<WorkspaceView>("scores");
   const [encodeCategory, setEncodeCategory] = React.useState<ComponentType>("WRITTEN_WORK");
   const [encodeAssessmentId, setEncodeAssessmentId] = React.useState("");
 
-  const handleEncodeSelect = (category: ComponentType, assessmentId: string) => {
-    setEncodeCategory(category);
-    setEncodeAssessmentId(assessmentId);
-  };
+  const selectedAssessment = React.useMemo(
+    () =>
+      detail.components
+        .flatMap((c) => c.assessments.map((a) => ({ ...a, type: c.type as ComponentType })))
+        .find((a) => a.id === encodeAssessmentId) ?? null,
+    [detail.components, encodeAssessmentId],
+  );
 
-  const openAssessment = (category: ComponentType, assessmentId: string) => {
-    handleEncodeSelect(category, assessmentId);
-    setView("scores");
-  };
+  const crumb = React.useMemo(
+    () => (
+      <Breadcrumb aria-label="Gradebook pages" className="text-[13px]">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/teacher/grading" className="inline-flex items-center gap-1.5">
+                <HomeIcon aria-hidden="true" size={16} />
+                Gradebook
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator> / </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            {selectedAssessment ? (
+              <BreadcrumbLink asChild>
+                <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setEncodeAssessmentId("");
+                  }}
+                >
+                  {assignment.subjectName}
+                </Link>
+              </BreadcrumbLink>
+            ) : (
+              <BreadcrumbPage>{assignment.subjectName}</BreadcrumbPage>
+            )}
+          </BreadcrumbItem>
+          {selectedAssessment ? (
+            <>
+              <BreadcrumbSeparator> / </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage>{selectedAssessment.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : null}
+        </BreadcrumbList>
+      </Breadcrumb>
+    ),
+    [assignment.subjectName, selectedAssessment],
+  );
+  useTopbarCrumb(crumb);
+
+  const weightsConfigured = detail.components.some((c) => (c.weight ?? 0) > 0);
 
   return (
     <section className={styles.page}>
-      <div className={styles.topRow}>
-        <Link href="/teacher/grading" className={styles.back}>
-          <ChevronLeft className={styles.backIcon} />
-          Back to Gradebook
-        </Link>
-
-        <WorkspaceHeader assignment={assignment} studentCount={students.length} />
-      </div>
-
       <div className={styles.layout}>
-        <WorkspaceSidebar
-          assignmentId={assignment.id}
-          components={detail.components}
-          studentCount={students.length}
-          view={view}
-          onSelectView={setView}
-          onOpenAssessment={openAssessment}
-          onOpenWeights={() => setWeightsOpen(true)}
-          onAddAssessment={() => setAddOpen(true)}
-        />
-
         <div className={styles.main}>
+          {!weightsConfigured ? (
+            <div className="flex min-h-[60vh] flex-1 flex-col items-center justify-end pb-8">
+              <div role="alert" className={`${assign.card} w-full max-w-md`}>
+                <span className={assign.glowClip} aria-hidden="true">
+                  <span className={assign.cardGlow} />
+                </span>
+                <div className="relative flex flex-col items-center gap-2 py-4 text-center">
+                  <p className="font-semibold">Subject weights not set up yet</p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    Final grades cannot compute until the WW / PT / E shares are set.
+                    Pick a DepEd preset or enter custom weights.
+                  </p>
+                  <Button size="sm" className="mt-1" onClick={() => setWeightsOpen(true)}>
+                    Set up weights
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : !selectedAssessment ? (
+          <div className="flex min-h-[50vh] flex-1 items-center justify-center">
+          <AssessmentList
+            students={students}
+            components={detail.components}
+            onSelect={(c, id) => {
+              setEncodeCategory(c);
+              setEncodeAssessmentId(id);
+            }}
+            onDeleted={(id) => {
+              if (id === encodeAssessmentId) setEncodeAssessmentId("");
+              onMutated();
+            }}
+          />
+          </div>
+          ) : (
+          <>
+          <div>
+            <Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => setEncodeAssessmentId("")}>
+              <ArrowLeft size={16} aria-hidden />
+              Assessments
+            </Button>
+          </div>
           <div className={view === "scores" ? undefined : styles.viewHidden}>
             <ScoreGrid
               students={students}
@@ -77,7 +154,18 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
               onChanged={onMutated}
             />
           </div>
+          </>
+          )}
         </div>
+
+        <WorkspaceRail
+          assignment={assignment}
+          studentCount={students.length}
+          assignmentId={assignment.id}
+          components={detail.components}
+          onOpenWeights={() => setWeightsOpen(true)}
+          onAddAssessment={() => setAddOpen(true)}
+        />
       </div>
 
       {weightsOpen ? (

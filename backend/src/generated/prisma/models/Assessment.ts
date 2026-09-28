@@ -41,6 +41,7 @@ export type AssessmentMinAggregateOutputType = {
   maxScore: number | null
   dateGiven: Date | null
   createdBy: string | null
+  createdAt: Date | null
 }
 
 export type AssessmentMaxAggregateOutputType = {
@@ -50,6 +51,7 @@ export type AssessmentMaxAggregateOutputType = {
   maxScore: number | null
   dateGiven: Date | null
   createdBy: string | null
+  createdAt: Date | null
 }
 
 export type AssessmentCountAggregateOutputType = {
@@ -59,6 +61,7 @@ export type AssessmentCountAggregateOutputType = {
   maxScore: number
   dateGiven: number
   createdBy: number
+  createdAt: number
   _all: number
 }
 
@@ -78,6 +81,7 @@ export type AssessmentMinAggregateInputType = {
   maxScore?: true
   dateGiven?: true
   createdBy?: true
+  createdAt?: true
 }
 
 export type AssessmentMaxAggregateInputType = {
@@ -87,6 +91,7 @@ export type AssessmentMaxAggregateInputType = {
   maxScore?: true
   dateGiven?: true
   createdBy?: true
+  createdAt?: true
 }
 
 export type AssessmentCountAggregateInputType = {
@@ -96,6 +101,7 @@ export type AssessmentCountAggregateInputType = {
   maxScore?: true
   dateGiven?: true
   createdBy?: true
+  createdAt?: true
   _all?: true
 }
 
@@ -192,6 +198,7 @@ export type AssessmentGroupByOutputType = {
   maxScore: number
   dateGiven: Date
   createdBy: string
+  createdAt: Date
   _count: AssessmentCountAggregateOutputType | null
   _avg: AssessmentAvgAggregateOutputType | null
   _sum: AssessmentSumAggregateOutputType | null
@@ -224,6 +231,7 @@ export type AssessmentWhereInput = {
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   createdBy?: Prisma.StringFilter<"Assessment"> | string
+  createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   gradeComponent?: Prisma.XOR<Prisma.GradeComponentScalarRelationFilter, Prisma.GradeComponentWhereInput>
   studentGrades?: Prisma.StudentGradeListRelationFilter
 }
@@ -235,6 +243,7 @@ export type AssessmentOrderByWithRelationInput = {
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
   gradeComponent?: Prisma.GradeComponentOrderByWithRelationInput
   studentGrades?: Prisma.StudentGradeOrderByRelationAggregateInput
 }
@@ -249,6 +258,7 @@ export type AssessmentWhereUniqueInput = Prisma.AtLeast<{
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   createdBy?: Prisma.StringFilter<"Assessment"> | string
+  createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   gradeComponent?: Prisma.XOR<Prisma.GradeComponentScalarRelationFilter, Prisma.GradeComponentWhereInput>
   studentGrades?: Prisma.StudentGradeListRelationFilter
 }, "id">
@@ -260,6 +270,7 @@ export type AssessmentOrderByWithAggregationInput = {
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
   _count?: Prisma.AssessmentCountOrderByAggregateInput
   _avg?: Prisma.AssessmentAvgOrderByAggregateInput
   _max?: Prisma.AssessmentMaxOrderByAggregateInput
@@ -277,6 +288,7 @@ export type AssessmentScalarWhereWithAggregatesInput = {
   maxScore?: Prisma.FloatWithAggregatesFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeWithAggregatesFilter<"Assessment"> | Date | string
   createdBy?: Prisma.StringWithAggregatesFilter<"Assessment"> | string
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"Assessment"> | Date | string
 }
 
 export type AssessmentCreateInput = {
@@ -285,6 +297,7 @@ export type AssessmentCreateInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutAssessmentInput
 }
@@ -296,6 +309,7 @@ export type AssessmentUncheckedCreateInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutAssessmentInput
 }
 
@@ -305,6 +319,7 @@ export type AssessmentUpdateInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutAssessmentNestedInput
 }
@@ -316,6 +331,7 @@ export type AssessmentUncheckedUpdateInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutAssessmentNestedInput
 }
 
@@ -326,6 +342,7 @@ export type AssessmentCreateManyInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
 }
 
 export type AssessmentUpdateManyMutationInput = {
@@ -334,6 +351,7 @@ export type AssessmentUpdateManyMutationInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AssessmentUncheckedUpdateManyInput = {
@@ -343,6 +361,7 @@ export type AssessmentUncheckedUpdateManyInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AssessmentListRelationFilter = {
@@ -362,6 +381,7 @@ export type AssessmentCountOrderByAggregateInput = {
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type AssessmentAvgOrderByAggregateInput = {
@@ -375,6 +395,7 @@ export type AssessmentMaxOrderByAggregateInput = {
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type AssessmentMinOrderByAggregateInput = {
@@ -384,6 +405,7 @@ export type AssessmentMinOrderByAggregateInput = {
   maxScore?: Prisma.SortOrder
   dateGiven?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type AssessmentSumOrderByAggregateInput = {
@@ -465,6 +487,7 @@ export type AssessmentCreateWithoutGradeComponentInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeCreateNestedManyWithoutAssessmentInput
 }
 
@@ -474,6 +497,7 @@ export type AssessmentUncheckedCreateWithoutGradeComponentInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
   studentGrades?: Prisma.StudentGradeUncheckedCreateNestedManyWithoutAssessmentInput
 }
 
@@ -513,6 +537,7 @@ export type AssessmentScalarWhereInput = {
   maxScore?: Prisma.FloatFilter<"Assessment"> | number
   dateGiven?: Prisma.DateTimeFilter<"Assessment"> | Date | string
   createdBy?: Prisma.StringFilter<"Assessment"> | string
+  createdAt?: Prisma.DateTimeFilter<"Assessment"> | Date | string
 }
 
 export type AssessmentCreateWithoutStudentGradesInput = {
@@ -521,6 +546,7 @@ export type AssessmentCreateWithoutStudentGradesInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
   gradeComponent: Prisma.GradeComponentCreateNestedOneWithoutAssessmentsInput
 }
 
@@ -531,6 +557,7 @@ export type AssessmentUncheckedCreateWithoutStudentGradesInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
 }
 
 export type AssessmentCreateOrConnectWithoutStudentGradesInput = {
@@ -555,6 +582,7 @@ export type AssessmentUpdateWithoutStudentGradesInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   gradeComponent?: Prisma.GradeComponentUpdateOneRequiredWithoutAssessmentsNestedInput
 }
 
@@ -565,6 +593,7 @@ export type AssessmentUncheckedUpdateWithoutStudentGradesInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AssessmentCreateManyGradeComponentInput = {
@@ -573,6 +602,7 @@ export type AssessmentCreateManyGradeComponentInput = {
   maxScore: number
   dateGiven: Date | string
   createdBy: string
+  createdAt?: Date | string
 }
 
 export type AssessmentUpdateWithoutGradeComponentInput = {
@@ -581,6 +611,7 @@ export type AssessmentUpdateWithoutGradeComponentInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUpdateManyWithoutAssessmentNestedInput
 }
 
@@ -590,6 +621,7 @@ export type AssessmentUncheckedUpdateWithoutGradeComponentInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studentGrades?: Prisma.StudentGradeUncheckedUpdateManyWithoutAssessmentNestedInput
 }
 
@@ -599,6 +631,7 @@ export type AssessmentUncheckedUpdateManyWithoutGradeComponentInput = {
   maxScore?: Prisma.FloatFieldUpdateOperationsInput | number
   dateGiven?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -639,6 +672,7 @@ export type AssessmentSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
+  createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
   studentGrades?: boolean | Prisma.Assessment$studentGradesArgs<ExtArgs>
   _count?: boolean | Prisma.AssessmentCountOutputTypeDefaultArgs<ExtArgs>
@@ -651,6 +685,7 @@ export type AssessmentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
+  createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["assessment"]>
 
@@ -661,6 +696,7 @@ export type AssessmentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
+  createdAt?: boolean
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["assessment"]>
 
@@ -671,9 +707,10 @@ export type AssessmentSelectScalar = {
   maxScore?: boolean
   dateGiven?: boolean
   createdBy?: boolean
+  createdAt?: boolean
 }
 
-export type AssessmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "gradeComponentId" | "title" | "maxScore" | "dateGiven" | "createdBy", ExtArgs["result"]["assessment"]>
+export type AssessmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "gradeComponentId" | "title" | "maxScore" | "dateGiven" | "createdBy" | "createdAt", ExtArgs["result"]["assessment"]>
 export type AssessmentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   gradeComponent?: boolean | Prisma.GradeComponentDefaultArgs<ExtArgs>
   studentGrades?: boolean | Prisma.Assessment$studentGradesArgs<ExtArgs>
@@ -699,6 +736,7 @@ export type $AssessmentPayload<ExtArgs extends runtime.Types.Extensions.Internal
     maxScore: number
     dateGiven: Date
     createdBy: string
+    createdAt: Date
   }, ExtArgs["result"]["assessment"]>
   composites: {}
 }
@@ -1130,6 +1168,7 @@ export interface AssessmentFieldRefs {
   readonly maxScore: Prisma.FieldRef<"Assessment", 'Float'>
   readonly dateGiven: Prisma.FieldRef<"Assessment", 'DateTime'>
   readonly createdBy: Prisma.FieldRef<"Assessment", 'String'>
+  readonly createdAt: Prisma.FieldRef<"Assessment", 'DateTime'>
 }
     
 

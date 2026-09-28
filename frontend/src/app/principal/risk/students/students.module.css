@@ -2,8 +2,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem 0.25rem 0.25rem;
+  gap: 4rem;
+  padding: 0;
   min-height: 100%;
   background-color: var(--background);
 }
@@ -12,4 +12,10 @@
   margin: 0;
   border: none;
   border-top: 1px solid var(--border, #e5e5e5);
+}
+
+/* Offset for the fixed topbar + navbar when auto-scrolling to the table. */
+.tableAnchor {
+  scroll-margin-top: 6.5rem;
+  min-width: 0;
 }

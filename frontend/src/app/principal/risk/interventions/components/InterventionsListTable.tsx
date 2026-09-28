@@ -1,29 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   X,
 } from "lucide-react";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../../grade-mode-context";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -42,8 +40,9 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/sonner";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
-import { fetchInterventionStudents } from "../api";
+import { alertGuidance, apiErrorMessage, fetchInterventionStudents } from "../api";
 import styles from "./InterventionsListTable.module.css";
 
 const gradeNum = (name: string) => {
@@ -53,7 +52,7 @@ const gradeNum = (name: string) => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 const RISK_BADGE: Record<RiskLevelKey, "destructive" | "warning" | "outline"> = {
   High: "destructive",
@@ -61,17 +60,27 @@ const RISK_BADGE: Record<RiskLevelKey, "destructive" | "warning" | "outline"> = 
   Low: "outline",
 };
 
-const FACTOR_LABELS: Record<string, string> = {
-  academic: "Academic",
-  attendance: "Attendance",
-  behavioral: "Behavioral",
-};
+function latestAction(s: RiskSnapshotStudent): { label: string; time: string } {
+  const iv = s.intervention;
+  if (!iv) return { label: "No follow-up yet", time: "" };
+  const date = (iv.createdAt ?? "").slice(0, 10);
+  if (iv.outcomeStatus === "resolved") return { label: "Marked resolved", time: date };
+  if (iv.outcomeStatus === "unresolved") return { label: "Marked unresolved", time: date };
+  return { label: "Intervention opened", time: date };
+}
+
+// Principal is read-only here: alerting is only offered while guidance has
+// taken no action (no plan yet) — mirrors the server gate.
+function canAlert(s: RiskSnapshotStudent): boolean {
+  return !s.intervention || s.intervention.outcomeStatus === "unresolved";
+}
 
 export function InterventionsListTable({
   onSelect,
 }: {
   onSelect: (student: RiskSnapshotStudent) => void;
 }) {
+  const queryClient = useQueryClient();
   const { gradeMode } = useGradeMode();
   const [query, setQuery] = usePersistentState<string>(
     "zentra.interventions.search",
@@ -86,6 +95,8 @@ export function InterventionsListTable({
     "all"
   );
   const [page, setPage] = React.useState(1);
+  const [alertTarget, setAlertTarget] = React.useState<RiskSnapshotStudent | null>(null);
+  const [note, setNote] = React.useState("");
 
   const { data, isPending } = useQuery({
     queryKey: ["interventions-list", gradeMode],
@@ -126,6 +137,7 @@ export function InterventionsListTable({
   }, [students, query, sectionFilter, riskFilter]);
 
   const hasActiveFilters = sectionFilter !== "all" || riskFilter !== "all";
+  const waitingCount = filtered.filter((s) => !s.intervention).length;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -133,29 +145,64 @@ export function InterventionsListTable({
   const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, filtered.length);
 
+  const alertMutation = useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      alertGuidance(id, note),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["interventions-list"] });
+      toast.success({
+        title: "Guidance alerted",
+        description: alertTarget
+          ? `Guidance counselors were notified about ${alertTarget.studentName}.`
+          : "Guidance counselors were notified.",
+      });
+      setAlertTarget(null);
+      setNote("");
+    },
+    onError: (err) => {
+      toast.error({
+        title: "Could not alert guidance",
+        description: apiErrorMessage(
+          err,
+          "The alert did not go through. Check your connection and try again."
+        ),
+      });
+    },
+  });
+
+  const closeAlert = () => {
+    if (alertMutation.isPending) return;
+    setAlertTarget(null);
+    setNote("");
+  };
+
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section aria-label="Intervention cases" className={styles.feed}>
+      <div className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>Intervention Queue</CardTitle>
-          <CardDescription>
-            {sectionFilter === "all"
-              ? "All at-risk learners requiring intervention."
-              : `At-risk learners in ${sectionFilter} requiring intervention.`}
-          </CardDescription>
+          <h2 className={styles.sectionTitle}>Intervention cases</h2>
+          <p className={styles.sectionDesc} aria-live="polite">
+            {filtered.length === 0
+              ? "No at-risk students right now"
+              : `${filtered.length} at-risk student${filtered.length === 1 ? "" : "s"} tracked from guidance interventions${
+                  waitingCount > 0
+                    ? ` · ${waitingCount} waiting for guidance action`
+                    : ""
+                }`}
+          </p>
         </div>
-        <CardAction className={styles.headerActions}>
+        <div className={styles.headerActions}>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
               className={styles.search}
-              placeholder="Search name or LRN…"
+              placeholder="Search student…"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(1);
               }}
-              aria-label="Search interventions"
+              aria-label="Search at-risk students"
             />
           </div>
 
@@ -263,158 +310,247 @@ export function InterventionsListTable({
               Clear
             </Button>
           )}
-        </CardAction>
-      </CardHeader>
-
-      <CardContent className={styles.content}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Section</TableHead>
-              <TableHead>Risk</TableHead>
-              <TableHead>Factors</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <SkeletonRows />
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className={styles.empty}>
-                  {query.trim()
-                    ? `No interventions match "${query}".`
-                    : hasActiveFilters
-                      ? "No interventions match the selected filters."
-                      : "No interventions found."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageRows.map((s) => {
-                const iv = s.intervention;
-                return (
-                  <TableRow
-                    key={s.studentId}
-                    className={styles.clickableRow}
-                    onClick={() => onSelect(s)}
-                  >
-                    <TableCell>
-                      <div className={styles.studentCell}>
-                        <span className={styles.studentName}>{s.studentName}</span>
-                        <span className={styles.studentLrn}>{s.lrn}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className={styles.section}>{s.section}</TableCell>
-                    <TableCell>
-                      <Badge variant={RISK_BADGE[s.riskLevel]} className={styles.riskBadge}>
-                        {s.riskLevel}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className={styles.factors}>
-                        {(Object.keys(s.factors) as (keyof typeof s.factors)[]).map((f) => (
-                          <span
-                            key={f}
-                            className={`${styles.factorChip} ${
-                              s.factors[f] ? styles.factorOn : styles.factorOff
-                            }`}
-                          >
-                            {FACTOR_LABELS[f]}
-                          </span>
-                        ))}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {iv ? (
-                        <Badge variant={iv.outcomeStatus === "resolved" ? "secondary" : iv.outcomeStatus === "unresolved" ? "destructive" : "default"} className={styles.statusBadge}>
-                          {iv.outcomeStatus === "ongoing" ? "Ongoing" : iv.outcomeStatus === "resolved" ? "Resolved" : "Unresolved"}
-                        </Badge>
-                      ) : (
-                        <span className={styles.noIntervention}>No plan</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal aria-hidden />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onSelect(s)}>View details</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onSelect(s)}>View intervention</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-
-      <CardFooter className={styles.footer}>
-        <span className={styles.footerInfo}>
-          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1 || filtered.length === 0}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages || filtered.length === 0}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+
+      <div className={styles.tableBody}>
+        {isPending ? (
+          <SkeletonRows />
+        ) : filtered.length === 0 ? (
+          <p className={styles.empty}>
+            {query.trim()
+              ? `No interventions match "${query}".`
+              : hasActiveFilters
+                ? "No interventions match the selected filters."
+                : "No intervention cases — nothing needs tracking right now."}
+          </p>
+        ) : (
+          <div className={styles.tableWrap}>
+            <Table aria-label="Intervention cases tracked by the principal">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Grade</TableHead>
+                  <TableHead>Section</TableHead>
+                  <TableHead>Risk level</TableHead>
+                  <TableHead>Detected</TableHead>
+                  <TableHead>Latest action</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <span className={styles.srOnly}>Row actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map((s) => {
+                  const iv = s.intervention;
+                  const action = latestAction(s);
+                  return (
+                    <TableRow
+                      key={s.studentId}
+                      className={styles.clickableRow}
+                      onClick={() => onSelect(s)}
+                    >
+                      <TableCell>
+                        <p className={styles.cellMain}>{s.studentName}</p>
+                        <p className={styles.cellSub}>{s.lrn}</p>
+                      </TableCell>
+                      <TableCell>{s.gradeLevel}</TableCell>
+                      <TableCell>{s.section}</TableCell>
+                      <TableCell>
+                        <Badge variant={RISK_BADGE[s.riskLevel]}>
+                          {s.riskLevel}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{s.snapshotDate ? s.snapshotDate.slice(0, 10) : "—"}</TableCell>
+                      <TableCell>
+                        <p className={styles.actionLabel}>{action.label}</p>
+                        <p className={styles.cellSub}>{action.time || "—"}</p>
+                      </TableCell>
+                      <TableCell>
+                        {iv ? (
+                          <Badge
+                            variant={
+                              iv.outcomeStatus === "resolved"
+                                ? "secondary"
+                                : iv.outcomeStatus === "unresolved"
+                                  ? "destructive"
+                                  : "default"
+                            }
+                          >
+                            {iv.outcomeStatus === "ongoing"
+                              ? "Ongoing"
+                              : iv.outcomeStatus === "resolved"
+                                ? "Resolved"
+                                : "Unresolved"}
+                          </Badge>
+                        ) : (
+                          <span className={styles.noIntervention}>No plan</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              aria-label={`Actions for ${s.studentName}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal aria-hidden />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => onSelect(s)}
+                            >
+                              View details
+                            </DropdownMenuItem>
+                            {canAlert(s) ? (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setAlertTarget(s);
+                                  setNote("");
+                                }}
+                              >
+                                Alert guidance
+                              </DropdownMenuItem>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {Array.from({ length: PAGE_SIZE - pageRows.length }).map((_, i) => (
+                  <TableRow key={`page-filler-${i}`} aria-hidden="true">
+                    <TableCell colSpan={8} />
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        <div className={styles.pager}>
+          <p className={styles.range}>
+            Showing {start}–{end} of {filtered.length}
+          </p>
+          <div className={styles.pagerButtons}>
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={safePage <= 1 || filtered.length === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <span className={styles.pageLabel} aria-live="polite">
+              {`Page ${safePage} of ${totalPages}`}
+            </span>
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={safePage >= totalPages || filtered.length === 0}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <Dialog
+        open={alertTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) closeAlert();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alert guidance</DialogTitle>
+            <DialogDescription>
+              {alertTarget
+                ? `${alertTarget.studentName} (${alertTarget.lrn}) has no intervention action yet. This notifies every active guidance counselor.`
+                : "Notify every active guidance counselor."}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Optional note for guidance…"
+            rows={3}
+            maxLength={500}
+            aria-label="Optional note for guidance"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAlert}>
+              Cancel
+            </Button>
+            <Button
+              disabled={alertMutation.isPending || !alertTarget}
+              onClick={() => {
+                if (!alertTarget) return;
+                alertMutation.mutate({ id: alertTarget.studentId, note });
+              }}
+            >
+              {alertMutation.isPending ? "Alerting…" : "Alert guidance"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 
 function SkeletonRows() {
   return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <div className={styles.studentCell}>
-              <Skeleton className={styles.skelName} />
-              <Skeleton className={styles.skelLrn} />
-            </div>
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "50%" }} />
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "38%" }} />
-          </TableCell>
-          <TableCell>
-            <span className={styles.factors}>
-              <Skeleton className={styles.skelChip} />
-              <Skeleton className={styles.skelChip} />
-              <Skeleton className={styles.skelChip} />
-            </span>
-          </TableCell>
-          <TableCell>
-            <Skeleton className={styles.skelCell} style={{ width: "60%" }} />
-          </TableCell>
-          <TableCell />
-        </TableRow>
-      ))}
-    </>
+    <div className={styles.tableWrap}>
+      <Table aria-label="Loading intervention cases">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Student</TableHead>
+            <TableHead>Grade</TableHead>
+            <TableHead>Section</TableHead>
+            <TableHead>Risk level</TableHead>
+            <TableHead>Detected</TableHead>
+            <TableHead>Latest action</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>
+              <span className={styles.srOnly}>Row actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className={styles.skelName} />
+                <Skeleton className={styles.skelLrn} />
+              </TableCell>
+              <TableCell>
+                <Skeleton className={styles.skelCell} />
+              </TableCell>
+              <TableCell>
+                <Skeleton className={styles.skelCell} />
+              </TableCell>
+              <TableCell>
+                <Skeleton className={styles.skelCell} />
+              </TableCell>
+              <TableCell>
+                <Skeleton className={styles.skelCell} />
+              </TableCell>
+              <TableCell>
+                <Skeleton className={styles.skelCell} />
+              </TableCell>
+              <TableCell>
+                <Skeleton className={styles.skelCell} />
+              </TableCell>
+              <TableCell />
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

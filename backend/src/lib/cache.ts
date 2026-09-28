@@ -25,7 +25,11 @@ function buildKey(req: Request): string {
   const qs = req.originalUrl.includes("?")
     ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
     : "";
-  return `cache:${req.method}:${req.path}${qs}:${role}:${uid}`;
+  // Term scope varies every payload once the client sends its active
+  // selection — without it, a Term 1 response would be served to Term 2.
+  const scope = (req as Request & { termScope?: { schoolYearId?: string; termId?: string } }).termScope;
+  const scopeKey = scope ? `:${scope.schoolYearId ?? ""}:${scope.termId ?? ""}` : "";
+  return `cache:${req.method}:${req.path}${qs}:${role}:${uid}${scopeKey}`;
 }
 
 function tagKey(tag: string): string {

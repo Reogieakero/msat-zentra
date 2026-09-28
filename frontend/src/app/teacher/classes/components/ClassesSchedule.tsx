@@ -32,9 +32,9 @@ const DAYS = [1, 2, 3, 4, 5];
 const TOTAL_MIN = TIMELINE[TIMELINE.length - 1].offset;
 const GUTTER_HEIGHT = HEADER_PX + TOTAL_MIN * PX_PER_MIN;
 
-export function ClassesSchedule() {
+export function ClassesSchedule({ blocks = WEEK_SCHEDULE }: { blocks?: ScheduleBlock[] }) {
   const [selected, setSelected] = useState<ScheduleBlock | null>(null);
-  const blocksByDay = DAYS.map((d) => WEEK_SCHEDULE.filter((b) => b.day === d));
+  const blocksByDay = DAYS.map((d) => blocks.filter((b) => b.day === d));
 
   // Live time indicator — ticks every minute, rendered only in today's
   // column and only while school is in session (Mon–Fri, 7:30 AM–5 PM).

@@ -120,7 +120,10 @@ router.get(
       // includeRecovered keeps students whose risk cleared but whose
       // follow-up is still open, so the case can be discontinued on the
       // desk instead of silently vanishing from the queue.
-      const cohort = await getInterventionStudents({ page: 1, pageSize: 1000, includeRecovered: true, fullCohort: true });
+      const cohort = await getInterventionStudents(
+        { page: 1, pageSize: 1000, includeRecovered: true, fullCohort: true },
+        req.termScope ?? undefined,
+      );
 
       const factorKey =
         factorFilter === "Academic"
@@ -394,7 +397,7 @@ router.post(
       if ((studentId && rosterId) || (!studentId && !rosterId)) {
         throw new AppError(400, "INVALID_ACTION", "Pick exactly one student");
       }
-      const termId = await resolveActiveTermId();
+      const termId = await resolveActiveTermId(req);
       if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term to evaluate");
       let liveLevel: string;
       if (rosterId) {
@@ -838,7 +841,7 @@ router.post(
           throw new AppError(400, "ACTIVE_SESSION_EXISTS", "This case has an upcoming session — finish or cancel it before recording the outcome");
         }
         if (doneCount === 0) {
-          const termId = await resolveActiveTermId();
+          const termId = await resolveActiveTermId(req);
           const liveLevel = termId
             ? row.studentId
               ? (await evaluateRisk(row.studentId, termId)).result.riskLevel

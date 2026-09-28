@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, CircleDot, ChevronDown, Check } from "lucide-react";
+import { Search, CircleDot } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -11,34 +11,22 @@ import {
   CardAction,
   CardContent,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { FolderCard } from "@/components/ui/FolderCard";
+import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import styles from "./RecordsHeatblocks.module.css";
-import {
-  CATEGORY_META,
-  CATEGORY_KEYS,
-  categoryColor,
-  fetchRecords,
-} from "./records-data";
+import { CATEGORY_META, fetchRecords } from "./records-data";
 
-export function RecordsHeatblocks({
-  selectedLrn,
-  onSelectLrn,
-  selectedGrade,
-  onSelectGrade,
-}: {
-  selectedLrn: string | null;
-  onSelectLrn: (lrn: string | null) => void;
-  selectedGrade: string | null;
-  onSelectGrade: (grade: string | null) => void;
-}) {
+const PAGE_SIZE = 21;
+
+export function RecordsHeatblocks() {
   const [query, setQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  // Folders never open the full report on this desk — clicking one shows the
+  // same privacy overlay the other roles use.
+  const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["records-heatmap"],
@@ -47,37 +35,37 @@ export function RecordsHeatblocks({
 
   const sections = React.useMemo(() => data?.sections ?? [], [data]);
 
-  const grades = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const s of sections) set.add(s.gradeLevel);
-    return Array.from(set).sort((a, b) => Number(a) - Number(b));
-  }, [sections]);
-
-  const shownSections = React.useMemo(() => {
+  const shownReports = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     return sections
-      .filter((s) => (selectedGrade ? s.gradeLevel === selectedGrade : true))
-      .map((s) => ({
-        ...s,
-        students: q
-          ? s.students.filter(
-              (st) =>
-                st.lrn.toLowerCase().includes(q) ||
-                st.name.toLowerCase().includes(q)
-            )
-          : s.students,
-      }))
-      .filter((s) => s.students.length > 0);
-  }, [sections, query, selectedGrade]);
+      .flatMap((s) => s.students)
+      .flatMap((st) => st.behavioral.map((rec) => ({ student: st, rec })))
+      .filter(({ student }) =>
+        q
+          ? student.lrn.toLowerCase().includes(q) ||
+            student.name.toLowerCase().includes(q)
+          : true
+      );
+  }, [sections, query]);
+
+  const totalPages = Math.max(1, Math.ceil(shownReports.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedReports = shownReports.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+  const rangeStart = shownReports.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, shownReports.length);
 
   return (
+    <>
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>Behavioral Records Heatblocks</CardTitle>
+          <CardTitle>Anecdotal Records Heatblocks</CardTitle>
           <CardDescription>
-            One block per tracked student, color-coded by dominant anecdotal
-            category.
+            One folder per filed anecdotal report. Full reports are kept
+            private on this desk.
           </CardDescription>
         </div>
         <CardAction className={styles.headerActions}>
@@ -87,51 +75,24 @@ export function RecordsHeatblocks({
               type="search"
               placeholder="Search LRN or name"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
               aria-label="Search students"
               className={styles.searchInput}
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className={styles.dropdown}>
-                <span>{selectedGrade ? `Grade ${selectedGrade}` : "All grades"}</span>
-                <ChevronDown className={styles.dropdownIcon} aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className={styles.dropdownMenu}>
-              {grades.map((g) => (
-                <DropdownMenuItem
-                  key={g}
-                  className={styles.dropdownItem}
-                  onSelect={() => onSelectGrade(g)}
-                >
-                  <span>Grade {g}</span>
-                  {selectedGrade === g ? <Check className={styles.dropdownCheck} /> : null}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </CardAction>
       </CardHeader>
 
       <CardContent className={styles.content}>
         {isPending ? (
-          <div className={styles.bands} aria-busy="true" aria-label="Loading student records">
-            {Array.from({ length: 4 }).map((_, b) => (
-              <div key={b} className={styles.band}>
-                <Skeleton className={styles.skelHead} />
-                <div className={styles.grid}>
-                  {Array.from({ length: 6 }).map((__, i) => (
-                    <div key={i} className={styles.skelBlock}>
-                      <span className={styles.skelDot} aria-hidden />
-                      <span className={styles.skelText}>
-                        <Skeleton className={styles.skelName} />
-                        <Skeleton className={styles.skelLrn} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
+          <div className={styles.grid} aria-busy="true" aria-label="Loading student records">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={styles.skelFolder}>
+                <Skeleton className={styles.skelFolderShape} />
+                <Skeleton className={styles.skelFolderLabel} />
               </div>
             ))}
           </div>
@@ -140,68 +101,91 @@ export function RecordsHeatblocks({
             <CircleDot className={styles.emptyIcon} aria-hidden />
             <p>Could not load student records.</p>
           </div>
-        ) : shownSections.length === 0 ? (
+        ) : shownReports.length === 0 ? (
           <div className={styles.empty}>
             <CircleDot className={styles.emptyIcon} aria-hidden />
-            <p>No students match the current filters.</p>
+            <p>No reports match the current filters.</p>
           </div>
         ) : (
-          <div className={styles.bands}>
-            {shownSections.map((section) => (
-              <div key={section.sectionId} className={styles.band}>
-                <div className={styles.head}>
-                  <span className={styles.headTitle}>{section.section}</span>
-                  <span className={styles.headCount}>
-                    {section.students.length} students
-                  </span>
-                </div>
-                <div className={styles.grid}>
-                  {section.students.map((s, i) => {
-                    const selected = selectedLrn === s.lrn;
-                    return (
-                      <button
-                        key={s.lrn}
-                        type="button"
-                        className={`${styles.block} ${selected ? styles.blockSelected : ""}`}
-                        style={{ animationDelay: `${Math.min(i, 24) * 18}ms` }}
-                        onClick={() => onSelectLrn(selected ? null : s.lrn)}
-                        aria-pressed={selected}
-                        aria-label={`${s.name}, LRN ${s.lrn}, ${s.status}`}
-                      >
-                        <span
-                          className={styles.dot}
-                          style={{ backgroundColor: categoryColor(s) }}
-                          aria-hidden
-                        />
-                        <span className={styles.blockText}>
-                          <span className={styles.blockName}>{s.name}</span>
-                          <span className={styles.blockLrn}>{s.lrn}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
+          <>
+            <div className={styles.head}>
+              <span className={styles.headCount}>
+                {shownReports.length} reports
+              </span>
+            </div>
+            <div className={styles.grid}>
+              {pagedReports.map(({ student: s, rec }, i) => {
+                return (
+                  <button
+                    key={rec.id}
+                    type="button"
+                    className={styles.folderBtn}
+                    style={{ animationDelay: `${Math.min(i, 24) * 18}ms` }}
+                    onClick={() => setPrivacyFor(s.name)}
+                    aria-label={`${s.name}, LRN ${s.lrn}, ${CATEGORY_META[rec.category].label} report from ${rec.date}`}
+                  >
+                    <FolderCard
+                      label={s.name}
+                      sublabel={`${s.lrn} · ${s.section}`}
+                      cornerTag={CATEGORY_META[rec.category].label}
+                      files={[
+                        {
+                          name: rec.date,
+                          tag: `${CATEGORY_META[rec.category].label} • ${rec.severity}`,
+                          icon: "doc" as const,
+                        },
+                      ]}
+                    />
+                  </button>
+                );
+              })}
+              {Array.from({ length: PAGE_SIZE - pagedReports.length }).map((_, i) => (
+                <span
+                  key={`page-filler-${i}`}
+                  aria-hidden="true"
+                  className={styles.gridFiller}
+                >
+                  <FolderCard label={"\u00A0"} sublabel={"\u00A0"} files={[]} />
+                </span>
+              ))}
+            </div>
+            {totalPages > 1 ? (
+              <div className={styles.pager}>
+                <p className={styles.range} aria-live="polite">
+                  Showing {rangeStart}–{rangeEnd} of {shownReports.length}
+                </p>
+                <div className={styles.pagerButtons}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={safePage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={safePage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
+            ) : null}
+          </>
         )}
 
-        {!isPending && !isError && data ? (
-          <div className={styles.legend} aria-label="Anecdotal category legend">
-            <span className={styles.legendTitle}>Category</span>
-            {CATEGORY_KEYS.map((key) => (
-              <span key={key} className={styles.legendItem}>
-                <span
-                  className={styles.legendDot}
-                  style={{ backgroundColor: CATEGORY_META[key].color }}
-                  aria-hidden
-                />
-                {CATEGORY_META[key].label}
-              </span>
-            ))}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
+
+      <PrivacyNoticeDialog
+        open={privacyFor !== null}
+        onClose={() => setPrivacyFor(null)}
+        studentName={privacyFor ?? undefined}
+        reason="principal"
+      />
+    </>
   );
 }

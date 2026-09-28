@@ -5,6 +5,7 @@ import { getEnv } from "./config/env.js";
 import { errorHandler, notFound } from "./lib/errors.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
+import { attachTermScope } from "./middleware/termScope.js";
 import gradesRoutes from "./modules/grades/grades.routes.js";
 import attendanceRoutes from "./modules/attendance/attendance.routes.js";
 import anecdotalRoutes from "./modules/anecdotal/anecdotal.routes.js";
@@ -44,6 +45,9 @@ export function createApp() {
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/auth", authRoutes);
+  // Global active School Year + Term (Login → select → session scope).
+  // Resolves headers/query into req.termScope for every data route below.
+  app.use("/api", attachTermScope);
   app.use("/api/grades", gradesRoutes);
   app.use("/api/attendance", attendanceRoutes);
   app.use("/api/anecdotal", anecdotalRoutes);

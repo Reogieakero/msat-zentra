@@ -140,3 +140,79 @@ export const ELIGIBILITY_LABELS: Record<string, string> = {
   eligible: "Eligible",
   ineligible: "Ineligible",
 };
+
+export function stageStatus(caseData: AdmCase, stage: string): string {
+  switch (stage) {
+    case "anecdotal":
+      return "Filed";
+    case "consultation":
+      return "Referred";
+    case "meeting_parents":
+      return caseData.meetingAttended === null
+        ? "If needed"
+        : caseData.meetingAttended
+          ? "Attended"
+          : "Scheduled";
+    case "home_visitation":
+      return caseData.hasHomeVisit ? "Done" : "If no meeting";
+    case "certification":
+      return caseData.certificationIssued
+        ? (ELIGIBILITY_LABELS[caseData.eligibilityStatus] ?? "Issued")
+        : "Pending issuance";
+    case "principal_approval":
+      return caseData.approved ? "Signed" : "Pending signature";
+    case "enrollment_monitoring":
+      return `Modules ${caseData.modulesSubmitted}/${caseData.modulesTotal}`;
+    case "completion":
+      return caseData.referralStatus === "resolved" ? "Closed" : "Pending";
+    default:
+      return "";
+  }
+}
+
+/**
+ * Headline status message in the same voice as the referrals workflow
+ * ("done X — now waiting on Y"): what is finished and who the case is
+ * waiting on. Status-only, derived from stage + evidence flags.
+ */
+export function caseHeadline(caseData: AdmCase): string {
+  if (caseData.referralStatus === "resolved" || caseData.stage === "completion") {
+    return "Case closed — the ADM process is complete.";
+  }
+  switch (caseData.stage) {
+    case "anecdotal":
+      return "Anecdotal filed — referral is being prepared.";
+    case "consultation":
+      return "Referral submitted — now waiting for Guidance Counselor / Nurse / LRPC review.";
+    case "meeting_parents":
+      if (caseData.meetingAttended === true) {
+        return "Consultation done — parent meeting attended, moving to Coordinator recommendation.";
+      }
+      if (caseData.meetingAttended === false) {
+        return "Consultation done — parent meeting scheduled, waiting on the ADM Coordinator & Teachers.";
+      }
+      return "Consultation done — now waiting on the parent meeting.";
+    case "home_visitation":
+      if (caseData.hasHomeVisit) {
+        return "Home visit done — now waiting on Coordinator recommendation & certification.";
+      }
+      return "Parents did not attend — now waiting on home visitation by the Guidance Counselor.";
+    case "certification":
+      if (caseData.certificationIssued) {
+        return `Certified (${ELIGIBILITY_LABELS[caseData.eligibilityStatus] ?? caseData.eligibilityStatus}) — now waiting for the Principal's signature.`;
+      }
+      return "Parent engagement done — now waiting for ADM Coordinator recommendation & certification.";
+    case "principal_approval":
+      if (caseData.approved) {
+        return "Principal signed — student is now completing modules under monitoring.";
+      }
+      if (caseData.eligibilityStatus === "ineligible") {
+        return "Not eligible — waiting on the ADM Coordinator to complete the requirements.";
+      }
+      return "Certification done — now waiting for the Principal's signature.";
+    case "enrollment_monitoring":
+      return `Approved — now tracking module completion (${caseData.modulesSubmitted}/${caseData.modulesTotal} submitted).`;
+    default:
+      return "Case is moving through the ADM pipeline.";
+  }
+}

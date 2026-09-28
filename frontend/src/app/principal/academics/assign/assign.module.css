@@ -1,0 +1,179 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0;
+  margin-top: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+
+.back:hover {
+  color: var(--foreground);
+}
+
+.backIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.cardSub {
+  margin: 0.25rem 0 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+/* Full-page centered state: used when there is no data to display.
+   The page body is left empty and only this message shows. */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 50vh;
+  padding: 4rem 1.5rem;
+  margin-top: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--card);
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 2rem;
+  height: 2rem;
+  opacity: 0.7;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  max-width: 28rem;
+}
+
+.emptyActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* Loading skeleton — wrapper mirrors .page stacking; layout comes from the
+   real header/card/form classes, this file only sizes the pulse blocks. */
+.skelWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.skelTitle {
+  width: 14rem;
+  max-width: 100%;
+  height: 1.25rem;
+}
+
+.skelSubtitle {
+  width: min(36rem, 90%);
+  height: 0.8125rem;
+}
+
+.skelCardTitle {
+  width: 10rem;
+  max-width: 100%;
+  height: 13px;
+}
+
+.skelCardSub {
+  width: 8rem;
+  max-width: 100%;
+  height: 13px;
+  margin-top: 0.375rem;
+}
+
+.skelFilter {
+  width: 9rem;
+  max-width: 100%;
+  height: 28px;
+  border-radius: var(--radius-md);
+}
+
+.skelHint {
+  width: 70%;
+  max-width: 100%;
+  height: 0.75rem;
+}
+
+.skelBtn {
+  width: 6.5rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.skelRow {
+  width: 100%;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+}

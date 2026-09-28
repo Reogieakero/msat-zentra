@@ -4,6 +4,8 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { TermProvider } from "@/lib/term/TermContext";
+import { TermSelectOverlay } from "@/components/term/TermSelectOverlay";
 
 type Theme = "light" | "dark";
 
@@ -155,8 +157,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <FontProvider>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-          <Toaster position="top-right" />
+          <TermProvider>
+            <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+            <Toaster position="top-right" />
+            <TermSelectOverlay />
+          </TermProvider>
         </QueryClientProvider>
       </FontProvider>
     </ThemeProvider>

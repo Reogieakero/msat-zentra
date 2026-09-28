@@ -59,6 +59,7 @@ export interface SectionAttendanceStat {
   amRate: number; // 0..100
   pmRate: number; // 0..100
   trend: "up" | "down" | "flat";
+  atRiskStudents: number; // enrolled students below 80% for the session
 }
 
 export interface TrendPoint {

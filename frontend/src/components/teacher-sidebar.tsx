@@ -2,26 +2,38 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   BookOpen,
   CalendarClock,
-  Flag,
+  CalendarDays,
   ClipboardCheck,
   FilePenLine,
-  Users,
+  FileText,
+  GraduationCap,
   Send,
   Inbox,
   Cat,
+  Settings,
+  ListChecks,
+  type LucideIcon,
 } from "lucide-react";
 
 import styles from "./teacher-sidebar.module.css";
+import BranchedMenu from "./nav/BranchedMenu";
+import CardNav, { type CardNavItem } from "./nav/CardNav";
+import { useLinksLayout } from "@/lib/links-layout";
+import {
+  useCachedMasterTeacher,
+  useTeacherOverview,
+} from "@/app/teacher/overview/components/teacher-overview-data";
+import { useSession } from "@/lib/auth/useSession";
 
 type NavItem = {
   title: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   badge?: string;
 };
 
@@ -30,89 +42,153 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Teacher nav — same top tab-bar pattern as the nurse/guidance/coordinator
-// desks. Every section flattened into one row under the topbar. Sub-routes
-// (e.g. /teacher/anecdotal/folders) stay under their parent tab via prefix
-// matching, so no submenu is needed.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
-// ADM Referrals + My Referrals=Send, Anecdotal Records=FilePenLine,
-// Risk Dashboard=Flame.
-const NAV: NavGroup[] = [
-  {
-    label: "Overview",
-    items: [
-      { title: "Overview", href: "/teacher/overview", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "Classroom",
-    items: [
-      { title: "My Classes", href: "/teacher/classes", icon: BookOpen },
-      { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
-    ],
-  },
-  {
-    label: "Grading",
-    items: [
-      { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },
-    ],
-  },
-  {
-    label: "Advisory",
-    items: [
-      { title: "Students", href: "/teacher/advisory/students", icon: Users },
-      { title: "My Referrals", href: "/teacher/advisory/referrals", icon: Send },
-      { title: "ADM Cases", href: "/teacher/advisory/adm-cases", icon: Inbox },
-    ],
-  },
-  {
-    label: "Anecdotal",
-    items: [
-      {
-        title: "Anecdotal Records",
-        href: "/teacher/anecdotal",
-        icon: FilePenLine,
-      },
-    ],
-  },
-  {
-    label: "Flags",
-    items: [
-      { title: "Grade Flags", href: "/teacher/grade-flags", icon: Flag },
-    ],
-  },
-  {
-    label: "Assistant",
-    items: [
-      { title: "Chat with Bama", href: "/teacher/chat", icon: Cat },
-    ],
-  },
-];
+// Teacher nav branching: Overview (dashboard), Advisory (attendance,
+// academic, anecdotal, adm), Workspace (class, gradebook, attendance,
+// referrals, chat, + timeslot for masters), Settings (general settings).
+// Sub-routes (e.g. /teacher/schedule/[sectionId]) stay under their parent
+// via prefix matching.
+function buildNav(isMasterTeacher: boolean): NavGroup[] {
+  const workspaceItems = [
+    { title: "Class", href: "/teacher/classes", icon: BookOpen },
+    { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },
+    { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
+    { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
+    { title: "Chat with Bama", href: "/teacher/chat", icon: Cat },
+  ];
+  if (isMasterTeacher) {
+    workspaceItems.push({ title: "Timeslot", href: "/teacher/schedule", icon: ListChecks });
+  }
+  return [
+    { label: "Overview", items: [
+      { title: "Dashboard", href: "/teacher/overview", icon: LayoutDashboard },
+      { title: "Reports", href: "/teacher/overview/reports", icon: FileText },
+    ] },
+    { label: "Advisory", items: [
+      { title: "Attendance", href: "/teacher/advisory/attendance", icon: CalendarClock },
+      { title: "Academic", href: "/teacher/advisory/students", icon: GraduationCap },
+      { title: "Anecdotal", href: "/teacher/anecdotal", icon: FilePenLine },
+      { title: "ADM", href: "/teacher/advisory/adm-cases", icon: Inbox },
+      { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: CalendarDays },
+    ]},
+    { label: "Workspace", items: workspaceItems },
+    { label: "Settings", items: [{ title: "General Settings", href: "/teacher/settings", icon: Settings }] },
+  ];
+}
 
-// GitHub-style tab bar: every section flattened into one row under the
-// topbar. Groups only group the source data, not the rendered tabs.
-const TABS: NavItem[] = NAV.flatMap((group) => group.items);
+export function TeacherSidebar() {
+  const session = useSession();
+  const overview = useTeacherOverview();
+  // First-frame value from the per-teacher cache: the Schedule tab must not
+  // pop in after a hard refresh. The live overview overwrites it on resolve.
+  const cachedMaster = useCachedMasterTeacher(session?.sub);
+  const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
+  const [linksLayout] = useLinksLayout();
+  const nav = buildNav(isMasterTeacher);
+  const tabs = nav.flatMap((group) => group.items);
 
-function useIsActive() {
+  // Navbar mode is the CardNav top bar. Sidebar mode swaps it for a left
+  // branched rail on desktop; the tab bar still serves small screens.
+  if (linksLayout !== "sidebar") {
+    return <TeacherCardNav nav={nav} />;
+  }
+  return (
+    <>
+      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Teacher sections">
+        <TeacherRail groups={nav} />
+      </aside>
+      <div className={styles.tabsMobile}>
+        <TeacherNavbar tabs={tabs} />
+      </div>
+    </>
+  );
+}
+
+function TeacherCardNav({ nav }: { nav: NavGroup[] }) {
+  const pick = (label: string) => nav.find((g) => g.label === label)?.items ?? [];
+  const tint = (pct: number) => `color-mix(in oklch, var(--primary) ${pct}%, var(--card))`;
+  const cards: CardNavItem[] = [
+    {
+      label: "Overview",
+      bgColor: "var(--primary)",
+      textColor: "var(--primary-foreground)",
+      links: pick("Overview").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
+    },
+    {
+      label: "Advisory",
+      bgColor: tint(14),
+      textColor: "var(--foreground)",
+      links: pick("Advisory").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
+    },
+    {
+      label: "Workspace",
+      bgColor: tint(7),
+      textColor: "var(--foreground)",
+      links: pick("Workspace").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
+    },
+    {
+      label: "Settings",
+      bgColor: tint(4),
+      textColor: "var(--foreground)",
+      links: pick("Settings").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
+    },
+  ];
+  return (
+    <div className={styles.cardNavWrap}>
+      <CardNav brand="Zentra" items={cards} ease="power3.out" />
+    </div>
+  );
+}
+
+function TeacherRail({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
-  return React.useCallback(
+  const router = useRouter();
+  const isActive = React.useCallback(
     (href: string) =>
       href === "/teacher/overview"
         ? pathname === href
         : pathname === href || pathname.startsWith(`${href}/`),
     [pathname],
   );
+  const tabs = groups.flatMap((group) => group.items);
+  const activeHref = tabs.find((t) => isActive(t.href))?.href ?? "/teacher/overview";
+  const defaultOpen = groups.map((_, i) => i);
+  return (
+    <BranchedMenu
+      accentColor="#f59e0b"
+      items={groups.map((group) => ({
+        label: group.label,
+        children: group.items.map((t) => ({
+          value: t.href,
+          label: t.title,
+          href: t.href,
+          icon: <t.icon size={16} strokeWidth={1.8} aria-hidden="true" />,
+        })),
+      }))}
+      defaultOpen={defaultOpen.length > 0 ? defaultOpen : [0]}
+      defaultActive={activeHref}
+      activeValue={activeHref}
+      onSelect={(_value, item) => {
+        if ("href" in item && item.href) router.push(item.href);
+      }}
+      width={208}
+    />
+  );
 }
 
-function TeacherNavbar() {
-  const isActive = useIsActive();
+function TeacherNavbar({ tabs }: { tabs: NavItem[] }) {
+  const pathname = usePathname();
+  const isActive = React.useCallback(
+    (href: string) =>
+      href === "/teacher/overview"
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`),
+    [pathname],
+  );
 
   return (
     <nav className={styles.navbar} aria-label="Teacher sections">
       <ul className={styles.tabs}>
-        {TABS.map((item) => {
+        {tabs.map((item) => {
           const active = isActive(item.href);
           return (
             <li key={item.href} className={styles.tabItem}>
@@ -131,8 +207,4 @@ function TeacherNavbar() {
       </ul>
     </nav>
   );
-}
-
-export function TeacherSidebar() {
-  return <TeacherNavbar />;
 }

@@ -3,9 +3,30 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1.5rem 0.25rem 0.25rem;
+  /* No padding here — the principal shell (.main) already provides the
+     single 16px gutter from the nav. Adding more would exceed 16px. */
+  padding: 0;
   min-height: 100%;
   background-color: var(--background);
+}
+
+/* Heatblocks (75%) beside the breakdown rail (25%) — equal heights. */
+.topRow {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.topRow > * {
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .topRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .divider {

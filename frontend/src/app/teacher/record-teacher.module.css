@@ -18,6 +18,16 @@
   margin-top: 6rem;
 }
 
+/* Sidebar links layout: no top tab bar (3rem topbar only) and room for
+   the 16rem branched rail. Desktop only — small screens keep the tab
+   bar layout untouched. */
+@media (min-width: 1024px) {
+  .shellWithRail {
+    margin-top: 3rem;
+    margin-left: 16rem;
+  }
+}
+
 .main {
   flex: 1;
   padding: 1rem;
@@ -45,6 +55,26 @@
   padding-inline: 0.75rem;
   border-bottom: 1px solid var(--border);
   background-color: var(--background);
+}
+
+/* Per-page breadcrumb slot: hidden on small screens; on desktop it sits
+   fixed at the main panel's left edge (16rem rail + 1rem main padding),
+   vertically centered in the 3rem topbar. */
+.crumb {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .crumb {
+    display: flex;
+    position: fixed;
+    left: 17rem;
+    top: 0;
+    height: 3rem;
+    align-items: center;
+    min-width: 0;
+    z-index: 41;
+  }
 }
 
 .brand {
@@ -115,6 +145,9 @@
   width: 1.125rem;
   height: 1.125rem;
 }
+
+/* Notification bell styles live in the shared
+   components/notifications/notifications-bell.module.css. */
 
 .accountMenu {
   min-width: 12rem;

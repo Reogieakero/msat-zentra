@@ -343,20 +343,22 @@ router.get(
   cache({ tags: ["registrar", "academics"] }),
   async (req, res, next) => {
     try {
-      // Optional ?schoolYearId= lets callers (e.g. Assign Subjects) list
-      // sections for any year. Defaults to the active year.
+      // Optional ?schoolYearId= lets callers list sections for any year.
+      // Defaults to the session's active School Year — pages no longer ask.
       const requestedYearId =
         typeof req.query.schoolYearId === "string" && req.query.schoolYearId.trim()
           ? req.query.schoolYearId.trim()
           : null;
+      const scopedYearId = requestedYearId ?? req.termScope?.schoolYearId ?? null;
       let targetYear: { id: string; name: string } | null = null;
-      if (requestedYearId) {
+      if (scopedYearId) {
         targetYear = await prisma.schoolYear.findUnique({
-          where: { id: requestedYearId },
+          where: { id: scopedYearId },
           select: { id: true, name: true },
         });
-        if (!targetYear) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "School year not found");
-      } else {
+        if (!targetYear && requestedYearId) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "School year not found");
+      }
+      if (!targetYear) {
         targetYear = await prisma.schoolYear.findFirst({
           where: { isActive: true },
           select: { id: true, name: true },
@@ -416,18 +418,21 @@ router.get(
   cache({ tags: ["registrar", "academics"] }),
   async (req, res, next) => {
     try {
+      // Defaults to the session's active School Year — pages no longer ask.
       const requestedYearId =
         typeof req.query.schoolYearId === "string" && req.query.schoolYearId.trim()
           ? req.query.schoolYearId.trim()
           : null;
+      const scopedTermsYearId = requestedYearId ?? req.termScope?.schoolYearId ?? null;
       let targetYear: { id: string; name: string } | null = null;
-      if (requestedYearId) {
+      if (scopedTermsYearId) {
         targetYear = await prisma.schoolYear.findUnique({
-          where: { id: requestedYearId },
+          where: { id: scopedTermsYearId },
           select: { id: true, name: true },
         });
-        if (!targetYear) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "School year not found");
-      } else {
+        if (!targetYear && requestedYearId) throw new AppError(404, "SCHOOL_YEAR_NOT_FOUND", "School year not found");
+      }
+      if (!targetYear) {
         targetYear = await prisma.schoolYear.findFirst({
           where: { isActive: true },
           select: { id: true, name: true },

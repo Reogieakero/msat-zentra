@@ -2,8 +2,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem 0.25rem 0.25rem;
+  gap: 1rem;
+  padding: 0;
 }
 
 .divider {

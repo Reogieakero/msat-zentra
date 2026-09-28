@@ -39,18 +39,30 @@ export interface AdmDashboard {
   latestReferred: AdmLatestReferred[];
 }
 
+export interface AdmReferralForm {
+  id: string;
+  formType: string;
+  title: string;
+  status: string;
+  fileUrl: string | null;
+  notes: string | null;
+  uploadedAt: string | null;
+}
+
 export interface AdmReferralRow {
   id: string;
   lrn: string;
   student: string;
   grade: string;
+  section: string;
+  anecdotalRecordId: string | null;
   stage: "consultation" | "meeting_parents" | "home_visitation" | "certification" | "principal_approval";
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   preparedBy: string;
   datePrepared: string;
   approvedBy: string | null;
   approvalDate: string | null;
-  forms: { id: string; formType: string; title: string; status: string }[];
+  forms: AdmReferralForm[];
 }
 
 export interface AdmReferralsPage {
@@ -82,12 +94,25 @@ export async function fetchAdmReferrals(
   return res.data;
 }
 
+export interface AdmSubjectGrade {
+  subject: string;
+  code: string;
+  computedAverage: number | null;
+  transmutedGrade: number | null;
+  belowThreshold: boolean;
+}
+
 export interface AdmApprovalRow {
   id: string;
   lrn: string;
   student: string;
   grade: string;
   section: string;
+  sectionName: string;
+  modulesSubmitted: number;
+  modulesTotal: number;
+  devicesIssued: number;
+  subjectGrades: AdmSubjectGrade[];
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   preparedBy: string;
   approvedBy: string | null;

@@ -21,14 +21,25 @@ interface FolderCardProps {
   label: string;
   sublabel?: string;
   files: FolderFile[];
+  /** Optional chip pinned to the folder's bottom-right (e.g. record type). */
+  cornerTag?: string;
+  /** Optional folder body color (e.g. per-category). Defaults to gray. */
+  folderColor?: string;
 }
 
-export function FolderCard({ label, sublabel, files }: FolderCardProps) {
+export function FolderCard({ label, sublabel, files, cornerTag, folderColor }: FolderCardProps) {
   const count = files.length;
 
   return (
     <div className={styles.card}>
-      <div className={styles.folder}>
+      <div
+        className={styles.folder}
+        style={
+          folderColor
+            ? ({ "--folder-color": folderColor } as React.CSSProperties)
+            : undefined
+        }
+      >
         <div className={styles.canvas}>
           <svg className={styles.back} viewBox="0 0 50 40" fill="none" aria-hidden>
             <path
@@ -49,6 +60,12 @@ export function FolderCard({ label, sublabel, files }: FolderCardProps) {
               </div>
             );
           })}
+
+          {cornerTag && (
+            <div className={styles.cornerTag} aria-label={`Record type: ${cornerTag}`}>
+              {cornerTag}
+            </div>
+          )}
 
           <div className={styles.frontWrapper}>
             <svg

@@ -3,24 +3,23 @@
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAction } from "./components/OverviewAction";
 import { OverviewRisk } from "./components/OverviewRisk";
-import { OverviewAttendance } from "./components/OverviewAttendance";
 import { OverviewPopulation } from "./components/OverviewPopulation";
 import styles from "./components/overview.module.css";
 
 export default function PrincipalOverviewPage() {
   return (
     <section className={styles.page}>
-      <OverviewHeader />
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          <OverviewRisk />
 
-      <hr className={styles.divider} />
+          <OverviewPopulation />
 
-      <OverviewAction />
+          <OverviewAction />
+        </div>
 
-      <OverviewRisk />
-
-      <OverviewAttendance />
-
-      <OverviewPopulation />
+        <OverviewHeader />
+      </div>
     </section>
   );
 }

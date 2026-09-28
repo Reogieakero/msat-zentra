@@ -53,6 +53,15 @@ export default function TeacherGradebookPage() {
 
   return (
     <section className={styles.page}>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Gradebook</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {critical.data.classes.length === 1
+            ? "1 subject"
+            : `${critical.data.classes.length} subjects`}{" "}
+          for this term — open a workspace to encode scores.
+        </p>
+      </div>
       {secondary.isPending ? (
         <p className={styles.syncNote} role="status">
           Loading assessments…

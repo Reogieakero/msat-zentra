@@ -4,8 +4,6 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchHeatmap } from "./api";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import { StudentsHeader } from "./components/StudentsHeader";
-import { StudentsKpiRail } from "./components/StudentsKpiRail";
 import { StudentHeatmap } from "./components/StudentHeatmap";
 import { StudentsListTable } from "./components/StudentsListTable";
 import styles from "./students.module.css";
@@ -23,25 +21,35 @@ export default function RiskBoardStudentsPage() {
     queryFn: fetchHeatmap,
   });
 
+  const tableRef = React.useRef<HTMLDivElement>(null);
+
+  const handleSelectSection = React.useCallback((section: string) => {
+    setSelectedSection(section);
+    // Let the table re-render with the new filter before scrolling to it.
+    requestAnimationFrame(() => {
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      tableRef.current?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+  }, [setSelectedSection]);
+
   return (
     <section className={styles.page}>
-      <StudentsHeader />
-
-      <hr className={styles.divider} />
-
-      <StudentsKpiRail />
-
       <StudentHeatmap
         heat={heat ?? null}
         loading={heatLoading}
         selectedSection={selectedSection === "all" ? null : selectedSection}
-        onSelect={setSelectedSection}
+        onSelect={handleSelectSection}
       />
 
-      <StudentsListTable
-        selectedSection={selectedSection}
-        onSectionChange={setSelectedSection}
-      />
+      <div ref={tableRef} className={styles.tableAnchor}>
+        <StudentsListTable
+          selectedSection={selectedSection}
+          onSectionChange={setSelectedSection}
+        />
+      </div>
     </section>
   );
 }

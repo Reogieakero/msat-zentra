@@ -1,17 +1,23 @@
 import { prisma } from "../lib/prisma.js";
+import { pickCurrentTerm } from "../lib/termScope.js";
 import { sectionHeadcounts } from "./enrollment.js";
 import type { RiskLevel } from "../generated/prisma/client.js";
 
-// Single source of truth for "the active term": the first term (by termNumber
-// asc) of the active school year. Used by every risk endpoint/service so the
-// live recompute never drifts between the board, heatmap, and students list.
-export async function resolveActiveTermId(): Promise<string | null> {
-  const term = await prisma.term.findFirst({
+// Single source of truth for "the active term": the session's selected term
+// (Login → select → scope, via req.termScope) when the request carries one,
+// otherwise the term containing today (falling back to the first term of
+// the active school year). Used by every risk endpoint/service so the live
+// recompute never drifts between the board, heatmap, and students list.
+export async function resolveActiveTermId(
+  req?: { termScope?: { termId: string } | undefined },
+): Promise<string | null> {
+  if (req?.termScope?.termId) return req.termScope.termId;
+  const terms = await prisma.term.findMany({
     where: { schoolYear: { isActive: true } },
     orderBy: { termNumber: "asc" },
-    select: { id: true },
+    select: { id: true, startDate: true, endDate: true },
   });
-  return term?.id ?? null;
+  return pickCurrentTerm(terms)?.id ?? null;
 }
 
 export interface RiskResult {
@@ -30,7 +36,10 @@ export async function evaluateRisk(
       where: { studentId, termId },
       select: { computedAverage: true, transmutedGrade: true },
     }),
-    prisma.attendanceRecord.findMany({ where: { studentId, termId }, select: { status: true } }),
+    prisma.attendanceRecord.findMany({
+      where: { studentId, termId },
+      select: { status: true, subjectId: true },
+    }),
     prisma.anecdotalRecord.count({ where: { studentId, termId } }),
     prisma.studentProfile.findUnique({
       where: { userId: studentId },
@@ -44,7 +53,18 @@ export async function evaluateRisk(
 
   const attPresent = attendance.filter((a) => a.status === "present").length;
   const enrolled = profile?.section?._count.students ?? 0;
-  const attendanceFlag = enrolled > 0 ? attPresent / enrolled < 0.8 : false;
+  // Dual-mode attendance flag (AM/PM → subject migration):
+  // - legacy rows (subjectId NULL): present / enrolled < 0.8 (unchanged).
+  // - subject-era rows: present / subjectSessions < 0.8. The enrolled
+  //   denominator would undercount by the subjects-per-day factor, so it must
+  //   NOT be used once subject rows exist.
+  const attendanceFlag = attendance.some((a) => a.subjectId !== null)
+    ? attendance.length > 0
+      ? attPresent / attendance.length < 0.8
+      : false
+    : enrolled > 0
+      ? attPresent / enrolled < 0.8
+      : false;
 
   const behavioralFlag = anecdotals >= 1;
 
@@ -80,11 +100,13 @@ export interface FactorInputs {
   // (DepEd transmuted). "raw" = recompute from each subject's computedAverage
   // (the raw weighted component average, before transmutation).
   gradeMode?: GradeMode;
-  attendance: { status: string }[];
+  // Subject-era records carry subjectId (non-null). When present, the flag
+  // uses present / subjectSessions; otherwise the legacy present / enrolled.
+  attendance: { status: string; subjectId?: string | null }[];
   anecdotalCount: number;
   // Enrolled headcount of the student's section. The attendance flag uses
   // present / enrolled (consistent with the Attendance heatmap/system), not
-  // present / submittedRecords.
+  // present / submittedRecords — legacy rows only.
   enrolled: number;
 }
 
@@ -113,7 +135,14 @@ export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
   const attPresent = attendance.filter((a) => a.status === "present").length;
   // present / enrolled < 0.8 → at-risk. A student with zero recorded presence
   // (enrolled > 0, present = 0) is below 80% and is flagged.
-  const attendanceFlag = enrolled > 0 ? attPresent / enrolled < 0.8 : false;
+  // Subject-era rows (any subjectId non-null): present / subjectSessions < 0.8.
+  const attendanceFlag = attendance.some((a) => a.subjectId != null)
+    ? attendance.length > 0
+      ? attPresent / attendance.length < 0.8
+      : false
+    : enrolled > 0
+      ? attPresent / enrolled < 0.8
+      : false;
   const behavioralFlag = anecdotalCount >= 1;
   return { academicFlag, attendanceFlag, behavioralFlag };
 }
@@ -143,7 +172,10 @@ export async function evaluateRosterRisk(
       where: { rosterId, termId },
       select: { computedAverage: true, transmutedGrade: true },
     }),
-    prisma.attendanceRecord.findMany({ where: { rosterId, termId }, select: { status: true } }),
+    prisma.attendanceRecord.findMany({
+      where: { rosterId, termId },
+      select: { status: true, subjectId: true },
+    }),
     prisma.anecdotalRecord.count({ where: { rosterId, termId } }),
     prisma.studentRoster.findUnique({
       where: { id: rosterId },
@@ -152,7 +184,8 @@ export async function evaluateRosterRisk(
   ]);
 
   // Same attendance denominator rule as the profile path: present over the
-  // section headcount (LRN-deduped via the shared enrollment helper).
+  // section headcount (LRN-deduped via the shared enrollment helper) for
+  // legacy rows; present over subject sessions once subject rows exist.
   const enrolled = roster
     ? ((await sectionHeadcounts([roster.sectionId])).get(roster.sectionId) ?? 0)
     : 0;
@@ -162,7 +195,13 @@ export async function evaluateRosterRisk(
     : false;
 
   const attPresent = attendance.filter((a) => a.status === "present").length;
-  const attendanceFlag = enrolled > 0 ? attPresent / enrolled < 0.8 : false;
+  const attendanceFlag = attendance.some((a) => a.subjectId !== null)
+    ? attendance.length > 0
+      ? attPresent / attendance.length < 0.8
+      : false
+    : enrolled > 0
+      ? attPresent / enrolled < 0.8
+      : false;
 
   const behavioralFlag = anecdotals >= 1;
 

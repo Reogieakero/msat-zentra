@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Menu, X, Type } from "lucide-react";
+import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import styles from "./record-keeper.module.css";
 
 function RecordKeeperShell({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,8 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className={styles.spacer} />
+
+        <ActiveTermBadge />
 
         <div className={styles.search}>
           <Command shouldFilter={false} className={styles.searchCommand}>

@@ -93,7 +93,7 @@ export const ADM_PIPELINE: {
   {
     stage: "enrollment_monitoring",
     order: 7,
-    label: "Modules Completed & Returned",
+    label: "Modules Ready for Release",
     owner: "Student",
     principalAction: false,
     description:

@@ -8,6 +8,7 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { validate } from "../../middleware/validate.js";
+import { scopedTermRow } from "../../lib/termScope.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { ADM_STAGE_FLOW, ADM_STAGES, canTransition, evaluateAdmEligibility, type AdmStage } from "../../services/adm.js";
@@ -127,7 +128,9 @@ router.get(
             formType: f.formType,
             title: f.title,
             status: f.status,
-            uploadedAt: f.uploadedAt,
+            fileUrl: f.fileUrl ?? null,
+            notes: f.notes ?? null,
+            uploadedAt: f.uploadedAt ? f.uploadedAt.toISOString() : null,
           })),
         }));
 
@@ -274,9 +277,17 @@ router.get(
       // mixes in enrolled learners. Explicit enrollment_monitoring /
       // completion filters serve the coordinator Enrolled page (approved
       // cases from the Principal).
+      // Principals keep seeing endorsed cases after signing: their
+      // principal_approval view also includes enrollment_monitoring cases
+      // (every one of them passed through endorsement + signature), so a
+      // signed case never vanishes from the desk.
+      const effectiveStageFilter: AdmStage | { in: AdmStage[] } =
+        stageFilter === "principal_approval" && req.user!.role === "principal"
+          ? { in: ["principal_approval", "enrollment_monitoring"] as AdmStage[] }
+          : (stageFilter as AdmStage);
       const where: Prisma.AdmLearnerProfileWhereInput = {
         ...(stageFilter && stageFilter !== "consultation"
-          ? { stage: stageFilter }
+          ? { stage: effectiveStageFilter }
           : stageFilter === ""
             ? { stage: { in: REFERRAL_STAGES } }
             : { id: "__none__" }),
@@ -326,7 +337,8 @@ router.get(
         prisma.admLearnerProfile.findMany({
           where,
           include: {
-            student: { include: { user: true } },
+            student: { include: { user: true, section: { select: { name: true } } } },
+            referral: { select: { anecdotalRecordId: true } },
             preparedByUser: true,
             forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
             parentMeetings: { orderBy: { meetingDatetime: "desc" }, take: 1 },
@@ -349,6 +361,7 @@ router.get(
                     lrn: true,
                     gradeLevel: true,
                     user: { select: { fullName: true } },
+                    section: { select: { name: true } },
                   },
                 },
                 roster: {
@@ -356,6 +369,7 @@ router.get(
                     lrn: true,
                     fullName: true,
                     gradeLevel: true,
+                    section: { select: { name: true } },
                   },
                 },
                 referredByUser: { select: { fullName: true } },
@@ -382,6 +396,8 @@ router.get(
           lrn: p.student.lrn,
           student: p.student.user.fullName,
           grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
+          section: p.student.section?.name ?? "",
+          anecdotalRecordId: p.referral?.anecdotalRecordId ?? null,
           stage,
           eligibilityStatus:
             p.eligibilityStatus === "eligible"
@@ -463,6 +479,8 @@ router.get(
           lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
           student: r.student?.user.fullName ?? r.roster?.fullName ?? "",
           grade: GRADE_LABEL[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
+          section: r.student?.section?.name ?? r.roster?.section?.name ?? "",
+          anecdotalRecordId: r.anecdotalRecordId ?? null,
           stage: "consultation" as const,
           eligibilityStatus: "pending" as const,
           preparedBy: r.referredByUser.fullName,
@@ -544,14 +562,19 @@ router.get(
           : {}),
       };
 
+      const activeTerm = await scopedTermRow(req);
+      const termId = activeTerm?.id;
+
       const [pageItems, total] = await Promise.all([
         prisma.admLearnerProfile.findMany({
           where,
           include: {
-            student: { include: { user: true } },
+            student: { include: { user: true, section: { select: { name: true } } } },
             approvedByUser: true,
             preparedByUser: true,
             forms: { orderBy: { uploadedAt: "desc" } },
+            modules: { select: { submitted: true } },
+            devices: { select: { id: true } },
           },
           orderBy: { approvedAt: "desc" },
           skip,
@@ -560,6 +583,30 @@ router.get(
         prisma.admLearnerProfile.count({ where }),
       ]);
 
+      // Per-subject academic tracking for the active term (finalized
+      // transmuted grades with raw computed averages alongside).
+      const gradeRows = termId
+        ? await prisma.finalGrade.findMany({
+            where: {
+              studentId: { in: pageItems.map((p) => p.studentId) },
+              termId,
+            },
+            select: {
+              studentId: true,
+              computedAverage: true,
+              transmutedGrade: true,
+              subject: { select: { name: true, code: true } },
+            },
+          })
+        : [];
+      const gradesByStudent = new Map<string, typeof gradeRows>();
+      for (const g of gradeRows) {
+        if (!g.studentId) continue;
+        const arr = gradesByStudent.get(g.studentId) ?? [];
+        arr.push(g);
+        gradesByStudent.set(g.studentId, arr);
+      }
+
       const out = pageItems.map((p) => {
         const base = {
           id: p.id,
@@ -567,6 +614,17 @@ router.get(
           student: p.student.user.fullName,
           grade: GRADE_LABEL[p.student.gradeLevel] ?? p.student.gradeLevel,
           section: p.student.sectionId ?? "",
+          sectionName: p.student.section?.name ?? "",
+          modulesSubmitted: p.modules.filter((m) => m.submitted).length,
+          modulesTotal: p.modules.length,
+          devicesIssued: p.devices.length,
+          subjectGrades: (gradesByStudent.get(p.studentId) ?? []).map((g) => ({
+            subject: g.subject.name,
+            code: g.subject.code,
+            computedAverage: g.computedAverage,
+            transmutedGrade: g.transmutedGrade,
+            belowThreshold: (g.transmutedGrade ?? 100) < 75,
+          })),
           eligibilityStatus:
             p.eligibilityStatus === "eligible"
               ? ("eligible" as const)
@@ -890,13 +948,15 @@ router.post(
       // together or roll back together — a half-created case (profile with
       // no forms, or transferred meetings with no profile) must never
       // persist. No external I/O inside: provisioning + argon2 stay above.
+      // Profiles are always filed under the session's active term.
       const me = req.user!.id;
+      const profileTermId = req.termScope?.termId ?? (req.body.termId as string);
       const profile = await prisma.$transaction(async (tx) => {
         const created = await tx.admLearnerProfile.create({
           data: {
             studentId: studentId as string,
             referralId: referral.id,
-            termId: req.body.termId,
+            termId: profileTermId,
             ...(req.body.certificationDetails !== undefined
               ? { certificationDetails: req.body.certificationDetails }
               : {}),

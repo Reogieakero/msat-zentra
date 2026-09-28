@@ -7,7 +7,6 @@ import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardAction,
   CardContent,
 } from "@/components/ui/card";
@@ -20,18 +19,31 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { fetchOverview } from "./overview-data";
+import { useTheme } from "@/components/providers";
 import styles from "./OverviewRisk.module.css";
 
-const chartConfig = {
+const chartConfigLight = {
   value: { label: "Students", color: "#171717" },
+} satisfies ChartConfig;
+
+const chartConfigDark = {
+  value: { label: "Students", color: "#e5e5e5" },
 } satisfies ChartConfig;
 
 type FactorKey = "attendance" | "grades" | "behavior";
 
-const FACTOR_COLORS: Record<FactorKey, string> = {
+// Light mode: ink-to-gray ramp for light surfaces.
+// Dark mode: mirrored paper-to-gray ramp so bars stay legible on dark cards.
+const FACTOR_COLORS_LIGHT: Record<FactorKey, string> = {
   attendance: "#171717",
   grades: "#525252",
   behavior: "#a3a3a3",
+};
+
+const FACTOR_COLORS_DARK: Record<FactorKey, string> = {
+  attendance: "#fafafa",
+  grades: "#a3a3a3",
+  behavior: "#525252",
 };
 
 interface FactorRow {
@@ -43,11 +55,27 @@ interface FactorRow {
 
 type LevelKey = "high" | "moderate" | "low";
 
-const LEVEL_COLORS: Record<LevelKey, string> = {
+const LEVEL_COLORS_LIGHT: Record<LevelKey, string> = {
   high: "#171717",
   moderate: "#6b7280",
   low: "#d1d5db",
 };
+
+const LEVEL_COLORS_DARK: Record<LevelKey, string> = {
+  high: "#fafafa",
+  moderate: "#9ca3af",
+  low: "#4b5563",
+};
+
+const GRADE_BAR_LIGHT = "#171717";
+const GRADE_BAR_DARK = "#e5e5e5";
+
+function useIsDark() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  return mounted && resolvedTheme === "dark";
+}
 
 interface LevelRow {
   key: LevelKey;
@@ -68,9 +96,9 @@ function interpretRisk(
   }
 
   const rows: FactorRow[] = [
-    { key: "attendance", label: "Attendance", value: attendance, color: FACTOR_COLORS.attendance },
-    { key: "grades", label: "Academics", value: grades, color: FACTOR_COLORS.grades },
-    { key: "behavior", label: "Behavior", value: behavior, color: FACTOR_COLORS.behavior },
+    { key: "attendance", label: "Attendance", value: attendance, color: "" },
+    { key: "grades", label: "Academics", value: grades, color: "" },
+    { key: "behavior", label: "Behavior", value: behavior, color: "" },
   ];
   rows.sort((a, b) => b.value - a.value);
 
@@ -145,17 +173,21 @@ function useOverview() {
 
 export function OverviewRisk() {
   const { data, isPending, isError } = useOverview();
+  const isDark = useIsDark();
+  const chartConfig = isDark ? chartConfigDark : chartConfigLight;
+  const gradeBarFill = isDark ? GRADE_BAR_DARK : GRADE_BAR_LIGHT;
 
   const rows: FactorRow[] = React.useMemo(() => {
     const atRisk = data?.atRisk;
     if (!atRisk) return [];
+    const colors = isDark ? FACTOR_COLORS_DARK : FACTOR_COLORS_LIGHT;
     const items: FactorRow[] = [
-      { key: "attendance", label: "Attendance", value: atRisk.attendance, color: FACTOR_COLORS.attendance },
-      { key: "grades", label: "Academics", value: atRisk.grades, color: FACTOR_COLORS.grades },
-      { key: "behavior", label: "Behavior", value: atRisk.behavior, color: FACTOR_COLORS.behavior },
+      { key: "attendance", label: "Attendance", value: atRisk.attendance, color: colors.attendance },
+      { key: "grades", label: "Academics", value: atRisk.grades, color: colors.grades },
+      { key: "behavior", label: "Behavior", value: atRisk.behavior, color: colors.behavior },
     ];
     return items;
-  }, [data]);
+  }, [data, isDark]);
 
   const interpretation = React.useMemo(
     () =>
@@ -176,13 +208,14 @@ export function OverviewRisk() {
   const levelRows: LevelRow[] = React.useMemo(() => {
     const levels = data?.riskByLevel;
     if (!levels) return [];
+    const colors = isDark ? LEVEL_COLORS_DARK : LEVEL_COLORS_LIGHT;
     const items: LevelRow[] = [
-      { key: "high", label: "High", value: levels.high, color: LEVEL_COLORS.high },
-      { key: "moderate", label: "Moderate", value: levels.moderate, color: LEVEL_COLORS.moderate },
-      { key: "low", label: "Low", value: levels.low, color: LEVEL_COLORS.low },
+      { key: "high", label: "High", value: levels.high, color: colors.high },
+      { key: "moderate", label: "Moderate", value: levels.moderate, color: colors.moderate },
+      { key: "low", label: "Low", value: levels.low, color: colors.low },
     ];
     return items;
-  }, [data]);
+  }, [data, isDark]);
 
   const levelsTotal = levelRows.reduce((sum, r) => sum + r.value, 0);
 
@@ -203,37 +236,174 @@ export function OverviewRisk() {
   );
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
-        <div className={styles.headerText}>
-          <CardTitle>Risk at a glance</CardTitle>
-          <CardDescription>
-            Students flagging on each risk factor, recomputed from the shared risk engine.
-          </CardDescription>
-        </div>
-        <CardAction>
+    <div className={styles.riskGrid}>
+      {/* Card 1 — Risk at a glance */}
+      <Card className={styles.card}>
+        <CardHeader className={styles.header}>
+          <div className={styles.headerText}>
+            <CardTitle>Risk at a glance</CardTitle>
+          </div>
+          <CardAction>
+            {isPending ? (
+              <Skeleton className={styles.headerBadgeSkel} />
+            ) : (
+              <Badge variant="secondary" className={styles.riskBadge}>
+                {data?.atRisk.students ?? 0} at risk
+              </Badge>
+            )}
+          </CardAction>
+        </CardHeader>
+        <CardContent className={styles.content}>
           {isPending ? (
-            <Skeleton className={styles.headerBadgeSkel} />
+            <Skeleton className={styles.chartSkel} />
+          ) : isError ? (
+            <p className={styles.empty}>Could not load risk figures.</p>
+          ) : noFlags ? (
+            <p className={styles.empty}>No students flagged at risk this term.</p>
           ) : (
-            <Badge variant="secondary" className={styles.riskBadge}>
-              {data?.atRisk.students ?? 0} at risk
-            </Badge>
+            <>
+              <div className={styles.chartWrap}>
+                <ChartContainer config={chartConfig} className={styles.chart}>
+                  <BarChart
+                    data={rows}
+                    margin={{ top: 8, right: 8, bottom: 0, left: -6 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="var(--border)"
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      minTickGap={12}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      width={32}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent formatter={(value) => `${value} student(s)`} />
+                      }
+                    />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {rows.map((r) => (
+                        <Cell key={r.key} fill={r.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              </div>
+              <p className={styles.chartInterpretation}>{interpretation}</p>
+            </>
           )}
-        </CardAction>
-      </CardHeader>
-      <CardContent className={styles.content}>
-        {isPending ? (
-          <Skeleton className={styles.chartSkel} />
-        ) : isError ? (
-          <p className={styles.empty}>Could not load risk figures.</p>
-        ) : noFlags ? (
-          <p className={styles.empty}>No students flagged at risk this term.</p>
-        ) : (
-          <>
-            <div className={styles.chartWrap}>
-              <ChartContainer config={chartConfig} className={styles.chart}>
+        </CardContent>
+      </Card>
+
+      {/* Card 2 — Students by risk level */}
+      <Card className={styles.card}>
+        <CardHeader className={styles.header}>
+          <div className={styles.headerText}>
+            <CardTitle>Students by risk level</CardTitle>
+          </div>
+          <CardAction>
+            {isPending ? (
+              <Skeleton className={styles.headerBadgeSkel} />
+            ) : (
+              <Badge variant="secondary" className={styles.riskBadge}>
+                {levelsTotal} tracked
+              </Badge>
+            )}
+          </CardAction>
+        </CardHeader>
+        <CardContent className={styles.content}>
+          {isPending ? (
+            <Skeleton className={styles.donutSkel} />
+          ) : isError ? (
+            <p className={styles.empty}>Could not load risk figures.</p>
+          ) : levelRows.length === 0 ? (
+            <p className={styles.chartEmpty}>No level data.</p>
+          ) : (
+            <>
+              <div className={styles.donutWrap}>
+                <ChartContainer config={chartConfig} className={styles.donut}>
+                  <PieChart>
+                    <ChartTooltip
+                      wrapperStyle={{ zIndex: 50 }}
+                      content={
+                        <ChartTooltipContent
+                          className={styles.tooltipSolid}
+                          formatter={(value, name) => `${name}: ${value} student(s)`}
+                        />
+                      }
+                    />
+                    <Pie
+                      data={levelRows}
+                      dataKey="value"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={44}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {levelRows.map((entry) => (
+                        <Cell key={entry.key} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className={styles.donutCenter}>
+                  <span className={styles.donutTotal}>{levelsTotal}</span>
+                  <span className={styles.donutLabel}>students</span>
+                </div>
+              </div>
+              <ul className={styles.levelList}>
+                {levelRows.map((r) => (
+                  <li key={r.key} className={styles.levelItem}>
+                    <span className={styles.levelLabel}>
+                      <span
+                        className={styles.levelDot}
+                        style={{ backgroundColor: r.color }}
+                        aria-hidden
+                      />
+                      {r.label}
+                    </span>
+                    <span className={styles.levelCount}>{r.value}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.chartInterpretation}>{levelInterpretation}</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Card 3 — At-risk students by grade */}
+      <Card className={styles.card}>
+        <CardHeader className={styles.header}>
+          <div className={styles.headerText}>
+            <CardTitle>At-risk students by grade</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className={styles.content}>
+          {isPending ? (
+            <Skeleton className={styles.barSkel} />
+          ) : isError ? (
+            <p className={styles.empty}>Could not load risk figures.</p>
+          ) : noGradeRisk ? (
+            <p className={styles.chartEmpty}>No at-risk students by grade this term.</p>
+          ) : (
+            <>
+              <ChartContainer config={chartConfig} className={styles.gradeChart}>
                 <BarChart
-                  data={rows}
+                  data={gradeRows}
                   margin={{ top: 8, right: 8, bottom: 0, left: -6 }}
                 >
                   <CartesianGrid
@@ -242,11 +412,11 @@ export function OverviewRisk() {
                     stroke="var(--border)"
                   />
                   <XAxis
-                    dataKey="label"
+                    dataKey="grade"
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    minTickGap={12}
+                    minTickGap={10}
                   />
                   <YAxis
                     allowDecimals={false}
@@ -259,119 +429,18 @@ export function OverviewRisk() {
                       <ChartTooltipContent formatter={(value) => `${value} student(s)`} />
                     }
                   />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {rows.map((r) => (
-                      <Cell key={r.key} fill={r.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            </div>
-            <p className={styles.chartInterpretation}>{interpretation}</p>
-
-            <div className={styles.chartsRow}>
-              {/* Donut — students by risk level */}
-              <div className={styles.chartBox}>
-                <h4 className={styles.chartHeading}>Students by risk level</h4>
-                {isPending ? (
-                  <Skeleton className={styles.donutSkel} />
-                ) : levelRows.length === 0 ? (
-                  <p className={styles.chartEmpty}>No level data.</p>
-                ) : (
-                  <div className={styles.donutWrap}>
-                    <ChartContainer config={chartConfig} className={styles.donut}>
-                      <PieChart>
-                        <Pie
-                          data={levelRows}
-                          dataKey="value"
-                          nameKey="label"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={44}
-                          outerRadius={70}
-                          paddingAngle={2}
-                          strokeWidth={0}
-                        >
-                          {levelRows.map((entry) => (
-                            <Cell key={entry.key} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ChartContainer>
-                    <div className={styles.donutCenter}>
-                      <span className={styles.donutTotal}>{levelsTotal}</span>
-                      <span className={styles.donutLabel}>students</span>
-                    </div>
-                  </div>
-                )}
-                <ul className={styles.levelList}>
-                  {levelRows.map((r) => (
-                    <li key={r.key} className={styles.levelItem}>
-                      <span className={styles.levelLabel}>
-                        <span
-                          className={styles.levelDot}
-                          style={{ backgroundColor: r.color }}
-                          aria-hidden
-                        />
-                        {r.label}
-                      </span>
-                      <span className={styles.levelCount}>{r.value}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className={styles.chartInterpretation}>{levelInterpretation}</p>
-              </div>
-
-              {/* Bar — at-risk students by grade level */}
-              <div className={styles.chartBox}>
-                <h4 className={styles.chartHeading}>At-risk students by grade</h4>
-                {isPending ? (
-                  <Skeleton className={styles.barSkel} />
-                ) : noGradeRisk ? (
-                  <p className={styles.chartEmpty}>No at-risk students by grade this term.</p>
-                ) : (
-                  <ChartContainer config={chartConfig} className={styles.gradeChart}>
-                    <BarChart
-                      data={gradeRows}
-                      margin={{ top: 8, right: 8, bottom: 0, left: -6 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="var(--border)"
-                      />
-                      <XAxis
-                        dataKey="grade"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        minTickGap={10}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tickLine={false}
-                        axisLine={false}
-                        width={32}
-                      />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent formatter={(value) => `${value} student(s)`} />
-                        }
-                      />
                       <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                         {gradeRows.map((r) => (
-                          <Cell key={r.grade} fill="#171717" />
+                          <Cell key={r.grade} fill={gradeBarFill} />
                         ))}
                       </Bar>
-                    </BarChart>
-                  </ChartContainer>
-                )}
-                <p className={styles.chartInterpretation}>{gradeInterpretation}</p>
-              </div>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+                </BarChart>
+              </ChartContainer>
+              <p className={styles.chartInterpretation}>{gradeInterpretation}</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

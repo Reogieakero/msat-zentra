@@ -52,7 +52,7 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
 
   const ww = detail.components.find((c) => c.type === "WRITTEN_WORK")?.weight ?? 0;
   const pt = detail.components.find((c) => c.type === "PERFORMANCE_TASK")?.weight ?? 0;
-  const qe = detail.components.find((c) => c.type === "QUARTERLY_EXAM")?.weight ?? 0;
+  const exam = detail.components.find((c) => c.type === "EXAM")?.weight ?? 0;
 
   const presets = isSHS(assignment.gradeLevel)
     ? WEIGHT_PRESETS.filter((p) => p.key === "SHS")
@@ -117,12 +117,12 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
           <DialogTitle>Category weights — DepEd Order No. 8</DialogTitle>
           <DialogDescription>
             Weight is each category&apos;s share of the final grade: final = (WW avg × WW%) +
-            (PT avg × PT%) + (QE avg × QE%). The three weights must total 100%.
+            (PT avg × PT%) + (E avg × E%). The three weights must total 100%.
           </DialogDescription>
         </DialogHeader>
 
         <div className={styles.form}>
-          <WeightsVisual ww={ww} pt={pt} qe={qe} />
+          <WeightsVisual ww={ww} pt={pt} exam={exam} />
 
           {editing ? (
             <>

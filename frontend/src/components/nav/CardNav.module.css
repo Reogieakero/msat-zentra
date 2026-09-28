@@ -1,0 +1,255 @@
+/* CardNav (reactbits) — converted to a CSS module. Type is set to the
+   app font so it matches the workspace. */
+
+.container {
+  position: absolute;
+  top: 2em;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 800px;
+  z-index: 99;
+  box-sizing: border-box;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.nav {
+  display: block;
+  height: 60px;
+  padding: 0;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 0.1);
+  position: relative;
+  overflow: hidden;
+  will-change: height;
+}
+
+.top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.45rem 0.55rem 1.1rem;
+  z-index: 2;
+}
+
+.hamburger {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0 0.25rem;
+  color: inherit;
+  font: inherit;
+}
+
+.hamburger:hover .hamburgerLine {
+  opacity: 0.75;
+}
+
+.hamburger:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.hamburgerLine {
+  width: 30px;
+  height: 2px;
+  background-color: currentColor;
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease,
+    margin 0.3s ease;
+  transform-origin: 50% 50%;
+}
+
+.hamburger.open .hamburgerLine:first-child {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.hamburger.open .hamburgerLine:last-child {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.logo {
+  height: 28px;
+}
+
+.brand {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cta {
+  border: none;
+  border-radius: calc(0.75rem - 0.35rem);
+  padding: 0 1rem;
+  height: 100%;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cta:hover {
+  filter: brightness(1.25);
+}
+
+.content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60px;
+  bottom: 0;
+  padding: 0.5rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.nav.open .content {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.card {
+  height: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: calc(0.75rem - 0.2rem);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  gap: 8px;
+  user-select: none;
+}
+
+.cardLabel {
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+}
+
+.cardLinks {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardLink {
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardLink:hover {
+  opacity: 0.75;
+}
+
+.cardLink:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.cardLinkIcon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: 90%;
+    top: 1.2em;
+  }
+
+  .top {
+    padding: 0.5rem 1rem;
+    justify-content: space-between;
+  }
+
+  .hamburger {
+    order: 2;
+  }
+
+  .logoWrap {
+    position: static;
+    transform: none;
+    order: 1;
+  }
+
+  .cta {
+    display: none;
+  }
+
+  .content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 0.5rem;
+    bottom: 0;
+    justify-content: flex-start;
+  }
+
+  .card {
+    height: auto;
+    min-height: 60px;
+    flex: 1 1 auto;
+    max-height: none;
+  }
+
+  .cardLabel {
+    font-size: 18px;
+  }
+
+  .cardLink {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hamburgerLine,
+  .cta,
+  .cardLink {
+    transition: none;
+  }
+}

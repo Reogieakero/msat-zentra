@@ -8,6 +8,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { resolveActiveTermId, recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
+import { scopedTermRow } from "../../lib/termScope.js";
 import {
   buildOcForm01Buffer,
   ocForm01Filename,
@@ -136,7 +137,7 @@ router.post(
       if (!isAdviser && !isSubjectTeacher) {
         throw new AppError(403, "FORBIDDEN", "Only the observer or a teacher in this section may refer from this record");
       }
-      const termId = await resolveActiveTermId();
+      const termId = await resolveActiveTermId(req);
       if (!termId) {
         throw new AppError(409, "NO_ACTIVE_TERM", "No active term");
       }
@@ -221,30 +222,24 @@ const CATEGORY_META: Record<
 // Principal: records heatmap source — every section with its students that have
 // anecdotal records, including each record's category/severity/follow-up. The
 // categories returned here are the canonical backend AnecdotalCategory enum, so
-// the heatmap legend and block colors stay wired to the backend.
+// the heatmap legend and block colors stay wired to the backend. Records filed
+// for students with no current account/section slot (transferred out,
+// deactivated, or otherwise unenrolled) are included too, grouped under
+// per-grade "Unassigned" sections instead of being silently dropped.
 router.get(
   "/records",
   requireAuth,
   requireRole("principal"),
   async (req, res, next) => {
     try {
-      const activeTerm = await prisma.term.findFirst({
-        where: { schoolYear: { isActive: true } },
-        orderBy: { termNumber: "asc" },
-        select: { id: true, schoolYearId: true },
-      });
+      const activeTerm = await scopedTermRow(req);
       const termId = activeTerm?.id;
-      const schoolYear = activeTerm
-        ? ((await prisma.schoolYear.findUnique({
-            where: { id: activeTerm.schoolYearId },
-            select: { name: true },
-          }))?.name ?? "")
-        : "";
+      const schoolYear = activeTerm?.schoolYearName ?? "";
       const where = termId ? { termId } : {};
 
       const [sections, rosterEntries, records, followups, referrals] = await Promise.all([
         prisma.section.findMany({
-          where: termId ? { schoolYearId: activeTerm!.schoolYearId } : {},
+          where: activeTerm?.schoolYearId ? { schoolYearId: activeTerm.schoolYearId } : {},
           orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
           select: {
             id: true,
@@ -261,7 +256,7 @@ router.get(
         }),
         // Enlisted students without accounts — shown with their records too.
         prisma.studentRoster.findMany({
-          where: termId ? { schoolYearId: activeTerm!.schoolYearId } : {},
+          where: activeTerm?.schoolYearId ? { schoolYearId: activeTerm.schoolYearId } : {},
           select: { id: true, lrn: true, fullName: true, sectionId: true },
         }),
         prisma.anecdotalRecord.findMany({
@@ -385,9 +380,127 @@ router.get(
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
 
+      // Orphan records: filed for students with no current account/section
+      // slot, so no profile/roster row above claimed them. Resolve whatever
+      // identity is left and surface them — one folder per student — instead
+      // of dropping their records.
+      const consumed = new Set<string>();
+      for (const section of sections) {
+        for (const st of section.students) consumed.add(st.userId);
+        for (const r of rosterBySection.get(section.id) ?? []) {
+          consumed.add(`roster:${r.id}`);
+        }
+      }
+      const orphanKeys = [...recordByStudent.keys()].filter(
+        (k): k is string => typeof k === "string" && !consumed.has(k)
+      );
+      // Records with neither identity attached (should be rare) collapse into
+      // a single "Unknown student" folder.
+      const nullKeyRecs =
+        (recordByStudent as Map<unknown, typeof records>).get(null) ?? [];
+
+      const orphanStudentIds = orphanKeys.filter((k) => !k.startsWith("roster:"));
+      const orphanRosterIds = orphanKeys
+        .filter((k) => k.startsWith("roster:"))
+        .map((k) => k.slice("roster:".length));
+
+      const [orphanProfiles, orphanRosterRows] = await Promise.all([
+        orphanStudentIds.length > 0
+          ? prisma.studentProfile.findMany({
+              where: { userId: { in: orphanStudentIds } },
+              select: {
+                userId: true,
+                lrn: true,
+                gradeLevel: true,
+                user: { select: { fullName: true, status: true } },
+                section: { select: { id: true, name: true } },
+              },
+            })
+          : [],
+        orphanRosterIds.length > 0
+          ? prisma.studentRoster.findMany({
+              where: { id: { in: orphanRosterIds } },
+              select: { id: true, lrn: true, fullName: true, gradeLevel: true, sectionId: true },
+            })
+          : [],
+      ]);
+
+      const profileById = new Map(orphanProfiles.map((p) => [p.userId, p]));
+      const rosterById = new Map(orphanRosterRows.map((r) => [r.id, r]));
+      const sectionById = new Map(sections.map((s) => [s.id, s]));
+
+      type OrphanStudent = {
+        lrn: string;
+        name: string;
+        status: string;
+        gradeLevel: string;
+        section: string;
+        sectionId: string;
+        behavioral: ReturnType<typeof toBehavioral>;
+      };
+      const orphansByGrade = new Map<string, OrphanStudent[]>();
+      const pushOrphan = (grade: string, row: OrphanStudent) => {
+        const arr = orphansByGrade.get(grade) ?? [];
+        arr.push(row);
+        orphansByGrade.set(grade, arr);
+      };
+
+      for (const key of orphanKeys) {
+        const recs = recordByStudent.get(key) ?? [];
+        if (recs.length === 0) continue;
+        const behavioral = toBehavioral(recs);
+        const recSection = sectionById.get(recs[0].sectionId);
+        if (key.startsWith("roster:")) {
+          const r = rosterById.get(key.slice("roster:".length));
+          const grade = String(r?.gradeLevel ?? recSection?.gradeLevel ?? "Unassigned");
+          pushOrphan(grade, {
+            lrn: r?.lrn || "N/A",
+            name: r?.fullName ?? "Unknown student",
+            status: "Enlisted",
+            gradeLevel: grade,
+            section: sectionById.get(r?.sectionId ?? "")?.name ?? recSection?.name ?? "Unassigned",
+            sectionId: r?.sectionId ?? recs[0].sectionId ?? "unassigned",
+            behavioral,
+          });
+        } else {
+          const p = profileById.get(key);
+          const grade = String(p?.gradeLevel ?? recSection?.gradeLevel ?? "Unassigned");
+          pushOrphan(grade, {
+            lrn: p?.lrn || "N/A",
+            name: p?.user.fullName ?? "Unknown student",
+            status: p?.user.status ?? "inactive",
+            gradeLevel: grade,
+            section: p?.section?.name ?? recSection?.name ?? "Unassigned",
+            sectionId: p?.section?.id ?? recs[0].sectionId ?? "unassigned",
+            behavioral,
+          });
+        }
+      }
+
+      if (nullKeyRecs.length > 0) {
+        const recSection = sectionById.get(nullKeyRecs[0].sectionId);
+        const grade = String(recSection?.gradeLevel ?? "Unassigned");
+        pushOrphan(grade, {
+          lrn: "N/A",
+          name: "Unknown student",
+          status: "inactive",
+          gradeLevel: grade,
+          section: recSection?.name ?? "Unassigned",
+          sectionId: recSection?.id ?? "unassigned",
+          behavioral: toBehavioral(nullKeyRecs),
+        });
+      }
+
+      const orphanSections = [...orphansByGrade.entries()].map(([grade, students]) => ({
+        sectionId: `unassigned-${grade}`,
+        section: "Unassigned",
+        gradeLevel: grade,
+        students,
+      }));
+
       res.json({
         schoolYear,
-        sections: dataSections,
+        sections: [...dataSections, ...orphanSections],
       });
     } catch (e) {
       next(e);
@@ -401,11 +514,7 @@ router.get(
   requireRole("principal"),
   async (req, res, next) => {
     try {
-      const activeTerm = await prisma.term.findFirst({
-        where: { schoolYear: { isActive: true } },
-        orderBy: { termNumber: "asc" },
-        select: { id: true },
-      });
+      const activeTerm = await scopedTermRow(req);
       const termId = activeTerm?.id;
       const where = termId ? { termId } : {};
 

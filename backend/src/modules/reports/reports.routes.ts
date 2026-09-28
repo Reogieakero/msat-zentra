@@ -28,7 +28,13 @@ router.get(
       const sectionId =
         typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
 
-      const payload = await getReports({ scope, gradeLevel, sectionId });
+      const payload = await getReports({
+        scope,
+        gradeLevel,
+        sectionId,
+        schoolYearId: req.termScope?.schoolYearId ?? null,
+        termId: req.termScope?.termId ?? null,
+      });
       res.json(payload);
     } catch (e) {
       next(e);

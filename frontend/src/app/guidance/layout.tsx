@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import styles from "./guidance.module.css";
@@ -68,6 +69,8 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className={styles.spacer} />
+
+        <ActiveTermBadge />
 
         <div className={styles.search}>
           <Command shouldFilter={false} className={styles.searchCommand}>

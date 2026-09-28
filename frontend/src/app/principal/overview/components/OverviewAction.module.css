@@ -20,13 +20,20 @@
   overflow: hidden;
 }
 
+/* Banner cards — each follow-up is its own banner with a tinted gradient
+   background that adapts to light/dark mode. */
 .actionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.75rem;
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .actionSkel {
+  flex: 1;
   height: 8.5rem;
   min-width: 0;
   border-radius: var(--radius-lg);
@@ -36,29 +43,35 @@
   position: relative;
   overflow: hidden;
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
+  min-width: 0;
   padding: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in oklch, var(--primary) 25%, var(--border));
   border-radius: var(--radius-lg);
-  background-color: var(--card);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in oklch, var(--primary) 14%, var(--card)),
+      color-mix(in oklch, var(--primary) 4%, var(--card)) 60%,
+      var(--card)
+    );
   color: var(--foreground);
   text-align: left;
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 97%);
   cursor: pointer;
-  transition: border-color 150ms ease-out, box-shadow 150ms ease-out,
-    transform 150ms ease-out;
+  transition: background-color 150ms ease-out;
 }
 
 .actionItem:hover {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary), transparent 80%);
+  background-color: color-mix(in oklch, var(--primary), transparent 94%);
 }
 
 .actionItem:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--ring, var(--primary));
+  box-shadow: inset 0 0 0 2px var(--ring, var(--primary));
 }
 
 .actionHead {
@@ -107,16 +120,6 @@
   color: var(--primary);
 }
 
-.actionCtaIcon {
-  width: 0.875rem;
-  height: 0.875rem;
-  transition: transform 150ms ease-out;
-}
-
-.actionItem:hover .actionCtaIcon {
-  transform: translateX(2px);
-}
-
 .footnote {
   display: inline-flex;
   align-items: center;
@@ -139,8 +142,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .actionItem,
-  .actionCtaIcon {
+  .actionItem {
     transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .actionGrid {
+    flex-direction: column;
   }
 }

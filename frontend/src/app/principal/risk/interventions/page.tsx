@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useGradeMode } from "../../grade-mode-context";
 import type { RiskSnapshotStudent } from "./types";
-import { InterventionsHeader } from "./components/InterventionsHeader";
 import { InterventionsListTable } from "./components/InterventionsListTable";
 import { InterventionDrawer } from "./components/InterventionDrawer";
 import menu from "../heatmaps/components/heatmap.module.css";
@@ -17,10 +16,6 @@ export default function PrincipalInterventionsPage() {
     <div className={menu.shell}>
       <div className={menu.layout}>
         <section className={styles.page}>
-          <InterventionsHeader />
-
-          <hr className={styles.divider} />
-
           <InterventionsListTable onSelect={setSelected} />
         </section>
       </div>

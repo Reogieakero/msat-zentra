@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { scopedYearId } from "../../lib/termScope.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
@@ -59,11 +60,15 @@ router.get(
           where: { id: counselorId },
           select: { fullName: true },
         }),
-        prisma.schoolYear.findFirst({
-          where: { isActive: true },
-          select: { id: true, name: true },
-        }),
-        resolveActiveTermId(),
+        // Session's active year when carried; legacy lookup otherwise.
+        (async () =>
+          req.termScope
+            ? { id: req.termScope.schoolYearId, name: req.termScope.schoolYearName }
+            : prisma.schoolYear.findFirst({
+                where: { isActive: true },
+                select: { id: true, name: true },
+              }))(),
+        resolveActiveTermId(req),
       ]);
       const schoolYearId = activeYear?.id;
       const term = termId
@@ -600,12 +605,9 @@ router.get(
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
 
-      const activeYear = await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true },
-      });
-      const schoolYearId = activeYear?.id;
-      const termId = await resolveActiveTermId();
+      // Session's active year when carried; legacy lookup otherwise.
+      const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      const termId = await resolveActiveTermId(req);
       const term = termId
         ? await prisma.term.findUnique({
             where: { id: termId },
@@ -1588,7 +1590,7 @@ router.get(
       // written when grades/attendance change, so a snapshot lookup alone
       // goes stale (and blank for never-snapshotted students).
       {
-        const termId = await resolveActiveTermId();
+        const termId = await resolveActiveTermId(req);
         if (termId) {
           await Promise.all(
             earlyReferrals.map(async (r, i) => {

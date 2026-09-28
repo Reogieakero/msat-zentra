@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { resolveActiveTermId, type GradeMode } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -24,21 +25,25 @@ export interface RiskStudentsResult {
 const LEVEL_RANK: Record<string, number> = { High: 3, Moderate: 2, Low: 1 };
 
 // Principal: full at-risk student list (status-only factors, no confidential
-// fields) for the active school year. Optional section filter. `gradeMode`
-// selects whether the academic factor uses final (transmuted) or raw averages.
-// Enlisted students without accounts are included on equal footing.
+// fields) for the session's active school year. Optional section filter.
+// `gradeMode` selects whether the academic factor uses final (transmuted) or
+// raw averages. Enlisted students without accounts are included on equal footing.
 export async function getRiskStudents(
   page: number,
   pageSize: number,
   section?: string,
-  gradeMode: GradeMode = "final"
+  gradeMode: GradeMode = "final",
+  scope?: TermScopeInput,
 ): Promise<RiskStudentsResult> {
-  const termId = await resolveActiveTermId();
-  const schoolYear = await prisma.schoolYear.findFirst({
-    where: { isActive: true },
-    select: { id: true },
-  });
-  const schoolYearId = schoolYear?.id;
+  const termId = scope?.termId ?? (await resolveActiveTermId());
+  const schoolYearId =
+    scope?.schoolYearId ??
+    (
+      await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      })
+    )?.id;
 
   const sectionMatch = {
     ...(schoolYearId ? { schoolYearId } : {}),

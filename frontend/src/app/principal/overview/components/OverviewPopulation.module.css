@@ -83,6 +83,12 @@
 }
 
 /* ---- Donut ---- */
+.tooltipSolid {
+  background-color: var(--popover);
+  border: 1px solid var(--border);
+  opacity: 1;
+}
+
 .donutWrap {
   position: relative;
   display: flex;

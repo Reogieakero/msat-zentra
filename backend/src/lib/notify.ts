@@ -19,9 +19,17 @@ const TYPE_MAP: Record<string, string> = {
   "adviser_sf10_access_requests:deny": "sf10_access_decision",
   "adm_devices:issue": "device_issued",
   "adm_devices:return": "device_returned",
+  "attendance_records:subject_create": "attendance_subject_alert",
+  "attendance_records:subject_submit": "attendance_submitted",
   "adm_parent_meetings:book": "meeting_booked",
   "adm_parent_meetings:reschedule": "meeting_rescheduled",
   "adm_parent_meetings:outcome": "meeting_outcome",
+  "section_timetable_entries:submit": "schedule_submitted",
+  "section_timetable_entries:approve": "schedule_approved",
+  "section_timetable_entries:reject": "schedule_rejected",
+  "teacher_names:claim": "teacher_code_claimed",
+  "teacher_names:unclaim": "teacher_code_released",
+  "teacher_names:attendance_unlock": "attendance_unlocked",
 };
 
 export function deriveNotifType(sourceTable: string, action: string): string {

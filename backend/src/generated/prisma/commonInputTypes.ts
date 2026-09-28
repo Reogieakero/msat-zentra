@@ -260,6 +260,23 @@ export type EnumSubjectCategoryWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumSubjectCategoryFilter<$PrismaModel>
 }
 
+export type EnumTimetableStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.TimetableStatus | Prisma.EnumTimetableStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTimetableStatusFilter<$PrismaModel> | $Enums.TimetableStatus
+}
+
+export type EnumTimetableStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TimetableStatus | Prisma.EnumTimetableStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTimetableStatusWithAggregatesFilter<$PrismaModel> | $Enums.TimetableStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTimetableStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTimetableStatusFilter<$PrismaModel>
+}
+
 export type EnumComponentTypeFilter<$PrismaModel = never> = {
   equals?: $Enums.ComponentType | Prisma.EnumComponentTypeFieldRefInput<$PrismaModel>
   in?: $Enums.ComponentType[] | Prisma.ListEnumComponentTypeFieldRefInput<$PrismaModel>
@@ -1030,6 +1047,23 @@ export type NestedEnumSubjectCategoryWithAggregatesFilter<$PrismaModel = never> 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSubjectCategoryFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSubjectCategoryFilter<$PrismaModel>
+}
+
+export type NestedEnumTimetableStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.TimetableStatus | Prisma.EnumTimetableStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTimetableStatusFilter<$PrismaModel> | $Enums.TimetableStatus
+}
+
+export type NestedEnumTimetableStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TimetableStatus | Prisma.EnumTimetableStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TimetableStatus[] | Prisma.ListEnumTimetableStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTimetableStatusWithAggregatesFilter<$PrismaModel> | $Enums.TimetableStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTimetableStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTimetableStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumComponentTypeFilter<$PrismaModel = never> = {

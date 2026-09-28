@@ -1,13 +1,13 @@
 "use client";
 
-import { ClassesSchedule } from "./components/ClassesSchedule";
+import { MyTimetable } from "./components/MyTimetable";
 import styles from "./components/classes.module.css";
 
 export default function TeacherClassesPage() {
   return (
     <section className={styles.page}>
       <div className={styles.body}>
-        <ClassesSchedule />
+        <MyTimetable />
       </div>
     </section>
   );

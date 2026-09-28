@@ -125,9 +125,7 @@ function CoordinatorReferralsPageInner() {
       {/* Create profile */}
       <CoordinatorReferralsCreateDialog
         target={r.createTarget}
-        terms={r.terms}
-        termId={r.termId}
-        onTermChange={r.setTermId}
+        scopeLabel={r.scopeLabel}
         onClose={() => r.setCreateTarget(null)}
         onConfirm={r.confirmCreate}
         pending={r.createPending}

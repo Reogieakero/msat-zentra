@@ -51,6 +51,7 @@ import {
 } from "./certification-sheet";
 import { EvidenceDetailsDialog } from "./evidence-details-dialog";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";
 import { ParentMeetingCard } from "./parent-meeting-card";
 import { CoordinatorCaseSkeleton } from "./coordinator-case-skeleton";
@@ -84,13 +85,15 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
   // Learner-profile bridge for early referrals: an attended meeting means
   // nothing without a profile to certify, so the case file offers creation
   // inline and lands on the profile case with the cert sheet queued.
+  // Profiles are filed under the session's active scope — no term picker.
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? "";
+  const scopeLabel = activeTerm
+    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
+    : "No active term";
   const [createTarget, setCreateTarget] = React.useState<AdmCaseRow | null>(
     null,
   );
-  const [terms, setTerms] = React.useState<{ id: string; termNumber: number }[]>(
-    [],
-  );
-  const [termId, setTermId] = React.useState("");
   const [certSheetOpen, setCertSheetOpen] = React.useState(false);
   const searchParams = useSearchParams();
 
@@ -155,17 +158,8 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
       await Promise.resolve();
       setPreparingProfile(true);
     // No account check here — the backend auto-provisions roster-only
-    // learners, so the dialog opens straight onto the term picker.
+    // learners, and files the profile under the session's active term.
     try {
-      const { data: termData } = await apiClient.get(
-        "/api/registrar/academics/terms",
-      );
-      const list = (termData?.terms ?? []) as {
-        id: string;
-        termNumber: number;
-      }[];
-      setTerms(list);
-      setTermId(list[0]?.id ?? "");
       setCreateTarget({
         id: `referral:${d.referralId}`,
         lrn: d.lrn,
@@ -852,9 +846,7 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
       </Dialog>
       <CoordinatorReferralsCreateDialog
         target={createTarget}
-        terms={terms}
-        termId={termId}
-        onTermChange={setTermId}
+        scopeLabel={scopeLabel}
         onClose={() => setCreateTarget(null)}
         onConfirm={() => createMutation.mutate()}
         pending={createMutation.isPending}

@@ -2,18 +2,16 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, CalendarRange } from "lucide-react";
+import { CalendarRange, Check, ChevronDown } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardAction,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -56,193 +54,145 @@ function ratioColor(ratio: number): string {
 export function AttendanceHeatblocks({
   session,
   onSessionChange,
-  selectedSectionId,
-  onSelectSection,
 }: {
   session: Session;
   onSessionChange: (s: Session) => void;
-  selectedSectionId?: string | null;
-  onSelectSection?: (id: string | null) => void;
 }) {
-  const scrollerRef = React.useRef<HTMLDivElement>(null);
-
   const { data, isPending } = useQuery({
     queryKey: ["attendance-section-heatmap", session],
     queryFn: async () => {
-      const res = await apiClient.get<{ sections: Row[] }>(
-        "/api/attendance/section-heatmap",
-        { params: { session } }
-      );
+      const res = await apiClient.get<{
+        sections: Row[];
+        term?: { id: string; termNumber: number };
+      }>("/api/attendance/section-heatmap", { params: { session } });
       return res.data;
     },
   });
 
+  // Every section in the school in one 3-per-row grid — no strip, no
+  // scrolling. Sections arrive grade-ordered from the backend.
   const sections = React.useMemo(() => data?.sections ?? [], [data]);
-
-  const bands = React.useMemo(() => {
-    const map = new Map<string, Row[]>();
-    for (const s of sections) {
-      const arr = map.get(s.gradeLevel) ?? [];
-      arr.push(s);
-      map.set(s.gradeLevel, arr);
-    }
-    return Array.from(map.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
-  }, [sections]);
-
-  React.useEffect(() => {
-    if (!selectedSectionId || !scrollerRef.current) return;
-    const el = scrollerRef.current.querySelector<HTMLElement>(
-      `[data-section-id="${selectedSectionId}"]`
-    );
-    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [selectedSectionId, sections]);
-
-  const scrollBy = (dir: 1 | -1) => {
-    scrollerRef.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
-  };
+  const termNumber = data?.term?.termNumber;
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
-        <div className={styles.headerText}>
-          <CardTitle>Section Attendance Heatblocks</CardTitle>
-          <CardDescription>
-            Per-section daily attendance for the {session} session. Select a
-            card to drill into its students below.
-          </CardDescription>
+    <div className={styles.content}>
+      <div className={styles.toolbar}>
+        <div className={styles.titleWrap}>
+          <h1 className={styles.title}>Section Attendance Heatblocks</h1>
+          <p className={styles.subtitle}>
+            Daily attendance for every section of the school — {session}{" "}
+            session
+            {termNumber ? ` · Term ${termNumber}` : ""}, color-coded against
+            the 80% threshold.
+          </p>
         </div>
-        <CardAction className={styles.headerActions}>
-          <Tabs
-            value={session}
-            onValueChange={(v) => onSessionChange(v as Session)}
-          >
-            <TabsList className={styles.tabsList}>
+        <div className={styles.toolbarRight}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Session filter"
+              >
+                {session} session
+                <ChevronDown aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
               {(["AM", "PM"] as Session[]).map((s) => (
-                <TabsTrigger key={s} value={s} className={styles.tabsTrigger}>
-                  {s}
-                </TabsTrigger>
+                <DropdownMenuItem
+                  key={s}
+                  onSelect={() => onSessionChange(s)}
+                >
+                  {session === s ? <Check aria-hidden /> : <span className={styles.checkSpacer} />}
+                  <span>{s} session</span>
+                </DropdownMenuItem>
               ))}
-            </TabsList>
-          </Tabs>
-          <div className={styles.nav}>
-            <button
-              type="button"
-              className={styles.arrow}
-              onClick={() => scrollBy(-1)}
-              aria-label="Scroll left"
-            >
-              <ChevronLeft className={styles.arrowIcon} aria-hidden />
-            </button>
-            <button
-              type="button"
-              className={styles.arrow}
-              onClick={() => scrollBy(1)}
-              aria-label="Scroll right"
-            >
-              <ChevronRight className={styles.arrowIcon} aria-hidden />
-            </button>
-          </div>
-        </CardAction>
-      </CardHeader>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
-      <CardContent className={styles.content}>
-        {isPending ? (
-          <div className={styles.scroller}>
-            <div className={styles.row}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <article key={i} className={styles.cardShell} aria-hidden>
-                  <Skeleton className={styles.skelGrade} />
-                  <div className={styles.grid}>
-                    {Array.from({ length: 36 }).map((__, j) => (
-                      <Skeleton key={j} className={styles.skelBlock} />
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        ) : sections.length === 0 ? (
-          <p className={styles.empty}>No attendance data available.</p>
-        ) : (
-          <TooltipProvider>
-            <div className={styles.scroller} ref={scrollerRef}>
-              <div className={styles.row}>
-                {bands.map(([, rows]) =>
-                  rows.map((s) => (
-                    <article
-                      key={s.sectionId}
-                      data-section-id={s.sectionId}
-                      className={`${styles.cardShell} ${
-                        selectedSectionId === s.sectionId ? styles.shellSelected : ""
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        className={styles.shellBtn}
-                        onClick={() =>
-                          onSelectSection?.(
-                            selectedSectionId === s.sectionId ? null : s.sectionId
-                          )
-                        }
-                        aria-pressed={selectedSectionId === s.sectionId}
-                      >
-                        <span className={styles.grade}>{s.section}</span>
-                        <span className={styles.enrolled}>
-                          <CalendarRange className={styles.enrolledIcon} aria-hidden />
-                          {s.enrolled} students
-                        </span>
-                      </button>
-                      <div className={styles.grid}>
-                        {s.days.map((d) => (
-                          <Tooltip key={d.date}>
-                            <TooltipTrigger asChild>
-                              <span
-                                className={`${styles.block} ${
-                                  d.isWeekend ? styles.blockWeekend : ""
-                                }`}
-                                style={{
-                                  background: d.isWeekend
-                                    ? "var(--hm-weekend)"
-                                    : ratioColor(d.ratio),
-                                }}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span className={styles.tooltipLine}>
-                                <span>
-                                  {d.date} &middot; {session}
-                                </span>
-                                <span>
-                                  {d.present} present &middot; {d.late} late
-                                  &middot; {d.absent} absent &middot; {d.excused}{" "}
-                                  excused
-                                </span>
-                              </span>
-                            </TooltipContent>
-                          </Tooltip>
-                        ))}
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </div>
-            <div className={styles.legend}>
-              <span className={styles.legendLabel}>Present: 0</span>
-              <span className={styles.legendSwatches}>
-                {SCALE.map((c, i) => (
-                  <span
-                    key={i}
-                    className={styles.legendSwatch}
-                    style={{ background: c }}
-                  />
+      {isPending ? (
+        <div className={styles.gridCards}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <article key={i} className={styles.cardShell} aria-hidden>
+              <Skeleton className={styles.skelGrade} />
+              <div className={styles.grid}>
+                {Array.from({ length: 36 }).map((__, j) => (
+                  <Skeleton key={j} className={styles.skelBlock} />
                 ))}
-              </span>
-              <span className={styles.legendLabel}>= enrolled</span>
-            </div>
-          </TooltipProvider>
-        )}
-      </CardContent>
-    </Card>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : sections.length === 0 ? (
+        <p className={styles.empty}>No attendance data available.</p>
+      ) : (
+        <TooltipProvider>
+          <div className={styles.gridCards}>
+            {sections.map((s) => (
+              <article
+                key={s.sectionId}
+                data-section-id={s.sectionId}
+                className={styles.cardShell}
+              >
+                <div className={styles.shellHead}>
+                  <span className={styles.grade}>{s.section}</span>
+                  <span className={styles.enrolled}>
+                    <CalendarRange className={styles.enrolledIcon} aria-hidden />
+                    {s.enrolled} students
+                  </span>
+                </div>
+                <div className={styles.grid}>
+                  {s.days.map((d) => (
+                    <Tooltip key={d.date}>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={`${styles.block} ${
+                            d.isWeekend ? styles.blockWeekend : ""
+                          }`}
+                          style={{
+                            background: d.isWeekend
+                              ? "var(--hm-weekend)"
+                              : ratioColor(d.ratio),
+                          }}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span className={styles.tooltipLine}>
+                          <span>
+                            {d.date} &middot; {session}
+                          </span>
+                          <span>
+                            {d.present} present &middot; {d.late} late
+                            &middot; {d.absent} absent &middot; {d.excused}{" "}
+                            excused
+                          </span>
+                        </span>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className={styles.legend}>
+            <span className={styles.legendLabel}>Present: 0</span>
+            <span className={styles.legendSwatches}>
+              {SCALE.map((c, i) => (
+                <span
+                  key={i}
+                  className={styles.legendSwatch}
+                  style={{ background: c }}
+                />
+              ))}
+            </span>
+            <span className={styles.legendLabel}>= enrolled</span>
+          </div>
+        </TooltipProvider>
+      )}
+    </div>
   );
 }

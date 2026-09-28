@@ -5,7 +5,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquareText } from "lucide-react";
-import type { AttendanceDay, AttendanceSummary } from "./attendance-data";
+import type {
+  AttendanceDay,
+  AttendanceSummary,
+  SubjectAttendanceSummary,
+} from "./attendance-data";
 import styles from "./AttendanceInsights.module.css";
 
 const SLICES = [
@@ -17,23 +21,41 @@ const SLICES = [
 
 interface AttendanceInsightsProps {
   summary: AttendanceSummary | null;
+  subjectSummary?: SubjectAttendanceSummary | null;
   days: AttendanceDay[];
   loading: boolean;
 }
 
-function buildInterpretation(summary: AttendanceSummary, days: AttendanceDay[]): string[] {
+function buildInterpretation(
+  summary: AttendanceSummary,
+  subjectSummary: SubjectAttendanceSummary | null | undefined,
+  days: AttendanceDay[],
+): string[] {
   const lines: string[] = [];
   const pct = Math.round(summary.rate * 100);
   // Guard against stale payloads that predate the schoolDays field.
   const dayCount = summary.schoolDays ?? days.length;
 
-  if (summary.total === 0) {
+  if (summary.total === 0 && !subjectSummary) {
     return ["No school days have elapsed yet this term — nothing to interpret so far."];
   }
 
-  lines.push(
-    `${pct}% present across ${summary.total} possible sessions (${dayCount} school days).`
-  );
+  if (subjectSummary) {
+    const spct = Math.round(subjectSummary.rate * 100);
+    lines.push(
+      `${spct}% present across ${subjectSummary.total} subject sessions.`
+    );
+    const worst = [...subjectSummary.bySubject].sort((a, b) => a.rate - b.rate)[0];
+    if (worst && worst.rate < 1) {
+      lines.push(
+        `Weakest subject: ${worst.name} at ${Math.round(worst.rate * 100)}% present (${worst.present}/${worst.total}).`
+      );
+    }
+  } else {
+    lines.push(
+      `${pct}% present across ${summary.total} possible sessions (${dayCount} school days).`
+    );
+  }
 
   const issues: { label: string; count: number; advice: string }[] = [
     {
@@ -61,9 +83,13 @@ function buildInterpretation(summary: AttendanceSummary, days: AttendanceDay[]):
     lines.push("No absences, lates, or excuses on record — clean sheet outside presences.");
   }
 
-  // Recent trend: last 10 school days vs the term average.
+  // Recent trend: last 10 school days vs the term average (subject marks
+  // and legacy AM/PM sessions pooled).
   const recent = days.slice(0, 10);
-  const recentSessions = recent.flatMap((d) => Object.values(d.sessions));
+  const recentSessions = recent.flatMap((d) => [
+    ...Object.values(d.sessions),
+    ...Object.values(d.subjects ?? {}).map((m) => m.status),
+  ]);
   if (recentSessions.length >= 5 && summary.total > 0) {
     const recentRate =
       recentSessions.filter((s) => s === "present").length / recentSessions.length;
@@ -82,18 +108,21 @@ function buildInterpretation(summary: AttendanceSummary, days: AttendanceDay[]):
   return lines;
 }
 
-export function AttendanceInsights({ summary, days, loading }: AttendanceInsightsProps) {
+export function AttendanceInsights({ summary, subjectSummary, days, loading }: AttendanceInsightsProps) {
+  // Subject-era students see the subject donut; legacy-only students keep the
+  // AM/PM sessions donut. Never mix the two denominators in one chart.
+  const shown = subjectSummary ?? summary;
   const series = useMemo(() => {
-    if (!summary) return [];
-    return SLICES.map((s) => ({ ...s, count: summary[s.key] }));
-  }, [summary]);
+    if (!shown) return [];
+    return SLICES.map((s) => ({ ...s, count: shown[s.key] }));
+  }, [shown]);
 
   const lines = useMemo(
-    () => (summary ? buildInterpretation(summary, days) : []),
-    [summary, days]
+    () => (summary ? buildInterpretation(summary, subjectSummary, days) : []),
+    [summary, subjectSummary, days]
   );
   // The status verdict is always the last line — render it as a badge.
-  const hasStatusBadge = summary !== null && summary.total > 0 && lines.length > 0;
+  const hasStatusBadge = shown !== null && shown.total > 0 && lines.length > 0;
   const bodyLines = hasStatusBadge ? lines.slice(0, -1) : lines;
   const statusLine = hasStatusBadge ? lines[lines.length - 1] : null;
 
@@ -134,7 +163,7 @@ export function AttendanceInsights({ summary, days, loading }: AttendanceInsight
             </PieChart>
           </ResponsiveContainer>
           <div className={styles.center}>
-            <span className={styles.centerValue}>{Math.round(summary.rate * 100)}%</span>
+            <span className={styles.centerValue}>{Math.round(shown!.rate * 100)}%</span>
             <span className={styles.centerLabel}>present</span>
           </div>
         </div>
@@ -161,13 +190,23 @@ export function AttendanceInsights({ summary, days, loading }: AttendanceInsight
             </li>
           ))}
         </ul>
-        {statusLine && summary ? (
+        {statusLine && shown ? (
           <Badge
-            variant={summary.isRisk ? "destructive" : "success"}
+            variant={shown.isRisk ? "destructive" : "success"}
             className={styles.statusBadge}
           >
             {statusLine}
           </Badge>
+        ) : null}
+        {subjectSummary && subjectSummary.bySubject.length > 0 ? (
+          <ul className={styles.messageList} aria-label="Per-subject breakdown">
+            {subjectSummary.bySubject.map((s) => (
+              <li key={s.subjectId} className={styles.messageLine}>
+                {s.name} ({s.code}): {s.present}/{s.total} present —{" "}
+                {Math.round(s.rate * 100)}%
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
     </div>

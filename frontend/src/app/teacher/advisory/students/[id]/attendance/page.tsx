@@ -31,7 +31,7 @@ export default function StudentAttendancePage() {
           {attendanceQuery.isPending ? "Attendance" : (student?.name ?? "Attendance")}
         </h1>
         <p className={styles.subtitle}>
-          {student ? `${student.lrn} · ${student.section}` : "Daily AM/PM attendance for this term."}
+          {student ? `${student.lrn} · ${student.section}` : "Daily attendance for this term."}
           {termStart
             ? ` · every school day since ${new Date(termStart).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
             : ""}
@@ -47,6 +47,7 @@ export default function StudentAttendancePage() {
         ) : (
           <AttendanceCalendar
             summary={attendanceQuery.data?.summary ?? null}
+            subjectSummary={attendanceQuery.data?.subjectSummary ?? null}
             days={attendanceQuery.data?.days ?? []}
             loading={attendanceQuery.isPending}
           />

@@ -73,6 +73,38 @@
   gap: 1rem;
 }
 
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.titleWrap {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.subtitle {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.toolbarRight {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.checkSpacer {
+  width: 1rem;
+}
+
 .scroller {
   overflow-x: auto;
   overflow-y: hidden;
@@ -145,9 +177,10 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(16, 11px);
+  grid-template-columns: repeat(18, 11px);
   gap: 3px;
   width: max-content;
+  max-width: 100%;
 }
 
 /* GitHub-style contribution squares: fixed 11px cells with a 3px gap and a
@@ -215,5 +248,198 @@
 @media (prefers-reduced-motion: reduce) {
   .cardShell {
     transition: none;
+  }
+}
+
+/* Subject matrix: one labeled row per subject, day-blocks across. */
+.matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subjectRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subjectLabel {
+  flex-shrink: 0;
+  width: 3.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subjectGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.noSubjects {
+  margin: 0;
+  padding: 0.75rem 0;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.skelSubject {
+  width: 3.25rem;
+  height: 11px;
+  border-radius: 2px;
+}
+
+/* Static card header: title block left, student count pinned top-right. */
+.shellHead {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.headMain {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.headCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Plain selector row: grade → section → subject dropdowns, no card chrome.
+   Bottom-aligned so the Filter button sits on the same line as the dropdown
+   triggers beneath their labels. */
+.filterBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filterField {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.filterFieldLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.filterBtn {
+  gap: 0.375rem;
+  max-width: 16rem;
+}
+
+.filterMenu {
+  max-height: 20rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.filterMenu::-webkit-scrollbar {
+  display: none;
+}
+
+/* Gate: centered, shown instead of the grid until the view is narrowed or
+   the principal explicitly shows everything. */
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+}
+
+.gateTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.gateBody {
+  margin: 0 0 0.5rem;
+  max-width: 28rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+/* Slim row holding the Change-filter button, pinned right. */
+.activeBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.changeBtn {
+  gap: 0.375rem;
+}
+
+/* Grid cards: 4 section cards per row, wrapping. No strip, no scrolling. */
+.gridCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.gridCards .cardShell {
+  width: auto;
+  min-height: 14rem;
+}
+
+@media (max-width: 1500px) {
+  .gridCards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .gridCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .gridCards {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

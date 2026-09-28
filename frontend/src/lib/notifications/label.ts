@@ -1,4 +1,4 @@
-/* Shared notification presentation helpers (nurse + coordinator bells).
+/* Shared notification presentation helpers (nurse + coordinator + teacher bells).
    Titles are derived client-side from the backend `type` — the Notification
    table carries message/type/sourceTable/sourceId only (no title column). */
 
@@ -35,5 +35,25 @@ export function nurseNotificationTarget(
 ): BellNotificationTarget {
   if (n.sourceTable === "referrals" && n.sourceId) return { href: "/nurse/alerts" };
   if (n.sourceTable === "adm_learner_profiles") return { href: "/nurse/referrals/adm" };
+  return null;
+}
+
+export function teacherNotificationTarget(
+  n: { sourceTable: string | null; sourceId: string | null },
+): BellNotificationTarget {
+  // Schedule review verdicts carry the section id — deep-link to the
+  // section's timetable, mirroring the principal review flow.
+  if (n.sourceTable === "section_timetable_entries" && n.sourceId)
+    return { href: `/teacher/schedule/${n.sourceId}` };
+  return null;
+}
+
+export function principalNotificationTarget(
+  n: { sourceTable: string | null; sourceId: string | null },
+): BellNotificationTarget {
+  // Master-teacher submissions carry the section id — deep-link to the
+  // section's review page instead of the bare queue.
+  if (n.sourceTable === "section_timetable_entries" && n.sourceId)
+    return { href: `/principal/academics/schedule/${n.sourceId}` };
   return null;
 }

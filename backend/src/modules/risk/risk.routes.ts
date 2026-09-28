@@ -18,6 +18,7 @@ import {
 } from "./riskHeatmap.service.js";
 import { getRiskStudents } from "./riskStudents.service.js";
 import { getInterventionStudents } from "./interventions.service.js";
+import { fanoutToRole } from "../../lib/notify.js";
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get(
         req.query.gradeMode === "raw" || req.query.gradeMode === "final"
           ? (req.query.gradeMode as "raw" | "final")
           : "final";
-      const board = await getRiskBoard(gradeMode);
+      const board = await getRiskBoard(gradeMode, req.termScope ?? undefined);
       res.json(board);
     } catch (e) {
       next(e);
@@ -89,7 +90,7 @@ router.get(
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 15));
-      const result = await getLowRiskStudents(page, pageSize);
+      const result = await getLowRiskStudents(page, pageSize, req.termScope ?? undefined);
       res.json(result);
     } catch (e) {
       next(e);
@@ -114,7 +115,7 @@ router.get(
         req.query.gradeMode === "raw" || req.query.gradeMode === "final"
           ? (req.query.gradeMode as "raw" | "final")
           : "final";
-      const result = await getRiskStudents(page, pageSize, section, gradeMode);
+      const result = await getRiskStudents(page, pageSize, section, gradeMode, req.termScope ?? undefined);
       res.json(result);
     } catch (e) {
       next(e);
@@ -182,7 +183,7 @@ router.get(
         if (r.sectionId) rosterSection.set(r.id, r.sectionId);
       }
       if (rosterIds.length > 0) {
-        const termId = await resolveActiveTermId();
+        const termId = await resolveActiveTermId(req);
         if (termId) {
           const [grades, attendance, anecdotalGroups, headcounts] = await Promise.all([
             prisma.finalGrade.findMany({
@@ -270,7 +271,7 @@ router.get(
         if (req.user!.role === "adviser" && roster.section?.adviserId !== req.user!.id) {
           return res.status(403).json({ error: { code: "FORBIDDEN", message: "Not your advisee" } });
         }
-        const termId = await resolveActiveTermId();
+        const termId = await resolveActiveTermId(req);
         if (!termId) {
           return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
         }
@@ -308,7 +309,7 @@ router.get(
   cache({ tags: ["risk", "principal"] }),
   async (req, res, next) => {
     try {
-      const termId = await resolveActiveTermId();
+      const termId = await resolveActiveTermId(req);
       if (!termId) {
         return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       }
@@ -316,7 +317,7 @@ router.get(
         req.query.gradeMode === "raw" || req.query.gradeMode === "final"
           ? (req.query.gradeMode as "raw" | "final")
           : "final";
-      const heatmap = await getRiskHeatmap(termId, gradeMode);
+      const heatmap = await getRiskHeatmap(termId, gradeMode, req.termScope?.schoolYearId ?? null);
       res.json(heatmap);
     } catch (e) {
       next(e);
@@ -460,15 +461,101 @@ router.get(
         (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
           ? (req.query.gradeMode as "raw" | "final")
           : undefined;
-      const result = await getInterventionStudents({
-        riskLevel,
-        hasIntervention,
-        factor,
-        gradeMode,
-        page,
-        pageSize,
-      });
+      // Same queue as the guidance desk: full live enrollment (profiles +
+      // roster) plus recovered students with open cases, so both desks track
+      // the same at-risk students.
+      const result = await getInterventionStudents(
+        {
+          riskLevel,
+          hasIntervention,
+          factor,
+          gradeMode,
+          includeRecovered: true,
+          fullCohort: true,
+          page,
+          pageSize,
+        },
+        req.termScope ?? undefined,
+      );
       res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal: alert guidance counselors about an at-risk student with no
+// intervention action yet. Read-only tracking otherwise — the principal never
+// edits interventions. Fans out to every active guidance counselor.
+router.post(
+  "/interventions/:studentId/alert",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const rawId = String(req.params.studentId);
+      const isRoster = rawId.startsWith("roster:");
+      const note =
+        typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 500) : "";
+
+      const [profile, roster, existing] = await Promise.all([
+        !isRoster
+          ? prisma.studentProfile.findUnique({
+              where: { userId: rawId },
+              select: {
+                lrn: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            })
+          : null,
+        isRoster
+          ? prisma.studentRoster.findUnique({
+              where: { id: rawId.slice("roster:".length) },
+              select: {
+                lrn: true,
+                fullName: true,
+                section: { select: { name: true } },
+              },
+            })
+          : null,
+        prisma.intervention.findFirst({
+          where: isRoster
+            ? { rosterId: rawId.slice("roster:".length) }
+            : { studentId: rawId },
+          select: { id: true, outcomeStatus: true },
+        }),
+      ]);
+
+      if (!profile && !roster) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      }
+      if (existing && existing.outcomeStatus !== "unresolved") {
+        return res.status(409).json({
+          error: {
+            code: "INTERVENTION_EXISTS",
+            message: "Guidance already has action on this case.",
+          },
+        });
+      }
+
+      const name = profile?.user.fullName ?? roster?.fullName ?? "Unknown student";
+      const lrn = profile?.lrn ?? roster?.lrn ?? "";
+      const section = profile?.section?.name ?? roster?.section?.name ?? "";
+      const message =
+        `Principal flagged ${name}${lrn ? ` (LRN ${lrn})` : ""}${section ? ` of ${section}` : ""} — no intervention action yet.` +
+        (note ? ` Note: ${note}` : "");
+
+      res.json({ alerted: true });
+
+      // Best-effort fanout after responding (never delays the response).
+      void fanoutToRole("guidance_counselor", {
+        sourceTable: "interventions",
+        action: "principal_alert",
+        message,
+        sourceId: rawId,
+        excludeUserId: req.user!.id,
+      });
     } catch (e) {
       next(e);
     }
@@ -488,11 +575,16 @@ router.get(
         (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
           ? (req.query.gradeMode as "raw" | "final")
           : undefined;
-      const result = await getInterventionStudents({
-        gradeMode,
-        page: 1,
-        pageSize: 1000,
-      });
+      const result = await getInterventionStudents(
+        {
+          gradeMode,
+          includeRecovered: true,
+          fullCohort: true,
+          page: 1,
+          pageSize: 1000,
+        },
+        req.termScope ?? undefined,
+      );
       const students = result.students;
       const withIntervention = students.filter((s) => s.intervention !== null);
       const pendingApproval = withIntervention.filter(

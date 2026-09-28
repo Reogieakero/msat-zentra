@@ -2,38 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
+import { CATEGORY_COLORS } from "./AnecdotalSideRail";
 import styles from "./anecdotal-repo-folders.module.css";
 
 const PAGE_SIZE = 24;
-
-const CATEGORY_OPTIONS = [
-  { value: "all", label: "All categories" },
-  { value: "behavioral", label: "Behavioral" },
-  { value: "bullying", label: "Bullying" },
-  { value: "academic", label: "Academic" },
-  { value: "attendance", label: "Attendance" },
-  { value: "health", label: "Health" },
-] as const;
 
 const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   behavioral: 1,
@@ -42,6 +19,9 @@ const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   attendance: 4,
   health: 5,
 };
+
+// Folder body color per anecdotal category lives in the side rail module
+// (single source of truth, shared with the legend).
 
 function humanize(value: string): string {
   return value
@@ -52,7 +32,7 @@ function humanize(value: string): string {
 
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
-  if (!Number.isFinite(then) || then < Date.UTC(2000, 0, 1)) return "—";
+  if (!Number.isFinite(then) || then < Date.UTC(2000, 0, 1)) return "-";
   const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
   if (seconds < 60) return "just now";
   const minutes = Math.round(seconds / 60);
@@ -76,25 +56,10 @@ function recordDate(iso: string): string {
  */
 export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[] }) {
   const router = useRouter();
-  const [query, setQuery] = React.useState("");
-  const [category, setCategory] = React.useState<string>("all");
   const [page, setPage] = React.useState(1);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
 
-  const needle = query.trim().toLowerCase();
-  const visible = React.useMemo(
-    () =>
-      records.filter((r) => {
-        if (category !== "all" && r.category !== category) return false;
-        if (!needle) return true;
-        return (
-          r.studentName.toLowerCase().includes(needle) ||
-          r.lrn.toLowerCase().includes(needle) ||
-          r.section.toLowerCase().includes(needle)
-        );
-      }),
-    [records, category, needle]
-  );
+  const visible = records;
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -104,65 +69,16 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
 
   return (
     <>
-      <Card className={styles.panel}>
-        <CardHeader className={styles.header}>
+      <div className={`${styles.panel} flex flex-1 flex-col`}>
+        <div className={styles.header}>
           <div className={styles.headerText}>
-            <CardTitle className={styles.sectionTitle}>My filed records</CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              Every anecdotal record you filed — {records.length} in all. Open a folder to read its GCForm-01.
-            </CardDescription>
+            <h2 className={styles.sectionTitle}>Advisory GCForm 01 records</h2>
+            <p className={styles.sectionDesc}>
+              Every anecdotal record filed for your advisory - {records.length} in all. Open a folder to read its GCForm-01.
+            </p>
           </div>
-          <CardAction className={styles.headerActions}>
-            <Input
-              className={styles.search}
-              placeholder="Search student, LRN, or section…"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
-              aria-label="Search filed records"
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={styles.filterSelect}
-                  aria-label="Filter by category"
-                >
-                  <span className={styles.filterSelectText}>
-                    {CATEGORY_OPTIONS.find((opt) => opt.value === category)?.label ?? "All categories"}
-                  </span>
-                  <ChevronDown className={styles.filterSelectIcon} aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    onSelect={() => {
-                      setCategory(opt.value);
-                      setPage(1);
-                    }}
-                    aria-pressed={category === opt.value}
-                  >
-                    {opt.label}
-                    {category === opt.value ? (
-                      <Check className={styles.filterCheck} aria-hidden />
-                    ) : null}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button type="button" size="sm" onClick={() => router.push("/teacher/chat?new=anecdotal")}>
-              <Plus aria-hidden />
-              New record
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className={styles.content}>
+        </div>
+        <div className={styles.content}>
           <div className={styles.scrollArea}>
           {records.length === 0 ? (
             <div className={styles.empty}>
@@ -177,9 +93,7 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
             </div>
           ) : pageRows.length === 0 ? (
             <p className={styles.emptyInline}>
-              {needle || category !== "all"
-                ? "No filed records match the current filters."
-                : "No filed records on this page."}
+              No filed records on this page.
             </p>
           ) : (
             <div className={styles.folderGrid}>
@@ -193,11 +107,12 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
                 >
                   <FolderCard
                     label={c.studentName}
-                    sublabel={`${c.lrn} · ${c.section}`}
+                    sublabel={`${c.lrn} - ${c.section}`}
+                    folderColor={CATEGORY_COLORS[c.category]}
                     files={[
                       {
                         name: `GCForm-01_${recordDate(c.observationDatetime)}`,
-                        tag: `${humanize(c.category)} • ${timeAgo(c.observationDatetime)}`,
+                        tag: `${humanize(c.category)} - ${timeAgo(c.observationDatetime)}`,
                         tone: CATEGORY_TONES[c.category] ?? 1,
                         icon: "doc",
                       },
@@ -209,9 +124,9 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
           )}
           </div>
           {visible.length > 0 ? (
-            <div className={styles.pager}>
+            <div className={`${styles.pager} mt-auto pt-2`}>
               <p className={styles.range}>
-                Showing {start}–{end} of {visible.length}
+                Showing {start}-{end} of {visible.length}
               </p>
               <div className={styles.pagerButtons}>
                 <Button
@@ -236,8 +151,8 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
               </div>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
     </>

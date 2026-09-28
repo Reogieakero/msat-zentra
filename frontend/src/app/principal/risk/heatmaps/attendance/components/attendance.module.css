@@ -2,8 +2,10 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem 0.25rem 0.25rem;
+  gap: 1rem;
+  /* No padding here — the principal shell (.main) already provides the
+     single 16px gutter from the nav. Adding more would double it to 32px. */
+  padding: 0;
   min-height: 100%;
   background-color: var(--background);
 }
@@ -12,4 +14,25 @@
   margin: 0;
   border: none;
   border-top: 1px solid var(--border, #e5e5e5);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

@@ -68,7 +68,7 @@ enum Session {
 enum ComponentType {
   WRITTEN_WORK
   PERFORMANCE_TASK
-  QUARTERLY_EXAM
+  EXAM
 }
 
 enum LockStatus {
@@ -272,6 +272,9 @@ model User {
   sf10AccessRequests  AdviserSf10AccessRequest[] @relation("Sf10AccessAdviser")
   sf10AccessDecided   AdviserSf10AccessRequest[] @relation("Sf10AccessDecidedBy")
   teacherAssignments  TeacherSubjectAssignment[]
+  submittedTimetables SectionTimetableEntry[] @relation("TimetableSubmitted")
+  reviewedTimetables  SectionTimetableEntry[] @relation("TimetableReviewed")
+  teacherName         TeacherName?
   gradeFlagsRaised    GradeFlag[]            @relation("FlagRaisedBy")
   gradeFlagsOwned     GradeFlag[]            @relation("FlagOwner")
   gradeFlagsResolved  GradeFlag[]            @relation("FlagResolvedBy")
@@ -332,6 +335,9 @@ model StaffProfile {
   employeeId   String  @unique
   department   String?
   isAdviser    Boolean @default(false)
+  // Master Teacher designation (grades 7–10 only). Self-declared by the
+  // teacher from Settings; the update endpoint enforces the grade band.
+  isMasterTeacher Boolean @default(false)
   handledGradeLevels GradeLevel[]
   // The teacher's one reusable drawn signature (PNG data URL), stamped onto
   // records via POST /api/anecdotal/:id/apply-signature.
@@ -375,6 +381,8 @@ model Term {
   reportSnapshots ReportSnapshot[]
   teacherAssignments TeacherSubjectAssignment[]
   gradeFlags GradeFlag[]
+  scheduleConfigs ScheduleConfig[]
+  timetableEntries SectionTimetableEntry[]
   @@unique([schoolYearId, termNumber])
 }
 
@@ -384,6 +392,10 @@ model Section {
   gradeLevel   GradeLevel
   schoolYearId String
   adviserId    String?
+  // Free-text advisory listing (principal-managed). Written whenever a name
+  // is assigned; the adviserId link is only set when the name resolves to
+  // exactly one active teacher, so listing never blocks on accounts.
+  adviserLabel String?
   schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
   adviser      User?      @relation("AdviserSection", fields: [adviserId], references: [id])
   students     StudentProfile[]
@@ -391,6 +403,7 @@ model Section {
   anecdotalRecords AnecdotalRecord[]
   teacherAssignments TeacherSubjectAssignment[]
   gradeFlags GradeFlag[]
+  timetableEntries SectionTimetableEntry[]
   rosterEntries StudentRoster[]
   sf10AccessRequests AdviserSf10AccessRequest[]
   @@index([schoolYearId])
@@ -439,6 +452,8 @@ model Subject {
   finalGrades FinalGrade[]
   assignments TeacherSubjectAssignment[]
   gradeFlags GradeFlag[]
+  timetableEntries SectionTimetableEntry[]
+  attendanceRecords AttendanceRecord[]
   @@unique([code, gradeLevel])
 }
 
@@ -452,7 +467,86 @@ model TeacherSubjectAssignment {
   subject    Subject  @relation(fields: [subjectId], references: [id])
   section    Section  @relation(fields: [sectionId], references: [id])
   term       Term     @relation(fields: [termId], references: [id])
+  attendanceRecords AttendanceRecord[]
   @@unique([teacherId, subjectId, sectionId, termId])
+}
+
+// Schedule review workflow: master-teacher fills are DRAFTS — never live —
+// until sent (SUBMITTED) and principal-approved (APPROVED, the only status
+// that materializes gradebook assignments). Reject returns rows to DRAFT
+// with the principal's note for revision.
+enum TimetableStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+}
+// ScheduleConfig stores the day shape per term (start time, period length,
+// lunch + recess placement). One row per term; the setup view falls back to
+// app defaults when no row exists yet.
+model ScheduleConfig {
+  id            String @id @default(uuid())
+  termId        String @unique
+  startTime     String @default("07:30")
+  periodMins    Int    @default(60)
+  lunchAfter    Int    @default(4)
+  lunchMins     Int    @default(90)
+  recessAmOn    Boolean @default(false)
+  recessAmAfter Int    @default(2)
+  recessAmMins  Int    @default(15)
+  recessPmOn    Boolean @default(false)
+  recessPmAfter Int    @default(6)
+  recessPmMins  Int    @default(15)
+  term          Term   @relation(fields: [termId], references: [id], onDelete: Cascade)
+}
+
+// One filled timetable cell: a subject placed in a section's weekly template
+// for a term. day 1=Mon..5=Fri, period is the 0-based period number (stable
+// when durations change). A slot holds at most one subject.
+model SectionTimetableEntry {
+  id            String  @id @default(uuid())
+  sectionId     String
+  subjectId     String
+  termId        String
+  day           Int
+  period        Int
+  // Display name running this slot — a plain catalog name, not a login.
+  // Nullable so rows created before names existed stay valid.
+  teacherNameId String?
+  status        TimetableStatus @default(DRAFT)
+  submittedBy   String?
+  submittedAt   DateTime?
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewNote    String?
+  section       Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  subject       Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  term          Term         @relation(fields: [termId], references: [id], onDelete: Cascade)
+  teacherName   TeacherName? @relation(fields: [teacherNameId], references: [id], onDelete: Cascade)
+  submitter     User?        @relation("TimetableSubmitted", fields: [submittedBy], references: [id], onDelete: SetNull)
+  reviewer      User?        @relation("TimetableReviewed", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  @@unique([sectionId, termId, day, period])
+  @@index([sectionId, termId])
+}
+
+// Plain display-name catalog for timetable slots. The master types each name
+// once in Add Teachers, then picks from the list — no accounts, emails, or
+// passwords are involved anywhere. A teacher links their own login to their
+// catalog row by entering its code on teacher/classes, attaching the row's
+// subjects and timeslots to their personal calendar.
+model TeacherName {
+  id      String @id @default(uuid())
+  name    String @unique
+  // Short token code (e.g. MS-101), visible wherever names are listed so the
+  // master can reference teachers. Nullable: rows predating codes stay valid.
+  code    String? @unique
+  // Login that claimed this row via its code. Nullable + unique: unclaimed
+  // rows stay valid, and one login holds at most one row.
+  userId  String? @unique
+  // Attendance code verified once — the attendance page stops asking until
+  // the row is unlinked. Cleared together with userId on release.
+  attendanceVerifiedAt DateTime?
+  entries SectionTimetableEntry[]
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 // ---------------------------------------------------------------------------
@@ -471,12 +565,13 @@ model GradeComponent {
 }
 
 model Assessment {
-  id              String          @id @default(uuid())
+  id              String   @id @default(uuid())
   gradeComponentId String
   title           String
   maxScore        Float
   dateGiven       DateTime
   createdBy       String
+  createdAt       DateTime @default(now())
   gradeComponent  GradeComponent  @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)
   studentGrades   StudentGrade[]
 }
@@ -564,6 +659,14 @@ model GradeFlag {
 // ---------------------------------------------------------------------------
 // 3.4 Attendance
 // ---------------------------------------------------------------------------
+// Per-subject attendance (AM/PM → subject migration).
+// - New writes REQUIRE subjectId (+ slot for same-subject repeats in one day).
+// - Legacy AM/PM rows keep subjectId NULL and remain readable; the authoritative
+//   archive copy lives in AttendanceRecordLegacy (see migration
+//   20260926000000_attendance_subject_support). Do NOT backfill subjectId for
+//   legacy rows — that would invent history.
+// - session is retained (frozen) for legacy reads only; new writes set it to AM
+//   as a placeholder until the Phase-7 cleanup drops the column.
 model AttendanceRecord {
   id         String           @id @default(uuid())
   // Exactly one of studentId (registered profile) / rosterId (enlisted, no
@@ -572,19 +675,52 @@ model AttendanceRecord {
   rosterId   String?
   sectionId  String
   date       DateTime
-  session    Session
+  session    Session          @default(AM)
   status     AttendanceStatus
   recordedBy String
   termId     String
+  // Per-subject fields. NULL = legacy AM/PM row (pre-migration).
+  subjectId  String?
+  assignmentId String?
+  // 1-based occurrence of the same subject for the same student on the same
+  // date (double periods). Part of the subject-era unique key.
+  slot       Int              @default(1)
   student    StudentProfile?  @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   roster     StudentRoster?   @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   section    Section          @relation(fields: [sectionId], references: [id])
   term       Term             @relation(fields: [termId], references: [id])
-  @@unique([studentId, date, session])
-  @@unique([rosterId, date, session])
+  subject    Subject?         @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  assignment TeacherSubjectAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  // Legacy AM/PM uniqueness lives as partial indexes in migration
+  // 20260927190000 (WHERE subjectId IS NULL) so subject-era rows for
+  // several subjects can share one student-day.
+  @@unique([studentId, subjectId, date, slot])
+  @@unique([rosterId, subjectId, date, slot])
   @@index([rosterId])
   @@index([studentId, termId])
   @@index([sectionId, termId])
+  @@index([subjectId, termId])
+  @@index([sectionId, subjectId, termId])
+  @@index([assignmentId])
+}
+
+// Frozen archive of pre-migration AM/PM rows, written once by migration
+// 20260926000000_attendance_subject_support. Read-only via
+// GET /api/attendance/legacy/* — never written by application code.
+model AttendanceRecordLegacy {
+  id         String           @id
+  studentId  String?
+  rosterId   String?
+  sectionId  String
+  date       DateTime
+  session    Session
+  status     AttendanceStatus
+  recordedBy String
+  termId     String
+  archivedAt DateTime         @default(now())
+  @@index([sectionId, termId])
+  @@index([studentId, termId])
+  @@index([rosterId])
 }
 
 // ---------------------------------------------------------------------------

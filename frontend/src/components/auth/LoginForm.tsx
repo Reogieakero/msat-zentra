@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { setAccessToken, setRefreshToken } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";
 import styles from "./LoginForm.module.css";
 
@@ -35,6 +36,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { setPromptRequired } = useTerm();
   const [identifier, setIdentifier] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
@@ -73,6 +75,10 @@ export function LoginForm({
       // Drop any cached queries from a previous account on this device
       // before entering the new session (QueryClient outlives SPA login).
       queryClient.clear();
+      // Every successful login must force the term-scope picker once the
+      // workspace loads (state + localStorage via context, so the overlay
+      // shows even when a term was picked in a previous session).
+      setPromptRequired(true);
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =
         (data.role === "principal" && "/principal/overview") ||

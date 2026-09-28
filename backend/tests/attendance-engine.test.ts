@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   buildDayAxis,
+  buildSchoolDayAxis,
+  manilaKey,
+  phTodayKey,
   countSchoolDays,
   formatDateKey,
   isWeekendKey,
@@ -115,6 +118,38 @@ describe("attendance engine (canonical single source of truth)", () => {
         { present: 5, late: 0, excused: 0, total: 5 },
       ];
       expect(attendanceTrend(days, 10)).toBe("down");
+    });
+  });
+
+  describe("phTodayKey", () => {
+    it("returns the Manila calendar day, not the UTC day", () => {
+      // 17:00 UTC = 01:00 next day in Manila — the block must already exist.
+      expect(phTodayKey(new Date("2026-09-25T17:00:00.000Z"))).toBe("2026-09-26");
+      // 15:00 UTC = 23:00 same day in Manila.
+      expect(phTodayKey(new Date("2026-09-25T15:00:00.000Z"))).toBe("2026-09-25");
+    });
+  });
+
+  describe("manilaKey", () => {
+    it("formats any instant as its Asia/Manila calendar date", () => {
+      // Instant-based: identical on servers in any timezone.
+      expect(manilaKey(new Date("2026-09-15T16:00:00.000Z"))).toBe("2026-09-16");
+      expect(manilaKey(new Date("2026-09-15T15:59:59.000Z"))).toBe("2026-09-15");
+      expect(manilaKey(new Date("2026-12-18T15:00:00.000Z"))).toBe("2026-12-18");
+    });
+  });
+
+  describe("buildSchoolDayAxis", () => {
+    it("runs term start -> today with zero weekend keys", () => {
+      const axis = buildSchoolDayAxis("2026-01-05T00:00:00.000Z"); // Monday
+      expect(axis.length).toBeGreaterThan(0);
+      expect(axis[0]).toBe("2026-01-05");
+      for (const key of axis) {
+        expect(isWeekendKey(key)).toBe(false);
+      }
+      // A full Mon->today span loses exactly its weekend days.
+      const full = buildDayAxis("2026-01-05T00:00:00.000Z");
+      expect(axis.length).toBe(countSchoolDays(full));
     });
   });
 });

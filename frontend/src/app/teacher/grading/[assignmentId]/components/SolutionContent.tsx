@@ -36,7 +36,7 @@ export function SolutionContent({ detail, studentId }: Props) {
       <WeightsVisual
         ww={work.find((w) => w.type === "WRITTEN_WORK")?.weight ?? 0}
         pt={work.find((w) => w.type === "PERFORMANCE_TASK")?.weight ?? 0}
-        qe={work.find((w) => w.type === "QUARTERLY_EXAM")?.weight ?? 0}
+        exam={work.find((w) => w.type === "EXAM")?.weight ?? 0}
       />
       {work.map((w, wi) => (
         <div key={w.type} className={styles.stepBlock}>

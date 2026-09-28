@@ -29,6 +29,7 @@ export type StaffProfileMinAggregateOutputType = {
   employeeId: string | null
   department: string | null
   isAdviser: boolean | null
+  isMasterTeacher: boolean | null
   signatureImageUrl: string | null
 }
 
@@ -37,6 +38,7 @@ export type StaffProfileMaxAggregateOutputType = {
   employeeId: string | null
   department: string | null
   isAdviser: boolean | null
+  isMasterTeacher: boolean | null
   signatureImageUrl: string | null
 }
 
@@ -45,6 +47,7 @@ export type StaffProfileCountAggregateOutputType = {
   employeeId: number
   department: number
   isAdviser: number
+  isMasterTeacher: number
   handledGradeLevels: number
   signatureImageUrl: number
   _all: number
@@ -56,6 +59,7 @@ export type StaffProfileMinAggregateInputType = {
   employeeId?: true
   department?: true
   isAdviser?: true
+  isMasterTeacher?: true
   signatureImageUrl?: true
 }
 
@@ -64,6 +68,7 @@ export type StaffProfileMaxAggregateInputType = {
   employeeId?: true
   department?: true
   isAdviser?: true
+  isMasterTeacher?: true
   signatureImageUrl?: true
 }
 
@@ -72,6 +77,7 @@ export type StaffProfileCountAggregateInputType = {
   employeeId?: true
   department?: true
   isAdviser?: true
+  isMasterTeacher?: true
   handledGradeLevels?: true
   signatureImageUrl?: true
   _all?: true
@@ -154,6 +160,7 @@ export type StaffProfileGroupByOutputType = {
   employeeId: string
   department: string | null
   isAdviser: boolean
+  isMasterTeacher: boolean
   handledGradeLevels: $Enums.GradeLevel[]
   signatureImageUrl: string | null
   _count: StaffProfileCountAggregateOutputType | null
@@ -184,6 +191,7 @@ export type StaffProfileWhereInput = {
   employeeId?: Prisma.StringFilter<"StaffProfile"> | string
   department?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   isAdviser?: Prisma.BoolFilter<"StaffProfile"> | boolean
+  isMasterTeacher?: Prisma.BoolFilter<"StaffProfile"> | boolean
   handledGradeLevels?: Prisma.EnumGradeLevelNullableListFilter<"StaffProfile">
   signatureImageUrl?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -194,6 +202,7 @@ export type StaffProfileOrderByWithRelationInput = {
   employeeId?: Prisma.SortOrder
   department?: Prisma.SortOrderInput | Prisma.SortOrder
   isAdviser?: Prisma.SortOrder
+  isMasterTeacher?: Prisma.SortOrder
   handledGradeLevels?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -207,6 +216,7 @@ export type StaffProfileWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.StaffProfileWhereInput | Prisma.StaffProfileWhereInput[]
   department?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   isAdviser?: Prisma.BoolFilter<"StaffProfile"> | boolean
+  isMasterTeacher?: Prisma.BoolFilter<"StaffProfile"> | boolean
   handledGradeLevels?: Prisma.EnumGradeLevelNullableListFilter<"StaffProfile">
   signatureImageUrl?: Prisma.StringNullableFilter<"StaffProfile"> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -217,6 +227,7 @@ export type StaffProfileOrderByWithAggregationInput = {
   employeeId?: Prisma.SortOrder
   department?: Prisma.SortOrderInput | Prisma.SortOrder
   isAdviser?: Prisma.SortOrder
+  isMasterTeacher?: Prisma.SortOrder
   handledGradeLevels?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.StaffProfileCountOrderByAggregateInput
@@ -232,6 +243,7 @@ export type StaffProfileScalarWhereWithAggregatesInput = {
   employeeId?: Prisma.StringWithAggregatesFilter<"StaffProfile"> | string
   department?: Prisma.StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
   isAdviser?: Prisma.BoolWithAggregatesFilter<"StaffProfile"> | boolean
+  isMasterTeacher?: Prisma.BoolWithAggregatesFilter<"StaffProfile"> | boolean
   handledGradeLevels?: Prisma.EnumGradeLevelNullableListFilter<"StaffProfile">
   signatureImageUrl?: Prisma.StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
 }
@@ -240,6 +252,7 @@ export type StaffProfileCreateInput = {
   employeeId: string
   department?: string | null
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: Prisma.StaffProfileCreatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: string | null
   user: Prisma.UserCreateNestedOneWithoutStaffProfileInput
@@ -250,6 +263,7 @@ export type StaffProfileUncheckedCreateInput = {
   employeeId: string
   department?: string | null
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: Prisma.StaffProfileCreatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: string | null
 }
@@ -258,6 +272,7 @@ export type StaffProfileUpdateInput = {
   employeeId?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdviser?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isMasterTeacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
   handledGradeLevels?: Prisma.StaffProfileUpdatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutStaffProfileNestedInput
@@ -268,6 +283,7 @@ export type StaffProfileUncheckedUpdateInput = {
   employeeId?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdviser?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isMasterTeacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
   handledGradeLevels?: Prisma.StaffProfileUpdatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -277,6 +293,7 @@ export type StaffProfileCreateManyInput = {
   employeeId: string
   department?: string | null
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: Prisma.StaffProfileCreatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: string | null
 }
@@ -285,6 +302,7 @@ export type StaffProfileUpdateManyMutationInput = {
   employeeId?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdviser?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isMasterTeacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
   handledGradeLevels?: Prisma.StaffProfileUpdatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -294,6 +312,7 @@ export type StaffProfileUncheckedUpdateManyInput = {
   employeeId?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdviser?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isMasterTeacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
   handledGradeLevels?: Prisma.StaffProfileUpdatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -316,6 +335,7 @@ export type StaffProfileCountOrderByAggregateInput = {
   employeeId?: Prisma.SortOrder
   department?: Prisma.SortOrder
   isAdviser?: Prisma.SortOrder
+  isMasterTeacher?: Prisma.SortOrder
   handledGradeLevels?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrder
 }
@@ -325,6 +345,7 @@ export type StaffProfileMaxOrderByAggregateInput = {
   employeeId?: Prisma.SortOrder
   department?: Prisma.SortOrder
   isAdviser?: Prisma.SortOrder
+  isMasterTeacher?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrder
 }
 
@@ -333,6 +354,7 @@ export type StaffProfileMinOrderByAggregateInput = {
   employeeId?: Prisma.SortOrder
   department?: Prisma.SortOrder
   isAdviser?: Prisma.SortOrder
+  isMasterTeacher?: Prisma.SortOrder
   signatureImageUrl?: Prisma.SortOrder
 }
 
@@ -385,6 +407,7 @@ export type StaffProfileCreateWithoutUserInput = {
   employeeId: string
   department?: string | null
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: Prisma.StaffProfileCreatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: string | null
 }
@@ -393,6 +416,7 @@ export type StaffProfileUncheckedCreateWithoutUserInput = {
   employeeId: string
   department?: string | null
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: Prisma.StaffProfileCreatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: string | null
 }
@@ -417,6 +441,7 @@ export type StaffProfileUpdateWithoutUserInput = {
   employeeId?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdviser?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isMasterTeacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
   handledGradeLevels?: Prisma.StaffProfileUpdatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -425,6 +450,7 @@ export type StaffProfileUncheckedUpdateWithoutUserInput = {
   employeeId?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdviser?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isMasterTeacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
   handledGradeLevels?: Prisma.StaffProfileUpdatehandledGradeLevelsInput | $Enums.GradeLevel[]
   signatureImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -436,6 +462,7 @@ export type StaffProfileSelect<ExtArgs extends runtime.Types.Extensions.Internal
   employeeId?: boolean
   department?: boolean
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: boolean
   signatureImageUrl?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -446,6 +473,7 @@ export type StaffProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   employeeId?: boolean
   department?: boolean
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: boolean
   signatureImageUrl?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -456,6 +484,7 @@ export type StaffProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   employeeId?: boolean
   department?: boolean
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: boolean
   signatureImageUrl?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -466,11 +495,12 @@ export type StaffProfileSelectScalar = {
   employeeId?: boolean
   department?: boolean
   isAdviser?: boolean
+  isMasterTeacher?: boolean
   handledGradeLevels?: boolean
   signatureImageUrl?: boolean
 }
 
-export type StaffProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "employeeId" | "department" | "isAdviser" | "handledGradeLevels" | "signatureImageUrl", ExtArgs["result"]["staffProfile"]>
+export type StaffProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "employeeId" | "department" | "isAdviser" | "isMasterTeacher" | "handledGradeLevels" | "signatureImageUrl", ExtArgs["result"]["staffProfile"]>
 export type StaffProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -491,6 +521,7 @@ export type $StaffProfilePayload<ExtArgs extends runtime.Types.Extensions.Intern
     employeeId: string
     department: string | null
     isAdviser: boolean
+    isMasterTeacher: boolean
     handledGradeLevels: $Enums.GradeLevel[]
     signatureImageUrl: string | null
   }, ExtArgs["result"]["staffProfile"]>
@@ -921,6 +952,7 @@ export interface StaffProfileFieldRefs {
   readonly employeeId: Prisma.FieldRef<"StaffProfile", 'String'>
   readonly department: Prisma.FieldRef<"StaffProfile", 'String'>
   readonly isAdviser: Prisma.FieldRef<"StaffProfile", 'Boolean'>
+  readonly isMasterTeacher: Prisma.FieldRef<"StaffProfile", 'Boolean'>
   readonly handledGradeLevels: Prisma.FieldRef<"StaffProfile", 'GradeLevel[]'>
   readonly signatureImageUrl: Prisma.FieldRef<"StaffProfile", 'String'>
 }

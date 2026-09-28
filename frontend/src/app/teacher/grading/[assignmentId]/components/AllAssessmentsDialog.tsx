@@ -21,13 +21,13 @@ import styles from "./AllAssessmentsDialog.module.css";
 const DOT: Record<string, string> = {
   WRITTEN_WORK: styles.dotWW,
   PERFORMANCE_TASK: styles.dotPT,
-  QUARTERLY_EXAM: styles.dotQE,
+  EXAM: styles.dotQE,
 };
 
 const SHORT: Record<string, string> = {
   WRITTEN_WORK: "WW",
   PERFORMANCE_TASK: "PT",
-  QUARTERLY_EXAM: "QE",
+  EXAM: "E",
 };
 
 type Props = {

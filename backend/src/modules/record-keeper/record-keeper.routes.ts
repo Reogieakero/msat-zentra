@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { GradeLevel } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { schoolYearWhere, scopedYearId } from "../../lib/termScope.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
@@ -83,7 +84,7 @@ router.get(
       // sections/subjects: G7–10 active sections and subjects (KPI metrics).
       const [sections, subjects] = await Promise.all([
         prisma.section.count({
-          where: { gradeLevel: { in: GRADE_BAND_7_10 }, schoolYear: { isActive: true } },
+          where: { gradeLevel: { in: GRADE_BAND_7_10 }, ...schoolYearWhere(req) },
         }),
         prisma.subject.count({ where: { gradeLevel: { in: GRADE_BAND_7_10 } } }),
       ]);
@@ -98,7 +99,7 @@ router.get(
         }),
         prisma.section.groupBy({
           by: ["gradeLevel"],
-          where: { gradeLevel: { in: GRADE_BAND_7_10 }, schoolYear: { isActive: true } },
+          where: { gradeLevel: { in: GRADE_BAND_7_10 }, ...schoolYearWhere(req) },
           _count: { _all: true },
         }),
         prisma.subject.groupBy({
@@ -451,11 +452,8 @@ router.get(
   cache({ tags: ["record-keeper", "accounts"] }),
   async (req, res, next) => {
     try {
-      const activeYear = await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true },
-      });
-      const schoolYearId = activeYear?.id;
+      // Roster scope follows the session's active School Year.
+      const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
 
       const roster = await prisma.studentRoster.findMany({
         where: { gradeLevel: { in: GRADE_BAND_7_10 }, schoolYearId: schoolYearId ?? "__none__" },

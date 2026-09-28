@@ -1,0 +1,186 @@
+"use client";
+
+import * as React from "react";
+import { Loader2, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  COMPONENT_NAMES,
+  deleteAssessment,
+  type ClassAssessment,
+  type ClassComponent,
+  type ClassStudent,
+  type ComponentType,
+} from "../../components/grading-data";
+import { sileo } from "@/components/ui/sonner";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+
+const DOT: Record<string, string> = {
+  WRITTEN_WORK: "bg-blue-500",
+  PERFORMANCE_TASK: "bg-amber-500",
+  EXAM: "bg-red-500",
+};
+
+type Props = {
+  students: ClassStudent[];
+  components: ClassComponent[];
+  onSelect: (category: ComponentType, assessmentId: string) => void;
+  onDeleted: (assessmentId: string) => void;
+};
+
+/* Assessment picker: every assessment the teacher added, grouped by
+   category. Labels the list, tiles each assessment pro-style (max score
+   right, added date below the title), and offers per-row delete.
+   Selecting a tile opens the encode table; nothing encodes here. */
+export function AssessmentList({ students, components, onSelect, onDeleted }: Props) {
+  const [pendingDelete, setPendingDelete] = React.useState<ClassAssessment | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  const groups = components.map((c) => ({
+    type: c.type,
+    assessments: [...c.assessments].sort(
+      (a, b) => +new Date(b.dateGiven) - +new Date(a.dateGiven),
+    ),
+  }));
+  const total = groups.reduce((n, g) => n + g.assessments.length, 0);
+
+  const scoredOf = (a: ClassAssessment) =>
+    students.filter((s) => a.scores[s.id] != null).length;
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    const { id, title } = pendingDelete;
+    setPendingDelete(null);
+    setDeletingId(id);
+    try {
+      await deleteAssessment(id);
+      sileo.success({ title: "Assessment deleted", description: `"${title}" and its scores were removed.` });
+      onDeleted(id);
+    } catch {
+      sileo.error({ title: "Could not delete assessment", description: "Try again." });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (total === 0) {
+    return (
+      <div className={`${assign.card} mx-auto w-full max-w-md`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div className="relative flex flex-col items-center gap-2 py-8 text-center">
+          <p className="font-semibold">No assessments yet</p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            Use the Add assessment card to create your first quiz, activity, or exam.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+    <div className="flex w-full max-w-lg min-w-0 flex-col gap-4">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        Select assessment
+      </p>
+      {groups.map((g) =>
+        g.assessments.length === 0 ? null : (
+          <div key={g.type} className={assign.card}>
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
+            </span>
+            <div className="relative flex items-center gap-2">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[g.type]}`} aria-hidden />
+              <h2 className="font-semibold">{COMPONENT_NAMES[g.type]}</h2>
+              <Badge variant="secondary" className="ml-auto">
+                {g.assessments.length}
+              </Badge>
+            </div>
+            <ul className="relative flex flex-col gap-2">
+              {g.assessments.map((a) => {
+                const scored = scoredOf(a);
+                const busy = deletingId === a.id;
+                return (
+                  <li key={a.id} className="flex min-w-0 items-stretch gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelect(g.type, a.id)}
+                      aria-label={`Encode scores for ${a.title}`}
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-input bg-card px-3 py-2.5 text-left shadow-sm transition-colors hover:border-primary"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{a.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          Added {a.createdAt} · {scored}/{students.length} scored
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end">
+                        <span className="text-base leading-none font-bold tabular-nums">
+                          {a.maxScore}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">max</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(a)}
+                      disabled={busy}
+                      aria-label={`Delete ${a.title}`}
+                      title="Delete assessment"
+                      className="shrink-0 self-center rounded-md p-1.5 transition-colors hover:bg-muted hover:text-red-500"
+                    >
+                      {busy ? (
+                        <Loader2 size={16} className="animate-spin" aria-hidden />
+                      ) : (
+                        <Trash2 size={16} aria-hidden />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ),
+      )}
+    </div>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete assessment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `"${pendingDelete.title}" and all of its encoded scores will be permanently removed. This cannot be undone.`
+                : "This assessment and all of its encoded scores will be permanently removed."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleDelete()}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

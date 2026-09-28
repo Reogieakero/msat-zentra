@@ -62,12 +62,16 @@ export const ModelName = {
   StudentRoster: 'StudentRoster',
   Subject: 'Subject',
   TeacherSubjectAssignment: 'TeacherSubjectAssignment',
+  ScheduleConfig: 'ScheduleConfig',
+  SectionTimetableEntry: 'SectionTimetableEntry',
+  TeacherName: 'TeacherName',
   GradeComponent: 'GradeComponent',
   Assessment: 'Assessment',
   StudentGrade: 'StudentGrade',
   FinalGrade: 'FinalGrade',
   GradeFlag: 'GradeFlag',
   AttendanceRecord: 'AttendanceRecord',
+  AttendanceRecordLegacy: 'AttendanceRecordLegacy',
   AnecdotalRecord: 'AnecdotalRecord',
   AnecdotalFolder: 'AnecdotalFolder',
   AnecdotalRecordFollowup: 'AnecdotalRecordFollowup',
@@ -168,6 +172,7 @@ export const StaffProfileScalarFieldEnum = {
   employeeId: 'employeeId',
   department: 'department',
   isAdviser: 'isAdviser',
+  isMasterTeacher: 'isMasterTeacher',
   handledGradeLevels: 'handledGradeLevels',
   signatureImageUrl: 'signatureImageUrl'
 } as const
@@ -204,7 +209,8 @@ export const SectionScalarFieldEnum = {
   name: 'name',
   gradeLevel: 'gradeLevel',
   schoolYearId: 'schoolYearId',
-  adviserId: 'adviserId'
+  adviserId: 'adviserId',
+  adviserLabel: 'adviserLabel'
 } as const
 
 export type SectionScalarFieldEnum = (typeof SectionScalarFieldEnum)[keyof typeof SectionScalarFieldEnum]
@@ -244,6 +250,54 @@ export const TeacherSubjectAssignmentScalarFieldEnum = {
 export type TeacherSubjectAssignmentScalarFieldEnum = (typeof TeacherSubjectAssignmentScalarFieldEnum)[keyof typeof TeacherSubjectAssignmentScalarFieldEnum]
 
 
+export const ScheduleConfigScalarFieldEnum = {
+  id: 'id',
+  termId: 'termId',
+  startTime: 'startTime',
+  periodMins: 'periodMins',
+  lunchAfter: 'lunchAfter',
+  lunchMins: 'lunchMins',
+  recessAmOn: 'recessAmOn',
+  recessAmAfter: 'recessAmAfter',
+  recessAmMins: 'recessAmMins',
+  recessPmOn: 'recessPmOn',
+  recessPmAfter: 'recessPmAfter',
+  recessPmMins: 'recessPmMins'
+} as const
+
+export type ScheduleConfigScalarFieldEnum = (typeof ScheduleConfigScalarFieldEnum)[keyof typeof ScheduleConfigScalarFieldEnum]
+
+
+export const SectionTimetableEntryScalarFieldEnum = {
+  id: 'id',
+  sectionId: 'sectionId',
+  subjectId: 'subjectId',
+  termId: 'termId',
+  day: 'day',
+  period: 'period',
+  teacherNameId: 'teacherNameId',
+  status: 'status',
+  submittedBy: 'submittedBy',
+  submittedAt: 'submittedAt',
+  reviewedBy: 'reviewedBy',
+  reviewedAt: 'reviewedAt',
+  reviewNote: 'reviewNote'
+} as const
+
+export type SectionTimetableEntryScalarFieldEnum = (typeof SectionTimetableEntryScalarFieldEnum)[keyof typeof SectionTimetableEntryScalarFieldEnum]
+
+
+export const TeacherNameScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  code: 'code',
+  userId: 'userId',
+  attendanceVerifiedAt: 'attendanceVerifiedAt'
+} as const
+
+export type TeacherNameScalarFieldEnum = (typeof TeacherNameScalarFieldEnum)[keyof typeof TeacherNameScalarFieldEnum]
+
+
 export const GradeComponentScalarFieldEnum = {
   id: 'id',
   subjectId: 'subjectId',
@@ -261,7 +315,8 @@ export const AssessmentScalarFieldEnum = {
   title: 'title',
   maxScore: 'maxScore',
   dateGiven: 'dateGiven',
-  createdBy: 'createdBy'
+  createdBy: 'createdBy',
+  createdAt: 'createdAt'
 } as const
 
 export type AssessmentScalarFieldEnum = (typeof AssessmentScalarFieldEnum)[keyof typeof AssessmentScalarFieldEnum]
@@ -331,10 +386,29 @@ export const AttendanceRecordScalarFieldEnum = {
   session: 'session',
   status: 'status',
   recordedBy: 'recordedBy',
-  termId: 'termId'
+  termId: 'termId',
+  subjectId: 'subjectId',
+  assignmentId: 'assignmentId',
+  slot: 'slot'
 } as const
 
 export type AttendanceRecordScalarFieldEnum = (typeof AttendanceRecordScalarFieldEnum)[keyof typeof AttendanceRecordScalarFieldEnum]
+
+
+export const AttendanceRecordLegacyScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  rosterId: 'rosterId',
+  sectionId: 'sectionId',
+  date: 'date',
+  session: 'session',
+  status: 'status',
+  recordedBy: 'recordedBy',
+  termId: 'termId',
+  archivedAt: 'archivedAt'
+} as const
+
+export type AttendanceRecordLegacyScalarFieldEnum = (typeof AttendanceRecordLegacyScalarFieldEnum)[keyof typeof AttendanceRecordLegacyScalarFieldEnum]
 
 
 export const AnecdotalRecordScalarFieldEnum = {

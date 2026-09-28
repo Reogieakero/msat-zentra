@@ -9,6 +9,8 @@ import {
   humanize,
   type AttendanceDay,
   type AttendanceSummary,
+  type SubjectAttendanceSummary,
+  type SubjectMark,
 } from "./attendance-data";
 import { AttendanceInsights } from "./AttendanceInsights";
 import styles from "./AttendanceCalendar.module.css";
@@ -47,6 +49,28 @@ function SessionMark({ session, status }: { session: "AM" | "PM"; status?: strin
   );
 }
 
+function SubjectMarks({ subjects }: { subjects: Record<string, SubjectMark> }) {
+  const entries = Object.entries(subjects);
+  if (entries.length === 0) return null;
+  return (
+    <span className={styles.sessionRow}>
+      <span className={styles.sessionLabel}>Subjects</span>
+      <span className={styles.subjectChips}>
+        {entries.map(([id, m]) => (
+          <Badge
+            key={id}
+            variant={STATUS_VARIANTS[m.status as keyof typeof STATUS_VARIANTS] ?? "outline"}
+            className={styles.sessionBadge}
+            title={`${m.name} — ${humanize(m.status)}${m.slot > 1 ? ` (period ${m.slot})` : ""}`}
+          >
+            {m.code}: {humanize(m.status)}
+          </Badge>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 function toKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
@@ -59,18 +83,19 @@ function monthLabel(cursor: Date): string {
 
 interface AttendanceCalendarProps {
   summary: AttendanceSummary | null;
+  subjectSummary?: SubjectAttendanceSummary | null;
   days: AttendanceDay[];
   loading: boolean;
 }
 
-export function AttendanceCalendar({ summary, days, loading }: AttendanceCalendarProps) {
+export function AttendanceCalendar({ summary, subjectSummary, days, loading }: AttendanceCalendarProps) {
   const today = useMemo(() => new Date(), []);
   const todayKey = toKey(today);
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
 
   const byDate = useMemo(() => {
-    const map = new Map<string, Record<string, string>>();
-    for (const d of days) map.set(d.date, d.sessions);
+    const map = new Map<string, AttendanceDay>();
+    for (const d of days) map.set(d.date, d);
     return map;
   }, [days]);
 
@@ -92,7 +117,7 @@ export function AttendanceCalendar({ summary, days, loading }: AttendanceCalenda
   if (loading || !summary) {
     return (
       <div className={styles.list} aria-busy="true" aria-label="Loading attendance">
-        <AttendanceInsights summary={null} days={[]} loading />
+        <AttendanceInsights summary={null} subjectSummary={null} days={[]} loading />
         <div className={styles.grid} aria-hidden>
           {Array.from({ length: 35 }).map((_, i) => (
             <Skeleton key={i} className={styles.skelCell} />
@@ -104,7 +129,7 @@ export function AttendanceCalendar({ summary, days, loading }: AttendanceCalenda
 
   return (
     <div className={styles.list}>
-      <AttendanceInsights summary={summary} days={days} loading={false} />
+      <AttendanceInsights summary={summary} subjectSummary={subjectSummary} days={days} loading={false} />
 
       <div className={styles.calHead}>
         <span className={styles.monthLabel}>{monthLabel(cursor)}</span>
@@ -154,7 +179,10 @@ export function AttendanceCalendar({ summary, days, loading }: AttendanceCalenda
       <div className={styles.grid}>
         {cells.map((key, i) => {
           if (key === null) return <span key={`b-${i}`} className={styles.blank} />;
-          const sessions = byDate.get(key) ?? {};
+          const day = byDate.get(key);
+          const sessions = day?.sessions ?? {};
+          const subjects = day?.subjects ?? {};
+          const hasSubjects = Object.keys(subjects).length > 0;
           const dayNum = Number(key.slice(8, 10));
           const isToday = key === todayKey;
           const isFuture = key > todayKey;
@@ -168,9 +196,15 @@ export function AttendanceCalendar({ summary, days, loading }: AttendanceCalenda
               } ${isFuture ? styles.dayFuture : ""}`}
             >
               <span className={styles.dayNum}>{dayNum}</span>
-              <SessionMark session="AM" status={sessions["AM"]} />
-              <hr className={styles.cellDivider} aria-hidden />
-              <SessionMark session="PM" status={sessions["PM"]} />
+              {hasSubjects ? (
+                <SubjectMarks subjects={subjects} />
+              ) : (
+                <>
+                  <SessionMark session="AM" status={sessions["AM"]} />
+                  <hr className={styles.cellDivider} aria-hidden />
+                  <SessionMark session="PM" status={sessions["PM"]} />
+                </>
+              )}
             </div>
           );
         })}
@@ -187,7 +221,11 @@ export function AttendanceCalendar({ summary, days, loading }: AttendanceCalenda
             {humanize(status)}
           </span>
         ))}
-        <span className={styles.legendHint}>Every school day carries AM and PM marks.</span>
+        <span className={styles.legendHint}>
+          {subjectSummary
+            ? "Subject marks are shown per day (CODE: status); archived days show AM/PM."
+            : "Every school day carries AM and PM marks."}
+        </span>
       </div>
     </div>
   );

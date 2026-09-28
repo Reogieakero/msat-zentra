@@ -100,13 +100,16 @@ async function sectionFactors(
   return { Academic: academic, Attendance: attendance, Behavioral: behavioral };
 }
 
-// All sections × risk-factor counts for the active board (O4, status-only).
+// All sections × risk-factor counts for the session's active board (O4, status-only).
 export async function getRiskHeatmap(
   termId: string,
-  gradeMode: GradeMode = "final"
+  gradeMode: GradeMode = "final",
+  schoolYearId?: string | null,
 ): Promise<HeatmapResult> {
   const sections = await prisma.section.findMany({
-    where: { schoolYear: { isActive: true } },
+    where: schoolYearId
+      ? { schoolYearId }
+      : { schoolYear: { isActive: true } },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
     select: { id: true, name: true, gradeLevel: true },
   });

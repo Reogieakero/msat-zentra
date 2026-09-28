@@ -3,17 +3,20 @@ import type {
   BehavioralCategory,
   BehavioralRecord,
   RecordDataset,
+  RecordSection,
   RecordStudent,
 } from "../types";
 
 // Canonical backend anecdotal categories (mirror of the AnecdotalCategory enum
 // + CATEGORY_META in backend/src/modules/anecdotal/anecdotal.routes.ts).
+// Colors use the theme-aware chart ramp so dots, donut slices, and bars stay
+// readable in both light and dark mode.
 export const CATEGORY_META: Record<BehavioralCategory, { label: string; color: string }> = {
-  behavioral: { label: "Behavioral", color: "#171717" },
-  bullying: { label: "Bullying", color: "#404040" },
-  academic: { label: "Academic", color: "#525252" },
-  attendance: { label: "Attendance", color: "#737373" },
-  health: { label: "Health", color: "#a3a3a3" },
+  behavioral: { label: "Behavioral", color: "var(--chart-1)" },
+  bullying: { label: "Bullying", color: "var(--chart-2)" },
+  academic: { label: "Academic", color: "var(--chart-3)" },
+  attendance: { label: "Attendance", color: "var(--chart-4)" },
+  health: { label: "Health", color: "var(--chart-5)" },
 };
 
 export const CATEGORY_KEYS = Object.keys(CATEGORY_META) as BehavioralCategory[];
@@ -91,13 +94,30 @@ export function normalizeRecords(raw: {
   schoolYear: string;
   sections: RawBackendSection[];
 }): RecordDataset {
-  return {
-    schoolYear: raw.schoolYear,
-    sections: raw.sections.map((section) => ({
-      sectionId: section.sectionId,
-      section: section.section,
-      gradeLevel: section.gradeLevel,
-      students: section.students.map((st) => ({
+  // The backend can list the same LRN more than once (repeat rows within or
+  // across sections). Merge duplicates so every LRN renders exactly once —
+  // otherwise React hits duplicate-key errors and the tracked/record counts
+  // inflate.
+  const byLrn = new Map<string, RecordStudent>();
+  const sections: RecordSection[] = [];
+
+  for (const section of raw.sections) {
+    const students: RecordStudent[] = [];
+    for (const st of section.students) {
+      const existing = byLrn.get(st.lrn);
+      if (existing) {
+        // Union behavioral records by id (the same incident can repeat on
+        // both rows).
+        const ids = new Set(existing.behavioral.map((r) => r.id));
+        for (const rec of st.behavioral) {
+          if (!ids.has(rec.id)) {
+            ids.add(rec.id);
+            existing.behavioral.push(rec);
+          }
+        }
+        continue;
+      }
+      const normalized: RecordStudent = {
         lrn: st.lrn,
         name: st.name,
         status: normalizeStatus(st.status),
@@ -110,10 +130,20 @@ export function normalizeRecords(raw: {
           missingRecords: [],
           completion: 0,
         },
-        behavioral: st.behavioral,
-      })),
-    })),
-  };
+        behavioral: [...st.behavioral],
+      };
+      byLrn.set(st.lrn, normalized);
+      students.push(normalized);
+    }
+    sections.push({
+      sectionId: section.sectionId,
+      section: section.section,
+      gradeLevel: section.gradeLevel,
+      students,
+    });
+  }
+
+  return { schoolYear: raw.schoolYear, sections };
 }
 
 // Shared query function — both the heatblocks and the overview fetch the same

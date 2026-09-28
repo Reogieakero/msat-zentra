@@ -6,22 +6,22 @@ import styles from "./WeightsVisual.module.css";
 type Props = {
   ww: number;
   pt: number;
-  qe: number;
+  exam: number;
 };
 
-/** Proportional WW/PT/QE bar with legend — shared by the weights and solution modals. */
-export function WeightsVisual({ ww, pt, qe }: Props) {
-  const total = ww + pt + qe;
+/** Proportional WW/PT/E bar with legend — shared by the weights and solution modals. */
+export function WeightsVisual({ ww, pt, exam }: Props) {
+  const total = ww + pt + exam;
   return (
     <>
       <div
         className={styles.segBar}
         role="img"
-        aria-label={`Written Work ${ww} percent, Performance Task ${pt} percent, Quarterly Exam ${qe} percent`}
+        aria-label={`Written Work ${ww} percent, Performance Task ${pt} percent, Exam ${exam} percent`}
       >
         <div className={`${styles.seg} ${styles.segWW}`} style={{ width: `${ww}%` }} />
         <div className={`${styles.seg} ${styles.segPT}`} style={{ width: `${pt}%` }} />
-        <div className={`${styles.seg} ${styles.segQE}`} style={{ width: `${qe}%` }} />
+        <div className={`${styles.seg} ${styles.segQE}`} style={{ width: `${exam}%` }} />
       </div>
       <ul className={styles.segLegend}>
         <li className={styles.segRow}>
@@ -46,7 +46,7 @@ export function WeightsVisual({ ww, pt, qe }: Props) {
           <span className={`${styles.segDot} ${styles.segQE}`} aria-hidden />
           <div className={styles.segText}>
             <span className={styles.segName}>
-              Quarterly Exam <b>{qe}%</b>
+              Exam <b>{exam}%</b>
             </span>
             <span className={styles.segMean}>Periodical exam</span>
           </div>

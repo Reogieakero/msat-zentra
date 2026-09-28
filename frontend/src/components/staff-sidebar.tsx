@@ -45,7 +45,15 @@ const NAV: NavGroup[] = [
   {
     label: "Manage",
     items: [
-      { title: "Academics", href: "/principal/academics", icon: GraduationCap },
+      {
+        title: "Academics",
+        href: "/principal/academics",
+        icon: GraduationCap,
+        subItems: [
+          { title: "Assigning", href: "/principal/academics/assign" },
+          { title: "Schedule Approval", href: "/principal/academics/schedule" },
+        ],
+      },
       {
         title: "Risk Board",
         href: "/principal/risk",
@@ -64,7 +72,7 @@ const NAV: NavGroup[] = [
         icon: FileSignature,
         subItems: [
           { title: "Referrals", href: "/principal/adm/referrals/all" },
-          { title: "Approvals", href: "/principal/adm/approvals/all" },
+          { title: "ADM Reports", href: "/principal/adm/approvals/all" },
         ],
       },
       {

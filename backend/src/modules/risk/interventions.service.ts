@@ -8,6 +8,7 @@ import {
   type GradeMode,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import type { TermScopeInput } from "../../lib/termScope.js";
 
 export type ApprovalStatusValue = "pending" | "approved" | "rejected" | "modified";
 export type OutcomeStatusValue = "ongoing" | "resolved" | "unresolved";
@@ -84,14 +85,15 @@ export interface StudentFilters {
   // "final" computes the academic factor from transmuted grades; "raw" from the
   // raw computed average. Drives both the academic factor flag and filtering.
   gradeMode?: GradeMode;
-  // Guidance queue only: also include students whose live risk dropped to Low
-  // but who still carry an ongoing intervention, so the case can be
-  // discontinued explicitly instead of silently vanishing from the queue.
+  // Also include students whose live risk dropped to Low but who still
+  // carry an ongoing intervention, so the case can be discontinued
+  // explicitly instead of silently vanishing from the queue.
   includeRecovered?: boolean;
-  // Guidance queue only: enumerate the full live enrollment (profiles +
-  // roster, no account required) instead of starting from engine
-  // snapshots, so at-risk students the engine hasn't snapshotted yet
-  // still appear. Principal endpoints keep snapshot behavior.
+  // Enumerate the full live enrollment (profiles + roster, no account
+  // required) instead of starting from engine snapshots, so at-risk
+  // students the engine hasn't snapshotted yet still appear. Both the
+  // guidance and principal queues use this so the desks track the same
+  // students.
   fullCohort?: boolean;
   page?: number;
   pageSize?: number;
@@ -153,23 +155,28 @@ function toInterventionLink(iv: InterventionRow | undefined): InterventionLink |
     : null;
 }
 
-// Principal: list of at-risk students from RiskSnapshot (engine-flagged) for the
-// active term, scoped to the principal's school year. Each student carries their
-// latest Intervention (if any) so the principal can decide/assign/track.
+// Principal: list of at-risk students from RiskSnapshot (engine-flagged) for
+// the session's active term, scoped to the active school year. Each student
+// carries their latest Intervention (if any) so the principal can
+// decide/assign/track.
 // Enlisted students without accounts merge in on equal footing (matched by LRN
 // so nobody appears twice after registering).
 export async function getInterventionStudents(
-  filters: StudentFilters
+  filters: StudentFilters,
+  scope?: TermScopeInput,
 ): Promise<InterventionStudentsResult> {
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
 
-  const termId = await resolveActiveTermId();
-  const schoolYear = await prisma.schoolYear.findFirst({
-    where: { isActive: true },
-    select: { id: true },
-  });
-  const schoolYearId = schoolYear?.id;
+  const termId = scope?.termId ?? (await resolveActiveTermId());
+  const schoolYearId =
+    scope?.schoolYearId ??
+    (
+      await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      })
+    )?.id;
 
   if (!termId) {
     return { students: [], total: 0, page, pageSize, highModerate: 0 };
@@ -189,8 +196,7 @@ export async function getInterventionStudents(
   if (filters.hasIntervention === false) studentWhere.interventions = { none: {} };
 
   // Recovered students (Low snapshot, ongoing intervention) join the queue
-  // only when asked and only when no single-level filter is active — the
-  // principal views never set the flag, so their counts never change.
+  // only when asked and only when no single-level filter is active.
   const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
   const levelClause = includeRecovered
     ? {

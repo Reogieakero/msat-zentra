@@ -18,7 +18,7 @@ import styles from "./record-sheet.module.css";
 const SHORT: Record<string, string> = {
   WRITTEN_WORK: "WW",
   PERFORMANCE_TASK: "PT",
-  QUARTERLY_EXAM: "QE",
+  EXAM: "E",
 };
 
 export default function ClassRecordPage() {
@@ -110,7 +110,7 @@ export default function ClassRecordPage() {
                     PT avg
                   </th>
                   <th rowSpan={2} className={styles.avgCol}>
-                    QE avg
+                    E avg
                   </th>
                   <th rowSpan={2}>Computed</th>
                   <th rowSpan={2}>Transmuted</th>
@@ -160,7 +160,7 @@ export default function ClassRecordPage() {
                       })}
                       <td className={styles.avgCol}>{avgOf("WRITTEN_WORK").toFixed(1)}</td>
                       <td className={styles.avgCol}>{avgOf("PERFORMANCE_TASK").toFixed(1)}</td>
-                      <td className={styles.avgCol}>{avgOf("QUARTERLY_EXAM").toFixed(1)}</td>
+                      <td className={styles.avgCol}>{avgOf("EXAM").toFixed(1)}</td>
                       <td className={styles.finalCol}>
                         {f?.computedAverage != null ? f.computedAverage.toFixed(2) : "—"}
                       </td>

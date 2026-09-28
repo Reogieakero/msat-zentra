@@ -1,66 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { AdvisorySidebar } from "./components/AdvisorySidebar";
-import { StudentTable } from "./components/StudentTable";
-import { SubjectStudents } from "./components/SubjectStudents";
-import { AddStudentDialog } from "./components/AddStudentDialog";
+import * as React from "react";
+import { AdvisoryGradesTable } from "./components/AdvisoryGradesTable";
 import { useAdvisoryRoster } from "./components/advisory-students-data";
-import { useTeacherOverview } from "../../overview/components/teacher-overview-data";
-import styles from "./components/advisory-students.module.css";
 
+/* Advisory students — roster-wide per-subject grades table with a raw /
+   final computation dropdown. Student names link to their academic record. */
 export default function TeacherAdvisoryStudentsPage() {
-  const [addOpen, setAddOpen] = useState(false);
-
   const rosterQuery = useAdvisoryRoster();
-  const overviewQuery = useTeacherOverview();
-  const students = rosterQuery.data?.students ?? [];
-  const sections = rosterQuery.data?.advisorySections ?? [];
-  const classes = overviewQuery.data?.classes ?? [];
-  const sectionName = sections[0]?.name ?? "";
-
-  const [activeSubject, setActiveSubject] = useState<string | null>(null);
-  const subjectTargets =
-    activeSubject == null
-      ? []
-      : classes
-          .filter((c) => c.subject === activeSubject)
-          .map((c) => ({ id: c.id, section: c.section }));
+  const students = React.useMemo(
+    () => rosterQuery.data?.students ?? [],
+    [rosterQuery.data],
+  );
+  const sections = React.useMemo(
+    () => rosterQuery.data?.advisorySections ?? [],
+    [rosterQuery.data],
+  );
+  const offeredSubjects = React.useMemo(
+    () => rosterQuery.data?.subjects ?? [],
+    [rosterQuery.data],
+  );
 
   return (
-    <section className={styles.page}>
-      <div className={styles.layout}>
-        <AdvisorySidebar
-          sections={sections}
-          classes={classes}
-          loading={rosterQuery.isPending}
-          subjectsLoading={overviewQuery.isPending}
-          activeSubject={activeSubject}
-          onSelectSubject={(subject) =>
-            setActiveSubject((prev) => (prev === subject ? null : subject))
-          }
-          onAdd={() => setAddOpen(true)}
-        />
-
-        <div className={styles.main}>
-          {activeSubject != null ? (
-            <SubjectStudents subject={activeSubject} targets={subjectTargets} />
-          ) : rosterQuery.isError ? (
-            <p className={styles.pageError}>
-              No advisory section assigned, or it could not be loaded. Contact the school
-              office.
-            </p>
-          ) : (
-            <StudentTable students={students} loading={rosterQuery.isPending} />
-          )}
+    <section className="flex w-full min-w-0 flex-1 flex-col gap-4">
+      {rosterQuery.isPending ? (
+        <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading students">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-12 rounded-md bg-muted" />
+          ))}
         </div>
-      </div>
-
-      <AddStudentDialog
-        open={addOpen}
-        sectionName={sectionName}
-        onOpenChange={setAddOpen}
-      />
+      ) : rosterQuery.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          No advisory section assigned, or it could not be loaded. Contact the school
+          office.
+        </p>
+      ) : (
+        <AdvisoryGradesTable students={students} sections={sections} offeredSubjects={offeredSubjects} />
+      )}
     </section>
   );
 }

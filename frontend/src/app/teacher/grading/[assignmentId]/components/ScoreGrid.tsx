@@ -1,13 +1,23 @@
 "use client";
 
 import * as React from "react";
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  flexRender,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+} from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
-  Card,
   CardAction,
   CardContent,
-  CardFooter,
   CardHeader,
 } from "@/components/ui/card";
 import {
@@ -31,12 +41,6 @@ import {
 import { sileo } from "@/components/ui/sonner";
 import styles from "./ScoreGrid.module.css";
 
-const SHORT: Record<ComponentType, string> = {
-  WRITTEN_WORK: "WW",
-  PERFORMANCE_TASK: "PT",
-  QUARTERLY_EXAM: "QE",
-};
-
 type Props = {
   students: ClassStudent[];
   components: ClassComponent[];
@@ -45,9 +49,14 @@ type Props = {
   onChanged: () => void;
 };
 
-export function ScoreGrid({ students, components, category, selectedId, onChanged }: Props) {
+export function ScoreGrid({
+  students,
+  components,
+  category,
+  selectedId,
+  onChanged,
+}: Props) {
   const refreshAcademic = useRefreshAcademic();
-  const unregistered = students.filter((s) => !s.hasAccount);
   const [editing, setEditing] = React.useState(false);
   const [drafts, setDrafts] = React.useState<Record<string, Record<string, string>>>({});
   const [maxDraft, setMaxDraft] = React.useState<string | null>(null);
@@ -60,9 +69,9 @@ export function ScoreGrid({ students, components, category, selectedId, onChange
   );
   const selected = assessments.find((a) => a.id === selectedId) ?? assessments[0] ?? null;
 
-  // Selection now comes from the sidebar — reset any in-progress edit
-  // (including the max draft) whenever the assessment changes.
-  // (Render-phase reset: allowed because it is conditional on prop change.)
+  // Reset any in-progress edit (including the max draft) whenever the
+  // assessment changes. (Render-phase reset: allowed because it is
+  // conditional on prop change.)
   const selectedKey = selected?.id ?? "";
   const [resetKey, setResetKey] = React.useState(selectedKey);
   if (resetKey !== selectedKey) {
@@ -170,29 +179,18 @@ export function ScoreGrid({ students, components, category, selectedId, onChange
     }
   };
 
-  const scoredCount = selected
-    ? students.filter((s) => selected.scores[s.id] != null).length
-    : 0;
-
   return (
-    <Card className={styles.card} aria-label="Encode scores">
-      <CardHeader className={styles.header}>
-        <div className={styles.headerText}>
-          <p className={styles.eyebrow}>Encode scores</p>
-          {selected ? (
-            <>
-              <h2 className={styles.metaLine}>
-                <span className={styles.metaLabel}>Assessment</span>
-                <span className={styles.metaValue}>{selected.title}</span>
-                <span className={styles.metaSep} aria-hidden />
-                <span className={styles.metaLabel}>Category</span>
-                <span className={styles.metaValue}>
-                  {SHORT[category]} {COMPONENT_NAMES[category]}
-                </span>
-              </h2>
-              <p className={styles.sectionSub}>
-                Given {selected.dateGiven}, max{" "}
-                {editing ? (
+    <div className={assign.card} aria-label="Encode scores">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <CardHeader className={`${styles.header} relative`}>
+        {assessments.length > 0 && selected ? (
+          <CardAction className={styles.headerActions}>
+            {editing ? (
+              <>
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Max
                   <input
                     className={styles.maxInput}
                     inputMode="numeric"
@@ -200,29 +198,7 @@ export function ScoreGrid({ students, components, category, selectedId, onChange
                     value={maxDraft ?? ""}
                     onChange={(e) => setMaxDraft(e.target.value.replace(/[^0-9]/g, ""))}
                   />
-                ) : (
-                  selected.maxScore
-                )}
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className={styles.metaLine}>
-                <span className={styles.metaLabel}>Category</span>
-                <span className={styles.metaValue}>
-                  {SHORT[category]} {COMPONENT_NAMES[category]}
-                </span>
-              </h2>
-              <p className={styles.sectionSub}>
-                No assessment yet — use Add assessment in the sidebar to create one.
-              </p>
-            </>
-          )}
-        </div>
-        {assessments.length > 0 && selected ? (
-          <CardAction className={styles.headerActions}>
-            {editing ? (
-              <>
+                </label>
                 <Button onClick={() => void handleSaveAll()} disabled={saving} aria-busy={saving || undefined}>
                   {saving ? (
                     <>
@@ -246,15 +222,15 @@ export function ScoreGrid({ students, components, category, selectedId, onChange
         ) : null}
       </CardHeader>
 
-      <CardContent className={styles.content}>
+      <CardContent className={`${styles.content} relative`}>
         {error ? <p className={styles.errorText}>{error}</p> : null}
 
         {assessments.length === 0 || !selected ? (
           <p className={styles.empty}>
-            No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use Add assessment in the sidebar.
+            No {COMPONENT_NAMES[category].toLowerCase()} assessments yet — use the Add assessment card.
           </p>
         ) : (
-          <ScoreTable
+          <ScoreDataTable
             assessment={selected}
             students={students}
             editing={editing}
@@ -269,21 +245,29 @@ export function ScoreGrid({ students, components, category, selectedId, onChange
         )}
       </CardContent>
 
-      <CardFooter className={styles.footer}>
-        <p className={styles.range}>
-          {scoredCount} of {students.length} scored
-        </p>
-        {unregistered.length > 0 ? (
-          <p className={styles.hint}>
-            {unregistered.length} without account — scores carry over on registration.
-          </p>
-        ) : null}
-      </CardFooter>
-    </Card>
+    </div>
   );
 }
 
-function ScoreTable({
+function scoreOf(
+  assessment: ClassAssessment,
+  drafts: Record<string, string>,
+  editing: boolean,
+  studentId: string,
+): { text: string; num: number | null } {
+  const text = editing
+    ? (drafts[studentId] ?? "")
+    : assessment.scores[studentId] != null
+      ? String(assessment.scores[studentId])
+      : "";
+  const num = Number(text);
+  return {
+    text,
+    num: text.trim() !== "" && Number.isFinite(num) ? num : null,
+  };
+}
+
+function ScoreDataTable({
   assessment,
   students,
   editing,
@@ -296,66 +280,173 @@ function ScoreTable({
   drafts: Record<string, string>;
   onDraftChange: (studentId: string, value: string) => void;
 }) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+
+  const columns = React.useMemo<ColumnDef<ClassStudent>[]>(
+    () => [
+      {
+        id: "student",
+        accessorFn: (row) => row.name,
+        header: "Student",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        cell: ({ row }) => (
+          <p className={styles.cellMain}>{row.original.name}</p>
+        ),
+      },
+      {
+        id: "lrn",
+        accessorFn: (row) => row.lrn,
+        header: "LRN",
+        size: 140,
+        minSize: 140,
+        maxSize: 140,
+        cell: ({ row }) => (
+          <span className={styles.lrnCell}>{row.original.lrn}</span>
+        ),
+      },
+      {
+        id: "score",
+        accessorFn: (row) => scoreOf(assessment, drafts, editing, row.id).num ?? -1,
+        header: `Score / ${assessment.maxScore}`,
+        size: 130,
+        minSize: 130,
+        maxSize: 130,
+        cell: ({ row }) => {
+          const { text } = scoreOf(assessment, drafts, editing, row.original.id);
+          return editing ? (
+            <input
+              className={styles.scoreInput}
+              inputMode="decimal"
+              aria-label={`${assessment.title} score for ${row.original.name}`}
+              value={text}
+              onChange={(e) => onDraftChange(row.original.id, e.target.value)}
+            />
+          ) : (
+            <span className={styles.scoreValue}>{text.trim() === "" ? "—" : text}</span>
+          );
+        },
+      },
+      {
+        id: "pct",
+        accessorFn: (row) => {
+          const { num } = scoreOf(assessment, drafts, editing, row.id);
+          return num !== null && assessment.maxScore > 0
+            ? (num / assessment.maxScore) * 100
+            : -1;
+        },
+        header: "%",
+        size: 100,
+        minSize: 100,
+        maxSize: 100,
+        cell: ({ row }) => {
+          const { num } = scoreOf(assessment, drafts, editing, row.original.id);
+          return (
+            <span className={styles.scorePct}>
+              {num !== null && assessment.maxScore > 0
+                ? `${((num / assessment.maxScore) * 100).toFixed(1)}%`
+                : "—"}
+            </span>
+          );
+        },
+      },
+    ],
+    [assessment, drafts, editing, onDraftChange],
+  );
+
+  const table = useReactTable({
+    data: students,
+    columns,
+    getRowId: (row) => row.id,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: {
+      pagination: { pageSize: 10 },
+    },
+    state: { sorting, columnFilters },
+  });
+
   if (students.length === 0) {
     return <p className={styles.empty}>No students in this section yet.</p>;
   }
 
-  // Display reads saved values; inputs read drafts while editing.
-  const shownOf = (studentId: string) =>
-    editing
-      ? (drafts[studentId] ?? "")
-      : assessment.scores[studentId] != null
-        ? String(assessment.scores[studentId])
-        : "";
-
+  // Display reads saved values; inputs read drafts while editing. Drafts
+  // are keyed by student, so paging, sorting, and filtering never lose edits.
   return (
-    <Table aria-label={`Scores for ${assessment.title}`}>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Student</TableHead>
-          <TableHead>LRN</TableHead>
-          <TableHead>
-            Score <span className={styles.headMuted}>/ {assessment.maxScore}</span>
-          </TableHead>
-          <TableHead>%</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {students.map((s) => {
-          const val = shownOf(s.id);
-          const num = Number(val);
-          const pct =
-            val.trim() !== "" && Number.isFinite(num) && assessment.maxScore > 0
-              ? `${((num / assessment.maxScore) * 100).toFixed(1)}%`
-              : "—";
-          return (
-            <TableRow key={s.id}>
-              <TableCell>
-                <p className={styles.cellMain}>{s.name}</p>
-              </TableCell>
-              <TableCell>
-                <span className={styles.lrnCell}>{s.lrn}</span>
-              </TableCell>
-              <TableCell>
-                {editing ? (
-                  <input
-                    className={styles.scoreInput}
-                    inputMode="decimal"
-                    aria-label={`${assessment.title} score for ${s.name}`}
-                    value={val}
-                    onChange={(e) => onDraftChange(s.id, e.target.value)}
-                  />
-                ) : (
-                  <span className={styles.scoreValue}>{val.trim() === "" ? "—" : val}</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <span className={styles.scorePct}>{pct}</span>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <div className="flex w-full min-w-0 flex-col gap-3">
+      <div className="overflow-x-auto rounded-md border">
+        <Table className="w-full table-fixed" aria-label={`Scores for ${assessment.title}`}>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.getSize() }}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      style={{ width: cell.column.getSize() }}
+                      className="truncate"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No students match your search.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredRowModel().rows.length} student
+          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   );
 }

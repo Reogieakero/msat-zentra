@@ -1,0 +1,139 @@
+/* Section links for teacher settings — branched navbar dock. (The sidebar
+   layout renders the real BranchedMenu component + BranchedMenu.module.css.) */
+
+/* --- Navbar (branched icon dock, reactbits branched-menu language) --- */
+.dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: max-content;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--card) 88%, transparent);
+  box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.dockItem {
+  position: relative;
+}
+
+.dockButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 160ms ease-out,
+    color 160ms ease-out,
+    box-shadow 160ms ease-out,
+    transform 160ms ease-out;
+}
+
+.dockButton:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.dockButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.dockButtonActive {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 4px 14px -4px color-mix(in oklch, var(--primary), transparent 40%);
+}
+
+.dockButtonActive:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.dockIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* The branch: curved connector + label pill fanning out from the icon. */
+.branch {
+  position: absolute;
+  left: calc(100% + 2px);
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-10px) scale(0.92);
+  transform-origin: left center;
+  transition:
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dockItem:hover .branch,
+.dockItem:focus-within .branch,
+.branchOpen {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+}
+
+.branchCurve {
+  flex-shrink: 0;
+  color: color-mix(in oklch, var(--primary) 55%, transparent);
+}
+
+.branchLabel {
+  white-space: nowrap;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.25);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+button.branchLabel {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.branchLabelActive {
+  border-color: color-mix(in oklch, var(--primary) 55%, transparent);
+}
+
+@media (max-width: 1023px) {
+  /* Dock collapses to a plain icon row on small screens — no branches. */
+  .dock {
+    flex-direction: row;
+    border-radius: var(--radius-lg);
+    width: 100%;
+    overflow-x: auto;
+  }
+  .branch {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .branch {
+    transition: none;
+  }
+  .dockButton {
+    transition: none;
+  }
+}

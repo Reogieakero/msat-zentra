@@ -14,18 +14,18 @@ import {
   type DepEdWeights,
   type StudentKey,
 } from "../../services/grading.js";
-import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
+import { recomputeRisk, recomputeRosterRisk, resolveActiveTermId } from "../../services/risk.js";
 
 const router = Router();
 
 const TEACHER_ROLES = ["subject_teacher", "adviser"] as const;
 
-const COMPONENT_TYPES = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"] as const;
+const COMPONENT_TYPES = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"] as const;
 
 export const COMPONENT_LABELS: Record<string, string> = {
   WRITTEN_WORK: "WW",
   PERFORMANCE_TASK: "PT",
-  QUARTERLY_EXAM: "QE",
+  EXAM: "E",
 };
 
 // Recompute finals for the given students (or every holder when keys are
@@ -67,22 +67,49 @@ async function assertSubjectAccess(teacherId: string, subjectId: string, termId:
 }
 
 // A class is one TeacherSubjectAssignment row (subject × section × term) that
-// must belong to the caller — 404 otherwise (uniform, no probing).
-async function assertAssignment(teacherId: string, assignmentId: string) {
+// must belong to the caller — 404 otherwise (uniform, no probing). Linked
+// timetable classes address it as `subjectId|sectionId`; those resolve to the
+// caller's assignment row for the given term.
+async function assertAssignment(teacherId: string, assignmentId: string, termId: string) {
+  const include = {
+    subject: { select: { id: true, code: true, name: true, gradeLevel: true, category: true } },
+    section: { select: { id: true, name: true, gradeLevel: true } },
+    term: {
+      select: { id: true, termNumber: true, schoolYear: { select: { id: true, name: true } } },
+    },
+  } as const;
+  const sep = assignmentId.indexOf("|");
+  if (sep >= 0) {
+    const assignment = await prisma.teacherSubjectAssignment.findFirst({
+      where: {
+        teacherId,
+        subjectId: assignmentId.slice(0, sep),
+        sectionId: assignmentId.slice(sep + 1),
+        termId,
+      },
+      include,
+    });
+    if (!assignment) {
+      throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
+    }
+    return assignment;
+  }
   const assignment = await prisma.teacherSubjectAssignment.findUnique({
     where: { id: assignmentId },
-    include: {
-      subject: { select: { id: true, code: true, name: true, gradeLevel: true } },
-      section: { select: { id: true, name: true, gradeLevel: true } },
-      term: {
-        select: { id: true, termNumber: true, schoolYear: { select: { id: true, name: true } } },
-      },
-    },
+    include,
   });
   if (!assignment || assignment.teacherId !== teacherId) {
     throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
   }
   return assignment;
+}
+
+async function resolveTermOrThrow(req: { termScope?: { termId: string } | undefined }) {
+  const termId = await resolveActiveTermId(req);
+  if (!termId) {
+    throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+  }
+  return termId;
 }
 
 // GET /api/teacher/grading/classes/:assignmentId — everything the class
@@ -97,7 +124,8 @@ router.get(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const a = await assertAssignment(teacherId, String(req.params.assignmentId));
+      const termId = await resolveTermOrThrow(req);
+      const a = await assertAssignment(teacherId, String(req.params.assignmentId), termId);
 
       const [profiles, rosterEntries, components] = await Promise.all([
         prisma.studentProfile.findMany({
@@ -170,6 +198,7 @@ router.get(
           subjectId: a.subject.id,
           subjectCode: a.subject.code,
           subjectName: a.subject.name,
+          subjectCategory: a.subject.category,
           sectionId: a.section.id,
           sectionName: a.section.name,
           gradeLevel: a.section.gradeLevel,
@@ -206,6 +235,7 @@ router.get(
             title: as.title,
             maxScore: as.maxScore,
             dateGiven: as.dateGiven.toISOString().slice(0, 10),
+            createdAt: as.createdAt.toISOString().slice(0, 10),
             scores: Object.fromEntries(
               as.studentGrades.map((g) => [
                 g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string),
@@ -227,7 +257,7 @@ const componentSchema = z.object({
 });
 
 // POST /api/teacher/grading/classes/:assignmentId/components — create or
-// update the weight for one WW/PT/QE category of the class subject + term.
+// update the weight for one WW/PT/E category of the class subject + term.
 router.post(
   "/classes/:assignmentId/components",
   requireAuth,
@@ -236,7 +266,8 @@ router.post(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const a = await assertAssignment(teacherId, String(req.params.assignmentId));
+      const termId = await resolveTermOrThrow(req);
+      const a = await assertAssignment(teacherId, String(req.params.assignmentId), termId);
       const { componentType, weightPercentage } = req.body as z.infer<typeof componentSchema>;
 
       const component = await prisma.gradeComponent.upsert({
@@ -294,7 +325,7 @@ function weightsForPreset(preset: (typeof PRESETS)[number]): DepEdWeights {
 }
 
 // POST /api/teacher/grading/classes/:assignmentId/components/preset — apply
-// a DepEd Order No. 8 weight set (WW/PT/QA) to all three categories at once.
+// a DepEd Order No. 8 weight set (WW/PT/E) to all three categories at once.
 router.post(
   "/classes/:assignmentId/components/preset",
   requireAuth,
@@ -303,7 +334,8 @@ router.post(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const a = await assertAssignment(teacherId, String(req.params.assignmentId));
+      const termId = await resolveTermOrThrow(req);
+      const a = await assertAssignment(teacherId, String(req.params.assignmentId), termId);
       const { preset } = req.body as z.infer<typeof presetSchema>;
       const weights = weightsForPreset(preset);
 
@@ -360,7 +392,7 @@ const assessmentSchema = z.object({
   dateGiven: z.string().datetime().optional(),
 });
 
-// POST /api/teacher/grading/classes/:assignmentId/assessments — add a WW/PT/QE
+// POST /api/teacher/grading/classes/:assignmentId/assessments — add a WW/PT/E
 // assessment (quiz, activity, exam…). The category row is auto-created at
 // weight 0 when missing so entry never blocks on ordering.
 router.post(
@@ -371,7 +403,8 @@ router.post(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const a = await assertAssignment(teacherId, String(req.params.assignmentId));
+      const termId = await resolveTermOrThrow(req);
+      const a = await assertAssignment(teacherId, String(req.params.assignmentId), termId);
       const body = req.body as z.infer<typeof assessmentSchema>;
 
       let component = await prisma.gradeComponent.findUnique({
@@ -422,6 +455,7 @@ router.post(
         title: assessment.title,
         maxScore: assessment.maxScore,
         dateGiven: assessment.dateGiven.toISOString().slice(0, 10),
+        createdAt: assessment.createdAt.toISOString().slice(0, 10),
         scores: {},
       });
     } catch (e) {

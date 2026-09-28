@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { GraduationCap } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -84,9 +85,15 @@ export function FinalGradeApprovals() {
         ) : isError ? (
           <p className={styles.empty}>Could not load viewable finals.</p>
         ) : viewable.length === 0 ? (
-          <p className={styles.empty}>
-            No complete grade sets yet. Students appear once all their subjects are adviser-approved.
-          </p>
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <GraduationCap />
+            </span>
+            <p className={styles.emptyTitle}>No complete grade sets yet</p>
+            <p className={styles.emptyHint}>
+              Students appear once every subject is adviser-approved.
+            </p>
+          </div>
         ) : (
           <ul className={styles.list}>
             {viewable.map((g) => (
@@ -103,11 +110,13 @@ export function FinalGradeApprovals() {
           </ul>
         )}
       </CardContent>
-      <div className={styles.footer}>
-        <Button className={styles.footerBtn} onClick={goFinals}>
-          View all finals
-        </Button>
-      </div>
+      {viewable.length > 0 && (
+        <div className={styles.footer}>
+          <Button className={styles.footerBtn} onClick={goFinals}>
+            View all finals
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

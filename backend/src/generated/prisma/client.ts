@@ -97,6 +97,21 @@ export type Subject = Prisma.SubjectModel
  */
 export type TeacherSubjectAssignment = Prisma.TeacherSubjectAssignmentModel
 /**
+ * Model ScheduleConfig
+ * 
+ */
+export type ScheduleConfig = Prisma.ScheduleConfigModel
+/**
+ * Model SectionTimetableEntry
+ * 
+ */
+export type SectionTimetableEntry = Prisma.SectionTimetableEntryModel
+/**
+ * Model TeacherName
+ * 
+ */
+export type TeacherName = Prisma.TeacherNameModel
+/**
  * Model GradeComponent
  * 
  */
@@ -126,6 +141,11 @@ export type GradeFlag = Prisma.GradeFlagModel
  * 
  */
 export type AttendanceRecord = Prisma.AttendanceRecordModel
+/**
+ * Model AttendanceRecordLegacy
+ * 
+ */
+export type AttendanceRecordLegacy = Prisma.AttendanceRecordLegacyModel
 /**
  * Model AnecdotalRecord
  * 

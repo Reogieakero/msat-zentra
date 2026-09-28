@@ -24,17 +24,21 @@ router.get(
   requireAuth,
   requireRole("principal"),
   cache({ tags: ["overview", "principal"] }),
-  async (_req, res, next) => {
+  async (req, res, next) => {
     try {
-      const activeYear = await prisma.schoolYear.findFirst({
-        where: { isActive: true },
-        select: { id: true },
-      });
-      const schoolYearId = activeYear?.id;
+      // Session's active School Year — pages never pick a year themselves.
+      const schoolYearId =
+        req.termScope?.schoolYearId ??
+        (
+          await prisma.schoolYear.findFirst({
+            where: { isActive: true },
+            select: { id: true },
+          })
+        )?.id;
 
       // Single active-term resolver, shared with the Risk endpoints so the
       // Overview's live recompute matches the board/heatmap/students exactly.
-      const termId = await resolveActiveTermId();
+      const termId = req.termScope?.termId ?? (await resolveActiveTermId(req));
 
       const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
         await Promise.all([

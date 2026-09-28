@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/chart";
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
+import { useTerm } from "@/lib/term/TermContext";
 import { RISK_LEVEL_COLORS } from "../riskData";
 import type { RiskTrendData } from "../riskBoard";
 import styles from "./RiskTrend.module.css";
@@ -75,6 +76,9 @@ async function fetchSchools(): Promise<SchoolYearOption[]> {
 
 export function RiskTrend() {
   const gradId = React.useId().replace(/:/g, "");
+  // Session scope (Login → select → active term). The chart defaults to it;
+  // the dropdowns below are optional analytical browsing, never required.
+  const { activeTerm } = useTerm();
 
   const [yearChoice, setYearChoice] = usePersistentState<string>(
     "zentra.risk.trend.year",
@@ -89,12 +93,25 @@ export function RiskTrend() {
     "all"
   );
 
+  // A scope switch (top-bar badge) resets the view back to the new scope.
+  const scopeKey = activeTerm ? `${activeTerm.schoolYearId}:${activeTerm.termId}` : "none";
+  const [prevScopeKey, setPrevScopeKey] = React.useState(scopeKey);
+  if (prevScopeKey !== scopeKey) {
+    setPrevScopeKey(scopeKey);
+    setYearChoice("auto");
+    setTermChoice("auto");
+  }
+
   const { data: schoolYears = [] } = useQuery({
     queryKey: ["risk-school-years"],
     queryFn: fetchSchools,
   });
 
+  const scopeYear = activeTerm
+    ? (schoolYears.find((y) => y.id === activeTerm.schoolYearId) ?? null)
+    : null;
   const activeYear =
+    scopeYear ??
     schoolYears.find((y) => y.isCurrent) ??
     schoolYears.find((y) => y.isActive) ??
     schoolYears[0] ??
@@ -106,11 +123,15 @@ export function RiskTrend() {
       : (schoolYears.find((y) => y.id === yearChoice) ?? activeYear);
 
   const terms = chosenYear?.terms ?? [];
+  const scopeTerm =
+    activeTerm && chosenYear?.id === activeTerm.schoolYearId
+      ? (terms.find((t) => t.id === activeTerm.termId) ?? null)
+      : null;
   const chosenTerm =
     termChoice === "all"
       ? null
       : termChoice === "auto"
-        ? (chosenYear?.terms[0] ?? null)
+        ? (scopeTerm ?? chosenYear?.terms[0] ?? null)
         : (terms.find((t) => t.id === termChoice) ?? chosenYear?.terms[0] ?? null);
 
   const effectiveTermId = chosenTerm?.id;
@@ -201,7 +222,7 @@ export function RiskTrend() {
                 checked={yearChoice === "auto"}
                 onCheckedChange={() => onYearChange("auto")}
               >
-                All (active year)
+                All (active scope)
               </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
               {schoolYears.length === 0 ? (

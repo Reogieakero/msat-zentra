@@ -6,17 +6,14 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DropdownSelect } from "../components/DropdownSelect";
+import { useTerm } from "@/lib/term/TermContext";
 import type { GradeLevel, Section, Subject, Teacher } from "../data";
 import {
   assignTeacher,
-  fetchSchoolYears,
   fetchSections,
   fetchSubjects,
   fetchTeachers,
-  fetchTerms,
   removeAssignment,
-  type SchoolYearOption,
-  type TermOption,
 } from "../api";
 import { toast } from "@/components/ui/sonner";
 import styles from "../components/form.module.css";
@@ -32,34 +29,28 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 export default function AssignSubjectsPage() {
-  const [years, setYears] = React.useState<SchoolYearOption[]>([]);
-  const [schoolYearId, setSchoolYearId] = React.useState("");
+  // Global session scope (Login → select → active term). This page never
+  // asks for School Year / Term again — assignments are filed under it.
+  const { activeTerm } = useTerm();
+  const schoolYearId = activeTerm?.schoolYearId ?? "";
+  const schoolYearName = activeTerm?.schoolYearName ?? "";
+  const termNumber = activeTerm?.termNumber ?? null;
+
   const [grade, setGrade] = React.useState<GradeLevel | null>(null);
   const [sections, setSections] = React.useState<Section[]>([]);
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
-  const [terms, setTerms] = React.useState<TermOption[]>([]);
   const [sectionId, setSectionId] = React.useState("");
   const [pickedIds, setPickedIds] = React.useState<string[]>([]);
   const [teacherBySubject, setTeacherBySubject] = React.useState<Record<string, string>>({});
-  const [termNumber, setTermNumber] = React.useState<number | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [removingId, setRemovingId] = React.useState<string | null>(null);
   const [listsLoading, setListsLoading] = React.useState(false);
-  const [yearLoading, setYearLoading] = React.useState(true);
 
-  // Initial load: school years (defaulting to the active year) plus the
-  // year-independent lists (subjects, teachers) — all from the backend.
+  // Year-independent lists (subjects, teachers) load once.
   React.useEffect(() => {
     const ctrl = new AbortController();
-    fetchSchoolYears(ctrl.signal)
-      .then((list) => {
-        setYears(list);
-        setSchoolYearId(list.find((y) => y.isActive)?.id ?? list[0]?.id ?? "");
-      })
-      .catch(() => setYears([]))
-      .finally(() => setYearLoading(false));
     fetchSubjects(ctrl.signal)
       .then(setSubjects)
       .catch(() => setSubjects([]));
@@ -69,32 +60,18 @@ export default function AssignSubjectsPage() {
     return () => ctrl.abort();
   }, []);
 
-  // Whenever the school year changes, reload that year's sections + terms
-  // from the backend. Terms come from GET …/terms (always Term 1–3 —
-  // the backend backfills any missing row).
+  // Sections for the session's active School Year.
   React.useEffect(() => {
     if (!schoolYearId) return;
     const ctrl = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- year switch reloads dependent lists
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- scope switch reloads sections
     setListsLoading(true);
     setSectionId("");
     setPickedIds([]);
     setTeacherBySubject({});
-    Promise.all([fetchSections(ctrl.signal, schoolYearId), fetchTerms(schoolYearId, ctrl.signal)])
-      .then(([sec, tms]) => {
-        setSections(sec);
-        setTerms(tms);
-        setTermNumber((prev) =>
-          prev != null && tms.some((t) => t.termNumber === prev)
-            ? prev
-            : (tms[0]?.termNumber ?? null),
-        );
-      })
-      .catch(() => {
-        setSections([]);
-        setTerms([]);
-        setTermNumber(null);
-      })
+    fetchSections(ctrl.signal, schoolYearId)
+      .then((sec) => setSections(sec))
+      .catch(() => setSections([]))
       .finally(() => setListsLoading(false));
     return () => ctrl.abort();
   }, [schoolYearId]);
@@ -171,8 +148,8 @@ export default function AssignSubjectsPage() {
   );
 
   const handleAssign = async () => {
-    if (!schoolYearId) {
-      setError("Select a school year first.");
+    if (!schoolYearId || termNumber == null) {
+      setError("No active term selected. Pick one from the top-bar badge first.");
       return;
     }
     if (grade == null) {
@@ -181,10 +158,6 @@ export default function AssignSubjectsPage() {
     }
     if (!sectionId) {
       setError("Select a section first.");
-      return;
-    }
-    if (termNumber == null) {
-      setError("No term available for this school year.");
       return;
     }
     if (pickedIds.length === 0) {
@@ -271,7 +244,8 @@ export default function AssignSubjectsPage() {
       <header className={page.header}>
         <h1 className={page.title}>Assign Subjects to Section</h1>
         <p className={page.subtitle}>
-          Pick a school year, grade level and section — then tick subjects and set each teacher.
+          Working in <strong>{schoolYearName || "…"} · {termNumber != null ? `Term ${termNumber}` : "…"}</strong> —
+          pick a grade level and section, then tick subjects and set each teacher. Change scope from the top-bar badge.
         </p>
       </header>
 
@@ -280,25 +254,6 @@ export default function AssignSubjectsPage() {
           <h2 className={page.cardTitle}>New assignments</h2>
           <div className={styles.form}>
             <div className={styles.row}>
-              <div className={styles.field}>
-                <Label className={styles.label} htmlFor="assign-year">
-                  School Year <span className={styles.required}>*</span>
-                </Label>
-                <DropdownSelect
-                  id="assign-year"
-                  ariaLabel="School year"
-                  value={schoolYearId}
-                  onValueChange={setSchoolYearId}
-                  options={years.map((y) => ({ value: y.id, label: y.name }))}
-                  placeholder={
-                    yearLoading
-                      ? "Loading school years…"
-                      : years.length === 0
-                        ? "No school years found"
-                        : "Select school year"
-                  }
-                />
-              </div>
               <div className={styles.field}>
                 <Label className={styles.label} htmlFor="assign-grade">
                   Grade Level <span className={styles.required}>*</span>
@@ -312,9 +267,6 @@ export default function AssignSubjectsPage() {
                   placeholder="Select grade"
                 />
               </div>
-            </div>
-
-            <div className={styles.row}>
               <div className={styles.field}>
                 <Label className={styles.label} htmlFor="assign-section">
                   Section <span className={styles.required}>*</span>
@@ -331,29 +283,8 @@ export default function AssignSubjectsPage() {
                       : listsLoading
                         ? "Loading sections…"
                         : gradeSections.length === 0
-                          ? `No Grade ${grade} sections this year`
+                          ? `No Grade ${grade} sections this scope`
                           : "Select section"
-                  }
-                />
-              </div>
-              <div className={styles.field}>
-                <Label className={styles.label} htmlFor="assign-term">
-                  Term
-                </Label>
-                <DropdownSelect
-                  id="assign-term"
-                  ariaLabel="Term"
-                  value={termNumber != null ? String(termNumber) : ""}
-                  onValueChange={(v) => setTermNumber(Number(v))}
-                  options={terms.map((t) => ({ value: String(t.termNumber), label: `Term ${t.termNumber}` }))}
-                  placeholder={
-                    !schoolYearId
-                      ? "Select a school year first"
-                      : listsLoading
-                        ? "Loading terms…"
-                        : terms.length === 0
-                          ? "No terms for this year"
-                          : "Select term"
                   }
                 />
               </div>

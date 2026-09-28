@@ -36,7 +36,7 @@
   position: absolute;
   bottom: 0;
   width: 100%;
-  color: #525252;
+  color: var(--folder-color, #525252);
   filter: drop-shadow(0 10px 20px rgb(0 0 0 / 0.25));
 }
 
@@ -58,7 +58,7 @@
 .front {
   width: 100%;
   display: block;
-  color: rgb(82 82 82 / 0.65);
+  color: color-mix(in oklch, var(--folder-color, #525252) 65%, transparent);
 }
 
 .label {
@@ -115,6 +115,27 @@
   background: #d4d4d4;
   border-radius: 50%;
   animation: pulse 2s infinite;
+}
+
+/* Bottom-right type chip (opt-in via cornerTag) — always visible. */
+.cornerTag {
+  position: absolute;
+  right: -6px;
+  bottom: 10px;
+  z-index: 20;
+  max-width: calc(100% - 12px);
+  padding: 2px 8px;
+  border-radius: 50px;
+  background-color: #171717;
+  box-shadow: 0 10px 20px rgb(0 0 0 / 0.3), inset 0 1px 1px rgb(255 255 255 / 0.2);
+  color: #fafafa;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 @keyframes pulse {

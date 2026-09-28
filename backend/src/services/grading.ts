@@ -77,33 +77,33 @@ export function classifyHonorRoll(
   return null;
 }
 
-// DepEd Order No. 8, s. 2015 assessment weights (WW / PT / QA), which must
+// DepEd Order No. 8, s. 2015 assessment weights (WW / PT / E), which must
 // total 100%. Senior High (G11-12) uses one set for every subject;
 // Junior High (G7-10) varies by learning area.
 export interface DepEdWeights {
   WRITTEN_WORK: number;
   PERFORMANCE_TASK: number;
-  QUARTERLY_EXAM: number;
+  EXAM: number;
 }
 
 export const DEPED_SHS_WEIGHTS: DepEdWeights = {
   WRITTEN_WORK: 25,
   PERFORMANCE_TASK: 45,
-  QUARTERLY_EXAM: 30,
+  EXAM: 30,
 };
 
 export const DEPED_JHS_WEIGHTS: { label: string; weights: DepEdWeights }[] = [
   {
     label: "Languages, AP, EsP",
-    weights: { WRITTEN_WORK: 30, PERFORMANCE_TASK: 50, QUARTERLY_EXAM: 20 },
+    weights: { WRITTEN_WORK: 30, PERFORMANCE_TASK: 50, EXAM: 20 },
   },
   {
     label: "Math & Science",
-    weights: { WRITTEN_WORK: 40, PERFORMANCE_TASK: 40, QUARTERLY_EXAM: 20 },
+    weights: { WRITTEN_WORK: 40, PERFORMANCE_TASK: 40, EXAM: 20 },
   },
   {
     label: "MAPEH & TLE",
-    weights: { WRITTEN_WORK: 20, PERFORMANCE_TASK: 60, QUARTERLY_EXAM: 20 },
+    weights: { WRITTEN_WORK: 20, PERFORMANCE_TASK: 60, EXAM: 20 },
   },
 ];
 

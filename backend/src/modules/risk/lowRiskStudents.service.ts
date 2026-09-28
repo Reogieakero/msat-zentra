@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface LowRiskStudent {
   lrn: string;
@@ -14,19 +15,23 @@ export interface LowRiskResult {
   pageSize: number;
 }
 
-// Low-risk students in the active school year, paginated. Risk is derived
-// live with the same factor rules as the risk list (no flags = Low) so
-// enlisted students without accounts are included on equal footing.
+// Low-risk students in the session's active school year, paginated. Risk is
+// derived live with the same factor rules as the risk list (no flags = Low)
+// so enlisted students without accounts are included on equal footing.
 export async function getLowRiskStudents(
   page: number,
-  pageSize: number
+  pageSize: number,
+  scope?: TermScopeInput,
 ): Promise<LowRiskResult> {
-  const termId = await resolveActiveTermId();
-  const schoolYear = await prisma.schoolYear.findFirst({
-    where: { isActive: true },
-    select: { id: true },
-  });
-  const schoolYearId = schoolYear?.id;
+  const termId = scope?.termId ?? (await resolveActiveTermId());
+  const schoolYearId =
+    scope?.schoolYearId ??
+    (
+      await prisma.schoolYear.findFirst({
+        where: { isActive: true },
+        select: { id: true },
+      })
+    )?.id;
 
   const [profiles, rosterEntries] = await Promise.all([
     prisma.studentProfile.findMany({

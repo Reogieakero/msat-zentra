@@ -16,9 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { fetchOverview, type OverviewSectionRow } from "./overview-data";
+import { useTheme } from "@/components/providers";
 import styles from "./OverviewPopulation.module.css";
 
 const chartConfig = {
@@ -27,12 +30,23 @@ const chartConfig = {
 
 const GRADE_ORDER = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 
-// Monochrome ramp: sections within a grade step from ink to light gray.
-const GRADE_LIGHTNESS = [22, 42, 62];
+// Monochrome ramp: sections within a grade step from ink to light gray on
+// light surfaces, mirrored (paper to mid gray) on dark surfaces so slices
+// stay legible in both modes.
+const GRADE_LIGHTNESS_LIGHT = [22, 42, 62];
+const GRADE_LIGHTNESS_DARK = [88, 68, 48];
 
-function colorFor(_grade: string, index: number): string {
-  const light = GRADE_LIGHTNESS[index % GRADE_LIGHTNESS.length];
+function colorFor(index: number, dark: boolean): string {
+  const ramp = dark ? GRADE_LIGHTNESS_DARK : GRADE_LIGHTNESS_LIGHT;
+  const light = ramp[index % ramp.length];
   return `hsl(0, 0%, ${light}%)`;
+}
+
+function useIsDark() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  return mounted && resolvedTheme === "dark";
 }
 
 interface GradeGroup {
@@ -64,6 +78,7 @@ export function OverviewPopulation() {
     queryKey: ["overview"],
     queryFn: fetchOverview,
   });
+  const isDark = useIsDark();
 
   const groups: GradeGroup[] = React.useMemo(() => {
     const rows = data?.sections ?? [];
@@ -146,6 +161,15 @@ export function OverviewPopulation() {
                     <div className={styles.donutWrap}>
                       <ChartContainer config={chartConfig} className={styles.donut}>
                         <PieChart>
+                          <ChartTooltip
+                            wrapperStyle={{ zIndex: 50 }}
+                            content={
+                              <ChartTooltipContent
+                                className={styles.tooltipSolid}
+                                formatter={(value, name) => `${name}: ${value} student(s)`}
+                              />
+                            }
+                          />
                           <Pie
                             data={g.rows}
                             dataKey="count"
@@ -158,7 +182,7 @@ export function OverviewPopulation() {
                             strokeWidth={0}
                           >
                             {g.rows.map((r, i) => (
-                              <Cell key={r.section} fill={colorFor(g.grade, i)} />
+                              <Cell key={r.section} fill={colorFor(i, isDark)} />
                             ))}
                           </Pie>
                         </PieChart>
@@ -173,7 +197,7 @@ export function OverviewPopulation() {
                         <li key={r.section} className={styles.sectionRow}>
                           <span
                             className={styles.sectionDot}
-                            style={{ backgroundColor: colorFor(g.grade, i) }}
+                            style={{ backgroundColor: colorFor(i, isDark) }}
                             aria-hidden
                           />
                           <span className={styles.sectionName}>{r.section}</span>

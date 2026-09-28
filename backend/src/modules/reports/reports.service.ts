@@ -107,16 +107,40 @@ export async function getReports(params: {
   scope: ReportScope;
   gradeLevel?: string;
   sectionId?: string;
+  schoolYearId?: string | null;
+  termId?: string | null;
 }): Promise<ReportsPayload> {
-  const activeTerm = await prisma.term.findFirst({
-    where: { schoolYear: { isActive: true } },
-    orderBy: { termNumber: "asc" },
-    select: {
-      id: true,
-      termNumber: true,
-      schoolYear: { select: { name: true, id: true } },
-    },
-  });
+  // Session's active term first; legacy active-year lookup only when the
+  // request carries no scope.
+  let activeTerm: {
+    id: string;
+    termNumber: number;
+    schoolYear: { name: string; id: string };
+  } | null = null;
+  if (params.termId) {
+    activeTerm = await prisma.term.findUnique({
+      where: { id: params.termId },
+      select: { id: true, termNumber: true, schoolYear: { select: { name: true, id: true } } },
+    });
+  }
+  if (!activeTerm && params.schoolYearId) {
+    activeTerm = await prisma.term.findFirst({
+      where: { schoolYearId: params.schoolYearId },
+      orderBy: { termNumber: "asc" },
+      select: { id: true, termNumber: true, schoolYear: { select: { name: true, id: true } } },
+    });
+  }
+  if (!activeTerm) {
+    activeTerm = await prisma.term.findFirst({
+      where: { schoolYear: { isActive: true } },
+      orderBy: { termNumber: "asc" },
+      select: {
+        id: true,
+        termNumber: true,
+        schoolYear: { select: { name: true, id: true } },
+      },
+    });
+  }
   const termId = activeTerm?.id ?? null;
   const schoolYearId = activeTerm?.schoolYear.id ?? null;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";

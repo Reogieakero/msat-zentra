@@ -1,14 +1,20 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
-  PolarGrid,
   RadialBar,
   RadialBarChart,
 } from "recharts";
-import { BookOpen, GraduationCap, Users } from "lucide-react";
-import type { AdvisorySectionInfo, TeacherClassRow } from "./teacher-overview-data";
+import { BookOpen, Clock, GraduationCap, ShieldAlert, Users } from "lucide-react";
+import {
+  buildTimetable,
+  formatRange,
+  type DayConfig,
+} from "@/app/teacher/schedule/components/schedule-time";
+import { Badge } from "@/components/ui/badge";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { GRADE_GRADIENT } from "@/components/schedule/SectionScheduleCard";
+import type { AdvisorySectionInfo } from "./teacher-overview-data";
 import styles from "./teacher-overview-header.module.css";
 
 interface TeacherOverviewHeaderProps {
@@ -16,19 +22,11 @@ interface TeacherOverviewHeaderProps {
   advisorySection?: AdvisorySectionInfo | null;
   classCount?: number;
   studentCount?: number;
-  atRiskFactors?: {
-    academic: number;
-    attendance: number;
-    behavioral: number;
-  };
-  atRiskStudents?: number;
-  /** Assigned class sections, shown on the flipped face of the risk card. */
-  classes?: TeacherClassRow[];
-  /** Narrow 20% sidebar rail: stacks identity, advisory and risk vertically. */
-  rail?: boolean;
 }
 
-const RISK_COLORS = ["#171717", "#525252", "#a3a3a3"];
+// Factor colors — academic amber, attendance green, behavioral blue —
+// shared by the gauge segments and the legend dots.
+const RISK_COLORS = ["#f59e0b", "#22c55e", "#3b82f6"];
 
 function StatChip({
   icon: Icon,
@@ -85,14 +83,6 @@ function AtRiskRadial({
           startAngle={90}
           endAngle={-270}
         >
-          <PolarGrid
-            cx={70}
-            cy={70}
-            innerRadius={38}
-            outerRadius={62}
-            gridType="circle"
-            stroke="var(--border)"
-          />
           <RadialBar
             dataKey="value"
             cornerRadius={6}
@@ -134,10 +124,6 @@ export function TeacherOverviewHeader({
   advisorySection,
   classCount = 0,
   studentCount = 0,
-  atRiskFactors,
-  atRiskStudents = 0,
-  classes = [],
-  rail = false,
 }: TeacherOverviewHeaderProps) {
   const isAdviser = Boolean(advisorySection);
   const initials = React.useMemo(() => {
@@ -151,127 +137,254 @@ export function TeacherOverviewHeader({
       .join("");
   }, [teacherName]);
 
-  const riskFactors = atRiskFactors ?? { academic: 0, attendance: 0, behavioral: 0 };
-  const [showClasses, setShowClasses] = React.useState(false);
+  // Card background follows the advisory section's grade color
+  // (G7 green, G8 amber, G9 red, G10 blue, G11 pink, G12 violet).
+  const grad = advisorySection?.gradeLevel
+    ? (GRADE_GRADIENT[advisorySection.gradeLevel] ?? null)
+    : null;
 
   return (
-    <div className={rail ? styles.railStack : undefined}>
-      <article className={`${styles.profile} ${rail ? styles.rail : ""}`}>
-        <div className={styles.profileBody}>
-        <div className={styles.identityBlock}>
-          <div className={styles.avatar} aria-hidden>
-            <span className={styles.avatarInitials}>{initials || "T"}</span>
-          </div>
-
-          <div className={styles.identity}>
-            <h1 className={styles.heroTitle}>{teacherName}</h1>
-            {isAdviser && advisorySection ? (
-              <p className={styles.advisory}>
-                <GraduationCap className={styles.advisoryIcon} aria-hidden />
-                You are adviser of <span>{advisorySection.name}</span>
-              </p>
-            ) : (
-              <p className={styles.advisoryMuted}>
-                Not assigned as a section adviser this term.
-              </p>
-            )}
-          </div>
+    <article
+      className={assign.card}
+      aria-label="Teacher profile"
+      style={
+        grad
+          ? {
+              borderColor: `color-mix(in oklch, ${grad.from} 40%, transparent)`,
+              background: `linear-gradient(135deg, color-mix(in oklch, ${grad.from} 16%, var(--card)), color-mix(in oklch, ${grad.to} 10%, var(--card)))`,
+            }
+          : undefined
+      }
+    >
+      <span className={assign.glowClip} aria-hidden="true">
+        <span
+          className={assign.cardGlow}
+          style={
+            grad
+              ? {
+                  background: `radial-gradient(ellipse at center, color-mix(in oklch, ${grad.from} 45%, transparent), transparent 70%)`,
+                }
+              : undefined
+          }
+        />
+      </span>
+      <Badge
+        variant="secondary"
+        className={`${assign.gradeBadge} ${assign.gradeFloat}`}
+        style={
+          grad
+            ? {
+                backgroundColor: grad.from,
+                color: "#ffffff",
+                borderColor: "transparent",
+              }
+            : {
+                backgroundColor: "var(--primary)",
+                color: "var(--primary-foreground)",
+                borderColor: "transparent",
+              }
+        }
+      >
+        {isAdviser ? "Adviser" : "Teacher"}
+      </Badge>
+      <div className="relative flex flex-col gap-1">
+        <div className={assign.cardHead}>
+          <span className={assign.avatar} aria-hidden="true">
+            {initials || "T"}
+          </span>
+          <span className={assign.cardTitleBlock}>
+            <span className={assign.fieldLabel}>Teacher</span>
+            <span className={assign.itemName} title={teacherName}>
+              {teacherName}
+            </span>
+          </span>
         </div>
+        {isAdviser && advisorySection ? (
+          <p className={styles.advisory}>
+            <GraduationCap className={styles.advisoryIcon} aria-hidden />
+            You are adviser of <span>{advisorySection.name}</span>
+          </p>
+        ) : (
+          <p className={styles.advisoryMuted}>
+            Not assigned as a section adviser this term.
+          </p>
+        )}
+      </div>
+      <div className={`${styles.profileFoot} relative`}>
+        <StatChip icon={BookOpen} label="Classes" value={String(classCount)} />
+        <span className={styles.statDivider} aria-hidden />
+        <StatChip icon={Users} label="Students" value={String(studentCount)} />
+      </div>
+    </article>
+  );
+}
 
-        <div className={styles.profileFoot}>
-          <StatChip icon={BookOpen} label="Classes" value={String(classCount)} />
-          <span className={styles.statDivider} aria-hidden />
-          <StatChip icon={Users} label="Students" value={String(studentCount)} />
-          <span className={styles.statDivider} aria-hidden />
-          <StatChip
-            icon={GraduationCap}
-            label="Advisory"
-            value={advisorySection?.name ?? "No"}
-          />
+const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+interface UpNextSlot {
+  day: number;
+  period: number;
+  subject: { name: string };
+  section: { name: string };
+}
+
+/* Right-rail "Up next" card: the next two upcoming subjects from the
+   current time (today's remaining slots first, then later this week),
+   resolved against the real day-shape clock. Ticks every minute. */
+export function TeacherOverviewUpNext({
+  slots,
+  config,
+}: {
+  slots: UpNextSlot[];
+  config: DayConfig | null;
+}) {
+  // Ticks every second — the first upcoming entry carries a live countdown.
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const entries = React.useMemo(() => {
+    if (!config || slots.length === 0) return [];
+    const rows = buildTimetable(config);
+    const timeOf = (period: number) => {
+      const row = rows.find((r) => r.kind === "period" && r.periodIndex === period);
+      return row && row.kind === "period" ? { start: row.startMin, end: row.endMin } : null;
+    };
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const dow = now.getDay();
+    const out: {
+      key: string;
+      subject: string;
+      section: string;
+      when: string;
+      startsInSec: number | null;
+    }[] = [];
+    for (let d = dow; d <= 5 && out.length < 2; d += 1) {
+      const daySlots = slots
+        .filter((s) => s.day === d)
+        .map((s) => ({ slot: s, time: timeOf(s.period) }))
+        .filter(
+          (r): r is { slot: UpNextSlot; time: { start: number; end: number } } =>
+            !!r.time && (d > dow || r.time.start > nowMin),
+        )
+        .sort((a, b) => a.time.start - b.time.start);
+      for (const r of daySlots) {
+        if (out.length >= 2) break;
+        const dayLabel = d === dow ? "Today" : WEEK_DAYS[d - 1];
+        const startsInSec =
+          d === dow
+            ? Math.max(
+                0,
+                r.time.start * 60 -
+                  (now.getHours() * 3_600 + now.getMinutes() * 60 + now.getSeconds()),
+              )
+            : null;
+        out.push({
+          key: `${d}:${r.slot.period}:${r.slot.subject.name}:${r.slot.section.name}`,
+          subject: r.slot.subject.name,
+          section: r.slot.section.name,
+          when: `${dayLabel} · ${formatRange(r.time.start, r.time.end)}`,
+          startsInSec,
+        });
+      }
+    }
+    return out;
+  }, [slots, config, now]);
+
+  const formatCountdown = (totalSec: number): string => {
+    const h = Math.floor(totalSec / 3_600);
+    const m = Math.floor((totalSec % 3_600) / 60);
+    const s = totalSec % 60;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  };
+
+  return (
+    <div className={assign.card} aria-label="Up next">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative flex items-center gap-3">
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
+          aria-hidden="true"
+        >
+          <Clock size={20} className="text-primary" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-semibold">Up next</h3>
+          <p className="text-xs text-muted-foreground">
+            Upcoming subjects from now.
+          </p>
         </div>
       </div>
-      </article>
-
-      {isAdviser ? (
-        <div className={styles.flip}>
-          <div className={`${styles.flipInner} ${showClasses ? styles.flipped : ""}`}>
-            <aside
-              className={`${styles.populationPanel} ${rail ? styles.railPanel : ""}`}
-              aria-label="At-risk factors"
-            >
-              <section className={styles.chartColumn}>
-                <header className={styles.sectionHead}>
-                  <h2 className={styles.sectionTitle}>At-Risk Factors</h2>
-                  <span className={styles.sectionMeta}>
-                    {atRiskStudents} of {studentCount}
-                  </span>
-                </header>
-                <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} />
-                <div className={styles.flipFoot}>
-                  <button
-                    type="button"
-                    className={styles.flipBtn}
-                    onClick={() => setShowClasses(true)}
-                    aria-label="Show my classes"
-                  >
-                    My classes
-                  </button>
-                </div>
-              </section>
-            </aside>
-            <aside
-              className={`${styles.populationPanel} ${rail ? styles.railPanel : ""} ${styles.flipBack}`}
-              aria-label="My classes"
-            >
-              <section className={styles.chartColumn}>
-                <header className={styles.sectionHead}>
-                  <h2 className={styles.sectionTitle}>My Classes</h2>
-                </header>
-                {classes.length === 0 ? (
-                  <p className={styles.classEmpty}>No classes assigned yet.</p>
-                ) : (
-                  <>
-                    <ul className={styles.classList}>
-                      {classes.map((c) => (
-                        <li key={c.id} className={styles.classRow}>
-                          <span className={styles.classText}>
-                            <span className={styles.classSubject}>{c.subject}</span>
-                            <span className={styles.classMeta}>
-                              {c.gradeLevel} · {c.section}
-                            </span>
-                          </span>
-                          <span className={styles.classCount}>
-                            <Users aria-hidden />
-                            {c.studentCount}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className={styles.classActions}>
-                      <Link href="/teacher/attendance" className={styles.classLink}>
-                        Take attendance
-                      </Link>
-                      <Link href="/teacher/classes" className={styles.classLink}>
-                        View all
-                      </Link>
-                    </div>
-                    <div className={styles.flipFoot}>
-                      <button
-                        type="button"
-                        className={styles.flipBackBtn}
-                        onClick={() => setShowClasses(false)}
-                        aria-label="Back to at-risk factors"
-                      >
-                        At-risk
-                      </button>
-                    </div>
-                  </>
-                )}
-              </section>
-            </aside>
-          </div>
+      <div className="relative flex flex-col gap-1.5">
+        {entries.length === 0 ? (
+          <p className={styles.classEmpty}>No upcoming classes scheduled.</p>
+        ) : (
+          entries.map((e, i) => (
+            <div key={e.key} className="flex items-start justify-between gap-2">
+              <span className={styles.classText}>
+                <span className={styles.classSubject}>{e.subject}</span>
+                <span className={styles.classMeta}>
+                  {e.section} · {e.when}
+                </span>
+              </span>
+              {i === 0 && e.startsInSec !== null ? (
+                <span
+                  className="shrink-0 rounded-md bg-primary/10 px-2 py-1 font-mono text-xs font-bold tabular-nums text-primary"
+                  title="Starts in"
+                  aria-label={`Starts in ${formatCountdown(e.startsInSec)}`}
+                >
+                  {formatCountdown(e.startsInSec)}
+                </span>
+              ) : null}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+/* Right-rail at-risk factors card: radial chart plus factor legend. */
+export function TeacherOverviewRisk({
+  atRiskFactors,
+  atRiskStudents = 0,
+  studentCount = 0,
+}: {
+  atRiskFactors?: {
+    academic: number;
+    attendance: number;
+    behavioral: number;
+  };
+  atRiskStudents?: number;
+  studentCount?: number;
+}) {
+  const riskFactors = atRiskFactors ?? { academic: 0, attendance: 0, behavioral: 0 };
+  return (
+    <div className={assign.card} aria-label="At-risk factors">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative flex items-center gap-3">
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
+          aria-hidden="true"
+        >
+          <ShieldAlert size={20} className="text-primary" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-semibold">At-Risk Factors</h3>
+          <p className="text-xs text-muted-foreground">
+            {atRiskStudents} of {studentCount} advisees.
+          </p>
         </div>
-      ) : null}
+      </div>
+      <div className="relative">
+        <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} />
+      </div>
     </div>
   );
 }

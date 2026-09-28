@@ -17,20 +17,20 @@ export function useRefreshAcademic(): () => void {
   }, [queryClient]);
 }
 
-export type ComponentType = "WRITTEN_WORK" | "PERFORMANCE_TASK" | "QUARTERLY_EXAM";
+export type ComponentType = "WRITTEN_WORK" | "PERFORMANCE_TASK" | "EXAM";
 
-export const COMPONENT_ORDER: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"];
+export const COMPONENT_ORDER: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"];
 
 export const COMPONENT_LABELS: Record<ComponentType, string> = {
   WRITTEN_WORK: "WW",
   PERFORMANCE_TASK: "PT",
-  QUARTERLY_EXAM: "QE",
+  EXAM: "E",
 };
 
 export const COMPONENT_NAMES: Record<ComponentType, string> = {
   WRITTEN_WORK: "Written Work",
   PERFORMANCE_TASK: "Performance Task",
-  QUARTERLY_EXAM: "Quarterly Exam",
+  EXAM: "Exam",
 };
 
 export interface ClassAssignment {
@@ -38,6 +38,7 @@ export interface ClassAssignment {
   subjectId: string;
   subjectCode: string;
   subjectName: string;
+  subjectCategory: string;
   sectionId: string;
   sectionName: string;
   gradeLevel: string;
@@ -68,6 +69,7 @@ export interface ClassAssessment {
   title: string;
   maxScore: number;
   dateGiven: string;
+  createdAt: string;
   scores: Record<string, number>;
 }
 
@@ -109,6 +111,9 @@ export function useClassDetail(assignmentId: string) {
     queryKey: classDetailKey(teacherId, assignmentId),
     queryFn: () => fetchClassDetail(assignmentId),
     enabled: !!teacherId && !!assignmentId,
+    // Fail fast like every other query — no backoff retries before the
+    // error state. Keeps previous data visible via placeholderData below.
+    retry: false,
     // Keep the previous class on screen while the next one loads so
     // switching classes never flashes a full-page skeleton.
     placeholderData: (previous) => previous,
@@ -126,10 +131,10 @@ export async function saveComponentWeight(
 export type WeightPreset = "SHS" | "JHS_LANG" | "JHS_MATH_SCI" | "JHS_MAPEH_TLE";
 
 export const WEIGHT_PRESETS: { key: WeightPreset; label: string; hint: string }[] = [
-  { key: "SHS", label: "SHS standard", hint: "WW 25 / PT 45 / QE 30" },
-  { key: "JHS_LANG", label: "Languages, AP, EsP", hint: "WW 30 / PT 50 / QE 20" },
-  { key: "JHS_MATH_SCI", label: "Math & Science", hint: "WW 40 / PT 40 / QE 20" },
-  { key: "JHS_MAPEH_TLE", label: "MAPEH & TLE", hint: "WW 20 / PT 60 / QE 20" },
+  { key: "SHS", label: "SHS standard", hint: "WW 25 / PT 45 / E 30" },
+  { key: "JHS_LANG", label: "Languages, AP, EsP", hint: "WW 30 / PT 50 / E 20" },
+  { key: "JHS_MATH_SCI", label: "Math & Science", hint: "WW 40 / PT 40 / E 20" },
+  { key: "JHS_MAPEH_TLE", label: "MAPEH & TLE", hint: "WW 20 / PT 60 / E 20" },
 ];
 
 export async function applyWeightPreset(assignmentId: string, preset: WeightPreset): Promise<void> {

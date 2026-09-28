@@ -2,13 +2,24 @@
 
 import * as React from "react";
 import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import {
   BookOpen,
   CalendarClock,
   ChevronDown,
+  ColumnsIcon,
   MoreHorizontal,
-  Search,
+  SearchIcon,
   ShieldAlert,
-  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,9 +27,24 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardFooter,
   CardHeader,
 } from "@/components/ui/card";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -28,19 +54,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DragAlongCell, DraggableHeader } from "@/components/data-table/drag-columns";
+import { riskBadgeVariant } from "@/lib/risk/status";
 import type { AdvisoryStatusRow } from "./teacher-overview-data";
 import styles from "./teacher-overview-advisory.module.css";
-
-const PAGE_SIZE = 10;
 
 type StatusFilter = "" | AdvisoryStatusRow["riskLevel"];
 
@@ -55,9 +81,8 @@ interface StatusBadgeProps {
   level: AdvisoryStatusRow["riskLevel"];
 }
 
-function StatusBadge({ level }: StatusBadgeProps) {
-  const variant = level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
-  return <Badge variant={variant}>{level}</Badge>;
+export function StatusBadge({ level }: StatusBadgeProps) {
+  return <Badge variant={riskBadgeVariant(level)}>{level}</Badge>;
 }
 
 interface FlagBadgeProps {
@@ -71,7 +96,7 @@ const FLAG_ICONS = {
   behavioral: ShieldAlert,
 } as const;
 
-function FlagBadge({ flag, flags }: FlagBadgeProps) {
+export function FlagBadge({ flag, flags }: FlagBadgeProps) {
   const active = flags && flags.length > 0 ? flags : flag === "none" ? [] : [flag];
   if (active.length === 0) return null;
   return (
@@ -89,46 +114,191 @@ function FlagBadge({ flag, flags }: FlagBadgeProps) {
   );
 }
 
+const baseColumns: ColumnDef<AdvisoryStatusRow>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+    size: 50,
+    minSize: 50,
+    maxSize: 50,
+  },
+  {
+    accessorKey: "name",
+    header: "Student",
+    size: 220,
+    minSize: 160,
+    cell: ({ row }) => (
+      <div className="min-w-0">
+        <p className={styles.cellMain}>{row.getValue("name")}</p>
+        <p className={styles.cellSub}>{row.original.section}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "riskLevel",
+    header: "Status",
+    size: 130,
+    minSize: 110,
+    cell: ({ row }) => <StatusBadge level={row.getValue("riskLevel")} />,
+  },
+  {
+    accessorKey: "flag",
+    header: "Flag",
+    size: 200,
+    minSize: 140,
+    cell: ({ row }) => <FlagBadge flag={row.getValue("flag")} flags={row.original.flags} />,
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    header: () => <div className="text-end">Actions</div>,
+    cell: ({ row, table }) => {
+      const s = row.original;
+      return (
+        <div className="text-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8">
+                <MoreHorizontal aria-hidden />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{s.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => table.getColumn("name")?.setFilterValue(s.name)}
+              >
+                Filter by name
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>View student profile</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    },
+  },
+];
+
 interface TeacherOverviewAdvisoryProps {
   students: AdvisoryStatusRow[];
 }
 
-/* Advisory-students card — outer Card shell with the guidance alerts
-   table pattern inside: header row (title + search/status filter),
-   plain table, pager footer. */
+/* Advisory-students card as a data table (data-table5 pattern: sortable +
+   draggable columns, name/status filters, column visibility, row
+   selection, pagination). Header keeps the title, privacy note, and the
+   status count. */
 export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryProps) {
-  const [query, setQuery] = React.useState("");
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnOrder, setColumnOrder] = React.useState<string[]>(() => [
+    "name",
+    "riskLevel",
+    "flag",
+  ]);
   const [status, setStatus] = React.useState<StatusFilter>("");
-  const [page, setPage] = React.useState(1);
+  const sortableId = React.useId();
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return students.filter((s) => {
-      if (status !== "" && s.riskLevel !== status) return false;
-      if (q !== "") {
-        return (
-          s.name.toLowerCase().includes(q) ||
-          s.section.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [students, query, status]);
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {}),
+  );
 
-  const clearFilters = React.useCallback(() => {
-    setQuery("");
-    setStatus("");
-    setPage(1);
-  }, []);
+  const columns = React.useMemo<ColumnDef<AdvisoryStatusRow>[]>(() => {
+    const selectColumn = baseColumns.find((col) => col.id === "select");
+    const actionsColumn = baseColumns.find((col) => col.id === "actions");
+    const otherColumns = columnOrder
+      .map((colId) =>
+        baseColumns.find(
+          (col) => col.id === colId || ("accessorKey" in col && col.accessorKey === colId),
+        ),
+      )
+      .filter((col): col is ColumnDef<AdvisoryStatusRow> => col !== undefined);
+    const result: ColumnDef<AdvisoryStatusRow>[] = [];
+    if (selectColumn) result.push(selectColumn);
+    result.push(...otherColumns);
+    if (actionsColumn) result.push(actionsColumn);
+    return result;
+  }, [columnOrder]);
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
+  const fullColumnOrder = React.useMemo<string[]>(
+    () => ["select", ...columnOrder, "actions"],
+    [columnOrder],
+  );
+
+  const table = useReactTable({
+    data: students,
+    columns,
+    columnResizeMode: "onChange",
+    getRowId: (row) => row.studentId,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onColumnOrderChange: (updater) => {
+      const newOrder = typeof updater === "function" ? updater(fullColumnOrder) : updater;
+      setColumnOrder(newOrder.filter((id: string) => id !== "select" && id !== "actions"));
+    },
+    initialState: { pagination: { pageSize: 10 } },
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      columnOrder: fullColumnOrder,
+    },
+  });
+
+  // Keep the status dropdown and the table column filter in sync.
+  const setStatusFilter = (next: StatusFilter) => {
+    setStatus(next);
+    table.getColumn("riskLevel")?.setFilterValue(next === "" ? undefined : next);
+  };
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (
+      active &&
+      over &&
+      active.id !== over.id &&
+      active.id !== "select" &&
+      active.id !== "actions" &&
+      over.id !== "select" &&
+      over.id !== "actions"
+    ) {
+      setColumnOrder((order) => {
+        const oldIndex = order.indexOf(active.id as string);
+        const newIndex = order.indexOf(over.id as string);
+        return arrayMove(order, oldIndex, newIndex);
+      });
+    }
+  }
+
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === status)?.label ?? "All statuses";
-  const hasActiveFilters = query.trim() !== "" || status !== "";
   const hasRows = students.length > 0;
 
   return (
@@ -137,26 +307,12 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
         <div className={styles.headerText}>
           <h2 className={styles.sectionTitle}>Advisory Students</h2>
           <p className={styles.sectionDesc}>
-            Status for your advisees — {total} student{total === 1 ? "" : "s"}. Category
-            only, never the private write-up.
+            Status for your advisees — {students.length} student{students.length === 1 ? "" : "s"}.
+            Category only, never the private write-up.
           </p>
         </div>
         {hasRows && (
           <CardAction className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "2rem" }}
-                placeholder="Search student…"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Search advisory students"
-              />
-            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -176,100 +332,130 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
                   <DropdownMenuCheckboxItem
                     key={item.label}
                     checked={status === item.value}
-                    onCheckedChange={() => {
-                      setStatus(item.value);
-                      setPage(1);
-                    }}
+                    onCheckedChange={() => setStatusFilter(item.value)}
                   >
                     {item.label}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
-                <X aria-hidden />
-                Show all
-              </Button>
-            )}
           </CardAction>
         )}
       </CardHeader>
       <CardContent className={styles.content}>
         {!hasRows ? (
           <p className={styles.empty}>No advisory students.</p>
-        ) : filtered.length === 0 ? (
-          <p className={styles.empty}>No students match your search and filters.</p>
         ) : (
-          <Table aria-label="Advisory students">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Flag</TableHead>
-                <TableHead>
-                  <span className={styles.srOnly}>Row actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pageRows.map((s) => (
-                <TableRow key={s.studentId}>
-                  <TableCell>
-                    <p className={styles.cellMain}>{s.name}</p>
-                    <p className={styles.cellSub}>{s.section}</p>
-                  </TableCell>
-                  <TableCell><StatusBadge level={s.riskLevel} /></TableCell>
-                  <TableCell><FlagBadge flag={s.flag} flags={s.flags} /></TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>{s.name}</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setQuery(s.name)}>
-                          Filter by name
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled>View student profile</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="w-full min-w-0 space-y-4">
+            <div className="flex items-center gap-2">
+              <InputGroup className="max-w-56">
+                <InputGroupInput
+                  placeholder="Filter students..."
+                  value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                  onChange={(event) =>
+                    table.getColumn("name")?.setFilterValue(event.target.value)
+                  }
+                />
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+              </InputGroup>
+              <div className="ml-auto flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <ColumnsIcon />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {table
+                      .getAllColumns()
+                      .filter((column) => column.getCanHide())
+                      .map((column) => {
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={column.id}
+                            className="capitalize"
+                            checked={column.getIsVisible()}
+                            onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                          >
+                            {column.id}
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <DndContext
+                id={sortableId}
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToHorizontalAxis]}
+                onDragEnd={handleDragEnd}
+              >
+                <Table className="w-full table-fixed">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                        <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
+                          {headerGroup.headers.map((header) => (
+                            <DraggableHeader key={header.id} header={header} />
+                          ))}
+                        </SortableContext>
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                          <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
+                            {row.getVisibleCells().map((cell) => (
+                              <DragAlongCell key={cell.id} cell={cell} />
+                            ))}
+                          </SortableContext>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No students match your search and filters.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </DndContext>
+            </div>
+            <div className="flex items-center justify-end space-x-2">
+              <div className="text-muted-foreground flex-1 text-sm">
+                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredRowModel().rows.length} row(s) selected.
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </CardContent>
-      <CardFooter className={styles.footer}>
-        <p className={styles.range}>
-          Showing {start}–{end} of {total}
-        </p>
-        <div className={styles.pagerButtons}>
-          <Button
-            size="xs"
-            variant="outline"
-            disabled={safePage <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </Button>
-          <span className={styles.pageLabel} aria-live="polite">
-            Page {safePage} of {totalPages}
-          </span>
-          <Button
-            size="xs"
-            variant="outline"
-            disabled={safePage >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      </CardFooter>
     </Card>
   );
 }
