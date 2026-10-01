@@ -21,9 +21,14 @@ export interface GuidanceGradeAttentionRow {
   short: string;
   sections: number;
   high: number;
+  moderate: number;
+  low: number;
   atRisk: number;
+  /** Most common level among the grade's at-risk students; null when none. */
+  mostLevel: "High" | "Moderate" | "Low" | null;
   topSection: string;
   topCount: number;
+  sectionsList: { name: string; atRisk: number }[];
 }
 
 export interface GuidanceSectionHeatRow {

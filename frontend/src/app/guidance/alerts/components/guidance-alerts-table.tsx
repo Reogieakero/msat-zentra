@@ -51,7 +51,7 @@ import {
 } from "./GuidanceAlertsRowActions";
 import styles from "./guidance-alerts-table.module.css";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 8;
 
 /* One table, two pipelines (never mixed upstream): adviser-referred cases
    plus the engine's intervention follow-ups, each row keeping its own
@@ -96,32 +96,44 @@ function formatElapsedShort(ms: number): string {
 }
 
 /* Latest action with live session detection first: a booked / finished /
-   cancelled intervention session is the freshest thing the reader can act
-   on, so it leads; otherwise fall back to the audit-backed trail (status
-   changes, notes, escalations). */
+   cancelled session leads only when it is actually the freshest event —
+   otherwise the audit-backed trail wins (e.g. an endorse that happened
+   after a pre-confirm booking reads "Endorsed to ADM coordinator", not
+   "Session booked"). Falls back to the audit trail when timestamps are
+   missing or the desk acted later. */
 function liveLatestActionOf(row: GuidanceReferralItem): { label: string; time: string } {
-  if (row.sessions.length > 0) {
-    const sorted = [...row.sessions].sort((a, b) => {
-      const at = new Date(a.createdAt || a.scheduledAt).getTime();
-      const bt = new Date(b.createdAt || b.scheduledAt).getTime();
-      if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
-      if (Number.isNaN(at)) return 1;
-      if (Number.isNaN(bt)) return -1;
-      return bt - at;
-    });
-    const newest = sorted[0];
-    if (newest.status === "completed" && row.followUpDate) {
-      return { label: "Marked for follow-up", time: row.followUpDate };
-    }
-    if (newest.status === "completed") {
-      return { label: "Session done", time: newest.createdAt || newest.scheduledAt };
-    }
-    if (newest.status === "cancelled") {
-      return { label: "Session cancelled", time: newest.createdAt || newest.scheduledAt };
-    }
-    return { label: "Session booked", time: newest.createdAt || newest.scheduledAt };
+  const audit = latestActionOf(row);
+  if (row.sessions.length === 0) return audit;
+  const sorted = [...row.sessions].sort((a, b) => {
+    const at = new Date(a.createdAt || a.scheduledAt).getTime();
+    const bt = new Date(b.createdAt || b.scheduledAt).getTime();
+    if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+    if (Number.isNaN(at)) return 1;
+    if (Number.isNaN(bt)) return -1;
+    return bt - at;
+  });
+  const newest = sorted[0];
+  let label: string;
+  let time: string;
+  if (newest.status === "completed" && row.followUpDate) {
+    label = "Marked for follow-up";
+    time = row.followUpDate;
+  } else if (newest.status === "completed") {
+    label = "Session done";
+    time = newest.createdAt || newest.scheduledAt;
+  } else if (newest.status === "cancelled") {
+    label = "Session cancelled";
+    time = newest.createdAt || newest.scheduledAt;
+  } else {
+    label = "Session booked";
+    time = newest.createdAt || newest.scheduledAt;
   }
-  return latestActionOf(row);
+  const sessionMs = new Date(time).getTime();
+  const auditMs = row.lastActionAt ? new Date(row.lastActionAt).getTime() : NaN;
+  if (Number.isFinite(auditMs) && (!Number.isFinite(sessionMs) || auditMs > sessionMs)) {
+    return audit;
+  }
+  return { label, time };
 }
 
 /* Latest intervention activity: newest session first, else the moment the
@@ -151,6 +163,9 @@ function interventionLatestAction(item: AtRiskStudentItem): { label: string; tim
     return { label: "Session booked", time: newest.createdAt || newest.scheduledAt };
   }
   if (iv?.createdAt) return { label: "Intervention opened", time: iv.createdAt };
+  // Flagged by the engine but no follow-up opened yet — reads as freshly
+  // detected until guidance books a counseling session.
+  if (!iv) return { label: "Just detected", time: "" };
   return { label: "Intervention recorded", time: "" };
 }
 
@@ -207,8 +222,9 @@ function referralStatusVariant(
 
 function RiskBadge({ level }: { level: GuidanceRiskLevel | undefined }) {
   if (!level) return <span className={styles.noRisk}>—</span>;
+  // High solid red, Moderate amber — same RAG convention as every desk.
   const variant =
-    level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
+    level === "High" ? "red" : level === "Moderate" ? "amber" : "outline";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
@@ -336,14 +352,15 @@ export function GuidanceAlertsTable({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
   const typeLabel = TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "All types";
   const hasActiveFilters = query.trim() !== "" || type !== "";
   const hasRows = rows.length > 0;
 
   return (
-    <section aria-label="Referred cases">
+    <section aria-label="Referred cases" className={styles.panel}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
       <div className={styles.header}>
         <div className={styles.headerText}>
           <h2 className={styles.sectionTitle}>Referred cases</h2>
@@ -421,8 +438,6 @@ export function GuidanceAlertsTable({
                   <TableHead>Case status</TableHead>
                   <TableHead>Risk</TableHead>
                   <TableHead>Latest action</TableHead>
-                  <TableHead>Time elapsed</TableHead>
-                  <TableHead>Date referred</TableHead>
                   <TableHead>
                     <span className={styles.srOnly}>Row actions</span>
                   </TableHead>
@@ -443,7 +458,7 @@ export function GuidanceAlertsTable({
         )}
         <div className={styles.pager}>
           <p className={styles.range}>
-            Showing {start}–{end} of {total}
+            {total} case{total === 1 ? "" : "s"}
           </p>
           <div className={styles.pagerButtons}>
             <Button
@@ -454,9 +469,6 @@ export function GuidanceAlertsTable({
             >
               Previous
             </Button>
-            <span className={styles.pageLabel} aria-live="polite">
-              Page {safePage} of {totalPages}
-            </span>
             <Button
               size="xs"
               variant="outline"
@@ -487,13 +499,31 @@ function CaseTableRow({
   if (row.kind === "intervention") {
     const item = row.item;
     const iv = item.intervention;
+    // Detection moment (engine snapshot) — falls back to the follow-up
+    // opened date for legacy rows. A row with no timestamp evidence at all
+    // was flagged live by this very computation, so it reads "just now"
+    // instead of a blank dash. Elapsed ticks from detection to now.
+    const detectedRaw = item.detectedAt || iv?.createdAt || "";
+    const detectedText = detectedRaw ? formatActionTime(detectedRaw) : "Just now";
+    const detectedMs = detectedRaw ? (msSince(detectedRaw, now) ?? 0) : 0;
     const outcome = iv?.outcomeStatus ?? "ongoing";
-    const statusVar =
-      outcome === "ongoing" ? "default" : outcome === "resolved" ? "success" : "destructive";
-    const statusText =
-      outcome === "ongoing" ? "Ongoing" : outcome === "resolved" ? "Resolved" : "Unresolved";
+    // No follow-up opened yet — freshly detected, needs guidance action.
+    // Once sessions are booked the session labels take over above.
+    const statusVar = !iv
+      ? "amber"
+      : outcome === "ongoing"
+        ? "default"
+        : outcome === "resolved"
+          ? "success"
+          : "destructive";
+    const statusText = !iv
+      ? "Just detected"
+      : outcome === "ongoing"
+        ? "Ongoing"
+        : outcome === "resolved"
+          ? "Resolved"
+          : "Unresolved";
     const doneCount = iv?.completedSessions ?? 0;
-    const dateText = iv?.createdAt ? formatActionTime(iv.createdAt) : "—";
     return (
       <TableRow>
         <TableCell>
@@ -525,15 +555,14 @@ function CaseTableRow({
           </p>
         </TableCell>
         <TableCell>
-          <p className={styles.cellTime} aria-live="off">
-            {actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
-          </p>
-        </TableCell>
-        <TableCell>
-          <p className={styles.cellMain}>{dateText}</p>
-        </TableCell>
-        <TableCell>
-          <GuidanceInterventionRowActions item={item} />
+          <GuidanceInterventionRowActions
+            item={item}
+            elapsedText={
+              detectedMs < 60_000 ? "just now" : `${formatElapsedShort(detectedMs)} ago`
+            }
+            referredLabel="Date detected"
+            referredText={detectedText}
+          />
         </TableCell>
       </TableRow>
     );
@@ -542,7 +571,7 @@ function CaseTableRow({
   const r = row.referral;
   const doneCount = r.sessions.filter((s) => s.status === "completed").length;
   const allDone = doneCount > 0 && !r.sessions.some((s) => s.status === "scheduled");
-  const statusText = allDone ? "Done" : rowStatusLabel(r.type, r.status);
+  const statusText = allDone ? "Done" : rowStatusLabel(r.type, r.status, r);
   const statusVar = allDone ? "success" : referralStatusVariant(r.type, r.status);
   return (
     <TableRow>
@@ -578,16 +607,12 @@ function CaseTableRow({
             <span>{latest.label}</span>
           </p>
         </TableCell>
-      <TableCell>
-        <p className={styles.cellTime} aria-live="off">
-          {actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
-        </p>
-      </TableCell>
-      <TableCell>
-        <p className={styles.cellMain}>{formatActionTime(r.date)}</p>
-      </TableCell>
         <TableCell>
-          <GuidanceAlertsRowActions row={r} />
+          <GuidanceAlertsRowActions
+            row={r}
+            elapsedText={actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
+            referredText={formatActionTime(r.date)}
+          />
         </TableCell>
     </TableRow>
   );

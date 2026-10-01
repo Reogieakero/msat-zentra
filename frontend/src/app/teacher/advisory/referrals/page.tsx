@@ -1,53 +1,118 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  flexRender,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+} from "@tanstack/react-table";
+import { MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { sileo } from "@/components/ui/sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ReferralsSidebar, type TrackFilter } from "./components/ReferralsSidebar";
-import { ReferralCanvas } from "./components/ReferralCanvas";
-import { ReferralComposer } from "./components/ReferralComposer";
+import { markSelfNotified } from "@/lib/realtime/teacherChannel";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
+import { ReferStudentCard } from "./components/ReferStudentCard";
 import {
   ReferralCancelDialog,
-  ReferralDeleteDialog,
   type ReferralActionTarget,
 } from "./components/ReferralActionDialogs";
-import { readLastViewedReferralId, writeLastViewedReferralId } from "./last-viewed";
-import styles from "./components/referrals.module.css";
+import {
+  ReferralTrackDialog,
+  type TrackableReferral,
+} from "./components/ReferralTrackDialog";
+import { useReopenReferral } from "./components/use-reopen-referral";
+import { typeForDesk } from "./components/referral-types";
+import refStyles from "./components/referrals.module.css";
 
-interface ReferralData {
+interface ReferralRow {
   id: string;
   studentName: string;
   lrn: string;
-  section: string;
-  referredToRole: string;
   targetRole: string;
-  referredBy: string;
-  reason: string;
-  notes?: string | null;
-  status: "pending" | "in_progress" | "resolved" | "dismissed" | "escalated" | "info_requested" | "follow_up";
+  status:
+    | "pending"
+    | "in_progress"
+    | "resolved"
+    | "dismissed"
+    | "escalated"
+    | "info_requested"
+    | "follow_up";
   referredAt: string;
-  resolvedAt: string | null;
-  anecdotalId: string;
-  observationDate: string;
-  anecdotalExcerpt: string;
-  category: string;
+  reason: string;
+  timeline: { label: string; detail?: string | null; date: string }[];
   track: "adm" | "general";
-  admReceiver: string | null;
-  hasParentMeeting: boolean;
-  meetingAttended: boolean | null;
-  hasHomeVisit: boolean;
-  admStage: string | null;
-  admStageLabel: string | null;
-  admEligibility: string | null;
-  admApproved: boolean;
-  admApprovedAt: string | null;
-  timeline: { label: string; date: string }[];
+  consultReviewer?: string | null;
+  admStage?: string | null;
+  observationDate?: string | null;
+  meetingAttended?: boolean | null;
+  lastMeetingAt?: string | null;
+  hasHomeVisit?: boolean;
+  admApproved?: boolean;
+  admApprovedAt?: string | null;
+  modulesSubmitted?: number;
+  modulesTotal?: number;
+  lastModuleAt?: string | null;
+  devicesReturned?: number;
+  certificationAt?: string | null;
+  resolvedAt?: string | null;
 }
 
-function useTeacherReferrals() {
-  return useQuery<ReferralData[]>({
+const STATUS_BADGE: Record<ReferralRow["status"], { variant: "amber" | "blue" | "green" | "red" | "outline"; label: string }> = {
+  pending: { variant: "amber", label: "Pending" },
+  in_progress: { variant: "blue", label: "In progress" },
+  info_requested: { variant: "blue", label: "Info requested" },
+  follow_up: { variant: "amber", label: "Follow up" },
+  resolved: { variant: "green", label: "Resolved" },
+  dismissed: { variant: "outline", label: "Dismissed" },
+  escalated: { variant: "red", label: "Escalated" },
+};
+
+function humanize(value: string): string {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/* Teacher referrals as a data table — same layout as the overview At-Risk
+   Advisees table: section card, title + count header with the filter on the
+   right, fixed table, count + pager footer. Main panel holds the list;
+   the right rail holds the quick-refer card. */
+/* Resolved / dismissed referrals can no longer be withdrawn (mirrors the
+   backend cancel guards). */
+function isCancellable(status: ReferralRow["status"]): boolean {
+  return status !== "resolved" && status !== "dismissed";
+}
+
+export default function TeacherAdvisoryReferralsPage() {
+  const queryClient = useQueryClient();
+  const referralsQuery = useQuery<ReferralRow[]>({
     queryKey: ["myReferrals"],
     queryFn: async () => {
       const { data } = await apiClient.get("/api/referrals/mine");
@@ -55,190 +120,40 @@ function useTeacherReferrals() {
     },
     staleTime: 1000 * 60 * 5,
   });
-}
 
-function useReferableAnecdotal() {
-  return useQuery({
-    queryKey: ["referableAnecdotal"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/api/anecdotal/referable");
-      return data;
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-}
+  const [trackTarget, setTrackTarget] = React.useState<TrackableReferral | null>(null);
+  const { reopen: reopenReferral, isPending: reopenPending } = useReopenReferral();
+  const [cancelTarget, setCancelTarget] = React.useState<ReferralActionTarget | null>(null);
+  const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelPending, setCancelPending] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
 
-export default function TeacherAdvisoryReferralsPage() {
-  const queryClient = useQueryClient();
-  const { data: referralsDataRaw, isPending: referralsPending } = useTeacherReferrals();
-  const { data: referablesDataRaw, isPending: referablesPending } = useReferableAnecdotal();
-  const referralsData = useMemo(() => referralsDataRaw ?? [], [referralsDataRaw]);
-  const referablesData = useMemo(() => referablesDataRaw ?? [], [referablesDataRaw]);
-  const isLoading = referralsPending;
-  const isComposerLoading = referablesPending;
-  const [query, setQuery] = useState("");
-  const [trackFilter, setTrackFilter] = useState<TrackFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(() => readLastViewedReferralId());
-  const [creating, setCreating] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<ReferralActionTarget | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ReferralActionTarget | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
-  const [cancelPending, setCancelPending] = useState(false);
-  const [deletePending, setDeletePending] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (selectedId) writeLastViewedReferralId(selectedId);
-  }, [selectedId]);
-
-  const needle = query.trim().toLowerCase();  const visible = useMemo(
-    () =>
-      referralsData.filter((r) => {
-        if (trackFilter === "adm" && r.track !== "adm") return false;
-        if (trackFilter === "general" && r.track === "adm") return false;
-        if (!needle) return true;
-        return (
-          (r.studentName ?? "").toLowerCase().includes(needle) ||
-          (r.lrn ?? "").toLowerCase().includes(needle) ||
-          (r.targetRole ?? "").toLowerCase().includes(needle)
-        );
-      }),
-    [referralsData, needle, trackFilter]
-  );
-
-  // LRNs with an open ADM case — the composer disables the ADM track for
-  // these students (one open ADM referral per student).
-  const admActiveLrns = useMemo(
-    () =>
-      referralsData
-        .filter((r) => r.track === "adm" && r.status !== "dismissed" && r.status !== "resolved")
-        .map((r) => r.lrn),
-    [referralsData]
-  );
-
-  // If the just-submitted id is not in the list yet (refetch in flight),
-  // fall back to the newest loaded case so the pipeline never blanks.
-  const onCanvas = selectedId
-    ? (referralsData.find((r) => r.id === selectedId) ?? referralsData[0] ?? null)
-    : (referralsData[0] ?? null);
-  // Never blank the canvas while matches exist: if the selected case is
-  // filtered out by search, fall back to the first visible match so the
-  // workflow tracking cards always display.
-  const canvasVisible =
-    onCanvas && visible.some((r) => r.id === onCanvas.id)
-      ? onCanvas
-      : (visible[0] ?? null);
-
-  if (isLoading) {
-    return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading referrals">
-        <div className={styles.layout}>
-          <ReferralsSidebar
-            referrals={[]}
-            selectedId={null}
-            onSelect={handleSelect}
-            onNew={handleNewReferral}
-            query={query}
-            onQueryChange={setQuery}
-            trackFilter={trackFilter}
-            onTrackFilterChange={setTrackFilter}
-            loading
-          />
-          <div className={styles.body}>
-            <div className={styles.workspace}>
-              <div className={styles.skelCanvas} aria-busy="true" aria-label="Loading referable records">
-                <div className={styles.skelCanvasHead}>
-                  <div className={styles.skelCanvasId}>
-                    <Skeleton className={styles.skelCanvasTitle} />
-                    <Skeleton className={styles.skelCanvasSub} />
-                  </div>
-                  <Skeleton className={styles.skelCanvasBadge} />
-                </div>
-                <div className={styles.skelNodes}>
-                  <Skeleton className={styles.skelNode} />
-                  <Skeleton className={styles.skelNode} />
-                  <Skeleton className={styles.skelNode} />
-                  <Skeleton className={styles.skelNode} />
-                </div>
-                <div className={styles.skelCaseFile}>
-                  <Skeleton className={styles.skelCaseCellWide} />
-                  <Skeleton className={styles.skelCaseCellNarrow} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  function handleSelect(id: string) {
-    setSelectedId(id);
-  }
-
-  function handleNewReferral() {
-    setCreating(true);
-  }
-
-  async function handleCreateReferral(draft: {
-    anecdotalId: string;
-    track: string;
-    admReceiver: string | null;
-    targetRole: string;
-    reason: string;
-  }): Promise<{ id: string }> {
-    const { data } = await apiClient.post(`/api/anecdotal/${draft.anecdotalId}/refer`, {
-      referredToRole: draft.targetRole,
-      reason: draft.reason,
-      // ADM track: persist the picked consultation reviewer (nurse |
-      // guidance_counselor | lrpc) so only the selected role acts on it.
-      ...(draft.track === "adm" && draft.admReceiver
-        ? { consultReviewer: draft.admReceiver }
-        : {}),
-    });
-    return { id: data.id };
-  }
-
-  function handleCreated(created: { id: string }): void {
-    queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
-    queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
-    setSelectedId(created.id);
-    setCreating(false);
-    sileo.success({ title: "Referral submitted", description: "The receiving desk has been notified." });
-  }
-
-  // Backend errors arrive as { error: { code, message } } — surface the
-  // server's message instead of a generic failure notice.
-  function apiErrorMessage(err: unknown, fallback: string): string {
-    if (typeof err === "object" && err !== null && "response" in err) {
-      const message = (err as { response?: { data?: { error?: { message?: string } } } })
-        .response?.data?.error?.message;
-      if (message) return message;
-    }
-    return fallback;
-  }
-
-  function requestCancel(referral: { id: string; studentName: string }): void {
-    setCancelTarget({ id: referral.id, studentName: referral.studentName });
+  const requestCancel = React.useCallback((row: ReferralRow) => {
+    setCancelTarget({ id: row.id, studentName: row.studentName });
     setCancelReason("");
     setActionError(null);
-  }
+  }, []);
 
   async function confirmCancel(): Promise<void> {
     if (!cancelTarget || cancelReason.trim() === "" || cancelPending) return;
     setCancelPending(true);
     setActionError(null);
     try {
-      await apiClient.post(`/api/referrals/${cancelTarget.id}/cancel`, {
+      const { data } = await apiClient.post<{ id: string }>(`/api/referrals/${cancelTarget.id}/cancel`, {
         reason: cancelReason.trim(),
       });
+      // Suppress the channel echo toast for our own cancel (the success
+      // toast below already fired) — the bell row still lands for badge.
+      if (data?.id) markSelfNotified(data.id);
       await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
       await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
       setCancelTarget(null);
       setCancelReason("");
       sileo.success({ title: "Referral cancelled", description: "The case was withdrawn." });
     } catch (err) {
-      const message = apiErrorMessage(err, "Could not cancel this referral.");
+      const message =
+        (err as { response?: { data?: { error?: { message?: string } } } })
+          ?.response?.data?.error?.message ?? "Could not cancel this referral.";
       setActionError(message);
       sileo.error({ title: "Could not cancel referral", description: message });
     } finally {
@@ -246,113 +161,325 @@ export default function TeacherAdvisoryReferralsPage() {
     }
   }
 
-  function requestDelete(referral: { id: string; studentName: string }): void {
-    setDeleteTarget({ id: referral.id, studentName: referral.studentName });
-    setActionError(null);
-  }
+  const referrals = React.useMemo(
+    () => referralsQuery.data ?? [],
+    [referralsQuery.data],
+  );
 
-  async function confirmDelete(): Promise<void> {
-    if (!deleteTarget || deletePending) return;
-    setDeletePending(true);
-    setActionError(null);
-    try {
-      await apiClient.delete(`/api/referrals/${deleteTarget.id}`);
-      const deletedId = deleteTarget.id;
-      await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
-      await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
-      // Move selection off the deleted row so the canvas never shows it.
-      setSelectedId((prev) => {
-        if (prev !== deletedId) return prev;
-        const next = visible.find((r) => r.id !== deletedId) ?? null;
-        return next ? next.id : null;
-      });
-      setDeleteTarget(null);
-      sileo.success({ title: "Referral deleted", description: "The case was removed from your list." });
-    } catch (err) {
-      const message = apiErrorMessage(err, "Could not delete this referral.");
-      setActionError(message);
-      sileo.error({ title: "Could not delete referral", description: message });
-    } finally {
-      setDeletePending(false);
-    }
-  }
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
-  return (
-    <section className={styles.page}>
-      <div className={styles.layout}>
-        <ReferralsSidebar
-          referrals={referralsData}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onNew={handleNewReferral}
-          query={query}
-          onQueryChange={setQuery}
-          trackFilter={trackFilter}
-          onTrackFilterChange={setTrackFilter}
-        />
-        <div className={styles.body}>
-          {creating ? (
-            <div className={styles.workspace}>
-              {isComposerLoading ? (
-                <div className={styles.skelCanvas} aria-busy="true" aria-label="Loading referable records">
-                  <div className={styles.skelCanvasHead}>
-                    <div className={styles.skelCanvasId}>
-                      <Skeleton className={styles.skelCanvasTitle} />
-                      <Skeleton className={styles.skelCanvasSub} />
-                    </div>
-                    <Skeleton className={styles.skelCanvasBadge} />
-                  </div>
-                  <div className={styles.skelNodes}>
-                    <Skeleton className={styles.skelNode} />
-                    <Skeleton className={styles.skelNode} />
-                    <Skeleton className={styles.skelNode} />
-                    <Skeleton className={styles.skelNode} />
-                  </div>
-                  <div className={styles.skelCaseFile}>
-                    <Skeleton className={styles.skelCaseCellWide} />
-                    <Skeleton className={styles.skelCaseCellNarrow} />
-                  </div>
-                </div>
-              ) : (
-                <ReferralComposer
-                  referables={referablesData}
-                  admActiveLrns={admActiveLrns}
-                  onCancel={() => setCreating(false)}
-                  onCreate={handleCreateReferral}
-                  onCreated={handleCreated}
-                />
-              )}
+  const columns = React.useMemo<ColumnDef<ReferralRow>[]>(
+    () => [
+      {
+        id: "name",
+        accessorFn: (row) => `${row.studentName} ${row.lrn} ${row.targetRole}`,
+        header: "Student",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <p className={styles.cellMain}>{row.original.studentName}</p>
+            <p className={styles.cellSub}>{row.original.lrn}</p>
+          </div>
+        ),
+      },
+      {
+        id: "status",
+        accessorFn: (row) => row.status,
+        header: "Status",
+        size: 130,
+        minSize: 130,
+        maxSize: 130,
+        cell: ({ row }) => {
+          const meta = STATUS_BADGE[row.original.status];
+          return <Badge variant={meta.variant}>{meta.label}</Badge>;
+        },
+      },
+      {
+        id: "type",
+        accessorFn: (row) => typeForDesk(row.targetRole).label,
+        header: "Type",
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
+        cell: ({ row }) => {
+          const meta = typeForDesk(row.original.targetRole);
+          return <Badge variant={meta.badgeVariant}>{meta.label}</Badge>;
+        },
+      },
+      {
+        id: "targetRole",
+        accessorFn: (row) => row.targetRole,
+        header: "Referred to",
+        size: 170,
+        minSize: 170,
+        maxSize: 170,
+        cell: ({ row }) => (
+          <Badge variant="outline">{humanize(row.original.targetRole)}</Badge>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-end">Actions</div>,
+        size: 60,
+        minSize: 60,
+        maxSize: 60,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const r = row.original;
+          const dismissed = r.status === "dismissed";
+          const cancellable = isCancellable(r.status);
+          return (
+            <div className="text-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-8" aria-label={`Actions for ${r.studentName}`}>
+                    <MoreHorizontal size={16} strokeWidth={1.8} aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-[14px]">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      const meta = STATUS_BADGE[r.status];
+                      const type = typeForDesk(r.targetRole);
+                      setTrackTarget({
+                        id: r.id,
+                        studentName: r.studentName,
+                        lrn: r.lrn,
+                        targetRole: r.targetRole,
+                        track: r.targetRole === "adm_coordinator" ? "adm" : "general",
+                        typeLabel: type.label,
+                        typeVariant: type.badgeVariant,
+                        status: r.status,
+                        statusLabel: meta.label,
+                        statusVariant: meta.variant,
+                        referredAt: r.referredAt,
+                        reason: r.reason,
+                        timeline: r.timeline ?? [],
+                        consultReviewer: r.consultReviewer ?? null,
+                        admStage: r.admStage ?? null,
+                        observationDate: r.observationDate ?? null,
+                        meetingAttended: r.meetingAttended ?? null,
+                        lastMeetingAt: r.lastMeetingAt ?? null,
+                        hasHomeVisit: r.hasHomeVisit ?? false,
+                        admApproved: r.admApproved ?? false,
+                        admApprovedAt: r.admApprovedAt ?? null,
+                        modulesSubmitted: r.modulesSubmitted ?? 0,
+                        modulesTotal: r.modulesTotal ?? 0,
+                        lastModuleAt: r.lastModuleAt ?? null,
+                        devicesReturned: r.devicesReturned ?? 0,
+                        certificationAt: r.certificationAt ?? null,
+                        resolvedAt: r.resolvedAt ?? null,
+                      });
+                    }}
+                  >
+                    <Route size={16} strokeWidth={1.8} aria-hidden />
+                    Track
+                  </DropdownMenuItem>
+                  {dismissed ? (
+                    <DropdownMenuItem
+                      disabled={reopenPending}
+                      onSelect={() => void reopenReferral(r)}
+                    >
+                      <RotateCcw size={16} strokeWidth={1.8} aria-hidden />
+                      {reopenPending ? "Re-submitting…" : "Refer again"}
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      disabled={!cancellable}
+                      onSelect={() => requestCancel(r)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                    <X size={16} strokeWidth={1.8} aria-hidden />
+                    {cancellable ? "Cancel" : "Cancel (closed)"}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          ) : referralsData.length === 0 ? (
-            <div className={styles.empty}>
-              <p className={styles.emptyTitle}>No referrals yet</p>
-              <p className={styles.emptyBody}>
-                Refer from one of your anecdotal records to open your first case.
-              </p>
-              <button type="button" className={styles.emptyAction} onClick={() => setCreating(true)}>
-                New referral
-              </button>
-            </div>
-          ) : visible.length === 0 ? (
-            <div className={styles.empty}>
-              <p className={styles.emptyTitle}>No matches</p>
-              <p className={styles.emptyBody}>
-                {needle
-                  ? `No referrals match "${query.trim()}".`
-                  : "No referrals match the selected filters."}
-              </p>
-            </div>
-          ) : (
-            <div className={styles.workspace}>
-              <ReferralCanvas
-                referral={canvasVisible}
-                onCancelRequest={requestCancel}
-                onDeleteRequest={requestDelete}
-              />
-            </div>
-          )}
+          );
+        },
+      },
+    ],
+    [requestCancel],
+  );
+
+  const table = useReactTable({
+    data: referrals,
+    columns,
+    getRowId: (row) => row.id,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: 15 } },
+    state: { sorting, columnFilters },
+  });
+
+  /* Main panel: referrals table (overview layout). Right rail: quick-refer
+     card. The rail stays mounted across loading / error / empty states. */
+  const body = referralsQuery.isPending ? (
+    <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading referrals">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="h-10 rounded-md bg-muted" />
+      ))}
+    </div>
+  ) : referralsQuery.isError ? (
+    <div className={assign.card}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+        <p role="alert" className="font-medium">
+          Could not load your referrals.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void referralsQuery.refetch()}
+          disabled={referralsQuery.isFetching}
+        >
+          {referralsQuery.isFetching ? "Retrying…" : "Try again"}
+        </Button>
+      </div>
+    </div>
+  ) : referrals.length === 0 ? (
+    <div className={assign.card}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative">
+        <h2 className={styles.sectionTitle}>Referrals</h2>
+        <p className={styles.sectionDesc}>
+          Your submitted referrals — 0 referrals.
+        </p>
+      </div>
+      <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+        <span
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+          aria-hidden="true"
+        >
+          <Send size={24} className="text-muted-foreground" />
+        </span>
+        <p className="font-medium">No referrals yet</p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Referrals you submit will appear here once created.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div className={assign.card}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className={styles.sectionTitle}>Referrals</h2>
+          <p className={styles.sectionDesc}>
+            Your submitted referrals — {referrals.length} referral
+            {referrals.length === 1 ? "" : "s"}.
+          </p>
+        </div>
+        <InputGroup className="max-w-40 shrink-0">
+          <InputGroupInput
+            placeholder="Filter referrals..."
+            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn("name")?.setFilterValue(event.target.value)
+            }
+            aria-label="Filter referrals"
+          />
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+          <div className={`relative overflow-x-auto rounded-md border ${refStyles.noScrollbar}`}>
+        <Table className="w-full table-fixed">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.getSize() }}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      style={{ width: cell.column.getSize() }}
+                      className="truncate"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No referrals match your search.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="relative flex items-center justify-end space-x-2">
+        <div className="text-muted-foreground flex-1 text-sm">
+          {table.getFilteredRowModel().rows.length} referral
+          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+        </div>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <section className={refStyles.page}>
+      <div className={refStyles.layout}>
+        <div className={refStyles.body}>{body}</div>
+        <aside className={refStyles.sideList} aria-label="Refer a student">
+          <ReferStudentCard />
+        </aside>
+      </div>
+
+      <ReferralTrackDialog referral={trackTarget} onClose={() => setTrackTarget(null)} />
 
       <ReferralCancelDialog
         target={cancelTarget}
@@ -367,18 +494,6 @@ export default function TeacherAdvisoryReferralsPage() {
           }
         }}
         onConfirm={confirmCancel}
-      />
-      <ReferralDeleteDialog
-        target={deleteTarget}
-        pending={deletePending}
-        error={actionError}
-        onClose={() => {
-          if (!deletePending) {
-            setDeleteTarget(null);
-            setActionError(null);
-          }
-        }}
-        onConfirm={confirmDelete}
       />
     </section>
   );

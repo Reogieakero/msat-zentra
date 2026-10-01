@@ -291,7 +291,7 @@ export default function TeacherSchedulePage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmClearOpen(false)}>
+              <Button variant="destructive" onClick={() => setConfirmClearOpen(false)}>
                 Cancel
               </Button>
               <Button

@@ -34,6 +34,8 @@ const TEACHER_KEYS = [
   ["advisory-students"],
   ["attendance-section-roster"],
   ["teacher-my-slots"],
+  // Gradebook workspace — saved scores repaint live on every related event.
+  ["teacher-grading-class"],
 ] as const;
 
 interface TeacherNotification {
@@ -54,6 +56,16 @@ interface TeacherNotification {
 // principal verdicts surface within seconds.
 const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
+
+/** Self-save suppression: saves this session already confirmed with a
+ *  direct toast skip the realtime duplicate (data still invalidates, the
+ *  bell row still lands). Keyed by notification sourceId. */
+const selfSaved = new Map<string, number>();
+const SELF_SUPPRESS_MS = 30_000;
+
+export function markSelfNotified(sourceId: string) {
+  selfSaved.set(sourceId, Date.now());
+}
 
 /** Current user id from the stored access JWT (backend signs `sub`). */
 function currentUserId(): string | null {
@@ -80,8 +92,70 @@ function toastTitleFor(n: TeacherNotification): string {
       return "Meeting outcome recorded";
     return "Parent meeting booked";
   }
-  if (n.type === "referral_status_change") return "Referral update";
+  // Referral toasts match backend `message` text — every referral fanout
+  // shares type `referral_status_change` (see notify.ts TYPE_MAP), so the
+  // title must be derived from the message, never the type. Strings below
+  // mirror referrals.routes.ts adviser fanouts verbatim.
+  if (n.sourceTable === "referrals" || n.type === "referral_status_change") {
+    const msg = n.message ?? "";
+    if (/clinic accepted your referral/i.test(msg)) return "Clinic accepted your referral";
+    if (/clinic booked a session/i.test(msg)) return "Clinic session booked";
+    if (/clinic completed a session/i.test(msg)) return "Clinic session completed";
+    if (/clinic rescheduled a session/i.test(msg)) return "Clinic session rescheduled";
+    if (/clinic cancelled a session/i.test(msg)) return "Clinic session cancelled";
+    if (/clinic resolved your referral/i.test(msg)) return "Clinic resolved your referral";
+    if (/clinic requested more info/i.test(msg)) return "Clinic requested more info";
+    if (/clinic set a follow-up/i.test(msg)) return "Clinic follow-up set";
+    if (/clinic completed the referral form/i.test(msg)) return "Clinic completed referral form";
+    if (/clinic started handling/i.test(msg)) return "Clinic started handling";
+    if (/was closed/i.test(msg)) return "Clinic referral closed";
+    if (/escalated to the clinic/i.test(msg)) return "Referral escalated to clinic";
+    if (/escalated to ADM/i.test(msg)) return "Referral escalated to ADM";
+    if (/was escalated/i.test(msg)) return "Referral escalated";
+    if (/reassigned to the clinic/i.test(msg)) return "Referral reassigned to clinic";
+    if (/was reassigned/i.test(msg)) return "Referral reassigned";
+    if (/follow-up was set/i.test(msg)) return "Follow-up set";
+    if (/was dismissed/i.test(msg)) return "Referral dismissed";
+    if (/more info was requested/i.test(msg)) return "Info requested";
+    if (/is now in progress/i.test(msg)) return "Referral in progress";
+    if (/was marked resolved/i.test(msg)) return "Referral resolved";
+    if (/pending review again/i.test(msg)) return "Referral pending";
+    if (/guidance resolved your referral/i.test(msg)) return "Guidance resolved";
+    if (/adm consultation endorsed/i.test(msg)) return "Sent to ADM coordinator";
+    if (/forwarded to the coordinator/i.test(msg)) return "Sent to ADM coordinator";
+    if (/not endorsed — case closed/i.test(msg)) return "ADM referral closed";
+    if (/guidance accepted your referral/i.test(msg)) return "Guidance accepted your referral";
+    if (/guidance booked a session/i.test(msg)) return "Guidance session booked";
+    if (/guidance completed a session/i.test(msg)) return "Guidance session completed";
+    if (/guidance rescheduled/i.test(msg)) return "Guidance session rescheduled";
+    if (/guidance cancelled/i.test(msg)) return "Guidance session cancelled";
+    if (/guidance resolved your referral/i.test(msg)) return "Guidance resolved your referral";
+    if (/sent to ADM/i.test(msg)) return "Sent to ADM";
+    if (/sent to the clinic/i.test(msg)) return "Sent to clinic";
+    if (/re-submitted/i.test(msg)) return "Referral re-submitted";
+    if (/withdrew a referral|you withdrew/i.test(msg)) return "Referral withdrawn";
+    return "Referral update";
+  }
   if (n.type === "new_followup") return "New follow-up";
+  // Engine detection rows for the section adviser — same row lands in the
+  // bell inbox + badge via the poll below (never toast-only).
+  if (n.type === "intervention_detected") {
+    if (/flagged Moderate risk/i.test(n.message ?? "")) return "Advisee flagged Moderate risk";
+    return "Advisee flagged High risk";
+  }
+  // Intervention session events fanned out to the case owner
+  // (interventions.routes.ts session endpoints). Matched before any
+  // generic "guidance …" patterns so they never read as referral sessions.
+  if (n.sourceTable === "interventions") {
+    const msg = n.message ?? "";
+    if (/booked an intervention session/i.test(msg)) return "Intervention session booked";
+    if (/completed an intervention session/i.test(msg)) return "Intervention session completed";
+    if (/rescheduled an intervention session/i.test(msg)) return "Intervention session rescheduled";
+    if (/cancelled an intervention session/i.test(msg)) return "Intervention session cancelled";
+    if (/opened a follow-up for/i.test(msg)) return "Follow-up opened";
+    if (/recorded an outcome for/i.test(msg)) return "Follow-up outcome recorded";
+    if (/the intervention plan for/i.test(msg)) return "Intervention plan reviewed";
+  }
   // Backend derives these types from sourceTable+action (see notify.ts
   // TYPE_MAP): section_timetable_entries:approve → schedule_approved, etc.
   if (n.sourceTable === "section_timetable_entries") {
@@ -98,6 +172,9 @@ function toastTitleFor(n: TeacherNotification): string {
   if (n.sourceTable === "attendance_records") {
     if (n.type === "attendance_submitted") return "Attendance submitted";
     return "Attendance update";
+  }
+  if (n.sourceTable === "student_grades") {
+    return "Scores saved";
   }
   return "New notification";
 }
@@ -132,10 +209,27 @@ export function useTeacherRealtime(enabled = true) {
     function notify(row: TeacherNotification) {
       if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
       seenIds.current.add(row.id);
-      toast.info({
-        title: toastTitleFor(row),
-        description: row.message,
-      });
+      // Saves this session already confirmed with a direct toast (grade
+      // saves, own referral submits) skip the realtime echo toast — the
+      // bell row still lands and lists still invalidate. Scoped to the
+      // filing confirmation itself: later clinic/nurse updates on the SAME
+      // referral id must still toast (different message), otherwise a fast
+      // nurse accept within 30s of submit would be swallowed.
+      const isOwnFilingEcho =
+        /your referral to the .* was submitted|your cancelled referral .*was re-submitted|you withdrew a referral/i.test(
+          row.message ?? "",
+        );
+      const selfConfirmed =
+        (row.sourceTable === "student_grades" ||
+          (row.sourceTable === "referrals" && isOwnFilingEcho)) &&
+        !!row.sourceId &&
+        Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
+      if (!selfConfirmed) {
+        toast.info({
+          title: toastTitleFor(row),
+          description: row.message,
+        });
+      }
       void invalidate();
     }
 

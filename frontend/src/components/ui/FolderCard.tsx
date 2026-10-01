@@ -7,7 +7,19 @@ export interface FolderFile {
   tag: string;
   tone?: 1 | 2 | 3 | 4 | 5;
   icon?: "image" | "video" | "code" | "doc" | "chart";
+  /** Session-type color coding (guidance documentation slips). */
+  sessionKind?: "individual" | "parent_conference" | "group" | "home_visit";
 }
+
+const SESSION_KIND_CLASS: Record<
+  NonNullable<FolderFile["sessionKind"]>,
+  string
+> = {
+  individual: "sessIndividual",
+  parent_conference: "sessParent",
+  group: "sessGroup",
+  home_visit: "sessHome",
+};
 
 const FILE_ICONS: Record<NonNullable<FolderFile["icon"]>, React.ComponentType<{ className?: string }>> = {
   image: FileImage,
@@ -25,9 +37,12 @@ interface FolderCardProps {
   cornerTag?: string;
   /** Optional folder body color (e.g. per-category). Defaults to gray. */
   folderColor?: string;
+  /** Optional per-slip click (e.g. open a gallery). Slips render as plain
+      divs when omitted; as buttons (with stopPropagation) when provided. */
+  onFileClick?: (index: number) => void;
 }
 
-export function FolderCard({ label, sublabel, files, cornerTag, folderColor }: FolderCardProps) {
+export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onFileClick }: FolderCardProps) {
   const count = files.length;
 
   return (
@@ -51,12 +66,33 @@ export function FolderCard({ label, sublabel, files, cornerTag, folderColor }: F
           {files.slice(0, 5).map((file, i) => {
             const Icon = FILE_ICONS[file.icon ?? "doc"];
             const tone = file.tone ?? (((i % 5) + 1) as FolderFile["tone"]);
-            return (
-              <div key={i} className={`${styles.file} ${styles[`tone${tone}`]}`}>
+            const sessionClass = file.sessionKind
+              ? ` ${styles[SESSION_KIND_CLASS[file.sessionKind]]}`
+              : "";
+            const inner = (
+              <>
                 <div className={styles.shine} aria-hidden />
                 <Icon className={styles.fileIcon} aria-hidden />
                 <div className={styles.fileText}>{file.name}</div>
                 <div className={styles.fileTag}>{file.tag}</div>
+              </>
+            );
+            return onFileClick ? (
+              <button
+                key={i}
+                type="button"
+                className={`${styles.file} ${styles[`tone${tone}`]}${sessionClass} ${styles.fileBtn}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFileClick(i);
+                }}
+                aria-label={`Open ${file.name}`}
+              >
+                {inner}
+              </button>
+            ) : (
+              <div key={i} className={`${styles.file} ${styles[`tone${tone}`]}${sessionClass}`}>
+                {inner}
               </div>
             );
           })}

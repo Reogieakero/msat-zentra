@@ -9,7 +9,8 @@ import { TermSelectOverlay } from "@/components/term/TermSelectOverlay";
 
 type Theme = "light" | "dark";
 
-export type FontPref = "inter" | "nunito";
+// Single workspace font (Inter) — the Nunito option was retired.
+export type FontPref = "inter";
 
 type ThemeContextValue = {
   theme: Theme;
@@ -27,18 +28,12 @@ const FontContext = React.createContext<{
 const FONT_STORAGE_KEY = "zentra.font";
 
 function getInitialFont(): FontPref {
-  if (typeof window === "undefined") return "inter";
-  const stored = window.localStorage.getItem(FONT_STORAGE_KEY);
-  if (stored === "inter" || stored === "nunito") return stored;
   return "inter";
 }
 
-function applyFont(font: FontPref) {
+function applyFont(_font: FontPref) {
   const root = document.documentElement;
-  root.style.setProperty(
-    "--font-sans",
-    font === "nunito" ? "var(--font-nunito)" : "var(--font-inter)",
-  );
+  root.style.setProperty("--font-sans", "var(--font-inter)");
 }
 
 export function FontProvider({ children }: { children: React.ReactNode }) {

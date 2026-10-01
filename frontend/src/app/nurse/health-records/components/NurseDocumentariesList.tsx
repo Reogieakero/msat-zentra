@@ -1,15 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -17,27 +10,29 @@ import {
 import { ImageViewer } from "@/components/image-viewer/ImageViewer";
 import { type ClinicAttachment } from "../../overview/components/nurse-overview-data";
 import { type NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
-import { DocumentaryTable } from "./DocumentaryTable";
 import { DocumentaryDetails } from "./DocumentaryDetails";
+import { StudentHealthFolders } from "./StudentHealthFolders";
+import { HealthRecordsSideRail } from "./HealthRecordsSideRail";
 import {
   buildEntries,
   fileHref,
-  sortEntries,
-  TYPE_OPTIONS,
-  PAGE_SIZE,
+  groupEntriesByStudent,
   type DocEntry,
-  type TypeFilter,
-  type SortKey,
+  type StudentHealthFolder,
 } from "./documentaries-utils";
 import styles from "./NurseDocumentariesList.module.css";
 
+/**
+ * Student health-records repository — one folder per student, same layout
+ * as the anecdotal repository (folder grid + right insights rail).
+ * Opening a folder reads that student's cases in the details dialog with
+ * prev/next through their cases; files open in the image viewer.
+ */
 export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] }) {
-  const [query, setQuery] = React.useState("");
-  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>("");
-  const [sortKey, setSortKey] = React.useState<SortKey>("date");
-  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
-  const [page, setPage] = React.useState(1);
-  const [selected, setSelected] = React.useState<DocEntry | null>(null);
+  const [selected, setSelected] = React.useState<{
+    folder: StudentHealthFolder;
+    index: number;
+  } | null>(null);
   const [viewer, setViewer] = React.useState<{
     files: ClinicAttachment[];
     index: number;
@@ -60,122 +55,74 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
     setViewer(null);
   }
 
-  const entries = React.useMemo(() => buildEntries(alerts), [alerts]);
+  const folders = React.useMemo(
+    () => groupEntriesByStudent(buildEntries(alerts)),
+    [alerts],
+  );
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const result = entries.filter((e) => {
-      if (typeFilter !== "" && e.row.type !== typeFilter) return false;
-      if (q !== "" && !`${e.row.id} ${e.row.student} ${e.row.lrn} ${e.row.section} ${e.row.reason} ${e.row.category} ${e.details} ${e.outcome}`.toLowerCase().includes(q)) return false;
-      return true;
+  function openCase(folder: StudentHealthFolder, index: number) {
+    if (folder.entries.length === 0) return;
+    setSelected({
+      folder,
+      index: Math.min(Math.max(index, 0), folder.entries.length - 1),
     });
-    return sortEntries(result, sortKey, sortDir);
-  }, [entries, query, typeFilter, sortKey, sortDir]);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-    setPage(1);
   }
 
-  function openDetails(entry: DocEntry) {
-    setSelected(entry);
+  const activeEntry = selected?.folder.entries[selected.index] ?? null;
+  const canPage = (selected?.folder.entries.length ?? 0) > 1;
+  function stepCase(delta: 1 | -1) {
+    setSelected((prev) => {
+      if (!prev) return prev;
+      const n = prev.folder.entries.length;
+      return { folder: prev.folder, index: (prev.index + delta + n) % n };
+    });
   }
-  function clearFilters() {
-    setQuery("");
-    setTypeFilter("");
-    setPage(1);
-  }
-
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
-  const typeLabel = TYPE_OPTIONS.find((o) => o.value === typeFilter)?.label ?? "All types";
-  const hasActiveFilters = query.trim() !== "" || typeFilter !== "";
 
   return (
     <section aria-label="Student health records">
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h2 className={styles.sectionTitle}>Health Records</h2>
-          <p className={styles.sectionDesc}>
-            Finished transactions — {total} record{total === 1 ? "" : "s"}.
-          </p>
+      <div className="grid flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="flex min-w-0 flex-col">
+          <StudentHealthFolders folders={folders} onOpenCase={openCase} />
         </div>
-        {entries.length > 0 && (
-          <div className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "2rem" }}
-                placeholder="Search by referral ID, student or keyword…"
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                aria-label="Search health records"
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  style={{ height: "2rem" }}
-                  aria-label={`Filter by type, currently showing: ${typeLabel}`}
-                  className={`${styles.filterBtn} ${typeFilter !== "" ? styles.filterActive : ""}`}
-                >
-                  {typeFilter === "" ? "Type" : typeLabel}
-                  {typeFilter !== "" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                {TYPE_OPTIONS.map((item) => (
-                  <DropdownMenuCheckboxItem
-                    key={item.label}
-                    checked={typeFilter === item.value}
-                    onCheckedChange={() => { setTypeFilter(item.value); setPage(1); }}
-                  >
-                    {item.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
-                <X aria-hidden />
-                Show all
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
+          <HealthRecordsSideRail folders={folders} />
+        </div>
       </div>
-
-      <DocumentaryTable
-        filtered={filtered}
-        pageRows={pageRows}
-        total={total}
-        start={start}
-        end={end}
-        safePage={safePage}
-        totalPages={totalPages}
-        onSort={toggleSort}
-        onPageChange={setPage}
-        onOpenDetails={openDetails}
-        onOpenViewer={openViewer}
-      />
+      <div className="flex min-w-0 flex-col gap-4 lg:hidden">
+        <HealthRecordsSideRail folders={folders} />
+      </div>
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <DialogContent className={styles.dialogContent}>
-          {selected && (
-            <DocumentaryDetails entry={selected} onOpenViewer={openViewer} />
+          {canPage && selected && (
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => stepCase(-1)}
+                aria-label="Previous case in this folder"
+              >
+                <ChevronLeft aria-hidden />
+                Prev
+              </Button>
+              <span className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+                Case {selected.index + 1} of {selected.folder.entries.length}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => stepCase(1)}
+                aria-label="Next case in this folder"
+              >
+                Next
+                <ChevronRight aria-hidden />
+              </Button>
+            </div>
+          )}
+          {activeEntry && (
+            <DocumentaryDetails entry={activeEntry} onOpenViewer={openViewer} />
           )}
         </DialogContent>
       </Dialog>

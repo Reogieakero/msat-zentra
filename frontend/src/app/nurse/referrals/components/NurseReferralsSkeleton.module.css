@@ -1,12 +1,11 @@
-/* Loading skeleton — mirrors the referrals display row-for-row (toolbar,
-   two-column entries with rail blocks incl. the student card, report body)
-   so content doesn't jump when the fetch lands. */
+/* Loading skeleton — mirrors the referrals display (case cards + pager +
+   action-menu card) so content doesn't jump when the fetch lands. */
 
 .page {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1.25rem 0.25rem 2rem;
+  padding: 0 0 0.25rem;
   min-height: 100%;
   background-color: var(--background);
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -32,178 +31,47 @@
   gap: 1.25rem;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  /* Mirrors NurseAlertsTable.toolbar so content doesn't jump under the
-     fixed topbar + tab navbar when data lands. */
-  position: sticky;
-  top: calc(6rem + 1px);
-  z-index: 30;
-  background-color: var(--background);
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.title {
-  width: 11rem;
-  height: 1.75rem;
-  border-radius: var(--radius-md);
-}
-
-.toolbarRight {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.search {
-  width: 16rem;
-  max-width: 100%;
-  /* Real search Input uses inline height 1.75rem. */
-  height: 1.75rem;
-  border-radius: var(--radius-md);
-}
-
-.pill {
-  width: 6.5rem;
-  height: 2rem;
-  border-radius: var(--radius-md);
-}
-
-.timeline {
+/* Card list skeleton — mirrors the section-card layout. */
+.cards {
   display: flex;
   flex-direction: column;
+  gap: 1.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.entry {
-  position: relative;
-  display: grid;
-  grid-template-columns: 12rem minmax(0, 1fr);
-  gap: 1.75rem;
-  padding: 1.75rem 0.75rem 1.75rem 1.75rem;
-  border-bottom: 1px solid var(--border);
-  background-color: var(--card);
-  scroll-margin-top: 7rem;
-}
-
-/* Vertical spine + node dot — mirrors NurseReferralEntry so the rail
-   doesn't shift when the real chrome renders. */
-.entry::before {
-  content: "";
-  position: absolute;
-  left: 0.4375rem;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background-color: var(--border);
-}
-
-.entry:first-child::before {
-  top: 2rem;
-}
-
-.entry:last-child::before {
-  bottom: auto;
-  height: 2rem;
-}
-
-.dot {
-  position: absolute;
-  left: 0.125rem;
-  top: 2rem;
-  width: 0.6875rem;
-  height: 0.6875rem;
-  border-radius: 9999px;
-  background-color: var(--background);
-  border: 2px solid var(--primary);
-  z-index: 1;
-}
-
-.entryAlt {
-  background-color: color-mix(in oklch, var(--foreground) 7%, var(--card));
-  border-radius: var(--radius-lg);
-}
-
-.rail {
+.cardHead {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   min-width: 0;
-  /* Mirrors .railSticky (top 8rem) so the rail doesn't jump on load. */
-  position: sticky;
-  top: 8rem;
-  align-self: start;
-  z-index: 1;
 }
 
-.date {
-  width: 7rem;
-  height: 1.25rem;
-  border-radius: var(--radius-md);
-}
-
-.badges {
-  display: flex;
-  gap: 0.375rem;
-}
-
-.badges > * {
-  width: 4rem;
-  height: 1.375rem;
-  border-radius: 9999px;
-}
-
-.line {
-  width: 100%;
-  height: 0.875rem;
-  border-radius: var(--radius-md);
-}
-
-.lineShort {
-  width: 65%;
-  height: 0.875rem;
-  border-radius: var(--radius-md);
-}
-
-.studentCard {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  padding: 0.75rem;
-  margin-top: 0.625rem;
+.identityText {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* "Student" caption over the avatar — mirrors .studentCaption. */
-.caption {
-  width: 4rem;
-  height: 0.75rem;
-  border-radius: var(--radius-md);
-}
-
-.studentText {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 0.25rem;
-  width: 100%;
+  min-width: 0;
 }
 
-/* Latest-action bordered block sits above the student card in the rail. */
-.latestAction {
-  width: 100%;
-  height: 2.5rem;
+.name {
+  width: 9rem;
+  height: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.nameSub {
+  width: 12rem;
+  height: 0.8125rem;
   border-radius: var(--radius-md);
 }
 
@@ -211,14 +79,20 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 9999px;
+  flex-shrink: 0;
 }
 
-.body {
+.badges {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-  max-width: 44rem;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  justify-content: flex-end;
+}
+
+.badges > * {
+  width: 4rem;
+  height: 1.375rem;
+  border-radius: 9999px;
 }
 
 .reason {
@@ -231,12 +105,6 @@
   width: 100%;
   height: 5rem;
   border-radius: var(--radius-md);
-}
-
-.sessions {
-  width: 100%;
-  height: 7rem;
-  border-radius: var(--radius-lg);
 }
 
 .actions {
@@ -257,15 +125,49 @@
   align-self: flex-start;
   /* Mirrors NurseActionMenu.sidebar pinning. */
   position: sticky;
-  top: 6.75rem;
+  top: 3.75rem;
   z-index: 10;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 1rem;
   background-color: var(--card);
-  padding: 0.75rem;
+  padding: 1.125rem;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
+}
+
+/* Card header mirror (icon + title + desc). */
+.sideHead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sideIcon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.sideHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sideTitle {
+  width: 6rem;
+  height: 0.9375rem;
+  border-radius: var(--radius-md);
+}
+
+.sideSub {
+  width: 8rem;
+  height: 0.75rem;
+  border-radius: var(--radius-md);
 }
 
 .sideLabel {
@@ -286,7 +188,8 @@
   border-bottom: none;
 }
 
-/* Pager — real NurseAlertsTable always renders Showing + Page label. */
+/* Pager shimmer — rendered only for paginated feeds (mirrors the real
+   Showing + Page label pager). */
 .pager {
   display: flex;
   flex-wrap: wrap;
@@ -325,31 +228,8 @@
     flex-direction: column;
   }
 
-  .entry {
-    grid-template-columns: 10rem minmax(0, 1fr);
-  }
-
   .side {
     width: 100%;
-    position: static;
-  }
-}
-
-@media (max-width: 640px) {
-  .entry {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding-left: 1.5rem;
-  }
-
-  .body {
-    max-width: none;
-  }
-
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    /* Keep sticky on desktop only; stacked mobile toolbar scrolls. */
     position: static;
   }
 }

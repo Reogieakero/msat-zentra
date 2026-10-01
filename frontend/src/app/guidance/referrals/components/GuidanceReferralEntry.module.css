@@ -14,8 +14,11 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  font-size: 4rem;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: color-mix(in oklch, var(--watermark-color, var(--primary)) 14%, transparent);
@@ -30,25 +33,66 @@
 .watermarkBooked     { --watermark-color: oklch(0.35 0.15 220); }
 .watermarkFollowup   { --watermark-color: oklch(0.35 0.15 280); }
 .watermarkReject     { --watermark-color: oklch(0.5 0.17 20); }
+.watermarkCancelled  { --watermark-color: oklch(0.55 0.05 250); }
 .watermarkDone       { --watermark-color: oklch(0.45 0.08 50); }
 
 .entry {
+  /* Card shell only — the inner hGrid owns the column layout. (A leftover
+     two-column grid here once squeezed the whole card into a 12rem track.) */
   position: relative;
-  display: grid;
-  grid-template-columns: 12rem minmax(0, 1fr);
-  gap: 1.75rem;
-  padding: 1.75rem 0.75rem 1.75rem 1.75rem;
-  border-bottom: 1px solid var(--border);
+  display: block;
+  padding: 1.125rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
   background-color: var(--card);
+  list-style: none;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
 }
 
-/* White / dark alternation — identical layout and sizes, odd rows only
-   get a darker tint + rounded corners so consecutive cases read apart in
-   both light and dark themes. */
-.entryAlt {
-  background-color: color-mix(in oklch, var(--foreground) 7%, var(--card));
-  border-bottom-color: var(--border);
-  border-radius: var(--radius-lg);
+.entry:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+/* Inner top highlight line. */
+.entry::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--foreground), transparent 78%),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Clipped glow behind the content. */
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 /* Deep-link highlight — the alerts table jumps here, so the case glows
@@ -64,39 +108,7 @@
   background-color: color-mix(in oklch, var(--primary) 9%, var(--card));
 }
 
-/* Vertical spine + node dot, like the changelog rail */
-.entry::before {
-  content: "";
-  position: absolute;
-  left: 0.4375rem;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background-color: var(--border);
-}
-
-.entry:first-child::before {
-  top: 2rem;
-}
-
-.entry:last-child::before {
-  bottom: auto;
-  height: 2rem;
-}
-
-.dot {
-  position: absolute;
-  left: 0.125rem;
-  top: 2rem;
-  width: 0.6875rem;
-  height: 0.6875rem;
-  border-radius: 9999px;
-  background-color: var(--background);
-  border: 2px solid var(--primary);
-  z-index: 1;
-}
-
-/* Left rail — sticks below the toolbar while its case is in view */
+/* Left rail — sticks while its case is in view */
 .rail {
   position: sticky;
   top: 1rem;
@@ -131,6 +143,182 @@
   gap: 0.375rem;
 }
 
+/* Horizontal card grid — identity column left, report middle, rail
+   right. Same anatomy as the nurse timeline cards. */
+.hGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr) 15rem;
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.hGridNoRail {
+  grid-template-columns: 13rem minmax(0, 1fr);
+}
+
+.idCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.idTop {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.sideRail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.sideRail .folderBtn {
+  max-width: none;
+}
+
+@media (max-width: 900px) {
+  .hGrid,
+  .hGridNoRail {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
+  .sideRail {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    align-items: start;
+  }
+}
+
+/* Phone: everything stacks - identity, report, then rail. */
+@media (max-width: 640px) {
+  .hGrid,
+  .hGridNoRail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sideRail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sideRail .folderBtn {
+    max-width: 15rem;
+  }
+}
+
+/* Sessions expander — flat mini-card (solid card background, no
+   gradient), neither a plain button nor a folder. Hover lifts it. */
+.sessDrop {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background-color: var(--card);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.sessDrop:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.sessDrop:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.sessDropIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 4px 14px -4px color-mix(in oklch, var(--primary), transparent 45%);
+}
+
+.sessDropText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sessDropTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.sessDropSub {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessDropCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding-inline: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--primary), transparent 82%);
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sessChevron {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.modalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sessDrop {
+    transition: none;
+  }
+
+  .sessDrop:hover {
+    transform: none;
+  }
+}
+
 /* Plain line explaining what the status means for the reader. */
 .statusHelp {
   margin: 0;
@@ -156,10 +344,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.entryAlt .studentCard {
-  background-color: var(--card);
 }
 
 .studentCaption {
@@ -189,8 +373,8 @@
 .studentText {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
   gap: 0.25rem;
   min-width: 0;
 }
@@ -361,10 +545,6 @@
   border-radius: var(--radius-lg);
   background-color: var(--card);
   padding: 0.875rem;
-}
-
-.entryAlt .plan {
-  background-color: var(--card);
 }
 
 .planHead {

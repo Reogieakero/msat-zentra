@@ -15,7 +15,6 @@ import {
 import {
   BookOpen,
   CalendarClock,
-  ChevronDown,
   ColumnsIcon,
   MoreHorizontal,
   SearchIcon,
@@ -324,7 +323,6 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
                 >
                   {status === "" ? "Status" : statusLabel}
                   {status !== "" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className={styles.filterMenu}>

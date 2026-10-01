@@ -1,0 +1,191 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0 0 0.25rem;
+  min-width: 0;
+  /* Shell scroll lock: the page itself never scrolls — it fills the
+     viewport content area exactly (6rem shell + 1rem main top pad + 1rem
+     bottom gutter), so only the table and rail scroll inside. No native
+     scrollbars anywhere — scroll-down hints cover those regions. */
+  height: calc(100dvh - 8rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Branched-rail mode has 3rem less top chrome (no tab bar). */
+.pageRail {
+  height: calc(100dvh - 5rem);
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.heading p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  margin: 0;
+  padding: 2.5rem 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.skeleton {
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e5e5);
+  background: var(--card);
+  min-height: 220px;
+}
+
+/* Two-column layout: student data table in the main column, section cards
+   in the right rail. Both columns fill the locked page height; inner
+   ScrollAreas scroll instead of the page. Collapses to one column on
+   narrow screens (page scroll returns there). */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 19rem);
+  gap: 1.25rem;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* The table panel grows to fill the column; only its rows scroll. The
+   header, filter, count, and pager stay pinned. */
+.tableCard {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Native scroll containers with hidden scrollbars — no scrollbar chrome at
+   all. The floating ScrollDownHint pill (absolute, bottom of each wrap)
+   signals "more below" instead. */
+.tableScrollWrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.tableScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 1.25rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tableScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.sideCol {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.railScrollWrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.railScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Top room so the first card's straddling grade badge isn't clipped;
+     bottom clearance so the last card never hides under the hint pill. */
+  padding: 0.75rem 0.125rem 1.5rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.railScroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .page,
+  .pageRail {
+    height: auto;
+    overflow: visible;
+  }
+
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .mainCol {
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Narrow screens keep inner scrolling with viewport caps instead of an
+     unbounded column. Small screens always show the tab bar, rail or not. */
+  .tableScrollWrap,
+  .railScrollWrap {
+    flex: none;
+  }
+
+  .tableScroll {
+    max-height: 65dvh;
+  }
+
+  .railScroll {
+    max-height: 50dvh;
+  }
+
+  .sideCol {
+    height: auto;
+    order: -1;
+    overflow: visible;
+  }
+}

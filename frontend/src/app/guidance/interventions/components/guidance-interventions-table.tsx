@@ -37,6 +37,7 @@ import {
 } from "./intervention-dialogs";
 import { Busy } from "./busy";
 import { toast } from "@/components/ui/sonner";
+import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
 import { apiErrorMessage } from "../../referrals/components/guidance-referrals-data";
 import styles from "./guidance-interventions.module.css";
@@ -301,6 +302,9 @@ export function GuidanceInterventionsTable({
       }
       // Confirmed success only — toast fires after the server confirms.
       toast.success(interventionSuccessMessage(variables.action));
+      // Instant reminder: re-evaluate the inbox now (booking-filtered
+      // inside) instead of waiting for the next poll tick.
+      refreshBookingReminders();
     },
     onError: (err) => {
       toast.error({
@@ -354,7 +358,10 @@ export function GuidanceInterventionsTable({
   const now = useNowTick();
 
   return (
-    <section aria-label="Intervention cases" className={styles.feed}>
+    <section aria-label="Intervention cases" className={`${styles.feed} ${styles.panel}`}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
       <div className={styles.header}>
         <div className={styles.headerText}>
           <h2 className={styles.sectionTitle}>Intervention cases</h2>
@@ -419,7 +426,6 @@ export function GuidanceInterventionsTable({
                   <TableHead>Detected</TableHead>
                   <TableHead>Latest action</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Files</TableHead>
                   <TableHead>
                     <span className={styles.srOnly}>Row actions</span>
                   </TableHead>

@@ -49,7 +49,8 @@ async function refreshFinals(
 }
 
 async function invalidateGradingCaches(): Promise<void> {
-  await invalidateTags(["teacher", "registrar", "academics", "overview", "principal"]);
+  // Recomputes above can open guidance interventions + risk levels.
+  await invalidateTags(["teacher", "registrar", "academics", "overview", "principal", "risk", "guidance"]);
 }
 
 // Grade components are school-wide per (subject, term), so ownership for
@@ -80,19 +81,56 @@ async function assertAssignment(teacherId: string, assignmentId: string, termId:
   } as const;
   const sep = assignmentId.indexOf("|");
   if (sep >= 0) {
+    const subjectId = assignmentId.slice(0, sep);
+    const sectionId = assignmentId.slice(sep + 1);
     const assignment = await prisma.teacherSubjectAssignment.findFirst({
       where: {
         teacherId,
-        subjectId: assignmentId.slice(0, sep),
-        sectionId: assignmentId.slice(sep + 1),
+        subjectId,
+        sectionId,
         termId,
       },
       include,
     });
-    if (!assignment) {
+    if (assignment) return assignment;
+    // Code-linked teachers (My Classes / Attendance link code) often have no
+    // assignment row — their classes come from committed timetable slots
+    // attached to their linked teacher-list name. Resolve the same
+    // (subject, section) through that link so the workspace opens instead of
+    // 404ing. The composite id is kept as `id` so every later call under
+    // /classes/:assignmentId (weights, presets, assessments) resolves the
+    // same way; grade components are keyed by subject + term, shared.
+    const linked = await prisma.sectionTimetableEntry.findFirst({
+      where: {
+        termId,
+        subjectId,
+        sectionId,
+        status: { in: ["APPROVED", "SUBMITTED"] },
+        teacherName: { userId: teacherId },
+      },
+      select: { subjectId: true, sectionId: true },
+    });
+    if (!linked) {
       throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
     }
-    return assignment;
+    const [subject, section, term] = await Promise.all([
+      prisma.subject.findUnique({
+        where: { id: subjectId },
+        select: { id: true, code: true, name: true, gradeLevel: true, category: true },
+      }),
+      prisma.section.findUnique({
+        where: { id: sectionId },
+        select: { id: true, name: true, gradeLevel: true },
+      }),
+      prisma.term.findUnique({
+        where: { id: termId },
+        select: { id: true, termNumber: true, schoolYear: { select: { id: true, name: true } } },
+      }),
+    ]);
+    if (!subject || !section || !term) {
+      throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
+    }
+    return { id: assignmentId, teacherId, subjectId, sectionId, termId, subject, section, term };
   }
   const assignment = await prisma.teacherSubjectAssignment.findUnique({
     where: { id: assignmentId },

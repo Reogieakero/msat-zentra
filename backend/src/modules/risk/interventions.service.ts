@@ -272,7 +272,7 @@ export async function getInterventionStudents(
                 subject: { select: { name: true, code: true } },
               },
             },
-            attendanceRecords: { where: { termId }, select: { status: true } },
+            attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
             anecdotalRecords: { where: { termId }, select: { id: true } },
             interventions: {
               orderBy: { id: "desc" },
@@ -334,7 +334,7 @@ export async function getInterventionStudents(
                 subject: { select: { name: true, code: true } },
               },
             },
-            attendanceRecords: { where: { termId }, select: { status: true } },
+            attendanceRecords: { where: { termId }, select: { status: true, subjectId: true } },
             anecdotalRecords: { where: { termId }, select: { id: true } },
             interventions: {
               orderBy: { id: "desc" },
@@ -389,7 +389,7 @@ export async function getInterventionStudents(
     enrolledFallback: number;
     gradeLevel: string;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null; subject: { name: string; code: string } }[];
-    attendanceRecords: { status: string }[];
+    attendanceRecords: { status: string; subjectId: string | null }[];
     anecdotalCount: number;
     intervention: InterventionLink | null;
   };
@@ -455,7 +455,11 @@ export async function getInterventionStudents(
         transmutedGrade: g.transmutedGrade,
       })),
       gradeMode: filters.gradeMode ?? "final",
-      attendance: st.attendanceRecords.map((a) => ({ status: a.status })),
+      // subjectId rides along so the subject-era rule (present over
+      // subject sessions) applies exactly like the live engine and the
+      // See-details breakdown — without it every cohort fell back to the
+      // legacy present-over-enrolled math and disagreed with both.
+      attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
@@ -536,8 +540,8 @@ async function getLiveCohortStudents(
             subject: { select: { name: true, code: true } },
           },
         },
-        attendanceRecords: { where: { termId }, select: { status: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true } },
+        attendanceRecords: { where: { termId }, select: { status: true, date: true, subjectId: true } },
+        anecdotalRecords: { where: { termId }, select: { id: true, observationDatetime: true } },
         interventions: {
           orderBy: { id: "desc" },
           take: 1,
@@ -589,8 +593,8 @@ async function getLiveCohortStudents(
             subject: { select: { name: true, code: true } },
           },
         },
-        attendanceRecords: { where: { termId }, select: { status: true } },
-        anecdotalRecords: { where: { termId }, select: { id: true } },
+        attendanceRecords: { where: { termId }, select: { status: true, date: true, subjectId: true } },
+        anecdotalRecords: { where: { termId }, select: { id: true, observationDatetime: true } },
         interventions: {
           orderBy: { id: "desc" },
           take: 1,
@@ -661,7 +665,8 @@ async function getLiveCohortStudents(
     enrolledFallback: number;
     gradeLevel: string;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null; subject: { name: string; code: string } }[];
-    attendanceRecords: { status: string }[];
+    attendanceRecords: { status: string; date: Date; subjectId: string | null }[];
+    anecdotalRecords: { observationDatetime: Date }[];
     anecdotalCount: number;
     intervention: InterventionRow | undefined;
     snapshotDate: Date | null;
@@ -675,7 +680,9 @@ async function getLiveCohortStudents(
         transmutedGrade: g.transmutedGrade,
       })),
       gradeMode,
-      attendance: st.attendanceRecords.map((a) => ({ status: a.status })),
+      // Same subject-era passthrough as above — the queue must agree with
+      // the live engine, never silently use legacy math.
+      attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
@@ -698,6 +705,27 @@ async function getLiveCohortStudents(
       belowThreshold: (g.transmutedGrade ?? 100) < 75,
     }));
 
+    // Detection moment with fallbacks so desks never show a blank date:
+    // engine snapshot → follow-up opened → earliest session booked →
+    // latest underlying evidence (attendance day / anecdotal observation)
+    // that the live flags were computed from.
+    const sessionTimes = (intervention?.sessions ?? [])
+      .map((s) => new Date(s.createdAt).getTime())
+      .filter((t) => Number.isFinite(t));
+    const evidenceTimes = [
+      ...st.attendanceRecords.map((a) => new Date(a.date).getTime()),
+      ...st.anecdotalRecords.map((a) => new Date(a.observationDatetime).getTime()),
+    ].filter((t) => Number.isFinite(t));
+    const detectedAt =
+      st.snapshotDate != null
+        ? st.snapshotDate.toISOString()
+        : (intervention?.createdAt ??
+          (sessionTimes.length > 0
+            ? new Date(Math.min(...sessionTimes)).toISOString()
+            : evidenceTimes.length > 0
+              ? new Date(Math.max(...evidenceTimes)).toISOString()
+              : null));
+
     return {
       studentId: st.studentId,
       lrn: st.lrn,
@@ -709,7 +737,7 @@ async function getLiveCohortStudents(
         (flags.academicFlag ? 1 : 0) +
         (flags.attendanceFlag ? 1 : 0) +
         (flags.behavioralFlag ? 1 : 0),
-      snapshotDate: st.snapshotDate ? st.snapshotDate.toISOString() : null,
+      snapshotDate: detectedAt,
       factors: {
         academic: flags.academicFlag,
         attendance: flags.attendanceFlag,
@@ -734,6 +762,7 @@ async function getLiveCohortStudents(
       gradeLevel: p.gradeLevel,
       finalGrades: p.finalGrades,
       attendanceRecords: p.attendanceRecords,
+      anecdotalRecords: p.anecdotalRecords,
       anecdotalCount: p.anecdotalRecords.length,
       intervention: p.interventions[0],
       snapshotDate: snapByStudent.get(p.userId) ?? null,
@@ -752,6 +781,7 @@ async function getLiveCohortStudents(
       gradeLevel: r.gradeLevel,
       finalGrades: r.finalGrades,
       attendanceRecords: r.attendanceRecords,
+      anecdotalRecords: r.anecdotalRecords,
       anecdotalCount: r.anecdotalRecords.length,
       intervention: r.interventions[0],
       snapshotDate: snapByRoster.get(r.id) ?? null,

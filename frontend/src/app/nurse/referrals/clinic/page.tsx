@@ -33,12 +33,13 @@ function NurseClinicReferralsView() {
     void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
     void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
     void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
   }
 
   if (isPending) {
     return (
       <section className={styles.page}>
-        <NurseReferralsSkeleton lockType sideRows={4} />
+        <NurseReferralsSkeleton sideRows={5} paginate={false} />
       </section>
     );
   }
@@ -79,6 +80,7 @@ function NurseClinicReferralsView() {
         lockType
         title="Clinic Matters"
         highlightId={highlightId}
+        paginate={false}
       />
     </section>
   );
@@ -89,7 +91,7 @@ export default function NurseClinicReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page}>
-          <NurseReferralsSkeleton lockType sideRows={4} />
+          <NurseReferralsSkeleton sideRows={5} paginate={false} />
         </section>
       }
     >

@@ -36,6 +36,9 @@ export function GuidanceOverviewKpis({ kpis }: GuidanceOverviewKpisProps) {
     <div className={styles.kpiGrid}>
       {cards.map((kpi) => (
         <Card key={kpi.label} size="sm" className={styles.card}>
+          <span className={styles.glowClip} aria-hidden="true">
+            <span className={styles.cardGlow} />
+          </span>
           <CardContent>
             <p className={styles.kpiLabel}>{kpi.label}</p>
             <p className={styles.kpiValue}>{kpi.value}</p>

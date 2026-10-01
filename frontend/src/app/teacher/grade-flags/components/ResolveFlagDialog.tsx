@@ -95,7 +95,7 @@ export function ResolveFlagDialog({ flag, onClose, onResolved }: ResolveFlagDial
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={close}>
+              <Button type="button" variant="destructive" onClick={close}>
                 Cancel
               </Button>
               <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>

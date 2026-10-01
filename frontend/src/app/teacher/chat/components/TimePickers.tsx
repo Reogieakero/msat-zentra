@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,7 +37,6 @@ export function TimePickers({ value, onPick }: TimePickersProps) {
               aria-label={`Pick ${menu.label}`}
             >
               <span>{menu.display}</span>
-              <ChevronDown className={styles.timeChevron} aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className={styles.timeMenu} align="start">

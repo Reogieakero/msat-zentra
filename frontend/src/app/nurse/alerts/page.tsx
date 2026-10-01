@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NurseReferralsTable } from "./components/NurseReferralsTable";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import { fetchNurseAlerts, fetchNurseRiskLevels } from "./components/nurse-alerts-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/nurse-alerts.module.css";
 
 export default function NurseAlertsPage() {
@@ -47,8 +48,11 @@ export default function NurseAlertsPage() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.skelPanel}>
-          <div className={styles.skelPanelHead}>
+        <div className={assign.card}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
             <div>
               <Skeleton className={styles.skelCardTitle} />
               <Skeleton className={styles.skelPanelDesc} />
@@ -58,21 +62,20 @@ export default function NurseAlertsPage() {
               <Skeleton className={styles.skelDrop} />
             </div>
           </div>
-          <div className={styles.skelThead} aria-hidden="true">
+          <div className="relative overflow-x-auto rounded-md border p-2">
+            <div className={styles.skelThead} aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <Skeleton key={i} className={styles.skelTheadCell} />
+              ))}
+            </div>
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <Skeleton key={i} className={styles.skelTheadCell} />
+              <Skeleton key={i} className={styles.skelRow} />
             ))}
           </div>
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <Skeleton key={i} className={styles.skelRow} />
-          ))}
-          <div className={styles.skelPager}>
+          <div className="relative flex items-center justify-end gap-2">
             <Skeleton className={styles.skelRange} />
-            <div className={styles.skelPagerBtns}>
-              <Skeleton className={styles.skelBtn} />
-              <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
-              <Skeleton className={styles.skelBtn} />
-            </div>
+            <Skeleton className={styles.skelBtn} />
+            <Skeleton className={styles.skelBtn} />
           </div>
         </div>
       </section>
@@ -110,6 +113,7 @@ export default function NurseAlertsPage() {
 
   return (
     <section className={styles.page} aria-busy={refreshing}>
+      {/* Floating pill — never shifts the table. */}
       {refreshing ? <NurseRefreshBadge label="Refreshing cases…" /> : null}
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
@@ -133,6 +137,7 @@ export default function NurseAlertsPage() {
           void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
           void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
           void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
+          void queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
         }}
       />
     </section>

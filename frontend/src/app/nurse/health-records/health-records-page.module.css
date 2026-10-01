@@ -4,7 +4,10 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.5rem 0;
+  /* 16px comes from the layout shell (.main padding); no extra top pad —
+     same as the alerts / overview / referrals pages, so content sits 16px
+     below the navbar. */
+  padding: 0 0 1.5rem;
 }
 
 /* Skeleton loading panel */

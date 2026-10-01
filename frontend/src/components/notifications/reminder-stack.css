@@ -1,0 +1,33 @@
+/* React-Bits Stack presentation for the reminder deck. The top entry sizes
+   the pile (normal flow); entries behind sit absolutely underneath it. */
+
+.rb-stack-container {
+  position: relative;
+  width: 100%;
+  perspective: 600px;
+}
+
+.rb-stack-top {
+  position: relative;
+  width: 100%;
+}
+
+.rb-stack-behind {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  /* Covered regions hit the top card first; only the peeking bottom
+     strip is clickable. */
+  pointer-events: auto;
+}
+
+.rb-card-rotate {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.rb-card {
+  border-radius: 1rem;
+  width: 100%;
+}

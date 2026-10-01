@@ -8,8 +8,13 @@ import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
+import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
 import { ADM_STAGE_FLOW } from "../../services/adm.js";
+import {
+  TIMELINE_DESK_LABELS,
+  buildCaseTimeline,
+} from "./timeline.js";
 
 // Clinic documentation uploads: photos filed on a session (wound, slip,
 // lab result…). Images only, 5 MB each, max 5 per request — filing is
@@ -27,6 +32,80 @@ const clinicUpload = multer({
 });
 
 const router = Router();
+
+// Detailed notification cards: every referral fanout names the student +
+// section (+ session when/venue or reason snippet where relevant) instead of
+// a bare "your referral was updated". Key phrases stay contiguous so the
+// frontend `toastTitleFor` matchers keep matching (details ride at the end).
+function truncate(text: string | null | undefined, max = 100): string | null {
+  const t = (text ?? "").trim();
+  if (!t) return null;
+  return t.length > max ? `${t.slice(0, max - 3)}...` : t;
+}
+
+function formatWhen(d: Date): string {
+  try {
+    return new Intl.DateTimeFormat("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "Asia/Manila",
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(0, 16).replace("T", " ");
+  }
+}
+
+interface ReferralCard {
+  /** e.g. "Maria Santos (G7 – Ruby)" or "Maria Santos" when section is unknown. */
+  who: string;
+  studentName: string;
+  sectionName: string;
+  filerName: string;
+}
+
+async function referralCard(referral: {
+  studentId: string | null;
+  rosterId: string | null;
+  referredBy: string | null;
+}): Promise<ReferralCard> {
+  // Note: referral.studentId is a User id (registered students file under
+  // their account), so names resolve through User, not StudentProfile.
+  const [account, roster, filer] = await Promise.all([
+    referral.studentId
+      ? prisma.user.findUnique({
+          where: { id: referral.studentId },
+          select: {
+            fullName: true,
+            studentProfile: { select: { section: { select: { name: true } } } },
+          },
+        })
+      : null,
+    referral.rosterId
+      ? prisma.studentRoster.findUnique({
+          where: { id: referral.rosterId },
+          select: { fullName: true, section: { select: { name: true } } },
+        })
+      : null,
+    referral.referredBy
+      ? prisma.user.findUnique({
+          where: { id: referral.referredBy },
+          select: { fullName: true },
+        })
+      : null,
+  ]);
+  const studentName = account?.fullName ?? roster?.fullName ?? "the student";
+  const sectionName =
+    account?.studentProfile?.section?.name ?? roster?.section?.name ?? "";
+  return {
+    who: sectionName ? `${studentName} (${sectionName})` : studentName,
+    studentName,
+    sectionName,
+    filerName: filer?.fullName ?? "the filing teacher",
+  };
+}
 
 const statusSchema = z.object({
   status: z.enum(["pending", "in_progress", "resolved", "escalated", "info_requested", "dismissed", "follow_up"]),
@@ -141,7 +220,107 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Status → ${req.body.status}`, oldValue: { status: referral.status }, newValue: { status: req.body.status } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
+      // Realtime handoff: the filing adviser learns the case moved — clinic
+      // matters notify the adviser only (never the coordinator). Best-effort.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        const nextStatus = String(req.body.status);
+        const isClinic = onNurseClinicDesk || req.user!.role === "nurse";
+        const isGuidance =
+          referral.referredToRole === "guidance_counselor" ||
+          req.user!.role === "guidance_counselor";
+        let message = `Your referral for ${card.who} was updated.`;
+        if (nextStatus === "resolved") {
+          message = isClinic
+            ? `Clinic resolved your referral for ${card.who} — case closed.`
+            : isGuidance
+              ? `Guidance resolved your referral for ${card.who} — case closed.`
+              : `Your referral for ${card.who} was marked resolved.`;
+        } else if (nextStatus === "info_requested") {
+          message = isClinic
+            ? `Clinic requested more info on your referral for ${card.who}.`
+            : `More info was requested on your referral for ${card.who}.`;
+        } else if (nextStatus === "follow_up") {
+          message = isClinic
+            ? `Clinic set a follow-up for ${card.who}.`
+            : `A follow-up was set for your referral for ${card.who}.`;
+        } else if (nextStatus === "in_progress") {
+          message = isClinic
+            ? `The clinic started handling your referral for ${card.who}.`
+            : `Your referral for ${card.who} is now in progress.`;
+        } else if (nextStatus === "dismissed") {
+          message = isClinic
+            ? `Your clinic referral for ${card.who} was closed.`
+            : `Your referral for ${card.who} was dismissed.`;
+        } else if (nextStatus === "escalated") {
+          message = `Your referral for ${card.who} was escalated.`;
+        } else if (nextStatus === "pending") {
+          message = `Your referral for ${card.who} is pending review again.`;
+        }
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message,
+          sourceId: referral.id,
+        });
+      }
+      // Nurse receipt: the acting nurse also gets a bell row (not just the
+      // local success toast) so their inbox reflects what they did.
+      if (req.user!.role === "nurse") {
+        const nextStatus = String(req.body.status);
+        let selfMessage: string | null = null;
+        if (nextStatus === "resolved") {
+          selfMessage = `You marked a clinic referral for ${card.who} resolved — case closed.`;
+        } else if (nextStatus === "info_requested") {
+          selfMessage = `You requested more info on a clinic referral for ${card.who}.`;
+        } else if (nextStatus === "follow_up") {
+          selfMessage = `You set a follow-up on a clinic referral for ${card.who}.`;
+        } else if (nextStatus === "in_progress") {
+          selfMessage = `You started handling a clinic referral for ${card.who}.`;
+        } else if (nextStatus === "dismissed") {
+          selfMessage = `You closed a clinic referral for ${card.who}.`;
+        } else if (nextStatus === "pending") {
+          selfMessage = `You moved a clinic referral for ${card.who} back to pending.`;
+        }
+        if (selfMessage) {
+          void fanoutNotification({
+            userId: req.user!.id,
+            sourceTable: "referrals",
+            action: "status",
+            message: selfMessage,
+            sourceId: referral.id,
+          });
+        }
+      }
+      // Counselor receipt: same bell-row bargain for the acting counselor.
+      if (req.user!.role === "guidance_counselor") {
+        const nextStatus = String(req.body.status);
+        let selfMessage: string | null = null;
+        if (nextStatus === "resolved") {
+          selfMessage = `You marked a guidance referral for ${card.who} resolved — case closed.`;
+        } else if (nextStatus === "info_requested") {
+          selfMessage = `You requested more info on a guidance referral for ${card.who}.`;
+        } else if (nextStatus === "follow_up") {
+          selfMessage = `You set a follow-up on a guidance referral for ${card.who}.`;
+        } else if (nextStatus === "in_progress") {
+          selfMessage = `You started handling a guidance referral for ${card.who}.`;
+        } else if (nextStatus === "dismissed") {
+          selfMessage = `You closed a guidance referral for ${card.who}.`;
+        } else if (nextStatus === "pending") {
+          selfMessage = `You moved a guidance referral for ${card.who} back to pending.`;
+        }
+        if (selfMessage) {
+          void fanoutNotification({
+            userId: req.user!.id,
+            sourceTable: "referrals",
+            action: "status",
+            message: selfMessage,
+            sourceId: referral.id,
+          });
+        }
+      }
     } catch (e) { next(e); }
   }
 );
@@ -171,13 +350,15 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_escalated", sourceTable: "referrals", sourceId: referral.id, reason: req.body.escalationReason, oldValue: { status: referral.status }, newValue: { status: "escalated", escalatedTo: req.body.escalatedTo } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const why = truncate(req.body.escalationReason, 120);
       res.json(updated);
       // Escalation handoff: the receiving desk learns immediately.
       if (req.body.escalatedTo === "nurse") {
         void fanoutToRole("nurse", {
           sourceTable: "referrals",
           action: "status",
-          message: "A case was escalated to the clinic.",
+          message: `A case was escalated to the clinic — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
         });
@@ -185,9 +366,49 @@ router.post(
         void fanoutToRole("adm_coordinator", {
           sourceTable: "referrals",
           action: "status",
-          message: "A case was escalated to ADM.",
+          message: `A case was escalated to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+        });
+      } else if (req.body.escalatedTo === "principal") {
+        void fanoutToRole("principal", {
+          sourceTable: "referrals",
+          action: "status",
+          message: `A case was escalated to the principal — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
+      // The filing adviser learns where the case went.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        const dest =
+          req.body.escalatedTo === "nurse"
+            ? "the clinic"
+            : req.body.escalatedTo === "adm_coordinator"
+              ? "ADM"
+              : "the principal";
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your referral for ${card.who} was escalated to ${dest}.`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      {
+        const dest =
+          req.body.escalatedTo === "nurse"
+            ? "the clinic"
+            : req.body.escalatedTo === "adm_coordinator"
+              ? "ADM"
+              : "the principal";
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You escalated a referral for ${card.who} to ${dest}.`,
+          sourceId: referral.id,
         });
       }
     } catch (e) { next(e); }
@@ -210,17 +431,18 @@ router.post(
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot reassign a resolved referral");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
-        data: { referredToRole: req.body.referredToRole },
+        data: { status: "dismissed", notes: req.body.reason },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "referral_reassigned", sourceTable: "referrals", sourceId: referral.id, reason: `Reassigned to ${req.body.referredToRole}`, oldValue: { referredToRole: referral.referredToRole }, newValue: { referredToRole: req.body.referredToRole } });
+      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
       // Reassignment handoff: the new owning desk learns immediately.
       if (req.body.referredToRole === "nurse") {
         void fanoutToRole("nurse", {
           sourceTable: "referrals",
           action: "status",
-          message: "A case was reassigned to the clinic.",
+          message: `A case was reassigned to the clinic — ${card.who}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
         });
@@ -228,9 +450,53 @@ router.post(
         void fanoutToRole("adm_coordinator", {
           sourceTable: "referrals",
           action: "status",
-          message: "A case was reassigned to ADM.",
+          message: `A case was reassigned to ADM — ${card.who}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+        });
+      } else if (req.body.referredToRole === "guidance_counselor") {
+        void fanoutToRole("guidance_counselor", {
+          sourceTable: "referrals",
+          action: "status",
+          message: `A case was reassigned to guidance — ${card.who}. Filed by ${card.filerName}.`,
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
+      // The filing adviser learns where the case went.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        const dest =
+          req.body.referredToRole === "nurse"
+            ? "the clinic"
+            : req.body.referredToRole === "adm_coordinator"
+              ? "ADM"
+              : req.body.referredToRole === "guidance_counselor"
+                ? "guidance"
+                : "the principal";
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your referral for ${card.who} was reassigned to ${dest}.`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      {
+        const dest =
+          req.body.referredToRole === "nurse"
+            ? "the clinic"
+            : req.body.referredToRole === "adm_coordinator"
+              ? "ADM"
+              : req.body.referredToRole === "guidance_counselor"
+                ? "guidance"
+                : "the principal";
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You reassigned a referral for ${card.who} to ${dest}.`,
+          sourceId: referral.id,
         });
       }
     } catch (e) { next(e); }
@@ -252,11 +518,29 @@ router.post(
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
-        data: { notes: req.body.notes },
+        data: { status: "dismissed", notes: req.body.reason },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "referral_note_added", sourceTable: "referrals", sourceId: referral.id, reason: "Internal note added", oldValue: null, newValue: { notes: req.body.notes } });
+      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your referral for ${card.who} was dismissed.`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You dismissed a referral for ${card.who}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -277,11 +561,29 @@ router.post(
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot flag a resolved referral for follow-up");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
-        data: { status: "follow_up", followUpDate: new Date(req.body.followUpDate) },
+        data: { status: "dismissed", notes: req.body.reason },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "referral_follow_up", sourceTable: "referrals", sourceId: referral.id, reason: `Follow-up on ${req.body.followUpDate}`, oldValue: { status: referral.status }, newValue: { status: "follow_up", followUpDate: req.body.followUpDate } });
+      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `A follow-up was set for your referral for ${card.who} — ${req.body.followUpDate}.`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You set a follow-up for ${card.who} — ${req.body.followUpDate}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -306,7 +608,26 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const why = truncate(req.body.reason, 120);
       res.json(updated);
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your referral for ${card.who} was dismissed${why ? ` — ${why}` : ""}.`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You dismissed a referral for ${card.who}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -332,7 +653,57 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_referred_specialist", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { referredToRole: referral.referredToRole, status: referral.status }, newValue: { referredToRole: req.body.referredToRole, status: "pending" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const why = truncate(req.body.reason, 120);
       res.json(updated);
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        const dest =
+          req.body.referredToRole === "nurse"
+            ? "the clinic"
+            : req.body.referredToRole === "adm_coordinator"
+              ? "ADM"
+              : "the principal";
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your referral for ${card.who} was sent to ${dest}.`,
+          sourceId: referral.id,
+        });
+      }
+      if (req.body.referredToRole === "nurse") {
+        void fanoutToRole("nurse", {
+          sourceTable: "referrals",
+          action: "status",
+          message: `A case was referred to the clinic — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      } else if (req.body.referredToRole === "adm_coordinator") {
+        void fanoutToRole("adm_coordinator", {
+          sourceTable: "referrals",
+          action: "status",
+          message: `A case was referred to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      {
+        const dest =
+          req.body.referredToRole === "nurse"
+            ? "the clinic"
+            : req.body.referredToRole === "adm_coordinator"
+              ? "ADM"
+              : "the principal";
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You sent a referral for ${card.who} to ${dest}.`,
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -357,7 +728,33 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_adm_initiated", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { referredToRole: referral.referredToRole, status: referral.status }, newValue: { referredToRole: "adm_coordinator", status: "pending" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const why = truncate(req.body.reason, 120);
       res.json(updated);
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your referral for ${card.who} was sent to ADM.`,
+          sourceId: referral.id,
+        });
+      }
+      void fanoutToRole("adm_coordinator", {
+        sourceTable: "referrals",
+        action: "status",
+        message: `A case was referred to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
+        sourceId: referral.id,
+        excludeUserId: req.user!.id,
+      });
+      // Counselor receipt: bell row for the acting counselor.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You sent a referral for ${card.who} to ADM.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -574,7 +971,26 @@ router.post(
       }
       await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted with ${req.body.priority} priority`, oldValue: { status: referral.status }, newValue: { status: "in_progress", priority: req.body.priority } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Guidance accepted your referral for ${card.who} — now in progress${req.body.firstSession ? " with a first session booked" : ""}.`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor (not just the
+      // local success toast) so their inbox reflects what they did.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You accepted a guidance referral for ${card.who} — now in progress.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -676,6 +1092,10 @@ router.post(
       }
       await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted by the clinic${session ? " with a clinic session booked" : ""}`, oldValue: { status: referral.status }, newValue: { status: "in_progress" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const sessionBit = session
+        ? ` with a first session ${formatWhen(session.scheduledAt)} at ${session.venue || "School clinic"}`
+        : "";
       res.json({ referral: updated, clinicSession: session ? formatSession(session) : null });
       // The referring adviser learns the clinic picked the case up.
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
@@ -683,10 +1103,19 @@ router.post(
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: "The clinic accepted your referral — now in progress.",
+          message: `The clinic accepted your referral for ${card.who} — now in progress${sessionBit}.`,
           sourceId: referral.id,
         });
       }
+      // Nurse receipt: bell row for the acting nurse (not just the local
+      // success toast) so their inbox reflects what they did.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You accepted a clinic referral for ${card.who} — now in progress${sessionBit}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -926,15 +1355,51 @@ router.post(
         });
       }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const recNote = truncate(recommendation.trim(), 120);
       res.json(updated);
-      // Nurse consultation endorse hands the case to the ADM coordinators.
+      // Nurse consultation endorse hands the case to the ADM coordinators
+      // (coordinator toast kept); the filing adviser learns the outcome too.
       if (outcome === "endorse") {
         void fanoutToRole("adm_coordinator", {
           sourceTable: "referrals",
           action: "status",
-          message: "ADM consultation endorsed — ready for the parent meeting.",
+          message: `ADM consultation endorsed — ${card.who} ready for the parent meeting${recNote ? `: ${recNote}` : ""}${session ? ` (clinic session ${formatWhen(session.scheduledAt)})` : ""}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+        });
+        if (referral.referredBy && referral.referredBy !== req.user!.id) {
+          void fanoutNotification({
+            userId: referral.referredBy,
+            sourceTable: "referrals",
+            action: "status",
+            message: `ADM consultation endorsed for ${card.who} — now with the coordinator.`,
+            sourceId: referral.id,
+          });
+        }
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You endorsed an ADM consultation for ${card.who} — sent to the coordinator.`,
+          sourceId: referral.id,
+        });
+      } else {
+        if (referral.referredBy && referral.referredBy !== req.user!.id) {
+          void fanoutNotification({
+            userId: referral.referredBy,
+            sourceTable: "referrals",
+            action: "status",
+            message: `Your ADM referral for ${card.who} was not endorsed — case closed${recNote ? `: ${recNote}` : ""}.`,
+            sourceId: referral.id,
+          });
+        }
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You did not endorse an ADM referral for ${card.who} — case closed.`,
+          sourceId: referral.id,
         });
       }
     } catch (e) { next(e); }
@@ -1027,7 +1492,28 @@ router.post(
         newValue: { referralFormReady: true },
       });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
+      // Form-save handoff (background, off the critical path): the filing
+      // adviser and the acting nurse each get a bell row. Uses action
+      // "form" (NOT "status") so the 60s per-user dedup can never swallow
+      // the seconds-later forward handoff for any recipient.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "form",
+          message: `The clinic completed the referral form for ${card.who} — ready to forward.`,
+          sourceId: referral.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "form",
+        message: `You completed the referral form for ${card.who} — ready to forward.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1069,14 +1555,32 @@ router.post(
         newValue: { status: "in_progress" },
       });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
-      // Explicit forward hands the case to the ADM coordinators.
+      // Explicit forward hands the case to the ADM coordinators (coordinator
+      // toast kept); the filing adviser learns the case moved too.
       void fanoutToRole("adm_coordinator", {
         sourceTable: "referrals",
         action: "status",
-        message: "ADM consultation endorsed — ready for the parent meeting.",
+        message: `ADM consultation endorsed — ${card.who} ready for the parent meeting.`,
         sourceId: referral.id,
         excludeUserId: req.user!.id,
+      });
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your ADM referral for ${card.who} was forwarded to the coordinator.`,
+          sourceId: referral.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "status",
+        message: `You forwarded an ADM referral for ${card.who} to the coordinator.`,
+        sourceId: referral.id,
       });
     } catch (e) { next(e); }
   }
@@ -1189,7 +1693,11 @@ router.post(
         });
         // Booking is handling: a still-pending referral leaves "Needs review"
         // the moment its first session is booked (mirrors nurse-accept).
-        if (referral.status === "pending") {
+        // ADM consultations never flip here — on ADM track in_progress IS
+        // the endorsed state, and endorsing happens only through the
+        // explicit Create-referral/forward flow (completed form required).
+        // A pre-confirm booking from the ADM review leaves the case pending.
+        if (referral.status === "pending" && referral.referredToRole !== "adm_coordinator") {
           await tx.referral.update({
             where: { id: referral.id },
             data: { status: "in_progress" },
@@ -1198,11 +1706,70 @@ router.post(
         return row;
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: created.id, reason: "Counseling session scheduled", oldValue: null, newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt } });
-      if (referral.status === "pending") {
+      if (referral.status === "pending" && referral.referredToRole !== "adm_coordinator") {
         await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: "Session booked — case now in progress", oldValue: { status: "pending" }, newValue: { status: "in_progress" } });
       }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const when = formatWhen(created.scheduledAt);
+      const where = created.venue ? ` at ${created.venue}` : "";
       res.status(201).json(formatSession(created));
+      // Session booking is handling — the filing adviser learns live.
+      // Clinic matters stay adviser-only (never fan out to the coordinator).
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        const message =
+          req.user!.role === "nurse"
+            ? `Clinic booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`
+            : `Guidance booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`;
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message,
+          sourceId: referral.id,
+        });
+      }
+      // Consultation reviewer: on ADM-track cases the other desk's
+      // reviewer (nurse ↔ guidance) learns about the booking too, so
+      // everyone connected to the student — guidance, nurse, adviser —
+      // is reminded live. Skipped when the reviewer is the actor.
+      if (
+        referral.referredToRole === "adm_coordinator" &&
+        (referral.consultReviewer === "nurse" ||
+          referral.consultReviewer === "guidance_counselor") &&
+        referral.consultReviewer !== req.user!.role
+      ) {
+        void fanoutToRole(referral.consultReviewer, {
+          sourceTable: "referrals",
+          action: "status",
+          message:
+            req.user!.role === "nurse"
+              ? `Clinic booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`
+              : `Guidance booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`,
+          sourceId: referral.id,
+          excludeUserId: req.user!.id,
+        });
+      }
+      // Nurse receipt: bell row for the acting nurse.
+      if (req.user!.role === "nurse") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You booked a clinic session for ${card.who} (${created.sessionType}, ${when}${where}).`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      if (req.user!.role === "guidance_counselor") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You booked a guidance session for ${card.who} (${created.sessionType}, ${when}${where}).`,
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -1290,7 +1857,52 @@ router.post(
         }
       }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const didWhen = formatWhen(session.scheduledAt);
       res.json(formatSession(updated));
+      // The filing adviser learns the session outcome live (adviser-only —
+      // clinic matters never fan out to the coordinator). Status-only: no
+      // clinical notes leave this message.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        const message = req.body.followUpSession
+          ? req.user!.role === "nurse"
+            ? `Clinic set a follow-up for ${card.who} — next session ${formatWhen(parseScheduledAt(req.body.followUpSession.scheduledAt))}.`
+            : `A follow-up was set for your referral for ${card.who}.`
+          : req.user!.role === "nurse"
+            ? `Clinic completed a session for ${card.who} (${session.sessionType}, ${didWhen}).`
+            : `Guidance completed a session for ${card.who} (${session.sessionType}, ${didWhen}).`;
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message,
+          sourceId: referral.id,
+        });
+      }
+      // Nurse receipt: bell row for the acting nurse.
+      if (req.user!.role === "nurse") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: req.body.followUpSession
+            ? `You completed a session for ${card.who} and set a follow-up (${formatWhen(parseScheduledAt(req.body.followUpSession.scheduledAt))}).`
+            : `You completed a clinic session for ${card.who} (${session.sessionType}, ${didWhen}).`,
+          sourceId: referral.id,
+        });
+      }
+      // Counselor receipt: bell row for the acting counselor.
+      if (req.user!.role === "guidance_counselor") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: req.body.followUpSession
+            ? `You completed a session for ${card.who} and set a follow-up (${formatWhen(parseScheduledAt(req.body.followUpSession.scheduledAt))}).`
+            : `You completed a guidance session for ${card.who} (${session.sessionType}, ${didWhen}).`,
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -1323,7 +1935,40 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt }, newValue: { scheduledAt: nextDate } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const was = formatWhen(session.scheduledAt);
+      const now = formatWhen(nextDate);
       res.json(formatSession(updated));
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message:
+            req.user!.role === "nurse"
+              ? `Clinic rescheduled a session for ${card.who} — now ${now} (was ${was}).`
+              : `Guidance rescheduled a session for ${card.who} — now ${now} (was ${was}).`,
+          sourceId: referral.id,
+        });
+      }
+      if (req.user!.role === "nurse") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You rescheduled a clinic session for ${card.who} — now ${now} (was ${was}).`,
+          sourceId: referral.id,
+        });
+      }
+      if (req.user!.role === "guidance_counselor") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You rescheduled a guidance session for ${card.who} — now ${now} (was ${was}).`,
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -1357,7 +2002,40 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: req.body.cancelReason?.trim() || "Counseling session cancelled", oldValue: { status: session.status }, newValue: { status: "cancelled" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      const was = formatWhen(session.scheduledAt);
+      const why = truncate(req.body.cancelReason, 120);
       res.json(formatSession(updated));
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "referrals",
+          action: "status",
+          message:
+            req.user!.role === "nurse"
+              ? `Clinic cancelled a session for ${card.who} (${session.sessionType}, ${was})${why ? ` — ${why}` : ""}.`
+              : `Guidance cancelled a session for ${card.who} (${session.sessionType}, ${was})${why ? ` — ${why}` : ""}.`,
+          sourceId: referral.id,
+        });
+      }
+      if (req.user!.role === "nurse") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You cancelled a clinic session for ${card.who} (${session.sessionType}, ${was}).`,
+          sourceId: referral.id,
+        });
+      }
+      if (req.user!.role === "guidance_counselor") {
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You cancelled a guidance session for ${card.who} (${session.sessionType}, ${was}).`,
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -1596,6 +2274,29 @@ router.get(
           referredAtById.set(log.sourceId, log.createdAt.toISOString());
         }
       }
+      // Who dismissed it — adviser withdrawal ("Cancelled" watermark) vs
+      // desk rejection ("Reject"). Latest dismissal audit wins; rows never
+      // dismissed stay null.
+      const dismissedByRole = new Map<string, string>();
+      if (ids.length > 0) {
+        const dismissalLogs = await prisma.auditLog.findMany({
+          where: {
+            sourceTable: "referrals",
+            sourceId: { in: ids },
+            actionType: "referral_dismissed",
+          },
+          select: { sourceId: true, user: { select: { role: true } } },
+          orderBy: { createdAt: "desc" },
+        });
+        for (const log of dismissalLogs) {
+          if (!dismissedByRole.has(log.sourceId)) {
+            dismissedByRole.set(log.sourceId, String(log.user?.role ?? ""));
+          }
+        }
+      }
+      // Who cancelled each session — desk cancel vs the adviser-withdrawal
+      // auto-cancel cascade (audit actor is the filing teacher there).
+      const cancelledByRole = await sessionCancelledByRole(sessionIds);
       // Latest execution per referral: newest referral-level audit wins
       // unless a session-level audit on one of its sessions is newer.
       const lastActionById = new Map<string, { type: string; at: string }>();
@@ -1630,26 +2331,35 @@ router.get(
         referrals
           .map((r) => ({
             ...r,
+            counselingSessions: r.counselingSessions.map((s) => ({
+              ...s,
+              cancelledByRole: cancelledByRole.get(s.id) ?? null,
+            })),
             referredAt:
               referredAtById.get(r.id) ??
               r.anecdotalRecord?.observationDatetime?.toISOString() ??
               null,
             lastActionAt: lastActionById.get(r.id)?.at ?? null,
             lastActionType: lastActionById.get(r.id)?.type ?? null,
+            dismissedByRole: dismissedByRole.get(r.id) ?? null,
           }))
           // Latest referred on top — the nurse referrals queue is a
           // newest-first timeline. (Referral ids are uuids, so the DB
           // orderBy above carries no chronology; referredAt does.)
-          .sort((a, b) => {
-            const at = a.referredAt ?? "";
-            const bt = b.referredAt ?? "";
-            if (at === bt) return 0;
-            return bt < at ? -1 : 1;
-          }),
-      );
-    } catch (e) { next(e); }
+      .sort((a, b) => {
+        const at = a.referredAt ?? "";
+        const bt = b.referredAt ?? "";
+        if (at === bt) return 0;
+        return bt < at ? -1 : 1;
+      }),
+  );
+} catch (e) { next(e); }
   }
 );
+
+// Timeline helpers (labels, desk names, per-case audit timelines) live in
+// ./timeline.js, shared with the ADM my-cases endpoint so both teacher
+// surfaces tell the same story.
 
 // Teacher-scoped referrals: returns referrals where the teacher is the referrer
 // (referredBy = me), narrowed to their advisory sections' students. Adviser-only
@@ -1670,8 +2380,14 @@ router.get(
         throw new AppError(404, "NOT_ADVISER", "No advisory section assigned");
       }
       const sectionIds = sections.map((s) => s.id);
+      // Term-scoped: a referral filed in another term never leaks into this
+      // term's list — each term shows only transactions executed under it.
+      // Linking the teacher code again in a new term grants access; it does
+      // not copy prior terms' rows over.
+      const scopeTermId = req.termScope?.termId ?? null;
       const referralWhere = {
         referredBy: teacherId,
+        ...(scopeTermId ? { termId: scopeTermId } : {}),
         ...(sectionIds.length > 0
           ? {
               OR: [
@@ -1726,6 +2442,9 @@ router.get(
                 take: 5,
                 select: { attended: true, meetingDatetime: true },
               },
+              modules: { select: { submitted: true, submissionDate: true } },
+              devices: { select: { returnedDate: true } },
+              forms: { select: { formType: true, status: true, uploadedAt: true } },
             },
           },
         },
@@ -1733,18 +2452,24 @@ router.get(
       });
 
       const referralIds = referrals.map((r) => r.id);
-      const auditEntries = await prisma.auditLog.findMany({
-        where: {
-          sourceTable: "referrals",
-          sourceId: { in: referralIds },
-        },
-        orderBy: { createdAt: "asc" },
-      });
-      const logsByReferral = new Map<string, { createdAt: Date; reason: string | null }[]>();
-      for (const log of auditEntries) {
-        const list = logsByReferral.get(log.sourceId) ?? [];
-        list.push({ createdAt: log.createdAt, reason: (log as { reason?: string | null }).reason ?? null });
-        logsByReferral.set(log.sourceId, list);
+      // Shared audit timeline (referral + session actions, actor roles,
+      // full timestamps) — same builder the ADM my-cases endpoint uses.
+      const timelines = await buildCaseTimeline(referralIds);
+      // Approver roles for the principal-signature entries (one query).
+      const approverIds = [
+        ...new Set(
+          referrals
+            .map((r) => r.admProfiles[0]?.approvedBy ?? null)
+            .filter((v): v is string => !!v)
+        ),
+      ];
+      const approverRoles = new Map<string, string>();
+      if (approverIds.length > 0) {
+        const approvers = await prisma.user.findMany({
+          where: { id: { in: approverIds } },
+          select: { id: true, role: true },
+        });
+        for (const a of approvers) approverRoles.set(a.id, String(a.role));
       }
 
       const admLabelByStage = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));
@@ -1760,28 +2485,41 @@ router.get(
         // referral with no profile yet sits at consultation.
         const admStage = isAdm ? (profile?.stage ?? "consultation") : null;
 
-        const logs = logsByReferral.get(r.id) ?? [];
-        const referredAt = logs[0]?.createdAt.toISOString() ?? new Date().toISOString();
-        const timeline = logs.map((l) => ({
-          label: l.reason ?? "Referral update",
-          date: l.createdAt.toISOString().slice(0, 10),
-        }));
+        const timeline = timelines.get(r.id) ?? [];
+        const referredAt =
+          timeline[0]?.at ?? new Date().toISOString();
         if (timeline.length === 0) {
           timeline.push({
-            label: `Referred to ${r.referredToRole}`,
+            label: `Submitted to the ${TIMELINE_DESK_LABELS[r.referredToRole] ?? "receiving desk"}.`,
+            detail: null,
             date: referredAt.slice(0, 10),
+            at: referredAt,
+            action: "referral_submitted",
+            byRole: null,
+            source: "case",
           });
         }
         if (profile) {
           timeline.push({
-            label: `ADM stage: ${admLabelByStage.get(profile.stage) ?? profile.stage}`,
+            label: `Moved to the ${admLabelByStage.get(profile.stage) ?? profile.stage} stage.`,
+            detail: null,
             date: profile.createdAt.toISOString().slice(0, 10),
+            at: profile.createdAt.toISOString(),
+            action: "adm_stage",
+            byRole: "adm_coordinator",
+            source: "case",
+            stage: profile.stage,
           });
         }
         if (profile?.approvedBy && profile.approvedAt) {
           timeline.push({
-            label: "Principal approval signed",
+            label: "The principal signed the approval.",
+            detail: null,
             date: profile.approvedAt.toISOString().slice(0, 10),
+            at: profile.approvedAt.toISOString(),
+            action: "adm_approved",
+            byRole: approverRoles.get(profile.approvedBy) ?? "principal",
+            source: "case",
           });
         }
 
@@ -1795,7 +2533,7 @@ router.get(
           reason: r.reason,
           status: r.status,
           referredAt,
-          resolvedAt: r.status === "resolved" ? (logs[logs.length - 1]?.createdAt.toISOString() ?? new Date().toISOString()) : null,
+          resolvedAt: r.status === "resolved" ? (timeline[timeline.length - 1]?.at ?? new Date().toISOString()) : null,
           anecdotalId: r.anecdotalRecordId,
           observationDate: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
           anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,
@@ -1804,6 +2542,7 @@ router.get(
           // Truthful routing: the teacher-picked consultation reviewer, or
           // the coordinator for legacy rows without a stored pick.
           admReceiver: isAdm ? (r.consultReviewer ?? "adm_coordinator") : null,
+          consultReviewer: r.consultReviewer ?? null,
           hasParentMeeting,
           meetingAttended,
           hasHomeVisit,
@@ -1812,6 +2551,27 @@ router.get(
           admEligibility: profile?.eligibilityStatus ?? null,
           admApproved: !!profile?.approvedBy,
           admApprovedAt: profile?.approvedAt ? profile.approvedAt.toISOString() : null,
+          // Stage evidence for the shared tracker (status-only counts and
+          // timestamps — same shape as adm/my-cases so both pages match).
+          modulesSubmitted: (profile?.modules ?? []).filter((m) => m.submitted).length,
+          modulesTotal: (profile?.modules ?? []).length,
+          lastModuleAt: (() => {
+            const dates = (profile?.modules ?? [])
+              .filter((m) => m.submitted && m.submissionDate)
+              .map((m) => (m.submissionDate as Date).toISOString());
+            return dates.length > 0 ? dates.sort().slice(-1)[0] : null;
+          })(),
+          devicesReturned: (profile?.devices ?? []).filter((d) => d.returnedDate !== null).length,
+          certificationAt: (() => {
+            const cert = (profile?.forms ?? []).find(
+              (f) => f.formType === "CERTIFICATION" && f.status === "verified" && f.uploadedAt
+            );
+            return cert?.uploadedAt ? (cert.uploadedAt as Date).toISOString() : null;
+          })(),
+          lastMeetingAt:
+            meetings.length > 0 && meetings[0].meetingDatetime
+              ? (meetings[0].meetingDatetime as Date).toISOString()
+              : null,
           timeline,
           notes: r.notes,
           escalationReason: r.escalationReason,
@@ -1856,8 +2616,172 @@ router.post(
         data: { status: "dismissed", notes: req.body.reason },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
+      // Cascade: booked (still-scheduled) sessions die with the referral —
+      // a withdrawn case must never keep an upcoming booking on any desk's
+      // calendar. Completed sessions stay as history; only scheduled ones
+      // flip, each with its own audit so timelines stay truthful.
+      const AUTO_CANCEL_REASON = "Auto-cancelled — referral withdrawn by the filing teacher";
+      const booked = await prisma.counselingSession.findMany({
+        where: { referralId: referral.id, status: "scheduled" },
+        select: { id: true, status: true },
+      });
+      if (booked.length > 0) {
+        await prisma.counselingSession.updateMany({
+          where: { referralId: referral.id, status: "scheduled" },
+          data: { status: "cancelled", cancelReason: AUTO_CANCEL_REASON },
+        });
+        for (const s of booked) {
+          await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: s.id, reason: AUTO_CANCEL_REASON, oldValue: { status: s.status }, newValue: { status: "cancelled" } });
+        }
+      }
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
       res.json(updated);
+      // Realtime handoff (background, off the critical path): the receiving
+      // desk learns the case was withdrawn, the consultation reviewer (if
+      // any) stops work, and the filing teacher gets a bell confirmation.
+      // Best-effort — never delays the response.
+      {
+        const actorId = req.user!.id;
+        const role = referral.referredToRole as
+          | "nurse"
+          | "guidance_counselor"
+          | "adm_coordinator"
+          | "principal";
+        const cascadeNote =
+          booked.length > 0
+            ? ` (${booked.length} booked session${booked.length === 1 ? "" : "s"} auto-cancelled).`
+            : "";
+        void fanoutToRole(role, {
+          sourceTable: "referrals",
+          action: "status",
+          message: `A referral to your desk was withdrawn by the filing teacher — ${card.who}.${cascadeNote}`,
+          sourceId: referral.id,
+          excludeUserId: actorId,
+        });
+        if (
+          role === "adm_coordinator" &&
+          (referral.consultReviewer === "nurse" ||
+            referral.consultReviewer === "guidance_counselor")
+        ) {
+          void fanoutToRole(referral.consultReviewer, {
+            sourceTable: "referrals",
+            action: "status",
+            message: `An ADM referral under your review was withdrawn — ${card.who}.${cascadeNote}`,
+            sourceId: referral.id,
+            excludeUserId: actorId,
+          });
+        }
+        void fanoutNotification({
+          userId: actorId,
+          sourceTable: "referrals",
+          action: "status",
+          message: `You withdrew a referral for ${card.who}.${cascadeNote}`,
+          sourceId: referral.id,
+        });
+      }
+    } catch (e) { next(e); }
+  }
+);
+
+// Adviser reopen: re-submit the teacher's own cancelled (dismissed)
+// referral. The SAME row flips back to pending (never a duplicate row),
+// so a submitted → cancelled → submitted case reads pending, not dismissed.
+// An optional new destination (type) may be picked: omitted keeps the
+// original desk. Guards mirror creation: own referral, dismissed-only, and
+// no other open ADM case for the student when the final desk is ADM.
+const reopenSchema = z.object({
+  referredToRole: z.enum(["nurse", "guidance_counselor", "adm_coordinator", "principal"]).optional(),
+  consultReviewer: z.enum(["nurse", "guidance_counselor", "lrpc"]).optional(),
+}).strict();
+router.post(
+  "/:id/reopen",
+  requireAuth,
+  requireRole("adviser", "subject_teacher"),
+  validate("body", reopenSchema),
+  async (req, res, next) => {
+    try {
+      const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
+      if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      if (referral.referredBy !== req.user!.id) {
+        throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can re-submit it");
+      }
+      if (referral.status !== "dismissed") {
+        throw new AppError(400, "INVALID_ACTION", "Only a cancelled referral can be re-submitted");
+      }
+      const nextRole = req.body.referredToRole ?? referral.referredToRole;
+      const nextReviewer = nextRole === "adm_coordinator" ? (req.body.consultReviewer ?? null) : null;
+      if (req.body.consultReviewer && nextRole !== "adm_coordinator") {
+        throw new AppError(400, "INVALID_ACTION", "A consultation reviewer can only be picked for ADM cases");
+      }
+      if (nextRole === "adm_coordinator") {
+        const studentMatch = referral.studentId
+          ? { studentId: referral.studentId }
+          : { rosterId: referral.rosterId };
+        const existingAdm = await prisma.referral.findFirst({
+          where: {
+            referredToRole: "adm_coordinator",
+            status: { notIn: ["dismissed", "resolved"] },
+            termId: referral.termId,
+            ...studentMatch,
+          },
+          select: { id: true },
+        });
+        if (existingAdm) {
+          throw new AppError(409, "ADM_CASE_EXISTS", "This student already has an open ADM case — only one ADM referral per student");
+        }
+      }
+      const updated = await prisma.referral.update({
+        where: { id: referral.id },
+        data: { status: "pending", notes: null, referredToRole: nextRole, consultReviewer: nextReviewer },
+      });
+      await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Cancelled referral re-submitted by the filing teacher${nextRole !== referral.referredToRole ? ` (new desk: ${nextRole})` : ""}`, oldValue: { status: referral.status }, newValue: { status: "pending" } });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      const card = await referralCard(referral);
+      res.json(updated);
+      // Realtime handoff (background, off the critical path): the receiving
+      // desk, the consultation reviewer (if any), and the filing teacher all
+      // learn the case is live again. Best-effort — never delays the response.
+      {
+        const actorId = req.user!.id;
+        const role = nextRole as
+          | "nurse"
+          | "guidance_counselor"
+          | "adm_coordinator"
+          | "principal";
+        const roleMessage: Record<typeof role, string> = {
+          adm_coordinator: `A cancelled ADM referral was re-submitted — ${card.who}.`,
+          nurse: `A cancelled clinic referral was re-submitted — ${card.who}.`,
+          guidance_counselor: `A cancelled guidance referral was re-submitted — ${card.who}.`,
+          principal: `A cancelled principal referral was re-submitted — ${card.who}.`,
+        };
+        void fanoutToRole(role, {
+          sourceTable: "referrals",
+          action: "status",
+          message: roleMessage[role],
+          sourceId: referral.id,
+          excludeUserId: actorId,
+        });
+        if (
+          role === "adm_coordinator" &&
+          (nextReviewer === "nurse" || nextReviewer === "guidance_counselor")
+        ) {
+          void fanoutToRole(nextReviewer, {
+            sourceTable: "referrals",
+            action: "status",
+            message: `A cancelled ADM referral under your review was re-submitted — ${card.who}.`,
+            sourceId: referral.id,
+            excludeUserId: actorId,
+          });
+        }
+        void fanoutNotification({
+          userId: actorId,
+          sourceTable: "referrals",
+          action: "status",
+          message: `Your cancelled referral for ${card.who} was re-submitted.`,
+          sourceId: referral.id,
+        });
+      }
     } catch (e) { next(e); }
   }
 );

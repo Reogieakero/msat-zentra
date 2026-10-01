@@ -214,7 +214,7 @@ export function AttendanceSheet({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel variant="destructive">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   setEditing(true);

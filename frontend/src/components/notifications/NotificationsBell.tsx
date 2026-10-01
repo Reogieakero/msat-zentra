@@ -65,13 +65,18 @@ interface NotificationsBellProps {
   refreshKeys?: string[][];
   /** Role-scoped deep link for an item (schedule verdict → section page). */
   resolveTarget: (n: BellNotice) => BellNotificationTarget;
+  /** Role-scoped inbox title per item. Defaults to the prettified type
+      ("Referral Status Change") — pass a mapper for specific titles that
+      name the event instead of the generic type. */
+  titleFor?: (n: BellNotice) => string;
 }
 
 /* Shared notification bell — one icon, badge, dropdown, and view-all
    overlay used by the teacher and principal desks. Missed sileo toasts stay
    here with an unread badge; realtime invalidation keeps the count live
    without manual refresh. */
-export function NotificationsBell({ queryKey, refreshKeys, resolveTarget }: NotificationsBellProps) {
+export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleFor }: NotificationsBellProps) {
+  const titleOf = titleFor ?? ((n: BellNotice) => prettifyNotificationType(n.type));
   const router = useRouter();
   const queryClient = useQueryClient();
   const [viewAllOpen, setViewAllOpen] = React.useState(false);
@@ -155,7 +160,7 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget }: Noti
         aria-hidden="true"
       />
       <span className={styles.bellMain}>
-        <span className={styles.bellTitle}>{prettifyNotificationType(n.type)}</span>
+        <span className={styles.bellTitle}>{titleOf(n)}</span>
         <span className={styles.bellMsg}>{n.message}</span>
         <span className={styles.bellDate}>
           {formatBellDate(n.createdAt)}
@@ -182,7 +187,7 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget }: Noti
             ) : null}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className={styles.bellMenu}>
+        <DropdownMenuContent align="end" className={`${styles.bellMenu} ${styles.bellMenuDrop}`}>
           <DropdownMenuLabel className={styles.bellHead}>
             <span>
               {unread === 0

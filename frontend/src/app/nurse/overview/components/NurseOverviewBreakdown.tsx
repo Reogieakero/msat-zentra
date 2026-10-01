@@ -12,12 +12,24 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card } from "@/components/ui/card";
 import type { NurseBreakdownRow } from "./nurse-overview-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
-/** Neutral ink scale — darkest slice always marks the leading segment. */
-const SHADES = ["#171717", "#525252", "#737373", "#a3a3a3", "#d4d4d4", "#e5e5e5", "#f5f5f5"];
+/** Primary-palette scale — follows the nurse's workspace palette
+ *  (--primary, same source as the heat-map scale in globals.css), so the
+ *  charts re-tint the moment the palette is previewed or saved. Strongest
+ *  slice always marks the leading segment. Falls back to the monochrome
+ *  brand when no custom palette is set. */
+const SHADES = [
+  "var(--primary)",
+  "color-mix(in oklch, var(--primary), transparent 25%)",
+  "color-mix(in oklch, var(--primary), transparent 45%)",
+  "color-mix(in oklch, var(--primary), transparent 60%)",
+  "color-mix(in oklch, var(--primary), transparent 72%)",
+  "color-mix(in oklch, var(--primary), transparent 82%)",
+  "color-mix(in oklch, var(--primary), transparent 89%)",
+];
 
 interface Slice extends NurseBreakdownRow {
   percent: number;
@@ -35,7 +47,7 @@ function buildSlices(rows: NurseBreakdownRow[]): { slices: Slice[]; total: numbe
   return { slices, total };
 }
 
-/* Horizontal bars for the per-type cards — same neutral scale and legend
+/* Horizontal bars for the per-type cards — same primary scale and legend
    as the donut, but counts are directly comparable across the two cards. */
 function BarPanel({
   title,
@@ -52,15 +64,20 @@ function BarPanel({
   const height = Math.max(168, slices.length * 36 + 16);
 
   return (
-    <Card className={styles.panel}>
-      <h2 className={styles.panelTitle}>{title}</h2>
-      <p className={styles.panelDesc}>{description}</p>
+    <div className={assign.card}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative">
+        <h2 className={styles.sectionTitle}>{title}</h2>
+        <p className={styles.sectionDesc}>{description}</p>
+      </div>
       {rows.length === 0 ? (
-        <p className={styles.empty}>{emptyText}</p>
+        <p className={`${styles.empty} relative`}>{emptyText}</p>
       ) : (
         <>
           <div
-            className={styles.barChart}
+            className={`${styles.barChart} relative`}
             role="img"
             aria-label={`${title}: ${slices.map((s) => `${s.label} ${s.count} (${s.percent}%)`).join(", ")}`}
           >
@@ -90,12 +107,12 @@ function BarPanel({
             </ResponsiveContainer>
           </div>
 
-          <p className={styles.legendTotal}>
+          <p className={`${styles.legendTotal} relative`}>
             {total} {total === 1 ? "case" : "cases"} total
           </p>
         </>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -115,14 +132,19 @@ function DonutPanel({
   const { slices, total } = buildSlices(rows);
 
   return (
-    <Card className={styles.panel}>
-      <h2 className={styles.panelTitle}>{title}</h2>
-      <p className={styles.panelDesc}>{description}</p>
+    <div className={assign.card}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative">
+        <h2 className={styles.sectionTitle}>{title}</h2>
+        <p className={styles.sectionDesc}>{description}</p>
+      </div>
       {rows.length === 0 ? (
-        <p className={styles.empty}>{emptyText}</p>
+        <p className={`${styles.empty} relative`}>{emptyText}</p>
       ) : (
         <div
-          className={styles.chartRow}
+          className={`${styles.chartRow} relative`}
           role="img"
           aria-label={`${title}: ${slices.map((s) => `${s.label} ${s.count} (${s.percent}%)`).join(", ")}`}
         >
@@ -166,7 +188,7 @@ function DonutPanel({
           </ul>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

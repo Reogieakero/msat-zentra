@@ -7,25 +7,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/providers";
+import { RefreshBadge } from "@/components/ui/refresh-badge";
 import {
+  buildCategoryTrend,
   buildRiskDashboard,
   interpretCategoryMix,
+  interpretCategoryTrend,
   interpretLevelMix,
-  interpretSectionMatrix,
 } from "@/components/risk-dashboard/risk-dashboard-data";
 import { RiskCategories } from "@/components/risk-dashboard/RiskCategories";
-import { RiskHeatmap } from "@/components/risk-dashboard/RiskHeatmap";
+import { RiskTrendLines } from "@/components/risk-dashboard/RiskTrendLines";
 import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
+import { findHotspot, RiskHotspot } from "@/components/risk-dashboard/RiskHotspot";
 import { fetchGuidanceRiskLevels } from "../referrals/components/guidance-referrals-data";
 import { fetchGuidanceRisk } from "./components/guidance-risk-dashboard";
+import {
+  buildGuidanceRiskWatch,
+  fetchAllGuidanceAlertFactors,
+  GuidanceRiskWatchCard,
+} from "./components/GuidanceRiskWatch";
+import { useGuidanceProfileSettings } from "../settings/components/profile-settings-data";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
 /**
  * Guidance risk dashboard — desk-scoped categories, levels, and heatmaps.
- * Same shared UI as the nurse risk board; every number derives from the
- * guidance desk's own referrals plus the per-student risk-level projection
- * the guidance role may read. Counts and levels only; confidential notes
- * from other roles never appear here.
+ * Same contents and layout as the nurse risk board, over the guidance
+ * desk's own referrals plus the per-student risk-level projection the
+ * guidance role may read. Counts and levels only; confidential notes from
+ * other roles never appear here.
  */
 export default function GuidanceRiskPage() {
   // Slice fills resolve per mode (SVG attributes can't read CSS vars), so
@@ -39,31 +48,14 @@ export default function GuidanceRiskPage() {
     staleTime: 60_000,
   });
 
-  // Track scope — the board mixes both referral tracks by default; the
-  // switch isolates the Counseling caseload or the ADM consultation queue.
-  const [track, setTrack] = React.useState<"all" | "Counseling" | "ADM">("all");
-  const trackCounts = React.useMemo(() => {
-    const rows = riskQuery.data?.rows ?? [];
-    return {
-      all: rows.length,
-      Counseling: rows.filter((r) => r.track === "Counseling").length,
-      ADM: rows.filter((r) => r.track === "ADM").length,
-    };
-  }, [riskQuery.data]);
-  const filteredRows = React.useMemo(() => {
-    const rows = riskQuery.data?.rows ?? [];
-    return track === "all" ? rows : rows.filter((r) => r.track === track);
-  }, [riskQuery.data, track]);
+  // Saved settings hex — charts build their scale straight from it, so the
+  // lines, donut, and bars always wear the user's chosen primary.
+  const profile = useGuidanceProfileSettings();
+  const primary = profile.data?.primaryColor ?? null;
 
   const studentIds = React.useMemo(
-    () => [
-      ...new Set(
-        filteredRows
-          .map((r) => riskQuery.data?.caseToStudent[r.id] ?? null)
-          .filter((id): id is string => id !== null)
-      ),
-    ],
-    [filteredRows, riskQuery.data]
+    () => [...new Set(Object.values(riskQuery.data?.caseToStudent ?? {}).filter((id): id is string => id !== null))],
+    [riskQuery.data]
   );
   const levelsQuery = useQuery({
     queryKey: ["guidance-risk-levels", studentIds],
@@ -76,77 +68,71 @@ export default function GuidanceRiskPage() {
     () =>
       riskQuery.data
         ? buildRiskDashboard(
-            filteredRows,
+            riskQuery.data.rows,
             levelsQuery.data ?? {},
             riskQuery.data.caseToStudent,
             isDark
           )
         : null,
-    [riskQuery.data, filteredRows, levelsQuery.data, isDark]
+    [riskQuery.data, levelsQuery.data, isDark]
+  );
+
+  // Factor flags behind the watch card — same students, so drivers repaint
+  // with levels and the desk.
+  const factorsQuery = useQuery({
+    queryKey: ["guidance-risk-alert-factors"],
+    queryFn: fetchAllGuidanceAlertFactors,
+    staleTime: 300_000,
+  });
+
+  // Plain-words watch over the same desk rows the dashboard reads.
+  const watch = React.useMemo(
+    () =>
+      riskQuery.data
+        ? buildGuidanceRiskWatch(
+            riskQuery.data.rows,
+            riskQuery.data.caseToStudent,
+            riskQuery.data.referralToName,
+            levelsQuery.data ?? {},
+            factorsQuery.data ?? {}
+          )
+        : null,
+    [riskQuery.data, levelsQuery.data, factorsQuery.data]
+  );
+
+  const hotspot = React.useMemo(
+    () =>
+      dashboard
+        ? findHotspot(dashboard.matrix, dashboard.matrixCategories, dashboard.totalCases)
+        : null,
+    [dashboard]
+  );
+
+  // Weekly category lines for the main panel — same desk rows, mapped to
+  // the shared trend input (category + referred date).
+  const trend = React.useMemo(
+    () =>
+      riskQuery.data
+        ? buildCategoryTrend(
+            riskQuery.data.rows.map((r) => ({
+              category: r.category,
+              referredAt: r.referredAt,
+            }))
+          )
+        : null,
+    [riskQuery.data]
   );
 
   const levelsPending = studentIds.length > 0 && levelsQuery.isPending;
 
   if (riskQuery.isPending || levelsPending) {
-    // Skeleton mirrors the real layout one-to-one (page head, heatmap
-    // grid panel + donut/bars side rail with descs and interpretations)
-    // so nothing shifts when data arrives.
+    // Skeleton mirrors the real layout one-to-one (trend-lines panel,
+    // levels + categories duo, side rail) so nothing shifts when data
+    // arrives.
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.skelPageHead} aria-hidden="true">
-          <Skeleton className={styles.skelEyebrow} />
-          <Skeleton className={styles.skelTitle} />
-          <Skeleton className={styles.skelLede} />
-        </div>
-        <div className={styles.trackRow} aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className={styles.skelTrackBtn} />
-          ))}
-        </div>
-        <div className={styles.mainGrid}>
-          <Card>
-            <CardContent className={styles.skelChartCard}>
-              <Skeleton className={styles.skelLabel} />
-              <Skeleton className={styles.skelDesc} aria-hidden="true" />
-              <div className={styles.skelHeatScroll} aria-hidden="true">
-                <div className={styles.skelHeatGrid}>
-                  <div className={styles.skelHeatRow}>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <Skeleton key={i} className={styles.skelHeatHeadCell} />
-                    ))}
-                  </div>
-                  {[0, 1, 2, 3].map((r) => (
-                    <div key={r} className={styles.skelHeatRow}>
-                      {[0, 1, 2, 3, 4].map((c) => (
-                        <Skeleton key={c} className={styles.skelHeatCell} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className={styles.skelHeatFooter} aria-hidden="true">
-                <Skeleton className={styles.skelHeatLegend} />
-              </div>
-              <Skeleton className={styles.skelInterp} aria-hidden="true" />
-              <Skeleton className={styles.skelInterpShort} aria-hidden="true" />
-            </CardContent>
-          </Card>
-          <div className={styles.sideRail}>
-            <Card>
-              <CardContent className={styles.skelChartCard}>
-                <Skeleton className={styles.skelLabel} />
-                <Skeleton className={styles.skelDesc} aria-hidden="true" />
-                <div className={styles.skelChartRow}>
-                  <Skeleton className={styles.skelDonut} />
-                  <div className={styles.skelLegend}>
-                    {[0, 1, 2, 3].map((i) => (
-                      <Skeleton key={i} className={styles.skelLegendRow} />
-                    ))}
-                  </div>
-                </div>
-                <Skeleton className={styles.skelInterp} aria-hidden="true" />
-              </CardContent>
-            </Card>
+        <div className={styles.mainGridFlipped}>
+          <div className={styles.chartsCol}>
             <Card>
               <CardContent className={styles.skelChartCard}>
                 <Skeleton className={styles.skelLabel} />
@@ -156,6 +142,52 @@ export default function GuidanceRiskPage() {
                     <Skeleton key={i} className={styles.skelBar} />
                   ))}
                 </div>
+                <Skeleton className={styles.skelInterp} aria-hidden="true" />
+                <Skeleton className={styles.skelInterpShort} aria-hidden="true" />
+              </CardContent>
+            </Card>
+            <div className={styles.duoGrid}>
+              <Card>
+                <CardContent className={styles.skelChartCard}>
+                  <Skeleton className={styles.skelLabel} />
+                  <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                  <div className={styles.skelChartRow}>
+                    <Skeleton className={styles.skelDonut} />
+                    <div className={styles.skelLegend}>
+                      {[0, 1, 2, 3].map((i) => (
+                        <Skeleton key={i} className={styles.skelLegendRow} />
+                      ))}
+                    </div>
+                  </div>
+                  <Skeleton className={styles.skelInterp} aria-hidden="true" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className={styles.skelChartCard}>
+                  <Skeleton className={styles.skelLabel} />
+                  <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                  <div className={styles.skelBars}>
+                    {[0, 1, 2, 3].map((i) => (
+                      <Skeleton key={i} className={styles.skelBar} />
+                    ))}
+                  </div>
+                  <Skeleton className={styles.skelInterp} aria-hidden="true" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          <div className={styles.sideRail}>
+            <Card aria-hidden="true">
+              <CardContent className={styles.skelChartCard}>
+                <Skeleton className={styles.skelLabel} />
+                <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                <Skeleton className={styles.skelInterp} aria-hidden="true" />
+              </CardContent>
+            </Card>
+            <Card aria-hidden="true">
+              <CardContent className={styles.skelChartCard}>
+                <Skeleton className={styles.skelLabel} />
+                <Skeleton className={styles.skelDesc} aria-hidden="true" />
                 <Skeleton className={styles.skelInterp} aria-hidden="true" />
               </CardContent>
             </Card>
@@ -193,62 +225,45 @@ export default function GuidanceRiskPage() {
     );
   }
 
+  const fetching = riskQuery.isFetching || levelsQuery.isFetching;
+
+  const refreshing = !riskQuery.isPending && fetching;
+
   return (
-    <section className={styles.page}>
-      <div>
-        <p className={styles.eyebrow}>Guidance · Insights</p>
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>Risk dashboard</h1>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <RefreshBadge label="Refreshing risk dashboard…" /> : null}
+      <div className={styles.mainGridFlipped}>
+        <div className={styles.chartsCol}>
+          {trend ? (
+            <RiskTrendLines
+              trend={trend}
+              interpretation={interpretCategoryTrend(trend)}
+              primary={primary}
+            />
+          ) : null}
+          <div className={styles.duoGrid}>
+            <RiskLevels
+              desk="guidance"
+              mix={dashboard.levelMix}
+              totalStudents={dashboard.totalStudents}
+              interpretation={interpretLevelMix(
+                dashboard.levelMix,
+                dashboard.totalStudents,
+                "guidance"
+              )}
+              primary={primary}
+            />
+            <RiskCategories
+              desk="guidance"
+              rows={dashboard.categoryRows}
+              interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases)}
+              primary={primary}
+            />
+          </div>
         </div>
-        <p className={styles.lede}>
-          Desk-scoped categories, levels, and heatmaps.
-        </p>
-      </div>
-      <div className={styles.trackRow} role="group" aria-label="Filter board by case track">
-        {(
-          [
-            { key: "all", label: "All tracks" },
-            { key: "Counseling", label: "Counseling" },
-            { key: "ADM", label: "ADM" },
-          ] as const
-        ).map((t) => (
-          <Button
-            key={t.key}
-            size="sm"
-            variant={track === t.key ? "default" : "outline"}
-            onClick={() => setTrack(t.key)}
-            aria-pressed={track === t.key}
-          >
-            {t.label} · {trackCounts[t.key]}
-          </Button>
-        ))}
-      </div>
-      <div className={styles.mainGrid}>
-        <RiskHeatmap
-          desk="guidance"
-          categories={dashboard.matrixCategories}
-          matrix={dashboard.matrix}
-          colTotals={dashboard.colTotals}
-          total={dashboard.totalCases}
-          interpretation={interpretSectionMatrix(
-            dashboard.matrix,
-            dashboard.matrixCategories,
-            dashboard.totalCases,
-            "guidance"
-          )}
-        />
         <div className={styles.sideRail}>
-          <RiskLevels
-            desk="guidance"
-            mix={dashboard.levelMix}
-            totalStudents={dashboard.totalStudents}
-            interpretation={interpretLevelMix(dashboard.levelMix, dashboard.totalStudents, "guidance")}
-          />
-          <RiskCategories
-            desk="guidance"
-            rows={dashboard.categoryRows}
-            interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases, "guidance")}
-          />
+          {watch ? <GuidanceRiskWatchCard data={watch} /> : null}
+          <RiskHotspot hotspot={hotspot} />
         </div>
       </div>
     </section>

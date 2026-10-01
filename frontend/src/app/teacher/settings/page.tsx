@@ -1,45 +1,29 @@
 "use client";
 
 import * as React from "react";
-import { Dock, Loader2, Moon, PanelLeft, Sun } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import BranchedMenu from "@/components/nav/BranchedMenu";
-import { useLinksLayout } from "@/lib/links-layout";
-import {
-  BranchedNav,
-  scrollToSection,
-  settingsSections,
-} from "./components/SettingsNav";
+import { scrollToSection, settingsSections } from "./components/SettingsNav";
+import { ProfileCard } from "./components/ProfileCard";
+import { PaletteCard } from "./components/PaletteCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
-import { useFont, useTheme } from "@/components/providers";
+import { useTheme } from "@/components/providers";
 import { toast } from "@/components/ui/sonner";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
   teacherOverviewKey,
   useCachedMasterTeacher,
   useTeacherOverview,
   type TeacherOverviewCritical,
+  writeCachedAdviser,
   writeCachedMasterTeacher,
 } from "../overview/components/teacher-overview-data";
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const first = parts[0]?.replace(/^[^A-Za-z]+/, "")?.[0] ?? parts[0]?.[0] ?? "?";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : (parts[0]?.[1] ?? "");
-  return `${first}${last}`.toUpperCase();
-}
-
-function roleLabel(role: string | undefined): string {
-  if (role === "adviser") return "Adviser";
-  if (role === "subject_teacher") return "Subject Teacher";
-  return "Teacher";
-}
 
 function getErrorMessage(err: unknown, fallback: string): string {
   // The backend envelopes errors as { error: { code, message } } — read that
@@ -90,14 +74,17 @@ function PasswordCard() {
   };
 
   return (
-    <section id="section-password" aria-labelledby="settings-password" className="scroll-mt-24 rounded-xl border border-input bg-card p-5 shadow-sm">
-      <h2 id="settings-password" className="text-base font-semibold">
+    <section id="section-password" aria-labelledby="settings-password" className={`${assign.card} scroll-mt-24`}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <h2 id="settings-password" className="relative text-base font-semibold">
         Password
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="relative mt-1 text-sm text-muted-foreground">
         Choose a new password at least 8 characters long.
       </p>
-      <form onSubmit={(e) => void handleSave(e)} className="mt-4 max-w-sm space-y-4">
+      <form onSubmit={(e) => void handleSave(e)} className="relative mt-4 max-w-sm space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="settings-current">Current password</Label>
           <Input
@@ -162,10 +149,360 @@ function PasswordCard() {
   );
 }
 
+type AdviserSectionOption = {
+  id: string;
+  name: string;
+  gradeLevel: string;
+  gradeNumber: number;
+  adviserLabel: string;
+  claimable: boolean;
+  advisedByMe: boolean;
+  holderName: string | null;
+  inMasterSchedule: boolean;
+};
+
+function AdviserCard() {
+  const session = useSession();
+  const overview = useTeacherOverview();
+  const queryClient = useQueryClient();
+  const isAdviser = overview.data?.isAdviser ?? false;
+  const advisorySection = overview.data?.advisorySection ?? null;
+  const [picking, setPicking] = React.useState(false);
+  const [answeredNo, setAnsweredNo] = React.useState(false);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+
+  const sectionsQuery = useQuery<{ sections: AdviserSectionOption[] }>({
+    queryKey: ["teacher-settings-adviser-sections"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ sections: AdviserSectionOption[] }>(
+        "/api/teacher/settings/adviser-sections",
+      );
+      return data;
+    },
+    staleTime: 30_000,
+  });
+
+  const sections = sectionsQuery.data?.sections ?? [];
+  const mine = sections.filter((s) => s.advisedByMe);
+  const currentName = mine[0]?.name ?? advisorySection?.name ?? null;
+  // Picker prefers sections already in the master teacher's schedule, then
+  // grade, then name. Taken sections stay visible but disabled.
+  const ordered = [...sections].sort(
+    (a, b) =>
+      Number(b.inMasterSchedule) - Number(a.inMasterSchedule) ||
+      Number(b.claimable) - Number(a.claimable) ||
+      a.gradeNumber - b.gradeNumber ||
+      a.name.localeCompare(b.name),
+  );
+  const effectiveSelected = ordered.some((s) => s.id === selectedId && (s.claimable || s.advisedByMe))
+    ? selectedId
+    : null;
+
+  const refreshAdvisory = async () => {
+    await queryClient.invalidateQueries({ queryKey: teacherOverviewKey(session?.sub) });
+    await queryClient.invalidateQueries({ queryKey: ["teacher-settings-adviser-sections"] });
+    for (const key of [
+      ["teacher", "advisory", "claim-status"],
+      ["advisory-students"],
+      ["advisee-attendance"],
+      ["advisee-academic"],
+    ]) {
+      void queryClient.invalidateQueries({ queryKey: key });
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!effectiveSelected || saving) return;
+    const target = ordered.find((s) => s.id === effectiveSelected);
+    if (!target) return;
+    setSaving(true);
+    try {
+      const previousMine = mine.length > 0 ? mine.map((m) => m.id) : advisorySection ? [advisorySection.id] : [];
+      await apiClient.post("/api/teacher/advisory/claim", { sectionId: target.id });
+      // Single-section model: release any previous section after the new
+      // claim lands, so a failed claim never leaves the teacher seatless.
+      for (const oldId of previousMine.filter((id) => id !== target.id)) {
+        try {
+          await apiClient.delete(`/api/teacher/advisory/claim?sectionId=${encodeURIComponent(oldId)}`, {
+            data: { sectionId: oldId },
+          });
+        } catch {
+          // Old seat kept — surfaces refresh below will show the truth.
+        }
+      }
+      writeCachedAdviser(session?.sub, true);
+      queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
+        if (!old) return old;
+        return { ...old, isAdviser: true };
+      });
+      await refreshAdvisory();
+      setPicking(false);
+      setAnsweredNo(false);
+      setSelectedId(null);
+      toast.success({
+        title: "Advisory saved",
+        description: `You are now the adviser of ${target.name}.`,
+      });
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to save your advisory section.");
+      toast.error({ title: "Could not save", description: message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRelease = async (sectionId: string | null) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const url = sectionId
+        ? `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(sectionId)}`
+        : "/api/teacher/advisory/claim";
+      await apiClient.delete(url, sectionId ? { data: { sectionId } } : undefined);
+      writeCachedAdviser(session?.sub, false);
+      queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
+        if (!old) return old;
+        return { ...old, isAdviser: false, advisorySection: null };
+      });
+      await refreshAdvisory();
+      setPicking(false);
+      setSelectedId(null);
+      toast.success({
+        title: "Advisory released",
+        description: "You are no longer an adviser. Overview, Workspace and Settings stay available.",
+      });
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to release your advisory section.");
+      toast.error({ title: "Could not release", description: message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section id="section-adviser" aria-labelledby="settings-adviser" className={`${assign.card} scroll-mt-24`}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <h2 id="settings-adviser" className="relative text-base font-semibold">
+        Adviser
+      </h2>
+      <p className="relative mt-1 text-sm text-muted-foreground">
+        Are you an adviser? Pick your section from the master teacher&apos;s schedule.
+      </p>
+      <div className="relative mt-4">
+        <p className="text-sm font-medium">Adviser status</p>
+        <p className="text-xs text-muted-foreground">
+          {isAdviser || mine.length > 0
+            ? currentName
+              ? `Adviser of ${currentName}`
+              : "Adviser"
+            : "Not an adviser"}
+        </p>
+        {!isAdviser && mine.length === 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Only Overview, Workspace and Settings show until you claim a section — the Advisory
+            branch unlocks once you are an adviser.
+          </p>
+        ) : null}
+      </div>
+
+      {isAdviser || mine.length > 0 ? (
+        <div className="relative mt-4 flex flex-col gap-3">
+          {mine.length > 1 ? (
+            <div className="flex flex-col gap-2">
+              {mine.map((s) => (
+                <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-input px-3 py-2">
+                  <span className="text-sm font-medium">{s.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => void handleRelease(s.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Release
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() => setPicking((v) => !v)}
+              >
+                {picking ? "Close section list" : "Change section"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={saving}
+                onClick={() => void handleRelease(mine[0]?.id ?? advisorySection?.id ?? null)}
+                className="text-destructive hover:text-destructive"
+              >
+                {saving ? "Working…" : "I'm not an adviser"}
+              </Button>
+            </div>
+          )}
+          {picking ? (
+            <AdviserPicker
+              ordered={ordered}
+              loading={sectionsQuery.isPending}
+              loadError={sectionsQuery.isError}
+              effectiveSelected={effectiveSelected}
+              saving={saving}
+              onSelect={(id) => setSelectedId(id)}
+              onClaim={() => void handleClaim()}
+            />
+          ) : null}
+        </div>
+      ) : picking ? (
+        <div className="relative mt-4 flex flex-col gap-3">
+          <AdviserPicker
+            ordered={ordered}
+            loading={sectionsQuery.isPending}
+            loadError={sectionsQuery.isError}
+            effectiveSelected={effectiveSelected}
+            saving={saving}
+            onSelect={(id) => setSelectedId(id)}
+            onClaim={() => void handleClaim()}
+          />
+          <div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setPicking(false); setSelectedId(null); }}>
+              Back
+            </Button>
+          </div>
+        </div>
+      ) : answeredNo ? (
+        <div className="relative mt-4 flex flex-wrap items-center gap-2">
+          <p className="w-full text-xs text-muted-foreground">
+            No problem — Overview, Workspace and Settings stay available. You can claim a section any time.
+          </p>
+          <Button type="button" variant="outline" onClick={() => { setAnsweredNo(false); setPicking(true); }}>
+            Actually, I&apos;m an adviser
+          </Button>
+        </div>
+      ) : (
+        <div className="relative mt-4 flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => setAnsweredNo(true)}>
+            No
+          </Button>
+          <Button type="button" onClick={() => setPicking(true)}>
+            Yes, I&apos;m an adviser
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AdviserPicker({
+  ordered,
+  loading,
+  loadError,
+  effectiveSelected,
+  saving,
+  onSelect,
+  onClaim,
+}: {
+  ordered: AdviserSectionOption[];
+  loading: boolean;
+  loadError: boolean;
+  effectiveSelected: string | null;
+  saving: boolean;
+  onSelect: (id: string) => void;
+  onClaim: () => void;
+}) {
+  if (loading) {
+    return <p className="text-sm text-muted-foreground" aria-busy="true">Loading sections…</p>;
+  }
+  if (loadError) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        Could not load sections from the master teacher&apos;s schedule.
+      </p>
+    );
+  }
+  const claimableCount = ordered.filter((s) => s.claimable || s.advisedByMe).length;
+  if (claimableCount === 0) {
+    return (
+      <p role="status" className="rounded-xl border border-dashed border-input p-4 text-sm text-muted-foreground">
+        No unclaimed sections left in the master teacher&apos;s schedule. Ask your principal to add a
+        section first, then come back here.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Your section">
+        {ordered.map((s) => {
+          const selectable = s.claimable || s.advisedByMe;
+          const selected = effectiveSelected === s.id;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={!selectable}
+              onClick={() => onSelect(s.id)}
+              className={`flex min-h-20 flex-col rounded-xl border bg-card p-3 text-left shadow-sm transition-all ${
+                selected
+                  ? "border-primary ring-2 ring-primary/40"
+                  : selectable
+                    ? "border-input hover:border-primary/50 hover:shadow"
+                    : "cursor-not-allowed border-input opacity-60"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold">{s.name}</span>
+                {s.inMasterSchedule ? (
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    Master schedule
+                  </span>
+                ) : null}
+              </span>
+              <span className="mt-1 text-[11px] font-medium text-muted-foreground">
+                Grade {s.gradeNumber}
+                {s.adviserLabel ? ` · Listed as "${s.adviserLabel}"` : ""}
+              </span>
+              <span className={`mt-auto pt-2 text-[11px] font-semibold ${selected ? "text-primary" : "text-muted-foreground"}`}>
+                {!selectable && s.holderName
+                  ? `Advised by ${s.holderName}`
+                  : !selectable
+                    ? "Already claimed"
+                    : selected
+                      ? "● Selected"
+                      : "○ Select this section"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div>
+        <Button type="button" onClick={onClaim} disabled={!effectiveSelected || saving} aria-busy={saving || undefined}>
+          {saving ? (
+            <>
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+              <span aria-live="polite">Saving…</span>
+            </>
+          ) : (
+            "Save advisory section"
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function TeacherSettingsPage() {
   const session = useSession();
   const { theme, setTheme } = useTheme();
-  const { font, setFont } = useFont();
   const overview = useTeacherOverview();
   const queryClient = useQueryClient();
 
@@ -175,8 +512,12 @@ export default function TeacherSettingsPage() {
   const cachedMaster = useCachedMasterTeacher(session?.sub);
   const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
   const masterTeacherEligible = overview.data?.masterTeacherEligible ?? false;
+  // Singleton seat: when another active teacher holds the designation, this
+  // login must not be prompted to claim it — the toggle hides until release.
+  const masterTeacherTaken = overview.data?.masterTeacherTaken ?? false;
+  const masterHolderName = overview.data?.masterTeacherHolderName ?? null;
+  const takenByOther = !isMasterTeacher && masterTeacherTaken;
   const [mtLoading, setMtLoading] = React.useState(false);
-  const [linksLayout, setLinksLayout] = useLinksLayout();
   const links = settingsSections(masterTeacherEligible);
   const [activeSection, setActiveSection] = React.useState(links[0]?.id ?? "section-profile");
 
@@ -188,6 +529,17 @@ export default function TeacherSettingsPage() {
   const handleToggleMasterTeacher = async () => {
     if (mtLoading) return;
     const next = !isMasterTeacher;
+    // Local guard: never attempt a steal while another master holds the seat.
+    // The backend also rejects with 409 MASTER_TEACHER_TAKEN as backstop.
+    if (next && takenByOther) {
+      toast.error({
+        title: "Designation unavailable",
+        description: masterHolderName
+          ? `Master Teacher is currently designated by ${masterHolderName} — try again after it is turned off.`
+          : "Master Teacher is currently designated — try again after it is turned off.",
+      });
+      return;
+    }
     setMtLoading(true);
     queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
       if (!old) return old;
@@ -213,6 +565,9 @@ export default function TeacherSettingsPage() {
       writeCachedMasterTeacher(session?.sub, isMasterTeacher);
       const message = getErrorMessage(err, "Failed to update Master Teacher status.");
       toast.error({ title: "Could not update status", description: message });
+      // A 409 means the seat was just taken elsewhere — refresh holder info
+      // so the toggle hides instead of staying actionable.
+      await queryClient.invalidateQueries({ queryKey: teacherOverviewKey(session?.sub) });
     } finally {
       setMtLoading(false);
     }
@@ -227,190 +582,132 @@ export default function TeacherSettingsPage() {
         </p>
       </div>
 
-      <section aria-labelledby="settings-navigation" className="rounded-xl border border-input bg-card p-5 shadow-sm">
-        <h2 id="settings-navigation" className="text-base font-semibold">
-          Links layout
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Choose how the section links appear on this page.
-        </p>
-        <div className="mt-4 flex gap-2" role="radiogroup" aria-label="Links layout">
-          <Button
-            type="button"
-            variant={linksLayout === "sidebar" ? "default" : "outline"}
-            role="radio"
-            aria-checked={linksLayout === "sidebar"}
-            onClick={() => setLinksLayout("sidebar")}
-            className="flex-1"
-          >
-            <PanelLeft size={16} aria-hidden />
-            Sidebar
-          </Button>
-          <Button
-            type="button"
-            variant={linksLayout === "navbar" ? "default" : "outline"}
-            role="radio"
-            aria-checked={linksLayout === "navbar"}
-            onClick={() => setLinksLayout("navbar")}
-            className="flex-1"
-          >
-            <Dock size={16} aria-hidden />
-            Navbar
-          </Button>
-        </div>
-      </section>
-
-      <div className={linksLayout === "sidebar" ? "grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]" : "flex flex-col gap-5"}>
+      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-24">
-          {linksLayout === "sidebar" ? (
-            <BranchedMenu
-              items={[
-                {
-                  label: "Settings",
-                  children: links.map((l) => ({
-                    value: l.id,
-                    label: l.label,
-                    icon: <l.Icon size={16} strokeWidth={1.8} aria-hidden="true" />,
-                  })),
-                },
-              ]}
-              defaultOpen={[0]}
-              defaultActive={activeSection}
-              onSelect={(value) => handleSelectSection(value)}
-              width={240}
-            />
-          ) : (
-            <BranchedNav links={links} activeId={activeSection} onSelect={handleSelectSection} />
-          )}
+          <BranchedMenu
+            items={[
+              {
+                label: "Settings",
+                children: links.map((l) => ({
+                  value: l.id,
+                  label: l.label,
+                  icon: <l.Icon size={16} strokeWidth={1.8} aria-hidden="true" />,
+                })),
+              },
+            ]}
+            defaultOpen={[0]}
+            defaultActive={activeSection}
+            onSelect={(value) => handleSelectSection(value)}
+            width={240}
+          />
         </div>
         <div className="flex min-w-0 flex-col gap-5">
-      <section id="section-profile" aria-labelledby="settings-profile" className="scroll-mt-24 rounded-xl border border-input bg-card p-5 shadow-sm">
-        <h2 id="settings-profile" className="text-base font-semibold">
-          Profile
-        </h2>
-        {overview.isPending ? (
-          <div className="mt-4 flex items-center gap-4">
-            <Skeleton className="size-12 shrink-0 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-3 w-64" />
-            </div>
-          </div>
-        ) : overview.isError || !overview.data ? (
-          <p role="alert" className="mt-4 text-sm text-destructive">
-            Could not load your profile.
-          </p>
-        ) : (
-          <div className="mt-4 flex items-center gap-4">
-            <span
-              aria-hidden
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground"
-            >
-              {initialsOf(overview.data.teacherName)}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold">{overview.data.teacherName}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {roleLabel(session?.role)}
-                {" · "}
-                {overview.data.advisorySection
-                  ? `Adviser of ${overview.data.advisorySection.name}`
-                  : "No advisory section"}
-                {" · "}
-                {overview.data.kpi.classCount} class{overview.data.kpi.classCount === 1 ? "" : "es"}
-              </p>
-            </div>
-          </div>
-        )}
-      </section>
+      <ProfileCard />
+
+      <AdviserCard />
 
       {masterTeacherEligible ? (
-        <section id="section-master-teacher" aria-labelledby="settings-master-teacher" className="scroll-mt-24 rounded-xl border border-input bg-card p-5 shadow-sm">
-          <h2 id="settings-master-teacher" className="text-base font-semibold">
+        <section id="section-master-teacher" aria-labelledby="settings-master-teacher" className={`${assign.card} scroll-mt-24`}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <h2 id="settings-master-teacher" className="relative text-base font-semibold">
             Master Teacher
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="relative mt-1 text-sm text-muted-foreground">
             Self-declared designation for grades 7–10 classes.
           </p>
-          <div className="mt-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Master Teacher status</p>
-              <p className="text-xs text-muted-foreground">
-                {isMasterTeacher ? "Currently designated" : "Not designated"}
-              </p>
+          {isMasterTeacher ? (
+            <div className="relative mt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Master Teacher status</p>
+                <p className="text-xs text-muted-foreground">
+                  Currently designated — only one designation at a time.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  No teacher code is needed on My Classes / Attendance while designated —
+                  your student and subject records open directly. Turn off to release the seat.
+                </p>
+              </div>
+              <Switch
+                checked
+                onCheckedChange={handleToggleMasterTeacher}
+                disabled={mtLoading}
+                aria-label="Toggle Master Teacher status"
+              />
             </div>
-            <Switch
-              checked={isMasterTeacher}
-              onCheckedChange={handleToggleMasterTeacher}
-              disabled={mtLoading}
-              aria-label="Toggle Master Teacher status"
-            />
-          </div>
+          ) : takenByOther ? (
+            <div className="relative mt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Master Teacher status</p>
+                <p className="text-xs text-muted-foreground">
+                  {masterHolderName
+                    ? `Currently designated by ${masterHolderName} — unavailable until released.`
+                    : "Currently designated — unavailable until released."}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Enter the code from the master teacher&apos;s teacher list on My Classes /
+                  Attendance to attach your student and subject records.
+                </p>
+              </div>
+              {/* No prompt for others while the seat is taken: switch hidden
+                  until the holder turns it off again. */}
+            </div>
+          ) : (
+            <div className="relative mt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Master Teacher status</p>
+                <p className="text-xs text-muted-foreground">Not designated</p>
+              </div>
+              <Switch
+                checked={false}
+                onCheckedChange={handleToggleMasterTeacher}
+                disabled={mtLoading}
+                aria-label="Toggle Master Teacher status"
+              />
+            </div>
+          )}
         </section>
       ) : null}
 
-      <section id="section-appearance" aria-labelledby="settings-appearance" className="scroll-mt-24 rounded-xl border border-input bg-card p-5 shadow-sm">
-        <h2 id="settings-appearance" className="text-base font-semibold">
+      <section id="section-appearance" aria-labelledby="settings-appearance" className={`${assign.card} scroll-mt-24`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <h2 id="settings-appearance" className="relative text-base font-semibold">
           Appearance
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="relative mt-1 text-sm text-muted-foreground">
           Applies instantly across the whole workspace.
         </p>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <p className="mb-2 text-sm font-medium">Theme</p>
-            <div className="flex gap-2" role="radiogroup" aria-label="Theme">
-              <Button
-                type="button"
-                variant={!isDark ? "default" : "outline"}
-                role="radio"
-                aria-checked={!isDark}
-                onClick={() => setTheme("light")}
-                className="flex-1"
-              >
-                <Sun size={16} aria-hidden />
-                Light
-              </Button>
-              <Button
-                type="button"
-                variant={isDark ? "default" : "outline"}
-                role="radio"
-                aria-checked={isDark}
-                onClick={() => setTheme("dark")}
-                className="flex-1"
-              >
-                <Moon size={16} aria-hidden />
-                Dark
-              </Button>
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-medium">Font</p>
-            <div className="flex gap-2" role="radiogroup" aria-label="Font">
-              <Button
-                type="button"
-                variant={font === "inter" ? "default" : "outline"}
-                role="radio"
-                aria-checked={font === "inter"}
-                onClick={() => setFont("inter")}
-                className="flex-1"
-              >
-                Inter
-              </Button>
-              <Button
-                type="button"
-                variant={font === "nunito" ? "default" : "outline"}
-                role="radio"
-                aria-checked={font === "nunito"}
-                onClick={() => setFont("nunito")}
-                className="flex-1"
-              >
-                Nunito
-              </Button>
-            </div>
+        <div className="relative mt-4">
+          <p className="mb-2 text-sm font-medium">Theme</p>
+          <div className="flex gap-2" role="radiogroup" aria-label="Theme">
+            <Button
+              type="button"
+              variant={!isDark ? "default" : "outline"}
+              role="radio"
+              aria-checked={!isDark}
+              onClick={() => setTheme("light")}
+              className="flex-1"
+            >
+              Light
+            </Button>
+            <Button
+              type="button"
+              variant={isDark ? "default" : "outline"}
+              role="radio"
+              aria-checked={isDark}
+              onClick={() => setTheme("dark")}
+              className="flex-1"
+            >
+              Dark
+            </Button>
           </div>
         </div>
       </section>
+
+      <PaletteCard />
 
       <PasswordCard />
         </div>

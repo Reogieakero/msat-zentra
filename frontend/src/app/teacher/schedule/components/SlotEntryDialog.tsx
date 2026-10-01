@@ -232,7 +232,7 @@ export function SlotEntryDialog({
               )}
             </Button>
           ) : null}
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose}>
             Cancel
           </Button>
           <Button

@@ -275,6 +275,8 @@ model User {
   submittedTimetables SectionTimetableEntry[] @relation("TimetableSubmitted")
   reviewedTimetables  SectionTimetableEntry[] @relation("TimetableReviewed")
   teacherName         TeacherName?
+  termGrants          TeacherTermGrant[]
+  archivedAdvisees    AdviserArchivedStudent[]
   gradeFlagsRaised    GradeFlag[]            @relation("FlagRaisedBy")
   gradeFlagsOwned     GradeFlag[]            @relation("FlagOwner")
   gradeFlagsResolved  GradeFlag[]            @relation("FlagResolvedBy")
@@ -342,6 +344,12 @@ model StaffProfile {
   // The teacher's one reusable drawn signature (PNG data URL), stamped onto
   // records via POST /api/anecdotal/:id/apply-signature.
   signatureImageUrl String?
+  // Profile photo (PNG/JPEG data URL) shown across the teacher workspace.
+  photoUrl String?
+  // Workspace palette (hex, e.g. "#7c3aed") applied site-wide to cards,
+  // buttons, and accents for this teacher. Null = theme default.
+  primaryColor String?
+  secondaryColor String?
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -383,6 +391,7 @@ model Term {
   gradeFlags GradeFlag[]
   scheduleConfigs ScheduleConfig[]
   timetableEntries SectionTimetableEntry[]
+  termGrants TeacherTermGrant[]
   @@unique([schoolYearId, termNumber])
 }
 
@@ -544,9 +553,52 @@ model TeacherName {
   userId  String? @unique
   // Attendance code verified once — the attendance page stops asking until
   // the row is unlinked. Cleared together with userId on release.
+  // LEGACY (global): superseded by per-term TeacherTermGrant rows. Kept for
+  // history; the workspace reads grants, never this column.
   attendanceVerifiedAt DateTime?
   entries SectionTimetableEntry[]
+  termGrants TeacherTermGrant[]
   user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// Per-term workspace verification ("auth" gate per term). A Term 1 link or
+// unlock never opens another term: each term needs its own grant row —
+// either the adviser tapping through for that term (`via: "adviser"`) or the
+// teacher entering their (same) link code again (`via: "code"` +
+// attendanceVerifiedAt). Gated reads/writes join on (userId, termId).
+model TeacherTermGrant {
+  id                   String      @id @default(uuid())
+  userId               String
+  termId               String
+  // How this term was entered: adviser tap-through vs code verification.
+  via                  String
+  teacherNameId        String?
+  attendanceVerifiedAt DateTime?
+  createdAt            DateTime    @default(now())
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  term                 Term        @relation(fields: [termId], references: [id], onDelete: Cascade)
+  teacherName          TeacherName? @relation(fields: [teacherNameId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, termId])
+  @@index([termId])
+}
+
+// Adviser-scoped soft delete for advisory students. One row hides a student
+// (registered profile OR roster enlistment) from one adviser's list only —
+// grades, attendance, anecdotal records, and referrals are never touched, so
+// restoring brings the full record history back. Exactly one of studentId /
+// rosterId is set.
+model AdviserArchivedStudent {
+  id         String   @id @default(uuid())
+  teacherId  String
+  studentId  String?
+  rosterId   String?
+  createdAt  DateTime @default(now())
+  teacher    User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, studentId])
+  @@unique([teacherId, rosterId])
+  @@index([teacherId])
 }
 
 // ---------------------------------------------------------------------------

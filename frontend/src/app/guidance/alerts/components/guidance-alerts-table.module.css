@@ -1,5 +1,46 @@
 /* Referred-cases panel — same pattern as the nurse referred-cases table:
-   header row (title + search/type filter), plain bordered table, pager. */
+   header row (title + search/type filter), plain bordered table, pager.
+   Glow accent card treatment (top highlight + blurred accent). */
+
+.panel {
+  position: relative;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background-color: var(--card);
+  padding: 1.125rem;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+}
 
 .header {
   display: flex;

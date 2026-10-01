@@ -1,19 +1,27 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GuidanceAnecdotalCharts } from "./components/guidance-anecdotal-charts";
-import { GuidanceAnecdotalGradeChart } from "./components/guidance-anecdotal-grade";
+import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
+import { TopReferredCard } from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
 import { fetchGuidanceAnecdotal } from "./components/guidance-anecdotal-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/guidance-anecdotal.module.css";
 
 const PAGE_SIZE = 50;
 
+/**
+ * Guidance anecdotal repository — same layout as the teacher records page:
+ * folder panel + right rail (top referred + legend). Every ADM and
+ * counseling case referred to the desk, one folder per case; search + type
+ * stay in the panel header.
+ */
 export default function GuidanceAnecdotalPage() {
   const [queryInput, setQueryInput] = React.useState("");
   const [query, setQuery] = React.useState("");
@@ -42,39 +50,9 @@ export default function GuidanceAnecdotalPage() {
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.layout}>
-          <div className={styles.side}>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <Skeleton className={styles.skelChart} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3, 4].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className={styles.skelInterpretation} />
-            </div>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelGradeBars}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelGradeRow}>
-                    <Skeleton className={styles.skelGradeLabel} />
-                    <Skeleton className={styles.skelGradeBar} />
-                    <Skeleton className={styles.skelGradeCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.main}>
+      <section className={styles.page} aria-busy="true" aria-label="Loading referred records">
+        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+          <div className={`${styles.main} flex min-w-0 flex-col`}>
             <div className={styles.skelPanel}>
               <div className={styles.skelPanelHead}>
                 <div className={styles.skelPanelHeadText}>
@@ -109,6 +87,32 @@ export default function GuidanceAnecdotalPage() {
               </div>
             </div>
           </div>
+          <div className="hidden min-w-0 flex-col gap-4 lg:flex" aria-hidden="true">
+            <div className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <div className={styles.skelLegend}>
+                {[0, 1, 2, 3, 4].map((j) => (
+                  <div key={j} className={styles.skelLegendRow}>
+                    <Skeleton className={styles.skelLegendLabel} />
+                    <Skeleton className={styles.skelLegendCount} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <div className={styles.skelLegend}>
+                {[0, 1, 2, 3, 4].map((j) => (
+                  <div key={j} className={styles.skelLegendRow}>
+                    <Skeleton className={styles.skelLegendLabel} />
+                    <Skeleton className={styles.skelLegendCount} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     );
@@ -135,15 +139,38 @@ export default function GuidanceAnecdotalPage() {
     );
   }
 
+  const hasActiveFilters = query !== "" || type !== "";
+  if (data.total === 0 && !hasActiveFilters) {
+    return (
+      <section className={`${styles.page} flex min-h-[60vh] flex-1 flex-col justify-center`}>
+        <div className={`${assign.card} mx-auto w-full max-w-md`}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center gap-2 py-8 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <FolderOpen size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">No referred files yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Every ADM and counseling case advisers refer to you will appear here as its own folder.
+            </p>
+            <Button asChild size="sm" className="mt-2">
+              <Link href="/guidance/referrals">View referrals</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.page}>
-      <div className={styles.layout}>
-        <aside className={styles.side}>
-          <GuidanceAnecdotalCharts summary={data.summary} />
-          <GuidanceAnecdotalGradeChart summary={data.summary} />
-        </aside>
-
-        <div className={styles.main}>
+      <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceAnecdotalFolders
             records={data.records}
             page={data.page}
@@ -161,6 +188,14 @@ export default function GuidanceAnecdotalPage() {
             }}
           />
         </div>
+        <div className="hidden min-w-0 flex-col gap-4 lg:flex">
+          <TopReferredCard items={data.summary.topStudents ?? []} />
+          <FolderLegendCard />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-4 lg:hidden">
+        <TopReferredCard items={data.summary.topStudents ?? []} />
+        <FolderLegendCard />
       </div>
     </section>
   );

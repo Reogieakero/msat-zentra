@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { ListFilter } from "lucide-react";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
   ADM_MENU,
   CLINIC_MENU,
@@ -52,29 +54,46 @@ export function NurseActionMenu({
 
   return (
     <aside aria-label="Action filters" className={styles.sidebar}>
-      {typeFilter !== "Clinic" && (
-        <>
-          <p className={styles.groupLabel}>ADM actions</p>
-          {ADM_MENU.map((item, index) =>
-            renderRow(item, "ADM", index === ADM_MENU.length - 1 && typeFilter === "ADM")
-          )}
-        </>
-      )}
-      {typeFilter !== "ADM" && (
-        <>
-          <p className={`${styles.groupLabel}${typeFilter === "" ? ` ${styles.groupGap}` : ""}`}>
-            Clinic actions
-          </p>
-          {CLINIC_MENU.map((item, index) =>
-            renderRow(item, "Clinic", index === CLINIC_MENU.length - 1)
-          )}
-        </>
-      )}
-      {actionFilter !== "" && (
-        <button type="button" className={styles.showAll} onClick={onClear}>
-          Show all
-        </button>
-      )}
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative flex items-center gap-3">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10"
+          aria-hidden="true"
+        >
+          <ListFilter size={18} className="text-primary" />
+        </span>
+        <div className="min-w-0">
+          <p className={styles.menuTitle}>Case actions</p>
+          <p className={styles.menuDesc}>Filter the timeline.</p>
+        </div>
+      </div>
+      <div className="relative">
+        {typeFilter !== "Clinic" && (
+          <>
+            <p className={styles.groupLabel}>ADM actions</p>
+            {ADM_MENU.map((item, index) =>
+              renderRow(item, "ADM", index === ADM_MENU.length - 1 && typeFilter === "ADM")
+            )}
+          </>
+        )}
+        {typeFilter !== "ADM" && (
+          <>
+            <p className={`${styles.groupLabel}${typeFilter === "" ? ` ${styles.groupGap}` : ""}`}>
+              Clinic actions
+            </p>
+            {CLINIC_MENU.map((item, index) =>
+              renderRow(item, "Clinic", index === CLINIC_MENU.length - 1)
+            )}
+          </>
+        )}
+        {actionFilter !== "" && (
+          <button type="button" className={styles.showAll} onClick={onClear}>
+            Show all
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

@@ -39,12 +39,21 @@ router.post(
       const rosterEntry = isRoster
         ? await prisma.studentRoster.findUnique({
             where: { id: rosterId as string },
-            select: { id: true, sectionId: true },
+            select: { id: true, sectionId: true, section: { select: { name: true } } },
           })
         : null;
       if (isRoster && !rosterEntry) {
         throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
       }
+      // Section + category for the realtime confirmation message.
+      const sectionName = isRoster
+        ? (rosterEntry!.section?.name ?? "")
+        : (
+            await prisma.studentProfile.findUnique({
+              where: { userId: rawStudentId },
+              select: { section: { select: { name: true } } },
+            })
+          )?.section?.name ?? "";
       const gc = assessment.gradeComponent;
       if (isRoster) {
         const coverage = await prisma.teacherSubjectAssignment.findFirst({
@@ -80,6 +89,11 @@ router.post(
       // identical math everywhere finals are recomputed).
       const key = isRoster ? { rosterId: rosterId as string } : { studentId: rawStudentId };
       const final = await recomputeSubjectFinal(key, gc.subjectId, gc.termId);
+      // Unreachable: a score was just stored, so at least one category has
+      // evidence and the recompute always yields a grade.
+      if (!final) {
+        throw new AppError(500, "RECOMPUTE_FAILED", "Could not recompute the final grade");
+      }
       const { computedAverage, transmutedGrade, remarks } = final;
 
       // Risk + parent notifications only apply to registered profiles.
@@ -91,7 +105,25 @@ router.post(
         await recomputeRosterRisk(rosterId as string, gc.termId);
       }
       // Finals feed cached teacher / registrar / principal views.
-      await invalidateTags(["teacher", "registrar", "academics", "overview", "principal"]);
+      await invalidateTags(["teacher", "registrar", "academics", "overview", "principal", "risk", "guidance"]);
+
+      // True realtime confirmation to the teacher who saved: one inbox row
+      // per assessment per minute (60s dedup on user + source + action) so
+      // a save-all batch lands as a single bell + toast, not one per score.
+      // Names the section and category the scores belong to, in sentence form.
+      const categoryName =
+        gc.componentType === "WRITTEN_WORK"
+          ? "Written Work"
+          : gc.componentType === "PERFORMANCE_TASK"
+            ? "Performance Task"
+            : "Exam";
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "student_grades",
+        action: "score",
+        sourceId: assessment.id,
+        message: `Scores saved for ${assessment.title} (${categoryName}) in ${sectionName}.`,
+      });
 
       res.json({ computedAverage, transmutedGrade, remarks });
     } catch (e) { next(e); }

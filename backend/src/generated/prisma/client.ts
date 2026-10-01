@@ -112,6 +112,16 @@ export type SectionTimetableEntry = Prisma.SectionTimetableEntryModel
  */
 export type TeacherName = Prisma.TeacherNameModel
 /**
+ * Model TeacherTermGrant
+ * 
+ */
+export type TeacherTermGrant = Prisma.TeacherTermGrantModel
+/**
+ * Model AdviserArchivedStudent
+ * 
+ */
+export type AdviserArchivedStudent = Prisma.AdviserArchivedStudentModel
+/**
  * Model GradeComponent
  * 
  */

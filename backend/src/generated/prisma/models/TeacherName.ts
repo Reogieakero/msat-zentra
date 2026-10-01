@@ -183,6 +183,7 @@ export type TeacherNameWhereInput = {
   userId?: Prisma.StringNullableFilter<"TeacherName"> | string | null
   attendanceVerifiedAt?: Prisma.DateTimeNullableFilter<"TeacherName"> | Date | string | null
   entries?: Prisma.SectionTimetableEntryListRelationFilter
+  termGrants?: Prisma.TeacherTermGrantListRelationFilter
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }
 
@@ -193,6 +194,7 @@ export type TeacherNameOrderByWithRelationInput = {
   userId?: Prisma.SortOrderInput | Prisma.SortOrder
   attendanceVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   entries?: Prisma.SectionTimetableEntryOrderByRelationAggregateInput
+  termGrants?: Prisma.TeacherTermGrantOrderByRelationAggregateInput
   user?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -206,6 +208,7 @@ export type TeacherNameWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.TeacherNameWhereInput | Prisma.TeacherNameWhereInput[]
   attendanceVerifiedAt?: Prisma.DateTimeNullableFilter<"TeacherName"> | Date | string | null
   entries?: Prisma.SectionTimetableEntryListRelationFilter
+  termGrants?: Prisma.TeacherTermGrantListRelationFilter
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }, "id" | "name" | "code" | "userId">
 
@@ -237,6 +240,7 @@ export type TeacherNameCreateInput = {
   code?: string | null
   attendanceVerifiedAt?: Date | string | null
   entries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutTeacherNameInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutTeacherNameInput
   user?: Prisma.UserCreateNestedOneWithoutTeacherNameInput
 }
 
@@ -247,6 +251,7 @@ export type TeacherNameUncheckedCreateInput = {
   userId?: string | null
   attendanceVerifiedAt?: Date | string | null
   entries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutTeacherNameInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutTeacherNameInput
 }
 
 export type TeacherNameUpdateInput = {
@@ -255,6 +260,7 @@ export type TeacherNameUpdateInput = {
   code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   entries?: Prisma.SectionTimetableEntryUpdateManyWithoutTeacherNameNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutTeacherNameNestedInput
   user?: Prisma.UserUpdateOneWithoutTeacherNameNestedInput
 }
 
@@ -265,6 +271,7 @@ export type TeacherNameUncheckedUpdateInput = {
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   entries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutTeacherNameNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutTeacherNameNestedInput
 }
 
 export type TeacherNameCreateManyInput = {
@@ -367,12 +374,29 @@ export type TeacherNameUpdateOneWithoutEntriesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeacherNameUpdateToOneWithWhereWithoutEntriesInput, Prisma.TeacherNameUpdateWithoutEntriesInput>, Prisma.TeacherNameUncheckedUpdateWithoutEntriesInput>
 }
 
+export type TeacherNameCreateNestedOneWithoutTermGrantsInput = {
+  create?: Prisma.XOR<Prisma.TeacherNameCreateWithoutTermGrantsInput, Prisma.TeacherNameUncheckedCreateWithoutTermGrantsInput>
+  connectOrCreate?: Prisma.TeacherNameCreateOrConnectWithoutTermGrantsInput
+  connect?: Prisma.TeacherNameWhereUniqueInput
+}
+
+export type TeacherNameUpdateOneWithoutTermGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeacherNameCreateWithoutTermGrantsInput, Prisma.TeacherNameUncheckedCreateWithoutTermGrantsInput>
+  connectOrCreate?: Prisma.TeacherNameCreateOrConnectWithoutTermGrantsInput
+  upsert?: Prisma.TeacherNameUpsertWithoutTermGrantsInput
+  disconnect?: Prisma.TeacherNameWhereInput | boolean
+  delete?: Prisma.TeacherNameWhereInput | boolean
+  connect?: Prisma.TeacherNameWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeacherNameUpdateToOneWithWhereWithoutTermGrantsInput, Prisma.TeacherNameUpdateWithoutTermGrantsInput>, Prisma.TeacherNameUncheckedUpdateWithoutTermGrantsInput>
+}
+
 export type TeacherNameCreateWithoutUserInput = {
   id?: string
   name: string
   code?: string | null
   attendanceVerifiedAt?: Date | string | null
   entries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutTeacherNameInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutTeacherNameInput
 }
 
 export type TeacherNameUncheckedCreateWithoutUserInput = {
@@ -381,6 +405,7 @@ export type TeacherNameUncheckedCreateWithoutUserInput = {
   code?: string | null
   attendanceVerifiedAt?: Date | string | null
   entries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutTeacherNameInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutTeacherNameInput
 }
 
 export type TeacherNameCreateOrConnectWithoutUserInput = {
@@ -405,6 +430,7 @@ export type TeacherNameUpdateWithoutUserInput = {
   code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   entries?: Prisma.SectionTimetableEntryUpdateManyWithoutTeacherNameNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutTeacherNameNestedInput
 }
 
 export type TeacherNameUncheckedUpdateWithoutUserInput = {
@@ -413,6 +439,7 @@ export type TeacherNameUncheckedUpdateWithoutUserInput = {
   code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   entries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutTeacherNameNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutTeacherNameNestedInput
 }
 
 export type TeacherNameCreateWithoutEntriesInput = {
@@ -420,6 +447,7 @@ export type TeacherNameCreateWithoutEntriesInput = {
   name: string
   code?: string | null
   attendanceVerifiedAt?: Date | string | null
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutTeacherNameInput
   user?: Prisma.UserCreateNestedOneWithoutTeacherNameInput
 }
 
@@ -429,6 +457,7 @@ export type TeacherNameUncheckedCreateWithoutEntriesInput = {
   code?: string | null
   userId?: string | null
   attendanceVerifiedAt?: Date | string | null
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutTeacherNameInput
 }
 
 export type TeacherNameCreateOrConnectWithoutEntriesInput = {
@@ -452,6 +481,7 @@ export type TeacherNameUpdateWithoutEntriesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutTeacherNameNestedInput
   user?: Prisma.UserUpdateOneWithoutTeacherNameNestedInput
 }
 
@@ -461,6 +491,59 @@ export type TeacherNameUncheckedUpdateWithoutEntriesInput = {
   code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutTeacherNameNestedInput
+}
+
+export type TeacherNameCreateWithoutTermGrantsInput = {
+  id?: string
+  name: string
+  code?: string | null
+  attendanceVerifiedAt?: Date | string | null
+  entries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutTeacherNameInput
+  user?: Prisma.UserCreateNestedOneWithoutTeacherNameInput
+}
+
+export type TeacherNameUncheckedCreateWithoutTermGrantsInput = {
+  id?: string
+  name: string
+  code?: string | null
+  userId?: string | null
+  attendanceVerifiedAt?: Date | string | null
+  entries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutTeacherNameInput
+}
+
+export type TeacherNameCreateOrConnectWithoutTermGrantsInput = {
+  where: Prisma.TeacherNameWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeacherNameCreateWithoutTermGrantsInput, Prisma.TeacherNameUncheckedCreateWithoutTermGrantsInput>
+}
+
+export type TeacherNameUpsertWithoutTermGrantsInput = {
+  update: Prisma.XOR<Prisma.TeacherNameUpdateWithoutTermGrantsInput, Prisma.TeacherNameUncheckedUpdateWithoutTermGrantsInput>
+  create: Prisma.XOR<Prisma.TeacherNameCreateWithoutTermGrantsInput, Prisma.TeacherNameUncheckedCreateWithoutTermGrantsInput>
+  where?: Prisma.TeacherNameWhereInput
+}
+
+export type TeacherNameUpdateToOneWithWhereWithoutTermGrantsInput = {
+  where?: Prisma.TeacherNameWhereInput
+  data: Prisma.XOR<Prisma.TeacherNameUpdateWithoutTermGrantsInput, Prisma.TeacherNameUncheckedUpdateWithoutTermGrantsInput>
+}
+
+export type TeacherNameUpdateWithoutTermGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  entries?: Prisma.SectionTimetableEntryUpdateManyWithoutTeacherNameNestedInput
+  user?: Prisma.UserUpdateOneWithoutTeacherNameNestedInput
+}
+
+export type TeacherNameUncheckedUpdateWithoutTermGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  entries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutTeacherNameNestedInput
 }
 
 
@@ -470,10 +553,12 @@ export type TeacherNameUncheckedUpdateWithoutEntriesInput = {
 
 export type TeacherNameCountOutputType = {
   entries: number
+  termGrants: number
 }
 
 export type TeacherNameCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   entries?: boolean | TeacherNameCountOutputTypeCountEntriesArgs
+  termGrants?: boolean | TeacherNameCountOutputTypeCountTermGrantsArgs
 }
 
 /**
@@ -493,6 +578,13 @@ export type TeacherNameCountOutputTypeCountEntriesArgs<ExtArgs extends runtime.T
   where?: Prisma.SectionTimetableEntryWhereInput
 }
 
+/**
+ * TeacherNameCountOutputType without action
+ */
+export type TeacherNameCountOutputTypeCountTermGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TeacherTermGrantWhereInput
+}
+
 
 export type TeacherNameSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -501,6 +593,7 @@ export type TeacherNameSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   userId?: boolean
   attendanceVerifiedAt?: boolean
   entries?: boolean | Prisma.TeacherName$entriesArgs<ExtArgs>
+  termGrants?: boolean | Prisma.TeacherName$termGrantsArgs<ExtArgs>
   user?: boolean | Prisma.TeacherName$userArgs<ExtArgs>
   _count?: boolean | Prisma.TeacherNameCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["teacherName"]>
@@ -534,6 +627,7 @@ export type TeacherNameSelectScalar = {
 export type TeacherNameOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "code" | "userId" | "attendanceVerifiedAt", ExtArgs["result"]["teacherName"]>
 export type TeacherNameInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   entries?: boolean | Prisma.TeacherName$entriesArgs<ExtArgs>
+  termGrants?: boolean | Prisma.TeacherName$termGrantsArgs<ExtArgs>
   user?: boolean | Prisma.TeacherName$userArgs<ExtArgs>
   _count?: boolean | Prisma.TeacherNameCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -548,6 +642,7 @@ export type $TeacherNamePayload<ExtArgs extends runtime.Types.Extensions.Interna
   name: "TeacherName"
   objects: {
     entries: Prisma.$SectionTimetableEntryPayload<ExtArgs>[]
+    termGrants: Prisma.$TeacherTermGrantPayload<ExtArgs>[]
     user: Prisma.$UserPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -951,6 +1046,7 @@ readonly fields: TeacherNameFieldRefs;
 export interface Prisma__TeacherNameClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   entries<T extends Prisma.TeacherName$entriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeacherName$entriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SectionTimetableEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  termGrants<T extends Prisma.TeacherName$termGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeacherName$termGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeacherTermGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   user<T extends Prisma.TeacherName$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeacherName$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1408,6 +1504,30 @@ export type TeacherName$entriesArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.SectionTimetableEntryScalarFieldEnum | Prisma.SectionTimetableEntryScalarFieldEnum[]
+}
+
+/**
+ * TeacherName.termGrants
+ */
+export type TeacherName$termGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TeacherTermGrant
+   */
+  select?: Prisma.TeacherTermGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TeacherTermGrant
+   */
+  omit?: Prisma.TeacherTermGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeacherTermGrantInclude<ExtArgs> | null
+  where?: Prisma.TeacherTermGrantWhereInput
+  orderBy?: Prisma.TeacherTermGrantOrderByWithRelationInput | Prisma.TeacherTermGrantOrderByWithRelationInput[]
+  cursor?: Prisma.TeacherTermGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TeacherTermGrantScalarFieldEnum | Prisma.TeacherTermGrantScalarFieldEnum[]
 }
 
 /**

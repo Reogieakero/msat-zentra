@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,20 +11,21 @@ import {
   fetchNurseRiskLevels,
   type NurseAlertsData,
 } from "../alerts/components/nurse-alerts-data";
-import { buildNurseAdmReferrals } from "./components/nurse-adm-data";
+import {
+  buildNurseAdmInsights,
+  buildNurseAdmReferrals,
+} from "./components/nurse-adm-data";
+import { NurseAdmInsights } from "./components/NurseAdmInsights";
 import { NurseAdmReports } from "./components/NurseAdmReports";
-import { NurseAdmQueueTable } from "./components/NurseAdmQueueTable";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./components/nurse-adm.module.css";
 
 /**
- * ADM Referrals — every ADM case referred to the school nurse, same
- * reports + review-queue shape as the guidance ADM Referrals page but
- * wired to nurse-scope cases and nurse actions (referral form, forward
- * to the coordinator, clinic sessions).
+ * Referrals Report — insights and reports over every case referred to the
+ * school nurse (clinic + ADM). Case work itself lives on the ADM Cases
+ * and Clinic Matters timelines, linked from the recommendations below.
  */
 export default function NurseAdmPage() {
-  const queryClient = useQueryClient();
   const { data: alertsData, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsData>({
       queryKey: ["nurse-alerts"],
@@ -32,17 +33,20 @@ export default function NurseAdmPage() {
       staleTime: 60_000,
     });
 
+  // All-status case list (pending through dismissed) — insights, reports,
+  // and queue always reflect the current referrals whatever their status.
   const data = React.useMemo(
-    () => (alertsData ? buildNurseAdmReferrals(alertsData.alerts) : null),
+    () => (alertsData ? buildNurseAdmReferrals(alertsData.cases) : null),
     [alertsData]
   );
 
   // Live rule-based risk level per student behind these cases (account
-  // id or roster id — the endpoint serves both).
+  // id or roster id — the endpoint serves both). Desk-wide so the
+  // high-risk recommendation sees clinic cases too.
   const studentIds = React.useMemo(
     () => [
       ...new Set(
-        (data?.queue ?? [])
+        (data?.desk ?? [])
           .map((a) => a.studentId)
           .filter((id): id is string => id !== null)
       ),
@@ -51,7 +55,6 @@ export default function NurseAdmPage() {
   );
   const {
     data: riskByStudent,
-    isPending: riskPending,
     isFetching: riskFetching,
     isError: riskError,
     refetch: refetchRisk,
@@ -61,21 +64,27 @@ export default function NurseAdmPage() {
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });
-  const riskLoading = studentIds.length > 0 && (riskPending || riskFetching);
 
-  function refresh() {
-    void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
-  }
+  // Referral insights derive from the same desk list the reports read
+  // (clinic + ADM), so every number repaints live with the desk — no
+  // extra fetch.
+  const insights = React.useMemo(
+    () =>
+      data ? buildNurseAdmInsights(data.desk, riskByStudent ?? {}) : null,
+    [data, riskByStudent],
+  );
 
   if (isPending) {
-    // High-fidelity skeleton mirroring NurseAdmReports (donut + legend,
-    // 12-week line + interpretations) + queue panel (head + search +
-    // 8-col thead + rows + pager) so nothing shifts on load.
+    // High-fidelity skeleton mirroring the findings strip + NurseAdmReports
+    // (donut + legend, 12-week line + interpretations) so nothing shifts on
+    // load.
     return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading ADM referrals">
+      <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
+        <div className={styles.skelFindings} aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className={styles.skelFinding} />
+          ))}
+        </div>
         <div className={styles.skelGrid} aria-hidden="true">
           <Card className={styles.card}>
             <CardContent className={styles.skelCardBody}>
@@ -101,41 +110,6 @@ export default function NurseAdmPage() {
             </CardContent>
           </Card>
         </div>
-
-        <Card className={styles.card} aria-hidden="true">
-          <CardContent className={styles.skelPanel}>
-            <div className={styles.skelPanelHead}>
-              <div>
-                <Skeleton className={styles.skelCardTitle} />
-                <Skeleton className={styles.skelPanelDesc} />
-              </div>
-              <div className={styles.skelPanelActions}>
-                <Skeleton className={styles.skelSearch} />
-              </div>
-            </div>
-            <div className={styles.skelThead}>
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <Skeleton key={i} className={styles.skelTheadCell} />
-              ))}
-            </div>
-            <div className={styles.skelCards}>
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className={styles.skelCardRow} />
-              ))}
-            </div>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className={styles.skelRow} />
-            ))}
-            <div className={styles.skelPager}>
-              <Skeleton className={styles.skelRange} />
-              <div className={styles.skelPagerBtns}>
-                <Skeleton className={styles.skelBtn} />
-                <Skeleton className={styles.skelPageLabel} />
-                <Skeleton className={styles.skelBtn} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </section>
     );
   }
@@ -144,7 +118,7 @@ export default function NurseAdmPage() {
     return (
       <section className={styles.page}>
         <div className={styles.pageError} role="alert">
-          <p className={styles.pageErrorTitle}>We couldn&apos;t load the ADM referrals</p>
+          <p className={styles.pageErrorTitle}>We couldn&apos;t load the referrals report</p>
           <p className={styles.pageErrorHint}>
             Please check your internet connection and try again.
           </p>
@@ -168,7 +142,7 @@ export default function NurseAdmPage() {
 
   return (
     <section className={styles.page} aria-busy={refreshing}>
-      {refreshing ? <NurseRefreshBadge label="Refreshing ADM referrals…" /> : null}
+      {refreshing ? <NurseRefreshBadge label="Refreshing referrals report…" /> : null}
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
           Risk levels couldn&apos;t load.{" "}
@@ -182,14 +156,8 @@ export default function NurseAdmPage() {
           </button>
         </p>
       ) : null}
+      {insights ? <NurseAdmInsights data={insights} /> : null}
       <NurseAdmReports data={data} />
-
-      <NurseAdmQueueTable
-        queue={data.queue}
-        riskByStudent={riskByStudent ?? {}}
-        riskLoading={riskLoading}
-        onChanged={refresh}
-      />
     </section>
   );
 }

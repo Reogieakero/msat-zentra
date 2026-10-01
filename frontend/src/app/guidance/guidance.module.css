@@ -18,6 +18,16 @@
   margin-top: 6rem;
 }
 
+/* Sidebar layout: no top tab bar (3rem topbar only) and room for the 16rem
+   branched rail. Desktop only — small screens keep the tab bar layout
+   untouched (same as the nurse desk). */
+@media (min-width: 1024px) {
+  .shellWithRail {
+    margin-top: 3rem;
+    margin-left: 16rem;
+  }
+}
+
 .main {
   flex: 1;
   padding: 1rem;

@@ -1,14 +1,169 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem 0;
+  gap: 1.25rem;
+  /* 16px comes from the layout shell (.main padding); no extra top pad —
+     same as the teacher overview page. */
+  padding: 0 0 0.25rem;
 }
 
 .divider {
+  margin: 0;
   border: none;
   border-top: 1px solid var(--border);
-  margin: 0.25rem 0;
+}
+
+/* Teacher overview layout: main data-table column + sticky right rail.
+   Applied one-to-one so the nurse desk matches the teacher desk. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* Same-height cards: the table card fills the main column and the
+   snapshot card fills the rail, so both outer boxes match the row's
+   taller height. */
+.mainCol > div {
+  flex: 1;
+  height: 100%;
+}
+
+.sideCol {
+  position: sticky;
+  top: 4rem;
+  align-self: stretch;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .sideCol {
+    position: static;
+    align-self: auto;
+  }
+
+  .mainCol > div {
+    height: auto;
+  }
+}
+
+/* Right-rail stack + KPI rows (teacher card style). */
+.railStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+}
+
+.railStack > div {
+  flex: 1;
+  height: 100%;
+}
+
+.kpiRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--foreground), transparent 94%);
+  min-width: 0;
+}
+
+.kpiRow:last-child {
+  border-bottom: none;
+}
+
+.kpiRowIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
+}
+
+.kpiRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.kpiRowLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpiRowHint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpiRowValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Data-table card header (same as teacher risk table). */
+.sectionTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
 /* Top layout: queues (left, ~85%) + KPI rail (right, ~15%).

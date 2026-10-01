@@ -56,6 +56,10 @@ export interface RawReferral {
   // never the future appointment time.
   lastActionAt?: string | null;
   lastActionType?: string | null;
+  // Role behind the latest dismissal audit (backend audit trail) — drives
+  // the watermark ("Cancelled" for adviser withdrawals vs "Reject" for
+  // desk decisions). Null when never dismissed.
+  dismissedByRole?: string | null;
   anecdotalRecord?: RawAnecdotal | null;
   student?: RawStudent | null;
   roster?: RawRoster | null;
@@ -80,6 +84,10 @@ interface RawSession {
   sessionNotes?: string | null;
   outcome?: string | null;
   cancelReason?: string | null;
+  // Role behind the latest session_cancelled audit, when cancelled
+  // (backend audit trail). Adviser/subject-teacher = the withdrawal
+  // auto-cancel cascade; a desk role = that desk cancelled it.
+  cancelledByRole?: string | null;
   // Execution times (backend): createdAt = when booked, completedAt = when
   // marked done. Never display the future appointment as the action time.
   createdAt?: string | null;
@@ -106,6 +114,8 @@ export interface NurseSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
+  // Role behind the latest session_cancelled audit, when cancelled.
+  cancelledByRole?: string | null;
   // When the session was booked (execution time). Falls back to
   // scheduledAt for legacy rows without it.
   createdAt: string;
@@ -174,6 +184,10 @@ export interface NurseQueueRow {
   // Empty when no audit trail exists (legacy rows) — callers fall back.
   lastActionAt: string;
   lastActionType: string;
+  // Role behind the dismissal, when dismissed (backend audit trail).
+  // Adviser/subject-teacher withdrawals read "Cancelled", desk decisions
+  // read "Reject". Empty otherwise.
+  dismissedByRole: string;
 }
 
 export interface NurseFollowUpRow extends NurseQueueRow {
@@ -335,6 +349,7 @@ export function toSessionItem(s: RawSession): NurseSessionItem {
     sessionNotes: s.sessionNotes ?? "",
     outcome: s.outcome ?? "",
     cancelReason: s.cancelReason ?? "",
+    cancelledByRole: s.cancelledByRole ?? null,
     createdAt: s.createdAt ?? s.scheduledAt ?? "",
     completedAt: parseDate(s.completedAt)?.toISOString().slice(0, 10) ?? "",
     attachments: (s.attachments ?? []).map((a) => ({
@@ -376,6 +391,7 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
     completedSessions: sessions.filter((s) => s.status === "completed").length,
     lastActionAt: r.lastActionAt ?? "",
     lastActionType: r.lastActionType ?? "",
+    dismissedByRole: r.dismissedByRole ?? "",
     anecdotalId: anec?.id ?? null,
     anecdotal: anec
       ? {

@@ -297,7 +297,7 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
           <Button variant="ghost" onClick={() => setDraft(DEFAULT_DAY_CONFIG)}>
             Reset
           </Button>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={handleApply} disabled={saving} aria-busy={saving || undefined}>

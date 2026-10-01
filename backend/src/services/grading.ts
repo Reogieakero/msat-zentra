@@ -107,10 +107,164 @@ export const DEPED_JHS_WEIGHTS: { label: string; weights: DepEdWeights }[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Assessment-driven grade computation — the single source of truth for the
+// pipeline: Assessment → Category → Weighted → Final (+ Risk inputs).
+//
+// Rules:
+// - Only categories that actually contain assessments contribute. A
+//   category with no assessments is N/A — never an automatic zero.
+// - Configured weights of available categories are normalized to 100.
+// - Within a category, the percentage is total-earned / total-possible over
+//   RECORDED assessments only (DepEd Order No. 8 method). An assessment that
+//   exists but has no encoded score for the student is excluded — never an
+//   automatic zero (no such grading policy exists in this codebase).
+// - A student is graded only on categories where they have encoded scores;
+//   those shares are rescaled to 100. No evidence at all → null (no fake
+//   0% / Failed); callers delete any stale final row.
+// ---------------------------------------------------------------------------
+
+export const CATEGORY_ORDER = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"] as const;
+
+export type CategoryKey = (typeof CATEGORY_ORDER)[number];
+
+export interface CategoryEvidence {
+  componentType: string;
+  weightPercentage: number;
+  /** Σ rawScore over assessments WITH this student's score. */
+  earned: number;
+  /** Σ maxScore over assessments WITH this student's score. */
+  possible: number;
+  /** Assessments existing in the category (subject + term). */
+  assessmentCount: number;
+  /** Of those, with this student's score encoded. */
+  encodedCount: number;
+}
+
+export interface CategoryResult {
+  componentType: string;
+  assessmentCount: number;
+  encodedCount: number;
+  /** Encoded / existing (null when nothing exists). Separate from performance. */
+  coverage: number | null;
+  /** Earned / possible × 100 (null when the student has nothing encoded). */
+  percentage: number | null;
+  configuredWeight: number;
+  /** Share within available (existing) categories. */
+  normalizedWeight: number;
+  /** Share within categories where the student has evidence. */
+  effectiveWeight: number;
+}
+
+export interface SubjectGradeComputation {
+  availableCategories: string[];
+  categories: CategoryResult[];
+  existingAssessments: number;
+  encodedAssessments: number;
+  coverage: number | null;
+  rawGrade: number | null;
+  computedAverage: number | null;
+  transmutedGrade: number | null;
+  remarks: "Passed" | "Failed" | null;
+}
+
+export function computeSubjectGrade(evidence: CategoryEvidence[]): SubjectGradeComputation {
+  const byType = new Map(evidence.map((e) => [e.componentType, e]));
+  // Every canonical category is reported (transparency), even ones with no
+  // component row — they read as N/A with zero weights.
+  const rows = CATEGORY_ORDER.map(
+    (t): Required<CategoryEvidence> & { componentType: string } =>
+      byType.get(t) ?? {
+        componentType: t,
+        weightPercentage: 0,
+        earned: 0,
+        possible: 0,
+        assessmentCount: 0,
+        encodedCount: 0,
+      },
+  );
+  const existingAssessments = rows.reduce((s, r) => s + r.assessmentCount, 0);
+  const encodedAssessments = rows.reduce((s, r) => s + r.encodedCount, 0);
+  const active = rows.filter((r) => r.assessmentCount > 0);
+
+  const categories: CategoryResult[] = rows.map((r) => ({
+    componentType: r.componentType,
+    assessmentCount: r.assessmentCount,
+    encodedCount: r.encodedCount,
+    coverage: r.assessmentCount > 0 ? r.encodedCount / r.assessmentCount : null,
+    percentage:
+      r.encodedCount > 0 && r.possible > 0 ? (r.earned / r.possible) * 100 : null,
+    configuredWeight: r.weightPercentage,
+    normalizedWeight: 0,
+    effectiveWeight: 0,
+  }));
+  const byResult = new Map(categories.map((c) => [c.componentType, c]));
+
+  const base: SubjectGradeComputation = {
+    availableCategories: active.map((r) => r.componentType),
+    categories,
+    existingAssessments,
+    encodedAssessments,
+    coverage: existingAssessments > 0 ? encodedAssessments / existingAssessments : null,
+    rawGrade: null,
+    computedAverage: null,
+    transmutedGrade: null,
+    remarks: null,
+  };
+  // Case 7: no assessments exist anywhere — no grade, never 0% / Failed.
+  if (active.length === 0) return base;
+
+  // Normalize configured weights across available categories. Unconfigured
+  // (all-zero) weights fall back to an equal split — never a fake failure.
+  const availWeight = active.reduce((s, r) => s + r.weightPercentage, 0);
+  for (const r of active) {
+    byResult.get(r.componentType)!.normalizedWeight =
+      availWeight > 0 ? (r.weightPercentage * 100) / availWeight : 100 / active.length;
+  }
+  // Grade the student only on categories where they have encoded scores.
+  const evidenced = active.filter((r) => {
+    const c = byResult.get(r.componentType)!;
+    return c.percentage !== null;
+  });
+  if (evidenced.length === 0) return base;
+  let scale = evidenced.reduce(
+    (s, r) => s + byResult.get(r.componentType)!.normalizedWeight,
+    0,
+  );
+  if (scale <= 0) {
+    // Degenerate (evidenced categories carry no weight): equal split.
+    for (const r of evidenced) byResult.get(r.componentType)!.normalizedWeight = 100 / evidenced.length;
+    scale = 100;
+  }
+  for (const r of evidenced) {
+    const c = byResult.get(r.componentType)!;
+    c.effectiveWeight = (c.normalizedWeight * 100) / scale;
+  }
+  const rawGrade =
+    evidenced.reduce(
+      (s, r) => s + byResult.get(r.componentType)!.percentage! * byResult.get(r.componentType)!.normalizedWeight,
+      0,
+    ) / scale;
+  const transmutedGrade = transmuteGrade(rawGrade);
+  return {
+    ...base,
+    rawGrade,
+    computedAverage: rawGrade,
+    transmutedGrade,
+    remarks: remarksFromTransmuted(transmutedGrade),
+  };
+}
+
 // Recompute + persist one student's final grade for a subject + term from
 // their recorded percentage scores, then return it. Works for registered
 // profiles ({ studentId }) and roster enlistments ({ rosterId }) alike.
 // Pure grade math — risk recompute / notifications stay with the callers.
+//
+// Assessment-driven: only categories that actually contain assessments
+// contribute (weights normalized across them); a category with no
+// assessments is N/A, never zero. A student with no encoded scores in any
+// existing category gets no final row at all (existing row deleted) —
+// never a fake 0% / Failed.
 export async function recomputeSubjectFinal(
   student: { studentId: string } | { rosterId: string },
   subjectId: string,
@@ -122,13 +276,36 @@ export async function recomputeSubjectFinal(
     where: { subjectId, termId },
     include: { assessments: { include: { studentGrades: { where: gradeFilter } } } },
   });
-  const componentAverages = components.map((c) => {
-    const grades = c.assessments.flatMap((a) => a.studentGrades);
-    const avg = grades.length ? grades.reduce((s, g) => s + g.percentageScore, 0) / grades.length : 0;
-    return { weightPercentage: c.weightPercentage, average: avg };
+  const evidence: CategoryEvidence[] = components.map((c) => {
+    const encoded = c.assessments.filter((a) => a.studentGrades.length > 0);
+    return {
+      componentType: c.componentType,
+      weightPercentage: c.weightPercentage,
+      earned: encoded.reduce(
+        (s, a) => s + a.studentGrades.reduce((x, g) => x + g.rawScore, 0),
+        0,
+      ),
+      possible: encoded.reduce((s, a) => s + a.maxScore, 0),
+      assessmentCount: c.assessments.length,
+      encodedCount: encoded.length,
+    };
   });
-  const { computedAverage, transmutedGrade, remarks } = computeFinalGrade(componentAverages);
-
+  const result = computeSubjectGrade(evidence);
+  if (result.rawGrade === null || result.computedAverage === null) {
+    // Case 7: no assessments (or nothing encoded) — remove any stale final
+    // row instead of manufacturing a fake 0% / Failed.
+    if ("studentId" in student) {
+      await prisma.finalGrade.deleteMany({
+        where: { studentId: student.studentId, subjectId, termId },
+      });
+    } else {
+      await prisma.finalGrade.deleteMany({
+        where: { rosterId: student.rosterId, subjectId, termId },
+      });
+    }
+    return null;
+  }
+  const { computedAverage, transmutedGrade, remarks } = result;
   if ("studentId" in student) {
     return prisma.finalGrade.upsert({
       where: { studentId_subjectId_termId: { studentId: student.studentId, subjectId, termId } },

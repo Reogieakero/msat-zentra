@@ -34,18 +34,29 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
+/* Primary palette — every slice is a step down from --primary so all
+   charts on this desk read as one family. Awaiting states are strongest;
+   terminal states fade toward the foreground. */
+export const PRIMARY_STEPS = [
+  "var(--primary)",
+  "color-mix(in oklch, var(--primary) 72%, var(--foreground) 28%)",
+  "color-mix(in oklch, var(--primary) 52%, var(--foreground) 48%)",
+  "color-mix(in oklch, var(--primary) 36%, var(--foreground) 64%)",
+  "color-mix(in oklch, var(--primary) 24%, var(--foreground) 76%)",
+];
+
 const ACTION_COLORS: Record<string, string> = {
-  needs_review: "var(--chart-4)",
-  booked: "var(--chart-3)",
-  followup: "var(--chart-5)",
-  endorsed: "var(--chart-1)",
-  done: "var(--chart-2)",
-  rejected: "var(--chart-2)",
+  needs_review: PRIMARY_STEPS[0],
+  endorsed: PRIMARY_STEPS[1],
+  booked: PRIMARY_STEPS[2],
+  followup: PRIMARY_STEPS[3],
+  done: PRIMARY_STEPS[4],
+  rejected: PRIMARY_STEPS[4],
   escalated: "var(--destructive)",
 };
 
 const ACTION_TAKEAWAYS: Record<string, string> = {
-  needs_review: "review each case, then endorse or reject it from the queue below.",
+  needs_review: "review each case, then endorse or reject it from the ADM timeline.",
   booked: "finish or cancel the booked clinic sessions to move these cases along.",
   followup: "check back on their follow-up dates.",
   endorsed: "they now move with the ADM coordinator.",
@@ -56,7 +67,7 @@ const ACTION_TAKEAWAYS: Record<string, string> = {
 
 function interpretActions(actions: NurseAdmActionCount[], total: number): string {
   if (total === 0) {
-    return "No ADM cases referred to you yet — your actions will break down here by state.";
+    return "No referrals on your desk yet — case states will break down here.";
   }
   const ranked = [...actions].sort((a, b) => b.count - a.count);
   const top = ranked[0];
@@ -69,9 +80,9 @@ function interpretActions(actions: NurseAdmActionCount[], total: number): string
 }
 
 /**
- * Referred-actions donut for the nurse ADM caseload, with a
- * plain-language read of what the mix means. Counts come from every
- * ADM case on the nurse's desk (never any page filter).
+ * Referred-actions donut for the whole nurse caseload (clinic + ADM),
+ * with a plain-language read of what the mix means. Counts come from
+ * every case on the nurse's desk (never any page filter).
  */
 function ReferredActions({ data }: { data: NurseAdmReferralsData }) {
   const { actions, total } = data;
@@ -81,12 +92,12 @@ function ReferredActions({ data }: { data: NurseAdmReferralsData }) {
       <CardHeader>
         <CardTitle className={styles.sectionTitle}>Referred actions</CardTitle>
         <CardDescription className={styles.sectionDesc}>
-          What you did with each referred ADM case.
+          What happened with each case referred to you.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {total === 0 ? (
-          <p className={styles.empty}>No ADM cases referred to you yet.</p>
+          <p className={styles.empty}>No referrals on your desk yet.</p>
         ) : (
           <div className={styles.split}>
             <div className={styles.donutWrap}>
@@ -141,8 +152,8 @@ function ReferredActions({ data }: { data: NurseAdmReferralsData }) {
 }
 
 /**
- * Weekly line graph of ADM cases referred to the nurse over the last
- * 12 weeks. Counts come from every ADM case on the nurse's desk (never
+ * Weekly line graph of cases referred to the nurse over the last
+ * 12 weeks. Counts come from every case on the nurse's desk (never
  * any page filter).
  */
 function ReferralTrend({ data }: { data: NurseAdmReferralsData }) {
@@ -156,14 +167,14 @@ function ReferralTrend({ data }: { data: NurseAdmReferralsData }) {
   return (
     <Card className={styles.card}>
       <CardHeader>
-        <CardTitle className={styles.sectionTitle}>ADM referred over time</CardTitle>
+        <CardTitle className={styles.sectionTitle}>Referrals over time</CardTitle>
         <CardDescription className={styles.sectionDesc}>
           Cases referred to you per week — last 12 weeks.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {total === 0 ? (
-          <p className={styles.empty}>No ADM referrals in the last 12 weeks.</p>
+          <p className={styles.empty}>No referrals in the last 12 weeks.</p>
         ) : (
           <>
             <div className={styles.trendWrap}>

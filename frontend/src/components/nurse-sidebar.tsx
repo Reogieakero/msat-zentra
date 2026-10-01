@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   BellRing,
@@ -11,14 +11,18 @@ import {
   HeartPulse,
   Flame,
   Send,
+  Settings,
+  type LucideIcon,
 } from "lucide-react";
 
 import styles from "./nurse-sidebar.module.css";
+import BranchedMenu from "./nav/BranchedMenu";
+import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 
 type NavItem = {
   title: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   badge?: string;
 };
 
@@ -29,13 +33,13 @@ type NavGroup = {
 
 // School Nurse nav — Referrals are split into two dedicated pages (ADM
 // Cases and Clinic Matters) so the reader never needs the old case-type
-// filter; each page locks to its own type. ADM Referrals mirrors the
-// guidance ADM Referrals page (reports + review queue) for nurse-scope
-// ADM cases.
+// filter; each page locks to its own type. Referrals Report covers the
+// whole desk (clinic + ADM insights and reports) with the ADM review
+// queue below.
 //
 // Shared-concept convention (same label + icon across desks):
 // Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
-// ADM Referrals=Send, Risk Dashboard=Flame.
+// Risk Dashboard=Flame. Referrals Report=Send lives under Insights.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -57,11 +61,6 @@ const NAV: NavGroup[] = [
         href: "/nurse/referrals/clinic",
         icon: Stethoscope,
       },
-      {
-        title: "ADM Referrals",
-        href: "/nurse/adm",
-        icon: Send,
-      },
     ],
   },
   {
@@ -78,16 +77,31 @@ const NAV: NavGroup[] = [
     label: "Insights",
     items: [
       {
+        title: "Referrals Report",
+        href: "/nurse/adm",
+        icon: Send,
+      },
+      {
         title: "Risk Dashboard",
         href: "/nurse/risk",
         icon: Flame,
       },
     ],
   },
+  {
+    label: "Settings",
+    items: [
+      {
+        title: "General Settings",
+        href: "/nurse/settings",
+        icon: Settings,
+      },
+    ],
+  },
 ];
 
-// GitHub-style tab bar: every section flattened into one row under the
-// topbar. Groups only group the source data, not the rendered tabs.
+// Sidebar rail (same pattern as the teacher desk): a branched left rail on
+// desktop plus the flattened tab bar for small screens. No top navbar.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {
@@ -101,13 +115,48 @@ function useIsActive() {
   );
 }
 
-function NurseNavbar() {
+function NurseRail({ groups }: { groups: NavGroup[] }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const isActive = React.useCallback(
+    (href: string) =>
+      href === "/nurse/overview"
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`),
+    [pathname],
+  );
+  const tabs = groups.flatMap((group) => group.items);
+  const activeHref = tabs.find((t) => isActive(t.href))?.href ?? "/nurse/overview";
+  const defaultOpen = groups.map((_, i) => i);
+  return (
+    <BranchedMenu
+      items={groups.map((group) => ({
+        label: group.label,
+        children: group.items.map((t) => ({
+          value: t.href,
+          label: t.title,
+          href: t.href,
+          icon: <t.icon size={16} strokeWidth={1.8} aria-hidden="true" />,
+        })),
+      }))}
+      defaultOpen={defaultOpen.length > 0 ? defaultOpen : [0]}
+      defaultActive={activeHref}
+      activeValue={activeHref}
+      onSelect={(_value, item) => {
+        if ("href" in item && item.href) router.push(item.href);
+      }}
+      width={208}
+    />
+  );
+}
+
+function NurseNavbar({ tabs }: { tabs: NavItem[] }) {
   const isActive = useIsActive();
 
   return (
     <nav className={styles.navbar} aria-label="Nurse sections">
       <ul className={styles.tabs}>
-        {TABS.map((item) => {
+        {tabs.map((item) => {
           const active = isActive(item.href);
           return (
             <li key={item.href} className={styles.tabItem}>
@@ -129,5 +178,26 @@ function NurseNavbar() {
 }
 
 export function NurseSidebar() {
-  return <NurseNavbar />;
+  const railScrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  return (
+    <>
+      <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Nurse sections">
+        <div ref={railScrollRef} className={styles.railScroll}>
+          <NurseRail groups={NAV} />
+        </div>
+        <div className={styles.railHintWrap}>
+          <ScrollDownHint
+            scrollRef={railScrollRef}
+            watchKey="nurse-nav"
+            label="Scroll for more"
+            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+          />
+        </div>
+      </aside>
+      <div className={styles.tabsMobile}>
+        <NurseNavbar tabs={TABS} />
+      </div>
+    </>
+  );
 }

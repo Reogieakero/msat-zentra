@@ -157,7 +157,7 @@ router.get(
           select: {
             userId: true,
             riskLevel: true,
-            section: { select: { adviserId: true } },
+            section: { select: { id: true, adviserId: true } },
           },
         }),
         prisma.studentRoster.findMany({
@@ -171,16 +171,74 @@ router.get(
       ]);
 
       const levels: Record<string, string> = {};
+      // Status-only factor flags per student (Academic/Attendance/Behavioral
+      // booleans — same posture as levels, no confidential fields). Lets
+      // desks explain *why* in plain words without another round-trip.
+      const factors: Record<string, { Academic: boolean; Attendance: boolean; Behavioral: boolean }> = {};
       const rosterIds: string[] = [];
       const rosterSection = new Map<string, string>();
-      for (const p of profiles) {
-        if (role === "adviser" && req.user!.id !== p.userId && p.section?.adviserId !== req.user!.id) continue;
+      const visibleProfiles = profiles.filter(
+        (p) =>
+          !(
+            role === "adviser" &&
+            req.user!.id !== p.userId &&
+            p.section?.adviserId !== req.user!.id
+          ),
+      );
+      for (const p of visibleProfiles) {
         if (p.riskLevel) levels[p.userId] = String(p.riskLevel);
       }
       for (const r of rosters) {
         if (role === "adviser" && r.section?.adviserId !== req.user!.id) continue;
         rosterIds.push(r.id);
         if (r.sectionId) rosterSection.set(r.id, r.sectionId);
+      }
+      // Live factor flags for account-backed students (same engine rule as
+      // the roster path below, batched to constant queries regardless of N).
+      const profileIds = visibleProfiles.map((p) => p.userId);
+      if (profileIds.length > 0) {
+        const termId = await resolveActiveTermId(req);
+        if (termId) {
+          const profileRows = await prisma.studentProfile.findMany({
+            where: { userId: { in: profileIds } },
+            select: {
+              userId: true,
+              section: { select: { id: true } },
+              finalGrades: {
+                where: { termId },
+                select: { computedAverage: true, transmutedGrade: true },
+              },
+              attendanceRecords: {
+                where: { termId },
+                select: { status: true, subjectId: true },
+              },
+              anecdotalRecords: { where: { termId }, select: { id: true } },
+            },
+          });
+          const pSectionIds = [
+            ...new Set(
+              profileRows.map((r) => r.section?.id).filter((v): v is string => !!v),
+            ),
+          ];
+          const pHeadcounts = await sectionHeadcounts(pSectionIds);
+          for (const pr of profileRows) {
+            const enrolled = pHeadcounts.get(pr.section?.id ?? "") ?? 0;
+            const flags = computeRiskFactors({
+              finalGrades: pr.finalGrades,
+              attendance: pr.attendanceRecords.map((a) => ({
+                status: a.status,
+                subjectId: a.subjectId,
+              })),
+              anecdotalCount: pr.anecdotalRecords.length,
+              enrolled,
+            });
+            factors[pr.userId] = {
+              Academic: flags.academicFlag,
+              Attendance: flags.attendanceFlag,
+              Behavioral: flags.behavioralFlag,
+            };
+          }
+        }
       }
       if (rosterIds.length > 0) {
         const termId = await resolveActiveTermId(req);
@@ -192,7 +250,7 @@ router.get(
             }),
             prisma.attendanceRecord.findMany({
               where: { rosterId: { in: rosterIds }, termId },
-              select: { rosterId: true, status: true },
+              select: { rosterId: true, status: true, subjectId: true },
             }),
             prisma.anecdotalRecord.groupBy({
               by: ["rosterId"],
@@ -208,11 +266,11 @@ router.get(
             arr.push({ computedAverage: g.computedAverage, transmutedGrade: g.transmutedGrade });
             gradesBy.set(g.rosterId, arr);
           }
-          const attBy = new Map<string, { status: string }[]>();
+          const attBy = new Map<string, { status: string; subjectId: string | null }[]>();
           for (const a of attendance) {
             if (!a.rosterId) continue;
             const arr = attBy.get(a.rosterId) ?? [];
-            arr.push({ status: a.status });
+            arr.push({ status: a.status, subjectId: a.subjectId });
             attBy.set(a.rosterId, arr);
           }
           const anecBy = new Map<string, number>();
@@ -229,10 +287,15 @@ router.get(
               enrolled,
             });
             levels[rid] = levelFromFlags(flags);
+            factors[rid] = {
+              Academic: flags.academicFlag,
+              Attendance: flags.attendanceFlag,
+              Behavioral: flags.behavioralFlag,
+            };
           }
         }
       }
-      res.json({ levels });
+      res.json({ levels, factors });
     } catch (e) {
       next(e);
     }

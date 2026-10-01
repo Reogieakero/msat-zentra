@@ -1,0 +1,39 @@
+/* Advisory list layout: data table left, actions rail right. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: 1.25rem;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.sideList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  position: sticky;
+  /* Level with the table card: 3rem navbar + 1rem main padding. */
+  top: 4rem;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  /* Scrollable without visible chrome — same pattern as the other rails. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sideList::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 64rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sideList {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}

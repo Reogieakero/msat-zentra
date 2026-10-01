@@ -411,6 +411,8 @@ export const ModelName = {
   ScheduleConfig: 'ScheduleConfig',
   SectionTimetableEntry: 'SectionTimetableEntry',
   TeacherName: 'TeacherName',
+  TeacherTermGrant: 'TeacherTermGrant',
+  AdviserArchivedStudent: 'AdviserArchivedStudent',
   GradeComponent: 'GradeComponent',
   Assessment: 'Assessment',
   StudentGrade: 'StudentGrade',
@@ -455,7 +457,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1492,6 +1494,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TeacherNameCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TeacherNameCountAggregateOutputType> | number
+        }
+      }
+    }
+    TeacherTermGrant: {
+      payload: Prisma.$TeacherTermGrantPayload<ExtArgs>
+      fields: Prisma.TeacherTermGrantFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TeacherTermGrantFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TeacherTermGrantFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>
+        }
+        findFirst: {
+          args: Prisma.TeacherTermGrantFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TeacherTermGrantFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>
+        }
+        findMany: {
+          args: Prisma.TeacherTermGrantFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>[]
+        }
+        create: {
+          args: Prisma.TeacherTermGrantCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>
+        }
+        createMany: {
+          args: Prisma.TeacherTermGrantCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TeacherTermGrantCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>[]
+        }
+        delete: {
+          args: Prisma.TeacherTermGrantDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>
+        }
+        update: {
+          args: Prisma.TeacherTermGrantUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>
+        }
+        deleteMany: {
+          args: Prisma.TeacherTermGrantDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TeacherTermGrantUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TeacherTermGrantUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>[]
+        }
+        upsert: {
+          args: Prisma.TeacherTermGrantUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeacherTermGrantPayload>
+        }
+        aggregate: {
+          args: Prisma.TeacherTermGrantAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTeacherTermGrant>
+        }
+        groupBy: {
+          args: Prisma.TeacherTermGrantGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TeacherTermGrantGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TeacherTermGrantCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TeacherTermGrantCountAggregateOutputType> | number
+        }
+      }
+    }
+    AdviserArchivedStudent: {
+      payload: Prisma.$AdviserArchivedStudentPayload<ExtArgs>
+      fields: Prisma.AdviserArchivedStudentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdviserArchivedStudentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdviserArchivedStudentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>
+        }
+        findFirst: {
+          args: Prisma.AdviserArchivedStudentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdviserArchivedStudentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>
+        }
+        findMany: {
+          args: Prisma.AdviserArchivedStudentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>[]
+        }
+        create: {
+          args: Prisma.AdviserArchivedStudentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>
+        }
+        createMany: {
+          args: Prisma.AdviserArchivedStudentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdviserArchivedStudentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>[]
+        }
+        delete: {
+          args: Prisma.AdviserArchivedStudentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>
+        }
+        update: {
+          args: Prisma.AdviserArchivedStudentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>
+        }
+        deleteMany: {
+          args: Prisma.AdviserArchivedStudentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdviserArchivedStudentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdviserArchivedStudentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>[]
+        }
+        upsert: {
+          args: Prisma.AdviserArchivedStudentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdviserArchivedStudentPayload>
+        }
+        aggregate: {
+          args: Prisma.AdviserArchivedStudentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdviserArchivedStudent>
+        }
+        groupBy: {
+          args: Prisma.AdviserArchivedStudentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdviserArchivedStudentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdviserArchivedStudentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdviserArchivedStudentCountAggregateOutputType> | number
         }
       }
     }
@@ -3742,7 +3892,10 @@ export const StaffProfileScalarFieldEnum = {
   isAdviser: 'isAdviser',
   isMasterTeacher: 'isMasterTeacher',
   handledGradeLevels: 'handledGradeLevels',
-  signatureImageUrl: 'signatureImageUrl'
+  signatureImageUrl: 'signatureImageUrl',
+  photoUrl: 'photoUrl',
+  primaryColor: 'primaryColor',
+  secondaryColor: 'secondaryColor'
 } as const
 
 export type StaffProfileScalarFieldEnum = (typeof StaffProfileScalarFieldEnum)[keyof typeof StaffProfileScalarFieldEnum]
@@ -3864,6 +4017,30 @@ export const TeacherNameScalarFieldEnum = {
 } as const
 
 export type TeacherNameScalarFieldEnum = (typeof TeacherNameScalarFieldEnum)[keyof typeof TeacherNameScalarFieldEnum]
+
+
+export const TeacherTermGrantScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  termId: 'termId',
+  via: 'via',
+  teacherNameId: 'teacherNameId',
+  attendanceVerifiedAt: 'attendanceVerifiedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type TeacherTermGrantScalarFieldEnum = (typeof TeacherTermGrantScalarFieldEnum)[keyof typeof TeacherTermGrantScalarFieldEnum]
+
+
+export const AdviserArchivedStudentScalarFieldEnum = {
+  id: 'id',
+  teacherId: 'teacherId',
+  studentId: 'studentId',
+  rosterId: 'rosterId',
+  createdAt: 'createdAt'
+} as const
+
+export type AdviserArchivedStudentScalarFieldEnum = (typeof AdviserArchivedStudentScalarFieldEnum)[keyof typeof AdviserArchivedStudentScalarFieldEnum]
 
 
 export const GradeComponentScalarFieldEnum = {
@@ -5019,6 +5196,8 @@ export type GlobalOmitConfig = {
   scheduleConfig?: Prisma.ScheduleConfigOmit
   sectionTimetableEntry?: Prisma.SectionTimetableEntryOmit
   teacherName?: Prisma.TeacherNameOmit
+  teacherTermGrant?: Prisma.TeacherTermGrantOmit
+  adviserArchivedStudent?: Prisma.AdviserArchivedStudentOmit
   gradeComponent?: Prisma.GradeComponentOmit
   assessment?: Prisma.AssessmentOmit
   studentGrade?: Prisma.StudentGradeOmit

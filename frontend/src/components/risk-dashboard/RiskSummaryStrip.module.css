@@ -1,0 +1,57 @@
+/* Plain-words summary strip — full-width glow card above the grid. */
+
+.strip {
+  position: relative;
+  overflow: visible;
+}
+
+.glow {
+  border-radius: 1rem;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.glow:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.text {
+  position: relative;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.urgent {
+  color: var(--destructive);
+  font-variant-numeric: tabular-nums;
+}

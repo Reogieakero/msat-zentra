@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GuidanceAlertsTable } from "./components/guidance-alerts-table";
+import { GuidanceAlertsSideRail } from "./components/GuidanceAlertsSideRail";
 import {
   fetchAllGuidanceReferrals,
   fetchGuidanceRiskLevels,
@@ -56,32 +57,43 @@ export default function GuidanceAlertsPage() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.skelPanel}>
-          <div className={styles.skelPanelHead}>
-            <div>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} />
+        <div className={styles.repoGrid}>
+          <div className={styles.skelPanel}>
+            <div className={styles.skelPanelHead}>
+              <div>
+                <Skeleton className={styles.skelCardTitle} />
+                <Skeleton className={styles.skelPanelDesc} />
+              </div>
+              <div className={styles.skelPanelActions}>
+                <Skeleton className={styles.skelSearch} />
+                <Skeleton className={styles.skelDrop} />
+              </div>
             </div>
-            <div className={styles.skelPanelActions}>
-              <Skeleton className={styles.skelSearch} />
-              <Skeleton className={styles.skelDrop} />
+            <div className={styles.skelThead} aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <Skeleton key={i} className={styles.skelTheadCell} />
+              ))}
             </div>
-          </div>
-          <div className={styles.skelThead} aria-hidden="true">
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <Skeleton key={i} className={styles.skelTheadCell} />
+              <Skeleton key={i} className={styles.skelRow} />
             ))}
-          </div>
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <Skeleton key={i} className={styles.skelRow} />
-          ))}
-          <div className={styles.skelPager}>
-            <Skeleton className={styles.skelRange} />
-            <div className={styles.skelPagerBtns}>
-              <Skeleton className={styles.skelBtn} />
-              <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
-              <Skeleton className={styles.skelBtn} />
+            <div className={styles.skelPager}>
+              <Skeleton className={styles.skelRange} />
+              <div className={styles.skelPagerBtns}>
+                <Skeleton className={styles.skelBtn} />
+                <Skeleton className={styles.skelPageLabel} aria-hidden="true" />
+                <Skeleton className={styles.skelBtn} />
+              </div>
             </div>
+          </div>
+          <div className={`${styles.sideRail} ${styles.railDesktop}`} aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={styles.skelRailCard}>
+                <Skeleton className={styles.skelRailTitle} />
+                <Skeleton className={styles.skelRailDesc} />
+                <Skeleton className={styles.skelRailLine} />
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -117,11 +129,29 @@ export default function GuidanceAlertsPage() {
 
   return (
     <section className={styles.page}>
-      <GuidanceAlertsTable
-        referrals={referrals}
-        interventions={interventions}
-        riskByStudent={riskByStudent ?? {}}
-      />
+      <div className={styles.repoGrid}>
+        <div className="flex min-w-0 flex-col">
+          <GuidanceAlertsTable
+            referrals={referrals}
+            interventions={interventions}
+            riskByStudent={riskByStudent ?? {}}
+          />
+        </div>
+        <div className={`${styles.sideRail} ${styles.railDesktop}`}>
+          <GuidanceAlertsSideRail
+            referrals={referrals}
+            interventions={interventions}
+            riskByStudent={riskByStudent ?? {}}
+          />
+        </div>
+      </div>
+      <div className={`${styles.sideRail} ${styles.railMobile}`}>
+        <GuidanceAlertsSideRail
+          referrals={referrals}
+          interventions={interventions}
+          riskByStudent={riskByStudent ?? {}}
+        />
+      </div>
     </section>
   );
 }

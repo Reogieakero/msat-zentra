@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "@/lib/auth/useSession";
+import {
+  advisoryRosterKey,
+  fetchAdvisoryRoster,
+} from "../../advisory/students/components/advisory-students-data";
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
@@ -63,16 +68,6 @@ export interface AnecdotalFlow {
   fileProgress: number;
   fileStage: string;
   flowError: string | null;
-  studentOpen: boolean;
-  setStudentOpen: (next: boolean) => void;
-  classOpen: boolean;
-  setClassOpen: (next: boolean) => void;
-  categoryOpen: boolean;
-  setCategoryOpen: (next: boolean) => void;
-  tierOpen: boolean;
-  setTierOpen: (next: boolean) => void;
-  datetimeOpen: boolean;
-  setDatetimeOpen: (next: boolean) => void;
   datePopoverOpen: boolean;
   setDatePopoverOpen: (next: boolean) => void;
   handleStudentPick: (id: string) => void;
@@ -141,11 +136,6 @@ export function useAnecdotalFlow({
   const [fileStage, setFileStage] = useState("");
   const [flowError, setFlowError] = useState<string | null>(null);
   const [studentQ, setStudentQ] = useState("");
-  const [studentOpen, setStudentOpen] = useState(false);
-  const [classOpen, setClassOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [tierOpen, setTierOpen] = useState(false);
-  const [datetimeOpen, setDatetimeOpen] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const progressTimer = useRef<number | null>(null);
@@ -179,11 +169,6 @@ export function useAnecdotalFlow({
     setDateInput("");
     setTimeInput("");
     setStudentQ("");
-    setStudentOpen(false);
-    setClassOpen(false);
-    setCategoryOpen(false);
-    setTierOpen(false);
-    setDatetimeOpen(false);
     setDatePopoverOpen(false);
     setFlowError(null);
   }
@@ -246,7 +231,28 @@ export function useAnecdotalFlow({
     queryKey: ["grade-flags", "options"],
     queryFn: fetchAnecdotalOptions,
   });
-  const students = useMemo(() => optionsQuery.data?.students ?? [], [optionsQuery.data]);
+  // Advisory-only picker: when the login teacher advises sections, the
+  // student list narrows to those advisees (never the subject-handled
+  // union). Non-advisers (roster error/empty) keep the full handled list
+  // so the flow still works for subject teachers.
+  const session = useSession();
+  const advisoryQuery = useQuery({
+    queryKey: advisoryRosterKey(session?.sub ?? null),
+    queryFn: fetchAdvisoryRoster,
+    enabled: !!session?.sub,
+    retry: false,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+  });
+  const advisedSectionIds = useMemo(
+    () => new Set((advisoryQuery.data?.advisorySections ?? []).map((s) => s.id)),
+    [advisoryQuery.data],
+  );
+  const students = useMemo(() => {
+    const all = optionsQuery.data?.students ?? [];
+    if (advisedSectionIds.size === 0) return all;
+    return all.filter((s) => s.sectionId != null && advisedSectionIds.has(s.sectionId));
+  }, [optionsQuery.data, advisedSectionIds]);
   const sectionClasses = useMemo(() => optionsQuery.data?.sectionClasses ?? [], [optionsQuery.data]);
   const sectionNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -303,7 +309,6 @@ export function useAnecdotalFlow({
     }
     setFlowError(null);
     setStudentId(id);
-    setStudentOpen(false);
     setConversations((prev) =>
       prev.map((c) =>
         c.id === activeId && c.title === "New chat" ? { ...c, title: picked.name } : c
@@ -332,7 +337,6 @@ export function useAnecdotalFlow({
     const picked = classes.find((c) => `${c.subjectId}|${c.sectionId}|${c.termId}` === value);
     if (!picked) return;
     setClassKey(value);
-    setClassOpen(false);
     lockQuestion("class");
     pushToActive([
       { id: nextMessageId(), from: "user", text: picked.subjectName, at: Date.now() },
@@ -356,7 +360,6 @@ export function useAnecdotalFlow({
   function handleCategoryPick(value: AnecdotalCategory) {
     if (category !== null) return;
     setCategory(value);
-    setCategoryOpen(false);
     lockQuestion("category");
     pushToActive([
       { id: nextMessageId(), from: "user", text: ANEC_CATEGORY_LABELS[value], at: Date.now() },
@@ -380,7 +383,6 @@ export function useAnecdotalFlow({
   function handleTierPick(value: AnecdotalTier) {
     if (tier !== null) return;
     setTier(value);
-    setTierOpen(false);
     lockQuestion("tier");
     const today = new Date().toISOString().split("T")[0];
     setDateInput(today);
@@ -411,7 +413,6 @@ export function useAnecdotalFlow({
     if (!dateInput || observationDate !== null) return;
     setObservationDate(dateInput);
     setObservationTime(timeInput);
-    setDatetimeOpen(false);
     lockQuestion("datetime");
     const when = timeInput.length >= 5 ? `${dateInput} at ${timeInput}` : dateInput;
     pushToActive([{ id: nextMessageId(), from: "user", text: when, at: Date.now() }]);
@@ -643,56 +644,6 @@ export function useAnecdotalFlow({
   );
   const studentRows = studentMatches.slice(0, 60);
 
-  // The student picker stays overlaid until a student is picked —
-  // closing it without picking reopens it.
-  useEffect(() => {
-    if (!active || active.type !== "anecdotal" || active.filed || studentId !== "") return;
-    if (studentOpen) return;
-    const t = window.setTimeout(() => setStudentOpen(true), 350);
-    return () => window.clearTimeout(t);
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [active, activeId, studentId, studentOpen]);
-
-  // The class picker stays overlaid until a class is picked —
-  // closing it without picking reopens it.
-  useEffect(() => {
-    if (!active || active.type !== "anecdotal" || active.filed || studentId === "" || classKey !== "") return;
-    if (classes.length === 0 || classOpen) return;
-    const t = window.setTimeout(() => setClassOpen(true), 350);
-    return () => window.clearTimeout(t);
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [active, activeId, studentId, classKey, classOpen, classes.length]);
-
-  // The category picker stays overlaid until a category is picked —
-  // closing it without picking reopens it.
-  useEffect(() => {
-    if (!active || active.type !== "anecdotal" || active.filed || classKey === "" || category !== null) return;
-    if (categoryOpen) return;
-    const t = window.setTimeout(() => setCategoryOpen(true), 350);
-    return () => window.clearTimeout(t);
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [active, activeId, classKey, category, categoryOpen]);
-
-  // The tier picker stays overlaid until a tier is picked —
-  // closing it without picking reopens it.
-  useEffect(() => {
-    if (!active || active.type !== "anecdotal" || active.filed || category === null || tier !== null) return;
-    if (tierOpen) return;
-    const t = window.setTimeout(() => setTierOpen(true), 350);
-    return () => window.clearTimeout(t);
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [active, activeId, category, tier, tierOpen]);
-
-  // The date picker stays overlaid until the date is confirmed —
-  // closing it without confirming reopens it.
-  useEffect(() => {
-    if (!active || active.type !== "anecdotal" || active.filed || tier === null || observationDate !== null) return;
-    if (datetimeOpen) return;
-    const t = window.setTimeout(() => setDatetimeOpen(true), 350);
-    return () => window.clearTimeout(t);
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [active, activeId, tier, observationDate, datetimeOpen]);
-
   return {
     students,
     sectionClasses,
@@ -720,16 +671,6 @@ export function useAnecdotalFlow({
     fileProgress,
     fileStage,
     flowError,
-    studentOpen,
-    setStudentOpen,
-    classOpen,
-    setClassOpen,
-    categoryOpen,
-    setCategoryOpen,
-    tierOpen,
-    setTierOpen,
-    datetimeOpen,
-    setDatetimeOpen,
     datePopoverOpen,
     setDatePopoverOpen,
     handleStudentPick,

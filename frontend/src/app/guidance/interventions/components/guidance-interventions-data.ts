@@ -38,6 +38,9 @@ export interface CounselingSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
+  // Role behind the latest session_cancelled audit, when cancelled
+  // (backend audit trail).
+  cancelledByRole?: string | null;
   // When the session was booked (execution time). Falls back to
   // scheduledAt for legacy rows without it — never display the future
   // appointment as the action time.
@@ -131,17 +134,30 @@ export async function fetchGuidanceInterventions(
   return data;
 }
 
-// Every at-risk student carrying an intervention (all outcomes) for
-// client-side tables. The endpoint caps pageSize at 100, so walk all
-// pages — filtering and paging then happen locally.
+// Every live at-risk student (High + Moderate, all outcomes) for
+// client-side tables — including flagged students whose follow-up hasn't
+// been opened yet (intervention === null renders with the table's
+// "Ongoing" / "Intervention recorded" fallbacks). The endpoint caps
+// pageSize at 100, so walk all pages — filtering and paging then happen
+// locally. `level: "All"` is required: the endpoint defaults to High-only.
 export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
-  const first = await fetchGuidanceInterventions({ page: 1, pageSize: 100, outcome: "all" });
+  const first = await fetchGuidanceInterventions({
+    page: 1,
+    pageSize: 100,
+    level: "All",
+    outcome: "all",
+  });
   const all = [...first.students];
   for (let p = 2; p <= first.totalPages; p++) {
-    const res = await fetchGuidanceInterventions({ page: p, pageSize: 100, outcome: "all" });
+    const res = await fetchGuidanceInterventions({
+      page: p,
+      pageSize: 100,
+      level: "All",
+      outcome: "all",
+    });
     all.push(...res.students);
   }
-  return all.filter((s) => s.intervention !== null);
+  return all;
 }
 
 export interface InterventionSessionDoc {
@@ -248,6 +264,69 @@ export async function recordInterventionOutcome(
   const { data } = await apiClient.post(
     `/api/interventions/${id}/outcome`,
     input
+  );
+  return data;
+}
+
+export interface EngineBreakdownSubject {
+  code: string;
+  name: string;
+  computedAverage: number | null;
+  transmutedGrade: number | null;
+  below: boolean;
+}
+
+export interface EngineAttendanceSubject {
+  code: string;
+  name: string;
+  present: number;
+  total: number;
+  rate: number | null;
+}
+
+export interface EngineBreakdown {
+  live: {
+    level: string;
+    count: number;
+    academic: boolean;
+    attendance: boolean;
+    behavioral: boolean;
+  };
+  academic: {
+    average: number | null;
+    transmutedAverage: number | null;
+    subjectCount: number;
+    threshold: number;
+    subjects: EngineBreakdownSubject[];
+  };
+  attendance: {
+    rate: number | null;
+    present: number;
+    total: number;
+    subjectEra: boolean;
+    threshold: number;
+    bySubject: EngineAttendanceSubject[];
+    general: { present: number; total: number; rate: number } | null;
+  };
+  behavioral: {
+    count: number;
+    recent: { category: string; date: string }[];
+  };
+  stored: { level: string; count: number; date: string } | null;
+  flagged: { level: string } | null;
+}
+
+export async function fetchInterventionEngine(
+  studentKey: string,
+  opts: { signal?: AbortSignal } = {}
+): Promise<EngineBreakdown> {
+  const rosterPrefix = "roster:";
+  const query = studentKey.startsWith(rosterPrefix)
+    ? `rosterId=${encodeURIComponent(studentKey.slice(rosterPrefix.length))}`
+    : `studentId=${encodeURIComponent(studentKey)}`;
+  const { data } = await apiClient.get<EngineBreakdown>(
+    `/api/interventions/engine?${query}`,
+    { signal: opts.signal }
   );
   return data;
 }

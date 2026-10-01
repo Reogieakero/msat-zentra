@@ -3,6 +3,25 @@ import type {
   NurseQueueRow,
   NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";
+import { actorActionLabel } from "@/lib/notifications/action-label";
+
+/* Folder body color per anecdotal category — mirrors the teacher
+   anecdotal repository (AnecdotalSideRail CATEGORY_COLORS) so the same
+   category carries the same color on every desk. */
+export const ANECDOTAL_CATEGORY_COLORS: Record<string, string> = {
+  behavioral: "#f59e0b",
+  bullying: "#ef4444",
+  academic: "#3b82f6",
+  attendance: "#22c55e",
+  health: "#8b5cf6",
+};
+
+/* Resolve the folder color for a (Title Case or raw) category label —
+   undefined falls back to the FolderCard gray. */
+export function anecdotalCategoryColor(category: string | null | undefined): string | undefined {
+  if (!category) return undefined;
+  return ANECDOTAL_CATEGORY_COLORS[category.trim().toLowerCase()];
+}
 
 /* Which desk the case came through — a clinic matter or an ADM consultation. */
 export type TypeFilter = "" | "Clinic" | "ADM";
@@ -23,10 +42,12 @@ export type ActionFilter =
   | "followup"
   | "booked"
   | "reject"
+  | "adm_cancelled"
   | "clinic_needs"
   | "clinic_booked"
   | "clinic_done"
-  | "clinic_followup";
+  | "clinic_followup"
+  | "clinic_cancelled";
 
 export type ActionValue = Exclude<ActionFilter, "">;
 
@@ -36,6 +57,7 @@ export const ADM_MENU: { value: ActionValue; label: string }[] = [
   { value: "followup", label: "Follow-up" },
   { value: "booked", label: "Book session" },
   { value: "reject", label: "Reject" },
+  { value: "adm_cancelled", label: "Cancelled" },
 ];
 
 export const CLINIC_MENU: { value: ActionValue; label: string }[] = [
@@ -43,6 +65,7 @@ export const CLINIC_MENU: { value: ActionValue; label: string }[] = [
   { value: "clinic_booked", label: "Booked session" },
   { value: "clinic_done", label: "Done" },
   { value: "clinic_followup", label: "Follow-up" },
+  { value: "clinic_cancelled", label: "Cancelled" },
 ];
 
 export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): boolean {
@@ -56,7 +79,9 @@ export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): bo
     case "booked":
       return row.type === "ADM" && row.sessions.length > 0;
     case "reject":
-      return row.type === "ADM" && row.status === "dismissed";
+      return row.type === "ADM" && row.status === "dismissed" && !isWithdrawn(row);
+    case "adm_cancelled":
+      return row.type === "ADM" && isWithdrawn(row);
     case "clinic_needs":
       return row.type === "Clinic" && row.status === "pending";
     case "clinic_booked":
@@ -65,6 +90,8 @@ export function matchesActionFilter(row: NurseQueueRow, filter: ActionValue): bo
       return row.type === "Clinic" && row.sessions.some((s) => s.status === "completed");
     case "clinic_followup":
       return row.type === "Clinic" && row.status === "follow_up";
+    case "clinic_cancelled":
+      return row.type === "Clinic" && isWithdrawn(row);
     default:
       return false;
   }
@@ -142,9 +169,12 @@ export function statusLabel(status: string): string {
 }
 
 /* Badge text for one row — endorsed ADM cases read "Endorsed", never "In
-   progress", so Needs action means exactly the cases waiting on the nurse. */
-export function rowStatusLabel(type: string, status: string): string {
+   progress", so Needs action means exactly the cases waiting on the nurse.
+   Withdrawn cases read "Cancelled" (pass the row); desk decisions read
+   "Closed". */
+export function rowStatusLabel(type: string, status: string, row?: NurseQueueRow): string {
   if (isEndorsed(type, status)) return "Endorsed";
+  if (row && isWithdrawn(row)) return "Cancelled";
   return statusLabel(status);
 }
 
@@ -170,44 +200,66 @@ export function statusHelp(status: string): string {
   }
 }
 
-export function rowStatusHelp(type: string, status: string): string {
+export function rowStatusHelp(type: string, status: string, row?: NurseQueueRow): string {
   if (isEndorsed(type, status)) return "Endorsed — now with the ADM coordinator.";
+  if (row && isWithdrawn(row)) return "Withdrawn by the filing teacher — no further action.";
   return statusHelp(status);
 }
 
-/* Backend audit type -> plain label for the left-rail latest action. */
+/* Backend audit type -> plain label for the left-rail latest action.
+   Actor-first wording shared with every desk (see action-label.ts):
+   "Cancelled by adviser", "Session booked by School Nurse", ... */
 export function labelForActionType(
   actionType: string,
   row: NurseQueueRow,
   alert: NurseAlertItem
 ): string {
+  const fallback = alert.title;
+  const newestSession = [...row.sessions].sort((a, b) => {
+    const at = new Date(a.createdAt || a.scheduledAt).getTime();
+    const bt = new Date(b.createdAt || b.scheduledAt).getTime();
+    if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+    if (Number.isNaN(at)) return 1;
+    if (Number.isNaN(bt)) return -1;
+    return bt - at;
+  })[0];
   switch (actionType) {
     case "session_scheduled":
-      return "Session booked";
     case "session_completed":
-      return "Session done";
-    case "session_cancelled":
-      return "Session cancelled";
     case "session_rescheduled":
-      return "Session moved";
     case "session_document_added":
-      return "Documentation filed";
     case "referral_follow_up":
-      return "Marked for follow-up";
-    case "referral_dismissed":
-      return "Rejected";
     case "referral_accepted":
-      return "Accepted — handling";
     case "referral_escalated":
-      return "Sent to clinic";
+      return actorActionLabel({ scope: "nurse", action: actionType, fallback });
+    case "session_cancelled":
+      return actorActionLabel({
+        scope: "nurse",
+        action: actionType,
+        cancelledByRole: newestSession?.cancelledByRole ?? null,
+        fallback,
+      });
+    case "referral_dismissed":
+      return actorActionLabel({
+        scope: "nurse",
+        action: actionType,
+        withdrawn: isWithdrawn(row),
+        fallback,
+      });
     case "referral_status_change":
-      if (isEndorsed(row.type, row.status)) return "Endorsed to ADM coordinator";
-      if (row.status === "follow_up") return "Marked for follow-up";
-      if (row.status === "resolved") return "Resolved";
-      if (row.status === "dismissed") return "Rejected";
-      return alert.title;
+      if (isEndorsed(row.type, row.status)) return "Endorsed to ADM coordinator by School Nurse";
+      if (row.status === "follow_up") return "Marked for follow-up by School Nurse";
+      if (row.status === "resolved") return "Resolved by School Nurse";
+      if (row.status === "dismissed")
+        return actorActionLabel({
+          scope: "nurse",
+          action: "referral_dismissed",
+          withdrawn: isWithdrawn(row),
+          fallback,
+        });
+      return fallback;
     default:
-      return alert.title;
+      return fallback;
   }
 }
 
@@ -231,23 +283,46 @@ export function latestActionOf(
     });
     const latest = sorted[0];
     if (latest.status === "completed" && row.followUpDate) {
-      return { label: "Marked for follow-up", time: row.followUpDate };
+      return { label: "Marked for follow-up by School Nurse", time: row.followUpDate };
     }
     if (latest.status === "completed") {
-      return { label: "Session done", time: latest.createdAt || latest.scheduledAt };
+      return {
+        label: actorActionLabel({ scope: "nurse", action: "session_completed", fallback: "Session done" }),
+        time: latest.createdAt || latest.scheduledAt,
+      };
     }
     if (latest.status === "cancelled") {
-      return { label: "Session cancelled", time: latest.createdAt || latest.scheduledAt };
+      return {
+        label: actorActionLabel({
+          scope: "nurse",
+          action: "session_cancelled",
+          cancelledByRole: latest.cancelledByRole ?? null,
+          fallback: "Session cancelled",
+        }),
+        time: latest.createdAt || latest.scheduledAt,
+      };
     }
-    return { label: "Session booked", time: latest.createdAt || latest.scheduledAt };
+    return {
+      label: actorActionLabel({ scope: "nurse", action: "session_scheduled", fallback: "Session booked" }),
+      time: latest.createdAt || latest.scheduledAt,
+    };
   }
   if (row.lastActionAt) {
     return { label: labelForActionType(row.lastActionType, row, alert), time: row.lastActionAt };
   }
-  if (row.followUpDate) return { label: "Marked for follow-up", time: row.followUpDate };
-  if (isEndorsed(row.type, row.status)) return { label: "Endorsed to ADM coordinator", time: row.date };
-  if (row.status === "dismissed") return { label: "Rejected", time: row.date };
-  if (row.status === "resolved") return { label: "Resolved", time: row.date };
+  if (row.followUpDate) return { label: "Marked for follow-up by School Nurse", time: row.followUpDate };
+  if (isEndorsed(row.type, row.status)) return { label: "Endorsed to ADM coordinator by School Nurse", time: row.date };
+  if (row.status === "dismissed")
+    return {
+      label: actorActionLabel({
+        scope: "nurse",
+        action: "referral_dismissed",
+        withdrawn: isWithdrawn(row),
+        fallback: "Rejected",
+      }),
+      time: row.date,
+    };
+  if (row.status === "resolved") return { label: "Resolved by School Nurse", time: row.date };
   return { label: alert.title, time: row.date };
 }
 
@@ -267,12 +342,15 @@ export function formatActionTime(value: string): string {
 
 export function statusVariant(
   type: string,
-  status: string
+  status: string,
+  row?: NurseQueueRow
 ): "warning" | "destructive" | "secondary" | "outline" | "success" {
   if (isEndorsed(type, status)) return "success";
   if (status === "pending") return "warning";
   if (status === "escalated") return "destructive";
-  if (status === "resolved" || status === "dismissed") return "secondary";
+  // Withdrawals read neutral — red is reserved for desk rejections.
+  if (status === "dismissed") return row && isWithdrawn(row) ? "outline" : "destructive";
+  if (status === "resolved") return "secondary";
   return "outline";
 }
 
@@ -306,11 +384,22 @@ export function hasScheduledSession(sessions: NurseSessionItem[]): boolean {
   return sessions.some((s) => s.status === "scheduled");
 }
 
+/* A dismissal the filing teacher made themselves (withdrawal) reads
+   "Cancelled"; a desk decision reads "Reject". The backend resolves the
+   actor from the dismissal audit trail. */
+export function isWithdrawn(row: NurseQueueRow): boolean {
+  return (
+    row.status === "dismissed" &&
+    (row.dismissedByRole === "adviser" || row.dismissedByRole === "subject_teacher")
+  );
+}
+
 /* Watermark label for the diagonal background on each referral entry.
    Matches the sidebar action menu labels so the reader sees the
    same wording in the watermark as in the filters. */
 export function watermarkLabel(row: NurseQueueRow): string {
   if (isEndorsed(row.type, row.status)) return "Endorse";
+  if (isWithdrawn(row)) return "Cancelled";
   if (row.status === "dismissed") return "Reject";
   if (row.status === "resolved") return "Done";
   if (row.status === "follow_up") return "Follow-up";
@@ -323,6 +412,7 @@ export function watermarkLabel(row: NurseQueueRow): string {
    classes that give each status its own distinct color. */
 export function watermarkColor(row: NurseQueueRow): string {
   if (isEndorsed(row.type, row.status)) return "endorse";
+  if (isWithdrawn(row)) return "cancelled";
   if (row.status === "dismissed") return "reject";
   if (row.status === "resolved") return "done";
   if (row.status === "follow_up") return "followup";

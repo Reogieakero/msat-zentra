@@ -842,7 +842,7 @@ export function ScheduleWeekSetup({ section }: Props) {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmUnlockOpen(false)}>
+              <Button variant="destructive" onClick={() => setConfirmUnlockOpen(false)}>
                 Cancel
               </Button>
               <Button
@@ -879,7 +879,7 @@ export function ScheduleWeekSetup({ section }: Props) {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmClearOpen(false)}>
+              <Button variant="destructive" onClick={() => setConfirmClearOpen(false)}>
                 Cancel
               </Button>
               <Button

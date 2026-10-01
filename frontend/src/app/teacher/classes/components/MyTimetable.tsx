@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, CalendarDays, Check, Clock, Info, Loader2, UserRound } from "lucide-react";
+import { BellRing, CalendarDays, Check, Clock, Info, KeyRound, Loader2, UserRound } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useTerm } from "@/lib/term/TermContext";
+import { useSheetContext } from "@/app/teacher/attendance/components/attendance-taking-data";
+import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import {
   Dialog,
   DialogContent,
@@ -23,11 +27,23 @@ import {
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { MyWeekGrid } from "./MyWeekGrid";
+import { useSession } from "@/lib/auth/useSession";
+import {
+  useCachedMasterTeacher,
+  useTeacherOverview,
+} from "@/app/teacher/overview/components/teacher-overview-data";
 
 interface LinkedName {
   id: string;
   name: string;
   code: string | null;
+}
+
+/** This term's verification grant (DB-saved auth flow per term). Null means
+ *  the term hasn't been entered yet — Term 1 state never opens Term 2. */
+interface TermGrant {
+  via: string;
+  attendanceVerified: boolean;
 }
 
 interface MySlot {
@@ -48,12 +64,23 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 /* My Classes timetable — the teacher enters the code from their teacher-list
-   entry once, linking their login to that catalog row. From then on the
-   calendar renders their real assigned subjects and timeslots (committed
-   slots only) instead of placeholder data. */
+   entry once, linking their login to that catalog row. Every term then asks
+   first (adviser tap-through or the same link code re-entered) and records a
+   DB grant row for that term before the calendar opens — never straight to
+   the pages. From then on the calendar renders their real assigned subjects
+   and timeslots (committed slots only) instead of placeholder data. */
 export function MyTimetable() {
   const queryClient = useQueryClient();
   const [confirmReleaseOpen, setConfirmReleaseOpen] = useState(false);
+  const { activeTerm } = useTerm();
+  const termLabel = activeTerm
+    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
+    : "this term";
+  // NOTE (Rules of Hooks): all state lives up here — nothing may hook
+  // below the early returns further down.
+  const [attCode, setAttCode] = useState("");
+  const [attCodeError, setAttCodeError] = useState<string | null>(null);
+  const [showCodeVerify, setShowCodeVerify] = useState(false);
   // Live clock for the reminder card — re-evaluates the current class
   // every minute.
   const [now, setNow] = useState(() => new Date());
@@ -62,17 +89,33 @@ export function MyTimetable() {
     return () => window.clearInterval(id);
   }, []);
 
-  const meQuery = useQuery<{ teacherName: LinkedName | null }>({
+  const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null; isMasterTeacher?: boolean }>({
     queryKey: ["teacher-schedule-me"],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ teacherName: LinkedName | null }>(
-        "/api/teacher/schedule/teachers/me",
-      );
+      const { data } = await apiClient.get<{
+        teacherName: LinkedName | null;
+        termGrant: TermGrant | null;
+        isMasterTeacher?: boolean;
+      }>("/api/teacher/schedule/teachers/me");
       return data;
     },
   });
 
   const linked = meQuery.data?.teacherName ?? null;
+  const termGrant = meQuery.data?.termGrant ?? null;
+
+  // Currently designated Master Teacher bypasses every code gate on this
+  // page — student and subject records open directly, no link/term code.
+  const session = useSession();
+  const overview = useTeacherOverview();
+  const cachedMaster = useCachedMasterTeacher(session?.sub);
+  const isMasterTeacher =
+    overview.data?.isMasterTeacher ?? meQuery.data?.isMasterTeacher ?? cachedMaster;
+
+  // Advisory identity for this login (shared roster cache): answers the
+  // per-term "adviser or not" question without an extra endpoint.
+  const sheetContext = useSheetContext();
+  const isAdviser = !!sheetContext.data;
 
   const slotsQuery = useQuery<{ slots: MySlot[] }>({
     queryKey: ["teacher-my-slots"],
@@ -82,7 +125,7 @@ export function MyTimetable() {
       );
       return data;
     },
-    enabled: linked !== null,
+    enabled: linked !== null || isMasterTeacher,
   });
 
   const configQuery = useQuery<{ config: DayConfig }>({
@@ -91,7 +134,7 @@ export function MyTimetable() {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");
       return data;
     },
-    enabled: linked !== null,
+    enabled: linked !== null || isMasterTeacher,
   });
 
   const refresh = () => {
@@ -118,6 +161,64 @@ export function MyTimetable() {
     },
   });
 
+  const verify = useMutation({
+    mutationFn: async (teacherCode: string) => {
+      const { data } = await apiClient.post(
+        "/api/teacher/schedule/teachers/verify-attendance",
+        { code: teacherCode },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      setAttCodeError(null);
+      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
+      toast.success({
+        title: "Term entered",
+        description: `Your code matches — classes are now open for ${termLabel}.`,
+      });
+    },
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err, "Could not verify teacher code.");
+      setAttCodeError(message);
+      toast.error({ title: "Could not verify code", description: message });
+    },
+  });
+
+  // Adviser tap-through: answer this term's entry question as the adviser.
+  // One tap records the term grant in the DB — no code needed.
+  const grantTap = useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{ termGrant: TermGrant }>(
+        "/api/teacher/schedule/teachers/term-grant",
+        {},
+      );
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
+      toast.success({
+        title: "Term entered",
+        description: `Workspace open as adviser for ${termLabel}.`,
+      });
+    },
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err, "Could not enter term.");
+      toast.error({ title: "Could not enter term", description: message });
+    },
+  });
+
+  const handleVerify = () => {
+    if (verify.isPending) return;
+    if (!attCode.trim()) {
+      setAttCodeError("Enter your teacher code to open this term.");
+      return;
+    }
+    setAttCodeError(null);
+    verify.mutate(attCode.trim());
+  };
+
   if (meQuery.isPending) {
     return (
       <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading classes">
@@ -135,7 +236,7 @@ export function MyTimetable() {
     );
   }
 
-  if (!linked) {
+  if (!linked && !isMasterTeacher) {
     return (
       <>
         <div>
@@ -148,6 +249,90 @@ export function MyTimetable() {
           title="Link your teacher code"
           description="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your assigned subjects and their timeslots will attach to this calendar."
         />
+      </>
+    );
+  }
+
+  // Term entry: each term asks first — advisers tap through, everyone else
+  // answers with their link code (same code re-entered per term). The pages
+  // never open until this term's grant row exists in the database.
+  // The currently designated Master Teacher skips both gates entirely.
+  if (!termGrant && !isMasterTeacher) {
+    return (
+      <>
+        <div className={emptyStyles.emptyWrap}>
+          <div className={assign.card} style={{ width: "100%", maxWidth: "28rem" }}>
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
+            </span>
+            <div className="relative flex flex-col items-center text-center">
+              <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
+                <KeyRound size={32} className="text-primary" />
+              </span>
+              <h3 className="text-lg font-semibold">Enter {termLabel}</h3>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                {isAdviser
+                  ? `You advise ${sheetContext.data?.sectionName ?? "a section"} — continue as adviser to open your classes for ${termLabel}, or verify with your teacher code instead.`
+                  : `Enter the same teacher code you linked to open your classes for ${termLabel}. Codes never carry across terms.`}
+              </p>
+              <div className="mt-4 flex w-full flex-col gap-2">
+                {isAdviser && !showCodeVerify ? (
+                  <>
+                    <Button onClick={() => grantTap.mutate()} disabled={grantTap.isPending}>
+                      {grantTap.isPending ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" aria-hidden />
+                          <span aria-live="polite">Entering…</span>
+                        </>
+                      ) : (
+                        "Continue as adviser"
+                      )}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowCodeVerify(true)}>
+                      Verify with teacher code instead
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      placeholder="Teacher code (e.g. MS-101)…"
+                      value={attCode}
+                      onChange={(e) => {
+                        setAttCode(e.target.value);
+                        setAttCodeError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleVerify();
+                      }}
+                      aria-label="Teacher code"
+                      className="text-center uppercase"
+                    />
+                    {attCodeError ? (
+                      <p role="alert" className="text-sm text-destructive">
+                        {attCodeError}
+                      </p>
+                    ) : null}
+                    <Button onClick={handleVerify} disabled={verify.isPending}>
+                      {verify.isPending ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" aria-hidden />
+                          <span aria-live="polite">Verifying…</span>
+                        </>
+                      ) : (
+                        "Verify code"
+                      )}
+                    </Button>
+                    {isAdviser ? (
+                      <Button variant="ghost" onClick={() => setShowCodeVerify(false)}>
+                        Back to adviser entry
+                      </Button>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </>
     );
   }
@@ -242,7 +427,9 @@ export function MyTimetable() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">My Classes</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Your attached timetable for the week.
+          {isMasterTeacher
+            ? "Master Teacher — no code needed. Your student and subject records open directly."
+            : "Your attached timetable for the week."}
         </p>
       </div>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
@@ -262,8 +449,9 @@ export function MyTimetable() {
               </span>
               <h3 className="text-lg font-semibold">No classes attached yet</h3>
               <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                Your subjects and timeslots will appear here once the master teacher
-                schedules {linked.name} and the slots are sent for review or approved.
+                {isMasterTeacher
+                  ? "No classes are attached to your login yet — schedule subjects in the Schedule workspace. Records open here without a code."
+                  : `Your subjects and timeslots will appear here once the master teacher schedules ${linked?.name ?? "your linked name"} and the slots are sent for review or approved.`}
               </p>
             </div>
           ) : (
@@ -271,6 +459,7 @@ export function MyTimetable() {
           )}
         </div>
         <div className="flex min-w-0 flex-col gap-4">
+          {linked ? (
           <div className={assign.card} aria-label={`Linked teacher code for ${linked.name}`}>
             <span className={assign.glowClip} aria-hidden="true">
               <span className={assign.cardGlow} />
@@ -303,6 +492,20 @@ export function MyTimetable() {
               </Button>
             </div>
           </div>
+          ) : isMasterTeacher ? (
+            <div className={assign.card} aria-label="Master Teacher access">
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex flex-col gap-1">
+                <h3 className="font-semibold">Master Teacher — no code needed</h3>
+                <p className="text-xs text-muted-foreground">
+                  Your student and subject records open directly. Manage the teacher list and
+                  timetables in the Schedule workspace.
+                </p>
+              </div>
+            </div>
+          ) : null}
 
           <div className={assign.card} aria-label="Slot status legend">
             <span className={assign.glowClip} aria-hidden="true">
@@ -364,7 +567,7 @@ export function MyTimetable() {
         </div>
       </div>
 
-      {confirmReleaseOpen ? (
+      {confirmReleaseOpen && linked ? (
         <Dialog
           open
           onOpenChange={(open) => {
@@ -381,7 +584,7 @@ export function MyTimetable() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmReleaseOpen(false)}>
+              <Button variant="destructive" onClick={() => setConfirmReleaseOpen(false)}>
                 Cancel
               </Button>
               <Button

@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { pickCurrentTerm } from "../lib/termScope.js";
 import { sectionHeadcounts } from "./enrollment.js";
+import { notifyInterventionDetected } from "../lib/notify.js";
 import type { RiskLevel } from "../generated/prisma/client.js";
 
 // Single source of truth for "the active term": the session's selected term
@@ -239,7 +240,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
         select: { id: true },
       });
       if (guidance) {
-        await prisma.intervention.create({
+        const created = await prisma.intervention.create({
           data: {
             studentId,
             riskLevelAtFlag: result.riskLevel,
@@ -249,6 +250,14 @@ export async function recomputeRisk(studentId: string, termId: string) {
             approvalStatus: "approved",
             outcomeStatus: "ongoing",
           },
+        });
+        // Realtime handoff (fire-and-forget — never delays the recompute
+        // caller): the counselor + section adviser learn the moment a
+        // Moderate/High case is detected.
+        void notifyInterventionDetected({
+          level: result.riskLevel,
+          interventionId: created.id,
+          studentId,
         });
       }
     }
@@ -277,7 +286,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
         select: { id: true },
       });
       if (guidance) {
-        await prisma.intervention.create({
+        const created = await prisma.intervention.create({
           data: {
             studentId: null,
             rosterId,
@@ -288,6 +297,14 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
             approvalStatus: "approved",
             outcomeStatus: "ongoing",
           },
+        });
+        // Realtime handoff (fire-and-forget — never delays the recompute
+        // caller): the counselor + section adviser learn the moment a
+        // Moderate/High case is detected.
+        void notifyInterventionDetected({
+          level: result.riskLevel,
+          interventionId: created.id,
+          rosterId,
         });
       }
     }

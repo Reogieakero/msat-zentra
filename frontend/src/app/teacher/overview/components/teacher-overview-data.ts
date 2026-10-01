@@ -62,11 +62,26 @@ export interface AdvisorySectionInfo {
   gradeLevel: string;
 }
 
+export interface ClassStudentRow {
+  studentId: string;
+  name: string;
+  lrn: string;
+  sectionId: string;
+  section: string;
+  /** Subject codes the teacher handles in this student's section — one row. */
+  subjects: string[];
+  riskLevel: "Low" | "Moderate" | "High";
+  /** Academic + attendance only — regular teachers record no anecdotal. */
+  flags: ("academic" | "attendance")[];
+}
+
 export interface TeacherOverviewData {
   teacherName: string;
   isAdviser: boolean;
   isMasterTeacher: boolean;
   masterTeacherEligible: boolean;
+  masterTeacherTaken: boolean;
+  masterTeacherHolderName: string | null;
   advisorySection: AdvisorySectionInfo | null;
   kpi: TeacherKpiRow;
   atRiskFactors: {
@@ -76,6 +91,7 @@ export interface TeacherOverviewData {
   };
   atRiskStudents: number;
   classes: TeacherClassRow[];
+  classStudents: ClassStudentRow[];
   recentActivity: TeacherActivityRow[];
   advisory: {
     students: AdvisoryStatusRow[];
@@ -92,6 +108,8 @@ export interface TeacherOverviewCritical {
   isAdviser: boolean;
   isMasterTeacher: boolean;
   masterTeacherEligible: boolean;
+  masterTeacherTaken: boolean;
+  masterTeacherHolderName: string | null;
   advisorySection: AdvisorySectionInfo | null;
   kpi: TeacherKpiRow;
   atRiskFactors: {
@@ -101,6 +119,7 @@ export interface TeacherOverviewCritical {
   };
   atRiskStudents: number;
   classes: TeacherClassRow[];
+  classStudents: ClassStudentRow[];
   advisory: {
     students: AdvisoryStatusRow[];
   };
@@ -182,6 +201,58 @@ function subscribeMasterTeacherCache(onChange: () => void): () => void {
   return () => window.removeEventListener("storage", onChange);
 }
 
+// Adviser flag mirrored per teacher in localStorage so the sidebar branch
+// paints correctly on the very first frame after a hard refresh — before the
+// overview query resolves. Same teacher-scoped, logout-wiped contract as the
+// master-teacher cache above. The live overview always overwrites this.
+function adviserCacheKey(teacherId: string | null | undefined): string | null {
+  return teacherId ? `zentra.adviser.${teacherId}` : null;
+}
+
+export function readCachedAdviser(teacherId: string | null | undefined): boolean | null {
+  if (typeof window === "undefined") return null;
+  const key = adviserCacheKey(teacherId);
+  if (!key) return null;
+  try {
+    const v = window.localStorage.getItem(key);
+    if (v === null) return null;
+    return v === "1";
+  } catch {
+    return null;
+  }
+}
+
+export function writeCachedAdviser(
+  teacherId: string | null | undefined,
+  value: boolean,
+): void {
+  const key = adviserCacheKey(teacherId);
+  if (!key || typeof window === "undefined") return;
+  try {
+    if (value) window.localStorage.setItem(key, "1");
+    else window.localStorage.setItem(key, "0");
+  } catch {
+    // Private mode / blocked storage — the live overview stays authoritative.
+  }
+}
+
+function subscribeAdviserCache(onChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+// Hydration-safe first-frame flag (null = unknown yet). Renders the server
+// snapshot (null) through hydration, then flips to the cached value on the
+// client. Callers treat null as "still loading — show full nav".
+export function useCachedAdviser(teacherId: string | null | undefined): boolean | null {
+  return useSyncExternalStore(
+    subscribeAdviserCache,
+    () => readCachedAdviser(teacherId),
+    () => null,
+  );
+}
+
 // Hydration-safe first-frame flag. A `useState` initializer reading
 // localStorage renders different tabs on the server (no window) vs the
 // client (cached "1") — a hydration mismatch. `useSyncExternalStore` renders
@@ -213,6 +284,7 @@ export function useTeacherOverview() {
     queryFn: async () => {
       const payload = await fetchTeacherOverview();
       writeCachedMasterTeacher(teacherId, payload.isMasterTeacher);
+      writeCachedAdviser(teacherId, payload.isAdviser);
       return payload;
     },
     enabled: !!teacherId,

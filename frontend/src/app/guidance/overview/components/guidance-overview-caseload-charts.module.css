@@ -13,6 +13,8 @@
 
 .card,
 .cardWide {
+  position: relative;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--card);
@@ -21,6 +23,38 @@
   flex-direction: column;
   height: 100%;
   min-width: 0;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.card:hover,
+.cardWide:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 .cardBody {
@@ -120,6 +154,11 @@
   font-size: 0.75rem;
   line-height: 1.45;
   color: var(--muted-foreground);
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .empty {

@@ -1,6 +1,43 @@
 .panel {
+  position: relative;
+  overflow: visible;
   padding: 1rem;
   min-width: 0;
+}
+
+.glow {
+  border-radius: 1rem;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.glow:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 .panelTitle {

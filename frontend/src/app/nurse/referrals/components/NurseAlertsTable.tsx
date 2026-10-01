@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import type {
@@ -31,8 +23,8 @@ import {
 import { NurseReferralEntry, type SessionDialogKind } from "./NurseReferralEntry";
 import { NurseActionMenu } from "./NurseActionMenu";
 import {
-  TYPES,
   isEndorsed,
+  isWithdrawn,
   matchesActionFilter,
   type ActionFilter,
   type ActionValue,
@@ -54,6 +46,47 @@ function useNowTick(active: boolean): number {
   return now;
 }
 
+/* Scroll hint — a floating "scroll for more" pill shown only while the
+   page itself is scrollable and the reader hasn't reached the bottom.
+   Rendered instead of the pager on unpaginated feeds (clinic matters). */
+function ScrollHint({ count }: { count: number }) {
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    const update = () => {
+      if (count === 0) {
+        setVisible(false);
+        return;
+      }
+      const el = document.documentElement;
+      const scrollable = el.scrollHeight - window.innerHeight > 40;
+      const atBottom =
+        window.innerHeight + window.scrollY >= el.scrollHeight - 80;
+      setVisible(scrollable && !atBottom);
+    };
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    // Measure after paint (and again once content settles) — async so the
+    // effect itself never sets state synchronously.
+    const t1 = window.setTimeout(update, 0);
+    const t2 = window.setTimeout(update, 500);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [count]);
+  if (!visible) return null;
+  return (
+    <div className={styles.scrollHint} aria-hidden="true">
+      <span className={styles.scrollHintPill}>
+        Scroll for more
+        <span className={styles.scrollHintArrow}>↓</span>
+      </span>
+    </div>
+  );
+}
+
 /**
  * Cases sent to the nurse (clinic matters and ADM consultations), newest
  * first — toolbar with count + filters, alternating timeline entries, an
@@ -62,6 +95,9 @@ function useNowTick(active: boolean): number {
  * Separate pages lock to one type (ADM Cases / Clinic Matters) via
  * `initialType` + `lockType` so the reader never needs the case-type
  * dropdown — the timeline, action menu, and counts all stay on that type.
+ *
+ * Pass `paginate={false}` for a single scrolling feed with no pager UI —
+ * a scroll hint appears only while the contents actually overflow.
  *
  * Deep-links from the alerts table pass `highlightId` (scrolls to and
  * highlights the case, jumping the pager to its page) and optionally
@@ -75,6 +111,7 @@ export function NurseAlertsTable({
   title = "Referrals to me",
   highlightId = null,
   autoViewFormId = null,
+  paginate = true,
 }: {
   alerts: NurseAlertItem[];
   onChanged: () => void;
@@ -83,8 +120,8 @@ export function NurseAlertsTable({
   title?: string;
   highlightId?: string | null;
   autoViewFormId?: string | null;
+  paginate?: boolean;
 }) {
-  const [query, setQuery] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<TypeFilter>(initialType);
   const [actionFilter, setActionFilter] = React.useState<ActionFilter>("");
   const [page, setPage] = React.useState(1);
@@ -153,23 +190,15 @@ export function NurseAlertsTable({
   const effectiveViewFor = !formDismissed ? (viewFor ?? autoRow) : viewFor;
 
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
     const rows = alerts.filter((a) => {
       if (typeFilter !== "" && a.row.type !== typeFilter) return false;
-      // Sidebar action menu — narrows the timeline to cases of the picked
+      // Sidebar action menu — narrows the list to cases of the picked
       // type in the picked action state.
       if (actionFilter !== "" && !matchesActionFilter(a.row, actionFilter)) return false;
-      if (
-        q !== "" &&
-        !`${a.row.student} ${a.row.lrn} ${a.row.section} ${a.row.reason} ${a.row.anecdotal?.incident ?? ""} ${a.row.category}`
-          .toLowerCase()
-          .includes(q)
-      )
-        return false;
       return true;
     });
     // Latest referred on top — the referrals queue is a newest-first
-    // timeline (page 1 = newest, pager walks toward older cases).
+    // list (page 1 = newest, pager walks toward older cases).
     rows.sort((a, b) => {
       const aDate = a.row.date === "—" ? "" : a.row.date;
       const bDate = b.row.date === "—" ? "" : b.row.date;
@@ -178,7 +207,7 @@ export function NurseAlertsTable({
       return b.sortTime - a.sortTime;
     });
     return rows;
-  }, [alerts, query, typeFilter, actionFilter]);
+  }, [alerts, typeFilter, actionFilter]);
 
   // Action-menu counts — computed from the full desk so the numbers stay
   // stable while searching or paging. ADM and Clinic menus count only
@@ -190,10 +219,12 @@ export function NurseAlertsTable({
       followup: 0,
       booked: 0,
       reject: 0,
+      adm_cancelled: 0,
       clinic_needs: 0,
       clinic_booked: 0,
       clinic_done: 0,
       clinic_followup: 0,
+      clinic_cancelled: 0,
     };
     for (const a of alerts) {
       if (a.row.type === "ADM") {
@@ -201,12 +232,14 @@ export function NurseAlertsTable({
         if (isEndorsed(a.row.type, a.row.status)) counts.endorse += 1;
         if (a.row.status === "follow_up") counts.followup += 1;
         if (a.row.sessions.length > 0) counts.booked += 1;
-        if (a.row.status === "dismissed") counts.reject += 1;
+        if (a.row.status === "dismissed" && !isWithdrawn(a.row)) counts.reject += 1;
+        if (isWithdrawn(a.row)) counts.adm_cancelled += 1;
       } else if (a.row.type === "Clinic") {
         if (a.row.status === "pending") counts.clinic_needs += 1;
         if (a.row.sessions.length > 0) counts.clinic_booked += 1;
         if (a.row.sessions.some((s) => s.status === "completed")) counts.clinic_done += 1;
         if (a.row.status === "follow_up") counts.clinic_followup += 1;
+        if (isWithdrawn(a.row)) counts.clinic_cancelled += 1;
       }
     }
     return counts;
@@ -215,31 +248,19 @@ export function NurseAlertsTable({
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(effPage, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  // One live clock for every countdown on this page — ticks each second
+  const visibleRows = paginate
+    ? filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+    : filtered;
+  // One live clock for every countdown on screen — ticks each second
   // only while a scheduled session is visible, so seconds stay exact.
-  const hasScheduledOnPage = pageRows.some((a) =>
+  const hasScheduledOnPage = visibleRows.some((a) =>
     a.row.sessions.some((s) => s.status === "scheduled")
   );
   const now = useNowTick(hasScheduledOnPage);
   const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, total);
   const hasActiveFilters =
-    query.trim() !== "" ||
-    actionFilter !== "" ||
-    (!lockType && typeFilter !== "");
-  const typeFilterLabel =
-    TYPES.find((t) => t.value === typeFilter)?.label ?? "All types";
-
-  function clearFilters() {
-    // Locked pages stay on their type — clearing only resets the search
-    // and the action menu so the timeline never empties to the other type.
-    // Either way the reader takes over paging from here.
-    if (!lockType) setTypeFilter("");
-    setActionFilter("");
-    setPage(1);
-    setPaged(true);
-  }
+    actionFilter !== "" || (!lockType && typeFilter !== "");
 
   function pickAction(value: ActionValue, type: "ADM" | "Clinic") {
     // Locked pages never switch type — picking an action only toggles the
@@ -253,92 +274,23 @@ export function NurseAlertsTable({
   return (
     <div className={styles.layout}>
       <div className={styles.feed}>
-        <div className={styles.toolbar}>
-          <div>
-            <h1 className={styles.title}>{title}</h1>
-          </div>
-          <div className={styles.filters}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "1.75rem" }}
-                placeholder="Search by student name or keyword…"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Search your cases"
-              />
-            </div>
-
-            {!lockType && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-label={`Filter cases by type, currently showing: ${typeFilterLabel}`}
-                    className={`${styles.filterBtn} ${typeFilter !== "" ? styles.filterActive : ""}`}
-                  >
-                    {typeFilterLabel}
-                    {typeFilter !== "" && <span className={styles.filterDot} aria-hidden />}
-                    <ChevronDown aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={styles.filterMenu}>
-                  {TYPES.map((item) => (
-                    <DropdownMenuCheckboxItem
-                      key={item.label}
-                      checked={typeFilter === item.value}
-                      onCheckedChange={() => {
-                        setTypeFilter(item.value);
-                        // The sidebar menus are per-type — a stale action from
-                        // the other type would empty the list, so reset it.
-                        setActionFilter("");
-                        setPage(1);
-                      }}
-                    >
-                      {item.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={styles.clearBtn}
-                onClick={clearFilters}
-              >
-                <X aria-hidden />
-                Show all
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {pageRows.length === 0 ? (
+        {visibleRows.length === 0 ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>
-              {hasActiveFilters ? "No cases match your search" : "You're all caught up"}
+              {hasActiveFilters ? "No cases match the selected filter" : "You're all caught up"}
             </p>
             <p className={styles.emptyHint}>
               {hasActiveFilters
-                ? "Try a different name or keyword, or clear the filter to see every case."
+                ? "Pick a different action in the sidebar, or show every case."
                 : "New cases sent to you by advisers will appear here."}
             </p>
           </div>
         ) : (
-          <ol className={styles.timeline}>
-            {pageRows.map((alert, index) => (
+          <ol className={styles.cards} aria-label={title}>
+            {visibleRows.map((alert) => (
               <NurseReferralEntry
                 key={alert.key}
                 alert={alert}
-                alt={index % 2 === 1}
                 highlighted={highlightId !== null && highlightId === alert.row.id}
                 now={now}
                 onPreview={setPreviewId}
@@ -355,39 +307,43 @@ export function NurseAlertsTable({
           </ol>
         )}
 
-        {/* Pager */}
-        <nav className={styles.pager} aria-label="Cases pages">
-          <p className={styles.range}>
-            Showing {start}–{end} of {total}
-          </p>
-          <div className={styles.pagerButtons}>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={safePage <= 1}
-              onClick={() => {
-                setPaged(true);
-                setPage(Math.max(1, safePage - 1));
-              }}
-            >
-              Previous
-            </Button>
-            <span className={styles.pageLabel} aria-live="polite">
-              Page {safePage} of {totalPages}
-            </span>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={safePage >= totalPages}
-              onClick={() => {
-                setPaged(true);
-                setPage(safePage + 1);
-              }}
-            >
-              Next
-            </Button>
-          </div>
-        </nav>
+        {/* Pager — unpaginated feeds render the scroll hint instead. */}
+        {paginate ? (
+          <nav className={styles.pager} aria-label="Cases pages">
+            <p className={styles.range}>
+              Showing {start}–{end} of {total}
+            </p>
+            <div className={styles.pagerButtons}>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={safePage <= 1}
+                onClick={() => {
+                  setPaged(true);
+                  setPage(Math.max(1, safePage - 1));
+                }}
+              >
+                Previous
+              </Button>
+              <span className={styles.pageLabel} aria-live="polite">
+                Page {safePage} of {totalPages}
+              </span>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={safePage >= totalPages}
+                onClick={() => {
+                  setPaged(true);
+                  setPage(safePage + 1);
+                }}
+              >
+                Next
+              </Button>
+            </div>
+          </nav>
+        ) : (
+          <ScrollHint count={total} />
+        )}
       </div>
 
       <NurseActionMenu

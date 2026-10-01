@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme, useFont } from "@/components/providers";
+import { useTheme } from "@/components/providers";
 import { GuidanceSidebar } from "@/components/guidance-sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -19,9 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
+import { GuidanceNotificationsBell } from "./components/GuidanceNotificationsBell";
+import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
+import { GuidancePaletteGate } from "./settings/components/profile-settings-data";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import styles from "./guidance.module.css";
 
@@ -34,7 +37,6 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   // Only subscribe once the role check passes.
   useGuidanceRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
-  const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
 
   const isDark = resolvedTheme === "dark";
@@ -82,6 +84,8 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
           </Command>
         </div>
 
+        <GuidanceNotificationsBell />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -102,7 +106,13 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
           >
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={styles.accountItem}>
+            <DropdownMenuItem
+              className={styles.accountItem}
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/guidance/settings");
+              }}
+            >
               <Settings className={styles.accountIcon} />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -137,37 +147,6 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
                 ) : null}
               </DropdownMenuItem>
             </div>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>Font</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setFont("inter");
-                }}
-              >
-                <Type className={styles.accountIcon} />
-                <span>Inter</span>
-                {font === "inter" ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setFont("nunito");
-                }}
-              >
-                <Type className={styles.accountIcon} />
-                <span>Nunito</span>
-                {font === "nunito" ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className={styles.accountItem}
@@ -182,10 +161,12 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+      <GuidancePaletteGate />
       <GuidanceSidebar />
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
+      <BookingReminderStack desk="guidance" />
     </div>
   );
 }

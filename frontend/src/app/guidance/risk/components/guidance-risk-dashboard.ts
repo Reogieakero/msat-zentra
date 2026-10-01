@@ -18,11 +18,15 @@ export interface GuidanceRiskRow extends RiskCaseRow {
   /** Referral track — "Counseling" for direct guidance cases, "ADM" for
       ADM-track cases picked for guidance consultation review. */
   track: GuidanceRiskTrack;
+  /** When the case was referred — drives the weekly trend lines. */
+  referredAt: string;
 }
 
 export async function fetchGuidanceRisk(): Promise<{
   rows: GuidanceRiskRow[];
   caseToStudent: Record<string, string | null>;
+  /** Referral id → display name, for the plain-words watch card. */
+  referralToName: Record<string, string>;
 }> {
   const referrals = await fetchAllGuidanceReferrals();
   const rows: GuidanceRiskRow[] = referrals.map((r) => ({
@@ -30,10 +34,13 @@ export async function fetchGuidanceRisk(): Promise<{
     section: r.section,
     category: r.category,
     track: r.type === "ADM" ? "ADM" : "Counseling",
+    referredAt: r.date,
   }));
   const caseToStudent: Record<string, string | null> = {};
+  const referralToName: Record<string, string> = {};
   for (const r of referrals) {
     caseToStudent[r.id] = r.studentId;
+    referralToName[r.id] = r.student;
   }
-  return { rows, caseToStudent };
+  return { rows, caseToStudent, referralToName };
 }

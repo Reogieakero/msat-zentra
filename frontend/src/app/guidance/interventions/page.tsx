@@ -9,7 +9,6 @@ import { fetchGuidanceInterventions } from "./components/guidance-interventions-
 import {
   GuidanceInterventionsTable,
 } from "./components/guidance-interventions-table";
-import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-interventions.module.css";
 
 const PAGE_SIZE = 50;
@@ -50,7 +49,7 @@ export default function GuidanceInterventionsPage() {
     });
 
   return (
-    <section className={pageStyles.page}>
+    <section className={styles.page}>
       {isPending ? (
         <div aria-busy="true" className={styles.feed}>
           <div className={styles.skelToolbar}>
@@ -63,13 +62,13 @@ export default function GuidanceInterventionsPage() {
           <div className={styles.skelTableWrap}>
             <div className={styles.skelTable}>
               <div className={styles.skelHeadRow}>
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
                   <Skeleton key={i} className={styles.skelTh} />
                 ))}
               </div>
               {[0, 1, 2, 3, 4].map((row) => (
                 <div key={row} className={styles.skelRow}>
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cell) => (
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((cell) => (
                     <div key={cell} className={styles.skelCell}>
                       <Skeleton
                         className={styles.skelBar}

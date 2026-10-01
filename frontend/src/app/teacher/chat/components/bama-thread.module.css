@@ -258,6 +258,56 @@
   text-align: center;
 }
 
+/* Inline student picker card (no overlay modal). Doubled selector outranks
+   the shared shell (no hover lift) regardless of stylesheet order. */
+.pickCard.pickCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+  width: 100%;
+  max-width: 30rem;
+  align-self: center;
+}
+
+.pickCard.pickCard:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+/* Card content paints above the glow (the glow span keeps its own absolute
+   positioning from the shared shell). */
+.pickCard > :not(span) {
+  position: relative;
+}
+
+.pickHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.pickTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.pickDesc {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.pickListWrap {
+  position: relative;
+  min-width: 0;
+}
+
 .reviewCard {
   display: flex;
   flex-direction: column;
@@ -316,6 +366,7 @@
   width: 100%;
 }
 
+/* Filed message: plain flow, no card chrome — folder, status line, text. */
 .filedCard {
   display: flex;
   flex-direction: column;
@@ -324,10 +375,6 @@
   min-width: 0;
   width: 100%;
   max-width: 30rem;
-  padding: 0.75rem;
-  border: 1px solid color-mix(in oklch, var(--primary), transparent 60%);
-  border-radius: var(--radius-md, 0.375rem);
-  background-color: color-mix(in oklch, var(--primary), transparent 95%);
 }
 
 .filedHead {

@@ -11,17 +11,85 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 17.5rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 19rem;
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: start;
   min-width: 0;
   flex: 1;
   min-height: 0;
 }
 
+.sideList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  position: sticky;
+  /* Level with the left data-table card: 3rem navbar + 1rem main padding. */
+  top: 4rem;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  /* Scrollable without visible chrome — same pattern as the attendance rail. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sideList::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 64rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .sideList {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* Hidden scroll chrome for the page's scroll containers (dropdown menus,
+   rail lists, wide table) — scrollable by touch, wheel, and keyboard without
+   visible bars, same pattern as the attendance rail. */
+.noScrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.noScrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth slide-down for the expandable form card (grid-rows trick animates
+   auto height without JS measurement). */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    grid-template-rows 280ms ease-out,
+    opacity 200ms ease-out,
+    transform 280ms ease-out;
+  min-width: 0;
+}
+
+.collapseOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.collapseInner {
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse {
+    transition: none;
   }
 }
 

@@ -105,7 +105,7 @@ export function statusVariant(
     case "info_requested": return "outline";
     case "escalated": return "destructive";
     case "resolved": return "success";
-    case "dismissed": return "secondary";
+    case "dismissed": return "destructive";
     default: return "outline";
   }
 }
@@ -120,6 +120,83 @@ export function entryStatusVariant(
 ): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
   if (entry.session) return "success";
   return statusVariant(entry.row.status);
+}
+
+/* Per-student folder over finished transactions — one folder per student
+   whose cases appear here. Colors follow the dominant case type so the
+   grid reads at a glance. */
+export interface StudentHealthFolder {
+  key: string;
+  student: string;
+  lrn: string;
+  section: string;
+  grade: string;
+  dominantType: "ADM" | "Clinic";
+  entries: DocEntry[];
+  fileCount: number;
+  storageBytes: number;
+}
+
+export const HEALTH_FOLDER_COLORS: Record<"ADM" | "Clinic", string> = {
+  ADM: "#3b82f6",
+  Clinic: "#22c55e",
+};
+
+function folderIdentity(row: NurseQueueRow): { key: string; lrn: string } {
+  // Same identity rules as the overview builder: registered students key
+  // by LRN, roster enlistments fall back to name + section.
+  const lrn = (row.lrn || "").trim();
+  if (lrn && lrn !== "—") return { key: `lrn:${lrn}`, lrn };
+  return {
+    key: `name:${row.student.trim().toLowerCase()}|${row.section.trim().toLowerCase()}`,
+    lrn: "—",
+  };
+}
+
+export function groupEntriesByStudent(entries: DocEntry[]): StudentHealthFolder[] {
+  const map = new Map<string, StudentHealthFolder>();
+  for (const e of entries) {
+    const { key, lrn } = folderIdentity(e.row);
+    let folder = map.get(key);
+    if (!folder) {
+      folder = {
+        key,
+        student: e.row.student || "Unknown student",
+        lrn,
+        section: e.row.section && e.row.section !== "—" ? e.row.section : "",
+        grade: e.row.grade && e.row.grade !== "—" ? e.row.grade : "",
+        dominantType: "Clinic",
+        entries: [],
+        fileCount: 0,
+        storageBytes: 0,
+      };
+      map.set(key, folder);
+    }
+    folder.entries.push(e);
+    folder.fileCount += e.files.length;
+    for (const f of e.files) {
+      if (Number.isFinite(f.fileSize) && f.fileSize > 0) {
+        folder.storageBytes += f.fileSize;
+      }
+    }
+    if (!folder.student || folder.student === "Unknown student") {
+      folder.student = e.row.student || folder.student;
+    }
+  }
+  const folders = [...map.values()];
+  for (const f of folders) {
+    // Newest case first inside each folder.
+    f.entries.sort((a, b) => b.sortTime - a.sortTime || b.dateDay.localeCompare(a.dateDay));
+    const adm = f.entries.filter((e) => e.row.type === "ADM").length;
+    f.dominantType = adm * 2 >= f.entries.length ? "ADM" : "Clinic";
+  }
+  // Most files first — the heaviest records surface on top.
+  folders.sort((a, b) => b.fileCount - a.fileCount || b.entries.length - a.entries.length);
+  return folders;
+}
+
+export function folderStorageBytes(folders: StudentHealthFolder[]): number {
+  return folders.reduce((sum, f) => sum + f.storageBytes, 0);
 }
 
 export function sortEntries(

@@ -9,6 +9,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { cache } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
 import { getInterventionStudents } from "../risk/interventions.service.js";
 import {
@@ -266,6 +267,22 @@ router.get(
           : null,
       }));
 
+      // Who cancelled each session (desk cancel vs adviser contexts) —
+      // latest session_cancelled audit wins; never-cancelled stay null.
+      const cancelledByRole = await sessionCancelledByRole(
+        slice.flatMap((s) => (s.intervention?.sessions ?? []).map((sess) => sess.id))
+      );
+      for (const st of students) {
+        const sessions = st.intervention?.sessions as
+          | { id: string; cancelledByRole?: string | null }[]
+          | undefined;
+        if (sessions) {
+          for (const sess of sessions) {
+            sess.cancelledByRole = cancelledByRole.get(sess.id) ?? null;
+          }
+        }
+      }
+
       res.json({
         summary: {
           high: cohort.students.filter((s) => s.riskLevel === "High").length,
@@ -328,6 +345,180 @@ router.get(
   }
 );
 
+// Live engine breakdown for one student — powers the See-details risk
+// panel (factors with real values, live vs stored vs flagged levels).
+// Read-only; never writes snapshots or interventions.
+router.get(
+  "/engine",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  async (req, res, next) => {
+    try {
+      const studentId =
+        typeof req.query.studentId === "string" && req.query.studentId
+          ? req.query.studentId
+          : null;
+      const rosterId =
+        typeof req.query.rosterId === "string" && req.query.rosterId
+          ? req.query.rosterId
+          : null;
+      if ((studentId && rosterId) || (!studentId && !rosterId)) {
+        throw new AppError(400, "INVALID_ACTION", "Pick exactly one student");
+      }
+      const termId = await resolveActiveTermId(req);
+      if (!termId) throw new AppError(400, "NO_ACTIVE_TERM", "No active term to evaluate");
+      const live = studentId
+        ? await evaluateRisk(studentId, termId)
+        : await evaluateRosterRisk(rosterId!, termId);
+
+      const gradeWhere = studentId ? { studentId, termId } : { rosterId: rosterId!, termId };
+      const attWhere = studentId ? { studentId, termId } : { rosterId: rosterId!, termId };
+      const [grades, attendance, anecdotals, snapshot, flagged] = await Promise.all([
+        prisma.finalGrade.findMany({
+          where: gradeWhere,
+          select: {
+            computedAverage: true,
+            transmutedGrade: true,
+            subject: { select: { name: true, code: true } },
+          },
+          orderBy: { subject: { name: "asc" } },
+        }),
+        prisma.attendanceRecord.findMany({
+          where: attWhere,
+          select: {
+            status: true,
+            subjectId: true,
+            subject: { select: { name: true, code: true } },
+          },
+        }),
+        prisma.anecdotalRecord.findMany({
+          where: studentId ? { studentId, termId } : { rosterId: rosterId!, termId },
+          select: { category: true, observationDatetime: true },
+          orderBy: { observationDatetime: "desc" },
+          take: 5,
+        }),
+        prisma.riskSnapshot.findFirst({
+          where: studentId ? { studentId, termId } : { rosterId: rosterId!, termId },
+          orderBy: { snapshotDate: "desc" },
+          select: { riskLevel: true, riskCount: true, snapshotDate: true },
+        }),
+        prisma.intervention.findFirst({
+          where: studentId ? { studentId } : { rosterId: rosterId! },
+          orderBy: { id: "desc" },
+          select: { riskLevelAtFlag: true },
+        }),
+      ]);
+
+      const present = attendance.filter((a) => a.status === "present").length;
+      const subjectEra = attendance.some((a) => a.subjectId !== null);
+      const rate = attendance.length > 0 ? present / attendance.length : null;
+      // Raw percentage average across ALL final-grade subjects (display
+      // basis; the engine flag itself runs on transmuted grades).
+      const raws = grades
+        .map((g) => g.computedAverage)
+        .filter((v): v is number => typeof v === "number");
+      const rawAverage =
+        raws.length > 0 ? raws.reduce((s, v) => s + v, 0) / raws.length : null;
+      // Transmuted mean — the number the Low/Clear badge actually answers
+      // to. Shown beside the raw average so the badge reads coherently
+      // (raw 67% routinely transmutes above the 75 line).
+      const transmutes = grades
+        .map((g) => g.transmutedGrade)
+        .filter((v): v is number => typeof v === "number");
+      const transmutedAverage =
+        transmutes.length > 0
+          ? transmutes.reduce((s, v) => s + v, 0) / transmutes.length
+          : null;
+      // Per-subject attendance (subject-era rows) + a General bucket for
+      // legacy AM/PM rows without a subject.
+      const bySubjectMap = new Map<
+        string,
+        { code: string; name: string; present: number; total: number }
+      >();
+      let generalPresent = 0;
+      let generalTotal = 0;
+      for (const a of attendance) {
+        if (!a.subjectId) {
+          generalTotal += 1;
+          if (a.status === "present") generalPresent += 1;
+          continue;
+        }
+        const key = a.subjectId;
+        const entry = bySubjectMap.get(key) ?? {
+          code: a.subject?.code ?? "",
+          name: a.subject?.name ?? "Subject",
+          present: 0,
+          total: 0,
+        };
+        entry.total += 1;
+        if (a.status === "present") entry.present += 1;
+        bySubjectMap.set(key, entry);
+      }
+      const bySubject = [...bySubjectMap.values()]
+        .map((s) => ({
+          ...s,
+          rate: s.total > 0 ? s.present / s.total : null,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      res.json({
+        live: {
+          level: live.result.riskLevel,
+          count: live.result.riskCount,
+          academic: live.academicFlag,
+          attendance: live.attendanceFlag,
+          behavioral: live.behavioralFlag,
+        },
+        academic: {
+          average: rawAverage,
+          transmutedAverage,
+          subjectCount: grades.length,
+          threshold: 75,
+          subjects: grades.map((g) => ({
+            code: g.subject?.code ?? "",
+            name: g.subject?.name ?? "Subject",
+            computedAverage: g.computedAverage,
+            transmutedGrade: g.transmutedGrade,
+            below: (g.transmutedGrade ?? g.computedAverage ?? 100) < 75,
+          })),
+        },
+        attendance: {
+          rate,
+          present,
+          total: attendance.length,
+          subjectEra,
+          threshold: 0.8,
+          bySubject,
+          general:
+            generalTotal > 0
+              ? {
+                  present: generalPresent,
+                  total: generalTotal,
+                  rate: generalPresent / generalTotal,
+                }
+              : null,
+        },
+        behavioral: {
+          count: anecdotals.length,
+          recent: anecdotals.map((a) => ({
+            category: a.category,
+            date: a.observationDatetime.toISOString().slice(0, 10),
+          })),
+        },
+        stored: snapshot
+          ? {
+              level: snapshot.riskLevel,
+              count: snapshot.riskCount,
+              date: snapshot.snapshotDate.toISOString().slice(0, 10),
+            }
+          : null,
+        flagged: flagged ? { level: flagged.riskLevelAtFlag } : null,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 // Start a follow-up for a live at-risk student who has no open one yet —
 // same intake as accepting a referral: urgency, first impressions, and an
 // optional first counseling session booked on the spot.
@@ -381,6 +572,29 @@ function formatSession(row: {
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt ? row.completedAt.toISOString() : "",
   };
+}
+
+/* "Oct 1, 2026, 9:30 AM" in Asia/Manila — same clock as the referral
+   desk fanouts so session times read identically everywhere. */
+function formatWhen(d: Date): string {
+  try {
+    return new Intl.DateTimeFormat("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "Asia/Manila",
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(0, 16).replace("T", " ");
+  }
+}
+
+function truncate(text: string | null | undefined, max = 100): string | null {
+  const t = (text ?? "").trim();
+  if (!t) return null;
+  return t.length > max ? `${t.slice(0, max - 3)}...` : t;
 }
 
 router.post(
@@ -470,6 +684,14 @@ router.post(
       });
       await invalidateTags(TAGS);
       res.status(201).json(created);
+      notifyInterventionAdviser(created, req.user!.id, (name) => `Guidance opened a follow-up for ${name}.`);
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "interventions",
+        action: "session",
+        message: `You opened a ${liveLevel}-risk follow-up.`,
+        sourceId: created.id,
+      });
     } catch (e) {
       next(e);
     }
@@ -483,6 +705,62 @@ async function getIntervention(id: string) {
   });
   if (!row) throw new AppError(404, "NOT_FOUND", "Intervention not found");
   return row;
+}
+
+/* Section adviser behind an intervention — same resolution as the engine
+   detection handoff (student/roster section). Used so every follow-up
+   action reaches the adviser live, not just the case owner. */
+async function adviserOf(row: {
+  studentId: string | null;
+  rosterId: string | null;
+}): Promise<{ adviserId: string | null; studentName: string }> {
+  if (row.studentId) {
+    const s = await prisma.studentProfile.findUnique({
+      where: { userId: row.studentId },
+      select: {
+        user: { select: { fullName: true } },
+        section: { select: { adviserId: true } },
+      },
+    });
+    if (!s) return { adviserId: null, studentName: "the student" };
+    return { adviserId: s.section?.adviserId ?? null, studentName: s.user.fullName };
+  }
+  if (row.rosterId) {
+    const r = await prisma.studentRoster.findUnique({
+      where: { id: row.rosterId },
+      select: { fullName: true, section: { select: { adviserId: true } } },
+    });
+    if (!r) return { adviserId: null, studentName: "the student" };
+    return { adviserId: r.section?.adviserId ?? null, studentName: r.fullName };
+  }
+  return { adviserId: null, studentName: "the student" };
+}
+
+/* Adviser handoff for every follow-up mutation (background, off the
+   critical path): the section adviser learns live via sileo + bell + badge
+   on their desk's realtime channel. Skipped when there is no adviser, the
+   adviser acted themselves, or they already got the owner fanout — never a
+   double row. Best-effort, never throws. */
+function notifyInterventionAdviser(
+  row: { id: string; studentId: string | null; rosterId: string | null; assignedTo: string | null },
+  actorId: string,
+  message: (studentName: string) => string,
+) {
+  void (async () => {
+    try {
+      const { adviserId, studentName } = await adviserOf(row);
+      if (!adviserId || adviserId === actorId || adviserId === row.assignedTo) return;
+      await fanoutNotification({
+        userId: adviserId,
+        sourceTable: "interventions",
+        action: "session",
+        message: message(studentName),
+        sourceId: row.id,
+      });
+    } catch {
+      // Best-effort — the confirmed response already went out.
+    }
+  })();
 }
 
 function ensureWorkable(row: { outcomeStatus: string; approvalStatus: string }) {
@@ -532,7 +810,36 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: created.id, reason: "Counseling session scheduled", oldValue: null, newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt } });
       await invalidateTags(TAGS);
+      const when = formatWhen(created.scheduledAt);
+      const venue = created.venue?.trim() ? ` at ${created.venue.trim()}` : "";
+      let bookedFor = "the student";
+      try {
+        bookedFor = (await adviserOf(row)).studentName;
+      } catch {
+        // Default stands — the fanout below still lands.
+      }
       res.status(201).json(formatSession(created));
+      if (row.assignedTo && row.assignedTo !== req.user!.id) {
+        void fanoutNotification({
+          userId: row.assignedTo,
+          sourceTable: "interventions",
+          action: "session",
+          message: `Guidance booked an intervention session for ${bookedFor} (${created.sessionType}, ${when}${venue}).`,
+          sourceId: row.id,
+        });
+      }
+      notifyInterventionAdviser(
+        row,
+        req.user!.id,
+        (name) => `Guidance booked an intervention session for ${name} (${created.sessionType}, ${when}${venue}).`
+      );
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "interventions",
+        action: "session",
+        message: `You booked an intervention session (${created.sessionType}, ${when}${venue}).`,
+        sourceId: row.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -612,7 +919,35 @@ router.post(
         }
       }
       await invalidateTags(TAGS);
+      const doneWhen = formatWhen(updated.scheduledAt);
+      let doneFor = "the student";
+      try {
+        doneFor = (await adviserOf(row)).studentName;
+      } catch {
+        // Default stands — the fanout below still lands.
+      }
       res.json(formatSession(updated));
+      if (row.assignedTo && row.assignedTo !== req.user!.id) {
+        void fanoutNotification({
+          userId: row.assignedTo,
+          sourceTable: "interventions",
+          action: "session",
+          message: `Guidance completed an intervention session for ${doneFor} (${updated.sessionType}, ${doneWhen}).`,
+          sourceId: row.id,
+        });
+      }
+      notifyInterventionAdviser(
+        row,
+        req.user!.id,
+        (name) => `Guidance completed an intervention session for ${name} (${updated.sessionType}, ${doneWhen}).`
+      );
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "interventions",
+        action: "session",
+        message: `You completed an intervention session (${updated.sessionType}, ${doneWhen}).`,
+        sourceId: row.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -641,7 +976,36 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt }, newValue: { scheduledAt: nextDate } });
       await invalidateTags(TAGS);
+      const wasMoved = formatWhen(session.scheduledAt);
+      const nowMoved = formatWhen(nextDate);
+      let movedFor = "the student";
+      try {
+        movedFor = (await adviserOf(row)).studentName;
+      } catch {
+        // Default stands — the fanout below still lands.
+      }
       res.json(formatSession(updated));
+      if (row.assignedTo && row.assignedTo !== req.user!.id) {
+        void fanoutNotification({
+          userId: row.assignedTo,
+          sourceTable: "interventions",
+          action: "session",
+          message: `Guidance rescheduled an intervention session for ${movedFor} — now ${nowMoved} (was ${wasMoved}).`,
+          sourceId: row.id,
+        });
+      }
+      notifyInterventionAdviser(
+        row,
+        req.user!.id,
+        (name) => `Guidance rescheduled an intervention session for ${name} — now ${nowMoved} (was ${wasMoved}).`
+      );
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "interventions",
+        action: "session",
+        message: `You rescheduled an intervention session — now ${nowMoved} (was ${wasMoved}).`,
+        sourceId: row.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -672,7 +1036,36 @@ router.post(
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: req.body.cancelReason?.trim() || "Counseling session cancelled", oldValue: { status: session.status }, newValue: { status: "cancelled" } });
       await invalidateTags(TAGS);
+      const wasDropped = formatWhen(session.scheduledAt);
+      const whyDropped = truncate(req.body.cancelReason, 120);
+      let droppedFor = "the student";
+      try {
+        droppedFor = (await adviserOf(row)).studentName;
+      } catch {
+        // Default stands — the fanout below still lands.
+      }
       res.json(formatSession(updated));
+      if (row.assignedTo && row.assignedTo !== req.user!.id) {
+        void fanoutNotification({
+          userId: row.assignedTo,
+          sourceTable: "interventions",
+          action: "session",
+          message: `Guidance cancelled an intervention session for ${droppedFor} (${session.sessionType}, ${wasDropped})${whyDropped ? ` — ${whyDropped}` : ""}.`,
+          sourceId: row.id,
+        });
+      }
+      notifyInterventionAdviser(
+        row,
+        req.user!.id,
+        (name) => `Guidance cancelled an intervention session for ${name} (${session.sessionType}, ${wasDropped})${whyDropped ? ` — ${whyDropped}` : ""}.`
+      );
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "interventions",
+        action: "session",
+        message: `You cancelled an intervention session (${session.sessionType}, ${wasDropped}).`,
+        sourceId: row.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -728,6 +1121,11 @@ router.post(
           message: `Your intervention was ${req.body.decision} by guidance`,
         });
       }
+      notifyInterventionAdviser(
+        row,
+        req.user!.id,
+        (name) => `Guidance ${req.body.decision} the intervention plan for ${name}.`
+      );
       await invalidateTags(TAGS);
       res.json(updated);
     } catch (e) {
@@ -882,6 +1280,11 @@ router.post(
           message: `Intervention outcome recorded: ${req.body.outcomeStatus}`,
         });
       }
+      notifyInterventionAdviser(
+        row,
+        req.user!.id,
+        (name) => `Guidance recorded an outcome for ${name}'s follow-up: ${req.body.outcomeStatus}.`
+      );
       await invalidateTags(TAGS);
       res.json(updated);
     } catch (e) {
@@ -965,6 +1368,24 @@ router.post(
       });
       await invalidateTags(TAGS);
       res.status(201).json(created.map(formatSessionDoc));
+    } catch (e) { next(e); }
+  }
+);
+
+// Session list for one follow-up — powers the booking-reminder liveness
+// check (card drops only while a scheduled session still exists).
+router.get(
+  "/:id/sessions",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  async (req, res, next) => {
+    try {
+      const row = await getIntervention(String(req.params.id));
+      const sessions = await prisma.counselingSession.findMany({
+        where: { interventionId: row.id },
+        orderBy: { scheduledAt: "asc" },
+      });
+      res.json(sessions.map(formatSession));
     } catch (e) { next(e); }
   }
 );

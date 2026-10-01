@@ -12,6 +12,7 @@ import { scopedTermRow } from "../../lib/termScope.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { ADM_STAGE_FLOW, ADM_STAGES, canTransition, evaluateAdmEligibility, type AdmStage } from "../../services/adm.js";
+import { buildCaseTimeline } from "../referrals/timeline.js";
 
 const router = Router();
 
@@ -690,10 +691,11 @@ router.get(
   }
 );
 
-// Teacher-scoped ADM cases (read-only): every ADM case for the teacher's
-// advisory students, newest first. Status-only — stage labels, eligibility,
-// principal-approval flag and evidence counts only; never certification
-// details, recommendation text, meeting minutes, or home-visit notes.
+// Teacher-scoped ADM cases (read-only): only ADM cases from referrals the
+// teacher filed themselves, newest first. Status-only — stage labels,
+// eligibility, principal-approval flag and evidence counts only; never
+// certification details, recommendation text, meeting minutes, or home-visit
+// notes.
 router.get(
   "/my-cases",
   requireAuth,
@@ -709,10 +711,18 @@ router.get(
         throw new AppError(404, "NOT_ADVISER", "No advisory section assigned");
       }
       const sectionIds = sections.map((s) => s.id);
+      // Referred-only: a profile counts only when its referral was filed by
+      // this teacher — cases other desks opened for the same advisees stay
+      // out of this list.
+      // Term-scoped (same contract as referrals/mine): only transactions
+      // executed under the selected term. Re-linking the code in a new term
+      // grants access; it never copies prior terms' cases over.
+      const scopeTermId = req.termScope?.termId ?? (await scopedTermRow(req))?.id ?? null;
+      const termFilter = scopeTermId ? { termId: scopeTermId } : {};
       const where: Prisma.AdmLearnerProfileWhereInput =
         sectionIds.length > 0
-          ? { student: { sectionId: { in: sectionIds } } }
-          : { referral: { referredBy: teacherId } };
+          ? { student: { sectionId: { in: sectionIds } }, referral: { referredBy: teacherId }, ...termFilter }
+          : { referral: { referredBy: teacherId }, ...termFilter };
 
       const profiles = await prisma.admLearnerProfile.findMany({
         where,
@@ -738,25 +748,28 @@ router.get(
             select: {
               id: true,
               status: true,
+              consultReviewer: true,
               homeVisitations: { select: { id: true } },
             },
           },
-          parentMeetings: { select: { attended: true } },
-          modules: { select: { id: true, submitted: true } },
+          parentMeetings: { select: { attended: true, meetingDatetime: true } },
+          modules: { select: { id: true, submitted: true, submissionDate: true } },
           devices: { select: { id: true, returnedDate: true } },
-          forms: { select: { formType: true, status: true } },
+          forms: { select: { formType: true, status: true, uploadedAt: true } },
         },
         orderBy: { createdAt: "desc" },
       });
 
       // ADM-track referrals that the coordinator hasn't built a learner
-      // profile for yet — these are still the teacher's cases (sitting at the
+      // profile for yet — only ones this teacher filed (sitting at the
       // consultation stage). Roster enlistments without accounts count too.
       const earlyWhere: Prisma.ReferralWhereInput =
         sectionIds.length > 0
           ? {
               referredToRole: "adm_coordinator",
+              referredBy: teacherId,
               admProfiles: { none: {} },
+              ...termFilter,
               OR: [
                 { student: { sectionId: { in: sectionIds } } },
                 { roster: { sectionId: { in: sectionIds } } },
@@ -766,12 +779,14 @@ router.get(
               referredBy: teacherId,
               referredToRole: "adm_coordinator",
               admProfiles: { none: {} },
+              ...termFilter,
             };
       const earlyReferrals = await prisma.referral.findMany({
         where: earlyWhere,
         select: {
           id: true,
           status: true,
+          consultReviewer: true,
           student: {
             select: {
               userId: true,
@@ -798,6 +813,29 @@ router.get(
       });
 
       const stageLabel = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));
+      // Shared audit timeline per referral (same builder as referrals/mine)
+      // so the adm-cases tracker tells the same story as the referrals one.
+      const referralIds = [
+        ...profiles.map((p) => p.referralId),
+        ...earlyReferrals.map((r) => r.id),
+      ];
+      const timelines = await buildCaseTimeline(referralIds);
+      // Approver roles for the principal-signature entries (one query).
+      const approverIds = [
+        ...new Set(
+          profiles
+            .map((p) => p.approvedBy ?? null)
+            .filter((v): v is string => !!v)
+        ),
+      ];
+      const approverRoles = new Map<string, string>();
+      if (approverIds.length > 0) {
+        const approvers = await prisma.user.findMany({
+          where: { id: { in: approverIds } },
+          select: { id: true, role: true },
+        });
+        for (const a of approvers) approverRoles.set(a.id, String(a.role));
+      }
       const earlyCases = earlyReferrals.map((r) => ({
         id: `referral:${r.id}`,
         studentId: r.student?.userId ?? `roster:${r.roster!.id}`,
@@ -808,6 +846,7 @@ router.get(
         photoUrl: r.student?.photoUrl ?? null,
         referralId: r.id,
         referralStatus: r.status,
+        consultReviewer: r.consultReviewer ?? null,
         stage: "consultation",
         stageLabel: stageLabel.get("consultation") ?? "Consultation & Referral",
         eligibilityStatus: "pending" as const,
@@ -821,11 +860,42 @@ router.get(
         devicesIssued: 0,
         devicesReturned: 0,
         certificationIssued: false,
+        certificationAt: null as string | null,
+        lastMeetingAt: null as string | null,
+        lastModuleAt: null as string | null,
+        timeline: timelines.get(r.id) ?? [],
       }));
 
       res.json([
         ...profiles.map((p) => {
           const meetings = p.parentMeetings ?? [];
+          const timeline = timelines.get(p.referralId) ?? [];
+          timeline.push({
+            label: `Moved to the ${stageLabel.get(p.stage) ?? p.stage} stage.`,
+            detail: null,
+            date: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : "",
+            at: p.createdAt ? p.createdAt.toISOString() : "",
+            action: "adm_stage",
+            byRole: "adm_coordinator",
+            source: "case",
+            stage: p.stage,
+          });
+          if (p.approvedBy && p.approvedAt) {
+            timeline.push({
+              label: "The principal signed the approval.",
+              detail: null,
+              date: p.approvedAt.toISOString().slice(0, 10),
+              at: p.approvedAt.toISOString(),
+              action: "adm_approved",
+              byRole: approverRoles.get(p.approvedBy) ?? "principal",
+              source: "case",
+            });
+          }
+          timeline.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+          const submittedModules = p.modules.filter((m) => m.submitted);
+          const cert = p.forms.find(
+            (f) => f.formType === "CERTIFICATION" && f.status === "verified" && f.uploadedAt
+          );
           return {
             id: p.id,
             studentId: p.student.userId,
@@ -836,6 +906,7 @@ router.get(
             photoUrl: p.student.photoUrl ?? null,
             referralId: p.referralId,
             referralStatus: p.referral.status,
+            consultReviewer: p.referral.consultReviewer ?? null,
             stage: p.stage,
             stageLabel: stageLabel.get(p.stage) ?? p.stage,
             eligibilityStatus: p.eligibilityStatus,
@@ -844,13 +915,28 @@ router.get(
             datePrepared: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : null,
             meetingAttended: meetings.length > 0 ? meetings.some((m) => m.attended) : null,
             hasHomeVisit: p.referral.homeVisitations.length > 0,
-            modulesSubmitted: p.modules.filter((m) => m.submitted).length,
+            modulesSubmitted: submittedModules.length,
             modulesTotal: p.modules.length,
+            lastModuleAt:
+              submittedModules.length > 0 && submittedModules[0].submissionDate
+                ? submittedModules
+                    .map((m) => (m.submissionDate as Date).toISOString())
+                    .sort()
+                    .slice(-1)[0]
+                : null,
             devicesIssued: p.devices.length,
             devicesReturned: p.devices.filter((d) => d.returnedDate !== null).length,
             certificationIssued: p.forms.some(
               (f) => f.formType === "CERTIFICATION" && f.status === "verified"
             ),
+            certificationAt: cert?.uploadedAt
+              ? (cert.uploadedAt as Date).toISOString()
+              : null,
+            lastMeetingAt:
+              meetings.length > 0 && meetings[0].meetingDatetime
+                ? (meetings[0].meetingDatetime as Date).toISOString()
+                : null,
+            timeline,
           };
         }),
         ...earlyCases,

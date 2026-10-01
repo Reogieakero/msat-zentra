@@ -5,18 +5,16 @@ import {
   Bell,
   CalendarPlus,
   Check,
-  ChevronDown,
   CircleCheck,
   CircleX,
   Eye,
   FileText,
   Flag,
   Hourglass,
-  Image as ImageIcon,
-  Loader2,
   MoreHorizontal,
   Send,
 } from "lucide-react";
+import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
@@ -50,7 +48,12 @@ import type {
   AtRiskStudentItem,
   CounselingSessionItem,
 } from "./guidance-interventions-data";
-import { CounselingPlan } from "./counseling-plan";
+import { CounselingPlan, liveSessionLabel, liveSessionState } from "./counseling-plan";
+import {
+  EngineBreakdown,
+  levelVariant,
+  useInterventionEngine,
+} from "./intervention-engine-breakdown";
 import { Busy } from "./busy";
 import { ImageViewer } from "@/components/image-viewer/ImageViewer";
 import { listInterventionSessionDocs } from "./guidance-interventions-data";
@@ -212,6 +215,12 @@ export function InterventionTableRow({
   onDocsChanged,
 }: InterventionTableRowProps) {
   const followUp = row.intervention;
+  // Live level for the summary chip — same cached result as the breakdown,
+  // so the sheet never disagrees with itself. Falls back to the row's
+  // frozen level while loading (or when the breakdown can't be reached).
+  // Fetched only while the details sheet is open.
+  const engine = useInterventionEngine(row.studentKey, expanded);
+  const displayLevel = engine.data?.live.level ?? row.riskLevel;
   const [sessionsOpen, setSessionsOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [viewer, setViewer] = React.useState<{
@@ -220,7 +229,6 @@ export function InterventionTableRow({
   } | null>(null);
   const [viewerLoading, setViewerLoading] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
-  const [showScrollDown, setShowScrollDown] = React.useState(false);
 
   const filesTotal =
     followUp?.sessions.reduce((n, s) => n + (s.attachmentsCount ?? 0), 0) ?? 0;
@@ -255,27 +263,6 @@ export function InterventionTableRow({
     }
   }
 
-  const updateScrollBtn = React.useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) {
-      setShowScrollDown(false);
-      return;
-    }
-    setShowScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 40);
-  }, []);
-
-  // Re-measure whenever the sheet opens or its content changes (sessions
-  // expand/collapse, dialogs that resize content). No state reset here:
-  // the sheet unmounts on close, and reopening re-measures below.
-  React.useEffect(() => {
-    if (!expanded) return;
-    updateScrollBtn();
-    const el = scrollRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => updateScrollBtn());
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [expanded, planCollapsed, followUp, updateScrollBtn]);
   const closed = !!followUp && followUp.outcomeStatus === "resolved";
   // Done pipeline stages (sessions finished, case still open) can take the
   // next follow-up session straight from the menu.
@@ -386,9 +373,9 @@ export function InterventionTableRow({
           <Badge
             variant={
               row.riskLevel === "High"
-                ? "destructive"
+                ? "red"
                 : row.riskLevel === "Moderate"
-                  ? "warning"
+                  ? "amber"
                   : "outline"
             }
           >
@@ -413,29 +400,6 @@ export function InterventionTableRow({
         <TableCell>
           <Badge variant={status.variant}>{status.label}</Badge>
           {status.sub ? <p className={styles.cellSub}>{status.sub}</p> : null}
-        </TableCell>
-        <TableCell>
-          {filesTotal === 0 ? (
-            <span className={styles.noFiles}>—</span>
-          ) : (
-            <button
-              type="button"
-              className={styles.filesIconBtn}
-              onClick={() => void openRowViewer()}
-              disabled={viewerLoading}
-              aria-label={`View ${filesTotal} attached image${filesTotal === 1 ? "" : "s"}`}
-              title={`${filesTotal} image${filesTotal === 1 ? "" : "s"} — click to view`}
-            >
-              <ImageIcon size={18} aria-hidden />
-              {viewerLoading ? (
-                <Loader2 size={14} className="animate-spin" aria-hidden />
-              ) : (
-                <span className={styles.filesCount} aria-hidden>
-                  {filesTotal > 1 ? `×${filesTotal}` : ""}
-                </span>
-              )}
-            </button>
-          )}
         </TableCell>
         <TableCell>
           <DropdownMenu>
@@ -493,6 +457,16 @@ export function InterventionTableRow({
                   <DropdownMenuItem onSelect={onToggleDetails}>
                     See details
                   </DropdownMenuItem>
+                  {filesTotal > 0 && (
+                    <DropdownMenuItem
+                      disabled={viewerLoading}
+                      onSelect={() => void openRowViewer()}
+                    >
+                      {viewerLoading
+                        ? "Loading files…"
+                        : `See attached files (×${filesTotal})`}
+                    </DropdownMenuItem>
+                  )}
                   {/* No upcoming session left (e.g. the booking was
                       cancelled) — offer booking again from the menu too. */}
                   {!scheduledSession && workable && (
@@ -564,11 +538,7 @@ export function InterventionTableRow({
                               : "default"
                         }
                       >
-                        {s.status === "completed"
-                          ? "Done"
-                          : s.status === "cancelled"
-                            ? "Cancelled"
-                            : "Upcoming"}
+                        {liveSessionLabel(liveSessionState(s.status, s.scheduledAt, now))}
                       </Badge>
                     </li>
                   ))}
@@ -620,11 +590,7 @@ export function InterventionTableRow({
                               : "default"
                         }
                       >
-                        {s.status === "completed"
-                          ? "Done"
-                          : s.status === "cancelled"
-                            ? "Cancelled"
-                            : "Upcoming"}
+                        {liveSessionLabel(liveSessionState(s.status, s.scheduledAt, now))}
                       </Badge>
                     </li>
                   ))}
@@ -650,7 +616,6 @@ export function InterventionTableRow({
           <div
             className={styles.sheetScroll}
             ref={scrollRef}
-            onScroll={updateScrollBtn}
           >
             <div className={styles.sheetSections}>
               <section className={styles.sheetCard} aria-label="Case summary">
@@ -671,16 +636,8 @@ export function InterventionTableRow({
                   </div>
                   <div className={styles.chip}>
                     <span className={styles.chipLabel}>Risk level</span>
-                    <Badge
-                      variant={
-                        row.riskLevel === "High"
-                          ? "destructive"
-                          : row.riskLevel === "Moderate"
-                            ? "warning"
-                            : "outline"
-                      }
-                    >
-                      {row.riskLevel}
+                    <Badge variant={levelVariant(displayLevel)}>
+                      {displayLevel}
                     </Badge>
                   </div>
                   <div className={styles.chip}>
@@ -698,29 +655,13 @@ export function InterventionTableRow({
               </section>
               <section className={styles.sheetCard} aria-label="Why at risk">
                 <p className={styles.detailLabel}>Why at risk</p>
-                <ul className={rowStyles.factorList}>
-                  {row.factors.academic && <li>Low grades</li>}
-                  {row.factors.attendance && <li>Absences</li>}
-                  {row.factors.behavioral && <li>Behavior report</li>}
-                </ul>
-                {row.referralContext.open > 0 || row.referralContext.closed > 0 ? (
-                  <p className={rowStyles.cellSub}>
-                    Also has adviser-referred cases:{" "}
-                    {[
-                      row.referralContext.open > 0
-                        ? `${row.referralContext.open} open`
-                        : "",
-                      row.referralContext.closed > 0
-                        ? `${row.referralContext.closed} resolved`
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                ) : null}
-                {followUp?.priority === "high" ? (
-                  <p className={rowStyles.cellSub}>High priority</p>
-                ) : null}
+                <EngineBreakdown
+                  studentKey={row.studentKey}
+                  factors={row.factors}
+                  openReferrals={row.referralContext.open}
+                  closedReferrals={row.referralContext.closed}
+                  highPriority={followUp?.priority === "high"}
+                />
               </section>
               <section className={styles.sheetSection} aria-label="Follow-up">
                 {!followUp ? (
@@ -788,24 +729,14 @@ export function InterventionTableRow({
                 )}
               </section>
             </div>
-            {showScrollDown && (
-              <button
-                type="button"
-                className={styles.scrollDownBtn}
-                onClick={() =>
-                  scrollRef.current?.scrollBy({
-                    top: Math.max(
-                      200,
-                      (scrollRef.current?.clientHeight ?? 400) * 0.8
-                    ),
-                    behavior: "smooth",
-                  })
-                }
-              >
-                <ChevronDown aria-hidden="true" />
-                Scroll down
-              </button>
-            )}
+          <div className="sticky bottom-2 z-10 flex justify-center pt-1">
+            <ScrollDownHint
+              scrollRef={scrollRef}
+              watchKey={`${row.studentKey}-${planCollapsed}-${followUp?.sessions.length ?? 0}`}
+              label="Scroll down"
+              className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+            />
+          </div>
           </div>
           <div className={styles.sheetFooter} aria-label="Actions">
             <div className={styles.sheetFooterActions}>

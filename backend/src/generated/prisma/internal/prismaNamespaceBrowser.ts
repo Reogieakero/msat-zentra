@@ -65,6 +65,8 @@ export const ModelName = {
   ScheduleConfig: 'ScheduleConfig',
   SectionTimetableEntry: 'SectionTimetableEntry',
   TeacherName: 'TeacherName',
+  TeacherTermGrant: 'TeacherTermGrant',
+  AdviserArchivedStudent: 'AdviserArchivedStudent',
   GradeComponent: 'GradeComponent',
   Assessment: 'Assessment',
   StudentGrade: 'StudentGrade',
@@ -174,7 +176,10 @@ export const StaffProfileScalarFieldEnum = {
   isAdviser: 'isAdviser',
   isMasterTeacher: 'isMasterTeacher',
   handledGradeLevels: 'handledGradeLevels',
-  signatureImageUrl: 'signatureImageUrl'
+  signatureImageUrl: 'signatureImageUrl',
+  photoUrl: 'photoUrl',
+  primaryColor: 'primaryColor',
+  secondaryColor: 'secondaryColor'
 } as const
 
 export type StaffProfileScalarFieldEnum = (typeof StaffProfileScalarFieldEnum)[keyof typeof StaffProfileScalarFieldEnum]
@@ -296,6 +301,30 @@ export const TeacherNameScalarFieldEnum = {
 } as const
 
 export type TeacherNameScalarFieldEnum = (typeof TeacherNameScalarFieldEnum)[keyof typeof TeacherNameScalarFieldEnum]
+
+
+export const TeacherTermGrantScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  termId: 'termId',
+  via: 'via',
+  teacherNameId: 'teacherNameId',
+  attendanceVerifiedAt: 'attendanceVerifiedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type TeacherTermGrantScalarFieldEnum = (typeof TeacherTermGrantScalarFieldEnum)[keyof typeof TeacherTermGrantScalarFieldEnum]
+
+
+export const AdviserArchivedStudentScalarFieldEnum = {
+  id: 'id',
+  teacherId: 'teacherId',
+  studentId: 'studentId',
+  rosterId: 'rosterId',
+  createdAt: 'createdAt'
+} as const
+
+export type AdviserArchivedStudentScalarFieldEnum = (typeof AdviserArchivedStudentScalarFieldEnum)[keyof typeof AdviserArchivedStudentScalarFieldEnum]
 
 
 export const GradeComponentScalarFieldEnum = {

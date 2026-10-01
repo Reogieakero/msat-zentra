@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Search, SquarePen, Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   BAMA_CHAT_TYPES,
   type BamaConversation,
 } from "./bama-conversations";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./bama-sidebar.module.css";
 
 interface BamaSidebarProps {
@@ -46,9 +47,11 @@ export function BamaSidebar({
   const totalChats = conversations.length;
 
   return (
-    <aside className={styles.sidebar} aria-label="Chat history">
+    <aside className={`${assign.card} ${styles.sidebar}`} aria-label="Chat history">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
       <Button type="button" className={styles.newBtn} onClick={onNew}>
-        <SquarePen aria-hidden />
         New chat
       </Button>
       <div className={styles.searchRow}>

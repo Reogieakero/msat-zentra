@@ -7,6 +7,7 @@ import { scopedYearId } from "../../lib/termScope.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { AppError } from "../../lib/errors.js";
 import {
@@ -434,21 +435,47 @@ router.get(
         const secs = sectionsByGrade.get(g) ?? [];
         let topSection = "—";
         let topCount = 0;
+        let moderate = 0;
+        let low = 0;
+        // Every section of the level rides in the row (at-risk only drives
+        // the top pick — same first-wins rule as before).
+        const sectionsList: { name: string; atRisk: number }[] = [];
         for (const sec of secs) {
-          const c = atRiskBySection.get(sec.id) ?? 0;
+          const bucket = levelBySection.get(sec.id) ?? { high: 0, moderate: 0, low: 0 };
+          moderate += bucket.moderate;
+          low += bucket.low;
+          const c = bucket.high + bucket.moderate;
           if (c > topCount) {
             topCount = c;
             topSection = sec.name;
           }
+          sectionsList.push({ name: sec.name, atRisk: c });
         }
+        sectionsList.sort((a, b) => b.atRisk - a.atRisk);
+        const high = highByGrade.get(g) ?? 0;
+        const atRisk = riskByGrade.get(g) ?? 0;
+        // Most common risk level among the grade's at-risk students —
+        // ties break toward the higher severity; null when none at risk.
+        const mostLevel =
+          atRisk === 0
+            ? null
+            : high >= moderate && high >= low
+              ? "High"
+              : moderate >= low
+                ? "Moderate"
+                : "Low";
         return {
           grade: GRADE_LABELS[g],
           short: g,
           sections: secs.length,
-          high: highByGrade.get(g) ?? 0,
-          atRisk: riskByGrade.get(g) ?? 0,
+          high,
+          moderate,
+          low,
+          atRisk,
+          mostLevel,
           topSection,
           topCount,
+          sectionsList,
         };
       });
 
@@ -1050,11 +1077,36 @@ router.get(
         completedSessions: r.counselingSessions.filter((s) => s.status === "completed").length,
       }));
 
-      // Latest execution per referral: newest audit across the referral row
-      // and its sessions (booked/done/cancelled/moved + status changes), so
-      // the UI shows when the action ran — never the appointment time.
+      // Who dismissed it — adviser withdrawal ("Cancelled" watermark) vs
+      // desk rejection ("Reject"). Latest dismissal audit wins; rows never
+      // dismissed stay null.
       const refIds = mapped.map((r) => r.id);
+      const dismissedByRole = new Map<string, string>();
+      if (refIds.length > 0) {
+        const dismissalLogs = await prisma.auditLog.findMany({
+          where: {
+            sourceTable: "referrals",
+            sourceId: { in: refIds },
+            actionType: "referral_dismissed",
+          },
+          select: { sourceId: true, user: { select: { role: true } } },
+          orderBy: { createdAt: "desc" },
+        });
+        for (const log of dismissalLogs) {
+          if (!dismissedByRole.has(log.sourceId)) {
+            dismissedByRole.set(log.sourceId, String(log.user?.role ?? ""));
+          }
+        }
+      }
       const sessIds = mapped.flatMap((r) => r.sessions.map((s) => s.id));
+      // Who cancelled each session — desk cancel vs adviser-withdrawal
+      // auto-cancel cascade. Latest session_cancelled audit wins.
+      const cancelledByRole = await sessionCancelledByRole(sessIds);
+      for (const r of mapped) {
+        for (const s of r.sessions as { id: string; cancelledByRole?: string | null }[]) {
+          s.cancelledByRole = cancelledByRole.get(s.id) ?? null;
+        }
+      }
       const lastActionById = new Map<string, { type: string; at: string }>();
       if (refIds.length > 0 || sessIds.length > 0) {
         const latestLogs = await prisma.auditLog.findMany({
@@ -1087,6 +1139,7 @@ router.get(
         ...r,
         lastActionAt: lastActionById.get(r.id)?.at ?? null,
         lastActionType: lastActionById.get(r.id)?.type ?? null,
+        dismissedByRole: dismissedByRole.get(r.id) ?? null,
       }));
 
       const filtered = withAction.filter((r) => {
@@ -1110,6 +1163,14 @@ router.get(
       const totalPages = Math.max(1, Math.ceil(total / pageSize));
       const safePage = Math.min(page, totalPages);
       const referrals = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+      // Adviser/subject-teacher withdrawals ("Cancelled") vs desk
+      // dismissals ("Reject") — subset of dismissed, resolved from the
+      // dismissal audit above. Unknown actors count as desk decisions.
+      const isCancelled = (r: { status: string; id: string }) =>
+        r.status === "dismissed" &&
+        (dismissedByRole.get(r.id) === "adviser" ||
+          dismissedByRole.get(r.id) === "subject_teacher");
 
       res.json({
         summary: {
@@ -1138,6 +1199,7 @@ router.get(
                 infoRequested: scoped.filter((r) => r.status === "info_requested").length,
                 resolved: scoped.filter((r) => r.status === "resolved").length,
                 dismissed: scoped.filter((r) => r.status === "dismissed").length,
+                cancelled: scoped.filter((r) => isCancelled(r)).length,
                 booked: scoped.filter((r) => r.sessions.length > 0).length,
                 done: scoped.filter((r) =>
                   r.sessions.some((s) => s.status === "completed")
@@ -1156,6 +1218,7 @@ router.get(
                 infoRequested: number;
                 resolved: number;
                 dismissed: number;
+                cancelled: number;
                 booked: number;
                 done: number;
                 open: number;
@@ -1257,16 +1320,39 @@ router.get(
               section: { select: { name: true } },
             },
           },
+          // Completed-session documentation for the folder slips: file
+          // metadata + URLs only (no notes, outcomes, or reasons).
+          counselingSessions: {
+            where: { status: "completed" },
+            orderBy: { scheduledAt: "asc" },
+            select: {
+              id: true,
+              sessionType: true,
+              scheduledAt: true,
+              attachments: {
+                orderBy: { uploadedAt: "asc" },
+                select: {
+                  id: true,
+                  fileUrl: true,
+                  fileName: true,
+                  mimeType: true,
+                  fileSize: true,
+                  uploadedAt: true,
+                },
+              },
+            },
+          },
         },
       });
 
-      // One row per referred filing — a record referred twice still reads as
-      // one case file; the newest referral state wins.
-      const byRecord = new Map<string, (typeof rows)[number]>();
-      for (const r of rows) {
-        if (!byRecord.has(r.anecdotalRecord.id)) byRecord.set(r.anecdotalRecord.id, r);
-      }
-      const mapped = [...byRecord.values()].map((r) => ({
+      // Every referred filing reads as its own case file — no dedupe, so
+      // the same anecdotal record filed twice (any track) still shows
+      // both folders, each with its own status and privacy gate.
+      const trackOf = (r: (typeof rows)[number]) =>
+        r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
+          ? "ADM"
+          : "Counseling";
+      const mapped = rows.map((r) => ({
         id: r.anecdotalRecord.id,
         referralId: r.id,
         student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
@@ -1279,16 +1365,28 @@ router.get(
         date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
         confidentiality: r.anecdotalRecord.confidentialityLevel,
         referralStatus: r.status,
+        sessionDocs: r.counselingSessions
+          .filter((s) => (s.attachments ?? []).length > 0)
+          .map((s) => ({
+            sessionId: s.id,
+            sessionType: s.sessionType,
+            date: s.scheduledAt.toISOString().slice(0, 10),
+            files: (s.attachments ?? []).map((a) => ({
+              id: a.id,
+              fileUrl: a.fileUrl,
+              fileName: a.fileName,
+              mimeType: a.mimeType,
+              fileSize: a.fileSize,
+              uploadedAt: a.uploadedAt.toISOString(),
+            })),
+          })),
         // Action track, same mapping as GET /api/guidance/referrals:
         // ADM-bound when already escalated toward the ADM coordinator,
         // otherwise regular guidance counseling. Needed so the desk can
         // hide the full report on finished (resolved/dismissed) and
         // endorsed (ADM + in_progress) cases — same overlays as the
         // referrals page.
-        referralType:
-          r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
-            ? "ADM"
-            : "Counseling",
+        referralType: trackOf(r),
       }));
 
       const filtered = mapped.filter((r) => {
@@ -1315,6 +1413,18 @@ router.get(
         grade: GRADE_LABELS[g] ?? g,
         count: mapped.filter((r) => r.grade === (GRADE_LABELS[g] ?? g)).length,
       }));
+      // Top referred students for the rail card — over the full referred
+      // scope (same unfiltered base as the other summary totals).
+      const topByStudent = new Map<string, { student: string; lrn: string; section: string; count: number }>();
+      for (const r of mapped) {
+        const key = r.lrn || r.student;
+        const entry = topByStudent.get(key) ?? { student: r.student, lrn: r.lrn, section: r.section, count: 0 };
+        entry.count += 1;
+        topByStudent.set(key, entry);
+      }
+      const topStudents = [...topByStudent.values()]
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
       res.json({
         summary: {
           total: mapped.length,
@@ -1324,6 +1434,7 @@ router.get(
           attendance: countBy("attendance"),
           health: countBy("health"),
           byGrade,
+          topStudents,
         },
         records,
         page: safePage,
@@ -1994,6 +2105,183 @@ router.post(
         "teacher",
       ]);
       res.json(updated);
+      // Realtime handoff (background, off the critical path): the filing
+      // adviser learns the consultation outcome, and the acting counselor
+      // gets a bell receipt (no second sileo — the success toast already
+      // showed). Best-effort — never delays the response.
+      if (outcome === "endorse") {
+        if (referral.referredBy && referral.referredBy !== req.user!.id) {
+          void fanoutNotification({
+            userId: referral.referredBy,
+            sourceTable: "referrals",
+            action: "status",
+            message: "ADM consultation endorsed — now with the coordinator.",
+            sourceId: referral.id,
+          });
+        }
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: "You endorsed an ADM consultation — sent to the coordinator.",
+          sourceId: referral.id,
+        });
+      } else {
+        if (referral.referredBy && referral.referredBy !== req.user!.id) {
+          void fanoutNotification({
+            userId: referral.referredBy,
+            sourceTable: "referrals",
+            action: "status",
+            message: "Your ADM referral was not endorsed — case closed.",
+            sourceId: referral.id,
+          });
+        }
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "referrals",
+          action: "status",
+          message: "You did not endorse an ADM referral — case closed.",
+          sourceId: referral.id,
+        });
+      }
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+const HEX_COLOR = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
+
+async function readGuidanceProfileSettings(counselorId: string) {
+  const [user, profile] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: counselorId },
+      select: { fullName: true },
+    }),
+    prisma.staffProfile.findUnique({
+      where: { userId: counselorId },
+      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+    }),
+  ]);
+  return {
+    fullName: user?.fullName ?? "",
+    photoUrl: profile?.photoUrl ?? null,
+    primaryColor: profile?.primaryColor ?? null,
+    secondaryColor: profile?.secondaryColor ?? null,
+  };
+}
+
+// GET /api/guidance/settings/profile — own display name, photo, palette.
+router.get(
+  "/settings/profile",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  async (req, res, next) => {
+    try {
+      res.json(await readGuidanceProfileSettings(req.user!.id));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// PATCH /api/guidance/settings/profile — display name + workspace palette.
+router.patch(
+  "/settings/profile",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  validate(
+    "body",
+    z.object({
+      fullName: z.string().trim().min(1).max(100).optional(),
+      primaryColor: HEX_COLOR.nullable().optional(),
+      secondaryColor: HEX_COLOR.nullable().optional(),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const counselorId = req.user!.id;
+      const { fullName, primaryColor, secondaryColor } = req.body as {
+        fullName?: string;
+        primaryColor?: string | null;
+        secondaryColor?: string | null;
+      };
+      await prisma.$transaction(async (tx) => {
+        if (fullName !== undefined) {
+          await tx.user.update({
+            where: { id: counselorId },
+            data: { fullName },
+          });
+        }
+        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+        if (primaryColor !== undefined) palette.primaryColor = primaryColor;
+        if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+        if (Object.keys(palette).length > 0) {
+          await tx.staffProfile.upsert({
+            where: { userId: counselorId },
+            update: palette,
+            create: {
+              userId: counselorId,
+              employeeId: `G-${counselorId.slice(0, 8)}`,
+              ...palette,
+            },
+          });
+        }
+      });
+      await writeAudit({
+        userId: counselorId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: counselorId,
+        reason: "Guidance counselor updated profile settings",
+      });
+      await invalidateTags(["guidance", "overview"]);
+      res.json(await readGuidanceProfileSettings(counselorId));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/guidance/settings/photo — profile photo upload (JSON data URL).
+// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
+router.post(
+  "/settings/photo",
+  requireAuth,
+  requireRole("guidance_counselor"),
+  validate(
+    "body",
+    z.object({
+      photoUrl: z
+        .string()
+        .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
+        .max(2_800_000),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const counselorId = req.user!.id;
+      const { photoUrl } = req.body as { photoUrl: string };
+      await prisma.staffProfile.upsert({
+        where: { userId: counselorId },
+        update: { photoUrl },
+        create: {
+          userId: counselorId,
+          employeeId: `G-${counselorId.slice(0, 8)}`,
+          photoUrl,
+        },
+      });
+      await writeAudit({
+        userId: counselorId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: counselorId,
+        reason: "Guidance counselor updated profile photo",
+      });
+      await invalidateTags(["guidance", "overview"]);
+      res.json({ photoUrl });
     } catch (e) {
       next(e);
     }

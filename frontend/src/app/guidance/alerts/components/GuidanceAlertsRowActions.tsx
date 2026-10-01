@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
@@ -41,12 +42,21 @@ function sessionStatusVariant(status: string): "default" | "success" | "secondar
 /**
  * Per-row 3-dots menu for adviser-referred rows (ADM / Counseling) — the
  * same entries as the nurse alerts menu: View referral form (ADM only),
- * View anecdotal report, See more. The two link entries jump to the
- * highlighted case on its home page without overlaying anything; the
- * filled form and the report open from the case page itself. Handling
- * stays on the case pages.
+ * View anecdotal report, See more, plus read-only timing lines (time
+ * elapsed, date referred) that used to be table columns. The two link
+ * entries jump to the highlighted case on its home page without overlaying
+ * anything; the filled form and the report open from the case page itself.
+ * Handling stays on the case pages.
  */
-export function GuidanceAlertsRowActions({ row }: { row: GuidanceReferralItem }) {
+export function GuidanceAlertsRowActions({
+  row,
+  elapsedText,
+  referredText,
+}: {
+  row: GuidanceReferralItem;
+  elapsedText: string;
+  referredText: string;
+}) {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [privacyOpen, setPrivacyOpen] = React.useState(false);
   const [endorsedOpen, setEndorsedOpen] = React.useState(false);
@@ -103,6 +113,11 @@ export function GuidanceAlertsRowActions({ row }: { row: GuidanceReferralItem })
           <DropdownMenuItem asChild>
             <Link href={seeMoreHref}>See more</Link>
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled>
+            Time elapsed · {elapsedText}
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled>Date referred · {referredText}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -129,7 +144,17 @@ export function GuidanceAlertsRowActions({ row }: { row: GuidanceReferralItem })
  * of the intervention's sessions) and See more (the interventions desk,
  * where sessions and outcomes are managed).
  */
-export function GuidanceInterventionRowActions({ item }: { item: AtRiskStudentItem }) {
+export function GuidanceInterventionRowActions({
+  item,
+  elapsedText,
+  referredLabel,
+  referredText,
+}: {
+  item: AtRiskStudentItem;
+  elapsedText: string;
+  referredLabel: string;
+  referredText: string;
+}) {
   const [sessionsOpen, setSessionsOpen] = React.useState(false);
   const sessions = item.intervention?.sessions ?? [];
 
@@ -152,6 +177,11 @@ export function GuidanceInterventionRowActions({ item }: { item: AtRiskStudentIt
           <DropdownMenuItem asChild>
             <Link href="/guidance/interventions">See more</Link>
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled>
+            Time elapsed · {elapsedText}
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled>{referredLabel} · {referredText}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

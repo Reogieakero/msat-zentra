@@ -1,0 +1,105 @@
+/* Sticky top-center booking reminder stack — slides down from the page
+   top on arrival and stays until dismissed or acted on. Above page content
+   and sileo toasts, below modal dialogs. */
+
+.stack {
+  position: fixed;
+  top: 4.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(30rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+/* Drop-in animation for the section card (the card visuals themselves
+   come from the shared section-card treatment). */
+.drop {
+  pointer-events: auto;
+  animation: booking-drop 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes booking-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-1.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Inner row above the glow (the glow spans sit behind everything). */
+.cardRow {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+}
+
+.body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.message {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTopbarCrumb } from "@/app/teacher/layout";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
+import { SheetDatePicker } from "./components/sheet-date-picker";
 import {
   phTodayKey,
+  useMeetupDates,
   useOfferedSubjects,
   useSectionRoster,
   useSheetContext,
@@ -15,7 +18,12 @@ import {
 } from "./components/attendance-taking-data";
 import { KeyRound } from "lucide-react";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
-import { useLinksLayout } from "@/lib/links-layout";
+import { useSession } from "@/lib/auth/useSession";
+import {
+  useCachedMasterTeacher,
+  useTeacherOverview,
+} from "@/app/teacher/overview/components/teacher-overview-data";
+import { useTerm } from "@/lib/term/TermContext";
 import { SectionScheduleCard } from "@/components/schedule/SectionScheduleCard";
 import { WEEK_LABELS_SHORT } from "@/app/teacher/classes/components/classes-data";
 import {
@@ -29,12 +37,20 @@ import assign from "@/app/principal/academics/assign/components/section-assignme
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Search } from "lucide-react";
 import styles from "./components/attendance-sheet.module.css";
 
 interface LinkedName {
   id: string;
   name: string;
   code: string | null;
+}
+
+/** This term's verification grant (DB-saved auth flow per term). Null means
+ *  the term has not been entered yet — Term 1 state never opens Term 2. */
+interface TermGrant {
+  via: string;
   attendanceVerified: boolean;
 }
 
@@ -46,10 +62,13 @@ interface MySlot {
   section: { id: string; name: string; gradeLevel: string };
 }
 
-/* Per-subject attendance. The section list unions the teacher's advisory
-   section with sections attached to their linked teacher-list code
-   (committed timetable slots) — entering the code is what gives a
-   subject teacher their subjects and each section's students here. */
+/* Per-subject, per-term attendance workspace. The session rail lists ONLY the
+   login teacher's own assigned subjects — the same `my-slots` source as My
+   Classes (/teacher/classes): committed timetable slots attached to their
+   linked teacher-list code. Every term asks first (adviser tap-through or
+   the same link code re-entered) and records a DB grant row for that term;
+   Term 1 state never opens another term, and bulk submits enforce the grant
+   server-side. */
 function getVerifyErrorMessage(err: unknown): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
@@ -60,7 +79,6 @@ function getVerifyErrorMessage(err: unknown): string {
 
 export default function TeacherAdvisoryAttendancePage() {
   const queryClient = useQueryClient();
-  const [linksLayout] = useLinksLayout();
   // Live clock for the time gate — re-evaluates the current slot every
   // minute so marking opens the moment class goes live.
   const [now, setNow] = useState(() => new Date());
@@ -68,26 +86,46 @@ export default function TeacherAdvisoryAttendancePage() {
     const id = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(id);
   }, []);
-  // Session defaults behind the scenes (today; slot resolves from the
-  // live/finished meetup below) — no visible filters on this page.
-  const date = phTodayKey();
+  // Sheet date (today by default; the table's date picker can look back at
+  // past sheets only — future dates are capped). Slot resolves from the
+  // live/finished meetup below.
+  const [date, setDate] = useState(phTodayKey);
   // This page has its own code input, separate from My Classes. The entered
   // code must match the schedule link code or attendance stays locked. The
   // unlock persists in the database on the link row, so leaving and coming
   // back never asks again until the row is unlinked.
   const [attCode, setAttCode] = useState("");
   const [attCodeError, setAttCodeError] = useState<string | null>(null);
+  // NOTE (Rules of Hooks): all state lives up here — nothing may hook
+  // below the early returns further down.
+  const [showCodeVerify, setShowCodeVerify] = useState(false);
 
-  const meQuery = useQuery<{ teacherName: LinkedName | null }>({
+  const { activeTerm } = useTerm();
+  const termLabel = activeTerm
+    ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
+    : "this term";
+
+  const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null; isMasterTeacher?: boolean }>({
     queryKey: ["teacher-schedule-me"],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ teacherName: LinkedName | null }>(
-        "/api/teacher/schedule/teachers/me",
-      );
+      const { data } = await apiClient.get<{
+        teacherName: LinkedName | null;
+        termGrant: TermGrant | null;
+        isMasterTeacher?: boolean;
+      }>("/api/teacher/schedule/teachers/me");
       return data;
     },
   });
   const linked = meQuery.data?.teacherName ?? null;
+  const termGrant = meQuery.data?.termGrant ?? null;
+
+  // Currently designated Master Teacher bypasses every code gate here —
+  // student and subject records open directly, no link/term code.
+  const session = useSession();
+  const overview = useTeacherOverview();
+  const cachedMaster = useCachedMasterTeacher(session?.sub);
+  const isMasterTeacher =
+    overview.data?.isMasterTeacher ?? meQuery.data?.isMasterTeacher ?? cachedMaster;
 
   const mySlotsQuery = useQuery<{ slots: MySlot[] }>({
     queryKey: ["teacher-my-slots"],
@@ -97,10 +135,8 @@ export default function TeacherAdvisoryAttendancePage() {
       );
       return data;
     },
-    enabled: linked !== null,
+    enabled: linked !== null || isMasterTeacher,
   });
-
-  const sheetContext = useSheetContext();
 
   const configQuery = useQuery<{ config: DayConfig }>({
     queryKey: ["teacher-schedule-config"],
@@ -112,6 +148,12 @@ export default function TeacherAdvisoryAttendancePage() {
     },
   });
 
+  // Advisory identity for this login (shared roster cache): answers the
+  // per-term "adviser or not" question without an extra endpoint.
+  const sheetContext = useSheetContext();
+  const isAdviser = !!sheetContext.data;
+  const advisorySectionId = sheetContext.data?.sectionId ?? null;
+
   const verify = useMutation({
     mutationFn: async (teacherCode: string) => {
       const { data } = await apiClient.post(
@@ -122,13 +164,13 @@ export default function TeacherAdvisoryAttendancePage() {
     },
     onSuccess: () => {
       setAttCodeError(null);
-      // The persisted flag flips the gate via the me-query refetch below.
+      // The persisted term grant flips the gate via the me-query refetch.
       void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
       // Badge + bell update instantly; the channel keeps them live after.
       void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
       toast.success({
         title: "Attendance unlocked",
-        description: "Your code matches — per-subject sheets are now open.",
+        description: `Your code matches — per-subject sheets are now open for ${termLabel}.`,
       });
     },
     onError: (err: unknown) => {
@@ -138,9 +180,34 @@ export default function TeacherAdvisoryAttendancePage() {
     },
   });
 
-  // One card per assigned subject: every code-linked (section, subject)
-  // pair, plus the advisory section on its own when it has no linked slots
-  // yet. Each pair carries its slots for status + timeslot times.
+  // Adviser tap-through: answer this term's entry question as the adviser.
+  // One tap records the term grant in the DB — no code needed.
+  const grantTap = useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{ termGrant: TermGrant }>(
+        "/api/teacher/schedule/teachers/term-grant",
+        {},
+      );
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-me"] });
+      void queryClient.invalidateQueries({ queryKey: ["teacher-notifications"] });
+      toast.success({
+        title: "Term entered",
+        description: `Workspace open as adviser for ${termLabel}.`,
+      });
+    },
+    onError: (err: unknown) => {
+      const message = getVerifyErrorMessage(err);
+      toast.error({ title: "Could not enter term", description: message });
+    },
+  });
+
+  // Assigned subjects only — the login teacher's own timetable slots
+  // (same `my-slots` source as My Classes), grouped by (section, subject).
+  // No advisory fallback: this is a per-subject attendance workspace, so the
+  // rail must never show subjects the teacher is not assigned to.
   const pairs = (() => {
     const list: {
       key: string;
@@ -165,18 +232,12 @@ export default function TeacherAdvisoryAttendancePage() {
       }
       entry.slots.push({ day: s.day, period: s.period, status: s.status });
     }
-    if (sheetContext.data && !list.some((l) => l.section.id === sheetContext.data!.sectionId)) {
-      list.unshift({
-        key: sheetContext.data.sectionId,
-        section: { id: sheetContext.data.sectionId, name: sheetContext.data.sectionName, gradeLevel: null },
-        subject: null,
-        slots: [],
-      });
-    }
     return list;
   })();
 
   const [pairKey, setPairKey] = useState<string | undefined>(undefined);
+  const [slotKey, setSlotKey] = useState<string | null>(null);
+  const [slotQuery, setSlotQuery] = useState("");
   const selectedPair = pairs.find((p) => p.key === pairKey) ?? pairs[0];
 
   const timeFor = (period: number): string | null => {
@@ -186,18 +247,21 @@ export default function TeacherAdvisoryAttendancePage() {
     return row && row.kind === "period" ? formatRange(row.startMin, row.endMin) : null;
   };
 
-  const pairTimes = (pair: (typeof pairs)[number]): string[] =>
-    pair.slots.map((s) => {
-      const t = timeFor(s.period);
-      return `${WEEK_LABELS_SHORT[s.day - 1]} ${t ?? `Period ${s.period + 1}`}`;
-    });
-
   // Defaults resolve during render (no effects): first pair, then its
   // subject (or the first markable offered subject). Explicit picks win.
   const resolvedSectionId = selectedPair?.section.id;
 
   const rosterQuery = useSectionRoster(resolvedSectionId);
-  const rosterOverride: { ctx: SheetContext | null; pending: boolean; error: boolean } = {
+  // `requestedSectionId` is the card the teacher picked; `ctx` may still
+  // hold the previous section while the new roster loads (keep-previous).
+  // The sheet compares the two and loads instead of ever rendering another
+  // section's students as the current sheet.
+  const rosterOverride: {
+    ctx: SheetContext | null;
+    pending: boolean;
+    error: boolean;
+    requestedSectionId: string | null;
+  } = {
     ctx: rosterQuery.data
       ? {
           sectionId: rosterQuery.data.sectionId,
@@ -208,6 +272,7 @@ export default function TeacherAdvisoryAttendancePage() {
       : null,
     pending: rosterQuery.isPending,
     error: rosterQuery.isError,
+    requestedSectionId: resolvedSectionId ?? null,
   };
 
   const offeredQuery = useOfferedSubjects(resolvedSectionId, rosterQuery.data?.termId);
@@ -217,27 +282,61 @@ export default function TeacherAdvisoryAttendancePage() {
     offered.find((s) => s.canMark)?.subjectId ??
     offered[0]?.subjectId;
   // Meetup weekdays of the active subject in the active section (from the
-  // linked timetable slots) — drives the blocks-view columns.
-  const meetupDaySet = new Set(
-    (mySlotsQuery.data?.slots ?? [])
-      .filter(
-        (s) =>
-          s.section.id === resolvedSectionId &&
-          (!resolvedSubjectId || s.subject.id === resolvedSubjectId),
-      )
-      .map((s) => s.day),
+  // linked timetable slots) — drives the blocks-view columns. Memoized to a
+  // stable reference: it feeds the meetup-keys memo, which feeds the navbar
+  // crumb memo — a fresh array every render would re-publish the crumb and
+  // loop `setCrumb` forever (Rules of Hooks + layout effect).
+  const resolvedMeetupDays = useMemo(() => {
+    const daySet = new Set(
+      (mySlotsQuery.data?.slots ?? [])
+        .filter(
+          (s) =>
+            s.section.id === resolvedSectionId &&
+            (!resolvedSubjectId || s.subject.id === resolvedSubjectId),
+        )
+        .map((s) => s.day),
+    );
+    const days = [1, 2, 3, 4, 5].filter((d) => daySet.has(d));
+    return days.length > 0 ? days : [1, 2, 3, 4, 5];
+  }, [mySlotsQuery.data, resolvedSectionId, resolvedSubjectId]);
+  // Term-scoped meetup date keys for the active subject — shared cache with
+  // the sheet, drives the navbar picker's markable days.
+  const { dateKeys: meetupDateKeys } = useMeetupDates(
+    resolvedSectionId,
+    resolvedSubjectId,
+    resolvedMeetupDays,
   );
-  const meetupDays = [1, 2, 3, 4, 5].filter((d) => meetupDaySet.has(d));
-  const resolvedMeetupDays = meetupDays.length > 0 ? meetupDays : [1, 2, 3, 4, 5];
 
   // Time gate: the sheet marks only while its slot is live; finished slots
-  // stay editable; everything else is locked. Pairs without timetable slots
-  // (legacy advisory flow) have nothing to gate against and stay open.
+  // stay editable; everything else is locked.
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const todayDow = now.getDay();
   const todayKey = now.toISOString().slice(0, 10);
   const gate: { live: AttendanceLive; slot: number } = (() => {
     const base = { nowMin, todayKey, todayEnd: null as number | null };
+    const todayPH = phTodayKey();
+    // Past sheets stay editable (no live session to gate against); future
+    // sheets are unreachable (the picker caps at today) but stay locked.
+    if (date < todayPH) {
+      const subjectName = selectedPair?.subject?.name;
+      return {
+        live: {
+          ...base,
+          locked: false,
+          tone: "info",
+          message: subjectName
+            ? `${subjectName} · past sheet ${date} — you can still edit these marks.`
+            : `Past sheet ${date} — you can still edit these marks.`,
+        },
+        slot: 1,
+      };
+    }
+    if (date > todayPH) {
+      return {
+        live: { ...base, locked: true, tone: "lock", message: "Future sheets are not available." },
+        slot: 1,
+      };
+    }
     if (!selectedPair) {
       return {
         live: { ...base, locked: true, tone: "lock", message: "Select a subject to take attendance." },
@@ -312,7 +411,100 @@ export default function TeacherAdvisoryAttendancePage() {
   })();
   const slot = gate.slot;
 
-  if (meQuery.isPending || (linked && mySlotsQuery.isPending && sheetContext.isPending)) {
+  // One rail card per (day, period) session — never one card per subject.
+  // Live sessions sort first; otherwise the nearest upcoming session leads.
+  const slotCards = (() => {
+    const cfg = configQuery.data?.config;
+    const rows = cfg ? buildTimetable(cfg) : [];
+    const rangeOf = (period: number): { start: number; end: number } | null => {
+      const row = rows.find((r) => r.kind === "period" && r.periodIndex === period);
+      return row && row.kind === "period" ? { start: row.startMin, end: row.endMin } : null;
+    };
+    type SlotCard = {
+      key: string;
+      pairKey: string;
+      section: { id: string; name: string; gradeLevel: string | null };
+      subject: { id: string; name: string; code: string };
+      day: number;
+      period: number;
+      status: "DRAFT" | "SUBMITTED" | "APPROVED";
+      time: string | null;
+      live: boolean;
+      rank: number;
+      haystack: string;
+    };
+    const cards: SlotCard[] = [];
+    for (const p of pairs) {
+      if (!p.subject) continue;
+      for (const s of p.slots) {
+        const t = timeFor(s.period);
+        const range = rangeOf(s.period);
+        const timeLabel = `${WEEK_LABELS_SHORT[s.day - 1]} ${t ?? `Period ${s.period + 1}`}`;
+        let rank: number;
+        let live = false;
+        if (s.day === todayDow && range) {
+          if (nowMin >= range.start && nowMin < range.end) {
+            rank = -1;
+            live = true;
+          } else if (nowMin < range.start) {
+            rank = range.start;
+          } else {
+            rank = 100000 - range.end;
+          }
+        } else {
+          const offset = (((s.day - todayDow) % 7) + 7) % 7;
+          rank = offset === 0 ? 300000 : 200000 + offset * 10000 + (range?.start ?? 0);
+        }
+        cards.push({
+          key: `${p.key}|${s.day}|${s.period}`,
+          pairKey: p.key,
+          section: p.section,
+          subject: p.subject,
+          day: s.day,
+          period: s.period,
+          status: s.status,
+          time: t,
+          live,
+          rank,
+          haystack: `${p.subject.name} ${p.subject.code} ${p.section.name} ${timeLabel}`.toLowerCase(),
+        });
+      }
+    }
+    const q = slotQuery.trim().toLowerCase();
+    return cards
+      .filter((c) => q === "" || c.haystack.includes(q))
+      .sort((a, b) => a.rank - b.rank);
+  })();
+  const activeSlotKey = slotKey ?? slotCards[0]?.key ?? null;
+
+  // Per-term workspace gate (DB-saved auth flow per term): no grant row for
+  // this term means the term hasn't been entered yet — Term 1 state never
+  // opens it. Marking additionally needs the code unlock, except inside the
+  // teacher's own advisory section (adviser grant suffices there).
+  // The currently designated Master Teacher skips all of this.
+  const hasGrant = termGrant !== null || isMasterTeacher;
+  const isAdvisoryPair =
+    !!advisorySectionId && (selectedPair?.section.id ?? null) === advisorySectionId;
+  const canMarkPair = isMasterTeacher
+    ? true
+    : !!termGrant && (!!termGrant.attendanceVerified || isAdvisoryPair);
+  const needsVerifyForPair = !isMasterTeacher && hasGrant && !canMarkPair;
+
+  // Sheet date picker in the top navbar (left-aligned with the main panel
+  // via the layout's crumb slot). Published only once the term is entered
+  // with assigned sessions; unmount/gate clears it. NOTE: all
+  // hooks must stay above every early return — Rules of Hooks.
+  const showSheetPicker = hasGrant && pairs.length > 0;
+  const topbarCrumb = useMemo(
+    () =>
+      showSheetPicker ? (
+        <SheetDatePicker date={date} onChange={setDate} meetupDates={meetupDateKeys} />
+      ) : null,
+    [showSheetPicker, date, meetupDateKeys],
+  );
+  useTopbarCrumb(topbarCrumb);
+
+  if (meQuery.isPending || ((linked || isMasterTeacher) && mySlotsQuery.isPending)) {
     return (
       <section className={styles.page}>
         <div className={styles.body}>
@@ -324,9 +516,10 @@ export default function TeacherAdvisoryAttendancePage() {
     );
   }
 
-  // No advisory section and no linked code: the teacher must link their
-  // code first to resolve their subjects and section students.
-  if (!linked && sheetContext.isError) {
+  // No linked code: the teacher must link their code first — same gate as
+  // My Classes — to resolve their assigned subjects and section students.
+  // The currently designated Master Teacher never sees this gate.
+  if (!linked && !isMasterTeacher) {
     return (
       <section className={styles.page}>
         <div className={styles.gateBody}>
@@ -349,10 +542,11 @@ export default function TeacherAdvisoryAttendancePage() {
     verify.mutate(attCode.trim());
   };
 
-  // Separate attendance code gate, persisted in the database on the link
-  // row — verified once, open on every visit until the row is unlinked.
-  const verified = linked?.attendanceVerified === true;
-  if (!verified) {
+  // Term entry: each term asks first. Advisers answer with one tap
+  // ("continue as adviser"); everyone else answers with their link code
+  // (same code re-entered per term). Nothing carries across terms.
+  // Masters bypass — records open directly.
+  if (!hasGrant && !isMasterTeacher) {
     return (
       <section className={styles.page}>
         <div className={styles.gateBody}>
@@ -365,40 +559,66 @@ export default function TeacherAdvisoryAttendancePage() {
                 <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
                   <KeyRound size={32} className="text-primary" />
                 </span>
-                <h3 className="text-lg font-semibold">Enter teacher code</h3>
+                <h3 className="text-lg font-semibold">Enter {termLabel}</h3>
                 <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                  Enter the same teacher code you linked on My Classes to open
-                  per-subject attendance for your sections.
+                  {isAdviser
+                    ? `You advise ${sheetContext.data?.sectionName ?? "a section"} — continue as adviser to open per-subject attendance for ${termLabel}, or verify with your teacher code instead.`
+                    : `Enter the same teacher code you linked on My Classes to open per-subject attendance for ${termLabel}. Codes never carry across terms.`}
                 </p>
                 <div className="mt-4 flex w-full flex-col gap-2">
-                  <Input
-                    placeholder="Teacher code (e.g. MS-101)…"
-                    value={attCode}
-                    onChange={(e) => {
-                      setAttCode(e.target.value);
-                      setAttCodeError(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleVerify();
-                    }}
-                    aria-label="Attendance teacher code"
-                    className="text-center uppercase"
-                  />
-                  {attCodeError ? (
-                    <p role="alert" className="text-sm text-destructive">
-                      {attCodeError}
-                    </p>
-                  ) : null}
-                  <Button onClick={handleVerify} disabled={verify.isPending}>
-                    {verify.isPending ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" aria-hidden />
-                        <span aria-live="polite">Verifying…</span>
-                      </>
-                    ) : (
-                      "Verify code"
-                    )}
-                  </Button>
+                  {isAdviser && !showCodeVerify ? (
+                    <>
+                      <Button onClick={() => grantTap.mutate()} disabled={grantTap.isPending}>
+                        {grantTap.isPending ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" aria-hidden />
+                            <span aria-live="polite">Entering…</span>
+                          </>
+                        ) : (
+                          "Continue as adviser"
+                        )}
+                      </Button>
+                      <Button variant="ghost" onClick={() => setShowCodeVerify(true)}>
+                        Verify with teacher code instead
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        placeholder="Teacher code (e.g. MS-101)…"
+                        value={attCode}
+                        onChange={(e) => {
+                          setAttCode(e.target.value);
+                          setAttCodeError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleVerify();
+                        }}
+                        aria-label="Attendance teacher code"
+                        className="text-center uppercase"
+                      />
+                      {attCodeError ? (
+                        <p role="alert" className="text-sm text-destructive">
+                          {attCodeError}
+                        </p>
+                      ) : null}
+                      <Button onClick={handleVerify} disabled={verify.isPending}>
+                        {verify.isPending ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" aria-hidden />
+                            <span aria-live="polite">Verifying…</span>
+                          </>
+                        ) : (
+                          "Verify code"
+                        )}
+                      </Button>
+                      {isAdviser ? (
+                        <Button variant="ghost" onClick={() => setShowCodeVerify(false)}>
+                          Back to adviser entry
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -412,7 +632,12 @@ export default function TeacherAdvisoryAttendancePage() {
 
   return (
     <section className={styles.page}>
-      {pairs.length === 0 ? (
+      {isMasterTeacher && pairs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Master Teacher — no code needed. Your student and subject records open directly;
+          schedule subjects in the Schedule workspace to attach sections here.
+        </p>
+      ) : pairs.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No sections attached yet — your sections will appear here once the master
           teacher schedules your linked name.
@@ -420,7 +645,58 @@ export default function TeacherAdvisoryAttendancePage() {
       ) : (
         <div className={styles.layout}>
           <div className={styles.main}>
+            {/* Small screens only — on desktop the picker lives in the top
+                navbar crumb slot (left of the main panel). */}
+            <div className="flex flex-wrap items-center justify-start gap-2 lg:hidden" aria-label="Sheet toolbar">
+              <SheetDatePicker date={date} onChange={setDate} meetupDates={meetupDateKeys} />
+            </div>
             <div className={styles.body}>
+              {needsVerifyForPair ? (
+                <div className={assign.card} aria-label="Verify code for this section">
+                  <span className={assign.glowClip} aria-hidden="true">
+                    <span className={assign.cardGlow} />
+                  </span>
+                  <div className="relative flex flex-col gap-2">
+                    <p className="text-sm">
+                      <span className="font-semibold">{selectedPair?.section.name}</span>
+                      <span className="text-muted-foreground">
+                        {" "}is outside your advisory — verify your teacher code to mark
+                        attendance here for {termLabel}.
+                      </span>
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <Input
+                        placeholder="Teacher code (e.g. MS-101)…"
+                        value={attCode}
+                        onChange={(e) => {
+                          setAttCode(e.target.value);
+                          setAttCodeError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleVerify();
+                        }}
+                        aria-label="Attendance teacher code"
+                        className="text-center uppercase"
+                      />
+                      {attCodeError ? (
+                        <p role="alert" className="text-sm text-destructive">
+                          {attCodeError}
+                        </p>
+                      ) : null}
+                      <Button onClick={handleVerify} disabled={verify.isPending}>
+                        {verify.isPending ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" aria-hidden />
+                            <span aria-live="polite">Verifying…</span>
+                          </>
+                        ) : (
+                          "Verify code"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <AttendanceRosterTable
                 date={date}
                 subjectId={resolvedSubjectId}
@@ -428,54 +704,66 @@ export default function TeacherAdvisoryAttendancePage() {
                 slot={slot}
                 roster={resolvedSectionId ? rosterOverride : undefined}
                 meetupDays={resolvedMeetupDays}
-                live={gate.live}
-                stretchClassName={linksLayout === "sidebar" ? styles.tableStretchRail : styles.tableStretch}
+                live={{ ...gate.live, locked: gate.live.locked || needsVerifyForPair }}
+                stretchClassName={styles.tableStretchRail}
               />
             </div>
           </div>
-          <aside className={styles.sideList} aria-label="Assigned subjects">
-            {pairs.map((p) => {
-              const times = pairTimes(p);
-              const title = p.subject ? p.subject.name : p.section.name;
-              const ariaSummary = p.subject
-                ? `${p.subject.name} (${p.subject.code}) in ${p.section.name} — ${times.join(", ")}`
-                : "no subjects yet";
-              return (
-                <SectionScheduleCard
-                  key={p.key}
-                  onSelect={() => setPairKey(p.key)}
-                  selected={p.key === selectedPair?.key}
-                  tone="green"
-                  ariaLabel={`Take attendance for ${title} — ${ariaSummary}`}
-                  titleLabel={p.subject ? "Subject" : "Section"}
-                  gradeLevel={p.section.gradeLevel}
-                  sectionName={title}
-                  adviserName={null}
-                  timetableEntries={p.slots.map((s) => ({ status: s.status }))}
-                  hint="Tap to take attendance"
-                  middle={
-                    p.subject ? (
+          <aside className={styles.sideList} aria-label="Class sessions">
+            <InputGroup className="w-full">
+              <InputGroupInput
+                placeholder="Search sessions..."
+                value={slotQuery}
+                onChange={(event) => setSlotQuery(event.target.value)}
+                aria-label="Search class sessions"
+              />
+              <InputGroupAddon>
+                <Search size={16} aria-hidden />
+              </InputGroupAddon>
+            </InputGroup>
+            {slotCards.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {pairs.some((p) => p.subject)
+                  ? "No sessions match your search."
+                  : "No scheduled sessions yet."}
+              </p>
+            ) : (
+              slotCards.map((c) => {
+                const timeLabel = `${WEEK_LABELS_SHORT[c.day - 1]} · ${c.time ?? `Period ${c.period + 1}`}`;
+                return (
+                  <SectionScheduleCard
+                    key={c.key}
+                    onSelect={() => {
+                      setPairKey(c.pairKey);
+                      setSlotKey(c.key);
+                    }}
+                    selected={c.key === activeSlotKey}
+                    tone="green"
+                    ariaLabel={`${c.live ? "Live now: " : ""}Take attendance for ${c.subject.name} in ${c.section.name} — ${timeLabel}`}
+                    titleLabel="Subject"
+                    gradeLevel={c.section.gradeLevel}
+                    sectionName={c.subject.name}
+                    adviserName={null}
+                    timetableEntries={[{ status: c.status }]}
+                    hint={c.live ? "Live now — tap to take attendance" : "Tap to take attendance"}
+                    middle={
                       <span className={assign.teacherBlock}>
                         <span
                           className={assign.itemName}
-                          title={`${p.section.name} (${p.subject.code})`}
+                          title={`${c.section.name} (${c.subject.code})`}
                         >
-                          {p.section.name} ({p.subject.code})
+                          {c.section.name} ({c.subject.code})
                         </span>
-                        <span className={assign.itemTerm} title={times.join(", ")}>
-                          {times.join(" · ")}
+                        <span className={assign.itemTerm} title={timeLabel}>
+                          {timeLabel}
+                          {c.live ? " · Live" : ""}
                         </span>
                       </span>
-                    ) : (
-                      <span className={assign.teacherBlock}>
-                        <span className={assign.fieldLabel}>Subjects</span>
-                        <span className={assign.itemTerm}>No scheduled subjects</span>
-                      </span>
-                    )
-                  }
-                />
-              );
-            })}
+                    }
+                  />
+                );
+              })
+            )}
           </aside>
         </div>
       )}

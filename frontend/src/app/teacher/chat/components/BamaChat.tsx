@@ -293,7 +293,7 @@ export function BamaChat() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel variant="destructive">Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               className={styles.btnRed}

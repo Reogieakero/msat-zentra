@@ -80,7 +80,7 @@ router.post(
       } else {
         await recomputeRisk(rawStudentId, record.termId);
       }
-      await invalidateTags(["risk", "principal", "teacher", "overview"]);
+      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance"]);
       res.status(201).json({ id: record.id, folderId: record.folderId ?? null });
     } catch (e) { next(e); }
   }
@@ -174,33 +174,92 @@ router.post(
       // cached empty response right after an adviser refers).
       await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals"]);
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}${req.body.consultReviewer ? ` (consult reviewer: ${req.body.consultReviewer})` : ""}` });
+      // Detailed cards name the student + section (record.studentId is a
+      // User id for registered students, or a roster enlistment).
+      const [filedAccount, filedRoster, filedSection] = await Promise.all([
+        record.studentId
+          ? prisma.user.findUnique({
+              where: { id: record.studentId },
+              select: { fullName: true },
+            })
+          : null,
+        record.rosterId
+          ? prisma.studentRoster.findUnique({
+              where: { id: record.rosterId },
+              select: { fullName: true },
+            })
+          : null,
+        prisma.section.findUnique({
+          where: { id: record.sectionId },
+          select: { name: true },
+        }),
+      ]);
+      const filedName =
+        filedAccount?.fullName ?? filedRoster?.fullName ?? "the student";
+      const filedWho = filedSection?.name
+        ? `${filedName} (${filedSection.name})`
+        : filedName;
+      const reasonSnippet =
+        req.body.reason.length > 100
+          ? `${req.body.reason.slice(0, 97)}...`
+          : req.body.reason;
       res.status(201).json(referral);
       // Realtime handoff (background, off the adviser critical path): the
       // receiving desk gets a sileo toast the moment the referral lands —
-      // the row itself already appears via their Referral-table subscription.
-      // Best-effort — never delays the 201.
-      if (req.body.referredToRole === "adm_coordinator") {
+      // every referred role (ADM, clinic, guidance, principal), never just
+      // some. Best-effort — never delays the 201.
+      {
         const actorId = req.user!.id;
         const referralId = (referral as { id: string }).id;
-        const viaConsult = req.body.consultReviewer
-          ? " (via consultation review)"
-          : "";
-        void fanoutToRole("adm_coordinator", {
+        const role = req.body.referredToRole as
+          | "nurse"
+          | "guidance_counselor"
+          | "adm_coordinator"
+          | "principal";
+        const roleMessage: Record<typeof role, string> = {
+          adm_coordinator: `New ADM referral submitted — ${filedWho}${req.body.consultReviewer ? ` (consult: ${req.body.consultReviewer})` : ""}: ${reasonSnippet}.`,
+          nurse: `New clinic referral submitted — ${filedWho}: ${reasonSnippet}.`,
+          guidance_counselor: `New guidance referral submitted — ${filedWho}: ${reasonSnippet}.`,
+          principal: `New principal referral submitted — ${filedWho}: ${reasonSnippet}.`,
+        };
+        void fanoutToRole(role, {
           sourceTable: "referrals",
           action: "status",
-          message: `New ADM referral submitted${viaConsult}.`,
+          message: roleMessage[role],
           sourceId: referralId,
           excludeUserId: actorId,
         });
-      } else if (req.body.referredToRole === "nurse") {
-        const actorId = req.user!.id;
-        const referralId = (referral as { id: string }).id;
-        void fanoutToRole("nurse", {
+        // ADM consultation reviewer acts on the case too — notify them
+        // directly. (lrpc has no login role, so only nurse/guidance
+        // reviewers fan out.)
+        if (
+          role === "adm_coordinator" &&
+          (req.body.consultReviewer === "nurse" ||
+            req.body.consultReviewer === "guidance_counselor")
+        ) {
+          void fanoutToRole(req.body.consultReviewer, {
+            sourceTable: "referrals",
+            action: "status",
+            message: `New ADM referral needs consultation review — ${filedWho}.`,
+            sourceId: referralId,
+            excludeUserId: actorId,
+          });
+        }
+        // Filing confirmation for the adviser themselves — the bell badge
+        // and inbox message land in realtime; the submit toast is already
+        // shown client-side, so the channel suppresses the echo toast.
+        const roleLabel: Record<typeof role, string> = {
+          adm_coordinator: "ADM Coordinator",
+          nurse: "Nurse",
+          guidance_counselor: "Guidance Counselor",
+          principal: "Principal",
+        };
+        void fanoutNotification({
+          userId: actorId,
           sourceTable: "referrals",
           action: "status",
-          message: "New clinic referral submitted.",
+          message: `Your referral to the ${roleLabel[role]} for ${filedWho} was submitted.`,
           sourceId: referralId,
-          excludeUserId: actorId,
         });
       }
     } catch (e) { next(e); }

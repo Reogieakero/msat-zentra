@@ -188,7 +188,7 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>

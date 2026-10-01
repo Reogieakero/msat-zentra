@@ -3,20 +3,48 @@
   flex-shrink: 0;
   align-self: flex-start;
   position: sticky;
-  /* Below both fixed bars (3rem topbar + 3rem tab navbar) plus a gap, so
-     the menu title never slides under the navbar when pinned — same as
-     the nurse desk. */
-  top: 6.75rem;
+  /* Below the 3rem topbar plus a gap, so the menu never slides under the
+     chrome when pinned (sidebar rail layout — no tab bar on desktop). */
+  top: 3.75rem;
   z-index: 10;
-  max-height: calc(100vh - 7.75rem);
+  max-height: calc(100vh - 4.75rem);
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 1rem;
   background-color: var(--card);
-  padding: 0.75rem;
+  padding: 1.125rem;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
+}
+
+/* Inner top highlight line (same as the shared section cards). */
+.sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--foreground), transparent 78%),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.menuTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.menuDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
 }
 
 .groupLabel {

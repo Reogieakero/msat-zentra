@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
@@ -103,11 +104,17 @@ export function useOfferedSubjects(sectionId: string | undefined, termId: string
     retry: false,
     staleTime: SHEET_STALE_MS,
     gcTime: SHEET_GC_MS,
+    // Card switches keep the previous sheet's subjects while the new
+    // section loads — no skeleton flash mid-navigation.
+    placeholderData: keepPreviousData,
   });
 }
 
-/** Sheet context derived from the SHARED roster entry — the rail, the sheet,
- *  and the students page all read one cached roster per teacher. */
+/** Advisory section discovery (section id/name/term) from the SHARED roster
+ *  entry — used ONLY to find which section a pair belongs to. The sheet's
+ *  STUDENT LIST never comes from here; it always comes from
+ *  useSectionRoster(sectionId) (GET /api/attendance/section-roster), i.e. the
+ *  section's enlisted students per subject, not the advisory list. */
 export function useSheetContext() {
   const session = useSession();
   const teacherId = session?.sub ?? null;
@@ -122,9 +129,9 @@ export function useSheetContext() {
   });
 }
 
-/** Submitted marks for one date + section + subject + slot. keepPreviousData
- *  keeps the last sheet visible while a new date/section/subject loads
- *  instead of flashing a full skeleton. */
+/** Submitted marks for one section + date + subject + slot (per-subject
+ *  sheet). keepPreviousData keeps the last sheet visible while a new
+ *  date/section/subject loads instead of flashing a full skeleton. */
 export function useSheetMarks(
   date: string,
   subjectId: string | undefined,
@@ -135,8 +142,9 @@ export function useSheetMarks(
   const teacherId = auth?.sub ?? null;
   return useQuery({
     queryKey: sheetMarksKey(teacherId, date, subjectId ?? "none", slot, sectionId ?? null),
-    queryFn: () => fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot),
-    enabled: !!teacherId && !!subjectId,
+    queryFn: () =>
+      fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
+    enabled: !!teacherId && !!subjectId && !!sectionId,
     staleTime: SHEET_STALE_MS,
     gcTime: SHEET_GC_MS,
     placeholderData: keepPreviousData,
@@ -194,7 +202,60 @@ export function useSubjectDays(
     retry: false,
     staleTime: SHEET_STALE_MS,
     gcTime: SHEET_GC_MS,
+    // Same keep-previous contract as the sheet marks: switching cards
+    // repaints the meetup blocks in place instead of blanking them.
+    placeholderData: keepPreviousData,
   });
+}
+
+/** Meetup dates across the term: every school day whose weekday is one of
+ *  the subject's meetup days. Capped so the strip stays renderable. */
+export function enumerateMeetupDates(
+  termStart: string | null,
+  termEnd: string | null,
+  meetupDays: number[],
+): string[] {
+  if (!termStart) return [];
+  const start = new Date(`${termStart.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(start.getTime())) return [];
+  const endRaw = termEnd ? new Date(`${termEnd.slice(0, 10)}T00:00:00Z`) : new Date();
+  const end = new Date(`${endRaw.toISOString().slice(0, 10)}T00:00:00Z`);
+  const out: string[] = [];
+  for (let d = new Date(start); d <= end && out.length < 90; d = new Date(d.getTime() + 86_400_000)) {
+    const dow = d.getUTCDay(); // 0 = Sun … 6 = Sat
+    const day = dow === 0 ? 7 : dow; // 1 = Mon … 7 = Sun
+    if (meetupDays.includes(day)) out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/** Meetup date keys for one section + subject — the single source for the
+ *  sheet blocks view AND the navbar sheet date picker, so both agree on
+ *  which dates are markable. `dateKeys` is null until the term range loads
+ *  (pickers fall back to future-only disabling while null). */
+export function useMeetupDates(
+  sectionId: string | undefined,
+  subjectId: string | undefined,
+  meetupDays: number[],
+) {
+  const daysQuery = useSubjectDays(sectionId, subjectId);
+  const dateKeys = useMemo(
+    () =>
+      daysQuery.data
+        ? enumerateMeetupDates(
+            daysQuery.data.termStart,
+            daysQuery.data.termEnd,
+            meetupDays,
+          )
+        : null,
+    [daysQuery.data, meetupDays],
+  );
+  return {
+    days: daysQuery.data,
+    dateKeys,
+    isPending: daysQuery.isPending,
+    hasTerm: !!daysQuery.data?.termStart,
+  };
 }
 
 /** Roster for one section the caller may serve (advisory, assignments, or
@@ -224,6 +285,10 @@ export function useSectionRoster(sectionId: string | undefined) {
     retry: false,
     staleTime: SHEET_STALE_MS,
     gcTime: SHEET_GC_MS,
+    // Card switches keep the previous section's students on screen while
+    // the new roster loads — the sheet never blanks to skeleton between
+    // two cached-or-fetching sections.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -231,8 +296,10 @@ export async function fetchSheetMarks(
   dateISO: string,
   subjectId: string,
   slot: number,
+  sectionId?: string | null,
 ): Promise<Record<string, SheetStatus>> {
   const params = new URLSearchParams({ date: dateISO, subjectId, slot: String(slot) });
+  if (sectionId) params.set("sectionId", sectionId);
   const { data } = await apiClient.get<{ marks: { studentId: string; status: SheetStatus }[] }>(
     `/api/teacher/advisory/attendance?${params.toString()}`
   );

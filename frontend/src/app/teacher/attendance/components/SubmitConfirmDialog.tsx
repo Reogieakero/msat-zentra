@@ -53,7 +53,7 @@ export function SubmitConfirmDialog({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="destructive"
             onClick={() => onOpenChange(false)}
             disabled={confirming}
           >

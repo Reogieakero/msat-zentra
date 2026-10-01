@@ -1,10 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { GuidanceAdmSummary } from "./guidance-adm-data";
-import { GuidanceAdmTrend } from "./guidance-adm-trend";
+import type {
+  GuidanceAdmReferralsData,
+  GuidanceAdmReportActionCount,
+} from "./guidance-adm-report-data";
 import styles from "./guidance-adm-reports.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -15,28 +28,41 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
+/* Primary palette — every slice is a step down from --primary so all
+   charts on this desk read as one family. Awaiting states are strongest;
+   terminal states fade toward the foreground. Shared with the insights
+   category bars. */
+export const PRIMARY_STEPS = [
+  "var(--primary)",
+  "color-mix(in oklch, var(--primary) 72%, var(--foreground) 28%)",
+  "color-mix(in oklch, var(--primary) 52%, var(--foreground) 48%)",
+  "color-mix(in oklch, var(--primary) 36%, var(--foreground) 64%)",
+  "color-mix(in oklch, var(--primary) 24%, var(--foreground) 76%)",
+];
+
 const ACTION_COLORS: Record<string, string> = {
-  needs_review: "var(--chart-4)",
-  booked_session: "var(--chart-3)",
-  followup: "var(--chart-5)",
-  endorsed: "var(--chart-1)",
-  rejected: "var(--chart-2)",
+  needs_review: PRIMARY_STEPS[0],
+  endorsed: PRIMARY_STEPS[1],
+  booked: PRIMARY_STEPS[2],
+  followup: PRIMARY_STEPS[3],
+  done: PRIMARY_STEPS[4],
+  rejected: PRIMARY_STEPS[4],
+  escalated: "var(--destructive)",
 };
 
 const ACTION_TAKEAWAYS: Record<string, string> = {
-  needs_review: "review each anecdotal, then endorse or reject it from the queue.",
-  booked_session: "finish or cancel the booked sessions to move these cases along.",
+  needs_review: "review each case, then endorse it or start counseling from the timelines.",
+  endorsed: "they now move with the ADM coordinator.",
+  booked: "finish or cancel the booked counseling sessions to move these cases along.",
   followup: "check back on their follow-up dates.",
-  endorsed: "they now move with the ADM coordinator toward the parent meeting.",
-  rejected: "they closed without further ADM action.",
+  done: "their counseling work is done.",
+  rejected: "they closed without further action.",
+  escalated: "they were sent higher up.",
 };
 
-function interpretActions(
-  actions: { action: string; label: string; count: number }[],
-  total: number
-): string {
+function interpretActions(actions: GuidanceAdmReportActionCount[], total: number): string {
   if (total === 0) {
-    return "No ADM cases referred to you yet — your actions will break down here by state.";
+    return "No referrals on your desk yet — case states will break down here.";
   }
   const ranked = [...actions].sort((a, b) => b.count - a.count);
   const top = ranked[0];
@@ -49,26 +75,25 @@ function interpretActions(
 }
 
 /**
- * Referred-actions donut for the guidance ADM caseload, with a
- * plain-language read of what the mix means. Counts come from the full
- * guidance caseload (never any page filter).
+ * Referred-actions donut for the whole guidance desk (ADM + Counseling),
+ * with a plain-language read of what the mix means. Counts come from every
+ * case on the guidance desk (never any page filter) — same contents as the
+ * nurse Referrals Report, over the guidance referrals basis.
  */
-export function GuidanceAdmReports({ summary }: { summary: GuidanceAdmSummary }) {
-  const actions = summary.byAction ?? [];
-  const total = actions.reduce((m, a) => m + a.count, 0);
+function ReferredActions({ data }: { data: GuidanceAdmReferralsData }) {
+  const { actions, total } = data;
 
   return (
-    <div className={styles.grid}>
     <Card className={styles.card}>
       <CardHeader>
         <CardTitle className={styles.sectionTitle}>Referred actions</CardTitle>
         <CardDescription className={styles.sectionDesc}>
-          What you did with each referred ADM case.
+          What happened with each case referred to you.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {total === 0 ? (
-          <p className={styles.empty}>No ADM cases referred to you yet.</p>
+          <p className={styles.empty}>No referrals on your desk yet.</p>
         ) : (
           <div className={styles.split}>
             <div className={styles.donutWrap}>
@@ -119,8 +144,85 @@ export function GuidanceAdmReports({ summary }: { summary: GuidanceAdmSummary })
         </p>
       </CardContent>
     </Card>
+  );
+}
 
-      <GuidanceAdmTrend summary={summary} />
+/**
+ * Weekly line graph of cases referred to guidance over the last 12 weeks.
+ * Counts come from every case on the guidance desk (never any page filter).
+ */
+function ReferralTrend({ data }: { data: GuidanceAdmReferralsData }) {
+  const weeks = data.trend;
+  const total = weeks.reduce((m, w) => m + w.count, 0);
+  const peak = weeks.reduce(
+    (best, w) => (w.count > best.count ? w : best),
+    { week: "", label: "—", count: 0 }
+  );
+
+  return (
+    <Card className={styles.card}>
+      <CardHeader>
+        <CardTitle className={styles.sectionTitle}>Referrals over time</CardTitle>
+        <CardDescription className={styles.sectionDesc}>
+          Cases referred to you per week — last 12 weeks.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {total === 0 ? (
+          <p className={styles.empty}>No referrals in the last 12 weeks.</p>
+        ) : (
+          <>
+            <div className={styles.trendWrap}>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={weeks} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "var(--border)" }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={32}
+                  />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => `Week of ${label}`}
+                    formatter={(value) => [`${value} case${value === 1 ? "" : "s"}`, "Referred"]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    name="Referred"
+                    stroke="var(--primary)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--primary)" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className={styles.interpretation} role="status">
+              {total} case{total === 1 ? "" : "s"} referred in 12 weeks
+              {peak.count > 0 ? ` — busiest week of ${peak.label} with ${peak.count}.` : "."}
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function GuidanceAdmReports({ data }: { data: GuidanceAdmReferralsData }) {
+  return (
+    <div className={styles.grid}>
+      <ReferredActions data={data} />
+      <ReferralTrend data={data} />
     </div>
   );
 }

@@ -138,7 +138,7 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
         {error ? <p className={styles.errorText}>{error}</p> : null}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={() => void handleSave()} disabled={saving} aria-busy={saving || undefined}>

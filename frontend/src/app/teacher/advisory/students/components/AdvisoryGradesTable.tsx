@@ -56,6 +56,26 @@ function riskBadge(level: AdviseeRow["riskLevel"]): {
   return { variant: "green" };
 }
 
+/** Academic risk straight from the engine rule (risk.ts academicFlag): the
+ *  total average of the student's CONNECTED subject grades in the active
+ *  computation, compared at 75. One tripped factor reads Moderate, a clear
+ *  average reads Low — and with no connected grades yet there is no academic
+ *  risk status at all (null → "—"), never a default Low. */
+function academicRiskOf(
+  student: AdviseeRow,
+  subjects: { name: string }[],
+  computation: GradeComputation,
+): "Low" | "Moderate" | null {
+  const values: number[] = [];
+  for (const s of subjects) {
+    const v = gradeOf(student, s.name, computation);
+    if (v !== null) values.push(v);
+  }
+  if (values.length === 0) return null;
+  const average = values.reduce((a, b) => a + b, 0) / values.length;
+  return average < 75 ? "Moderate" : "Low";
+}
+
 interface AdvisoryGradesTableProps {
   students: AdviseeRow[];
   sections: AdvisorySectionInfo[];
@@ -144,19 +164,28 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         ),
       },
       {
+        // Academic-only risk (total average vs 75); unconnected students
+        // carry no status. Ranks null < Low < Moderate for sorting.
         id: "risk",
-        accessorFn: (row) => row.riskLevel,
+        accessorFn: (row) => {
+          const r = academicRiskOf(row, subjects, computation);
+          return r === null ? -1 : r === "Moderate" ? 1 : 0;
+        },
         header: "Risk",
         size: 120,
         minSize: 120,
         maxSize: 120,
         cell: ({ row }) => {
-          const badge = riskBadge(row.original.riskLevel);
-          return (
-            <Badge variant={badge.variant}>
-              {row.original.riskLevel}
-            </Badge>
-          );
+          const r = academicRiskOf(row.original, subjects, computation);
+          if (r === null) {
+            return (
+              <span className="text-muted-foreground" title="No academic risk yet — no grade data shared">
+                —
+              </span>
+            );
+          }
+          const badge = riskBadge(r);
+          return <Badge variant={badge.variant}>{r}</Badge>;
         },
       },
       ...subjectColumns,
@@ -348,8 +377,10 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
               Moderate risk
             </span>
             <span className="flex items-center gap-2">
-              <Badge variant="red">High</Badge>
-              High risk
+              <span className="text-muted-foreground" aria-hidden="true">
+                —
+              </span>
+              No academic risk yet — grades not connected
             </span>
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden="true" />

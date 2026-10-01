@@ -118,7 +118,6 @@ function cellInlineStyle(cell: {
   }
   if (font.strike === true) parts.push("text-decoration:line-through");
   const fontColor = colorToCss(font.color);
-  if (fontColor) parts.push(`color:${fontColor}`);
 
   const h = typeof alignment.horizontal === "string" ? alignment.horizontal : "";
   parts.push(
@@ -143,8 +142,17 @@ function cellInlineStyle(cell: {
   if (bottom) parts.push(`border-bottom:${bottom}`);
   if (left) parts.push(`border-left:${left}`);
 
+  // The official template paints its header bands solid black with white
+  // text. The preview drops the black fill so the sheet reads on white,
+  // forcing dark text on those cells so the headers stay visible.
+  let bg: string | null = null;
   if (toRecord(fill).pattern === "solid") {
-    const bg = colorToCss(toRecord(fill).fgColor ?? toRecord(fill).bgColor);
+    bg = colorToCss(toRecord(fill).fgColor ?? toRecord(fill).bgColor);
+  }
+  if (bg && /^#0{6}$/i.test(bg)) {
+    parts.push("color:#000000");
+  } else {
+    if (fontColor) parts.push(`color:${fontColor}`);
     if (bg) parts.push(`background-color:${bg}`);
   }
 

@@ -1,0 +1,609 @@
+```mermaid
+erDiagram
+%% ZENTRA Full Technical ERD — 45 entities, PostgreSQL/Prisma
+%% PK/FK/UK in caps. xor = SQL CHECK exactly-one-of student_profile vs roster. AttendanceRecordLegacy isolated (no rels). AdviserArchivedStudent.studentId/rosterId have no FK. Paste at https://mermaid.live
+  User {
+    UUID id PK
+    VARCHAR email "UK"
+    VARCHAR passwordHash
+    ENUM role "Role"
+    VARCHAR fullName
+    VARCHAR contactNumber "NULL"
+    VARCHAR lrn "NULL, signup claim"
+    ENUM status "UserStatus"
+    UUID approvedBy "NULL"
+    TIMESTAMP approvedAt "NULL"
+    TIMESTAMP createdAt
+  }
+  StudentProfile {
+    UUID userId PK "also FK to User"
+    VARCHAR lrn "UK"
+    ENUM gradeLevel "GradeLevel"
+    UUID sectionId FK "NULL"
+    DATE birthdate "NULL"
+    VARCHAR gender "NULL"
+    TEXT address "NULL"
+    VARCHAR photoUrl "NULL"
+    INT riskCount
+    ENUM riskLevel "RiskLevel"
+    TIMESTAMP createdAt
+  }
+  ParentProfile {
+    UUID userId PK "also FK to User"
+    TEXT address "NULL"
+    VARCHAR occupation "NULL"
+  }
+  ParentStudentLink {
+    UUID id PK
+    UUID parentId FK
+    UUID studentId FK
+    VARCHAR relationship
+    UUID approvedBy "NULL"
+    TIMESTAMP createdAt
+    VARCHAR UK_pair "parentId+studentId"
+  }
+  StaffProfile {
+    UUID userId PK "also FK to User"
+    VARCHAR employeeId "UK"
+    VARCHAR department "NULL"
+    BOOL isAdviser
+    BOOL isMasterTeacher
+    VARCHAR handledGrades "ENUM array"
+    TEXT signatureImageUrl "NULL"
+    VARCHAR photoUrl "NULL"
+    VARCHAR primaryColor "NULL"
+    VARCHAR secondaryColor "NULL"
+  }
+  SchoolYear {
+    UUID id PK
+    VARCHAR name
+    DATE startDate
+    DATE endDate
+    BOOL isActive
+    VARCHAR createdBy "plain, no FK"
+    TIMESTAMP createdAt
+  }
+  Term {
+    UUID id PK
+    UUID schoolYearId FK
+    INT termNumber
+    DATE startDate "NULL"
+    DATE endDate "NULL"
+    VARCHAR UK_pair "schoolYearId+termNumber"
+  }
+  Section {
+    UUID id PK
+    VARCHAR name
+    ENUM gradeLevel "GradeLevel"
+    UUID schoolYearId FK
+    UUID adviserId FK "NULL"
+    VARCHAR adviserLabel "NULL"
+  }
+  StudentRoster {
+    UUID id PK
+    VARCHAR lrn
+    VARCHAR fullName
+    ENUM gradeLevel "GradeLevel"
+    UUID sectionId FK
+    UUID schoolYearId FK
+    VARCHAR UK_pair "lrn+schoolYearId"
+    VARCHAR note "NO CREATE TABLE in migrations"
+  }
+  Subject {
+    UUID id PK
+    VARCHAR name
+    VARCHAR code
+    ENUM gradeLevel "GradeLevel"
+    ENUM category "SubjectCategory"
+    VARCHAR UK_pair "code+gradeLevel"
+  }
+  TeacherSubjectAssignment {
+    UUID id PK
+    UUID teacherId FK
+    UUID subjectId FK
+    UUID sectionId FK
+    UUID termId FK
+    VARCHAR UK_quad "teacher+subject+section+term"
+  }
+  ScheduleConfig {
+    UUID id PK
+    UUID termId FK "UK, 1to1"
+    VARCHAR startTime
+    INT periodMins
+    INT lunchAfter
+    INT lunchMins
+    VARCHAR recess_cfg "am+pm fields"
+  }
+  SectionTimetableEntry {
+    UUID id PK
+    UUID sectionId FK
+    UUID subjectId FK
+    UUID termId FK
+    INT day "1=Mon..5=Fri"
+    INT period "0-based"
+    UUID teacherNameId FK "NULL"
+    ENUM status "TimetableStatus"
+    UUID submittedBy FK "NULL"
+    TIMESTAMP submittedAt "NULL"
+    UUID reviewedBy FK "NULL"
+    TIMESTAMP reviewedAt "NULL"
+    TEXT reviewNote "NULL"
+    VARCHAR UK_slot "section+term+day+period"
+  }
+  TeacherName {
+    UUID id PK
+    VARCHAR name "UK"
+    VARCHAR code "UK NULL"
+    UUID userId FK "UK NULL, claimed login"
+    TIMESTAMP attendanceVerifiedAt "NULL legacy"
+  }
+  TeacherTermGrant {
+    UUID id PK
+    UUID userId FK
+    UUID termId FK
+    VARCHAR via
+    UUID teacherNameId FK "NULL"
+    TIMESTAMP attendanceVerifiedAt "NULL"
+    TIMESTAMP createdAt
+    VARCHAR UK_pair "userId+termId"
+  }
+  AdviserArchivedStudent {
+    UUID id PK
+    UUID teacherId FK
+    VARCHAR studentId "NULL, NO FK"
+    VARCHAR rosterId "NULL, NO FK"
+    TIMESTAMP createdAt
+  }
+  GradeComponent {
+    UUID id PK
+    UUID subjectId FK
+    UUID termId FK
+    ENUM componentType "ComponentType"
+    INT weightPercentage
+    VARCHAR UK_triple "subject+term+type"
+  }
+  Assessment {
+    UUID id PK
+    UUID gradeComponentId FK
+    VARCHAR title
+    FLOAT maxScore
+    DATE dateGiven
+    VARCHAR createdBy "plain, no FK"
+    TIMESTAMP createdAt
+  }
+  StudentGrade {
+    UUID id PK
+    UUID assessmentId FK
+    UUID studentId FK "NULL xor rosterId"
+    UUID rosterId FK "NULL xor studentId"
+    FLOAT rawScore
+    FLOAT percentageScore
+  }
+  FinalGrade {
+    UUID id PK
+    UUID studentId FK "NULL xor"
+    UUID rosterId FK "NULL xor"
+    UUID subjectId FK
+    UUID termId FK
+    FLOAT computedAverage "NULL"
+    FLOAT transmutedGrade "NULL"
+    ENUM remarks "NULL Remarks"
+    ENUM lockStatus "LockStatus"
+    VARCHAR lock_info "by+at NULL"
+    VARCHAR adviserAppr "by+at NULL"
+    VARCHAR finalized "by+at NULL"
+  }
+  GradeFlag {
+    UUID id PK
+    UUID studentId FK
+    UUID subjectId FK
+    UUID sectionId FK
+    UUID termId FK
+    ENUM reason "GradeFlagReason"
+    TEXT note "NULL"
+    ENUM status "GradeFlagStatus"
+    UUID raisedBy FK
+    UUID ownerId FK "NULL"
+    UUID resolvedBy FK "NULL"
+    TIMESTAMP resolvedAt "NULL"
+    TEXT resolutionNote "NULL"
+    TIMESTAMP escalatedAt "NULL"
+    TIMESTAMP createdAt
+    TIMESTAMP updatedAt
+  }
+  AttendanceRecord {
+    UUID id PK
+    UUID studentId FK "NULL xor"
+    UUID rosterId FK "NULL xor"
+    UUID sectionId FK
+    DATE date_
+    ENUM session "legacy frozen"
+    ENUM status "AttendanceStatus"
+    VARCHAR recordedBy "plain, no FK"
+    UUID termId FK
+    UUID subjectId FK "NULL"
+    UUID assignmentId FK "NULL"
+    INT slot
+  }
+  AttendanceRecordLegacy {
+    UUID id PK
+    VARCHAR note "READ-ONLY archive, no FKs"
+    VARCHAR studentId "NULL no FK"
+    VARCHAR rosterId "NULL no FK"
+    VARCHAR sectionId "no FK"
+    DATE date_
+    ENUM session_ "Session"
+    ENUM status "AttendanceStatus"
+    VARCHAR recordedBy "no FK"
+    VARCHAR termId "no FK"
+    TIMESTAMP archivedAt
+  }
+  AdviserSf10AccessRequest {
+    UUID id PK
+    UUID adviserId FK
+    UUID sectionId FK
+    ENUM gradeLevel "GradeLevel"
+    TEXT reason
+    ENUM status "AccessRequestStatus"
+    UUID decidedBy FK "NULL"
+    TIMESTAMP decidedAt "NULL"
+    TEXT decisionReason "NULL"
+    TIMESTAMP requestedAt
+    TIMESTAMP createdAt
+  }
+  Sf10Record {
+    UUID id PK
+    UUID studentId FK "UK, 1to1"
+    ENUM source "Sf10Source"
+    ENUM status "Sf10Status"
+    VARCHAR uploadedFileUrl "NULL"
+    JSON ocrExtractedData "NULL"
+    UUID verifiedBy FK "NULL"
+    TIMESTAMP verifiedAt "NULL"
+    UUID validatedBy FK "NULL"
+    TIMESTAMP validatedAt "NULL"
+    TIMESTAMP releasedAt "NULL"
+    TIMESTAMP archivedAt "NULL"
+    TIMESTAMP uploadedAt "NULL"
+    TIMESTAMP updatedAt
+    INT currentVersion
+  }
+  Sf10RecordVersion {
+    UUID id PK
+    UUID sf10RecordId FK
+    INT versionNumber
+    JSON dataSnapshot
+    UUID changedBy FK
+    VARCHAR changeReason
+    TIMESTAMP changedAt
+  }
+  AnecdotalFolder {
+    UUID id PK
+    UUID ownerId FK
+    VARCHAR name
+    TIMESTAMP createdAt
+  }
+  AnecdotalRecord {
+    UUID id PK
+    UUID studentId FK "NULL xor"
+    UUID rosterId FK "NULL xor"
+    UUID observerId FK
+    UUID sectionId FK
+    TIMESTAMP observedAt
+    TEXT incident
+    TEXT location "NULL"
+    TEXT notesActions "NULL"
+    TEXT classPerf "NULL"
+    TEXT attendSummary "NULL"
+    VARCHAR attachmentUrl "NULL"
+    UUID termId FK
+    ENUM category "AnecdotalCategory"
+    ENUM confidentiality "Confidentiality"
+    UUID folderId FK "NULL"
+    VARCHAR signedBy "NULL"
+    TIMESTAMP signedAt "NULL"
+    VARCHAR signatureImageUrl "NULL"
+  }
+  AnecdotalRecordFollowup {
+    UUID id PK
+    UUID anecdotalRecordId FK
+    UUID followupBy FK
+    TIMESTAMP followupDate
+    TEXT notes
+  }
+  Referral {
+    UUID id PK
+    UUID anecdotalRecordId FK
+    ENUM referredToRole "ReferralTarget"
+    UUID referredBy FK
+    TEXT reason
+    VARCHAR consultReviewer "NULL"
+    BOOL referralFormReady
+    ENUM status "ReferralStatus"
+    TEXT notes "NULL"
+    TEXT escalationReason "NULL"
+    TIMESTAMP followUpDate "NULL"
+    VARCHAR escalatedTo "NULL"
+    VARCHAR priority "NULL"
+    TEXT intakeNotes "NULL"
+    TIMESTAMP acceptedAt "NULL"
+    TEXT resolutionSummary "NULL"
+    TIMESTAMP resolvedAt "NULL"
+    UUID studentId FK "NULL xor"
+    UUID rosterId FK "NULL xor"
+    UUID termId FK
+  }
+  CounselingSession {
+    UUID id PK
+    UUID referralId FK "NULL xor"
+    UUID interventionId FK "NULL xor"
+    VARCHAR sessionType
+    TIMESTAMP scheduledAt
+    VARCHAR venue "NULL"
+    VARCHAR status
+    TEXT sessionNotes "NULL"
+    TEXT outcome "NULL"
+    TEXT cancelReason "NULL"
+    UUID createdBy FK
+    TIMESTAMP createdAt
+    TIMESTAMP completedAt "NULL"
+  }
+  ClinicSessionAttachment {
+    UUID id PK
+    UUID sessionId FK
+    VARCHAR fileUrl
+    VARCHAR fileName
+    VARCHAR mimeType
+    INT fileSize
+    UUID uploadedBy FK
+    TIMESTAMP uploadedAt
+  }
+  Intervention {
+    UUID id PK
+    UUID studentId FK "NULL xor"
+    UUID rosterId FK "NULL xor"
+    ENUM riskLevelAtFlag "RiskLevel"
+    TEXT recommendedAction
+    UUID assignedTo FK "NULL"
+    TIMESTAMP assignedAt "NULL"
+    ENUM approvalStatus "ApprovalStatus"
+    ENUM outcomeStatus "OutcomeStatus"
+    TEXT outcomeNotes "NULL"
+    VARCHAR priority "NULL"
+    TEXT intakeNotes "NULL"
+  }
+  HealthRecord {
+    UUID id PK
+    UUID studentId FK
+    UUID referralId FK "NULL"
+    TIMESTAMP visitDatetime
+    TEXT complaint
+    TEXT diagnosis
+    TEXT treatmentGiven
+    UUID recordedBy FK
+    UUID termId FK
+    ENUM confidentiality "Confidentiality"
+  }
+  HomeVisitationRecord {
+    UUID id PK
+    UUID studentId FK
+    UUID referralId FK "NULL"
+    VARCHAR personVisited
+    TEXT homeCondition
+    TEXT familyCondition
+    TEXT agreements
+    VARCHAR parentSignature "NULL"
+    VARCHAR studentSignature "NULL"
+    UUID certificationBy FK
+    UUID termId FK
+    ENUM confidentiality "Confidentiality"
+  }
+  AdmLearnerProfile {
+    UUID id PK
+    UUID studentId FK
+    UUID referralId FK
+    TIMESTAMP createdAt
+    ENUM eligibility "AdmEligibility"
+    ENUM stage "AdmStage"
+    UUID preparedBy FK
+    UUID approvedBy FK "NULL"
+    TIMESTAMP approvedAt "NULL"
+    JSON certificationDetails "NULL"
+    UUID termId FK
+    ENUM confidentiality "Confidentiality"
+  }
+  AdmParentMeeting {
+    UUID id PK
+    UUID profileId FK "NULL xor referralId"
+    UUID referralId FK "NULL xor profileId"
+    UUID recordedBy FK
+    TIMESTAMP meetingDatetime
+    VARCHAR venue
+    BOOL attended
+    TIMESTAMP parentConfirmedAt "NULL"
+    TEXT minutesOfMeeting "NULL"
+    VARCHAR logbookRef "NULL"
+    JSON attendees
+  }
+  AdmModule {
+    UUID id PK
+    UUID profileId FK
+    VARCHAR moduleName
+    DATE releaseDate "NULL"
+    DATE dueDate "NULL"
+    BOOL submitted
+    DATE submissionDate "NULL"
+    UUID recordedBy FK
+  }
+  AdmDevice {
+    UUID id PK
+    UUID profileId FK
+    VARCHAR deviceType
+    VARCHAR deviceSerial
+    UUID issuedBy FK
+    DATE issuedDate
+    DATE returnedDate "NULL"
+    TEXT conditionNotes "NULL"
+  }
+  AdmForm {
+    UUID id PK
+    UUID profileId FK
+    ENUM formType "AdmFormType"
+    VARCHAR title
+    VARCHAR fileUrl "NULL"
+    ENUM status "AdmFormStatus"
+    UUID uploadedBy FK
+    TIMESTAMP uploadedAt "NULL"
+    TEXT notes "NULL"
+  }
+  AuditLog {
+    UUID id PK
+    UUID userId FK
+    ENUM actionType "ActionType 30plus"
+    VARCHAR sourceTable
+    VARCHAR sourceId
+    TEXT reason "NULL"
+    JSON oldValue "NULL"
+    JSON newValue "NULL"
+    TIMESTAMP createdAt
+  }
+  RiskSnapshot {
+    UUID id PK
+    UUID studentId FK "NULL xor"
+    UUID rosterId FK "NULL xor"
+    ENUM riskLevel "RiskLevel"
+    INT riskCount
+    TIMESTAMP snapshotDate
+    UUID termId FK
+  }
+  ReportSnapshot {
+    UUID id PK
+    VARCHAR reportType
+    VARCHAR scope
+    VARCHAR scopeId "NULL"
+    UUID termId FK
+    JSON payload
+    TIMESTAMP generatedAt
+  }
+  Notification {
+    UUID id PK
+    UUID userId FK
+    VARCHAR type_
+    VARCHAR sourceTable "NULL"
+    VARCHAR sourceId "NULL"
+    VARCHAR channel "NotifChannel array"
+    TEXT message
+    BOOL isRead
+    TIMESTAMP createdAt
+  }
+  RefreshToken {
+    UUID id PK
+    UUID userId FK
+    VARCHAR tokenHash "UK"
+    TIMESTAMP expiresAt
+    TIMESTAMP createdAt
+  }
+  User ||--|| StudentProfile : "userId shared-PK"
+  Section |o--o{ StudentProfile : "sectionId"
+  User ||--|| ParentProfile : "userId shared-PK"
+  ParentProfile ||--o{ ParentStudentLink : "parentId"
+  StudentProfile ||--o{ ParentStudentLink : "studentId"
+  User ||--|| StaffProfile : "userId shared-PK"
+  SchoolYear ||--o{ Term : "schoolYearId"
+  SchoolYear ||--o{ Section : "schoolYearId"
+  User |o--o{ Section : "adviserId"
+  Section ||--o{ StudentRoster : "sectionId"
+  SchoolYear ||--o{ StudentRoster : "schoolYearId"
+  User ||--o{ TeacherSubjectAssignment : "teacherId"
+  Subject ||--o{ TeacherSubjectAssignment : "subjectId"
+  Section ||--o{ TeacherSubjectAssignment : "sectionId"
+  Term ||--o{ TeacherSubjectAssignment : "termId"
+  Term ||--|| ScheduleConfig : "termId unique"
+  Section ||--o{ SectionTimetableEntry : "sectionId"
+  Subject ||--o{ SectionTimetableEntry : "subjectId"
+  Term ||--o{ SectionTimetableEntry : "termId"
+  TeacherName |o--o{ SectionTimetableEntry : "teacherNameId"
+  User |o--o{ SectionTimetableEntry : "submittedBy reviewer"
+  User ||--o| TeacherName : "userId unique NULL"
+  User ||--o{ TeacherTermGrant : "userId"
+  Term ||--o{ TeacherTermGrant : "termId"
+  TeacherName |o--o{ TeacherTermGrant : "teacherNameId"
+  User ||--o{ AdviserArchivedStudent : "teacherId"
+  Subject ||--o{ GradeComponent : "subjectId"
+  Term ||--o{ GradeComponent : "termId"
+  GradeComponent ||--o{ Assessment : "gradeComponentId"
+  Assessment ||--o{ StudentGrade : "assessmentId"
+  StudentProfile ||--o{ StudentGrade : "xor studentId"
+  StudentRoster ||--o{ StudentGrade : "xor rosterId"
+  StudentProfile ||--o{ FinalGrade : "xor studentId"
+  StudentRoster ||--o{ FinalGrade : "xor rosterId"
+  Subject ||--o{ FinalGrade : "subjectId"
+  Term ||--o{ FinalGrade : "termId"
+  StudentProfile ||--o{ GradeFlag : "studentId"
+  Subject ||--o{ GradeFlag : "subjectId"
+  Section ||--o{ GradeFlag : "sectionId"
+  Term ||--o{ GradeFlag : "termId"
+  User ||--o{ GradeFlag : "raisedBy owner resolvedBy"
+  Section ||--o{ AttendanceRecord : "sectionId"
+  Term ||--o{ AttendanceRecord : "termId"
+  Subject |o--o{ AttendanceRecord : "subjectId"
+  TeacherSubjectAssignment |o--o{ AttendanceRecord : "assignmentId"
+  StudentProfile ||--o{ AttendanceRecord : "xor studentId"
+  StudentRoster ||--o{ AttendanceRecord : "xor rosterId"
+  User ||--o{ AnecdotalRecord : "observerId"
+  Section ||--o{ AnecdotalRecord : "sectionId"
+  Term ||--o{ AnecdotalRecord : "termId"
+  AnecdotalFolder |o--o{ AnecdotalRecord : "folderId"
+  StudentProfile ||--o{ AnecdotalRecord : "xor studentId"
+  StudentRoster ||--o{ AnecdotalRecord : "xor rosterId"
+  User ||--o{ AnecdotalFolder : "ownerId"
+  AnecdotalRecord ||--o{ AnecdotalRecordFollowup : "recordId"
+  User ||--o{ AnecdotalRecordFollowup : "followupBy"
+  AnecdotalRecord ||--o{ Referral : "anecdotalRecordId"
+  User ||--o{ Referral : "referredBy"
+  Term ||--o{ Referral : "termId"
+  StudentProfile ||--o{ Referral : "xor studentId"
+  StudentRoster ||--o{ Referral : "xor rosterId"
+  Referral ||--o{ CounselingSession : "xor referralId"
+  Intervention ||--o{ CounselingSession : "xor interventionId"
+  User ||--o{ CounselingSession : "createdBy"
+  CounselingSession ||--o{ ClinicSessionAttachment : "sessionId"
+  User ||--o{ ClinicSessionAttachment : "uploadedBy"
+  StudentProfile ||--o{ Intervention : "xor studentId"
+  StudentRoster ||--o{ Intervention : "xor rosterId"
+  User |o--o{ Intervention : "assignedTo"
+  StudentProfile ||--o{ HealthRecord : "studentId"
+  Referral |o--o{ HealthRecord : "referralId"
+  User ||--o{ HealthRecord : "recordedBy"
+  Term ||--o{ HealthRecord : "termId"
+  StudentProfile ||--o{ HomeVisitationRecord : "studentId"
+  Referral |o--o{ HomeVisitationRecord : "referralId"
+  User ||--o{ HomeVisitationRecord : "certificationBy"
+  Term ||--o{ HomeVisitationRecord : "termId"
+  StudentProfile ||--o{ AdmLearnerProfile : "studentId"
+  Referral ||--o{ AdmLearnerProfile : "referralId"
+  User ||--o{ AdmLearnerProfile : "preparedBy approvedBy"
+  Term ||--o{ AdmLearnerProfile : "termId"
+  AdmLearnerProfile ||--o{ AdmParentMeeting : "xor profileId"
+  Referral ||--o{ AdmParentMeeting : "xor referralId"
+  User ||--o{ AdmParentMeeting : "recordedBy"
+  AdmLearnerProfile ||--o{ AdmModule : "profileId"
+  User ||--o{ AdmModule : "recordedBy"
+  AdmLearnerProfile ||--o{ AdmDevice : "profileId"
+  User ||--o{ AdmDevice : "issuedBy"
+  AdmLearnerProfile ||--o{ AdmForm : "profileId"
+  User ||--o{ AdmForm : "uploadedBy"
+  StudentProfile ||--|| Sf10Record : "studentId unique"
+  User |o--o{ Sf10Record : "verifiedBy validatedBy"
+  Sf10Record ||--o{ Sf10RecordVersion : "recordId"
+  User ||--o{ Sf10RecordVersion : "changedBy"
+  User ||--o{ AuditLog : "userId"
+  Term ||--o{ RiskSnapshot : "termId"
+  StudentProfile ||--o{ RiskSnapshot : "xor studentId"
+  StudentRoster ||--o{ RiskSnapshot : "xor rosterId"
+  Term ||--o{ ReportSnapshot : "termId"
+  User ||--o{ AdviserSf10AccessRequest : "adviserId decidedBy"
+  Section ||--o{ AdviserSf10AccessRequest : "sectionId"
+  User ||--o{ Notification : "userId"
+  User ||--o{ RefreshToken : "userId"
+```

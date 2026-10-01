@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme, useFont } from "@/components/providers";
+import { useTheme } from "@/components/providers";
 import { NurseSidebar } from "@/components/nurse-sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +14,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { NURSE_REFERRAL_DRAFT_KEY } from "./overview/components/nurse-overview-data";
 import { useNurseRealtime } from "@/lib/realtime/nurseChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { NurseNotificationsBell } from "./components/nurse-notifications-bell";
+import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
+import {
+  NursePaletteGate,
+  useNurseProfileSettings,
+} from "./settings/components/profile-settings-data";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {
@@ -28,7 +33,7 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   const { allowed } = useRoleGuard(["nurse"]);
   useNurseRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
-  const { font, setFont } = useFont();
+  const profile = useNurseProfileSettings();
 
   const isDark = resolvedTheme === "dark";
 
@@ -81,6 +86,9 @@ function NurseShell({ children }: { children: React.ReactNode }) {
               aria-label="Account menu"
             >
               <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
                 <AvatarFallback>
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
@@ -93,7 +101,13 @@ function NurseShell({ children }: { children: React.ReactNode }) {
           >
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={styles.accountItem}>
+            <DropdownMenuItem
+              className={styles.accountItem}
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/nurse/settings");
+              }}
+            >
               <Settings className={styles.accountIcon} />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -128,37 +142,6 @@ function NurseShell({ children }: { children: React.ReactNode }) {
                 ) : null}
               </DropdownMenuItem>
             </div>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>Font</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setFont("inter");
-                }}
-              >
-                <Type className={styles.accountIcon} />
-                <span>Inter</span>
-                {font === "inter" ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setFont("nunito");
-                }}
-              >
-                <Type className={styles.accountIcon} />
-                <span>Nunito</span>
-                {font === "nunito" ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className={styles.accountItem}
@@ -173,10 +156,12 @@ function NurseShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+      <NursePaletteGate />
       <NurseSidebar />
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
+      <BookingReminderStack desk="nurse" />
     </div>
   );
 }

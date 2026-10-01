@@ -7,11 +7,20 @@ import styles from "./GuidanceReferralsSkeleton.module.css";
    (title + search + track filter), two-column entries (rail with date,
    badges, status help, sent/observed-by lines, latest-action block,
    student card + report body with reason, observed block, folder,
-   callout, session plan, variable actions), pager, and the grouped
-   action-menu sidebar — so nothing jumps when the fetch lands. */
-export function GuidanceReferralsSkeleton({ lockType = false }: { lockType?: boolean }) {
+   callout, session plan, variable actions), and the grouped action-menu
+   sidebar — so nothing jumps when the fetch lands. Locked pages scroll
+   the full list (scroll hint, no pager). */
+export function GuidanceReferralsSkeleton({
+  lockType = false,
+  menuRows,
+}: {
+  lockType?: boolean;
+  // Locked action-menu row count (ADM 6 / Counseling 5 with the Cancelled
+  // row). Unlocked keeps the per-track defaults below.
+  menuRows?: number;
+}) {
   const sideGroups: { label: string; rows: number }[] = lockType
-    ? [{ label: "Actions", rows: 4 }]
+    ? [{ label: "Actions", rows: menuRows ?? 4 }]
     : [
         { label: "ADM actions", rows: 5 },
         { label: "Counseling actions", rows: 4 },
@@ -19,20 +28,20 @@ export function GuidanceReferralsSkeleton({ lockType = false }: { lockType?: boo
   return (
     <div className={styles.layout} aria-busy="true" aria-label="Loading your cases">
       <div className={styles.feed}>
-        <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
-          <Skeleton className={styles.title} />
-          <div className={styles.toolbarRight}>
-            <Skeleton className={styles.search} />
-            {!lockType ? <Skeleton className={styles.filterBtn} /> : null}
+        {/* Locked track pages match the nurse timelines: entries start
+            immediately with no toolbar shimmer. */}
+        {!lockType ? (
+          <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
+            <Skeleton className={styles.title} />
+            <div className={styles.toolbarRight}>
+              <Skeleton className={styles.search} />
+              <Skeleton className={styles.filterBtn} />
+            </div>
           </div>
-        </div>
+        ) : null}
         <div className={styles.timeline}>
           {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className={`${styles.entry}${i % 2 === 1 ? ` ${styles.entryAlt}` : ""}`}
-            >
-              <span className={styles.dot} aria-hidden="true" />
+            <div key={i} className={styles.entry}>
               <div className={`${styles.rail} ${styles.railSticky}`}>
                 <Skeleton className={styles.date} />
                 <div className={styles.badges}>
@@ -90,14 +99,6 @@ export function GuidanceReferralsSkeleton({ lockType = false }: { lockType?: boo
               </div>
             </div>
           ))}
-        </div>
-        <div className={styles.pager} aria-hidden="true">
-          <Skeleton className={styles.pagerRange} />
-          <div className={styles.pagerButtons}>
-            <Skeleton className={styles.pagerBtn} />
-            <Skeleton className={styles.pagerLabel} />
-            <Skeleton className={styles.pagerBtn} />
-          </div>
         </div>
       </div>
       <div className={styles.side} aria-hidden="true">

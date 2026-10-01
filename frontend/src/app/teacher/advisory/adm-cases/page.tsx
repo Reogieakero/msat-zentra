@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, FolderOpen, Send } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { writeLastViewedReferralId } from "../referrals/last-viewed";
@@ -24,7 +24,7 @@ const GRID_STYLE: React.CSSProperties = {
 };
 
 /**
- * Teacher ADM cases: every ADM case for the teacher's advisory students
+ * Teacher ADM cases: only ADM cases from referrals the teacher filed
  * (pending or principal-approved), one section-grid card per case.
  * Read-only — stage and status only, never confidential detail.
  */
@@ -59,7 +59,7 @@ export default function TeacherAdvisoryAdmCasesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">ADM Cases</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {cases.length === 1 ? "1 case" : `${cases.length} cases`} for your advisees.
+            {cases.length === 1 ? "1 referred case" : `${cases.length} referred cases`}.
           </p>
         </div>
 
@@ -106,11 +106,10 @@ export default function TeacherAdvisoryAdmCasesPage() {
                 </span>
                 <p className="font-medium">No ADM cases yet</p>
                 <p className="max-w-sm text-sm text-muted-foreground">
-                  None of your advisees are in the ADM pipeline. Cases appear here once an
-                  ADM referral moves forward.
+                  You haven&apos;t referred any ADM cases yet. Cases you refer appear here
+                  as they move forward.
                 </p>
                 <Button size="sm" className="mt-2" onClick={() => router.push("/teacher/advisory/referrals")}>
-                  <Send size={16} aria-hidden="true" />
                   Refer ADM cases
                 </Button>
               </div>
@@ -143,7 +142,6 @@ export default function TeacherAdvisoryAdmCasesPage() {
                     disabled={safePage <= 1 || cases.length === 0}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                   >
-                    <ChevronLeft aria-hidden />
                     Previous
                   </Button>
                   <Button
@@ -153,7 +151,6 @@ export default function TeacherAdvisoryAdmCasesPage() {
                     onClick={() => setPage((p) => p + 1)}
                   >
                     Next
-                    <ChevronRight aria-hidden />
                   </Button>
                 </div>
               </div>

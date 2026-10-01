@@ -37,7 +37,10 @@ export function RiskHeatmap({
   interpretation: string;
 }) {
   return (
-    <Card className={styles.panel}>
+    <Card className={`${styles.panel} ${styles.glow}`}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
       <h2 className={styles.panelTitle}>Section × category heatmap</h2>
       <p className={styles.panelDesc}>
         {matrix.length === 0

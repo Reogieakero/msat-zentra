@@ -129,7 +129,7 @@ export function ReferralDeleteDialog({
         </AlertDialogHeader>
         {error ? <p className={styles.error}>{error}</p> : null}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel variant="destructive" disabled={pending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             className={styles.btnRed}

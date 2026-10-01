@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
 import {
   formatActionTime,
@@ -27,9 +28,12 @@ import type {
 import styles from "./nurse-adm.module.css";
 
 /**
- * Latest referred ADM cases — the shared ADM queue table fed by the
+ * ADM cases needing nurse action — the shared ADM queue table fed by the
  * nurse adapter: nurse-scope rows mapped onto the shared list, nurse
- * actions (forward, review, referral form) injected per row.
+ * actions (forward, review, referral form) injected per row. Terminal
+ * rows (resolved, dismissed) are excluded here — they stay visible in the
+ * alerts list and count in the reports above; this section is the working
+ * set only.
  */
 export function NurseAdmQueueTable({
   queue,
@@ -42,6 +46,7 @@ export function NurseAdmQueueTable({
   riskLoading?: boolean;
   onChanged: () => void;
 }) {
+  const router = useRouter();
   const [formSheet, setFormSheet] = React.useState<{
     row: NurseAlertItem["row"];
     draft: AdmReviewDraft;
@@ -49,26 +54,31 @@ export function NurseAdmQueueTable({
 
   const rows = React.useMemo<AdmQueueRowVM[]>(
     () =>
-      queue.map((alert) => {
-        const row = alert.row;
-        const actionStatus = deriveActionStatus(row.type, row.status, row.sessions);
-        const latest = latestActionOf(row, alert);
-        return {
-          id: row.id,
-          lrn: row.lrn,
-          student: row.student,
-          section: row.section,
-          searchText: `${row.student} ${row.lrn} ${row.section} ${row.reason} ${row.category}`,
-          statusLabel: actionStatus.label,
-          statusVariant:
-            ACTION_STATUS_VARIANT[actionStatus.key] ?? statusVariant(row.status),
-          riskLevel: alert.studentId ? riskByStudent[alert.studentId] : undefined,
-          latestLabel: latest.label,
-          LatestIcon: actionIconFor(latest.label),
-          actionTime: latest.time,
-          dateReferred: formatActionTime(row.date),
-        };
-      }),
+      queue
+        .filter(
+          (alert) =>
+            alert.row.status !== "resolved" && alert.row.status !== "dismissed",
+        )
+        .map((alert) => {
+          const row = alert.row;
+          const actionStatus = deriveActionStatus(row.type, row.status, row.sessions);
+          const latest = latestActionOf(row, alert);
+          return {
+            id: row.id,
+            lrn: row.lrn,
+            student: row.student,
+            section: row.section,
+            searchText: `${row.student} ${row.lrn} ${row.section} ${row.reason} ${row.category}`,
+            statusLabel: actionStatus.label,
+            statusVariant:
+              ACTION_STATUS_VARIANT[actionStatus.key] ?? statusVariant(row.status),
+            riskLevel: alert.studentId ? riskByStudent[alert.studentId] : undefined,
+            latestLabel: latest.label,
+            LatestIcon: actionIconFor(latest.label),
+            actionTime: latest.time,
+            dateReferred: formatActionTime(row.date),
+          };
+        }),
     [queue, riskByStudent]
   );
 
@@ -111,14 +121,16 @@ export function NurseAdmQueueTable({
   return (
     <>
       <AdmQueueTable
-        title="Latest referred ADM cases"
-        description="The latest ADM cases referred to you — review the case, then endorse or reject."
+        title="Latest referrals needing action"
+        description="The 5 most recent ADM cases waiting on your review, decision, or session work. Closed cases stay in the alerts list and count in the reports above."
         searchPlaceholder="Search student…"
-        emptyTitle="No ADM cases referred to you yet"
-        emptyHint="New ADM cases referred to you will appear here."
+        emptyTitle="No ADM cases need action"
+        emptyHint="You're all caught up — new referrals will appear here."
         rows={rows}
         renderActions={renderActions}
         riskLoading={riskLoading}
+        limit={5}
+        onRowClick={(id) => router.push(`/nurse/referrals/adm?highlight=${id}`)}
       />
 
       {formSheet && (

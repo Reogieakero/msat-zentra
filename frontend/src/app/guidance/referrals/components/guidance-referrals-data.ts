@@ -36,6 +36,10 @@ export interface CounselingSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
+  // Role behind the latest session_cancelled audit, when cancelled
+  // (backend audit trail). Adviser/subject-teacher = the withdrawal
+  // auto-cancel cascade; a desk role = that desk cancelled it.
+  cancelledByRole?: string | null;
   // When the session was booked (execution time). Falls back to
   // scheduledAt for legacy rows without it.
   createdAt: string;
@@ -82,6 +86,10 @@ export interface GuidanceReferralItem {
   // Empty when no audit trail exists (legacy rows) — callers fall back.
   lastActionAt: string;
   lastActionType: string;
+  // Role behind the dismissal, when dismissed (backend audit trail).
+  // Adviser/subject-teacher withdrawals read "Cancelled", desk decisions
+  // read "Reject". Absent when never dismissed.
+  dismissedByRole?: string | null;
 }
 
 export interface GuidanceTypeSummary {
@@ -93,6 +101,9 @@ export interface GuidanceTypeSummary {
   infoRequested?: number;
   resolved: number;
   dismissed: number;
+  // Adviser/subject-teacher withdrawals (subset of dismissed). Optional for
+  // backward-compat with cached responses predating the split.
+  cancelled?: number;
   booked: number;
   done: number;
   open: number;

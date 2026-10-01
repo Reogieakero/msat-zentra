@@ -44,6 +44,7 @@ import {
   type NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";
 import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
+import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import styles from "./NurseReferralDialogs.module.css";
 
 /* Live clock for session-gate checks below — ticks each second while the
@@ -93,6 +94,9 @@ export function ScheduleSessionDialog({
     onSuccessExtra: () => {
       onClose();
       onChanged();
+      // Instant reminder: re-evaluate the inbox now instead of waiting for
+      // the next poll tick, so the booking card drops immediately.
+      refreshBookingReminders();
     },
   });
   const acting = bookMutation.isPending;

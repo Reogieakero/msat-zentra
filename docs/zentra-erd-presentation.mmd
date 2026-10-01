@@ -1,0 +1,135 @@
+```mermaid
+erDiagram
+%% ZENTRA Capstone Presentation ERD — domain-collapsed, faithful to schema
+%% 16 boxes collapse 45 tables. Paste at https://mermaid.live
+  User {
+    UUID id PK
+    VARCHAR email "UK"
+    ENUM role "Role"
+    VARCHAR fullName
+    ENUM status "UserStatus"
+  }
+  Student {
+    UUID userId PK "FK User"
+    VARCHAR lrn "UK"
+    UUID sectionId FK "NULL"
+    VARCHAR roster "pre-account enroll"
+    VARCHAR risk "level+count"
+  }
+  ParentLink {
+    UUID userId PK "FK User"
+    UUID parentId FK
+    UUID studentId FK
+    VARCHAR relationship
+  }
+  SectionTerm {
+    UUID id PK
+    UUID schoolYearId FK
+    UUID termId FK "via Term"
+    UUID adviserId FK "NULL"
+  }
+  SubjectAssign {
+    UUID id PK
+    VARCHAR code
+    UUID teacherId FK
+    UUID sectionId FK
+    UUID termId FK
+  }
+  Grading {
+    UUID id PK
+    UUID componentId FK
+    UUID assessmentId FK
+    UUID student_xor FK "profile|xor|roster"
+    FLOAT score_transmuted
+    ENUM lockStatus "LockStatus"
+  }
+  Attendance {
+    UUID id PK
+    UUID student_xor FK "profile|xor|roster"
+    UUID sectionId FK
+    UUID subjectId FK "NULL"
+    VARCHAR status_date_slot
+  }
+  Sf10Pack {
+    UUID id PK
+    UUID studentId FK "UK 1to1"
+    ENUM status "Sf10Status"
+    UUID verifiedBy FK "NULL"
+  }
+  AnecdotalPack {
+    UUID id PK
+    UUID observerId FK
+    UUID student_xor FK "profile|xor|roster"
+    ENUM category
+    UUID folderId FK "NULL"
+  }
+  Referral {
+    UUID id PK
+    UUID anecdotalId FK
+    UUID referredBy FK
+    ENUM target_status
+    UUID student_xor FK "profile|xor|roster"
+  }
+  CounselingPack {
+    UUID id PK
+    UUID ref_xor FK "referral|xor|intervention"
+    UUID createdBy FK
+    VARCHAR status_notes
+  }
+  InterventionRisk {
+    UUID id PK
+    UUID student_xor FK "profile|xor|roster"
+    UUID assignedTo FK "NULL"
+    ENUM approval_outcome
+  }
+  HealthVisit {
+    UUID id PK
+    UUID studentId FK
+    UUID referralId FK "NULL"
+    UUID recordedBy FK
+  }
+  AdmProfile {
+    UUID id PK
+    UUID studentId FK
+    UUID referralId FK
+    ENUM stage_eligibility
+    UUID preparedBy FK
+  }
+  AdmChildren {
+    UUID id PK
+    UUID profileId FK
+    VARCHAR meeting_module_device_form
+    UUID recorder FK
+  }
+  SystemPack {
+    UUID id PK
+    UUID userId FK
+    VARCHAR action_message
+    VARCHAR snapshots "risk+report per term"
+  }
+  User ||--|| Student : "userId"
+  SectionTerm |o--o{ Student : "sectionId"
+  User ||--o{ ParentLink : "userId"
+  Student ||--o{ ParentLink : "studentId"
+  User |o--o{ SectionTerm : "adviserId"
+  User ||--o{ SubjectAssign : "teacherId"
+  SectionTerm ||--o{ SubjectAssign : "sectionId"
+  SubjectAssign ||--o{ Grading : "subjectId"
+  Student ||--o{ Grading : "xor student"
+  Student ||--o{ Attendance : "xor student"
+  SectionTerm ||--o{ Attendance : "sectionId"
+  User ||--o{ AnecdotalPack : "observerId"
+  Student ||--o{ AnecdotalPack : "xor student"
+  AnecdotalPack ||--o{ Referral : "anecdotalId"
+  Student ||--o{ Referral : "xor student"
+  Referral ||--o{ CounselingPack : "xor referral"
+  InterventionRisk ||--o{ CounselingPack : "xor intervention"
+  Student ||--o{ InterventionRisk : "xor student"
+  Student ||--o{ HealthVisit : "studentId"
+  Referral |o--o{ HealthVisit : "referralId"
+  Student ||--o{ AdmProfile : "studentId"
+  Referral ||--o{ AdmProfile : "referralId"
+  AdmProfile ||--o{ AdmChildren : "profileId"
+  Student ||--|| Sf10Pack : "studentId unique"
+  User ||--o{ SystemPack : "userId"
+```

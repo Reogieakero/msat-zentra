@@ -6,11 +6,10 @@ import { useTheme } from "@/components/providers";
 import {
   CARD_SURFACE_DARK,
   CARD_SURFACE_LIGHT,
-  LEVEL_COLORS_DARK,
-  LEVEL_COLORS_LIGHT,
   type LevelSlice,
   type RiskDesk,
 } from "./risk-dashboard-data";
+import { usePrimaryScale } from "./use-primary-scale";
 import styles from "./RiskLevels.module.css";
 
 /**
@@ -23,18 +22,26 @@ export function RiskLevels({
   mix,
   totalStudents,
   interpretation,
+  primary,
 }: {
   desk: RiskDesk;
   mix: LevelSlice[];
   totalStudents: number;
   interpretation: string;
+  /** Saved settings hex — wins over the probed runtime palette. */
+  primary?: string | null;
 }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const colors = isDark ? LEVEL_COLORS_DARK : LEVEL_COLORS_LIGHT;
+  // Live primary scale in bucket order (High → Unassessed).
+  const scale = usePrimaryScale(4, primary);
+  const colors = { High: scale[0], Moderate: scale[1], Low: scale[2], Unassessed: scale[3] };
   const surface = isDark ? CARD_SURFACE_DARK : CARD_SURFACE_LIGHT;
   return (
-    <Card className={styles.panel}>
+    <Card className={`${styles.panel} ${styles.glow}`}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
       <h2 className={styles.panelTitle}>Students by risk level</h2>
       <p className={styles.panelDesc}>
         Live levels for learners with a case on the {desk} desk.

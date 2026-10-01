@@ -4,14 +4,6 @@ import * as React from "react";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HelpCircle, Loader2 } from "lucide-react";
+import { CATEGORY_COLORS } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import type { GuidanceAnecdotalRecord } from "./guidance-anecdotal-data";
 import {
   GuidanceAnecdotalFilters,
@@ -66,6 +59,17 @@ interface GuidanceAnecdotalFoldersProps {
 function isClosedStatus(status: string): boolean {
   return status === "resolved" || status === "dismissed";
 }
+
+/* Folder body color + slip tone per category — same map as the teacher
+   repo (single source of truth in the teacher side rail, shared with the
+   legend card on this page's rail). */
+const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
+  behavioral: 1,
+  bullying: 2,
+  academic: 3,
+  attendance: 4,
+  health: 5,
+};
 
 function isEndorsedCase(type: string | undefined, status: string): boolean {
   return type === "ADM" && status === "in_progress";
@@ -117,10 +121,12 @@ function statusColor(record: GuidanceAnecdotalRecord): string {
 
 /**
  * Referred case files — one folder per referred case (same folder UI as the
- * adviser records page). Opening a folder overlays that referral's attached
- * GCForm-01 preview. Finished (resolved/dismissed) and endorsed (ADM +
- * in_progress) cases stay listed, but the full report never opens — the same
- * privacy overlays as the referrals page appear instead.
+ * adviser records page). Each folder holds only its GCForm-01 slip; session
+ * documentation lives on the separate Session Documents page.
+ * Opening a folder overlays that referral's attached GCForm-01 preview.
+ * Finished (resolved/dismissed) and endorsed (ADM + in_progress) cases stay
+ * listed, but the full report never opens — the same privacy overlays as the
+ * referrals page appear instead.
  * Guidance viewing is read-only — the sign flow never activates for this
  * role because they are never the signatory.
  */
@@ -162,11 +168,11 @@ export function GuidanceAnecdotalFolders({
 
   return (
     <>
-      <Card className={styles.panel}>
-        <CardHeader className={styles.header}>
+      <div className={styles.panel}>
+        <div className={styles.header}>
           <div className={styles.headerText}>
             <div className={styles.titleRow}>
-              <CardTitle className={styles.sectionTitle}>Referred case files</CardTitle>
+              <h2 className={styles.sectionTitle}>Referred GCForm-01 case files</h2>
               <button
                 type="button"
                 className={styles.helpBtn}
@@ -177,27 +183,33 @@ export function GuidanceAnecdotalFolders({
                 <HelpCircle aria-hidden="true" />
               </button>
             </div>
-            <CardDescription className={styles.sectionDesc}>
-              One folder per referred case — {total} record{total === 1 ? "" : "s"} referred
-              to you.
-            </CardDescription>
+            <p className={styles.sectionDesc}>
+              Every ADM and counseling case referred to you — {total} in all. Open a folder to
+              read its GCForm-01.
+            </p>
           </div>
-          <CardAction className={styles.headerActions}>
+          <div className={styles.headerActions}>
             <GuidanceAnecdotalFilters
               query={query}
               onQueryChange={onQueryChange}
               type={type}
               onTypeChange={onTypeChange}
             />
-          </CardAction>
-        </CardHeader>
-        <CardContent className={styles.content}>
+          </div>
+        </div>
+        <div className={styles.content}>
+          <div className={styles.scrollArea}>
           {records.length === 0 ? (
-            <p className={styles.empty}>No referred records match the current filters.</p>
+            <div className={styles.empty}>
+              <p className={styles.emptyTitle}>No referred records here</p>
+              <p className={styles.emptyBody}>
+                Try a different name or keyword, or clear the filter to see every referred case.
+              </p>
+            </div>
           ) : (
-             <div className={styles.studentGrid}>
+              <div className={styles.studentGrid}>
                 {records.map((record) => (
-                  <div key={record.id} className={styles.studentBlock}>
+                  <div key={record.referralId} className={styles.studentBlock}>
                     <button
                       type="button"
                       className={styles.studentFolderBtn}
@@ -217,10 +229,12 @@ export function GuidanceAnecdotalFolders({
                         <FolderCard
                           label={record.student}
                           sublabel={`${record.lrn} · ${record.section}`}
+                          folderColor={CATEGORY_COLORS[record.category]}
                           files={[
                             {
                               name: `OCForm-01_${record.date}`,
                               tag: `${humanize(record.category)} • ${timeAgo(record.date)}`,
+                              tone: CATEGORY_TONES[record.category] ?? 1,
                               icon: "doc" as const,
                             },
                           ]}
@@ -231,13 +245,14 @@ export function GuidanceAnecdotalFolders({
                 ))}
               </div>
           )}
+          </div>
           <div className={styles.pager}>
             <p className={styles.range}>
               Showing {start}–{end} of {total}
             </p>
             <div className={styles.pagerButtons}>
               <Button
-                size="xs"
+                size="sm"
                 variant="outline"
                 disabled={page <= 1 || isNavigating}
                 onClick={() => onPageChange(page - 1)}
@@ -255,7 +270,7 @@ export function GuidanceAnecdotalFolders({
                 )}
               </span>
               <Button
-                size="xs"
+                size="sm"
                 variant="outline"
                 disabled={page >= totalPages || isNavigating}
                 onClick={() => onPageChange(page + 1)}
@@ -264,8 +279,8 @@ export function GuidanceAnecdotalFolders({
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
 

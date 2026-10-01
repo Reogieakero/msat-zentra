@@ -10,6 +10,19 @@
   display: none;
 }
 
+/* Inner timeline scroll area — hidden scrollbar (the labeled pill below
+   does the job), same as the referrals track dialog. */
+.timelineScroll {
+  max-height: 52vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.timelineScroll::-webkit-scrollbar {
+  display: none;
+}
+
 .body {
   display: flex;
   flex-direction: column;

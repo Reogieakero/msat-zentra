@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { ChevronDown, Loader2, SearchIcon, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ import {
 } from "../../components/grading-data";
 import { sileo } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import scrollStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 
 const DOT: Record<string, string> = {
   WRITTEN_WORK: "bg-blue-500",
@@ -44,14 +46,38 @@ type Props = {
 export function AssessmentList({ students, components, onSelect, onDeleted }: Props) {
   const [pendingDelete, setPendingDelete] = React.useState<ClassAssessment | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
 
   const groups = components.map((c) => ({
     type: c.type,
-    assessments: [...c.assessments].sort(
-      (a, b) => +new Date(b.dateGiven) - +new Date(a.dateGiven),
-    ),
+    assessments: [...c.assessments]
+      .filter((a) =>
+        a.title.toLowerCase().includes(query.trim().toLowerCase()),
+      )
+      .sort(
+        (a, b) => +new Date(b.dateGiven) - +new Date(a.dateGiven),
+      ),
   }));
   const total = groups.reduce((n, g) => n + g.assessments.length, 0);
+  const unfilteredTotal = components.reduce((n, c) => n + c.assessments.length, 0);
+
+  // Floating scroll hint: visible only when the list overflows and the
+  // user is not at the bottom yet.
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollDown, setCanScrollDown] = React.useState(false);
+  const updateScrollHint = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      setCanScrollDown(false);
+      return;
+    }
+    setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+  }, []);
+  React.useEffect(() => {
+    updateScrollHint();
+    window.addEventListener("resize", updateScrollHint);
+    return () => window.removeEventListener("resize", updateScrollHint);
+  }, [updateScrollHint, total, query]);
 
   const scoredOf = (a: ClassAssessment) =>
     students.filter((s) => a.scores[s.id] != null).length;
@@ -72,7 +98,7 @@ export function AssessmentList({ students, components, onSelect, onDeleted }: Pr
     }
   };
 
-  if (total === 0) {
+  if (unfilteredTotal === 0) {
     return (
       <div className={`${assign.card} mx-auto w-full max-w-md`}>
         <span className={assign.glowClip} aria-hidden="true">
@@ -90,13 +116,38 @@ export function AssessmentList({ students, components, onSelect, onDeleted }: Pr
 
   return (
     <>
-    <div className="flex w-full max-w-lg min-w-0 flex-col gap-4">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+    <div className="flex min-h-[50vh] flex-1 items-center justify-center">
+    <div className={`${assign.card} relative w-full max-w-lg min-w-0`}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <p className="relative text-xs font-medium tracking-wide text-muted-foreground uppercase">
         Select assessment
       </p>
+      <InputGroup className="relative max-w-40">
+        <InputGroupInput
+          placeholder="Search assessments..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Search assessments"
+        />
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+      </InputGroup>
+      {total === 0 ? (
+        <p className="relative text-sm text-muted-foreground">
+          No assessments match &quot;{query.trim()}&quot;.
+        </p>
+      ) : null}
+      <div
+        ref={scrollRef}
+        onScroll={updateScrollHint}
+        className={`relative max-h-[55vh] min-w-0 overflow-y-auto ${scrollStyles.noScrollbar}`}
+      >
       {groups.map((g) =>
         g.assessments.length === 0 ? null : (
-          <div key={g.type} className={assign.card}>
+          <div key={g.type} className={`${assign.card} mb-3 last:mb-0`}>
             <span className={assign.glowClip} aria-hidden="true">
               <span className={assign.cardGlow} />
             </span>
@@ -153,6 +204,21 @@ export function AssessmentList({ students, components, onSelect, onDeleted }: Pr
           </div>
         ),
       )}
+      </div>
+      {canScrollDown ? (
+        <button
+          type="button"
+          onClick={() =>
+            scrollRef.current?.scrollBy({ top: 240, behavior: "smooth" })
+          }
+          aria-label="Scroll down for more assessments"
+          className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-input bg-card px-3 py-1.5 text-xs font-medium shadow-lg transition-colors hover:border-primary"
+        >
+          <ChevronDown size={14} aria-hidden="true" />
+          Scroll down
+        </button>
+      ) : null}
+    </div>
     </div>
 
       <AlertDialog
@@ -171,7 +237,7 @@ export function AssessmentList({ students, components, onSelect, onDeleted }: Pr
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel variant="destructive">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => void handleDelete()}
               className="bg-red-500 text-white hover:bg-red-600"

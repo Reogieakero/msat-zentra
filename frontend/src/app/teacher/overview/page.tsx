@@ -1,9 +1,8 @@
 ﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, ClipboardCheck, Flag, Send } from "lucide-react";
+import { BookOpen, CalendarClock, ClipboardCheck, Flag, Send } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { useLinksLayout } from "@/lib/links-layout";
 import type { DayConfig } from "@/app/teacher/schedule/components/schedule-time";
 import {
   TeacherOverviewHeader,
@@ -13,6 +12,7 @@ import {
 import { TeacherOverviewActions } from "./components/teacher-overview-actions";
 import { TeacherOverviewAnecdotes } from "./components/teacher-overview-anecdotes";
 import { TeacherOverviewAttendanceTable } from "./components/teacher-overview-attendance-table";
+import { TeacherOverviewClassStudents } from "./components/teacher-overview-class-students";
 import { TeacherOverviewRiskTable } from "./components/teacher-overview-risk-table";
 import { TeacherOverviewSkeleton } from "./components/teacher-overview-skeleton";
 import { useTeacherOverview } from "./components/teacher-overview-data";
@@ -26,11 +26,20 @@ interface LinkedSlot {
   section: { id: string; name: string; gradeLevel: string };
 }
 
-const QUICK_ACTIONS = [
+const ADVISER_QUICK_ACTIONS = [
   { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
   { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
   { title: "Flag Student", description: "Raise a concern for an advisee", href: "/teacher/grade-flags", icon: Flag },
   { title: "New Referral", description: "Refer from an anecdotal record", href: "/teacher/advisory/referrals", icon: Send },
+];
+
+// Non-advisers have no Advisory branch — point them at their own classes
+// instead of adviser-only surfaces.
+const CLASS_QUICK_ACTIONS = [
+  { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
+  { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
+  { title: "Flag Student", description: "Raise a concern for a student", href: "/teacher/grade-flags", icon: Flag },
+  { title: "My Classes", description: "Open your class timetable", href: "/teacher/classes", icon: BookOpen },
 ];
 
 export default function TeacherOverviewPage() {
@@ -39,9 +48,7 @@ export default function TeacherOverviewPage() {
   // Stale data (>30s) refetches silently in the background — the loaded UI
   // stays visible, so isPending below is only true on a genuine first load.
   const { data, isPending, isError } = useTeacherOverview();
-  // Rail pins 16px below the chrome: 4rem under the lone topbar in sidebar
-  // mode, 7rem under the topbar + tab bar in navbar mode.
-  const [linksLayout] = useLinksLayout();
+  // Sidebar-only: rail pins 16px below the lone topbar (4rem).
   const mySlotsQuery = useQuery({
     queryKey: ["teacher-my-slots"],
     queryFn: async () => {
@@ -62,7 +69,7 @@ export default function TeacherOverviewPage() {
   });
 
   if (isPending) {
-    return <TeacherOverviewSkeleton actions={QUICK_ACTIONS} />;
+    return <TeacherOverviewSkeleton actions={ADVISER_QUICK_ACTIONS} />;
   }
 
   if (isError || !data) {
@@ -73,30 +80,52 @@ export default function TeacherOverviewPage() {
     );
   }
 
+  // Non-advisers see every student in their own classes (subject-assignment
+  // datas) instead of an advisory roster they don't have — and their gauge
+  // runs off handled-subject risk (academic + attendance only), since the
+  // advisory engine has no advisees to score for them.
+  const isAdviser = !!data.advisorySection;
+  const quickActions = isAdviser ? ADVISER_QUICK_ACTIONS : CLASS_QUICK_ACTIONS;
+  const classStudents = data.classStudents ?? [];
+  const studentCount = isAdviser ? data.advisory.students.length : classStudents.length;
+  const atRiskFactors = isAdviser
+    ? data.atRiskFactors
+    : {
+        academic: classStudents.filter((s) => s.flags.includes("academic")).length,
+        attendance: classStudents.filter((s) => s.flags.includes("attendance")).length,
+        behavioral: 0,
+      };
+  const atRiskStudents = isAdviser
+    ? data.atRiskStudents
+    : classStudents.filter((s) => s.riskLevel !== "Low").length;
+
   return (
     <section className={styles.page}>
       <div className={styles.body}>
         <div className={styles.mainCol}>
-          <TeacherOverviewActions actions={QUICK_ACTIONS} />
+          <TeacherOverviewActions actions={quickActions} />
 
-          <TeacherOverviewRiskTable students={data.advisory.students} />
+          {isAdviser ? (
+            <TeacherOverviewRiskTable students={data.advisory.students} />
+          ) : (
+            <TeacherOverviewClassStudents students={classStudents} />
+          )}
 
           {data.advisorySection ? (
             <TeacherOverviewAttendanceTable sectionId={data.advisorySection.id} />
           ) : null}
 
-          <TeacherOverviewAnecdotes />
+          {/* Anecdotal filings belong to advisers only — regular teachers
+              (no advisory section) never see this panel. */}
+          {isAdviser ? <TeacherOverviewAnecdotes /> : null}
         </div>
 
-        <aside
-          className={styles.sideCol}
-          style={linksLayout === "sidebar" ? { top: "4rem" } : undefined}
-        >
+        <aside className={styles.sideCol} style={{ top: "4rem" }}>
           <TeacherOverviewHeader
             teacherName={data.teacherName}
             advisorySection={data.advisorySection}
             classCount={data.kpi.classCount}
-            studentCount={data.kpi.studentCount}
+            studentCount={studentCount}
           />
 
           <TeacherOverviewUpNext
@@ -105,9 +134,11 @@ export default function TeacherOverviewPage() {
           />
 
           <TeacherOverviewRisk
-            atRiskFactors={data.atRiskFactors}
-            atRiskStudents={data.atRiskStudents}
-            studentCount={data.advisory.students.length}
+            atRiskFactors={atRiskFactors}
+            atRiskStudents={atRiskStudents}
+            studentCount={studentCount}
+            populationLabel={isAdviser ? "advisees" : "students"}
+            hideBehavioral={!isAdviser}
           />
         </aside>
       </div>

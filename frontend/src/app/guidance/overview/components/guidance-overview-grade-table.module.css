@@ -1,8 +1,30 @@
+/* Grade attention data table — glow card shell, search header, grade rows
+   with every section of the level inlined as chips. */
+
 .card {
-  border: 1px solid var(--border);
+  position: relative;
+  overflow: visible;
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   border-radius: var(--radius-md);
-  background-color: var(--card);
-  box-shadow: none;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 .sectionTitle {
@@ -23,94 +45,143 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.searchWrap {
+  position: relative;
+  width: 16rem;
+  max-width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.search {
+  padding-left: 1.75rem;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
 }
 
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background-color: var(--card);
+  position: relative;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.75rem;
-  min-width: 36rem;
-}
-
-.table th {
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-foreground);
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
   white-space: nowrap;
 }
 
-.table td {
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-  text-align: center;
+.cellSub {
+  margin: 0.125rem 0 0;
   font-size: 0.75rem;
-  color: var(--foreground);
+  color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
-.table tr:last-child td {
-  border-bottom: none;
+.sectionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  max-width: 22rem;
 }
 
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
-}
-
-/* Inline composition graph — count plus a slim stacked bar (high-risk
-   over moderate) on the same line, so row and card heights never change. */
-.atRiskCell {
+.sectionChip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.sectionCount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
 }
 
 .atRiskCount {
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.atRiskBar {
-  width: 4.5rem;
-  height: 0.375rem;
-  border-radius: 9999px;
-  background-color: color-mix(in oklch, var(--muted-foreground) 18%, transparent);
+.muted {
+  color: var(--muted-foreground);
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:hover td {
+  background-color: color-mix(in oklch, var(--muted-foreground), transparent 94%);
+}
+
+.clickableRow:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-}
-
-.atRiskTrack {
-  display: flex;
-  height: 100%;
-  border-radius: inherit;
-  background-color: var(--chart-3);
-}
-
-.atRiskHigh {
-  height: 100%;
-  border-radius: inherit;
-  background-color: var(--destructive);
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .interpretation {
   margin: 0.75rem 0 0;
+  padding-left: 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--muted-foreground);
+  position: relative;
 }
 
-.highRisk {
-  color: var(--destructive);
+.interpretationLabel {
   font-weight: 600;
+  color: var(--foreground);
 }

@@ -16,15 +16,16 @@ import {
   Inbox,
   Cat,
   Settings,
+  Users,
   ListChecks,
   type LucideIcon,
 } from "lucide-react";
 
 import styles from "./teacher-sidebar.module.css";
 import BranchedMenu from "./nav/BranchedMenu";
-import CardNav, { type CardNavItem } from "./nav/CardNav";
-import { useLinksLayout } from "@/lib/links-layout";
+import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import {
+  useCachedAdviser,
   useCachedMasterTeacher,
   useTeacherOverview,
 } from "@/app/teacher/overview/components/teacher-overview-data";
@@ -42,100 +43,89 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Teacher nav branching: Overview (dashboard), Advisory (attendance,
-// academic, anecdotal, adm), Workspace (class, gradebook, attendance,
-// referrals, chat, + timeslot for masters), Settings (general settings).
-// Sub-routes (e.g. /teacher/schedule/[sectionId]) stay under their parent
-// via prefix matching.
-function buildNav(isMasterTeacher: boolean): NavGroup[] {
+// Teacher nav branching: Overview (dashboard), Advisory (list, attendance,
+// academic, anecdotal, referrals, adm), Workspace (class, gradebook,
+// attendance, chat, + timeslot for masters), Settings (general settings).
+// Non-advisers see only Overview, Workspace and Settings — the Advisory
+// branch unlocks once they claim a section in Settings. Chat with Bama is
+// an adviser-only filing surface (anecdotal records belong to advisers),
+// so regular subject teachers never see it.
+function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
   const workspaceItems = [
     { title: "Class", href: "/teacher/classes", icon: BookOpen },
     { title: "Gradebook", href: "/teacher/grading", icon: ClipboardCheck },
     { title: "Attendance", href: "/teacher/attendance", icon: CalendarClock },
-    { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
-    { title: "Chat with Bama", href: "/teacher/chat", icon: Cat },
   ];
+  if (isAdviser) {
+    workspaceItems.push({ title: "Chat with Bama", href: "/teacher/chat", icon: Cat });
+  }
   if (isMasterTeacher) {
     workspaceItems.push({ title: "Timeslot", href: "/teacher/schedule", icon: ListChecks });
   }
-  return [
+  const groups: NavGroup[] = [
     { label: "Overview", items: [
       { title: "Dashboard", href: "/teacher/overview", icon: LayoutDashboard },
+      { title: "Student List", href: "/teacher/overview/students", icon: Users },
       { title: "Reports", href: "/teacher/overview/reports", icon: FileText },
     ] },
-    { label: "Advisory", items: [
-      { title: "Attendance", href: "/teacher/advisory/attendance", icon: CalendarClock },
-      { title: "Academic", href: "/teacher/advisory/students", icon: GraduationCap },
-      { title: "Anecdotal", href: "/teacher/anecdotal", icon: FilePenLine },
-      { title: "ADM", href: "/teacher/advisory/adm-cases", icon: Inbox },
-      { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: CalendarDays },
-    ]},
+  ];
+  if (isAdviser) {
+    groups.push(
+      { label: "Advisory", items: [
+        { title: "Advisory List", href: "/teacher/advisory/list", icon: Users },
+        { title: "Attendance", href: "/teacher/advisory/attendance", icon: CalendarClock },
+        { title: "Academic", href: "/teacher/advisory/students", icon: GraduationCap },
+        { title: "Anecdotal", href: "/teacher/anecdotal", icon: FilePenLine },
+        { title: "Referrals", href: "/teacher/advisory/referrals", icon: Send },
+        { title: "ADM", href: "/teacher/advisory/adm-cases", icon: Inbox },
+        { title: "Class Schedule", href: "/teacher/advisory/schedule", icon: CalendarDays },
+      ]},
+    );
+  }
+  groups.push(
     { label: "Workspace", items: workspaceItems },
     { label: "Settings", items: [{ title: "General Settings", href: "/teacher/settings", icon: Settings }] },
-  ];
+  );
+  return groups;
 }
 
 export function TeacherSidebar() {
   const session = useSession();
   const overview = useTeacherOverview();
-  // First-frame value from the per-teacher cache: the Schedule tab must not
-  // pop in after a hard refresh. The live overview overwrites it on resolve.
+  // First-frame values from the per-teacher caches: tabs must not pop in/out
+  // after a hard refresh. The live overview overwrites them on resolve. While
+  // the overview is still unknown (null cache + pending), show the full nav
+  // so advisers never see their branch vanish on first paint; non-advisers
+  // settle to Overview/Workspace/Settings once the payload lands.
   const cachedMaster = useCachedMasterTeacher(session?.sub);
   const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
-  const [linksLayout] = useLinksLayout();
-  const nav = buildNav(isMasterTeacher);
+  const cachedAdviser = useCachedAdviser(session?.sub);
+  const isAdviser = overview.data?.isAdviser ?? cachedAdviser ?? true;
+  const nav = buildNav(isMasterTeacher, isAdviser);
   const tabs = nav.flatMap((group) => group.items);
+  // Sidebar-only: left branched rail on desktop, tab bar on small screens.
+  // No top navbar variant — the rail is the single desktop nav.
+  const railScrollRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Navbar mode is the CardNav top bar. Sidebar mode swaps it for a left
-  // branched rail on desktop; the tab bar still serves small screens.
-  if (linksLayout !== "sidebar") {
-    return <TeacherCardNav nav={nav} />;
-  }
   return (
     <>
       <aside className={`${styles.rail} ${styles.railDesktop}`} aria-label="Teacher sections">
-        <TeacherRail groups={nav} />
+        <div ref={railScrollRef} className={styles.railScroll}>
+          <TeacherRail groups={nav} />
+        </div>
+        <div className={styles.railHintWrap}>
+          <ScrollDownHint
+            scrollRef={railScrollRef}
+            watchKey={`${isAdviser}:${isMasterTeacher}`}
+            label="Scroll for more"
+            className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+          />
+        </div>
       </aside>
       <div className={styles.tabsMobile}>
         <TeacherNavbar tabs={tabs} />
       </div>
     </>
-  );
-}
-
-function TeacherCardNav({ nav }: { nav: NavGroup[] }) {
-  const pick = (label: string) => nav.find((g) => g.label === label)?.items ?? [];
-  const tint = (pct: number) => `color-mix(in oklch, var(--primary) ${pct}%, var(--card))`;
-  const cards: CardNavItem[] = [
-    {
-      label: "Overview",
-      bgColor: "var(--primary)",
-      textColor: "var(--primary-foreground)",
-      links: pick("Overview").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
-    },
-    {
-      label: "Advisory",
-      bgColor: tint(14),
-      textColor: "var(--foreground)",
-      links: pick("Advisory").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
-    },
-    {
-      label: "Workspace",
-      bgColor: tint(7),
-      textColor: "var(--foreground)",
-      links: pick("Workspace").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
-    },
-    {
-      label: "Settings",
-      bgColor: tint(4),
-      textColor: "var(--foreground)",
-      links: pick("Settings").map((t) => ({ label: t.title, ariaLabel: t.title, href: t.href })),
-    },
-  ];
-  return (
-    <div className={styles.cardNavWrap}>
-      <CardNav brand="Zentra" items={cards} ease="power3.out" />
-    </div>
   );
 }
 
@@ -154,7 +144,6 @@ function TeacherRail({ groups }: { groups: NavGroup[] }) {
   const defaultOpen = groups.map((_, i) => i);
   return (
     <BranchedMenu
-      accentColor="#f59e0b"
       items={groups.map((group) => ({
         label: group.label,
         children: group.items.map((t) => ({

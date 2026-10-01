@@ -41,6 +41,36 @@ function formatCountdown(ms: number): string {
   return parts.join(" ");
 }
 
+/* Display-level live state — the DB only knows scheduled/completed/
+// cancelled, so "ongoing" is derived from the clock: a scheduled session
+// whose time arrived reads Ongoing until someone marks it done. */
+export type LiveSessionState = "completed" | "cancelled" | "ongoing" | "upcoming";
+
+export function liveSessionState(
+  status: string,
+  scheduledAt: string,
+  now: number
+): LiveSessionState {
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  const target = new Date(scheduledAt).getTime();
+  if (Number.isFinite(target) && target <= now) return "ongoing";
+  return "upcoming";
+}
+
+export function liveSessionLabel(state: LiveSessionState): string {
+  switch (state) {
+    case "completed":
+      return "Done";
+    case "cancelled":
+      return "Cancelled";
+    case "ongoing":
+      return "Ongoing";
+    default:
+      return "Upcoming";
+  }
+}
+
 interface CounselingPlanProps {
   followUp: StudentFollowUp;
   studentFirstName: string;
@@ -92,6 +122,10 @@ export function CounselingPlan({
 
   return (
     <div className={styles.plan}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
+      <div className={styles.planBody}>
       <div className={styles.planHead}>
         <p className={styles.blockLabel}>Counseling plan</p>
       </div>
@@ -115,6 +149,7 @@ export function CounselingPlan({
         <ul className={styles.sessionList}>
           {followUp.sessions.map((s) => {
             const target = new Date(s.scheduledAt).getTime();
+            const live = liveSessionState(s.status, s.scheduledAt, now);
             const started =
               s.status === "completed" ||
               (Number.isFinite(target) && target <= now);
@@ -128,18 +163,13 @@ export function CounselingPlan({
               <li key={s.id} className={styles.session}>
                 <div className={styles.sessionTop}>
                   <span className={styles.srOnly}>
-                    Status:{" "}
-                    {s.status === "completed"
-                      ? "Done"
-                      : s.status === "cancelled"
-                        ? "Cancelled"
-                        : "Upcoming"}
+                    Status: {liveSessionLabel(live)}
                   </span>
                   <p className={styles.topCountdown} aria-live="off">
                     {s.status === "scheduled" && Number.isFinite(target)
                       ? target > now
                         ? `Starts in ${formatCountdown(target - now)}`
-                        : "Starting now"
+                        : "Ongoing now"
                       : null}
                   </p>
                 </div>
@@ -150,15 +180,13 @@ export function CounselingPlan({
                         ? styles.watermarkDone
                         : s.status === "cancelled"
                           ? styles.watermarkCancelled
-                          : styles.watermarkUpcoming
+                          : live === "ongoing"
+                            ? styles.watermarkOngoing
+                            : styles.watermarkUpcoming
                     }`}
                     aria-hidden="true"
                   >
-                    {s.status === "completed"
-                      ? "Done"
-                      : s.status === "cancelled"
-                        ? "Cancelled"
-                        : "Upcoming"}
+                    {liveSessionLabel(live)}
                   </p>
                   <p className={styles.sessionTitle}>
                     <span className={styles.titleLabel}>Session kind:</span>
@@ -277,6 +305,7 @@ export function CounselingPlan({
           )}
         </div>
       )}
+      </div>
       {docsFor && (
         <InterventionSessionDocsDialog
           followUpId={followUp.id}

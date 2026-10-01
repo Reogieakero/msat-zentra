@@ -28,6 +28,7 @@ import {
   type DayAgg,
 } from "../../services/attendance.js";
 import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
+import { sweepAutoAbsent } from "../../services/autoAbsent.js";
 import { rosterCountsByGrade, sectionHeadcounts } from "../../services/enrollment.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 
@@ -139,6 +140,18 @@ router.post(
       const sections = await adviserSectionsOr404(teacherId);
       if (!sections.some((s) => s.id === sectionId)) {
         throw new AppError(403, "FORBIDDEN", "Section is not in your advisory");
+      }
+      // Per-term verification gate: advisory sheets need this term's grant.
+      const legacyGrant = await prisma.teacherTermGrant.findUnique({
+        where: { userId_termId: { userId: teacherId, termId } },
+        select: { id: true },
+      });
+      if (!legacyGrant) {
+        throw new AppError(
+          403,
+          "TERM_NOT_VERIFIED",
+          "Continue as adviser for this term to take attendance"
+        );
       }
 
       // 2. Date rules (Philippines calendar day): no future, no weekends,
@@ -288,8 +301,9 @@ router.post(
         sourceId: `${sectionId}|${recordDay}|${legacySession}`,
         reason: `Bulk attendance: ${written.length} marks (${legacySession} ${recordDay})`,
       });
-      // Attendance stats feed cached overview/teacher pages.
-      await invalidateTags(["overview", "principal", "teacher"]);
+      // Attendance stats feed cached overview/teacher pages; recomputes
+      // above can open guidance interventions + risk levels.
+      await invalidateTags(["overview", "principal", "teacher", "risk", "guidance"]);
 
       res.status(201).json({ count: written.length });
     } catch (e) { next(e); }
@@ -318,6 +332,29 @@ interface SubjectBulkInput {
 // Duplicate prevention: unique (student|roster, subjectId, dateDay, slot).
 async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
   const { teacherId, callerRole, sectionId, termId, subjectId, assignmentId, slot, date, records, res } = input;
+
+  // 0. Per-term verification gate (auth flow per term): this term must hold
+  // a grant row for the caller. Advisory-section sheets open on any grant;
+  // code-linked sections additionally require the verified code unlock.
+  const grant = await prisma.teacherTermGrant.findUnique({
+    where: { userId_termId: { userId: teacherId, termId } },
+    select: { via: true, attendanceVerifiedAt: true },
+  });
+  if (!grant) {
+    throw new AppError(
+      403,
+      "TERM_NOT_VERIFIED",
+      "Verify this term to take attendance — enter your code or continue as adviser for this term"
+    );
+  }
+  const advisoryIds = await adviserSectionsOr404(teacherId).catch(() => [] as { id: string }[]);
+  if (!advisoryIds.some((s) => s.id === sectionId) && !grant.attendanceVerifiedAt) {
+    throw new AppError(
+      403,
+      "TERM_NOT_VERIFIED",
+      "Verify your teacher code for this term to take attendance in this section"
+    );
+  }
 
   // 1. Subject must be offered in this section+term.
   const offerings = await prisma.teacherSubjectAssignment.findMany({
@@ -515,7 +552,7 @@ async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
     sourceId: `${sectionId}|${subjectId}|${recordDay}|slot${slot}`,
     reason: `Bulk subject attendance: ${written.length} marks (${subjectLabel} ${recordDay} slot ${slot})`,
   });
-  await invalidateTags(["overview", "principal", "teacher", "risk", "reports"]);
+  await invalidateTags(["overview", "principal", "teacher", "risk", "reports", "guidance"]);
 
   res.status(201).json({ count: written.length, subjectId, slot });
   // The section adviser learns in realtime (toast + bell) that per-subject
@@ -542,7 +579,23 @@ async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
 }
 
 const GRADE_ORDER = ["G7", "G8", "G9", "G10", "G11", "G12"] as const;
-const GRADE_LABEL: Record<string, string> = {
+
+// Manual auto-absent sweep: materialize absent rows for elapsed subject
+// meetups the teacher never took (same run the hourly job performs).
+// Principal-gated; idempotent — re-runs create nothing new.
+router.post(
+  "/sweep-absent",
+  requireAuth,
+  requireRole("principal"),
+  async (_req, res, next) => {
+    try {
+      const result = await sweepAutoAbsent();
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);const GRADE_LABEL: Record<string, string> = {
   G7: "Grade 7",
   G8: "Grade 8",
   G9: "Grade 9",

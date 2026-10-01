@@ -1,11 +1,12 @@
 "use client";
 
-import * as React from "react";
 import {
   COMPONENT_NAMES,
   bandForGrade,
-  categoryWork,
+  computeSubjectGrade,
+  subjectEvidence,
   type ClassDetail,
+  type ComponentType,
 } from "../../components/grading-data";
 import { WeightsVisual } from "./WeightsVisual";
 import styles from "./SolutionContent.module.css";
@@ -17,11 +18,8 @@ type Props = {
 
 export function SolutionContent({ detail, studentId }: Props) {
   const student = detail.students.find((s) => s.id === studentId);
-  const work = categoryWork(detail.components, studentId);
-  const computed = work.reduce((s, w) => s + w.contribution, 0);
-  const band = bandForGrade(computed);
-  const remarks = band.grade >= 75 ? "Passed" : "Failed";
-  const hasScores = work.some((w) => w.parts.length > 0);
+  const result = computeSubjectGrade(subjectEvidence(detail.components, studentId));
+  const hasScores = result.encodedAssessments > 0;
   const fmt = (n: number, digits = 2) => n.toFixed(digits);
 
   if (!hasScores) {
@@ -30,60 +28,77 @@ export function SolutionContent({ detail, studentId }: Props) {
     );
   }
 
+  const band =
+    result.computedAverage !== null ? bandForGrade(result.computedAverage) : null;
+  const remarks = result.transmutedGrade == null
+    ? "No grade yet"
+    : result.transmutedGrade >= 75
+      ? "Passed"
+      : "Failed";
+
   return (
     <div className={styles.form}>
       <p className={styles.stepTitle}>Category weights — DepEd Order No. 8</p>
       <WeightsVisual
-        ww={work.find((w) => w.type === "WRITTEN_WORK")?.weight ?? 0}
-        pt={work.find((w) => w.type === "PERFORMANCE_TASK")?.weight ?? 0}
-        exam={work.find((w) => w.type === "EXAM")?.weight ?? 0}
+        ww={result.categories.find((c) => c.componentType === "WRITTEN_WORK")?.configuredWeight ?? 0}
+        pt={result.categories.find((c) => c.componentType === "PERFORMANCE_TASK")?.configuredWeight ?? 0}
+        exam={result.categories.find((c) => c.componentType === "EXAM")?.configuredWeight ?? 0}
       />
-      {work.map((w, wi) => (
-        <div key={w.type} className={styles.stepBlock}>
+      {result.categories.map((c, ci) => (
+        <div key={c.componentType} className={styles.stepBlock}>
           <p className={styles.stepTitle}>
-            Step {wi + 1} · {COMPONENT_NAMES[w.type]} (weight {w.weight}%)
+            Step {ci + 1} · {COMPONENT_NAMES[c.componentType as ComponentType]} (configured {c.configuredWeight}
+            %, normalized {fmt(c.normalizedWeight)}%)
           </p>
-          {w.parts.length === 0 ? (
-            <p className={styles.workLine}>No scores yet → average 0</p>
+          {c.assessmentCount === 0 ? (
+            <p className={styles.workLine}>No assessments — N/A, excluded from the grade.</p>
           ) : (
             <>
-              {w.parts.map((p) => (
-                <p key={p.title} className={styles.workLine}>
-                  {p.title}: {p.raw}/{p.max} = {fmt(p.ps, 1)}%
-                </p>
-              ))}
+              {detail.components
+                .find((x) => x.type === c.componentType)
+                ?.assessments.filter((a) => a.scores[studentId] != null)
+                .map((a) => (
+                  <p key={a.id} className={styles.workLine}>
+                    {a.title}: {a.scores[studentId]}/{a.maxScore} ={" "}
+                    {a.maxScore > 0 ? fmt(((a.scores[studentId] ?? 0) / a.maxScore) * 100, 1) : "—"}%
+                  </p>
+                ))}
               <p className={styles.workLine}>
-                Average:{" "}
-                {w.parts.length > 1
-                  ? `(${w.parts.map((p) => fmt(p.ps, 1)).join(" + ")}) ÷ ${w.parts.length} = `
-                  : ""}
-                {fmt(w.average)}%
+                {c.encodedCount} of {c.assessmentCount} encoded
+                {c.coverage !== null ? ` (coverage ${fmt(c.coverage * 100, 1)}%)` : ""}
               </p>
+              {c.percentage === null ? (
+                <p className={styles.workLine}>Nothing encoded yet — N/A, excluded.</p>
+              ) : (
+                <p className={styles.workLine}>
+                  {fmt(c.percentage)}% × effective {fmt(c.effectiveWeight)}% ={" "}
+                  <b>{fmt((c.percentage * c.effectiveWeight) / 100)}</b>
+                </p>
+              )}
             </>
           )}
-          <p className={styles.workLine}>
-            Contributes {fmt(w.average)} × {w.weight}% = <b>{fmt(w.contribution)}</b>
-          </p>
         </div>
       ))}
 
       <div className={styles.stepBlock}>
-        <p className={styles.stepTitle}>Step {work.length + 1} · Add them up</p>
+        <p className={styles.stepTitle}>Step {result.categories.length + 1} · Weighted raw grade</p>
         <p className={styles.workLine}>
-          {work.map((w) => fmt(w.contribution)).join(" + ")} = <b>{fmt(computed)}</b>
+          {result.rawGrade !== null ? <b>{fmt(result.rawGrade)}</b> : "N/A — no encoded scores"}
         </p>
       </div>
 
-      <div className={styles.stepBlock}>
-        <p className={styles.stepTitle}>Step {work.length + 2} · Transmute (DepEd table)</p>
-        <p className={styles.workLine}>
-          {fmt(computed)} falls in {band.low.toFixed(2)}–{band.high.toFixed(2)} →{" "}
-          <b>{band.grade}</b>
-        </p>
-        <p className={styles.workLine}>
-          {band.grade} {band.grade >= 75 ? "≥" : "<"} 75 → <b>{remarks}</b>
-        </p>
-      </div>
+      {band && result.computedAverage !== null && result.transmutedGrade !== null ? (
+        <div className={styles.stepBlock}>
+          <p className={styles.stepTitle}>Step {result.categories.length + 2} · Transmute (DepEd table)</p>
+          <p className={styles.workLine}>
+            {fmt(result.computedAverage)} falls in {band.low.toFixed(2)}–{band.high.toFixed(2)} →{" "}
+            <b>{band.grade}</b>
+          </p>
+          <p className={styles.workLine}>
+            {band.grade} {band.grade >= 75 ? "≥" : "<"} 75 → <b>{remarks}</b>
+          </p>
+        </div>
+      ) : null}
 
       <p className={styles.hint}>
         {student ? `Solved for ${student.name}. ` : ""}Matches the saved final grade once scores

@@ -17,6 +17,7 @@ const NURSE_KEYS = [
   ["nurse-overview"],
   ["nurse-risk"],
   ["nurse-risk-levels"],
+  ["nurse-risk-factors"],
   ["nurse-notifications"],
 ] as const;
 
@@ -38,17 +39,53 @@ interface NurseInboxRow {
   createdAt: string;
 }
 
-// Poll safety net (mirrors the coordinator desk): auth-gated REST is the only
-// recipient-safe way to learn about inbox rows, so a missed realtime tick can
-// never leave the bell stale for long.
-const FALLBACK_POLL_MS = 30_000;
+// Inbox poll cadence (mirrors the coordinator desk): auth-gated REST is the
+// recipient-safe way to learn about inbox rows. Kept short so referred cases
+// toast within seconds even when the realtime tick never arrives — cheap
+// indexed query, rows already seen are skipped.
+const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_SYNC = 3;
+
+/** Self-confirmation receipts the nurse wrote themselves — these land in
+ *  the bell inbox but must never pop a second sileo (the mutation already
+ *  showed a success toast). Matched by message since every referral fanout
+ *  shares type `referral_status_change`. Strings mirror referrals.routes.ts
+ *  nurse self fanouts verbatim. */
+function isSelfReceipt(n: NurseInboxRow): boolean {
+  return /^you (accepted|booked|completed|rescheduled|cancelled|marked|requested|set|started|closed|moved|endorsed|forwarded|did not endorse)\b/i.test(
+    n.message ?? "",
+  );
+}
 
 function toastTitleFor(n: NurseInboxRow): string {
   if (/clinic referral submitted/i.test(n.message)) return "New clinic referral";
+  if (/referred to the clinic/i.test(n.message)) return "New clinic referral";
   if (/escalated to the clinic/i.test(n.message)) return "Case escalated to you";
   if (/reassigned to the clinic/i.test(n.message)) return "Case reassigned to you";
+  if (/needs consultation review/i.test(n.message)) return "Consultation review needed";
+  if (/under your review was withdrawn/i.test(n.message)) return "Referral withdrawn";
+  if (/withdrawn by the filing teacher/i.test(n.message)) return "Referral withdrawn by teacher";
+  if (/re-submitted/i.test(n.message)) return "Referral re-submitted";
   if (/clinic accepted/i.test(n.message)) return "Referral update";
+  if (/you accepted a clinic referral/i.test(n.message)) return "Clinic referral accepted";
+  if (/you booked a clinic session/i.test(n.message)) return "Clinic session booked";
+  if (/you completed a clinic session/i.test(n.message)) return "Clinic session completed";
+  if (/you completed a session and set a follow-up/i.test(n.message)) return "Follow-up set";
+  if (/you rescheduled a clinic session/i.test(n.message)) return "Clinic session rescheduled";
+  if (/you cancelled a clinic session/i.test(n.message)) return "Clinic session cancelled";
+  if (/you marked .* resolved/i.test(n.message)) return "Clinic referral resolved";
+  if (/you requested more info/i.test(n.message)) return "Info requested";
+  if (/you set a follow-up/i.test(n.message)) return "Follow-up set";
+  if (/you started handling/i.test(n.message)) return "Handling started";
+  if (/you closed a clinic referral/i.test(n.message)) return "Referral closed";
+  if (/you moved .* pending/i.test(n.message)) return "Moved to pending";
+  if (/you endorsed an ADM consultation/i.test(n.message)) return "ADM endorsed";
+  if (/you forwarded an ADM referral/i.test(n.message)) return "Sent to coordinator";
+  if (/you did not endorse/i.test(n.message)) return "ADM referral closed";
+  if (/you completed the referral form/i.test(n.message)) return "Referral form completed";
+  // Cross-desk booking on a shared ADM case (the other desk booked) — the
+  // reviewer learns live with the same title as a clinic booking.
+  if (/guidance booked a session/i.test(n.message)) return "Guidance session booked";
   return "New notification";
 }
 
@@ -117,11 +154,17 @@ export function useNurseRealtime(enabled = true) {
       if (rows.length === 0) return;
       // Initiator echo guard + per-sync toast throttle.
       if (wasRecentLocalMutation()) return;
+      // Own receipts already showed a success toast at mutation time — bell
+      // inbox keeps the row (badge still updates via setQueryData), but no
+      // second sileo. Filtered by message so the guard holds even when the
+      // poll lands after the 5s local-mutation window.
+      const toToast = rows.filter((n) => !isSelfReceipt(n));
+      if (toToast.length === 0) return;
       const now = Date.now();
       if (now - lastToasted.current < 8000) return;
       lastToasted.current = now;
       // Oldest first so the newest toast stays on top.
-      const ordered = [...rows].reverse().slice(0, MAX_TOASTS_PER_SYNC);
+      const ordered = [...toToast].reverse().slice(0, MAX_TOASTS_PER_SYNC);
       for (const n of ordered) {
         toast.info({ title: toastTitleFor(n), description: n.message });
       }
@@ -136,7 +179,6 @@ export function useNurseRealtime(enabled = true) {
         const { data } = await apiClient.get<NurseInboxRow[]>("/api/notifications/");
         if (cancelled || !Array.isArray(data)) return;
         queryClient.setQueryData(["nurse-notifications"], data);
-        void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
         if (!seeded.current) {
           for (const n of data) seenIds.current.add(n.id);
           seeded.current = true;
@@ -144,6 +186,14 @@ export function useNurseRealtime(enabled = true) {
         }
         const fresh = data.filter((n) => !seenIds.current.has(n.id));
         for (const n of data) seenIds.current.add(n.id);
+        // Only refetch the case list when something actually arrived for
+        // this nurse — otherwise the 5s poll would re-render (and visibly
+        // shift) the alerts table even when nothing changed. Genuine table
+        // writes still invalidate through the Referral/session bindings,
+        // and reconnects reconcile unconditionally.
+        if (fresh.length > 0) {
+          void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
+        }
         if (reason !== "seed") toastRows(fresh);
       } catch {
         // Offline / unauthorized — the next tick or reconnect covers it.

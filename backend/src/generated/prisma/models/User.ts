@@ -261,6 +261,8 @@ export type UserWhereInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryListRelationFilter
   reviewedTimetables?: Prisma.SectionTimetableEntryListRelationFilter
   teacherName?: Prisma.XOR<Prisma.TeacherNameNullableScalarRelationFilter, Prisma.TeacherNameWhereInput> | null
+  termGrants?: Prisma.TeacherTermGrantListRelationFilter
+  archivedAdvisees?: Prisma.AdviserArchivedStudentListRelationFilter
   gradeFlagsRaised?: Prisma.GradeFlagListRelationFilter
   gradeFlagsOwned?: Prisma.GradeFlagListRelationFilter
   gradeFlagsResolved?: Prisma.GradeFlagListRelationFilter
@@ -309,6 +311,8 @@ export type UserOrderByWithRelationInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryOrderByRelationAggregateInput
   reviewedTimetables?: Prisma.SectionTimetableEntryOrderByRelationAggregateInput
   teacherName?: Prisma.TeacherNameOrderByWithRelationInput
+  termGrants?: Prisma.TeacherTermGrantOrderByRelationAggregateInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentOrderByRelationAggregateInput
   gradeFlagsRaised?: Prisma.GradeFlagOrderByRelationAggregateInput
   gradeFlagsOwned?: Prisma.GradeFlagOrderByRelationAggregateInput
   gradeFlagsResolved?: Prisma.GradeFlagOrderByRelationAggregateInput
@@ -360,6 +364,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   submittedTimetables?: Prisma.SectionTimetableEntryListRelationFilter
   reviewedTimetables?: Prisma.SectionTimetableEntryListRelationFilter
   teacherName?: Prisma.XOR<Prisma.TeacherNameNullableScalarRelationFilter, Prisma.TeacherNameWhereInput> | null
+  termGrants?: Prisma.TeacherTermGrantListRelationFilter
+  archivedAdvisees?: Prisma.AdviserArchivedStudentListRelationFilter
   gradeFlagsRaised?: Prisma.GradeFlagListRelationFilter
   gradeFlagsOwned?: Prisma.GradeFlagListRelationFilter
   gradeFlagsResolved?: Prisma.GradeFlagListRelationFilter
@@ -442,6 +448,8 @@ export type UserCreateInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -490,6 +498,8 @@ export type UserUncheckedCreateInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -538,6 +548,8 @@ export type UserUpdateInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -586,6 +598,8 @@ export type UserUncheckedUpdateInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -827,6 +841,34 @@ export type UserUpdateOneWithoutTeacherNameNestedInput = {
   delete?: Prisma.UserWhereInput | boolean
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTeacherNameInput, Prisma.UserUpdateWithoutTeacherNameInput>, Prisma.UserUncheckedUpdateWithoutTeacherNameInput>
+}
+
+export type UserCreateNestedOneWithoutTermGrantsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTermGrantsInput, Prisma.UserUncheckedCreateWithoutTermGrantsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTermGrantsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutTermGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTermGrantsInput, Prisma.UserUncheckedCreateWithoutTermGrantsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTermGrantsInput
+  upsert?: Prisma.UserUpsertWithoutTermGrantsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTermGrantsInput, Prisma.UserUpdateWithoutTermGrantsInput>, Prisma.UserUncheckedUpdateWithoutTermGrantsInput>
+}
+
+export type UserCreateNestedOneWithoutArchivedAdviseesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutArchivedAdviseesInput, Prisma.UserUncheckedCreateWithoutArchivedAdviseesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutArchivedAdviseesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutArchivedAdviseesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutArchivedAdviseesInput, Prisma.UserUncheckedCreateWithoutArchivedAdviseesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutArchivedAdviseesInput
+  upsert?: Prisma.UserUpsertWithoutArchivedAdviseesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutArchivedAdviseesInput, Prisma.UserUpdateWithoutArchivedAdviseesInput>, Prisma.UserUncheckedUpdateWithoutArchivedAdviseesInput>
 }
 
 export type UserCreateNestedOneWithoutGradeFlagsRaisedInput = {
@@ -1249,6 +1291,8 @@ export type UserCreateWithoutStudentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1296,6 +1340,8 @@ export type UserUncheckedCreateWithoutStudentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1359,6 +1405,8 @@ export type UserUpdateWithoutStudentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -1406,6 +1454,8 @@ export type UserUncheckedUpdateWithoutStudentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -1453,6 +1503,8 @@ export type UserCreateWithoutParentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1500,6 +1552,8 @@ export type UserUncheckedCreateWithoutParentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1563,6 +1617,8 @@ export type UserUpdateWithoutParentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -1610,6 +1666,8 @@ export type UserUncheckedUpdateWithoutParentProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -1657,6 +1715,8 @@ export type UserCreateWithoutStaffProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1704,6 +1764,8 @@ export type UserUncheckedCreateWithoutStaffProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1767,6 +1829,8 @@ export type UserUpdateWithoutStaffProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -1814,6 +1878,8 @@ export type UserUncheckedUpdateWithoutStaffProfileInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -1861,6 +1927,8 @@ export type UserCreateWithoutSectionsAdvisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -1908,6 +1976,8 @@ export type UserUncheckedCreateWithoutSectionsAdvisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -1971,6 +2041,8 @@ export type UserUpdateWithoutSectionsAdvisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2018,6 +2090,8 @@ export type UserUncheckedUpdateWithoutSectionsAdvisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2065,6 +2139,8 @@ export type UserCreateWithoutTeacherAssignmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2112,6 +2188,8 @@ export type UserUncheckedCreateWithoutTeacherAssignmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2175,6 +2253,8 @@ export type UserUpdateWithoutTeacherAssignmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2222,6 +2302,8 @@ export type UserUncheckedUpdateWithoutTeacherAssignmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2269,6 +2351,8 @@ export type UserCreateWithoutSubmittedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2316,6 +2400,8 @@ export type UserUncheckedCreateWithoutSubmittedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2368,6 +2454,8 @@ export type UserCreateWithoutReviewedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2415,6 +2503,8 @@ export type UserUncheckedCreateWithoutReviewedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2478,6 +2568,8 @@ export type UserUpdateWithoutSubmittedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2525,6 +2617,8 @@ export type UserUncheckedUpdateWithoutSubmittedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2583,6 +2677,8 @@ export type UserUpdateWithoutReviewedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2630,6 +2726,8 @@ export type UserUncheckedUpdateWithoutReviewedTimetablesInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2677,6 +2775,8 @@ export type UserCreateWithoutTeacherNameInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -2724,6 +2824,8 @@ export type UserUncheckedCreateWithoutTeacherNameInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -2787,6 +2889,8 @@ export type UserUpdateWithoutTeacherNameInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -2834,6 +2938,432 @@ export type UserUncheckedUpdateWithoutTeacherNameInput = {
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutTermGrantsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutTermGrantsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutTermGrantsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutTermGrantsInput, Prisma.UserUncheckedCreateWithoutTermGrantsInput>
+}
+
+export type UserUpsertWithoutTermGrantsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutTermGrantsInput, Prisma.UserUncheckedUpdateWithoutTermGrantsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutTermGrantsInput, Prisma.UserUncheckedCreateWithoutTermGrantsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutTermGrantsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutTermGrantsInput, Prisma.UserUncheckedUpdateWithoutTermGrantsInput>
+}
+
+export type UserUpdateWithoutTermGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutTermGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserCreateWithoutArchivedAdviseesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserUncheckedCreateWithoutArchivedAdviseesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  role: $Enums.Role
+  fullName: string
+  contactNumber?: string | null
+  lrn?: string | null
+  status?: $Enums.UserStatus
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  createdAt?: Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  parentProfile?: Prisma.ParentProfileUncheckedCreateNestedOneWithoutUserInput
+  staffProfile?: Prisma.StaffProfileUncheckedCreateNestedOneWithoutUserInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutObserverInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedCreateNestedManyWithoutOwnerInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedCreateNestedManyWithoutFollowupUserInput
+  referralsMade?: Prisma.ReferralUncheckedCreateNestedManyWithoutReferredByUserInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutCreatorInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedCreateNestedManyWithoutUploaderInput
+  assignedInterventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutAssigneeInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutRecorderInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutCertifierInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutPreparedByUserInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutApprovedByUserInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedCreateNestedManyWithoutRecorderInput
+  admModules?: Prisma.AdmModuleUncheckedCreateNestedManyWithoutRecorderInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedCreateNestedManyWithoutIssuerInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedCreateNestedManyWithoutUploaderInput
+  sf10Records?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedCreateNestedManyWithoutValidatedByUserInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedCreateNestedManyWithoutChangerInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  sectionsAdvised?: Prisma.SectionUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutAdviserInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedCreateNestedManyWithoutDecidedByUserInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTeacherInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
+  teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
+  gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
+  gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
+}
+
+export type UserCreateOrConnectWithoutArchivedAdviseesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutArchivedAdviseesInput, Prisma.UserUncheckedCreateWithoutArchivedAdviseesInput>
+}
+
+export type UserUpsertWithoutArchivedAdviseesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutArchivedAdviseesInput, Prisma.UserUncheckedUpdateWithoutArchivedAdviseesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutArchivedAdviseesInput, Prisma.UserUncheckedCreateWithoutArchivedAdviseesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutArchivedAdviseesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutArchivedAdviseesInput, Prisma.UserUncheckedUpdateWithoutArchivedAdviseesInput>
+}
+
+export type UserUpdateWithoutArchivedAdviseesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
+  gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
+  gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutArchivedAdviseesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  contactNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lrn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  parentProfile?: Prisma.ParentProfileUncheckedUpdateOneWithoutUserNestedInput
+  staffProfile?: Prisma.StaffProfileUncheckedUpdateOneWithoutUserNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutObserverNestedInput
+  anecdotalFolders?: Prisma.AnecdotalFolderUncheckedUpdateManyWithoutOwnerNestedInput
+  anecdotalFollowups?: Prisma.AnecdotalRecordFollowupUncheckedUpdateManyWithoutFollowupUserNestedInput
+  referralsMade?: Prisma.ReferralUncheckedUpdateManyWithoutReferredByUserNestedInput
+  sessionsCreated?: Prisma.CounselingSessionUncheckedUpdateManyWithoutCreatorNestedInput
+  sessionAttachments?: Prisma.ClinicSessionAttachmentUncheckedUpdateManyWithoutUploaderNestedInput
+  assignedInterventions?: Prisma.InterventionUncheckedUpdateManyWithoutAssigneeNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutRecorderNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutCertifierNestedInput
+  admProfilesPrepared?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutPreparedByUserNestedInput
+  admProfilesApproved?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutApprovedByUserNestedInput
+  admMeetings?: Prisma.AdmParentMeetingUncheckedUpdateManyWithoutRecorderNestedInput
+  admModules?: Prisma.AdmModuleUncheckedUpdateManyWithoutRecorderNestedInput
+  admDevicesIssued?: Prisma.AdmDeviceUncheckedUpdateManyWithoutIssuerNestedInput
+  admFormsUploaded?: Prisma.AdmFormUncheckedUpdateManyWithoutUploaderNestedInput
+  sf10Records?: Prisma.Sf10RecordUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  sf10Validated?: Prisma.Sf10RecordUncheckedUpdateManyWithoutValidatedByUserNestedInput
+  sf10Versions?: Prisma.Sf10RecordVersionUncheckedUpdateManyWithoutChangerNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  sectionsAdvised?: Prisma.SectionUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessRequests?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutAdviserNestedInput
+  sf10AccessDecided?: Prisma.AdviserSf10AccessRequestUncheckedUpdateManyWithoutDecidedByUserNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTeacherNestedInput
+  submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
+  reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
+  teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -2882,6 +3412,8 @@ export type UserCreateWithoutGradeFlagsRaisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
 }
@@ -2929,6 +3461,8 @@ export type UserUncheckedCreateWithoutGradeFlagsRaisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
 }
@@ -2981,6 +3515,8 @@ export type UserCreateWithoutGradeFlagsOwnedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
 }
@@ -3028,6 +3564,8 @@ export type UserUncheckedCreateWithoutGradeFlagsOwnedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
 }
@@ -3080,6 +3618,8 @@ export type UserCreateWithoutGradeFlagsResolvedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
 }
@@ -3127,6 +3667,8 @@ export type UserUncheckedCreateWithoutGradeFlagsResolvedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
 }
@@ -3190,6 +3732,8 @@ export type UserUpdateWithoutGradeFlagsRaisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -3237,6 +3781,8 @@ export type UserUncheckedUpdateWithoutGradeFlagsRaisedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -3295,6 +3841,8 @@ export type UserUpdateWithoutGradeFlagsOwnedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -3342,6 +3890,8 @@ export type UserUncheckedUpdateWithoutGradeFlagsOwnedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
 }
@@ -3400,6 +3950,8 @@ export type UserUpdateWithoutGradeFlagsResolvedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
 }
@@ -3447,6 +3999,8 @@ export type UserUncheckedUpdateWithoutGradeFlagsResolvedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
 }
@@ -3493,6 +4047,8 @@ export type UserCreateWithoutAnecdotalRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -3540,6 +4096,8 @@ export type UserUncheckedCreateWithoutAnecdotalRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -3603,6 +4161,8 @@ export type UserUpdateWithoutAnecdotalRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -3650,6 +4210,8 @@ export type UserUncheckedUpdateWithoutAnecdotalRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -3697,6 +4259,8 @@ export type UserCreateWithoutAnecdotalFoldersInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -3744,6 +4308,8 @@ export type UserUncheckedCreateWithoutAnecdotalFoldersInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -3807,6 +4373,8 @@ export type UserUpdateWithoutAnecdotalFoldersInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -3854,6 +4422,8 @@ export type UserUncheckedUpdateWithoutAnecdotalFoldersInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -3901,6 +4471,8 @@ export type UserCreateWithoutAnecdotalFollowupsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -3948,6 +4520,8 @@ export type UserUncheckedCreateWithoutAnecdotalFollowupsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4011,6 +4585,8 @@ export type UserUpdateWithoutAnecdotalFollowupsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4058,6 +4634,8 @@ export type UserUncheckedUpdateWithoutAnecdotalFollowupsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4105,6 +4683,8 @@ export type UserCreateWithoutReferralsMadeInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4152,6 +4732,8 @@ export type UserUncheckedCreateWithoutReferralsMadeInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4215,6 +4797,8 @@ export type UserUpdateWithoutReferralsMadeInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4262,6 +4846,8 @@ export type UserUncheckedUpdateWithoutReferralsMadeInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4309,6 +4895,8 @@ export type UserCreateWithoutSessionsCreatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4356,6 +4944,8 @@ export type UserUncheckedCreateWithoutSessionsCreatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4419,6 +5009,8 @@ export type UserUpdateWithoutSessionsCreatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4466,6 +5058,8 @@ export type UserUncheckedUpdateWithoutSessionsCreatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4513,6 +5107,8 @@ export type UserCreateWithoutSessionAttachmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4560,6 +5156,8 @@ export type UserUncheckedCreateWithoutSessionAttachmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4623,6 +5221,8 @@ export type UserUpdateWithoutSessionAttachmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4670,6 +5270,8 @@ export type UserUncheckedUpdateWithoutSessionAttachmentsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4717,6 +5319,8 @@ export type UserCreateWithoutAssignedInterventionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4764,6 +5368,8 @@ export type UserUncheckedCreateWithoutAssignedInterventionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -4827,6 +5433,8 @@ export type UserUpdateWithoutAssignedInterventionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -4874,6 +5482,8 @@ export type UserUncheckedUpdateWithoutAssignedInterventionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -4921,6 +5531,8 @@ export type UserCreateWithoutHealthRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -4968,6 +5580,8 @@ export type UserUncheckedCreateWithoutHealthRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5031,6 +5645,8 @@ export type UserUpdateWithoutHealthRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5078,6 +5694,8 @@ export type UserUncheckedUpdateWithoutHealthRecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5125,6 +5743,8 @@ export type UserCreateWithoutHomeVisitationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5172,6 +5792,8 @@ export type UserUncheckedCreateWithoutHomeVisitationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5235,6 +5857,8 @@ export type UserUpdateWithoutHomeVisitationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5282,6 +5906,8 @@ export type UserUncheckedUpdateWithoutHomeVisitationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5329,6 +5955,8 @@ export type UserCreateWithoutAdmProfilesPreparedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5376,6 +6004,8 @@ export type UserUncheckedCreateWithoutAdmProfilesPreparedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5428,6 +6058,8 @@ export type UserCreateWithoutAdmProfilesApprovedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5475,6 +6107,8 @@ export type UserUncheckedCreateWithoutAdmProfilesApprovedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5538,6 +6172,8 @@ export type UserUpdateWithoutAdmProfilesPreparedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5585,6 +6221,8 @@ export type UserUncheckedUpdateWithoutAdmProfilesPreparedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5643,6 +6281,8 @@ export type UserUpdateWithoutAdmProfilesApprovedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5690,6 +6330,8 @@ export type UserUncheckedUpdateWithoutAdmProfilesApprovedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5737,6 +6379,8 @@ export type UserCreateWithoutAdmMeetingsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5784,6 +6428,8 @@ export type UserUncheckedCreateWithoutAdmMeetingsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -5847,6 +6493,8 @@ export type UserUpdateWithoutAdmMeetingsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -5894,6 +6542,8 @@ export type UserUncheckedUpdateWithoutAdmMeetingsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -5941,6 +6591,8 @@ export type UserCreateWithoutAdmModulesInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -5988,6 +6640,8 @@ export type UserUncheckedCreateWithoutAdmModulesInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6051,6 +6705,8 @@ export type UserUpdateWithoutAdmModulesInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6098,6 +6754,8 @@ export type UserUncheckedUpdateWithoutAdmModulesInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6145,6 +6803,8 @@ export type UserCreateWithoutAdmDevicesIssuedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6192,6 +6852,8 @@ export type UserUncheckedCreateWithoutAdmDevicesIssuedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6255,6 +6917,8 @@ export type UserUpdateWithoutAdmDevicesIssuedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6302,6 +6966,8 @@ export type UserUncheckedUpdateWithoutAdmDevicesIssuedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6349,6 +7015,8 @@ export type UserCreateWithoutAdmFormsUploadedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6396,6 +7064,8 @@ export type UserUncheckedCreateWithoutAdmFormsUploadedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6459,6 +7129,8 @@ export type UserUpdateWithoutAdmFormsUploadedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6506,6 +7178,8 @@ export type UserUncheckedUpdateWithoutAdmFormsUploadedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6553,6 +7227,8 @@ export type UserCreateWithoutSf10RecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6600,6 +7276,8 @@ export type UserUncheckedCreateWithoutSf10RecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6652,6 +7330,8 @@ export type UserCreateWithoutSf10ValidatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -6699,6 +7379,8 @@ export type UserUncheckedCreateWithoutSf10ValidatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -6762,6 +7444,8 @@ export type UserUpdateWithoutSf10RecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6809,6 +7493,8 @@ export type UserUncheckedUpdateWithoutSf10RecordsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6867,6 +7553,8 @@ export type UserUpdateWithoutSf10ValidatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -6914,6 +7602,8 @@ export type UserUncheckedUpdateWithoutSf10ValidatedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -6961,6 +7651,8 @@ export type UserCreateWithoutSf10VersionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7008,6 +7700,8 @@ export type UserUncheckedCreateWithoutSf10VersionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7071,6 +7765,8 @@ export type UserUpdateWithoutSf10VersionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7118,6 +7814,8 @@ export type UserUncheckedUpdateWithoutSf10VersionsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7165,6 +7863,8 @@ export type UserCreateWithoutAuditLogsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7212,6 +7912,8 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7275,6 +7977,8 @@ export type UserUpdateWithoutAuditLogsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7322,6 +8026,8 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7369,6 +8075,8 @@ export type UserCreateWithoutSf10AccessRequestsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7416,6 +8124,8 @@ export type UserUncheckedCreateWithoutSf10AccessRequestsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7468,6 +8178,8 @@ export type UserCreateWithoutSf10AccessDecidedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7515,6 +8227,8 @@ export type UserUncheckedCreateWithoutSf10AccessDecidedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7578,6 +8292,8 @@ export type UserUpdateWithoutSf10AccessRequestsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7625,6 +8341,8 @@ export type UserUncheckedUpdateWithoutSf10AccessRequestsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7683,6 +8401,8 @@ export type UserUpdateWithoutSf10AccessDecidedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7730,6 +8450,8 @@ export type UserUncheckedUpdateWithoutSf10AccessDecidedInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7777,6 +8499,8 @@ export type UserCreateWithoutNotificationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -7824,6 +8548,8 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -7887,6 +8613,8 @@ export type UserUpdateWithoutNotificationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -7934,6 +8662,8 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -7981,6 +8711,8 @@ export type UserCreateWithoutRefreshTokensInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagCreateNestedManyWithoutResolvedByUserInput
@@ -8028,6 +8760,8 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutSubmitterInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutReviewerInput
   teacherName?: Prisma.TeacherNameUncheckedCreateNestedOneWithoutUserInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutUserInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedCreateNestedManyWithoutTeacherInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutRaisedByUserInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutOwnerInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutResolvedByUserInput
@@ -8091,6 +8825,8 @@ export type UserUpdateWithoutRefreshTokensInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUpdateManyWithoutResolvedByUserNestedInput
@@ -8138,6 +8874,8 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   submittedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutSubmitterNestedInput
   reviewedTimetables?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutReviewerNestedInput
   teacherName?: Prisma.TeacherNameUncheckedUpdateOneWithoutUserNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutUserNestedInput
+  archivedAdvisees?: Prisma.AdviserArchivedStudentUncheckedUpdateManyWithoutTeacherNestedInput
   gradeFlagsRaised?: Prisma.GradeFlagUncheckedUpdateManyWithoutRaisedByUserNestedInput
   gradeFlagsOwned?: Prisma.GradeFlagUncheckedUpdateManyWithoutOwnerNestedInput
   gradeFlagsResolved?: Prisma.GradeFlagUncheckedUpdateManyWithoutResolvedByUserNestedInput
@@ -8176,6 +8914,8 @@ export type UserCountOutputType = {
   teacherAssignments: number
   submittedTimetables: number
   reviewedTimetables: number
+  termGrants: number
+  archivedAdvisees: number
   gradeFlagsRaised: number
   gradeFlagsOwned: number
   gradeFlagsResolved: number
@@ -8209,6 +8949,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   teacherAssignments?: boolean | UserCountOutputTypeCountTeacherAssignmentsArgs
   submittedTimetables?: boolean | UserCountOutputTypeCountSubmittedTimetablesArgs
   reviewedTimetables?: boolean | UserCountOutputTypeCountReviewedTimetablesArgs
+  termGrants?: boolean | UserCountOutputTypeCountTermGrantsArgs
+  archivedAdvisees?: boolean | UserCountOutputTypeCountArchivedAdviseesArgs
   gradeFlagsRaised?: boolean | UserCountOutputTypeCountGradeFlagsRaisedArgs
   gradeFlagsOwned?: boolean | UserCountOutputTypeCountGradeFlagsOwnedArgs
   gradeFlagsResolved?: boolean | UserCountOutputTypeCountGradeFlagsResolvedArgs
@@ -8416,6 +9158,20 @@ export type UserCountOutputTypeCountReviewedTimetablesArgs<ExtArgs extends runti
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountTermGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TeacherTermGrantWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountArchivedAdviseesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdviserArchivedStudentWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountGradeFlagsRaisedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.GradeFlagWhereInput
 }
@@ -8478,6 +9234,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   submittedTimetables?: boolean | Prisma.User$submittedTimetablesArgs<ExtArgs>
   reviewedTimetables?: boolean | Prisma.User$reviewedTimetablesArgs<ExtArgs>
   teacherName?: boolean | Prisma.User$teacherNameArgs<ExtArgs>
+  termGrants?: boolean | Prisma.User$termGrantsArgs<ExtArgs>
+  archivedAdvisees?: boolean | Prisma.User$archivedAdviseesArgs<ExtArgs>
   gradeFlagsRaised?: boolean | Prisma.User$gradeFlagsRaisedArgs<ExtArgs>
   gradeFlagsOwned?: boolean | Prisma.User$gradeFlagsOwnedArgs<ExtArgs>
   gradeFlagsResolved?: boolean | Prisma.User$gradeFlagsResolvedArgs<ExtArgs>
@@ -8559,6 +9317,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   submittedTimetables?: boolean | Prisma.User$submittedTimetablesArgs<ExtArgs>
   reviewedTimetables?: boolean | Prisma.User$reviewedTimetablesArgs<ExtArgs>
   teacherName?: boolean | Prisma.User$teacherNameArgs<ExtArgs>
+  termGrants?: boolean | Prisma.User$termGrantsArgs<ExtArgs>
+  archivedAdvisees?: boolean | Prisma.User$archivedAdviseesArgs<ExtArgs>
   gradeFlagsRaised?: boolean | Prisma.User$gradeFlagsRaisedArgs<ExtArgs>
   gradeFlagsOwned?: boolean | Prisma.User$gradeFlagsOwnedArgs<ExtArgs>
   gradeFlagsResolved?: boolean | Prisma.User$gradeFlagsResolvedArgs<ExtArgs>
@@ -8601,6 +9361,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     submittedTimetables: Prisma.$SectionTimetableEntryPayload<ExtArgs>[]
     reviewedTimetables: Prisma.$SectionTimetableEntryPayload<ExtArgs>[]
     teacherName: Prisma.$TeacherNamePayload<ExtArgs> | null
+    termGrants: Prisma.$TeacherTermGrantPayload<ExtArgs>[]
+    archivedAdvisees: Prisma.$AdviserArchivedStudentPayload<ExtArgs>[]
     gradeFlagsRaised: Prisma.$GradeFlagPayload<ExtArgs>[]
     gradeFlagsOwned: Prisma.$GradeFlagPayload<ExtArgs>[]
     gradeFlagsResolved: Prisma.$GradeFlagPayload<ExtArgs>[]
@@ -9042,6 +9804,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   submittedTimetables<T extends Prisma.User$submittedTimetablesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$submittedTimetablesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SectionTimetableEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   reviewedTimetables<T extends Prisma.User$reviewedTimetablesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reviewedTimetablesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SectionTimetableEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   teacherName<T extends Prisma.User$teacherNameArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$teacherNameArgs<ExtArgs>>): Prisma.Prisma__TeacherNameClient<runtime.Types.Result.GetResult<Prisma.$TeacherNamePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  termGrants<T extends Prisma.User$termGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$termGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeacherTermGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  archivedAdvisees<T extends Prisma.User$archivedAdviseesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$archivedAdviseesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdviserArchivedStudentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlagsRaised<T extends Prisma.User$gradeFlagsRaisedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$gradeFlagsRaisedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlagsOwned<T extends Prisma.User$gradeFlagsOwnedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$gradeFlagsOwnedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gradeFlagsResolved<T extends Prisma.User$gradeFlagsResolvedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$gradeFlagsResolvedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GradeFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -10199,6 +10963,54 @@ export type User$teacherNameArgs<ExtArgs extends runtime.Types.Extensions.Intern
    */
   include?: Prisma.TeacherNameInclude<ExtArgs> | null
   where?: Prisma.TeacherNameWhereInput
+}
+
+/**
+ * User.termGrants
+ */
+export type User$termGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TeacherTermGrant
+   */
+  select?: Prisma.TeacherTermGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TeacherTermGrant
+   */
+  omit?: Prisma.TeacherTermGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeacherTermGrantInclude<ExtArgs> | null
+  where?: Prisma.TeacherTermGrantWhereInput
+  orderBy?: Prisma.TeacherTermGrantOrderByWithRelationInput | Prisma.TeacherTermGrantOrderByWithRelationInput[]
+  cursor?: Prisma.TeacherTermGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TeacherTermGrantScalarFieldEnum | Prisma.TeacherTermGrantScalarFieldEnum[]
+}
+
+/**
+ * User.archivedAdvisees
+ */
+export type User$archivedAdviseesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdviserArchivedStudent
+   */
+  select?: Prisma.AdviserArchivedStudentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdviserArchivedStudent
+   */
+  omit?: Prisma.AdviserArchivedStudentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdviserArchivedStudentInclude<ExtArgs> | null
+  where?: Prisma.AdviserArchivedStudentWhereInput
+  orderBy?: Prisma.AdviserArchivedStudentOrderByWithRelationInput | Prisma.AdviserArchivedStudentOrderByWithRelationInput[]
+  cursor?: Prisma.AdviserArchivedStudentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdviserArchivedStudentScalarFieldEnum | Prisma.AdviserArchivedStudentScalarFieldEnum[]
 }
 
 /**

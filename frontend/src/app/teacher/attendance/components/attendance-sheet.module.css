@@ -54,6 +54,7 @@
   gap: 0.75rem;
   min-width: 0;
   position: sticky;
+  /* Level with the left data-table card: 3rem navbar + 1rem main padding. */
   top: 4rem;
   max-height: calc(100dvh - 5rem);
   overflow-y: auto;
@@ -84,6 +85,28 @@
     position: static;
     max-height: none;
     overflow-y: visible;
+  }
+}
+
+/* Gentle floating effect for the fixed status cards (info/lock) so they
+   hover instead of sitting static. */
+@keyframes attendance-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.floatCard {
+  animation: attendance-float 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floatCard {
+    animation: none;
   }
 }
 

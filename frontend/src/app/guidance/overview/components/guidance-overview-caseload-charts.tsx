@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import type {
   GuidanceReferralTypeRow,
   GuidanceSectionHeatRow,
@@ -25,11 +26,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   background: "var(--card)",
   color: "var(--foreground)",
   fontSize: 12,
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  ADM: "var(--chart-1)",
-  Counseling: "var(--chart-2)",
 };
 
 const BAR_END_RADIUS = 4;
@@ -74,6 +70,8 @@ function HighBarShape(props: BarShapeProps) {
 interface GuidanceOverviewCaseloadChartsProps {
   referralsByType: GuidanceReferralTypeRow[];
   sectionHeat: GuidanceSectionHeatRow[];
+  /** Saved settings hex — wins over the probed runtime palette. */
+  primary?: string | null;
 }
 
 function interpretReferralTypes(rows: GuidanceReferralTypeRow[]): string {
@@ -87,7 +85,17 @@ function interpretReferralTypes(rows: GuidanceReferralTypeRow[]): string {
 export function GuidanceOverviewCaseloadCharts({
   referralsByType,
   sectionHeat,
+  primary,
 }: GuidanceOverviewCaseloadChartsProps) {
+  // Live primary-ink steps — ADM/type donut and stacked section bars wear
+  // the counselor's palette instead of fixed chart hues.
+  const scale = usePrimaryScale(2, primary);
+  const TYPE_COLORS: Record<string, string> = {
+    ADM: scale[0],
+    Counseling: scale[1],
+  };
+  const SECTION_HIGH_COLOR = scale[0];
+  const SECTION_MODERATE_COLOR = scale[1];
   const referralsTotal = referralsByType.reduce((s, r) => s + r.count, 0);
   const topSections = [...sectionHeat]
     .sort((a, b) => b.high - a.high || b.moderate - a.moderate)
@@ -96,6 +104,9 @@ export function GuidanceOverviewCaseloadCharts({
   return (
     <div className={styles.chartGrid}>
       <Card className={styles.card}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Referred cases by type</CardTitle>
           <CardDescription className={styles.sectionDesc}>
@@ -150,11 +161,17 @@ export function GuidanceOverviewCaseloadCharts({
               </ul>
             </>
           )}
-          <p className={styles.interpretation}>{interpretReferralTypes(referralsByType)}</p>
+          <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
+            {interpretReferralTypes(referralsByType)}
+          </p>
         </CardContent>
       </Card>
 
       <Card className={styles.cardWide}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Sections needing attention</CardTitle>
           <CardDescription className={styles.sectionDesc}>
@@ -178,13 +195,14 @@ export function GuidanceOverviewCaseloadCharts({
                     tick={{ fontSize: 12, fill: "var(--foreground)" }}
                   />
                   <Tooltip cursor={{ fill: "color-mix(in oklch, var(--foreground), transparent 95%)" }} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="high" name="High" stackId="risk" fill="var(--chart-1)" maxBarSize={18} shape={<HighBarShape />} />
-                  <Bar dataKey="moderate" name="Moderate" stackId="risk" fill="var(--chart-4)" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                  <Bar dataKey="high" name="High" stackId="risk" fill={SECTION_HIGH_COLOR} maxBarSize={18} shape={<HighBarShape />} />
+                  <Bar dataKey="moderate" name="Moderate" stackId="risk" fill={SECTION_MODERATE_COLOR} radius={[0, 4, 4, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
           <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
             {topSections.length === 0
               ? "No sections found for the active school year."
               : `${topSections[0]?.section} leads with ${topSections[0]?.high} high-risk and ${topSections[0]?.moderate} moderate-risk students.`}

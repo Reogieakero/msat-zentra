@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import {
+  deriveActionStatus,
   isNurseScope,
   toQueueRow,
   type NurseQueueRow,
@@ -42,12 +43,18 @@ export interface NurseAlertsSummary {
   fresh: number;
   followUps: number;
   resolvedWeek: number;
+  closed: number;
   total: number;
 }
 
 export interface NurseAlertsData {
   summary: NurseAlertsSummary;
   alerts: NurseAlertItem[];
+  // Every nurse-scope referral in EVERY status (pending through dismissed),
+  // one item per case — desk-wide insights read this list. The `alerts`
+  // feed carries the same rows with action-oriented titles, so nothing
+  // ever disappears from the desk unless the nurse deletes the case.
+  cases: NurseAlertItem[];
   notifications: NurseNotificationItem[];
   unread: number;
 }
@@ -120,6 +127,11 @@ export function buildNurseAlerts(
     return prefix ? `${prefix} · ${wait}` : wait;
   };
 
+  // Desk-wide case list (every status) alongside the action-scoped
+  // alerts below — insights and review queues read `cases` so dismissed
+  // and older resolved referrals are counted too.
+  const cases: NurseAlertItem[] = [];
+
   for (const r of scoped) {
     const row = toQueueRow(r);
     // Account userId for the live risk lookup (GET /api/risk/students/:id),
@@ -128,6 +140,18 @@ export function buildNurseAlerts(
     const studentId = r.student?.userId ?? r.roster?.id ?? null;
     const status = r.status ?? "pending";
     const timeOf = (iso: string | null | undefined) => parseDate(iso)?.getTime() ?? 0;
+
+    cases.push({
+      key: r.id,
+      severity: status === "resolved" || status === "dismissed" ? "done" : "info",
+      title: deriveActionStatus(row.type, status, row.sessions).label,
+      detail: row.reason,
+      waiting: waitingLine(row.waitingDays),
+      date: row.date,
+      sortTime: timeOf(r.referredAt),
+      studentId,
+      row,
+    });
 
     if (status === "escalated" && r.escalatedTo === "nurse") {
       alerts.push({
@@ -198,22 +222,42 @@ export function buildNurseAlerts(
       });
     }
 
+    // Resolved cases stay on the desk at any age — nothing is removed
+    // unless the nurse deletes the case. Recent ones keep the weekly title.
     if (status === "resolved") {
       const resolvedAt = parseDate(r.resolvedAt);
-      if (resolvedAt && now.getTime() - resolvedAt.getTime() <= RESOLVED_WINDOW_MS) {
-        alerts.push({
-          key: `${r.id}:resolved`,
-          severity: "done",
-          title: "Resolved this week",
-          detail: row.reason,
-          waiting: `Resolved ${resolvedAt.toISOString().slice(0, 10)}`,
-          date: resolvedAt.toISOString().slice(0, 10),
-          // Negated so the most recently resolved surfaces first.
-          sortTime: -resolvedAt.getTime(),
-          studentId,
-          row,
-        });
-      }
+      const resolvedDay = resolvedAt ? resolvedAt.toISOString().slice(0, 10) : row.date;
+      const recent =
+        resolvedAt !== null && now.getTime() - resolvedAt.getTime() <= RESOLVED_WINDOW_MS;
+      alerts.push({
+        key: `${r.id}:resolved`,
+        severity: "done",
+        title: recent ? "Resolved this week" : "Resolved",
+        detail: row.reason,
+        waiting: `Resolved ${resolvedDay}`,
+        date: resolvedDay,
+        // Negated so the most recently resolved surfaces first.
+        sortTime: resolvedAt ? -resolvedAt.getTime() : -timeOf(r.referredAt),
+        studentId,
+        row,
+      });
+    }
+
+    // Dismissed/closed cases stay visible too — the list only shrinks when
+    // the nurse deletes a case, never on status change.
+    if (status === "dismissed") {
+      alerts.push({
+        key: `${r.id}:dismissed`,
+        severity: "done",
+        title: "Closed",
+        detail: row.reason,
+        waiting: "Closed",
+        date: row.date,
+        // No closure timestamp on the payload — newest referred first.
+        sortTime: -timeOf(r.referredAt),
+        studentId,
+        row,
+      });
     }
   }
 
@@ -230,13 +274,17 @@ export function buildNurseAlerts(
     urgent: alerts.filter((a) => a.severity === "urgent").length,
     fresh: alerts.filter((a) => a.severity === "new").length,
     followUps: alerts.filter((a) => a.key.endsWith(":followup")).length,
-    resolvedWeek: alerts.filter((a) => a.severity === "done").length,
+    resolvedWeek: alerts.filter(
+      (a) => a.key.endsWith(":resolved") && a.title === "Resolved this week",
+    ).length,
+    closed: alerts.filter((a) => a.key.endsWith(":dismissed")).length,
     total: alerts.length,
   };
 
   return {
     summary,
     alerts,
+    cases,
     notifications: items,
     unread: items.filter((n) => !n.isRead).length,
   };
@@ -260,6 +308,54 @@ export async function markNurseNotificationRead(id: string): Promise<void> {
 
 export async function markAllNurseNotificationsRead(): Promise<void> {
   await apiClient.post("/api/notifications/read-all");
+}
+
+// Status-only factor flags per student (same posture as levels — no
+// confidential fields). Lets desks explain *why* in plain words.
+export type NurseRiskFactors = {
+  Academic: boolean;
+  Attendance: boolean;
+  Behavioral: boolean;
+};
+
+// Plain words for non-technical readers — single source of truth so every
+// desk says the same thing about the same level or factor.
+export const RISK_LEVEL_WORDS: Record<NurseRiskLevel, string> = {
+  High: "Needs urgent attention",
+  Moderate: "Keep an eye on",
+  Low: "Doing okay",
+};
+
+export const RISK_FACTOR_WORDS: Record<keyof NurseRiskFactors, string> = {
+  Academic: "low grades",
+  Attendance: "missing classes",
+  Behavioral: "behavior notes",
+};
+
+// Live factor flags per referred student — same batched endpoint as levels
+// (additive `factors` map). Ids with no result stay absent. Never throws:
+// an empty map simply hides the driver lines.
+export async function fetchNurseRiskFactors(
+  studentIds: string[]
+): Promise<Record<string, NurseRiskFactors>> {
+  const unique = [...new Set(studentIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  try {
+    const { data } = await apiClient.get<{
+      factors?: Record<string, Partial<NurseRiskFactors> | null>;
+    }>("/api/risk/students/batch", { params: { ids: unique.join(",") } });
+    const map: Record<string, NurseRiskFactors> = {};
+    for (const [id, f] of Object.entries(data?.factors ?? {})) {
+      map[id] = {
+        Academic: f?.Academic === true,
+        Attendance: f?.Attendance === true,
+        Behavioral: f?.Behavioral === true,
+      };
+    }
+    return map;
+  } catch {
+    return {};
+  }
 }
 
 // Live rule-based risk level per referred student — single batched call

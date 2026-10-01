@@ -11,6 +11,7 @@ const TYPE_MAP: Record<string, string> = {
   "adm_learner_profiles:principal_approve": "new_adm_case",
   "users:approve": "account_approval",
   "interventions:approve": "intervention_approved",
+  "interventions:detect": "intervention_detected",
   "sf10_records:validate": "sf10_validated",
   "audit_logs:alert": "audit_alert",
   "anecdotal_record_followups:create": "new_followup",
@@ -49,32 +50,109 @@ export async function fanoutNotification(input: NotifyInput) {
   try {
     const type = deriveNotifType(input.sourceTable, input.action);
     // Dedup: a retry/double-submit within 60s for the same user + source +
-    // action must not create a second inbox row.
-    if (input.sourceId) {
-      const recent = await prisma.notification.findFirst({
-        where: {
+    // action + identical message must not create a second inbox row. The
+    // message is part of the identity on purpose: distinct events on the
+    // same case (book then cancel seconds later) carry different messages
+    // and must BOTH land — an earlier coarse key (user + type + source +
+    // id only) silently ate the second event. The check + insert run under
+    // a keyed advisory lock so parallel saves (e.g. a save-all batch)
+    // cannot slip duplicates past each other.
+    const message = input.message ?? "";
+    await prisma.$transaction(async (tx) => {
+      if (input.sourceId) {
+        await tx.$executeRawUnsafe(
+          `SELECT pg_advisory_xact_lock(hashtext($1))`,
+          `${input.userId}|${type}|${input.sourceTable}|${input.sourceId}|${message}`,
+        );
+        const recent = await tx.notification.findFirst({
+          where: {
+            userId: input.userId,
+            type,
+            sourceTable: input.sourceTable,
+            sourceId: input.sourceId,
+            message,
+            createdAt: { gte: new Date(Date.now() - 60_000) },
+          },
+          select: { id: true },
+        });
+        if (recent) return;
+      }
+      await tx.notification.create({
+        data: {
           userId: input.userId,
           type,
           sourceTable: input.sourceTable,
           sourceId: input.sourceId,
-          createdAt: { gte: new Date(Date.now() - 60_000) },
+          message: input.message,
+          channel: input.channel ?? ["web", "mobile", "email"],
         },
-        select: { id: true },
       });
-      if (recent) return;
-    }
-    await prisma.notification.create({
-      data: {
-        userId: input.userId,
-        type,
-        sourceTable: input.sourceTable,
-        sourceId: input.sourceId,
-        message: input.message,
-        channel: input.channel ?? ["web", "mobile", "email"],
-      },
     });
   } catch (e) {
     logger.error({ err: e, userId: input.userId }, "notification fanout failed");
+  }
+}
+
+// Engine detection handoff: a newly auto-created Moderate/High intervention
+// notifies the assigned guidance counselor (role fanout — every active
+// counselor learns) plus the student's section adviser directly. Best-effort
+// — never throws; callers invoke it with `void` so engine recomputes never
+// delay the confirmed response.
+export async function notifyInterventionDetected(input: {
+  level: string;
+  interventionId: string;
+  studentId?: string | null;
+  rosterId?: string | null;
+}) {
+  try {
+    let name = "A student";
+    let section = "";
+    let adviserId: string | null = null;
+    if (input.studentId) {
+      const s = await prisma.studentProfile.findUnique({
+        where: { userId: input.studentId },
+        select: {
+          user: { select: { fullName: true } },
+          section: { select: { name: true, adviserId: true } },
+        },
+      });
+      if (s) {
+        name = s.user.fullName;
+        section = s.section?.name ?? "";
+        adviserId = s.section?.adviserId ?? null;
+      }
+    } else if (input.rosterId) {
+      const r = await prisma.studentRoster.findUnique({
+        where: { id: input.rosterId },
+        select: {
+          fullName: true,
+          section: { select: { name: true, adviserId: true } },
+        },
+      });
+      if (r) {
+        name = r.fullName;
+        section = r.section?.name ?? "";
+        adviserId = r.section?.adviserId ?? null;
+      }
+    }
+    const who = `${name}${section ? ` (${section})` : ""}`;
+    await fanoutToRole("guidance_counselor", {
+      sourceTable: "interventions",
+      action: "detect",
+      message: `New ${input.level}-risk intervention: ${who} — auto-flagged for follow-up.`,
+      sourceId: input.interventionId,
+    });
+    if (adviserId) {
+      await fanoutNotification({
+        userId: adviserId,
+        sourceTable: "interventions",
+        action: "detect",
+        message: `Your advisee ${who} was flagged ${input.level} risk — a guidance intervention was opened.`,
+        sourceId: input.interventionId,
+      });
+    }
+  } catch (e) {
+    logger.error({ err: e, interventionId: input.interventionId }, "intervention detect fanout failed");
   }
 }
 

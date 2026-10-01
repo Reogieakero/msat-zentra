@@ -2,6 +2,16 @@
 
 import * as React from "react";
 import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table";
+import {
   Bell,
   CalendarClock,
   CalendarPlus,
@@ -13,7 +23,7 @@ import {
   FileText,
   Flag,
   Hourglass,
-  Search,
+  SearchIcon,
   Send,
   X,
 } from "lucide-react";
@@ -25,7 +35,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Table,
   TableBody,
@@ -34,6 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
 import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
 import {
@@ -105,24 +120,27 @@ export function msSince(time: string, now: number): number | null {
   return Math.max(0, now - t);
 }
 
+/* Color-coded status badges — amber = needs action, blue = in motion,
+   green = completed/forwarded, red = escalated or rejected, gray = closed.
+   Unknown keys fall back to the raw-status variant. */
 export function statusVariant(
   status: string
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
+): "amber" | "blue" | "green" | "red" | "secondary" | "outline" {
   switch (status) {
     case "pending":
-      return "warning";
+      return "amber";
     case "in_progress":
-      return "default";
+      return "blue";
     case "follow_up":
-      return "secondary";
+      return "blue";
     case "info_requested":
       return "outline";
     case "escalated":
-      return "destructive";
+      return "red";
     case "resolved":
-      return "success";
+      return "green";
     case "dismissed":
-      return "secondary";
+      return "red";
     default:
       return "outline";
   }
@@ -133,16 +151,16 @@ export function statusVariant(
    to the raw-status variant. Shared with the nurse ADM referrals queue. */
 export const ACTION_STATUS_VARIANT: Record<
   string,
-  "warning" | "default" | "secondary" | "outline" | "destructive" | "success"
+  "amber" | "blue" | "green" | "red" | "secondary" | "outline"
 > = {
-  endorsed: "success",
-  done: "success",
-  done_session: "success",
-  booked: "default",
-  followup: "secondary",
-  rejected: "secondary",
-  needs_review: "warning",
-  escalated: "destructive",
+  endorsed: "green",
+  done: "green",
+  done_session: "green",
+  booked: "blue",
+  followup: "blue",
+  rejected: "red",
+  needs_review: "amber",
+  escalated: "red",
 };
 
 export function RiskBadge({
@@ -159,8 +177,9 @@ export function RiskBadge({
       </span>
     );
   if (!level) return <span className={styles.noRisk}>—</span>;
-  const variant =
-    level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
+  // Shared RAG convention (same as teacher/principal/guidance desks):
+  // High red, Moderate amber, Low green.
+  const variant = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
@@ -192,10 +211,11 @@ export function actionIconFor(label: string): ActionIcon {
 
 /**
  * Every case referred to the nurse (ADM consultations + clinic matters) as
- * one table row: student, case status, live rule-based risk level, latest
+ * a data table: student, case status, live rule-based risk level, latest
  * action (name + elapsed since it ran), and the live countdown from when
  * the case was referred to right now. Read-only — handling happens on the
- * ADM Cases / Clinic Matters pages.
+ * ADM Cases / Clinic Matters pages. Same card + table language as the
+ * overview Needs-review table.
  */
 export function NurseReferralsTable({
   alerts,
@@ -210,7 +230,7 @@ export function NurseReferralsTable({
 }) {
   const [query, setQuery] = React.useState("");
   const [risk, setRisk] = React.useState<RiskFilter>("");
-  const [page, setPage] = React.useState(1);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const now = useNowTick();
 
   const filtered = React.useMemo(() => {
@@ -249,54 +269,254 @@ export function NurseReferralsTable({
   const clearFilters = React.useCallback(() => {
     setQuery("");
     setRisk("");
-    setPage(1);
   }, []);
 
+  const columns = React.useMemo<ColumnDef<NurseAlertItem>[]>(
+    () => [
+      {
+        id: "student",
+        accessorFn: (alert) => alert.row.student,
+        header: "Student",
+        size: 200,
+        minSize: 200,
+        maxSize: 200,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <p className={styles.cellMain}>{row.original.row.student}</p>
+            <p className={styles.cellSub}>
+              <span className={styles.lrn}>{row.original.row.lrn}</span>
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "type",
+        accessorFn: (alert) => alert.row.type,
+        header: "Type",
+        size: 90,
+        minSize: 90,
+        maxSize: 90,
+        cell: ({ row }) =>
+          row.original.row.type === "ADM" ? (
+            <Badge variant="secondary">ADM</Badge>
+          ) : (
+            <Badge variant="outline">Clinic</Badge>
+          ),
+      },
+      {
+        id: "status",
+        accessorFn: (alert) =>
+          deriveActionStatus(
+            alert.row.type,
+            alert.row.status,
+            alert.row.sessions,
+          ).label,
+        header: "Case status",
+        size: 170,
+        minSize: 170,
+        maxSize: 170,
+        cell: ({ row }) => {
+          const alert = row.original;
+          const doneCount = alert.row.sessions.filter(
+            (s) => s.status === "completed",
+          ).length;
+          const allDone =
+            doneCount > 0 &&
+            !alert.row.sessions.some((s) => s.status === "scheduled");
+          // Action-based status — what the case actually needs now
+          // (Endorsed, Booked session, Done, Needs review…) instead of the
+          // raw database enum. Same vocabulary the overview charts use.
+          const actionStatus = allDone
+            ? { key: "done", label: "Done" }
+            : deriveActionStatus(
+                alert.row.type,
+                alert.row.status,
+                alert.row.sessions,
+              );
+          const statusVar =
+            ACTION_STATUS_VARIANT[actionStatus.key] ??
+            statusVariant(alert.row.status);
+          return (
+            <>
+              <Badge variant={statusVar}>{actionStatus.label}</Badge>
+              {doneCount > 0 && !allDone ? (
+                <p className={styles.cellSub}>
+                  {doneCount} session{doneCount === 1 ? "" : "s"} done
+                </p>
+              ) : null}
+            </>
+          );
+        },
+      },
+      {
+        id: "risk",
+        accessorFn: (alert) =>
+          alert.studentId ? (riskByStudent[alert.studentId] ?? "") : "",
+        header: "Risk",
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
+        cell: ({ row }) => {
+          const alert = row.original;
+          const level = alert.studentId
+            ? riskByStudent[alert.studentId]
+            : undefined;
+          return <RiskBadge level={level} loading={riskLoading} />;
+        },
+      },
+      {
+        id: "latest",
+        accessorFn: (alert) => latestActionOf(alert.row, alert).label,
+        header: "Latest action",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        cell: ({ row }) => {
+          const latest = latestActionOf(
+            row.original.row,
+            row.original,
+          );
+          const ActionIcon = actionIconFor(latest.label);
+          return (
+            <p className={styles.actionLabel}>
+              <ActionIcon className={styles.actionIcon} aria-hidden />
+              <span>{latest.label}</span>
+            </p>
+          );
+        },
+      },
+      {
+        id: "elapsed",
+        accessorFn: (alert) => actionTimeOf(alert) ?? 0,
+        header: "Time elapsed",
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
+        cell: ({ row }) => {
+          const latest = latestActionOf(
+            row.original.row,
+            row.original,
+          );
+          const actionMs = msSince(latest.time, now);
+          return (
+            <p className={styles.cellTime} aria-live="off">
+              {actionMs === null
+                ? "—"
+                : `${formatElapsedShort(actionMs)} ago`}
+            </p>
+          );
+        },
+      },
+      {
+        id: "referred",
+        accessorFn: (alert) => alert.row.date,
+        header: "Date referred",
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
+        cell: ({ row }) => (
+          <p className={styles.cellMain}>
+            {formatActionTime(row.original.row.date)}
+          </p>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <span className="flex justify-end">Actions</span>,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const alert = row.original;
+          // Deep-link to the page where this case lives — the page
+          // auto-scrolls to and highlights it. ADM form-ready cases also
+          // overlay the filled referral form (form=1); every other row
+          // still lands highlighted on its own case.
+          const homeBase =
+            alert.row.type === "ADM"
+              ? "/nurse/referrals/adm"
+              : "/nurse/referrals/clinic";
+          const seeMoreHref = `${homeBase}?highlight=${alert.row.id}`;
+          const viewFormHref =
+            alert.row.type === "ADM" && alert.row.referralReady
+              ? `${seeMoreHref}&form=1`
+              : seeMoreHref;
+          return (
+            <div className="flex justify-end">
+              <NurseQueueRowActions
+                row={alert.row}
+                onChanged={onChanged}
+                seeMoreHref={seeMoreHref}
+                viewFormHref={viewFormHref}
+                viewOnly
+              />
+            </div>
+          );
+        },
+      },
+    ],
+    [now, onChanged, riskByStudent, riskLoading],
+  );
+
+  const table = useReactTable({
+    data: filtered,
+    columns,
+    getRowId: (row) => row.key,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
+    state: { sorting },
+  });
+
   const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
-  const riskLabel = RISK_OPTIONS.find((o) => o.value === risk)?.label ?? "All risks";
+  const riskLabel =
+    RISK_OPTIONS.find((o) => o.value === risk)?.label ?? "All risks";
   const hasActiveFilters = query.trim() !== "" || risk !== "";
 
   return (
-    <section aria-label="Referred cases">
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h2 className={styles.sectionTitle}>Referred cases</h2>
+    <div className={assign.card}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className={styles.sectionTitle}>
+            Referred cases — {total}
+          </h2>
           <p className={styles.sectionDesc}>
-            Every ADM and clinic matter on your desk — {total} case{total === 1 ? "" : "s"}.
+            Every ADM and clinic matter on your desk — {total} case
+            {total === 1 ? "" : "s"}.
           </p>
         </div>
         {alerts.length > 0 && (
-          <div className={styles.headerActions}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.search}
-                style={{ height: "2rem" }}
-                placeholder="Search by student or keyword…"
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <InputGroup className="max-w-40 shrink-0">
+              <InputGroupInput
+                placeholder="Search cases..."
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
-                  setPage(1);
+                  table.setPageIndex(0);
                 }}
                 aria-label="Search referred cases"
               />
-            </div>
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  style={{ height: "2rem" }}
                   aria-label={`Filter cases by risk level, currently showing: ${riskLabel}`}
                   className={`${styles.filterBtn} ${risk !== "" ? styles.filterActive : ""}`}
                 >
                   {risk === "" ? "Risk" : riskLabel}
-                  {risk !== "" && <span className={styles.filterDot} aria-hidden />}
+                  {risk !== "" && (
+                    <span className={styles.filterDot} aria-hidden />
+                  )}
                   <ChevronDown aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
@@ -307,7 +527,7 @@ export function NurseReferralsTable({
                     checked={risk === item.value}
                     onCheckedChange={() => {
                       setRisk(item.value);
-                      setPage(1);
+                      table.setPageIndex(0);
                     }}
                   >
                     {item.label}
@@ -316,7 +536,15 @@ export function NurseReferralsTable({
               </DropdownMenuContent>
             </DropdownMenu>
             {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className={styles.clearBtn} onClick={clearFilters}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={styles.clearBtn}
+                onClick={() => {
+                  clearFilters();
+                  table.setPageIndex(0);
+                }}
+              >
                 <X aria-hidden />
                 Show all
               </Button>
@@ -324,155 +552,100 @@ export function NurseReferralsTable({
           </div>
         )}
       </div>
-      <div className={styles.tableBody}>
-        {alerts.length === 0 ? (
-          <p className={styles.empty}>No referred cases — nothing needs your attention right now.</p>
-        ) : filtered.length === 0 ? (
-          <p className={styles.empty}>No cases match your search and filters.</p>
-        ) : (
-          <div className={styles.tableWrap}>
-          <Table aria-label="Cases referred to the nurse">
+      {alerts.length === 0 ? (
+        <p className={`${styles.empty} relative`}>
+          No referred cases — nothing needs your attention right now.
+        </p>
+      ) : filtered.length === 0 ? (
+        <p className={`${styles.empty} relative`}>
+          No cases match your search and filters.
+        </p>
+      ) : (
+        <div className="relative overflow-x-auto rounded-md border">
+          <Table
+            className="w-full table-fixed"
+            aria-label="Cases referred to the nurse"
+          >
             <TableHeader>
-              <TableRow>
-                <TableHead>LRN</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Case status</TableHead>
-                <TableHead>Risk</TableHead>
-                <TableHead>Latest action</TableHead>
-                <TableHead>Time elapsed</TableHead>
-                <TableHead>Date referred</TableHead>
-                <TableHead>
-                  <span className={styles.srOnly}>Row actions</span>
-                </TableHead>
-              </TableRow>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="bg-muted/50 [&>th]:border-t-0"
+                >
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      style={{ width: header.getSize() }}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
             </TableHeader>
             <TableBody>
-              {pageRows.map((alert) => {
-                const latest = latestActionOf(alert.row, alert);
-                const actionMs = msSince(latest.time, now);
-                const riskLevel = alert.studentId
-                  ? riskByStudent[alert.studentId]
-                  : undefined;
-                const ActionIcon = actionIconFor(latest.label);
-                // Deep-link to the page where this case lives — the page
-                // auto-scrolls to and highlights it. ADM form-ready cases
-                // also overlay the filled referral form (form=1); every
-                // other row still lands highlighted on its own case.
-                const homeBase =
-                  alert.row.type === "ADM" ? "/nurse/referrals/adm" : "/nurse/referrals/clinic";
-                const seeMoreHref = `${homeBase}?highlight=${alert.row.id}`;
-                const viewFormHref =
-                  alert.row.type === "ADM" && alert.row.referralReady
-                    ? `${seeMoreHref}&form=1`
-                    : seeMoreHref;
-                return (
-                  <TableRow key={alert.key}>
-                    <TableCell>
-                      <p className={styles.cellMain}>
-                        <span className={styles.lrn}>{alert.row.lrn}</span>
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      {alert.row.type === "ADM" ? (
-                        <Badge variant="secondary">ADM</Badge>
-                      ) : (
-                        <Badge variant="outline">Clinic</Badge>
-                      )}
-                    </TableCell>
-<TableCell>
-                       {(() => {
-                          const doneCount = alert.row.sessions.filter(
-                            (s) => s.status === "completed"
-                          ).length;
-                          const allDone = doneCount > 0 && !alert.row.sessions.some((s) => s.status === "scheduled");
-                          // Action-based status — what the case actually needs
-                          // now (Endorsed, Booked session, Done, Needs review…)
-                          // instead of the raw database enum. Same vocabulary
-                          // the overview charts use.
-                          const actionStatus = allDone
-                            ? { key: "done", label: "Done" }
-                            : deriveActionStatus(
-                                alert.row.type,
-                                alert.row.status,
-                                alert.row.sessions
-                              );
-                          const statusVar =
-                            ACTION_STATUS_VARIANT[actionStatus.key] ??
-                            statusVariant(alert.row.status);
-                          return (
-                            <>
-                              <Badge variant={statusVar}>
-                                {actionStatus.label}
-                              </Badge>
-                              {doneCount > 0 && !allDone ? (
-                                <p className={styles.cellSub}>
-                                  {doneCount} session{doneCount === 1 ? "" : "s"} done
-                                </p>
-                              ) : null}
-                            </>
-                          );
-                        })()}
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        className="truncate"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
                       </TableCell>
-                    <TableCell>
-                      <RiskBadge level={riskLevel} loading={riskLoading} />
-                    </TableCell>
-                    <TableCell>
-                      <p className={styles.actionLabel}>
-                        <ActionIcon className={styles.actionIcon} aria-hidden />
-                        <span>{latest.label}</span>
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className={styles.cellTime} aria-live="off">
-                        {actionMs === null ? "—" : `${formatElapsedShort(actionMs)} ago`}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className={styles.cellMain}>{formatActionTime(alert.row.date)}</p>
-                    </TableCell>
-                    <TableCell>
-                      <NurseQueueRowActions
-                        row={alert.row}
-                        onChanged={onChanged}
-                        seeMoreHref={seeMoreHref}
-                        viewFormHref={viewFormHref}
-                        viewOnly
-                      />
-                    </TableCell>
+                    ))}
                   </TableRow>
-                );
-              })}
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No cases match your search and filters.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
-          </div>
-        )}
-        <div className={styles.pager}>
-          <p className={styles.range}>
-            Showing {start}–{end} of {total}
-          </p>
-          <div className={styles.pagerButtons}>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <span className={styles.pageLabel} aria-live="polite">
-              Page {safePage} of {totalPages}
-            </span>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
+        </div>
+      )}
+      <div className="relative mt-auto flex items-center justify-end space-x-2 pt-2">
+        <div className="text-muted-foreground flex-1 text-sm">
+          {table.getFilteredRowModel().rows.length} case
+          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+        </div>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

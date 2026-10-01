@@ -26,11 +26,11 @@ export default function ClassWorkspacePage() {
   // Initial load only: mirrors the workspace (back link, header, sidebar,
   // encode table with Student/LRN/Score/% columns, footer). Background
   // refetches keep existing data visible via placeholderData above.
-  if (detailQuery.isPending || !detailQuery.data) {
-    return <ClassWorkspaceSkeleton />;
-  }
-
-  if (detailQuery.isError) {
+  // Error first when there is nothing to show: with retry:false + 
+  // placeholderData, a failed first load leaves data undefined while
+  // isPending is already false — checking pending first would spin the
+  // skeleton forever instead of showing the not-found state.
+  if (detailQuery.isError && !detailQuery.data) {
     return (
       <section className={styles.page}>
         <Link href="/teacher/grading" className={styles.back}>
@@ -42,17 +42,16 @@ export default function ClassWorkspacePage() {
     );
   }
 
+  if (detailQuery.isPending || !detailQuery.data) {
+    return <ClassWorkspaceSkeleton />;
+  }
+
   // No remount key here on purpose: the encoder keeps its category,
   // assessment, and draft state across refetches, so saved scores stay on
   // screen and remain editable. Fresh server data flows in via props
   // (finals table, assessment lists) while drafts are preserved.
   return (
     <>
-      {detailQuery.isFetching ? (
-        <p className={styles.skelSync} role="status" aria-live="polite">
-          Updating scores…
-        </p>
-      ) : null}
       <ClassWorkspace detail={detailQuery.data} onMutated={refresh} />
     </>
   );

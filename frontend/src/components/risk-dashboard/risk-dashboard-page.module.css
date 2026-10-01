@@ -1,12 +1,15 @@
 /* Shared risk dashboard — page layout, skeleton, and error states.
    Used by the nurse and guidance risk pages; both render the same
-   heatmap + side-rail (levels donut, categories bars) arrangement. */
+   left rail (watch, hotspot, levels donut, categories bars) + main
+   trend-lines arrangement. */
 
 .page {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.5rem 0;
+  /* 16px comes from the layout shell (.main padding); no extra top pad —
+     content sits 16px below the navbar. */
+  padding: 0 0 1.5rem;
 }
 
 .eyebrow {
@@ -64,7 +67,31 @@
 
 .mainGrid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+/* Flipped board: wide charts column first, narrow message rail second. */
+.mainGridFlipped {
+  display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.chartsCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Two cards side by side within the charts column. */
+.duoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
   gap: 0.75rem;
   align-items: stretch;
 }
@@ -80,6 +107,9 @@
 
 @media (max-width: 1100px) {
   .mainGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mainGridFlipped {
     grid-template-columns: minmax(0, 1fr);
   }
 }

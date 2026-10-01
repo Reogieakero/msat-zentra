@@ -10,6 +10,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import type { CategorySlice, RiskDesk } from "./risk-dashboard-data";
+import { usePrimaryScale } from "./use-primary-scale";
 import styles from "./RiskCategories.module.css";
 
 /**
@@ -20,10 +21,13 @@ export function RiskCategories({
   desk,
   rows,
   interpretation,
+  primary,
 }: {
   desk: RiskDesk;
   rows: CategorySlice[];
   interpretation: string;
+  /** Saved settings hex — wins over the probed runtime palette. */
+  primary?: string | null;
 }) {
   // Tooltip swatch follows the theme ink so it stays legible on the
   // popover surface in both modes.
@@ -31,8 +35,13 @@ export function RiskCategories({
   const chartConfig = {
     count: { label: "Cases", color: resolvedTheme === "dark" ? "#fafafa" : "#171717" },
   } satisfies ChartConfig;
+  // Live primary-ink steps in rank order — bars follow user palettes.
+  const shades = usePrimaryScale(Math.max(rows.length, 1), primary);
   return (
-    <Card className={styles.panel}>
+    <Card className={`${styles.panel} ${styles.glow}`}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
       <h2 className={styles.panelTitle}>Cases by category</h2>
       <p className={styles.panelDesc}>
         What the underlying reports on the {desk} desk are about.
@@ -76,8 +85,8 @@ export function RiskCategories({
                 }
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {rows.map((c) => (
-                  <Cell key={c.key} fill={c.fill} />
+                {rows.map((c, i) => (
+                  <Cell key={c.key} fill={shades[i % shades.length]} />
                 ))}
               </Bar>
             </BarChart>

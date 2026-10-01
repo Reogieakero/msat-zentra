@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, MoreHorizontal } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -153,7 +153,6 @@ export function TeacherOverviewActivity({ activity }: TeacherOverviewActivityPro
             disabled={safePage <= 1 || filtered.length === 0}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            <ChevronLeft aria-hidden />
             Previous
           </Button>
           <Button
@@ -163,7 +162,6 @@ export function TeacherOverviewActivity({ activity }: TeacherOverviewActivityPro
             onClick={() => setPage((p) => p + 1)}
           >
             Next
-            <ChevronRight aria-hidden />
           </Button>
         </div>
       </CardFooter>

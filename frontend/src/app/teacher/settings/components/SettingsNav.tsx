@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  Brush,
   GraduationCap,
   KeyRound,
   Palette,
   UserRound,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,12 +21,14 @@ export interface SettingsSectionLink {
 export function settingsSections(masterTeacherEligible: boolean): SettingsSectionLink[] {
   const links: SettingsSectionLink[] = [
     { id: "section-profile", label: "Profile", Icon: UserRound },
+    { id: "section-adviser", label: "Adviser", Icon: Users },
   ];
   if (masterTeacherEligible) {
     links.push({ id: "section-master-teacher", label: "Master Teacher", Icon: GraduationCap });
   }
   links.push(
     { id: "section-appearance", label: "Appearance", Icon: Palette },
+    { id: "section-palette", label: "Palette", Icon: Brush },
     { id: "section-password", label: "Password", Icon: KeyRound },
   );
   return links;

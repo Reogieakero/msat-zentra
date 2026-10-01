@@ -1,14 +1,16 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import * as React from "react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import {
-  ADM_STAGES,
   gradeLabel,
   stageOrder,
-  stageStatus,
   type AdmCase,
 } from "./adm-cases-data";
+import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
+import type { TrackerCaseInput } from "@/components/adm-tracker/adm-stage-activity";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./AdmCaseDialog.module.css";
 
@@ -22,7 +24,31 @@ interface AdmCaseRailProps {
    pipeline with the current position plus status-only facts. No clinical
    detail ever renders here. */
 export function AdmCaseRail({ caseData, onClose, onTrack }: AdmCaseRailProps) {
+  const listRef = React.useRef<HTMLDivElement | null>(null);
   const currentOrder = stageOrder(caseData.stage);
+  // Same shared tracker input as the referrals track dialog — one output
+  // on both pages. Filing/reviewer identity falls back (adviser filed it;
+  // reviewer unknown on this list) and the audit timeline carries the rest.
+  const trackInput: TrackerCaseInput = {
+    stage: caseData.stage,
+    referralStatus: caseData.referralStatus,
+    consultReviewer: caseData.consultReviewer ?? null,
+    referredBy: null,
+    anecdotalDate: null,
+    referredDate: caseData.datePrepared,
+    meetingAttended: caseData.meetingAttended,
+    lastMeetingAt: caseData.lastMeetingAt ?? null,
+    hasHomeVisit: caseData.hasHomeVisit,
+    approved: caseData.approved,
+    approvedAt: caseData.approvedAt,
+    modulesSubmitted: caseData.modulesSubmitted,
+    modulesTotal: caseData.modulesTotal,
+    lastModuleAt: caseData.lastModuleAt ?? null,
+    devicesReturned: caseData.devicesReturned,
+    certificationIssued: caseData.certificationIssued,
+    certificationAt: caseData.certificationAt ?? null,
+    timeline: caseData.timeline ?? [],
+  };
 
   return (
     <div className={assign.card} aria-label={`Track ADM case for ${caseData.studentName}`}>
@@ -65,35 +91,20 @@ export function AdmCaseRail({ caseData, onClose, onTrack }: AdmCaseRailProps) {
         </span>
       </div>
 
-      <ol className={`${styles.track} relative`} aria-label="ADM pipeline progress">
-        {ADM_STAGES.map((step, i) => {
-          const done = step.order < currentOrder || caseData.referralStatus === "resolved";
-          const active = step.order === currentOrder && caseData.referralStatus !== "resolved";
-          const last = i === ADM_STAGES.length - 1;
-          return (
-            <li
-              key={step.stage}
-              className={`${styles.step} ${done ? styles.done : ""} ${active ? styles.active : ""}`}
-            >
-              <span className={styles.markerCol} aria-hidden>
-                <span className={styles.marker}>
-                  {done ? <Check className={styles.markerIcon} /> : <span>{step.order}</span>}
-                </span>
-                {!last && <span className={styles.connector} />}
-              </span>
-              <span className={styles.stepBody}>
-                <span className={styles.stepLine}>
-                  <span className={styles.stepLabel}>{step.label}</span>
-                  {step.principalAction && <span className={styles.principalTag}>Principal action</span>}
-                  {active && <span className={styles.currentTag}>Current</span>}
-                </span>
-                <span className={styles.stepOwner}>{step.owner}</span>
-                <span className={styles.stepStatus}>{stageStatus(caseData, step.stage)}</span>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+      {/* The 8-step timeline scrolls inside the card (same pattern as the
+          referrals track dialog) with the shared scroll-down hint pinned
+          under it — guaranteed visible whenever stages sit below the fold. */}
+      <div ref={listRef} className={`relative ${styles.timelineScroll} pr-1`}>
+        <AdmTrackingTimeline input={trackInput} />
+      </div>
+      <div className="flex justify-center pt-1">
+        <ScrollDownHint
+          scrollRef={listRef}
+          watchKey={caseData.id}
+          label="Scroll down"
+          className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
+        />
+      </div>
 
       <div className="relative flex justify-end">
         <Button type="button" size="sm" onClick={() => onTrack(caseData)}>

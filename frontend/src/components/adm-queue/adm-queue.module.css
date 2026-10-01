@@ -7,6 +7,44 @@
   width: 100%;
 }
 
+/* Opt-in glow accent (positioning keeps header/content above the glow). */
+.glow {
+  position: relative;
+  overflow: visible;
+  border-radius: 1rem;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.glow:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+}
+
 .title {
   margin: 0;
   font-size: 0.9375rem;
@@ -71,6 +109,21 @@
 
 .tableWrap tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* Clickable rows (opt-in via onRowClick) — pointer + hover wash so the
+   redirect affordance is visible. */
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:hover td {
+  background-color: color-mix(in oklch, var(--muted-foreground), transparent 94%);
+}
+
+.clickableRow:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
 .cellMain {

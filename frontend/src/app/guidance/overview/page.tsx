@@ -9,6 +9,7 @@ import { GuidanceOverviewRiskCharts } from "./components/guidance-overview-risk-
 import { GuidanceOverviewCaseloadCharts } from "./components/guidance-overview-caseload-charts";
 import { GuidanceOverviewGradeTable } from "./components/guidance-overview-grade-table";
 import { fetchGuidanceOverview } from "./components/guidance-overview-data";
+import { useGuidanceProfileSettings } from "../settings/components/profile-settings-data";
 import styles from "./components/guidance-overview.module.css";
 
 export default function GuidanceOverviewPage() {
@@ -17,6 +18,11 @@ export default function GuidanceOverviewPage() {
     queryFn: fetchGuidanceOverview,
     staleTime: 60_000,
   });
+
+  // Saved settings hex — charts build their scale straight from it, so the
+  // donut, bars, and stacked sections always wear the counselor's primary.
+  const profile = useGuidanceProfileSettings();
+  const primary = profile.data?.primaryColor ?? null;
 
   if (isPending) {
     return (
@@ -136,6 +142,7 @@ export default function GuidanceOverviewPage() {
         riskByLevel={data.riskByLevel}
         factorTotals={data.factorTotals}
         riskByGrade={data.riskByGrade}
+        primary={primary}
       />
 
       <hr className={styles.divider} />
@@ -143,6 +150,7 @@ export default function GuidanceOverviewPage() {
       <GuidanceOverviewCaseloadCharts
         referralsByType={data.referralsByType}
         sectionHeat={data.sectionHeat}
+        primary={primary}
       />
     </section>
   );

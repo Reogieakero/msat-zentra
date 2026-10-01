@@ -164,6 +164,21 @@
   text-shadow: 0 0 10px rgb(255 255 255 / 0.5);
 }
 
+/* Clickable slip variant (opt-in via onFileClick) — resets native button
+   chrome; tone/session classes keep painting the background. */
+.fileBtn {
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fileBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 /* stacked records inside the folder */
 .file {
   position: absolute;
@@ -208,6 +223,25 @@
   background: #737373;
   z-index: 1;
   transition-delay: 0s;
+}
+
+/* Session-type color coding (guidance documentation slips). Layered after
+   the grayscale tones so the background wins while tone keeps its
+   z-index/transition-delay for the fan. White slip text stays readable. */
+.sessIndividual {
+  background: #3b82f6;
+}
+
+.sessParent {
+  background: #f59e0b;
+}
+
+.sessGroup {
+  background: #22c55e;
+}
+
+.sessHome {
+  background: #8b5cf6;
 }
 
 .shine {

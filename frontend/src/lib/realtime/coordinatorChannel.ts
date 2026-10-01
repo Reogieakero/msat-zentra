@@ -59,10 +59,11 @@ interface CoordinatorNotification {
   createdAt?: string;
 }
 
-// Safety-net poll cadence: only toasts what Realtime missed (e.g. table
-// missing from the realtime publication). Rows already toasted via Realtime
-// are skipped through `seenIds`. Mirrors useTeacherRealtime.
-const FALLBACK_POLL_MS = 30_000;
+// Inbox poll cadence — the working transport alongside the realtime
+// wake-up (Supabase delivery is best-effort on this network). Cheap indexed
+// query; rows already toasted are skipped through `seenIds`. Kept short so
+// referred cases toast within seconds. Mirrors useTeacherRealtime.
+const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
 
 /** Current user id from the stored access JWT (backend signs `sub`). */
@@ -93,6 +94,24 @@ function toastTitleFor(n: CoordinatorNotification): string {
   }
   if (/returned .*revision/i.test(n.message)) {
     return "Case returned for revision";
+  }
+  if (/adm consultation endorsed/i.test(n.message)) {
+    return "ADM consultation endorsed";
+  }
+  if (/escalated to ADM/i.test(n.message)) {
+    return "Case escalated to ADM";
+  }
+  if (/reassigned to ADM/i.test(n.message)) {
+    return "Case reassigned to ADM";
+  }
+  if (/referred to ADM/i.test(n.message)) {
+    return "New ADM referral";
+  }
+  if (/re-submitted/i.test(n.message)) {
+    return "Referral re-submitted";
+  }
+  if (/was withdrawn/i.test(n.message)) {
+    return "Referral withdrawn";
   }
   if (n.type === "referral_status_change") return "Referral update";
   return "New notification";

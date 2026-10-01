@@ -244,3 +244,13 @@
   text-align: center;
   color: var(--muted-foreground);
 }
+
+.recovered {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--amber-700, #b45309);
+  background: color-mix(in oklch, var(--amber-500, #f59e0b) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--amber-500, #f59e0b) 35%, transparent);
+  border-radius: var(--radius-sm);
+}

@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import type {
   GuidanceCategoryRow,
   GuidanceRiskByGradeRow,
@@ -27,18 +28,12 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-const LEVEL_COLORS: Record<string, string> = {
-  High: "var(--chart-1)",
-  Moderate: "var(--chart-3)",
-  Low: "var(--chart-5)",
-};
-
-const FACTOR_COLOR = "var(--chart-1)";
-
 interface GuidanceOverviewRiskChartsProps {
   riskByLevel: { high: number; moderate: number; low: number };
   factorTotals: { attendance: number; grades: number; behavior: number };
   riskByGrade: GuidanceRiskByGradeRow[];
+  /** Saved settings hex — wins over the probed runtime palette. */
+  primary?: string | null;
 }
 
 function interpretLevels(high: number, moderate: number, low: number): string {
@@ -57,7 +52,17 @@ export function GuidanceOverviewRiskCharts({
   riskByLevel,
   factorTotals,
   riskByGrade,
+  primary,
 }: GuidanceOverviewRiskChartsProps) {
+  // Live primary-ink steps — donut follows High/Moderate/Low order, both
+  // bar charts wear the solid primary.
+  const scale = usePrimaryScale(3, primary);
+  const LEVEL_COLORS: Record<string, string> = {
+    High: scale[0],
+    Moderate: scale[1],
+    Low: scale[2],
+  };
+  const FACTOR_COLOR = scale[0];
   const levelSlices = [
     { label: "High", value: riskByLevel.high },
     { label: "Moderate", value: riskByLevel.moderate },
@@ -77,6 +82,9 @@ export function GuidanceOverviewRiskCharts({
   return (
     <div className={styles.chartGrid}>
       <Card className={styles.card}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Risk levels</CardTitle>
           <CardDescription className={styles.sectionDesc}>
@@ -132,12 +140,16 @@ export function GuidanceOverviewRiskCharts({
             </>
           )}
           <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
             {interpretLevels(riskByLevel.high, riskByLevel.moderate, riskByLevel.low)}
           </p>
         </CardContent>
       </Card>
 
       <Card className={styles.card}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Risk factors</CardTitle>
           <CardDescription className={styles.sectionDesc}>
@@ -163,12 +175,16 @@ export function GuidanceOverviewRiskCharts({
             </ResponsiveContainer>
           </div>
           <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
             {interpretFactors(factorTotals.attendance, factorTotals.grades, factorTotals.behavior)}
           </p>
         </CardContent>
       </Card>
 
       <Card className={styles.card}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>At-risk by grade</CardTitle>
           <CardDescription className={styles.sectionDesc}>
@@ -200,6 +216,7 @@ export function GuidanceOverviewRiskCharts({
             </ResponsiveContainer>
           </div>
           <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
             {gradeRows.every((r) => r.count === 0)
               ? "No grade level has at-risk students right now."
               : `Highest: ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.grade} with ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.count} students needing attention.`}

@@ -34,12 +34,13 @@ function NurseAdmReferralsView() {
     void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
     void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
     void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
+    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
   }
 
   if (isPending) {
     return (
       <section className={styles.page}>
-        <NurseReferralsSkeleton lockType sideRows={5} />
+        <NurseReferralsSkeleton sideRows={6} paginate={false} />
       </section>
     );
   }
@@ -81,6 +82,7 @@ function NurseAdmReferralsView() {
         title="ADM Cases"
         highlightId={highlightId}
         autoViewFormId={autoViewFormId}
+        paginate={false}
       />
     </section>
   );
@@ -91,7 +93,7 @@ export default function NurseAdmReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page}>
-          <NurseReferralsSkeleton lockType sideRows={5} />
+          <NurseReferralsSkeleton sideRows={6} paginate={false} />
         </section>
       }
     >

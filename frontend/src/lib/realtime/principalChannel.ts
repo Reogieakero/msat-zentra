@@ -51,6 +51,9 @@ function currentUserId(): string | null {
 }
 
 function toastTitleFor(n: PrincipalNotification): string {
+  if (/withdrawn/i.test(n.message)) return "Referral withdrawn by teacher";
+  if (/re-submitted/i.test(n.message)) return "Referral re-submitted";
+  if (n.type === "referral_status_change") return "New referral";
   if (n.type === "schedule_submitted") return "Schedule sent for review";
   if (n.type === "schedule_approved") return "Schedule approved";
   if (n.type === "schedule_rejected") return "Schedule sent back";

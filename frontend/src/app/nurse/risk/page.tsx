@@ -8,17 +8,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/providers";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
-import { fetchNurseRiskLevels } from "../alerts/components/nurse-alerts-data";
+import {
+  fetchNurseRiskFactors,
+  fetchNurseRiskLevels,
+} from "../alerts/components/nurse-alerts-data";
 import { fetchNurseRisk } from "./components/nurse-risk-data";
 import {
+  buildCategoryTrend,
   buildRiskDashboard,
   interpretCategoryMix,
+  interpretCategoryTrend,
   interpretLevelMix,
-  interpretSectionMatrix,
 } from "@/components/risk-dashboard/risk-dashboard-data";
 import { RiskCategories } from "@/components/risk-dashboard/RiskCategories";
-import { RiskHeatmap } from "@/components/risk-dashboard/RiskHeatmap";
+import { RiskTrendLines } from "@/components/risk-dashboard/RiskTrendLines";
 import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
+import { findHotspot, RiskHotspot } from "@/components/risk-dashboard/RiskHotspot";
+import { buildRiskWatch, RiskWatchCard } from "./components/RiskWatch";
+import { useNurseProfileSettings } from "../settings/components/profile-settings-data";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
 /**
@@ -38,6 +45,11 @@ export default function NurseRiskPage() {
     queryFn: fetchNurseRisk,
     staleTime: 60_000,
   });
+
+  // Saved settings hex — charts build their scale straight from it, so the
+  // lines, donut, and bars always wear the user's chosen primary.
+  const profile = useNurseProfileSettings();
+  const primary = profile.data?.primaryColor ?? null;
 
   const studentIds = React.useMemo(
     () => [...new Set(Object.values(riskQuery.data?.referralToStudent ?? {}))],
@@ -63,63 +75,62 @@ export default function NurseRiskPage() {
     [riskQuery.data, levelsQuery.data, isDark]
   );
 
+  // Factor flags behind the watch card — same students, same gate, so
+  // drivers repaint with levels and the desk.
+  const factorsQuery = useQuery({
+    queryKey: ["nurse-risk-factors", studentIds],
+    queryFn: () => fetchNurseRiskFactors(studentIds),
+    staleTime: 300_000,
+    enabled: studentIds.length > 0,
+  });
+
+  // Plain-words watch over the same desk rows the dashboard reads.
+  const watch = React.useMemo(
+    () =>
+      riskQuery.data
+        ? buildRiskWatch(
+            riskQuery.data.rows,
+            riskQuery.data.referralToStudent,
+            levelsQuery.data ?? {},
+            factorsQuery.data ?? {},
+          )
+        : null,
+    [riskQuery.data, levelsQuery.data, factorsQuery.data],
+  );
+
+  const hotspot = React.useMemo(
+    () =>
+      dashboard
+        ? findHotspot(dashboard.matrix, dashboard.matrixCategories, dashboard.totalCases)
+        : null,
+    [dashboard],
+  );
+
+  // Weekly category lines for the main panel — same desk rows, mapped to
+  // the shared trend input (category + referred date).
+  const trend = React.useMemo(
+    () =>
+      riskQuery.data
+        ? buildCategoryTrend(
+            riskQuery.data.rows.map((r) => ({
+              category: r.category,
+              referredAt: r.referredAt,
+            })),
+          )
+        : null,
+    [riskQuery.data],
+  );
+
   const levelsPending = studentIds.length > 0 && levelsQuery.isPending;
 
   if (riskQuery.isPending || levelsPending) {
-    // Skeleton mirrors the real layout one-to-one (page head, heatmap
-    // grid panel + donut/bars side rail with descs and interpretations)
-    // so nothing shifts when data arrives.
+    // Skeleton mirrors the real layout one-to-one (page head, summary
+    // strip, left rail cards + trend-lines panel with descs and
+    // interpretations) so nothing shifts when data arrives.
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.skelPageHead} aria-hidden="true">
-          <Skeleton className={styles.skelEyebrow} />
-          <Skeleton className={styles.skelTitle} />
-          <Skeleton className={styles.skelLede} />
-        </div>
-        <div className={styles.mainGrid}>
-          <Card>
-            <CardContent className={styles.skelChartCard}>
-              <Skeleton className={styles.skelLabel} />
-              <Skeleton className={styles.skelDesc} aria-hidden="true" />
-              <div className={styles.skelHeatScroll} aria-hidden="true">
-                <div className={styles.skelHeatGrid}>
-                  <div className={styles.skelHeatRow}>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <Skeleton key={i} className={styles.skelHeatHeadCell} />
-                    ))}
-                  </div>
-                  {[0, 1, 2, 3].map((r) => (
-                    <div key={r} className={styles.skelHeatRow}>
-                      {[0, 1, 2, 3, 4].map((c) => (
-                        <Skeleton key={c} className={styles.skelHeatCell} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className={styles.skelHeatFooter} aria-hidden="true">
-                <Skeleton className={styles.skelHeatLegend} />
-              </div>
-              <Skeleton className={styles.skelInterp} aria-hidden="true" />
-              <Skeleton className={styles.skelInterpShort} aria-hidden="true" />
-            </CardContent>
-          </Card>
-          <div className={styles.sideRail}>
-            <Card>
-              <CardContent className={styles.skelChartCard}>
-                <Skeleton className={styles.skelLabel} />
-                <Skeleton className={styles.skelDesc} aria-hidden="true" />
-                <div className={styles.skelChartRow}>
-                  <Skeleton className={styles.skelDonut} />
-                  <div className={styles.skelLegend}>
-                    {[0, 1, 2, 3].map((i) => (
-                      <Skeleton key={i} className={styles.skelLegendRow} />
-                    ))}
-                  </div>
-                </div>
-                <Skeleton className={styles.skelInterp} aria-hidden="true" />
-              </CardContent>
-            </Card>
+        <div className={styles.mainGridFlipped}>
+          <div className={styles.chartsCol}>
             <Card>
               <CardContent className={styles.skelChartCard}>
                 <Skeleton className={styles.skelLabel} />
@@ -129,6 +140,52 @@ export default function NurseRiskPage() {
                     <Skeleton key={i} className={styles.skelBar} />
                   ))}
                 </div>
+                <Skeleton className={styles.skelInterp} aria-hidden="true" />
+                <Skeleton className={styles.skelInterpShort} aria-hidden="true" />
+              </CardContent>
+            </Card>
+            <div className={styles.duoGrid}>
+              <Card>
+                <CardContent className={styles.skelChartCard}>
+                  <Skeleton className={styles.skelLabel} />
+                  <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                  <div className={styles.skelChartRow}>
+                    <Skeleton className={styles.skelDonut} />
+                    <div className={styles.skelLegend}>
+                      {[0, 1, 2, 3].map((i) => (
+                        <Skeleton key={i} className={styles.skelLegendRow} />
+                      ))}
+                    </div>
+                  </div>
+                  <Skeleton className={styles.skelInterp} aria-hidden="true" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className={styles.skelChartCard}>
+                  <Skeleton className={styles.skelLabel} />
+                  <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                  <div className={styles.skelBars}>
+                    {[0, 1, 2, 3].map((i) => (
+                      <Skeleton key={i} className={styles.skelBar} />
+                    ))}
+                  </div>
+                  <Skeleton className={styles.skelInterp} aria-hidden="true" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          <div className={styles.sideRail}>
+            <Card aria-hidden="true">
+              <CardContent className={styles.skelChartCard}>
+                <Skeleton className={styles.skelLabel} />
+                <Skeleton className={styles.skelDesc} aria-hidden="true" />
+                <Skeleton className={styles.skelInterp} aria-hidden="true" />
+              </CardContent>
+            </Card>
+            <Card aria-hidden="true">
+              <CardContent className={styles.skelChartCard}>
+                <Skeleton className={styles.skelLabel} />
+                <Skeleton className={styles.skelDesc} aria-hidden="true" />
                 <Skeleton className={styles.skelInterp} aria-hidden="true" />
               </CardContent>
             </Card>
@@ -173,41 +230,34 @@ export default function NurseRiskPage() {
   return (
     <section className={styles.page} aria-busy={refreshing}>
       {refreshing ? <NurseRefreshBadge label="Refreshing risk dashboard…" /> : null}
-      <div>
-        <p className={styles.eyebrow}>School Nurse · Insights</p>
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>Risk dashboard</h1>
-        </div>
-        <p className={styles.lede}>
-          Desk-scoped categories, levels, and heatmaps.
-        </p>
-      </div>
-      <div className={styles.mainGrid}>
-        <RiskHeatmap
-          desk="clinic"
-          categories={dashboard.matrixCategories}
-          matrix={dashboard.matrix}
-          colTotals={dashboard.colTotals}
-          total={dashboard.totalCases}
-          interpretation={interpretSectionMatrix(
-            dashboard.matrix,
-            dashboard.matrixCategories,
-            dashboard.totalCases,
-            "clinic"
-          )}
-        />
-        <div className={styles.sideRail}>
+      <div className={styles.mainGridFlipped}>
+        <div className={styles.chartsCol}>
+        {trend ? (
+          <RiskTrendLines
+            trend={trend}
+            interpretation={interpretCategoryTrend(trend)}
+            primary={primary}
+          />
+        ) : null}
+          <div className={styles.duoGrid}>
           <RiskLevels
             desk="clinic"
             mix={dashboard.levelMix}
             totalStudents={dashboard.totalStudents}
             interpretation={interpretLevelMix(dashboard.levelMix, dashboard.totalStudents, "clinic")}
+            primary={primary}
           />
           <RiskCategories
             desk="clinic"
             rows={dashboard.categoryRows}
-            interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases, "clinic")}
+            interpretation={interpretCategoryMix(dashboard.categoryRows, dashboard.totalCases)}
+            primary={primary}
           />
+          </div>
+        </div>
+        <div className={styles.sideRail}>
+          {watch ? <RiskWatchCard data={watch} /> : null}
+          <RiskHotspot hotspot={hotspot} />
         </div>
       </div>
     </section>

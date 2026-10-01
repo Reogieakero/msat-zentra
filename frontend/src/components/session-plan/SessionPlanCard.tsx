@@ -3,6 +3,14 @@
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Check, FileText, MoreHorizontal, Move as MoveIcon } from "lucide-react";
 import styles from "./session-plan-card.module.css";
 
 /* One session row on the shared card — structural fields only, so both
@@ -220,56 +228,29 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                     </button>
                   </p>
                 ) : null}
-                {showActions ? (
+                {/* Organized actions: the destructive step stays visible
+                    (Cancel / Delete), everything else lives in the ⋯
+                    overflow menu so a row never crowds the modal. */}
+                {showActions || (manageable && s.status === "cancelled") ? (
                   <div
                     className={styles.sessionActions}
                     style={{ justifyContent: "flex-end", alignItems: "center" }}
                   >
-                    {docsSupported ? (
+                    {s.status === "cancelled" ? (
                       <Button
                         type="button"
                         size="xs"
-                        variant="outline"
-                            style={{ height: "32px" }}
-                            disabled={disabled || locked}
-                            title={
-                              locked
-                                ? "Documentation unlocks once the session time arrives"
-                            : s.status === "completed"
-                              ? "View or file documentation for this session"
-                              : "File documentation for this session"
-                        }
-                        onClick={() => onAction(s, "docs")}
+                        variant="destructive"
+                        className={styles.deleteBtn}
+                        style={{ height: "32px", backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#ffffff", opacity: 1 }}
+                        title="Permanently remove this cancelled session"
+                        disabled={disabled}
+                        onClick={() => onAction(s, "delete")}
                       >
-                        {(s.attachmentsCount ?? 0) > 0 ? "Docs" : "Add docs (optional)"}
+                        Delete
                       </Button>
-                    ) : null}
-                    {isScheduled ? (
-                      <span style={{ display: "inline-flex", gap: "0.375rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                        <Button
-                          type="button"
-                          size="xs"
-                          style={{ height: "32px" }}
-                          disabled={disabled || locked}
-                          title={
-                            locked
-                              ? "You can mark this session done once the scheduled time arrives"
-                              : "Record what happened and mark this session done"
-                          }
-                          onClick={() => onAction(s, "finish")}
-                        >
-                          Mark done
-                        </Button>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="outline"
-                          style={{ height: "32px" }}
-                          disabled={disabled}
-                          onClick={() => onAction(s, "move")}
-                        >
-                          Move
-                        </Button>
+                    ) : isScheduled ? (
+                      <>
                         <Button
                           type="button"
                           size="xs"
@@ -280,27 +261,82 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                         >
                           Cancel
                         </Button>
-                      </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant="outline"
+                              disabled={disabled}
+                              aria-label={`More actions for the ${formatDate(s.date)} session`}
+                            >
+                              <MoreHorizontal />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="z-[60] min-w-44"
+                          >
+                            <DropdownMenuItem
+                              disabled={disabled || locked}
+                              title={
+                                locked
+                                  ? "You can mark this session done once the scheduled time arrives"
+                                  : "Record what happened and mark this session done"
+                              }
+                              onSelect={() => onAction(s, "finish")}
+                            >
+                              <Check />
+                              Mark done
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={disabled}
+                              onSelect={() => onAction(s, "move")}
+                            >
+                              <MoveIcon />
+                              Move
+                            </DropdownMenuItem>
+                            {docsSupported ? (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  disabled={disabled || locked}
+                                  title={
+                                    locked
+                                      ? "Documentation unlocks once the session time arrives"
+                                      : s.status === "completed"
+                                        ? "View or file documentation for this session"
+                                        : "File documentation for this session"
+                                  }
+                                  onSelect={() => onAction(s, "docs")}
+                                >
+                                  <FileText />
+                                  {(s.attachmentsCount ?? 0) > 0 ? "Docs" : "Add docs (optional)"}
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    ) : docsSupported ? (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        style={{ height: "32px" }}
+                        disabled={disabled || locked}
+                        title={
+                          locked
+                            ? "Documentation unlocks once the session time arrives"
+                            : s.status === "completed"
+                              ? "View or file documentation for this session"
+                              : "File documentation for this session"
+                        }
+                        onClick={() => onAction(s, "docs")}
+                      >
+                        {(s.attachmentsCount ?? 0) > 0 ? "Docs" : "Add docs (optional)"}
+                      </Button>
                     ) : null}
-                  </div>
-                ) : null}
-                {manageable && s.status === "cancelled" ? (
-                  <div
-                    className={styles.sessionActions}
-                    style={{ justifyContent: "flex-end", alignItems: "center" }}
-                  >
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="destructive"
-                      className={styles.deleteBtn}
-                      style={{ height: "32px", backgroundColor: "#dc2626", borderColor: "#dc2626", color: "#ffffff", opacity: 1 }}
-                      title="Permanently remove this cancelled session"
-                      disabled={disabled}
-                      onClick={() => onAction(s, "delete")}
-                    >
-                      Delete
-                    </Button>
                   </div>
                 ) : null}
               </li>

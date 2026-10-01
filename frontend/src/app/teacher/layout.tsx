@@ -4,9 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme, useFont } from "@/components/providers";
+import { useTheme } from "@/components/providers";
 import { TeacherSidebar } from "@/components/teacher-sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Command,
   CommandInput,
@@ -19,11 +19,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Type } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { AdviserClaimGate } from "./components/AdviserClaimGate";
-import { useLinksLayout } from "@/lib/links-layout";
+import {
+  TeacherPaletteGate,
+  useTeacherProfileSettings,
+} from "./settings/components/profile-settings-data";
 import { TeacherNotificationsBell } from "./components/TeacherNotificationsBell";
+import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
 import styles from "./record-teacher.module.css";
 
@@ -45,15 +49,14 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { resolvedTheme, setTheme } = useTheme();
-  const { font, setFont } = useFont();
   const [query, setQuery] = React.useState("");
   // Live adviser alerts: a sileo toast pops on the current page the moment
   // another desk acts on their case (e.g. ADM coordinator books a parent
   // meeting), plus their lists refresh. Single channel per mount.
   useTeacherRealtime();
+  // Saved workspace palette paints every teacher page (mounted below).
 
-  const [linksLayout] = useLinksLayout();
-  const railOn = linksLayout === "sidebar";
+  const profile = useTeacherProfileSettings();
   const [topbarCrumb, setTopbarCrumb] = React.useState<React.ReactNode>(null);
   const setCrumb = React.useCallback(
     (node: React.ReactNode) => setTopbarCrumb(node),
@@ -74,6 +77,7 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TopbarCrumbContext.Provider value={{ setCrumb }}>
+    <TeacherPaletteGate />
     <div className={styles.wrapper}>
       <header className={styles.topbar}>
         <Link href="/teacher/overview" className={styles.brand}>
@@ -106,6 +110,9 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
               aria-label="Account menu"
             >
               <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
                 <AvatarFallback>
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
@@ -156,37 +163,6 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
                 ) : null}
               </DropdownMenuItem>
             </div>
-            <div className={styles.accountGroup}>
-              <div className={styles.accountGroupLabel}>
-                <span>Font</span>
-              </div>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setFont("inter");
-                }}
-              >
-                <Type className={styles.accountIcon} />
-                <span>Inter</span>
-                {font === "inter" ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className={`${styles.accountItem} ${styles.accountSubItem}`}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setFont("nunito");
-                }}
-              >
-                <Type className={styles.accountIcon} />
-                <span>Nunito</span>
-                {font === "nunito" ? (
-                  <span className={styles.accountCheck}>Active</span>
-                ) : null}
-              </DropdownMenuItem>
-            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className={styles.accountItem}
@@ -202,12 +178,13 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
         </DropdownMenu>
       </header>
       <TeacherSidebar />
-      <div className={`${styles.shell} ${railOn ? styles.shellWithRail : ""}`}>
+      <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
       {/* First-login self-onboarding: asks new teachers if they advise, and
           links their account to the principal-listed section on claim. */}
       <AdviserClaimGate />
+      <BookingReminderStack desk="teacher" />
     </div>
     </TopbarCrumbContext.Provider>
   );

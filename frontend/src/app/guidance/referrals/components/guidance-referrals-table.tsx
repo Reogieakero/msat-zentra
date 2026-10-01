@@ -57,6 +57,7 @@ import {
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
 import { toast } from "@/components/ui/sonner";
+import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
 import { apiErrorMessage } from "./guidance-referrals-data";
 import styles from "./guidance-referrals-table.module.css";
@@ -156,6 +157,47 @@ function Busy({ busy }: { busy: boolean }) {
   return <Loader2 className={styles.spin} aria-hidden="true" />;
 }
 
+/* Scroll hint — a floating "scroll for more" pill shown only while the
+   page itself is scrollable and the reader hasn't reached the bottom.
+   Rendered instead of the pager on full-list feeds. */
+function ScrollHint({ count }: { count: number }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const update = () => {
+      if (count === 0) {
+        setVisible(false);
+        return;
+      }
+      const el = document.documentElement;
+      const scrollable = el.scrollHeight - window.innerHeight > 40;
+      const atBottom =
+        window.innerHeight + window.scrollY >= el.scrollHeight - 80;
+      setVisible(scrollable && !atBottom);
+    };
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    // Measure after paint (and again once content settles) — async so the
+    // effect itself never sets state synchronously.
+    const t1 = window.setTimeout(update, 0);
+    const t2 = window.setTimeout(update, 500);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [count]);
+  if (!visible) return null;
+  return (
+    <div className={styles.scrollHint} aria-hidden="true">
+      <span className={styles.scrollHintPill}>
+        Scroll for more
+        <span className={styles.scrollHintArrow}>↓</span>
+      </span>
+    </div>
+  );
+}
+
 /* Live clock for the session countdowns — ticks each second while any
    scheduled session is on screen so the seconds stay exact. */
 function useNowTick(active: boolean): number {
@@ -171,10 +213,10 @@ function useNowTick(active: boolean): number {
 export function GuidanceReferralsTable({
   referrals,
   summary,
-  page,
-  pageSize,
+  page = 1,
+  pageSize = 0,
   total,
-  totalPages,
+  totalPages = 1,
   onPageChange,
   query,
   onQueryChange,
@@ -184,7 +226,10 @@ export function GuidanceReferralsTable({
   onActionChange,
   onRetry,
   isRetrying,
-  isNavigating,
+  isNavigating = false,
+  // Full-list mode (locked track pages): every row renders, the pager is
+  // replaced by the scroll hint. Server-paged mode keeps the pager.
+  paginate = true,
   lockType = false,
   title = "Referrals to me",
   highlightId = null,
@@ -386,6 +431,9 @@ export function GuidanceReferralsTable({
       }
       const message = referralActionMessage(variables.action);
       if (message) toast.success(message);
+      // Instant reminder: re-evaluate the inbox now (booking-filtered
+      // inside) instead of waiting for the next poll tick.
+      refreshBookingReminders();
     },
     onError: (err) => {
       toast.error({
@@ -433,6 +481,7 @@ export function GuidanceReferralsTable({
 
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
+  const goToPage = (next: number) => onPageChange?.(next);
   const isActionPending = actionMutation.isPending;
 
   const hasActiveFilters =
@@ -457,7 +506,8 @@ export function GuidanceReferralsTable({
     onTypeChange(lockType ? typeFilter : "");
   }
 
-  // Scroll the highlighted case into view once its page renders.
+  // Scroll the highlighted case into view once its page renders. In
+  // full-list mode the row is always mounted, so no page math is needed.
   useEffect(() => {
     if (!highlightId) return;
     const t = window.setTimeout(() => {
@@ -466,12 +516,17 @@ export function GuidanceReferralsTable({
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 150);
     return () => window.clearTimeout(t);
-  }, [highlightId, page, referrals]);
+  }, [highlightId, referrals]);
 
   return (
     <div className={styles.layout}>
       <div className={`${styles.feed} ${styles.layoutFeed}`}>
         <h1 className={styles.srOnly}>Cases sent to guidance</h1>
+        {/* Locked track pages match the nurse timelines: entries start
+            immediately, all filtering lives in the action sidebar. The
+            toolbar (title, search, track picker) renders on unlocked
+            views only. */}
+        {!lockType && (
         <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
           <div>
             <p className={styles.pageTitle}>{title}</p>
@@ -488,9 +543,6 @@ export function GuidanceReferralsTable({
                 aria-label="Search your cases"
               />
             </div>
-            {/* Locked pages never need the track dropdown — the page itself
-                is the track, so the picker would only ever hold one value. */}
-            {!lockType && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -514,7 +566,7 @@ export function GuidanceReferralsTable({
                       // Sidebar actions are per-track — a stale action from
                       // the other track would empty the list, so reset it.
                       onActionChange("");
-                      onPageChange(1);
+                      goToPage(1);
                     }}
                   >
                     {item.label}
@@ -522,7 +574,6 @@ export function GuidanceReferralsTable({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            )}
             {hasActiveFilters && (
               <Button
                 variant="ghost"
@@ -535,6 +586,7 @@ export function GuidanceReferralsTable({
             )}
           </div>
         </div>
+        )}
 
       {mutation.isError && (
         <div className={styles.errorBlock} role="alert">
@@ -552,43 +604,29 @@ export function GuidanceReferralsTable({
           </Button>
         </div>
       )}
-      {actionMutation.isError && (
-        <div className={styles.errorBlock} role="alert">
-          <p className={styles.errorText}>
-            Sorry — that action did not go through. Please try again.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isRetrying}
-            onClick={() => onRetry()}
-          >
-            <Busy busy={isRetrying} />
-            {isRetrying ? "Loading…" : "Try again"}
-          </Button>
-        </div>
-      )}
-
       {referrals.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>
             {hasActiveFilters
-              ? "No cases match your search"
+              ? lockType
+                ? "No cases match the selected filter"
+                : "No cases match your search"
               : "You're all caught up"}
           </p>
           <p className={styles.emptyHint}>
             {hasActiveFilters
-              ? "Try a different name or keyword, or clear the filter to see every case."
+              ? lockType
+                ? "Pick a different action in the sidebar, or show every case."
+                : "Try a different name or keyword, or clear the filter to see every case."
               : "New cases sent to you by advisers will appear here."}
           </p>
         </div>
       ) : (
         <ol className={styles.timeline}>
-          {referrals.map((row, index) => (
+          {referrals.map((row) => (
             <GuidanceReferralEntry
               key={row.id}
               row={row}
-              alt={index % 2 === 1}
               now={now}
               highlighted={highlightId !== null && highlightId === row.id}
               actionPending={isActionPending}
@@ -608,51 +646,56 @@ export function GuidanceReferralsTable({
         </ol>
       )}
 
-      {/* Pager */}
-      <nav className={styles.pager} aria-label="Cases pages">
-        <p className={styles.range}>
-          Showing cases {start}–{end} of {total}
-        </p>
-        <div className={styles.pagerButtons}>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page <= 1 || isNavigating}
-            onClick={() => onPageChange(page - 1)}
-            aria-label="Show newer cases"
-          >
-            ← Newer
-          </Button>
-          <span className={styles.pageLabel} aria-live="polite">
-            {isNavigating ? (
-              <span className={styles.loadingLabel}>
-                <Busy busy />
-                Loading…
-              </span>
-            ) : (
-              `Page ${page} of ${totalPages}`
-            )}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page >= totalPages || isNavigating}
-            onClick={() => onPageChange(page + 1)}
-            aria-label="Show older cases"
-          >
-            Older →
-          </Button>
-        </div>
-      </nav>
+      {/* Pager (server-paged mode) or scroll hint (full-list mode). */}
+      {paginate ? (
+        <nav className={styles.pager} aria-label="Cases pages">
+          <p className={styles.range}>
+            Showing cases {start}–{end} of {total}
+          </p>
+          <div className={styles.pagerButtons}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1 || isNavigating}
+              onClick={() => goToPage(page - 1)}
+              aria-label="Show newer cases"
+            >
+              ← Newer
+            </Button>
+            <span className={styles.pageLabel} aria-live="polite">
+              {isNavigating ? (
+                <span className={styles.loadingLabel}>
+                  <Busy busy />
+                  Loading…
+                </span>
+              ) : (
+                `Page ${page} of ${totalPages}`
+              )}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages || isNavigating}
+              onClick={() => goToPage(page + 1)}
+              aria-label="Show older cases"
+            >
+              Older →
+            </Button>
+          </div>
+        </nav>
+      ) : (
+        <ScrollHint count={total} />
+      )}
       </div>
 
       <GuidanceActionMenu
         action={action}
         summary={summary}
         typeFilter={typeFilter}
+        showCancelled={lockType}
         onPick={(value) => {
           onActionChange(action === value ? "" : value);
-          onPageChange(1);
+          goToPage(1);
         }}
         onClear={() => onActionChange("")}
       />
@@ -764,11 +807,12 @@ export function GuidanceReferralsTable({
 interface GuidanceReferralsTableProps {
   referrals: GuidanceReferralItem[];
   summary: GuidanceReferralsSummary | null;
-  page: number;
-  pageSize: number;
+  page?: number;
+  pageSize?: number;
   total: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  paginate?: boolean;
   query: string;
   onQueryChange: (value: string) => void;
   typeFilter: GuidanceTypeFilter;
@@ -777,7 +821,7 @@ interface GuidanceReferralsTableProps {
   onActionChange: (value: GuidanceAction) => void;
   onRetry: () => void;
   isRetrying: boolean;
-  isNavigating: boolean;
+  isNavigating?: boolean;
   // Locked pages (ADM Cases / Counseling Cases) hide the track dropdown
   // and keep "Show all" within their own track.
   lockType?: boolean;

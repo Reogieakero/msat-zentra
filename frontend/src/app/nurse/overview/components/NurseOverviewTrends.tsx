@@ -11,8 +11,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card } from "@/components/ui/card";
 import type { NurseQueueRow, NurseTrendPoint } from "./nurse-overview-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
 /* Minute-precision clock is enough (no seconds displayed) — re-renders
@@ -75,7 +75,7 @@ function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
             type="monotone"
             dataKey="adm"
             name="ADM cases"
-            stroke="var(--chart-1)"
+            stroke="var(--primary)"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -84,8 +84,9 @@ function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
             type="monotone"
             dataKey="clinic"
             name="Clinic matters"
-            stroke="var(--chart-4)"
+            stroke="color-mix(in oklch, var(--primary), transparent 45%)"
             strokeWidth={2}
+            strokeDasharray="6 3"
             dot={false}
             activeDot={{ r: 4 }}
           />
@@ -180,9 +181,9 @@ function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
               type="monotone"
               dataKey="hours"
               name="Waiting time"
-              stroke="var(--chart-1)"
+              stroke="var(--primary)"
               strokeWidth={2}
-              dot={{ fill: "var(--chart-1)", r: 3 }}
+              dot={{ fill: "var(--primary)", r: 3 }}
               activeDot={{ r: 5 }}
             />
           </LineChart>
@@ -201,18 +202,33 @@ export function NurseOverviewTrends({
 }) {
   return (
     <div className={styles.twoCol}>
-      <Card className={styles.panel}>
-        <h2 className={styles.panelTitle}>Case load</h2>
-        <p className={styles.panelDesc}>
-          Referred cases per day over the last 14 days — referred time to now.
-        </p>
-        <CaseLoadLine trend={dailyTrend} />
-      </Card>
-      <Card className={styles.panel}>
-        <h2 className={styles.panelTitle}>Waiting time</h2>
-        <p className={styles.panelDesc}>Time elapsed from referred to now.</p>
-        <WaitingTimeLine rows={needsReview} />
-      </Card>
+      <div className={assign.card}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div className="relative">
+          <h2 className={styles.sectionTitle}>Case load</h2>
+          <p className={styles.sectionDesc}>
+            Referred cases per day over the last 14 days — referred time to
+            now.
+          </p>
+        </div>
+        <div className="relative">
+          <CaseLoadLine trend={dailyTrend} />
+        </div>
+      </div>
+      <div className={assign.card}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div className="relative">
+          <h2 className={styles.sectionTitle}>Waiting time</h2>
+          <p className={styles.sectionDesc}>Time elapsed from referred to now.</p>
+        </div>
+        <div className="relative">
+          <WaitingTimeLine rows={needsReview} />
+        </div>
+      </div>
     </div>
   );
 }

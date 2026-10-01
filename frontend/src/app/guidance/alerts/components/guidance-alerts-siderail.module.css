@@ -1,0 +1,40 @@
+/* Guidance alerts side rail — row links, message lines, name links. Card
+   chrome comes from the shared glow card pattern. */
+
+.rowList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rowLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease-out;
+}
+
+.rowLink:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.message {
+  line-height: 1.6;
+}
+
+.nameLink {
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.nameLink:hover {
+  text-decoration-thickness: 2px;
+}

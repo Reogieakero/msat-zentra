@@ -617,7 +617,7 @@ export function AdmReferralFormSheet({
 
               <div
                 className={styles.actions}
-                style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
+                style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}
               >
                 <Button disabled={!form} onClick={() => setStep(2)}>
                   Preview filled form

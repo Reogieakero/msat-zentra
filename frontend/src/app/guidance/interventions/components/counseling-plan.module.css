@@ -1,8 +1,42 @@
 .plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background-color: var(--card);
+  padding: 1rem;
+  overflow: visible;
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.planBody {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  margin-top: 0.75rem;
   min-width: 0;
 }
 
@@ -84,6 +118,10 @@
 
 .watermarkUpcoming {
   color: color-mix(in oklch, var(--success, #16a34a), transparent 55%);
+}
+
+.watermarkOngoing {
+  color: color-mix(in oklch, var(--primary), transparent 45%);
 }
 
 .watermarkCancelled {

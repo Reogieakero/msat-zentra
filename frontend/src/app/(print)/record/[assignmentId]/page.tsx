@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   COMPONENT_ORDER,
-  categoryWork,
+  computeSubjectGrade,
   fetchClassDetail,
   gradeLabel,
+  subjectEvidence,
 } from "@/app/teacher/grading/components/grading-data";
 import styles from "./record-sheet.module.css";
 
@@ -55,7 +56,9 @@ export default function ClassRecordPage() {
   }
 
   const { assignment, students, components } = detailQuery.data;
-  const workByStudent = new Map(students.map((s) => [s.id, categoryWork(components, s.id)]));
+  const gradeByStudent = new Map(
+    students.map((s) => [s.id, computeSubjectGrade(subjectEvidence(components, s.id))]),
+  );
 
   return (
     <section className={styles.page}>
@@ -87,6 +90,7 @@ export default function ClassRecordPage() {
         {students.length === 0 ? (
           <p className={styles.empty}>No students in this section yet.</p>
         ) : (
+          <>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -100,6 +104,7 @@ export default function ClassRecordPage() {
                     return (
                       <th key={t} colSpan={Math.max(n, 1)} className={styles.groupHead}>
                         {SHORT[t]} · {c ? `${c.weight}%` : "—"}
+                        {n === 0 ? " — No assessments (excluded)" : ""}
                       </th>
                     );
                   })}
@@ -127,9 +132,14 @@ export default function ClassRecordPage() {
               </thead>
               <tbody>
                 {students.map((s) => {
-                  const work = workByStudent.get(s.id) ?? [];
-                  const avgOf = (t: string) => work.find((w) => w.type === t)?.average ?? 0;
-                  const f = s.final;
+                  const grade = gradeByStudent.get(s.id);
+                  const avgOf = (t: string) => {
+                    const pct = grade?.categories.find((c) => c.componentType === t)?.percentage;
+                    return pct == null ? null : pct;
+                  };
+                  // Computed / Transmuted / Remarks come from recorded
+                  // assessments only (same engine as the workspace) — never
+                  // across all types, and "—" when nothing is recorded yet.
                   return (
                     <tr key={s.id}>
                       <th className={styles.stickyCol} scope="row">
@@ -158,22 +168,29 @@ export default function ClassRecordPage() {
                           );
                         });
                       })}
-                      <td className={styles.avgCol}>{avgOf("WRITTEN_WORK").toFixed(1)}</td>
-                      <td className={styles.avgCol}>{avgOf("PERFORMANCE_TASK").toFixed(1)}</td>
-                      <td className={styles.avgCol}>{avgOf("EXAM").toFixed(1)}</td>
+                      <td className={styles.avgCol}>{avgOf("WRITTEN_WORK")?.toFixed(1) ?? "N/A"}</td>
+                      <td className={styles.avgCol}>{avgOf("PERFORMANCE_TASK")?.toFixed(1) ?? "N/A"}</td>
+                      <td className={styles.avgCol}>{avgOf("EXAM")?.toFixed(1) ?? "N/A"}</td>
                       <td className={styles.finalCol}>
-                        {f?.computedAverage != null ? f.computedAverage.toFixed(2) : "—"}
+                        {grade?.computedAverage != null ? grade.computedAverage.toFixed(2) : "—"}
                       </td>
                       <td className={styles.finalCol}>
-                        {f?.transmutedGrade != null ? f.transmutedGrade.toFixed(0) : "—"}
+                        {grade?.transmutedGrade != null ? grade.transmutedGrade.toFixed(0) : "—"}
                       </td>
-                      <td className={styles.finalCol}>{f?.remarks ?? "—"}</td>
+                      <td className={styles.finalCol}>{grade?.remarks ?? "—"}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+          <p className={styles.footnote}>
+            Category averages use total-earned ÷ total-possible over encoded scores only.
+            Categories with no assessments are excluded (N/A) and the remaining
+            weights normalize to 100. Unencoded scores are not zeroes. Computed,
+            Transmuted, and Remarks are calculated live from recorded assessments.
+          </p>
+          </>
         )}
       </div>
     </section>

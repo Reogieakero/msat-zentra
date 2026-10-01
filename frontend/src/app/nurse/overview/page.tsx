@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { NurseOverviewKpis } from "./components/NurseOverviewKpis";
 import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
 import { NurseOverviewBreakdown } from "./components/NurseOverviewBreakdown";
@@ -21,94 +21,95 @@ export default function NurseOverviewPage() {
   });
 
   if (isPending) {
-    // Skeleton mirrors the real layout one-to-one (same grid, same cards,
-    // same headers/descs/thead, same dividers and sections) so nothing
-    // shifts when the data arrives.
+    // Skeleton mirrors the real layout one-to-one (teacher body grid: main
+    // data-table card + sticky side card, then breakdown + trends) so
+    // nothing shifts when the data arrives.
     return (
       <section className={styles.page} aria-busy="true">
-        <div className={styles.topRow}>
+        <div className={styles.body}>
           <div className={styles.mainCol}>
-            <Card className={`${styles.panel} ${styles.skelPanel} ${styles.needsPanel}`}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-              <div className={styles.skelThead} aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className={styles.skelTheadCell} />
+            <div className={assign.card}>
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative">
+                <Skeleton className={styles.skelCardTitle} />
+                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
+              </div>
+              <div className="relative overflow-x-auto rounded-md border p-2">
+                <div className={styles.skelThead} aria-hidden="true">
+                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                    <Skeleton key={i} className={styles.skelTheadCell} />
+                  ))}
+                </div>
+                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <Skeleton key={i} className={styles.skelRow} />
                 ))}
               </div>
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <Skeleton key={i} className={styles.skelRow} />
-              ))}
-            </Card>
-          </div>
-
-          <div className={styles.kpiRail}>
-            <div className={styles.kpiGrid}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Card key={i} size="sm" className={styles.card}>
-                  <CardContent className={styles.skelKpiBody}>
-                    <Skeleton className={styles.skelKpiLabel} />
-                    <Skeleton className={styles.skelKpiValue} />
-                    <Skeleton className={styles.skelKpiHint} aria-hidden="true" />
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
+
+          <aside className={styles.sideCol} style={{ top: "4rem" }}>
+            <div className={assign.card}>
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative">
+                <Skeleton className={styles.skelCardTitle} />
+                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
+              </div>
+              <div className="relative flex flex-col gap-3">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="flex flex-1 flex-col gap-1">
+                      <Skeleton className={styles.skelKpiLabel} />
+                      <Skeleton className={styles.skelKpiHint} aria-hidden="true" />
+                    </div>
+                    <Skeleton className="h-6 w-8" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
         </div>
 
         <hr className={styles.divider} />
 
         <div className={styles.threeCol}>
-          <Card className={`${styles.panel} ${styles.skelPanel}`}>
-            <Skeleton className={styles.skelCardTitle} />
-            <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-            <div className={styles.skelChartRow}>
-              <Skeleton className={styles.skelDonut} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3].map((i) => (
-                  <Skeleton key={i} className={styles.skelLegendRow} />
-                ))}
+          {[0, 1, 2].map((col) => (
+            <div key={col} className={assign.card}>
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative">
+                <Skeleton className={styles.skelCardTitle} />
+                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
+              </div>
+              <div className="relative">
+                <Skeleton className={styles.skelLine} aria-hidden="true" />
               </div>
             </div>
-          </Card>
-          {[1, 2].map((col) => (
-            <Card key={col} className={`${styles.panel} ${styles.skelPanel}`}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-              <div className={styles.skelBars}>
-                {[82, 64, 50, 36, 24].map((w) => (
-                  <div key={w} className={styles.skelBarRowWrap} aria-hidden="true">
-                    <Skeleton className={styles.skelBarYLabel} />
-                    <Skeleton className={styles.skelBarRow} style={{ width: `${w}%` }} />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className={styles.skelBarTotal} aria-hidden="true" />
-            </Card>
           ))}
         </div>
 
         <hr className={styles.divider} />
 
         <div className={styles.twoCol}>
-          <Card className={`${styles.panel} ${styles.skelPanel}`}>
-            <Skeleton className={styles.skelCardTitle} />
-            <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-            <Skeleton className={styles.skelLine} aria-hidden="true" />
-          </Card>
-          <Card className={`${styles.panel} ${styles.skelPanel}`}>
-            <Skeleton className={styles.skelCardTitle} />
-            <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
-            <div className={styles.skelBars}>
-              {[72, 54, 38, 26].map((w) => (
-                <div key={w} className={styles.skelBarRowWrap} aria-hidden="true">
-                  <Skeleton className={styles.skelBarYLabel} />
-                  <Skeleton className={styles.skelBarRow} style={{ width: `${w}%` }} />
-                </div>
-              ))}
+          {[0, 1].map((col) => (
+            <div key={col} className={assign.card}>
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative">
+                <Skeleton className={styles.skelCardTitle} />
+                <Skeleton className={styles.skelPanelDesc} aria-hidden="true" />
+              </div>
+              <div className="relative">
+                <Skeleton className={styles.skelLine} aria-hidden="true" />
+              </div>
             </div>
-          </Card>
+          ))}
         </div>
       </section>
     );
@@ -144,13 +145,16 @@ export default function NurseOverviewPage() {
 
   return (
     <section className={styles.page} aria-busy={refreshing}>
+      {/* Floating pill — never shifts the content. */}
       {refreshing ? <NurseRefreshBadge label="Refreshing overview…" /> : null}
-      <div className={styles.topRow}>
+      {/* Teacher overview layout: main data-table column + sticky right
+          rail of cards. Same grid, same sticky offset, same card shell. */}
+      <div className={styles.body}>
         <div className={styles.mainCol}>
           <NurseNeedsReviewPanel needsReview={data.needsReview} />
         </div>
 
-        <aside className={styles.kpiRail}>
+        <aside className={styles.sideCol} style={{ top: "4rem" }}>
           <NurseOverviewKpis kpis={data.kpis} />
         </aside>
       </div>

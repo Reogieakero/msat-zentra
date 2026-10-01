@@ -49,6 +49,7 @@ export interface AdvisoryRoster {
   termId: string | null;
   students: AdviseeRow[];
   subjects: AdvisoryRosterSubject[];
+  archivedCount?: number;
 }
 
 export interface AdviseeGrade {
@@ -124,6 +125,18 @@ const ROSTER_GC_MS = 5 * 60_000;
 /** Teacher-scoped key — one teacher's advisees must never leak to another. */
 export function advisoryRosterKey(teacherId: string | null | undefined) {
   return ["advisory-students", teacherId ?? "anon"] as const;
+}
+
+export async function fetchArchivedRoster(): Promise<AdvisoryRoster> {
+  const { data } = await apiClient.get<AdvisoryRoster>(
+    "/api/teacher/advisory/students?archived=true",
+  );
+  return data;
+}
+
+/** Teacher-scoped key for soft-deleted (archived) advisees. */
+export function archivedRosterKey(teacherId: string | null | undefined) {
+  return ["advisory-students-archived", teacherId ?? "anon"] as const;
 }
 
 /** Advisee roster shared by the students page and the attendance sheet, so

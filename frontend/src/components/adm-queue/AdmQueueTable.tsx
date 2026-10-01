@@ -21,11 +21,17 @@ import {
 } from "@/components/ui/table";
 import styles from "./adm-queue.module.css";
 
+/* Badge color language for queue statuses — color-coded (amber/blue/green/
+   red) plus the legacy neutrals guidance still passes. */
 export type AdmQueueStatusVariant =
-  | "warning"
-  | "default"
+  | "amber"
+  | "blue"
+  | "green"
+  | "red"
   | "secondary"
   | "outline"
+  | "warning"
+  | "default"
   | "destructive"
   | "success";
 
@@ -94,8 +100,9 @@ function RiskBadge({ level, loading = false }: { level: AdmQueueRisk | undefined
       </span>
     );
   if (!level) return <span className={styles.noRisk}>—</span>;
-  const variant =
-    level === "High" ? "destructive" : level === "Moderate" ? "warning" : "outline";
+  // Shared RAG convention (same as teacher/principal desks):
+  // High red, Moderate amber, Low green.
+  const variant = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
@@ -115,6 +122,10 @@ export function AdmQueueTable({
   rows,
   renderActions,
   riskLoading = false,
+  limit,
+  onRowClick,
+  typeBadgeLabel = "ADM",
+  glow = false,
 }: {
   title: string;
   description: string;
@@ -124,6 +135,16 @@ export function AdmQueueTable({
   rows: AdmQueueRowVM[];
   renderActions: (id: string) => React.ReactNode;
   riskLoading?: boolean;
+  /** Cap the visible list to the latest N rows (search still matches all). */
+  limit?: number;
+  /** Redirect on row click (keyboard-accessible). Omit for static rows. */
+  onRowClick?: (id: string) => void;
+  /** Type-column badge text. Defaults to "ADM" (queue tables); pass null
+      to hide the Type column for non-case lists. */
+  typeBadgeLabel?: string | null;
+  /** Glow accent card treatment. Defaults off so existing queues render
+      byte-identical. */
+  glow?: boolean;
 }) {
   const [query, setQuery] = React.useState("");
   const now = useNowTick();
@@ -134,10 +155,17 @@ export function AdmQueueTable({
     return rows.filter((r) => r.searchText.toLowerCase().includes(q));
   }, [rows, query]);
 
+  const visible = limit !== undefined ? filtered.slice(0, limit) : filtered;
+
   const searching = query.trim() !== "";
 
   return (
-    <Card>
+    <Card className={glow ? styles.glow : undefined}>
+      {glow ? (
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
+      ) : null}
       <CardHeader>
         <div className={styles.queueHeadRow}>
           <div>
@@ -158,7 +186,7 @@ export function AdmQueueTable({
         </div>
       </CardHeader>
       <CardContent>
-        {filtered.length === 0 ? (
+        {visible.length === 0 ? (
           <div className={styles.queueEmpty}>
             <p className={styles.queueEmptyTitle}>
               {searching ? "No cases match your search" : emptyTitle}
@@ -173,7 +201,7 @@ export function AdmQueueTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>LRN</TableHead>
-                  <TableHead>Type</TableHead>
+                  {typeBadgeLabel !== null ? <TableHead>Type</TableHead> : null}
                   <TableHead>Case status</TableHead>
                   <TableHead>Risk</TableHead>
                   <TableHead>Latest action</TableHead>
@@ -185,11 +213,35 @@ export function AdmQueueTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((row) => {
+                {visible.map((row) => {
                   const actionMs = msSince(row.actionTime, now);
                   const LatestIcon = row.LatestIcon;
+                  const clickable = onRowClick !== undefined;
                   return (
-                    <TableRow key={row.id}>
+                    <TableRow
+                      key={row.id}
+                      className={clickable ? styles.clickableRow : undefined}
+                      tabIndex={clickable ? 0 : undefined}
+                      onClick={
+                        clickable
+                          ? (e) => {
+                              // Action buttons handle their own clicks.
+                              if ((e.target as HTMLElement).closest("button,a")) return;
+                              onRowClick(row.id);
+                            }
+                          : undefined
+                      }
+                      onKeyDown={
+                        clickable
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onRowClick(row.id);
+                              }
+                            }
+                          : undefined
+                      }
+                    >
                       <TableCell>
                         <p className={styles.cellMain}>
                           <span className={styles.lrn}>{row.lrn}</span>
@@ -198,9 +250,11 @@ export function AdmQueueTable({
                           {row.student} · {row.section}
                         </p>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">ADM</Badge>
-                      </TableCell>
+                      {typeBadgeLabel !== null ? (
+                        <TableCell>
+                          <Badge variant="secondary">{typeBadgeLabel}</Badge>
+                        </TableCell>
+                      ) : null}
                       <TableCell>
                         <Badge variant={row.statusVariant}>{row.statusLabel}</Badge>
                       </TableCell>

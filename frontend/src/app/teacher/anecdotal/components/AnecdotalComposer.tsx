@@ -216,7 +216,7 @@ export function AnecdotalComposer({ open, onOpenChange, onSave }: AnecdotalCompo
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSave}>

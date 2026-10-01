@@ -183,7 +183,7 @@ export function AddTeacherDialog({
         ) : null}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -428,7 +428,7 @@ export function AddSubjectDialog({
         ) : null}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -747,7 +747,7 @@ function TeacherListDialog({
         <DialogFooter>
           {confirming ? (
             <>
-              <Button variant="outline" onClick={() => setConfirming(false)}>
+              <Button variant="destructive" onClick={() => setConfirming(false)}>
                 Cancel
               </Button>
               <Button

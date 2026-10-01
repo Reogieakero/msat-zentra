@@ -1,0 +1,115 @@
+/* Weekly category trend lines — main panel visual, glow card. */
+
+.panel {
+  position: relative;
+  overflow: visible;
+  min-width: 0;
+}
+
+.glow {
+  border-radius: 1rem;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.glow:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.title {
+  position: relative;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.desc {
+  position: relative;
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.chart {
+  position: relative;
+  width: 100%;
+}
+
+.empty {
+  position: relative;
+  margin: 0.625rem 0 0;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.legend {
+  position: relative;
+  margin: 0.625rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legendCount {
+  font-weight: 600;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.interpretation {
+  position: relative;
+  margin: 0.625rem 0 0;
+  padding-left: 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}

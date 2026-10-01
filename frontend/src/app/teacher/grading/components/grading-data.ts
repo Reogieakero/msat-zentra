@@ -259,33 +259,150 @@ export function bandForGrade(computed: number): TransmutationBand {
   return { grade: 60, low: 0, high: 3.99 };
 }
 
-/** Percentage score of one assessment, or null when unscored. */
-export function psOf(scores: Record<string, number>, studentId: string, maxScore: number): number | null {
-  const raw = scores[studentId];
-  if (raw == null || maxScore <= 0) return null;
-  return (raw / maxScore) * 100;
-}
+// ---------------------------------------------------------------------------
+// Assessment-driven grade computation — client twin of backend
+// services/grading.ts computeSubjectGrade (the source of truth for stored
+// grades). Same rules: only categories with assessments contribute (weights
+// normalized), earned/possible over recorded scores, N/A never zero, no
+// evidence → null instead of a fake 0% / Failed.
+// ---------------------------------------------------------------------------
 
-export interface CategoryWork {
-  type: ComponentType;
-  weight: number;
-  parts: { title: string; raw: number; max: number; ps: number }[];
-  average: number;
-  contribution: number;
-}
+export type CategoryEvidence = {
+  componentType: string;
+  weightPercentage: number;
+  earned: number;
+  possible: number;
+  assessmentCount: number;
+  encodedCount: number;
+};
 
-/** Step-1 working per category, mirroring the backend recompute exactly:
- *  average of recorded percentage scores (0 when nothing recorded yet). */
-export function categoryWork(
+export type CategoryResult = {
+  componentType: string;
+  assessmentCount: number;
+  encodedCount: number;
+  coverage: number | null;
+  percentage: number | null;
+  configuredWeight: number;
+  normalizedWeight: number;
+  effectiveWeight: number;
+};
+
+export type SubjectGradeComputation = {
+  availableCategories: string[];
+  categories: CategoryResult[];
+  existingAssessments: number;
+  encodedAssessments: number;
+  coverage: number | null;
+  rawGrade: number | null;
+  computedAverage: number | null;
+  transmutedGrade: number | null;
+  remarks: "Passed" | "Failed" | null;
+};
+
+const CANONICAL_ORDER = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"];
+
+/** Per-category evidence for one student from workspace components. */
+export function subjectEvidence(
   components: ClassComponent[],
-  studentId: string
-): CategoryWork[] {
+  studentId: string,
+): CategoryEvidence[] {
   return components.map((c) => {
-    const parts = c.assessments.flatMap((a) => {
-      const ps = psOf(a.scores, studentId, a.maxScore);
-      return ps == null ? [] : [{ title: a.title, raw: a.scores[studentId], max: a.maxScore, ps }];
-    });
-    const average = parts.length > 0 ? parts.reduce((s, p) => s + p.ps, 0) / parts.length : 0;
-    return { type: c.type, weight: c.weight, parts, average, contribution: (average * c.weight) / 100 };
+    let earned = 0;
+    let possible = 0;
+    let encodedCount = 0;
+    for (const a of c.assessments) {
+      const raw = a.scores[studentId];
+      if (raw == null) continue;
+      encodedCount += 1;
+      earned += raw;
+      possible += a.maxScore;
+    }
+    return {
+      componentType: c.type,
+      weightPercentage: c.weight,
+      earned,
+      possible,
+      assessmentCount: c.assessments.length,
+      encodedCount,
+    };
   });
+}
+
+export function computeSubjectGrade(evidence: CategoryEvidence[]): SubjectGradeComputation {
+  const byType = new Map(evidence.map((e) => [e.componentType, e]));
+  const rows = CANONICAL_ORDER.map((t) => ({
+    componentType: t,
+    weightPercentage: 0,
+    earned: 0,
+    possible: 0,
+    assessmentCount: 0,
+    encodedCount: 0,
+    ...(byType.get(t) ?? {}),
+  }));
+  const existingAssessments = rows.reduce((s, r) => s + r.assessmentCount, 0);
+  const encodedAssessments = rows.reduce((s, r) => s + r.encodedCount, 0);
+  const active = rows.filter((r) => r.assessmentCount > 0);
+
+  const categories: CategoryResult[] = rows.map((r) => ({
+    componentType: r.componentType,
+    assessmentCount: r.assessmentCount,
+    encodedCount: r.encodedCount,
+    coverage: r.assessmentCount > 0 ? r.encodedCount / r.assessmentCount : null,
+    percentage:
+      r.encodedCount > 0 && r.possible > 0 ? (r.earned / r.possible) * 100 : null,
+    configuredWeight: r.weightPercentage,
+    normalizedWeight: 0,
+    effectiveWeight: 0,
+  }));
+  const byResult = new Map(categories.map((c) => [c.componentType, c]));
+
+  const base: SubjectGradeComputation = {
+    availableCategories: active.map((r) => r.componentType),
+    categories,
+    existingAssessments,
+    encodedAssessments,
+    coverage: existingAssessments > 0 ? encodedAssessments / existingAssessments : null,
+    rawGrade: null,
+    computedAverage: null,
+    transmutedGrade: null,
+    remarks: null,
+  };
+  if (active.length === 0) return base;
+
+  const availWeight = active.reduce((s, r) => s + r.weightPercentage, 0);
+  for (const r of active) {
+    byResult.get(r.componentType)!.normalizedWeight =
+      availWeight > 0 ? (r.weightPercentage * 100) / availWeight : 100 / active.length;
+  }
+  const evidenced = active.filter(
+    (r) => byResult.get(r.componentType)!.percentage !== null,
+  );
+  if (evidenced.length === 0) return base;
+  let scale = evidenced.reduce(
+    (s, r) => s + byResult.get(r.componentType)!.normalizedWeight,
+    0,
+  );
+  if (scale <= 0) {
+    for (const r of evidenced) {
+      byResult.get(r.componentType)!.normalizedWeight = 100 / evidenced.length;
+    }
+    scale = 100;
+  }
+  for (const r of evidenced) {
+    const c = byResult.get(r.componentType)!;
+    c.effectiveWeight = (c.normalizedWeight * 100) / scale;
+  }
+  const rawGrade =
+    evidenced.reduce((s, r) => {
+      const c = byResult.get(r.componentType)!;
+      return s + c.percentage! * c.normalizedWeight;
+    }, 0) / scale;
+  const transmutedGrade = bandForGrade(rawGrade).grade;
+  return {
+    ...base,
+    rawGrade,
+    computedAverage: rawGrade,
+    transmutedGrade,
+    remarks: transmutedGrade >= 75 ? "Passed" : "Failed",
+  };
 }

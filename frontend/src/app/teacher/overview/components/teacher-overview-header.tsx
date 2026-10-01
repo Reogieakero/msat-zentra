@@ -12,6 +12,7 @@ import {
   type DayConfig,
 } from "@/app/teacher/schedule/components/schedule-time";
 import { Badge } from "@/components/ui/badge";
+import { useTeacherProfileSettings } from "@/app/teacher/settings/components/profile-settings-data";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { GRADE_GRADIENT } from "@/components/schedule/SectionScheduleCard";
 import type { AdvisorySectionInfo } from "./teacher-overview-data";
@@ -52,17 +53,21 @@ function AtRiskRadial({
   factors,
   total,
   atRisk,
+  hideBehavioral = false,
 }: {
   factors: { academic: number; attendance: number; behavioral: number };
   total: number;
   atRisk: number;
+  hideBehavioral?: boolean;
 }) {
   const safeTotal = total > 0 ? total : 1;
-  const data = [
+  const all = [
     { name: "Academic", value: Math.min(100, (factors.academic / safeTotal) * 100), count: factors.academic, fill: RISK_COLORS[0] },
     { name: "Attendance", value: Math.min(100, (factors.attendance / safeTotal) * 100), count: factors.attendance, fill: RISK_COLORS[1] },
     { name: "Behavioral", value: Math.min(100, (factors.behavioral / safeTotal) * 100), count: factors.behavioral, fill: RISK_COLORS[2] },
   ];
+  // Regular teachers record no anecdotal — no behavioral factor, ever.
+  const data = hideBehavioral ? all.slice(0, 2) : all;
   // Unique at-risk students over the section population — never the sum of
   // factor hits (one student can trip several factors), capped at 100%.
   const pct =
@@ -125,6 +130,9 @@ export function TeacherOverviewHeader({
   classCount = 0,
   studentCount = 0,
 }: TeacherOverviewHeaderProps) {
+  // Attached profile photo (same upload as Settings → Profile).
+  const profile = useTeacherProfileSettings();
+  const photoUrl = profile.data?.photoUrl ?? null;
   const isAdviser = Boolean(advisorySection);
   const initials = React.useMemo(() => {
     const parts = teacherName
@@ -189,9 +197,17 @@ export function TeacherOverviewHeader({
       </Badge>
       <div className="relative flex flex-col gap-1">
         <div className={assign.cardHead}>
-          <span className={assign.avatar} aria-hidden="true">
-            {initials || "T"}
-          </span>
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={`${teacherName} profile photo`}
+              className="h-11 w-11 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className={assign.avatar} aria-hidden="true">
+              {initials || "T"}
+            </span>
+          )}
           <span className={assign.cardTitleBlock}>
             <span className={assign.fieldLabel}>Teacher</span>
             <span className={assign.itemName} title={teacherName}>
@@ -353,6 +369,8 @@ export function TeacherOverviewRisk({
   atRiskFactors,
   atRiskStudents = 0,
   studentCount = 0,
+  populationLabel = "advisees",
+  hideBehavioral = false,
 }: {
   atRiskFactors?: {
     academic: number;
@@ -361,6 +379,8 @@ export function TeacherOverviewRisk({
   };
   atRiskStudents?: number;
   studentCount?: number;
+  populationLabel?: string;
+  hideBehavioral?: boolean;
 }) {
   const riskFactors = atRiskFactors ?? { academic: 0, attendance: 0, behavioral: 0 };
   return (
@@ -378,12 +398,12 @@ export function TeacherOverviewRisk({
         <div className="min-w-0">
           <h3 className="font-semibold">At-Risk Factors</h3>
           <p className="text-xs text-muted-foreground">
-            {atRiskStudents} of {studentCount} advisees.
+            {atRiskStudents} of {studentCount} {populationLabel}.
           </p>
         </div>
       </div>
       <div className="relative">
-        <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} />
+        <AtRiskRadial factors={riskFactors} total={studentCount} atRisk={atRiskStudents} hideBehavioral={hideBehavioral} />
       </div>
     </div>
   );

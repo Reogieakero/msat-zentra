@@ -139,6 +139,8 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
           </div>
           <div className={view === "scores" ? undefined : styles.viewHidden}>
             <ScoreGrid
+              assignmentId={assignment.id}
+              sectionName={assignment.sectionName}
               students={students}
               components={detail.components}
               category={encodeCategory}

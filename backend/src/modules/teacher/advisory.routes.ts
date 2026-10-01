@@ -7,6 +7,7 @@ import { scopedYearId } from "../../lib/termScope.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
+import { fanoutNotification } from "../../lib/notify.js";
 import {
   computeRiskFactors,
   levelFromFlags,
@@ -348,10 +349,30 @@ router.get(
         }),
       ];
 
+      // Soft-delete scoping: ?archived=true lists only this adviser's
+      // archived rows, default lists only active rows. Nothing is ever
+      // deleted — restore brings the full record history back.
+      const archivedRows = await prisma.adviserArchivedStudent.findMany({
+        where: { teacherId },
+        select: { studentId: true, rosterId: true },
+      });
+      const archivedProfiles = new Set(
+        archivedRows.map((r) => r.studentId).filter((s): s is string => !!s),
+      );
+      const archivedRosters = new Set(
+        archivedRows.map((r) => r.rosterId).filter((s): s is string => !!s),
+      );
+      const isArchived = (studentId: string) =>
+        studentId.startsWith("roster:")
+          ? archivedRosters.has(studentId.slice("roster:".length))
+          : archivedProfiles.has(studentId);
+      const wantArchived = String(req.query.archived ?? "") === "true";
+
       res.json({
         advisorySections: sections,
         termId,
-        students,
+        students: students.filter((s) => isArchived(s.studentId) === wantArchived),
+        archivedCount: archivedRows.length,
         subjects: [...new Map(
           [...assignSubjects, ...entrySubjects].map((s) => [s.subject.name, s.subject]),
         ).values()].sort((a, b) => a.name.localeCompare(b.name)),
@@ -421,24 +442,9 @@ router.post(
         include: { section: { select: { name: true } } },
       });
 
-      await writeAudit({
-        userId: teacherId,
-        actionType: "create",
-        sourceTable: "student_roster",
-        sourceId: entry.id,
-        reason: `Enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}`,
-      });
-      // Enrollment headcounts are cached — a new enlistment must refresh
-      // academics, overview, and teacher caches immediately.
-      await invalidateTags([
-        "registrar",
-        "record-keeper",
-        "academics",
-        "overview",
-        "principal",
-        "teacher",
-      ]);
-
+      // Respond the moment the row exists — audit, cache invalidation
+      // (~18 Upstash round trips), and the bell fanout all run behind the
+      // response so enlisting feels instant.
       res.status(201).json({
         studentId: `roster:${entry.id}`,
         name: entry.fullName,
@@ -454,6 +460,172 @@ router.post(
         hasOpenFlag: false,
         openFlagCount: 0,
         hasAccount: false,
+      });
+      void (async () => {
+        try {
+          await writeAudit({
+            userId: teacherId,
+            actionType: "create",
+            sourceTable: "student_roster",
+            sourceId: entry.id,
+            reason: `Enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}`,
+          });
+          // Enrollment headcounts are cached — a new enlistment must refresh
+          // academics, overview, and teacher caches immediately.
+          await invalidateTags([
+            "registrar",
+            "record-keeper",
+            "academics",
+            "overview",
+            "principal",
+            "teacher",
+          ]);
+          // Realtime bell row for the filing adviser (toast suppressed
+          // client-side — the success toast already fired there).
+          await fanoutNotification({
+            userId: teacherId,
+            sourceTable: "student_roster",
+            action: "create",
+            message: `You enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}.`,
+            sourceId: entry.id,
+          });
+        } catch {
+          // Logged inside fanoutNotification/audit; never throws outward.
+        }
+      })();
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/teacher/advisory/students/archive — soft-delete one advisee
+// from the caller's advisory list (profile or `roster:<id>` enlistment).
+// Adviser-only. Grades, attendance, anecdotal records, and referrals are
+// never touched — restore brings the full history back.
+router.post(
+  "/students/archive",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  validate("body", z.object({ studentId: z.string().min(1) })),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const sections = await adviserSectionsOr404(teacherId);
+      const sectionIds = new Set(sections.map((s) => s.id));
+      const studentId = String((req.body as { studentId?: string }).studentId ?? "");
+      let displayName = "";
+      let archiveData: { teacherId: string; studentId?: string; rosterId?: string };
+      if (studentId.startsWith("roster:")) {
+        const row = await prisma.studentRoster.findUnique({
+          where: { id: studentId.slice("roster:".length) },
+          select: { id: true, sectionId: true, fullName: true, lrn: true },
+        });
+        if (!row || !sectionIds.has(row.sectionId)) {
+          throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+        }
+        displayName = `${row.fullName} (${row.lrn})`;
+        archiveData = { teacherId, rosterId: row.id };
+      } else {
+        const student = await prisma.studentProfile.findUnique({
+          where: { userId: studentId },
+          select: {
+            userId: true,
+            lrn: true,
+            user: { select: { fullName: true } },
+            section: { select: { id: true } },
+          },
+        });
+        if (!student || !student.section || !sectionIds.has(student.section.id)) {
+          throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
+        }
+        displayName = `${student.user.fullName} (${student.lrn})`;
+        archiveData = { teacherId, studentId };
+      }
+      const archived = await prisma.adviserArchivedStudent.upsert({
+        where: studentId.startsWith("roster:")
+          ? { teacherId_rosterId: { teacherId, rosterId: studentId.slice("roster:".length) } }
+          : { teacherId_studentId: { teacherId, studentId } },
+        update: {},
+        create: archiveData,
+        select: { id: true },
+      });
+      await writeAudit({
+        userId: teacherId,
+        actionType: "update",
+        sourceTable: "adviser_archived_students",
+        sourceId: archived.id,
+        reason: `Archived ${displayName} from advisory list (records kept)`,
+      });
+      await invalidateTags(["academics", "overview", "principal", "teacher"]);
+      res.status(201).json({ archived: true, id: archived.id, studentId });
+      // Realtime bell row for the filing adviser (toast suppressed
+      // client-side — the success toast already fired there).
+      void fanoutNotification({
+        userId: teacherId,
+        sourceTable: "adviser_archived_students",
+        action: "create",
+        message: `You archived ${displayName} from your advisory list. Records are kept.`,
+        sourceId: archived.id,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/teacher/advisory/students/restore — bring a soft-deleted advisee
+// back with their full record history intact. Adviser-only, own rows only.
+router.post(
+  "/students/restore",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  validate("body", z.object({ studentId: z.string().min(1) })),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      await adviserSectionsOr404(teacherId);
+      const studentId = String((req.body as { studentId?: string }).studentId ?? "");
+      const where = studentId.startsWith("roster:")
+        ? { teacherId, rosterId: studentId.slice("roster:".length) }
+        : { teacherId, studentId };
+      const existing = await prisma.adviserArchivedStudent.findFirst({
+        where,
+        select: { id: true },
+      });
+      if (!existing) {
+        throw new AppError(404, "NOT_ARCHIVED", "Student is not archived");
+      }
+      let displayName = studentId;
+      if (studentId.startsWith("roster:")) {
+        const row = await prisma.studentRoster.findUnique({
+          where: { id: studentId.slice("roster:".length) },
+          select: { fullName: true, lrn: true },
+        });
+        if (row) displayName = `${row.fullName} (${row.lrn})`;
+      } else {
+        const profile = await prisma.studentProfile.findUnique({
+          where: { userId: studentId },
+          select: { lrn: true, user: { select: { fullName: true } } },
+        });
+        if (profile) displayName = `${profile.user.fullName} (${profile.lrn})`;
+      }
+      await prisma.adviserArchivedStudent.delete({ where: { id: existing.id } });
+      await writeAudit({
+        userId: teacherId,
+        actionType: "update",
+        sourceTable: "adviser_archived_students",
+        sourceId: existing.id,
+        reason: `Restored ${displayName} to advisory list with record history`,
+      });
+      await invalidateTags(["academics", "overview", "principal", "teacher"]);
+      res.json({ restored: true, studentId });
+      void fanoutNotification({
+        userId: teacherId,
+        sourceTable: "adviser_archived_students",
+        action: "delete",
+        message: `You restored ${displayName} to your advisory list with full history.`,
+        sourceId: studentId,
       });
     } catch (e) {
       next(e);
@@ -883,13 +1055,15 @@ router.get(
   }
 );
 
-// GET /api/teacher/advisory/attendance — submitted marks for one date across
-// the caller's sections (sheet prefill).
-// Query: ?date=ISO-datetime [& session=AM|PM] [& subjectId=.. & slot=N].
-// Subject path (subjectId present) filters by (subject, day, slot); legacy
-// path filters by session. Sections = advisory sections UNION sections the
-// caller teaches this term (subject teachers without advisory load can prefill
-// their own classes).
+// GET /api/teacher/advisory/attendance — submitted marks for one section +
+// date (+ subject & slot) — per-subject sheet prefill.
+// Query: ?date=ISO-datetime [& sectionId=..] [& session=AM|PM]
+//   [& subjectId=.. & slot=N].
+// Subject path (subjectId present) filters by (section, subject, day, slot);
+// legacy path filters by session. Without sectionId the scope stays the
+// caller's teachable sections (advisory UNION assignments UNION code-linked
+// timetable sections); with sectionId the scope narrows to that section
+// (403 unless teachable), so two sections sharing a subject never mix marks.
 router.get(
   "/attendance",
   requireAuth,
@@ -899,10 +1073,18 @@ router.get(
       const teacherId = req.user!.id;
       // Advisory UNION assignments UNION code-linked timetable sections, so
       // claimed subject teachers prefill their own classes too.
-      const sectionIds = await teachableSectionIds(teacherId);
-      if (sectionIds.length === 0) {
+      const teachable = await teachableSectionIds(teacherId);
+      if (teachable.length === 0) {
         throw new AppError(404, "NOT_ADVISER", "No advisory or teaching sections assigned");
       }
+      const onlySection =
+        typeof req.query.sectionId === "string" && req.query.sectionId.length > 0
+          ? req.query.sectionId
+          : undefined;
+      if (onlySection && !teachable.includes(onlySection)) {
+        throw new AppError(403, "FORBIDDEN", "Section is not in your teaching load");
+      }
+      const sectionIds = onlySection ? [onlySection] : teachable;
       const subjectId =
         typeof req.query.subjectId === "string" && req.query.subjectId.length > 0
           ? req.query.subjectId
@@ -1219,6 +1401,77 @@ router.post(
         adviserId: teacherId,
         alreadyClaimed: false,
       });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// DELETE /api/teacher/advisory/claim { sectionId? } — release the teacher's
+// advisory section(s). With sectionId, releases only that section when owned;
+// without it, releases every section this teacher advises (answering "Are you
+// an adviser?" with No in Settings). Conditional writes so a section already
+// taken over by someone else is never touched.
+router.delete(
+  "/claim",
+  requireAuth,
+  requireRole(...TEACHER_ROLES),
+  async (req, res, next) => {
+    try {
+      const teacherId = req.user!.id;
+      const bodyId = ((req.body ?? {}) as { sectionId?: string }).sectionId;
+      const queryId = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
+      const { sectionId } = { sectionId: bodyId ?? queryId };
+      const trimmed = sectionId?.trim() || null;
+
+      let released: { id: string; name: string }[] = [];
+      if (trimmed) {
+        const owned = await prisma.section.findFirst({
+          where: { id: trimmed, adviserId: teacherId },
+          select: { id: true, name: true },
+        });
+        if (!owned) {
+          throw new AppError(404, "NOT_ADVISER", "You are not the adviser of this section");
+        }
+        await prisma.section.updateMany({
+          where: { id: owned.id, adviserId: teacherId },
+          data: { adviserId: null },
+        });
+        released = [{ id: owned.id, name: owned.name }];
+      } else {
+        const owned = await prisma.section.findMany({
+          where: { adviserId: teacherId },
+          select: { id: true, name: true },
+        });
+        if (owned.length === 0) {
+          return res.json({ released: [], isAdviser: false });
+        }
+        await prisma.section.updateMany({
+          where: { adviserId: teacherId },
+          data: { adviserId: null },
+        });
+        released = owned.map((s) => ({ id: s.id, name: s.name }));
+      }
+
+      // Keep the staff directory consistent: adviser flag mirrors whether any
+      // advised section remains.
+      const remaining = await prisma.section.count({ where: { adviserId: teacherId } });
+      await prisma.staffProfile.updateMany({
+        where: { userId: teacherId },
+        data: { isAdviser: remaining > 0 },
+      });
+      for (const s of released) {
+        await writeAudit({
+          userId: teacherId,
+          actionType: "update",
+          sourceTable: "sections",
+          sourceId: s.id,
+          reason: "Teacher released advisory section (Settings)",
+        });
+      }
+      await invalidateTags(["academics", "principal", "registrar", "overview", "teacher"]);
+
+      res.json({ released, isAdviser: remaining > 0 });
     } catch (e) {
       next(e);
     }

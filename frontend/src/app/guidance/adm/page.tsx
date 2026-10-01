@@ -1,26 +1,86 @@
 "use client";
 
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchGuidanceAdm } from "./components/guidance-adm-data";
+import { RefreshBadge } from "@/components/ui/refresh-badge";
+import {
+  fetchAllGuidanceReferrals,
+  fetchGuidanceRiskLevels,
+} from "../referrals/components/guidance-referrals-data";
+import {
+  buildGuidanceAdmInsights,
+  buildGuidanceAdmReferrals,
+} from "./components/guidance-adm-report-data";
+import { GuidanceAdmInsights } from "./components/GuidanceAdmInsights";
 import { GuidanceAdmReports } from "./components/guidance-adm-reports";
-import { GuidanceAdmTable } from "./components/guidance-adm-table";
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
+/**
+ * Referrals Report — insights and reports over every case referred to
+ * guidance (ADM + Counseling). Same contents as the nurse Referrals Report,
+ * over the guidance referrals basis. Case work itself lives on the ADM Cases
+ * and Counseling Cases timelines, linked from the recommendations below.
+ */
 export default function GuidanceAdmPage() {
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
-    queryKey: ["guidance-adm"],
-    queryFn: () => fetchGuidanceAdm({ page: 1, pageSize: 1 }),
+  const { data: referrals, isPending, isError, refetch, isFetching } = useQuery({
+    queryKey: ["guidance-adm-report"],
+    queryFn: () => fetchAllGuidanceReferrals(),
     staleTime: 60_000,
   });
 
+  // All-status case list (pending through dismissed) — insights, reports,
+  // and queue always reflect the current referrals whatever their status.
+  const data = React.useMemo(
+    () => (referrals ? buildGuidanceAdmReferrals(referrals) : null),
+    [referrals]
+  );
+
+  // Live rule-based risk level per student behind these cases (account
+  // id or roster id — the endpoint serves both). Desk-wide so the
+  // high-risk recommendation sees counseling cases too.
+  const studentIds = React.useMemo(
+    () => [
+      ...new Set(
+        (data?.desk ?? [])
+          .map((a) => a.studentId)
+          .filter((id): id is string => id !== null)
+      ),
+    ],
+    [data]
+  );
+  const {
+    data: riskByStudent,
+    isFetching: riskFetching,
+    isError: riskError,
+    refetch: refetchRisk,
+  } = useQuery({
+    queryKey: ["guidance-risk-levels", studentIds],
+    queryFn: () => fetchGuidanceRiskLevels(studentIds),
+    staleTime: 300_000,
+    enabled: studentIds.length > 0,
+  });
+
+  // Referral insights derive from the same desk list the reports read
+  // (ADM + counseling), so every number repaints live with the desk — no
+  // extra fetch.
+  const insights = React.useMemo(
+    () => (data ? buildGuidanceAdmInsights(data.desk, riskByStudent ?? {}) : null),
+    [data, riskByStudent]
+  );
+
   if (isPending) {
     return (
-      <section className={pageStyles.page} aria-busy="true">
+      <section className={pageStyles.page} aria-busy="true" aria-label="Loading referrals report">
+        <div className={styles.skelFindings} aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className={styles.skelFinding} />
+          ))}
+        </div>
         <div
           aria-hidden="true"
           style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))", gap: "1rem" }}
@@ -51,66 +111,6 @@ export default function GuidanceAdmPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Queue card skeleton — mirrors the live Card: header row with
-            title/desc + 16rem × 2rem search, then the 8-column table with
-            roomy 0.875rem/1rem cells, 2-line LRN cell, badge pills, and
-            action icons. */}
-        <Card aria-hidden="true">
-          <CardContent>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flex: "1 1 auto", minWidth: 0 }}>
-                <Skeleton style={{ width: "12rem", height: "0.9375rem" }} />
-                <Skeleton style={{ width: "min(24rem, 90%)", height: "0.8125rem" }} />
-              </div>
-              <Skeleton style={{ width: "16rem", height: "2rem" }} />
-            </div>
-            <div style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", marginTop: "0.75rem" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "36rem" }}>
-                <thead>
-                  <tr>
-                    {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                      <th key={i} style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "4rem", height: "0.75rem" }} />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[0, 1, 2].map((i) => (
-                    <tr key={i}>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "5rem", height: "0.8125rem" }} />
-                        <Skeleton style={{ width: "7rem", height: "0.75rem", marginTop: "0.125rem" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "3.5rem", height: "1.375rem", borderRadius: "9999px" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "5rem", height: "1.375rem", borderRadius: "9999px" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "4rem", height: "1.375rem", borderRadius: "9999px" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "6rem", height: "0.8125rem" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "3.5rem", height: "0.8125rem" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "5rem", height: "0.8125rem" }} />
-                      </td>
-                      <td style={{ padding: "0.875rem 1rem" }}>
-                        <Skeleton style={{ width: "1.5rem", height: "1.5rem" }} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </section>
     );
   }
@@ -120,33 +120,45 @@ export default function GuidanceAdmPage() {
       <section className={pageStyles.page}>
         <div className={styles.errorBlock} role="alert">
           <p className={styles.errorText}>
-            We couldn&apos;t load the ADM hand-offs. Please check your internet
+            We couldn&apos;t load the referrals report. Please check your internet
             connection and try again.
           </p>
           <Button
             size="sm"
             variant="outline"
-            disabled={isRefetching}
+            disabled={isFetching}
             onClick={() => refetch()}
           >
-            {isRefetching ? (
+            {isFetching ? (
               <Loader2 className={styles.spin} aria-hidden="true" />
             ) : null}
-            {isRefetching ? "Loading…" : "Try again"}
+            {isFetching ? "Loading…" : "Try again"}
           </Button>
         </div>
       </section>
     );
   }
 
-  return (
-    <section className={pageStyles.page}>
-      <GuidanceAdmReports summary={data.summary} />
+  const refreshing = isFetching && !isPending;
 
-      <GuidanceAdmTable
-        summary={data.summary}
-        reviewQueue={data.reviewQueue}
-      />
+  return (
+    <section className={pageStyles.page} aria-busy={refreshing}>
+      {refreshing ? <RefreshBadge label="Refreshing referrals report…" /> : null}
+      {riskError && studentIds.length > 0 ? (
+        <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
+          Risk levels couldn&apos;t load.{" "}
+          <button
+            type="button"
+            onClick={() => refetchRisk()}
+            disabled={riskFetching}
+            style={{ textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit" }}
+          >
+            {riskFetching ? "Retrying…" : "Retry"}
+          </button>
+        </p>
+      ) : null}
+      {insights ? <GuidanceAdmInsights data={insights} /> : null}
+      <GuidanceAdmReports data={data} />
     </section>
   );
 }

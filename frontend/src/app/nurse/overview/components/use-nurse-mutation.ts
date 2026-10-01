@@ -21,6 +21,7 @@ export const NURSE_QUERY_KEYS = [
   ["nurse-overview"],
   ["nurse-risk"],
   ["nurse-risk-levels"],
+  ["nurse-risk-factors"],
   ["nurse-notifications"],
 ] as const;
 
