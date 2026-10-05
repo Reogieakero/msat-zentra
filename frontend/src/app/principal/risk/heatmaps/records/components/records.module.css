@@ -10,12 +10,13 @@
   background-color: var(--background);
 }
 
-/* Heatblocks (75%) beside the breakdown rail (25%) — equal heights. */
+/* Heatblocks (75%) beside the breakdown rail (25%). The breakdown card
+   keeps its natural height instead of stretching to match. */
 .topRow {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: start;
   min-width: 0;
 }
 

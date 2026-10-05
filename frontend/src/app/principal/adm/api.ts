@@ -94,57 +94,6 @@ export async function fetchAdmReferrals(
   return res.data;
 }
 
-export interface AdmSubjectGrade {
-  subject: string;
-  code: string;
-  computedAverage: number | null;
-  transmutedGrade: number | null;
-  belowThreshold: boolean;
-}
-
-export interface AdmApprovalRow {
-  id: string;
-  lrn: string;
-  student: string;
-  grade: string;
-  section: string;
-  sectionName: string;
-  modulesSubmitted: number;
-  modulesTotal: number;
-  devicesIssued: number;
-  subjectGrades: AdmSubjectGrade[];
-  eligibilityStatus: "pending" | "eligible" | "ineligible";
-  preparedBy: string;
-  approvedBy: string | null;
-  approvalDate: string | null;
-  forms: { id: string; formType: string; title: string; status: string }[];
-}
-
-export interface AdmApprovalsPage {
-  rows: AdmApprovalRow[];
-  total: number;
-  page: number;
-  totalPages: number;
-  limit: number;
-}
-
-export async function fetchAdmApprovals(
-  page = 1,
-  limit = 20,
-  signal?: AbortSignal,
-  q?: string
-): Promise<AdmApprovalsPage> {
-  const res = await apiClient.get<AdmApprovalsPage>("/api/adm/approvals", {
-    signal,
-    params: {
-      page,
-      limit,
-      ...(q ? { q } : {}),
-    },
-  });
-  return res.data;
-}
-
 export async function fetchAdmDashboard(signal?: AbortSignal): Promise<AdmDashboard | null> {
   try {
     const res = await apiClient.get<AdmDashboard>("/api/adm/dashboard", { signal });

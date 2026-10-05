@@ -5,34 +5,25 @@ import * as React from "react";
 import { AuditToolbar, type ActorScope } from "./components/AuditToolbar";
 import { AuditTable } from "./components/AuditTable";
 import { AuditSkeleton } from "./components/AuditSkeleton";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { useSession } from "@/lib/auth/useSession";
 import {
   fetchAuditEntries,
   exportAuditCsv,
-  AuditEntry,
   AuditActionType,
   AuditRole,
 } from "./audit-data";
+import type { AuditEntry } from "./audit-data";
 import styles from "./page.module.css";
 import header from "../adm/components/AdmHeader.module.css";
+import assign from "../academics/assign/components/section-assignments.module.css";
 
 const PAGE_SIZE = 25;
 
 export default function PrincipalAuditPage() {
   const session = useSession();
   const currentUserId = session?.sub ?? "";
-  const currentUserEmail = currentUserId;
 
   const [entries, setEntries] = React.useState<AuditEntry[]>([]);
   const [total, setTotal] = React.useState(0);
@@ -45,11 +36,11 @@ export default function PrincipalAuditPage() {
   const [sourceTable, setSourceTable] = React.useState<string | "all">("all");
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
-
-  const sourceTables = React.useMemo(
-    () => Array.from(new Set(entries.map((e) => e.sourceTable))).sort(),
-    [entries],
-  );
+  // Union of every source table seen across all fetched pages (trimmed,
+  // exact-value deduped). The dropdown options stay stable while paging
+  // instead of reshuffling to each page's 25 rows — and near-duplicate
+  // variants (case/whitespace) can never appear twice.
+  const [knownTables, setKnownTables] = React.useState<string[]>([]);
 
   const load = React.useCallback(
     (abort?: AbortSignal) => {
@@ -70,6 +61,17 @@ export default function PrincipalAuditPage() {
         .then((res) => {
           setEntries(res.entries);
           setTotal(res.total);
+          setKnownTables((prev) => {
+            const next = new Set(prev);
+            for (const e of res.entries) {
+              const t = e.sourceTable?.trim();
+              if (t) next.add(t);
+            }
+            return next.size === prev.length &&
+              prev.every((t) => next.has(t))
+              ? prev
+              : Array.from(next).sort((a, b) => a.localeCompare(b));
+          });
         })
         .catch((err: unknown) => {
           if ((err as { name?: string })?.name === "CanceledError") return;
@@ -129,17 +131,20 @@ export default function PrincipalAuditPage() {
         </p>
       </div>
 
-      <Card className={styles.card}>
-        <CardHeader className={styles.cardHeader}>
-          <div className={styles.cardHeaderText}>
-            <CardTitle>Audit Entries</CardTitle>
-            <CardDescription>
-              {totalCount === 0
-                ? "No audit entries on record."
-                : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`}
-            </CardDescription>
-          </div>
-          <CardAction className={styles.cardHeaderActions}>
+      <section aria-label="Audit entries" className="flex min-w-0 flex-col gap-3">
+        <div className={assign.card}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className={styles.sectionTitle}>Audit Entries</h2>
+              <p className={styles.sectionDesc} aria-live="polite">
+                {totalCount === 0
+                  ? "No audit entries on record."
+                  : `${totalCount} ${totalCount === 1 ? "entry" : "entries"} across the school.`}
+              </p>
+            </div>
             <AuditToolbar
               actionType={actionType}
               onActionTypeChange={(v) => {
@@ -161,7 +166,7 @@ export default function PrincipalAuditPage() {
                 setSourceTable(v);
                 setPage(1);
               }}
-              sourceTables={sourceTables}
+              sourceTables={knownTables}
               query={query}
               onQueryChange={(v) => {
                 setQuery(v);
@@ -169,62 +174,75 @@ export default function PrincipalAuditPage() {
               }}
               onExport={handleExport}
             />
-          </CardAction>
-        </CardHeader>
+          </div>
 
-        <CardContent className={styles.cardContent}>
           {error ? (
-            <div className={styles.error}>
-              <p>{error}</p>
-              <button type="button" className={styles.retry} onClick={handleRetry}>
+            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+              <span
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                aria-hidden="true"
+              >
+                <TriangleAlert size={24} className="text-muted-foreground" />
+              </span>
+              <p className="font-medium">Couldn&apos;t load the audit log</p>
+              <p className="max-w-sm text-sm text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" onClick={handleRetry}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : loading ? (
-            <AuditSkeleton rows={PAGE_SIZE} />
+            <div className="relative overflow-x-auto rounded-md border">
+              <AuditSkeleton rows={PAGE_SIZE} />
+            </div>
           ) : entries.length === 0 ? (
-            <div className={styles.empty}>
-              <p>
+            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+              <span
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                aria-hidden="true"
+              >
+                <ShieldCheck size={24} className="text-muted-foreground" />
+              </span>
+              <p className="font-medium">No audit entries</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
                 {query.trim()
                   ? `No audit entries match "${query}".`
                   : hasActiveFilters
                     ? "No audit entries match the selected filters."
-                    : "No audit entries on record."}
+                    : "Sensitive actions will appear here once recorded."}
               </p>
             </div>
           ) : (
-            <AuditTable entries={entries} currentUser={currentUserEmail} />
+            <>
+              <div className="relative">
+                <AuditTable entries={entries} />
+              </div>
+              <div className="relative flex items-center justify-end space-x-2">
+                <div className="text-muted-foreground flex-1 text-sm">
+                  {`${start}–${end} of ${totalCount}`}
+                </div>
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={safePage <= 1 || totalCount === 0}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={safePage >= pageCount || totalCount === 0}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
-        </CardContent>
-
-        {!loading && !error && totalCount > 0 ? (
-          <CardFooter className={styles.cardFooter}>
-            <span className={styles.count}>
-              {`${start}–${end} of ${totalCount}`}
-            </span>
-            <div className={styles.footerActions}>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage <= 1 || totalCount === 0}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft aria-hidden />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage >= pageCount || totalCount === 0}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-                <ChevronRight aria-hidden />
-              </Button>
-            </div>
-          </CardFooter>
-        ) : null}
-      </Card>
+        </div>
+      </section>
     </section>
   );
 }

@@ -103,37 +103,6 @@
   }
 }
 
-.awardSheet {
-  top: 1rem;
-  right: 1rem;
-  bottom: 1rem;
-  height: auto;
-  width: min(22rem, calc(100vw - 2rem));
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-}
-
-.awardSheetBody {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0 1rem 1rem;
-}
-
-.awardSheetBasis {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.awardSheetNote {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-  line-height: 1.5;
-}
-
 .error {
   padding: 2.5rem 1rem;
   text-align: center;

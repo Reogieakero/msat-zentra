@@ -61,20 +61,33 @@ export function remarksFromTransmuted(transmuted: number): "Passed" | "Failed" {
   return transmuted >= 75 ? "Passed" : "Failed";
 }
 
-export type HonorRollTier = "Highest Honors" | "High Honors" | "With Honors";
+export type DescriptorBand =
+  | "Advancing"
+  | "Benchmarking"
+  | "Connecting"
+  | "Developing"
+  | "Emerging";
 
-// DepEd honor roll classification (DO 8, s. 2015): requires all subject grades
-// to be finalized and uses the general average with the lowest subject grade.
-// Shared by the academics + overview endpoints so the honor-roll concept is
-// identical across principal pages.
-export function classifyHonorRoll(
+// DepEd Order No. 015, s. 2026 — Academic Excellence Award (Key Stages 2-4):
+// General Average of 90 or higher with no Final Grade below 80 in any
+// learning area, subject to the order's other conditions (all grades
+// finalized, student in good standing — enforced by callers). Replaces the
+// three-band honor tiers. Shared by the academics + overview endpoints so the
+// award concept is identical across principal pages.
+export function meetsAcademicExcellenceAward(
   overallAverage: number,
   lowestSubject: number
-): HonorRollTier | null {
-  if (overallAverage >= 98 && lowestSubject >= 90) return "Highest Honors";
-  if (overallAverage >= 95 && lowestSubject >= 85) return "High Honors";
-  if (overallAverage >= 90 && lowestSubject >= 85) return "With Honors";
-  return null;
+): boolean {
+  return overallAverage >= 90 && lowestSubject >= 80;
+}
+
+// DO 15, s. 2026 qualitative descriptors for numeric grades (Key Stages 2-4).
+export function descriptorBand(average: number): DescriptorBand {
+  if (average >= 90) return "Advancing";
+  if (average >= 80) return "Benchmarking";
+  if (average >= 75) return "Connecting";
+  if (average >= 65) return "Developing";
+  return "Emerging";
 }
 
 // DepEd Order No. 8, s. 2015 assessment weights (WW / PT / E), which must

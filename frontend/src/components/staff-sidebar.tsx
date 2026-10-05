@@ -72,7 +72,6 @@ const NAV: NavGroup[] = [
         icon: FileSignature,
         subItems: [
           { title: "Referrals", href: "/principal/adm/referrals/all" },
-          { title: "ADM Reports", href: "/principal/adm/approvals/all" },
         ],
       },
       {

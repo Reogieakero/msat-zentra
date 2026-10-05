@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
-import { classifyHonorRoll } from "../../services/grading.js";
+import { meetsAcademicExcellenceAward } from "../../services/grading.js";
 
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
@@ -267,8 +267,9 @@ export async function getReports(params: {
       riskCounts[level] += 1;
       // Honor roll uses the SAME DepEd rule as Academics/Overview: every subject
       // grade must be locked/finalized, the student must not be High risk, AND
-      // the average must meet a DepEd honor band (classifyHonorRoll). Counting
-      // any locked non-High student would overstate the figure vs those pages.
+      // the average must meet the Academic Excellence rule (DO 15, s. 2026).
+      // Counting any locked non-High student would overstate the figure vs
+      // those pages.
       const allLocked =
         finals.length > 0 &&
         finals.every(
@@ -281,7 +282,7 @@ export async function getReports(params: {
         const gGrades = finals.map((f) => f.transmutedGrade as number);
         const avg = gGrades.reduce((s, g) => s + g, 0) / gGrades.length;
         const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
-        if (classifyHonorRoll(avg, lowest)) {
+        if (meetsAcademicExcellenceAward(avg, lowest)) {
           honorRoll += 1;
           honorRollByGradeMap.set(grade, (honorRollByGradeMap.get(grade) ?? 0) + 1);
         }

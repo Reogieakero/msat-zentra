@@ -13,6 +13,16 @@ const PRINCIPAL_KEYS = [
   // (Keys match element-wise — each workspace key is listed explicitly.)
   ["principal-schedule-sections"],
   ["principal-schedule-config"],
+  // Academic heatmap trend page reads ["academic-insights", "live"] (always
+  // raw). Invalidating the prefix keeps the line chart live on grade saves
+  // with no manual refresh; a 15s poll on the page covers anything missed.
+  ["academic-insights"],
+  // Attendance heatmap stacked page (trend + averages + attention). Prefix
+  // invalidation keeps every section live on attendance saves; a 30s poll on
+  // the page covers anything missed.
+  ["attendance-section-averages"],
+  ["attendance-needs-attention"],
+  ["attendance-section-subject-heatmap"],
 ] as const;
 
 interface PrincipalNotification {

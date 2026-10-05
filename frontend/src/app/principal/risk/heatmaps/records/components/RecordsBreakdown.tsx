@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pie, PieChart, Cell } from "recharts";
+import { Pie, PieChart, Cell, Tooltip } from "recharts";
 import {
   ChevronRight,
   FileText,
@@ -20,10 +20,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
+import { usePrincipalProfileSettings } from "@/app/principal/settings/components/profile-settings-data";
 import type { RecordStudent } from "../types";
 import {
-  CATEGORY_META,
   CATEGORY_KEYS,
+  CATEGORY_META,
   fetchRecords,
 } from "./records-data";
 import styles from "./RecordsOverview.module.css";
@@ -38,6 +40,58 @@ interface Kpi {
   value: string;
   suffix?: string;
   tone: "default" | "good" | "warn";
+}
+
+// Theme-safe tooltip shell (same tokens as the other heatmap tooltips —
+// tracks light/dark and user recolors automatically).
+const TOOLTIP_STYLE: React.CSSProperties = {
+  borderRadius: 8,
+  border: "1px solid var(--border)",
+  background: "var(--card)",
+  color: "var(--foreground)",
+  fontSize: 12,
+};
+
+function DonutTooltip({
+  active,
+  payload,
+  total,
+  colorForKey,
+}: {
+  active?: boolean;
+  payload?: {
+    value?: string | number;
+    payload?: { key?: string; value?: number };
+  }[];
+  total: number;
+  colorForKey: (key: string) => string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0]?.payload;
+  const key = datum?.key ?? "";
+  const value = Number(payload[0]?.value ?? datum?.value ?? 0);
+  const meta = key
+    ? CATEGORY_META[key as keyof typeof CATEGORY_META]
+    : undefined;
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div style={TOOLTIP_STYLE} className="flex flex-col gap-1 px-2.5 py-2">
+      <p className="m-0 flex items-center gap-2 font-semibold">
+        <span
+          aria-hidden
+          className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+          style={{ background: colorForKey(key) }}
+        />
+        {meta?.label ?? key}
+      </p>
+      <p className="m-0 flex items-baseline justify-between gap-4 tabular-nums">
+        <span style={{ color: "var(--muted-foreground)" }}>
+          {value.toLocaleString()} record{value === 1 ? "" : "s"}
+        </span>
+        <span className="font-bold">{pct}%</span>
+      </p>
+    </div>
+  );
 }
 
 export function RecordsBreakdown() {
@@ -57,17 +111,9 @@ export function RecordsBreakdown() {
   );
 
   const categoryRows = React.useMemo(() => {
-    const map = new Map<
-      string,
-      { key: string; label: string; color: string; value: number }
-    >();
+    const map = new Map<string, { key: string; value: number }>();
     for (const key of CATEGORY_KEYS) {
-      map.set(key, {
-        key,
-        label: CATEGORY_META[key].label,
-        color: CATEGORY_META[key].color,
-        value: 0,
-      });
+      map.set(key, { key, value: 0 });
     }
     for (const rec of allRecords) {
       const row = map.get(rec.category);
@@ -79,6 +125,15 @@ export function RecordsBreakdown() {
   }, [allRecords]);
 
   const categoryTotal = categoryRows.reduce((s, r) => s + r.value, 0);
+
+  // Donut slices wear the viewer's own primary (shades, darkest first) —
+  // one family, matching the attendance trend chart.
+  const profile = usePrincipalProfileSettings();
+  const scale = usePrimaryScale(
+    Math.max(categoryRows.length, 1),
+    profile.data?.primaryColor
+  );
+  const sliceColor = (i: number) => scale[i % scale.length] ?? "#888888";
 
   const attention = React.useMemo(() => {
     const highWeight = (s: RecordStudent) =>
@@ -124,7 +179,10 @@ export function RecordsBreakdown() {
 
   return (
     <>
-    <Card className={`${styles.card} ${styles.narrow}`}>
+    <Card className={`${styles.card} ${styles.narrow} ${styles.glowCard}`}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
       <CardHeader className={styles.header}>
         <div className={styles.headerText}>
           <CardTitle>Anecdotal record breakdown</CardTitle>
@@ -162,10 +220,24 @@ export function RecordsBreakdown() {
             <div className={styles.donutWrap}>
               <ChartContainer config={chartConfig} className={styles.donut}>
                 <PieChart>
+                  <Tooltip
+                    content={
+                      <DonutTooltip
+                        total={categoryTotal}
+                        colorForKey={(key) => {
+                          const i = categoryRows.findIndex(
+                            (r) => r.key === key
+                          );
+                          return sliceColor(Math.max(0, i));
+                        }}
+                      />
+                    }
+                    contentStyle={TOOLTIP_STYLE}
+                  />
                   <Pie
                     data={categoryRows}
                     dataKey="value"
-                    nameKey="label"
+                    nameKey="key"
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
@@ -173,8 +245,8 @@ export function RecordsBreakdown() {
                     paddingAngle={2}
                     strokeWidth={0}
                   >
-                    {categoryRows.map((entry) => (
-                      <Cell key={entry.key} fill={entry.color} />
+                    {categoryRows.map((entry, i) => (
+                      <Cell key={entry.key} fill={sliceColor(i)} />
                     ))}
                   </Pie>
                 </PieChart>
@@ -184,24 +256,6 @@ export function RecordsBreakdown() {
                 <span className={styles.donutLabel}>records</span>
               </div>
             </div>
-
-            <ul className={styles.catGrid}>
-              {categoryRows.map((row) => (
-                <li key={row.key} className={styles.catGridItem}>
-                  <div className={styles.catGridTop}>
-                    <span className={styles.catGridLabel}>
-                      <span
-                        className={styles.catGridDot}
-                        style={{ backgroundColor: row.color }}
-                        aria-hidden
-                      />
-                      {row.label}
-                    </span>
-                    <span className={styles.catGridCount}>{row.value}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
 
             {attention.length > 0 ? (
               <button

@@ -39,12 +39,6 @@
 
 .chartWrap {
   width: 100%;
-  max-width: 56rem;
-  margin-inline: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
-  padding: 1rem 1rem 0.5rem 0.5rem;
 }
 
 .chart {
@@ -57,8 +51,8 @@
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
-  max-width: 56rem;
-  margin-inline: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .dayRow {
@@ -66,8 +60,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   width: 100%;
-  max-width: 56rem;
-  margin-inline: auto;
 }
 
 .dayCard {
@@ -121,6 +113,16 @@
   color: var(--primary);
 }
 
+.messageBadge {
+  margin-left: auto;
+}
+
+.messageSub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
 .messageList {
   margin: 0;
   padding: 0;
@@ -136,10 +138,6 @@
   color: var(--muted-foreground);
 }
 
-.statusBadge {
-  align-self: flex-start;
-}
-
 /* Clickable series legend: one chip per subject plus the average line. */
 .legendRow {
   display: flex;
@@ -147,8 +145,6 @@
   gap: 0.375rem;
   flex-wrap: wrap;
   width: 100%;
-  max-width: 56rem;
-  margin-inline: auto;
 }
 
 .chip {

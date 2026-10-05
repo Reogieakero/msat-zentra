@@ -14,6 +14,16 @@
   gap: 0.25rem;
   position: relative;
   overflow: hidden;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
 }
 
 .kpiCard::before {
@@ -23,6 +33,42 @@
   width: 3px;
   background: var(--primary);
   opacity: 0.85;
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.kpiMessage {
+  margin: auto 0 0;
+  padding-top: 0.625rem;
+  padding-left: 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.kpiMessageLabel {
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .kpiLabel {

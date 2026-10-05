@@ -9,12 +9,14 @@
 
 import type {
   AcademicsMock,
-  HonorRollTier,
+  AwardStatus,
+  DescriptorBand,
   StudentRow,
   SectionSummary,
 } from "../academics/academics-data";
+import { descriptorBand } from "../academics/academics-data";
 
-export type { HonorRollTier };
+export type { AwardStatus, DescriptorBand };
 
 export interface CandidateSubjectGrade {
   subject: string;
@@ -29,51 +31,16 @@ export interface HonorRollCandidate {
   section: string;
   gradeLevel: number;
   overallAverage: number;
-  tier: HonorRollTier;
+  /** DO 15, s. 2026 descriptor band derived from the live average. */
+  band: DescriptorBand;
+  /** Awarded = all subjects locked; potential = raw grades qualify. */
+  status: AwardStatus;
+  /** Present only for potential candidates. */
+  unlockedSubjects?: number;
   subjects: CandidateSubjectGrade[];
 }
 
-export interface AwardCategory {
-  id: string;
-  title: string;
-  description: string;
-  basis: string;
-  icon: "medal" | "calendar" | "star" | "flame" | "book";
-}
 
-// School-defined award categories (PLAN.md principal.md §6). These are
-// configuration, not computed data — kept as the only non-fetched content on
-// this page until the backend exposes an awards endpoint.
-export const AWARD_CATEGORIES: AwardCategory[] = [
-  {
-    id: "perfect-attendance",
-    title: "Perfect Attendance",
-    description: "Learners with no absences or late marks for the term.",
-    basis: "Attendance rate 100%",
-    icon: "calendar",
-  },
-  {
-    id: "subject-toppers",
-    title: "Subject Toppers",
-    description: "Highest transmuted grade per subject across the grade level.",
-    basis: "Top score per subject",
-    icon: "book",
-  },
-  {
-    id: "leadership",
-    title: "Leadership Award",
-    description: "Recognized student leaders and club officers.",
-    basis: "Faculty nomination",
-    icon: "star",
-  },
-  {
-    id: "conduct",
-    title: "Conduct Award",
-    description: "Exemplary behavior with zero anecdotal records.",
-    basis: "No behavioral flags",
-    icon: "medal",
-  },
-];
 
 const SUBJECT_CODES: Record<string, string> = {
   English: "ENG",
@@ -96,7 +63,12 @@ function gradeLevelFromLabel(grade: string): number {
   return match ? Number(match[0]) : 0;
 }
 
-function toCandidate(student: StudentRow, section: SectionSummary, tier: HonorRollTier): HonorRollCandidate {
+function toCandidate(
+  student: StudentRow,
+  section: SectionSummary,
+  status: AwardStatus,
+  unlockedSubjects?: number
+): HonorRollCandidate {
   return {
     studentId: student.studentId,
     name: student.name,
@@ -104,7 +76,9 @@ function toCandidate(student: StudentRow, section: SectionSummary, tier: HonorRo
     section: section.section,
     gradeLevel: gradeLevelFromLabel(section.grade),
     overallAverage: student.overallAverage,
-    tier,
+    band: descriptorBand(student.overallAverage),
+    status,
+    unlockedSubjects,
     subjects: student.subjects
       .filter((s) => s.transmutedGrade != null)
       .map((s) => ({
@@ -116,36 +90,38 @@ function toCandidate(student: StudentRow, section: SectionSummary, tier: HonorRo
 }
 
 /**
- * Build the full honor-roll candidate list from the academics summary.
- * The confirmed pool (honorRollPreview) is the authoritative qualifier set;
- * section/student detail is joined in for the table grid.
+ * Build the award list from the academics summary: confirmed qualifiers only
+ * (honorRollPreview → awarded, all subjects locked/finalized).
  */
 export function deriveHonorRoll(summary: AcademicsMock): {
   candidates: HonorRollCandidate[];
   termLabel: string;
   schoolYear: string;
 } {
-  const byId = new Map<string, { student: StudentRow; section: SectionSummary; tier: HonorRollTier }>();
+  const byId = new Map<
+    string,
+    { student: StudentRow; section: SectionSummary }
+  >();
 
   for (const section of summary.sections) {
     for (const student of section.students) {
-      const preview = summary.honorRollPreview.find((h) => h.studentId === student.studentId);
-      if (preview) {
-        byId.set(student.studentId, { student, section, tier: preview.tier });
+      const confirmed = summary.honorRollPreview.find((h) => h.studentId === student.studentId);
+      if (confirmed) {
+        byId.set(student.studentId, { student, section });
       }
     }
   }
 
   const candidates = Array.from(byId.values())
-    .map(({ student, section, tier }) => toCandidate(student, section, tier))
+    .map(({ student, section }) => toCandidate(student, section, "awarded"))
     .sort((a, b) => b.overallAverage - a.overallAverage);
 
-  // Reconciliation: the backend's confirmed pool is authoritative. If a preview
-  // student isn't present in the section payload (e.g. filtered server-side),
-  // they are dropped — surface the mismatch instead of silently undercounting.
+  // Reconciliation: the backend pool is authoritative. If a pooled student
+  // isn't present in the section payload (e.g. filtered server-side), they
+  // are dropped — surface the mismatch instead of silently undercounting.
   if (summary.honorRollPreview.length !== candidates.length) {
     console.warn(
-      `[honor-roll] ${summary.honorRollPreview.length} previewed candidates but only ${candidates.length} joined to section data.`
+      `[honor-roll] ${summary.honorRollPreview.length} pooled candidates but only ${candidates.length} joined to section data.`
     );
   }
 

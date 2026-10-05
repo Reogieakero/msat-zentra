@@ -1,8 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import {
   remarksFromTransmuted,
-  classifyHonorRoll,
-  type HonorRollTier,
+  meetsAcademicExcellenceAward,
 } from "../../services/grading.js";
 import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
 import { schoolDaysToDate } from "../../services/attendance.js";
@@ -24,12 +23,8 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-// DepEd honor roll bands use the general average and the lowest subject grade.
-const TIER_RANK: Record<HonorRollTier, number> = {
-  "Highest Honors": 3,
-  "High Honors": 2,
-  "With Honors": 1,
-};
+// DO 15, s. 2026 lists Academic Excellence awardees alphabetically — no
+// bands, no rank order.
 
 export interface AcademicsSummary {
   schoolYear: string;
@@ -41,13 +36,13 @@ export interface AcademicsSummary {
 }
 
 // Students not yet confirmed (grades still unlocked) but whose current raw
-// partial grades already satisfy a DepEd honor band — i.e. they have the
-// potential to make the honor roll once remaining grades are locked/finalized.
+// partial grades already satisfy the Academic Excellence rule — i.e. they
+// have the potential to make the award list once remaining grades are
+// locked/finalized.
 export interface PotentialHonorCandidateDTO {
   studentId: string;
   name: string;
   overallAverage: number;
-  tier: HonorRollTier;
   unlockedSubjects: number;
 }
 
@@ -92,7 +87,6 @@ export interface HonorRollCandidateDTO {
   studentId: string;
   name: string;
   overallAverage: number;
-  tier: HonorRollTier;
 }
 
 export async function getAcademicsSummary(
@@ -321,8 +315,9 @@ export async function getAcademicsSummary(
         subjects,
       });
 
-      // Honor roll (DepEd): only students with encoded grades, every subject
-      // grade locked/finalized, and the student is not High risk.
+      // Academic Excellence (DO 15, s. 2026): only students with encoded
+      // grades, every subject grade locked/finalized, and the student is not
+      // High risk.
       if (hasGrades) {
         const allLocked = finals.every(
           (f) => f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
@@ -332,24 +327,22 @@ export async function getAcademicsSummary(
             (min, s) => Math.min(min, s.transmutedGrade),
             Infinity
           );
-          const tier = classifyHonorRoll(overallAverage, lowestSubject);
-          if (tier) {
+          if (meetsAcademicExcellenceAward(overallAverage, lowestSubject)) {
             honorRollPool.push({
               studentId: student.userId,
               name: student.fullName,
               overallAverage,
-              tier,
             });
           }
         } else if (!allLocked && liveLevel !== "High") {
-          // Potential engine: current raw partial grades already meet a band, so the
-          // student can still reach the honor roll once remaining grades are locked.
+          // Potential engine: current raw partial grades already meet the
+          // award rule, so the student can still reach the award list once
+          // remaining grades are locked.
           const lowestSubject = subjects.reduce(
             (min, s) => Math.min(min, s.transmutedGrade),
             Infinity
           );
-          const tier = classifyHonorRoll(overallAverage, lowestSubject);
-          if (tier) {
+          if (meetsAcademicExcellenceAward(overallAverage, lowestSubject)) {
             const unlockedSubjects = finals.filter(
               (f) =>
                 f.lockStatus !== "locked" &&
@@ -360,7 +353,6 @@ export async function getAcademicsSummary(
               studentId: student.userId,
               name: student.fullName,
               overallAverage,
-              tier,
               unlockedSubjects,
             });
           }
@@ -409,19 +401,12 @@ export async function getAcademicsSummary(
         Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, ""))
     );
 
+  // DO 15, s. 2026: awardees are listed alphabetically.
   const honorRollPreview = honorRollPool
-    .sort((a, b) => {
-      const tierDiff = TIER_RANK[b.tier] - TIER_RANK[a.tier];
-      if (tierDiff !== 0) return tierDiff;
-      return b.overallAverage - a.overallAverage;
-    });
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const potentialHonorRoll = potentialPool
-    .sort((a, b) => {
-      const tierDiff = TIER_RANK[b.tier] - TIER_RANK[a.tier];
-      if (tierDiff !== 0) return tierDiff;
-      return b.overallAverage - a.overallAverage;
-    });
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return {
     schoolYear,

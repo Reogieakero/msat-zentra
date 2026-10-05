@@ -1,24 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { Download, Trophy, X } from "lucide-react";
 import { HonorRollHero } from "./components/HonorRollHero";
 import { TierLeaderboard } from "./components/TierLeaderboard";
 import { CandidateTable } from "./components/CandidateTable";
-import { AwardCategories } from "./components/AwardCategories";
 import {
   deriveHonorRoll,
-  AWARD_CATEGORIES,
   HONOR_ROLL_GRADES,
-  type AwardCategory,
   type HonorRollCandidate,
 } from "./honor-roll-data";
 import { apiClient } from "@/lib/api/client";
@@ -28,54 +19,47 @@ import styles from "./honor-roll.module.css";
 export default function PrincipalHonorRollPage() {
   const [grade, setGrade] = React.useState<string>("7");
   const [rankOpen, setRankOpen] = React.useState(false);
-  const [activeAward, setActiveAward] = React.useState<AwardCategory | null>(null);
 
-  const [summary, setSummary] = React.useState<AcademicsMock | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    apiClient
-      .get<AcademicsMock>("/api/academics", { params: { mode: "final" } })
-      .then((res) => {
-        if (!cancelled) setSummary(res.data);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          const status = (err as { response?: { status?: number } })?.response?.status;
-          setError(
-            status
-              ? `Failed to load honor roll (HTTP ${status})`
-              : "Failed to load honor roll"
-          );
-          console.error("[/api/academics] fetch failed:", err);
-        }
+  // Live finalized snapshot (locked grades only): only confirmed Academic
+  // Excellence awardees are listed. Moves without refresh via polling + the
+  // principal realtime channel (the ["academic-insights"] prefix already
+  // covers this key).
+  const {
+    data: summary,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["academic-insights", "honor-roll"],
+    queryFn: async () => {
+      const res = await apiClient.get<AcademicsMock>("/api/academics", {
+        params: { mode: "final" },
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return res.data;
+    },
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
 
-  const loading = !summary && !error;
+  const loading = isPending;
   const derived = React.useMemo(
     () => (summary ? deriveHonorRoll(summary) : null),
     [summary]
   );
-
-  const termLabel = derived?.termLabel ?? "";
 
   const filtered = React.useMemo(() => {
     const all: HonorRollCandidate[] = derived?.candidates ?? [];
     return all.filter((c) => c.gradeLevel === Number(grade));
   }, [derived, grade]);
 
-  const highestCount = filtered.filter((c) => c.tier === "Highest Honors").length;
+  const awardedCount = filtered.length;
 
   const handleGradeChange = (value: string) => setGrade(value);
 
   const handleExport = () => {
     if (filtered.length === 0) return;
-    const header = ["Rank", "Name", "LRN", "Section", "Term Avg", "Tier"];
+    const header = ["Rank", "Name", "LRN", "Section", "Term Avg", "Band"];
     const rows = filtered
       .slice()
       .sort((a, b) => b.overallAverage - a.overallAverage)
@@ -85,7 +69,7 @@ export default function PrincipalHonorRollPage() {
         c.lrn,
         c.section,
         c.overallAverage.toFixed(1),
-        c.tier,
+        c.band,
       ]);
     const csv = [header, ...rows]
       .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
@@ -101,10 +85,15 @@ export default function PrincipalHonorRollPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (error) {
+  if (isError) {
+    const status = (error as { response?: { status?: number } })?.response?.status;
     return (
       <section className={styles.page}>
-        <div className={styles.error}>{error}</div>
+        <div className={styles.error}>
+          {status
+            ? `Failed to load honor roll (HTTP ${status})`
+            : "Failed to load honor roll"}
+        </div>
       </section>
     );
   }
@@ -123,12 +112,9 @@ export default function PrincipalHonorRollPage() {
     <section className={styles.page}>
       <HonorRollHero
         data={{
-          termLabel,
           schoolYear: derived?.schoolYear ?? "",
-          awards: AWARD_CATEGORIES,
         }}
-        candidateCount={filtered.length}
-        highestCount={highestCount}
+        candidateCount={awardedCount}
       />
 
       <div className={styles.toolbar}>
@@ -172,26 +158,6 @@ export default function PrincipalHonorRollPage() {
         </div>
       ) : null}
 
-      <AwardCategories awards={AWARD_CATEGORIES} onSelect={setActiveAward} />
-
-      <Sheet open={activeAward !== null} onOpenChange={(o) => !o && setActiveAward(null)}>
-        <SheetContent side="right" className={styles.awardSheet}>
-          {activeAward ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>{activeAward.title}</SheetTitle>
-                <SheetDescription>{activeAward.description}</SheetDescription>
-              </SheetHeader>
-              <div className={styles.awardSheetBody}>
-                <p className={styles.awardSheetBasis}>Basis: {activeAward.basis}</p>
-                <p className={styles.awardSheetNote}>
-                  Recipients for this term will be listed here once finalized.
-                </p>
-              </div>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
     </section>
   );
 }

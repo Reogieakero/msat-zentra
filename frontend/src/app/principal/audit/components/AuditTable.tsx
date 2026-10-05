@@ -1,5 +1,15 @@
 import * as React from "react";
-import { ChevronRight, Lock } from "lucide-react";
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+  flexRender,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+} from "@tanstack/react-table";
+import { ChevronRight } from "lucide-react";
 
 import {
   Table,
@@ -13,11 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   ACTION_LABELS,
   ROLE_LABELS,
-  AuditEntry,
-  isConfidentialTable,
+  type AuditEntry,
 } from "../audit-data";
 import { buildChangeLines, summarizeAction } from "../format-change";
-import { AuditDrawer } from "./AuditDrawer";
 import styles from "./audit-table.module.css";
 
 function formatTimestamp(iso: string): string {
@@ -75,104 +83,180 @@ function FriendlyDiff({ entry }: { entry: AuditEntry }) {
   );
 }
 
-export function AuditTable({
-  entries,
-  currentUser,
-}: {
-  entries: AuditEntry[];
-  currentUser: string;
-}) {
+/* Audit entries as a data table in the At-Risk Advisees pattern: fixed-width
+   sortable columns, bordered wrapper, click a row to expand its before/after
+   diff inline. There is no detail sheet on this desk — the expanded diff is
+   the full inspection. Sorting applies to the loaded server page. */
+export function AuditTable({ entries }: { entries: AuditEntry[] }) {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
-  const [drawerEntry, setDrawerEntry] = React.useState<AuditEntry | null>(null);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+
+  const columns = React.useMemo<ColumnDef<AuditEntry>[]>(
+    () => [
+      {
+        id: "expander",
+        header: "",
+        size: 36,
+        minSize: 36,
+        maxSize: 36,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const expanded = expandedId === row.original.id;
+          return (
+            <ChevronRight
+              className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
+              aria-hidden
+            />
+          );
+        },
+      },
+      {
+        id: "timestamp",
+        accessorFn: (row) => row.timestamp,
+        header: "Timestamp",
+        size: 170,
+        minSize: 170,
+        maxSize: 170,
+        cell: ({ row }) => (
+          <span className={styles.mono}>{formatTimestamp(row.original.timestamp)}</span>
+        ),
+      },
+      {
+        id: "actor",
+        accessorFn: (row) => row.user,
+        header: "Actor",
+        size: 180,
+        minSize: 180,
+        maxSize: 180,
+      },
+      {
+        id: "role",
+        accessorFn: (row) => row.actorRole,
+        header: "Role",
+        size: 120,
+        minSize: 120,
+        maxSize: 120,
+        cell: ({ row }) => (
+          <Badge variant="outline" className={styles.roleBadge}>
+            {ROLE_LABELS[row.original.actorRole]}
+          </Badge>
+        ),
+      },
+      {
+        id: "action",
+        accessorFn: (row) => row.actionType,
+        header: "Action",
+        size: 150,
+        minSize: 150,
+        maxSize: 150,
+        cell: ({ row }) => <span>{ACTION_LABELS[row.original.actionType]}</span>,
+      },
+      {
+        id: "source",
+        accessorFn: (row) => row.sourceLabel,
+        header: "Source",
+        size: 170,
+        minSize: 170,
+        maxSize: 170,
+      },
+      {
+        id: "reason",
+        accessorFn: (row) => row.reason,
+        header: "Reason",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        cell: ({ row }) => (
+          <span className={styles.reasonText} title={row.original.reason}>
+            {row.original.reason}
+          </span>
+        ),
+      },
+    ],
+    [expandedId]
+  );
+
+  const table = useReactTable({
+    data: entries,
+    columns,
+    getRowId: (row) => row.id,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: { sorting, columnFilters },
+  });
 
   return (
-    <>
-      <div className={styles.wrap}>
-        <Table>
-          <TableHeader>
-            <TableRow className={styles.headRow}>
-              <TableHead className={styles.expandCol} />
-              <TableHead className={styles.colTimestamp}>Timestamp</TableHead>
-              <TableHead className={styles.colActor}>Actor</TableHead>
-              <TableHead className={styles.colRole}>Role</TableHead>
-              <TableHead className={styles.colAction}>Action</TableHead>
-              <TableHead className={styles.colSource}>Source</TableHead>
-              <TableHead className={styles.colReason}>Reason</TableHead>
+    <div className="relative overflow-x-auto rounded-md border">
+      <Table className="w-full table-fixed" aria-label="Audit entries">
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  style={{ width: header.getSize() }}
+                  onClick={header.column.getToggleSortingHandler()}
+                  className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.map((entry) => {
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => {
+              const entry = row.original;
               const expanded = expandedId === entry.id;
-              const confidential = isConfidentialTable(entry.sourceTable);
               return (
-                <React.Fragment key={entry.id}>
+                <React.Fragment key={row.id}>
                   <TableRow
-                    className={styles.row}
                     aria-expanded={expanded}
                     onClick={() => setExpandedId(expanded ? null : entry.id)}
                     style={{ cursor: "pointer" }}
                   >
-                    <TableCell className={styles.expandCol}>
-                      <ChevronRight
-                        className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`}
-                        aria-hidden
-                      />
-                    </TableCell>
-                    <TableCell className={`${styles.mono} ${styles.colTimestamp}`} data-label="Timestamp">
-                      {formatTimestamp(entry.timestamp)}
-                    </TableCell>
-                    <TableCell className={styles.colActor} data-label="Actor">{entry.user}</TableCell>
-                    <TableCell className={styles.colRole} data-label="Role">
-                      <Badge variant="outline" className={styles.roleBadge}>
-                        {ROLE_LABELS[entry.actorRole]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className={styles.colAction} data-label="Action">{ACTION_LABELS[entry.actionType]}</TableCell>
-                    <TableCell className={styles.colSource} data-label="Source">
-                      {entry.sourceLabel}
-                    </TableCell>
-                    <TableCell className={`${styles.reason} ${styles.colReason}`} data-label="Reason">
-                      <span className={styles.reasonText} title={entry.reason}>
-                        {entry.reason}
-                      </span>
-                    </TableCell>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        className="truncate"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
                   </TableRow>
                   {expanded ? (
-                    <TableRow className={styles.detailRow} onClick={(e) => e.stopPropagation()}>
+                    <TableRow
+                      className={styles.detailRow}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <TableCell />
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={columns.length - 1}>
                         <div className={styles.detail}>
                           <FriendlyDiff entry={entry} />
-                          <button
-                            type="button"
-                            className={styles.drillButton}
-                            onClick={() => setDrawerEntry(entry)}
-                          >
-                            {confidential ? (
-                              <>
-                                <Lock className={styles.lockIcon} aria-hidden />
-                                View source (status-only)
-                              </>
-                            ) : (
-                              <>View source record #{entry.sourceId}</>
-                            )}
-                          </button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : null}
                 </React.Fragment>
               );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-
-      <AuditDrawer
-        entry={drawerEntry}
-        currentUser={currentUser}
-        onClose={() => setDrawerEntry(null)}
-      />
-    </>
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No audit entries match your search.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

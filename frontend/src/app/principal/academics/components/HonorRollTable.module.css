@@ -97,20 +97,8 @@
   border: 1px solid transparent;
 }
 
-.tier_HighestHonors {
+.band_Advancing {
   background-color: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--primary);
-}
-
-.tier_HighHonors {
-  background-color: color-mix(in oklch, var(--foreground), transparent 88%);
-  color: var(--foreground);
-  border-color: color-mix(in oklch, var(--foreground), transparent 70%);
-}
-
-.tier_WithHonors {
-  background-color: transparent;
-  color: var(--foreground);
-  border-color: var(--border);
 }

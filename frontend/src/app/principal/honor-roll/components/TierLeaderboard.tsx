@@ -4,24 +4,21 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Medal, Star } from "lucide-react";
-import type { HonorRollCandidate, HonorRollTier } from "../honor-roll-data";
+import { Crown, Medal, Star, Sprout, Leaf } from "lucide-react";
+import type { DescriptorBand, HonorRollCandidate } from "../honor-roll-data";
 import styles from "./TierLeaderboard.module.css";
 
 interface Props {
   candidates: HonorRollCandidate[];
 }
 
-const TIER_ICON: Record<HonorRollTier, React.ComponentType<{ className?: string }>> = {
-  "Highest Honors": Crown,
-  "High Honors": Medal,
-  "With Honors": Star,
-};
-
-const TIER_RANK: Record<HonorRollTier, number> = {
-  "Highest Honors": 3,
-  "High Honors": 2,
-  "With Honors": 1,
+// DO 15, s. 2026 descriptor bands (Advancing 90+ → Emerging below 65).
+const BAND_ICON: Record<DescriptorBand, React.ComponentType<{ className?: string }>> = {
+  Advancing: Crown,
+  Benchmarking: Medal,
+  Connecting: Star,
+  Developing: Sprout,
+  Emerging: Leaf,
 };
 
 function initials(name: string): string {
@@ -35,14 +32,7 @@ function initials(name: string): string {
 
 export function TierLeaderboard({ candidates }: Props) {
   const ranked = React.useMemo(
-    () =>
-      [...candidates]
-        .sort((a, b) => {
-          const d = TIER_RANK[b.tier] - TIER_RANK[a.tier];
-          if (d !== 0) return d;
-          return b.overallAverage - a.overallAverage;
-        })
-        .slice(0, 6),
+    () => [...candidates].sort((a, b) => b.overallAverage - a.overallAverage).slice(0, 6),
     [candidates]
   );
 
@@ -50,12 +40,12 @@ export function TierLeaderboard({ candidates }: Props) {
     <Card className={styles.wrap}>
       <div className={styles.head}>
         <h2 className={styles.title}>Top of the Term</h2>
-        <p className={styles.sub}>Ranked by honor tier, then term average</p>
+        <p className={styles.sub}>Ranked by term average across awardees</p>
       </div>
 
       <ol className={styles.list}>
         {ranked.map((c, i) => {
-          const Icon = TIER_ICON[c.tier];
+          const Icon = BAND_ICON[c.band];
           return (
             <li key={c.studentId} className={styles.row}>
               <span className={`${styles.rank} ${i < 3 ? styles.rankTop : ""}`}>
@@ -70,7 +60,7 @@ export function TierLeaderboard({ candidates }: Props) {
               </div>
               <div className={styles.tierCol}>
                 <Icon className={styles.tierIcon} aria-hidden />
-                <span className={styles.tierText}>{c.tier}</span>
+                <span className={styles.tierText}>{c.band}</span>
               </div>
               <span className={styles.avg}>{c.overallAverage.toFixed(1)}</span>
             </li>
@@ -79,9 +69,9 @@ export function TierLeaderboard({ candidates }: Props) {
       </ol>
 
       <div className={styles.legend}>
-        <Badge variant="outline">Highest Honors ≥ 98</Badge>
-        <Badge variant="outline">High Honors ≥ 95</Badge>
-        <Badge variant="outline">With Honors ≥ 90</Badge>
+        <Badge variant="outline">Advancing ≥ 90</Badge>
+        <Badge variant="outline">Benchmarking ≥ 80</Badge>
+        <Badge variant="outline">Connecting ≥ 75</Badge>
       </div>
     </Card>
   );

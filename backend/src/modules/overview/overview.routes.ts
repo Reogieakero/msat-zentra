@@ -12,7 +12,7 @@ import {
   levelFromFlags,
   resolveActiveTermId,
 } from "../../services/risk.js";
-import { classifyHonorRoll } from "../../services/grading.js";
+import { meetsAcademicExcellenceAward } from "../../services/grading.js";
 
 const router = Router();
 
@@ -190,7 +190,7 @@ router.get(
           const gGrades = finals.map((g) => g.transmutedGrade ?? 100);
           const avg = gGrades.reduce((sum, g) => sum + g, 0) / gGrades.length;
           const lowest = gGrades.length > 0 ? Math.min(...gGrades) : 100;
-          if (classifyHonorRoll(avg, lowest)) honorRoll++;
+          if (meetsAcademicExcellenceAward(avg, lowest)) honorRoll++;
         }
       }
 

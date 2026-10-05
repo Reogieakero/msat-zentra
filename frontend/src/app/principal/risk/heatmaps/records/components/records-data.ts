@@ -9,14 +9,15 @@ import type {
 
 // Canonical backend anecdotal categories (mirror of the AnecdotalCategory enum
 // + CATEGORY_META in backend/src/modules/anecdotal/anecdotal.routes.ts).
-// Colors use the theme-aware chart ramp so dots, donut slices, and bars stay
-// readable in both light and dark mode.
+// Colors are the concrete per-category hexes shared with the teacher
+// anecdotal desk (CATEGORY_COLORS in teacher/anecdotal) — NOT var(--chart-N),
+// which is grayscale in this theme and rendered every folder gray.
 export const CATEGORY_META: Record<BehavioralCategory, { label: string; color: string }> = {
-  behavioral: { label: "Behavioral", color: "var(--chart-1)" },
-  bullying: { label: "Bullying", color: "var(--chart-2)" },
-  academic: { label: "Academic", color: "var(--chart-3)" },
-  attendance: { label: "Attendance", color: "var(--chart-4)" },
-  health: { label: "Health", color: "var(--chart-5)" },
+  behavioral: { label: "Behavioral", color: "#f59e0b" },
+  bullying: { label: "Bullying", color: "#ef4444" },
+  academic: { label: "Academic", color: "#3b82f6" },
+  attendance: { label: "Attendance", color: "#22c55e" },
+  health: { label: "Health", color: "#8b5cf6" },
 };
 
 export const CATEGORY_KEYS = Object.keys(CATEGORY_META) as BehavioralCategory[];

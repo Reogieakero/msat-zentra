@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ADM_PIPELINE, STAGE_COLORS } from "../adm";
+import { ADM_PIPELINE } from "../adm";
 import { fetchAdmDashboard } from "../api";
 import styles from "./AdmPipelineOverview.module.css";
 
@@ -27,12 +27,7 @@ export function AdmPipelineOverview() {
           return (
             <React.Fragment key={step.stage}>
               <div className={styles.stage}>
-                <span
-                  className={styles.marker}
-                  style={{ backgroundColor: STAGE_COLORS[step.stage] }}
-                >
-                  {step.order}
-                </span>
+                <span className={styles.marker}>{step.order}</span>
                 <div className={styles.body}>
                   <span className={styles.label}>{step.label}</span>
                   <span className={styles.count}>{count}</span>

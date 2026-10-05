@@ -48,6 +48,9 @@ export function AdmStats() {
       <div className={styles.grid}>
         {STATS.map((stat) => (
           <div key={stat.key} className={styles.stat}>
+            <span className={styles.glowClip} aria-hidden="true">
+              <span className={styles.cardGlow} />
+            </span>
             <span className={styles.value}>{getStatValue(stat.key)}</span>
             <span className={styles.label}>{stat.label}</span>
             <p className={styles.description}>{stat.description}</p>

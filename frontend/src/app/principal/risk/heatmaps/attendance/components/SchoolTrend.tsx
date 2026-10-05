@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/chart";
 import { MessageSquareText } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { useTheme } from "@/components/providers";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import {
   Card,
@@ -31,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePrincipalProfileSettings } from "@/app/principal/settings/components/profile-settings-data";
-import { primarySeriesColors } from "./subject-palette";
+import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import styles from "./SchoolTrend.module.css";
 
 interface SubjectMeta {
@@ -87,10 +86,10 @@ export function SchoolTrend() {
       return res.data;
     },
     staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
   const profile = usePrincipalProfileSettings();
-  const { resolvedTheme } = useTheme();
-  const dark = resolvedTheme === "dark";
 
   const sections = React.useMemo(() => data?.sections ?? [], [data]);
   const subjects = React.useMemo(() => data?.subjects ?? [], [data]);
@@ -189,16 +188,10 @@ export function SchoolTrend() {
     });
   }, [sections, series, mode]);
 
-  const colors = React.useMemo(
-    () =>
-      primarySeriesColors({
-        primary: profile.data?.primaryColor,
-        secondary: profile.data?.secondaryColor,
-        count: series.length,
-        dark,
-      }),
-    [profile.data?.primaryColor, profile.data?.secondaryColor, series.length, dark]
-  );
+  // Every series line is a step of the viewer's own primary color (darkest
+  // first) — one family, not many hues. The school-average line keeps its
+  // contrast dashed style below.
+  const colors = usePrimaryScale(series.length, profile.data?.primaryColor);
   const colorOf = React.useCallback(
     (i: number) => colors[i % Math.max(1, colors.length)] ?? "#888888",
     [colors]
@@ -218,9 +211,13 @@ export function SchoolTrend() {
   // the weakest series visible); the first toggle materializes the set so
   // manual picks survive refetches. Mode switches reset to defaults.
   const [hidden, setHidden] = React.useState<Set<string> | null>(null);
-  React.useEffect(() => {
+  // Mode switches reset to defaults — adjusted during render, never in an
+  // effect (avoids cascading renders).
+  const [prevMode, setPrevMode] = React.useState(mode);
+  if (prevMode !== mode) {
+    setPrevMode(mode);
     setHidden(null);
-  }, [mode]);
+  }
   const toggle = (key: string) => {
     setHidden((prev) => {
       const next = new Set(prev ?? defaultHidden);
@@ -230,31 +227,45 @@ export function SchoolTrend() {
     });
   };
   const resetLines = () => setHidden(null);
-  const ranked = React.useMemo(() => {
-    if (chartData.length === 0) return [];
-    return series
-      .map((item, i) => {
-        const rates = chartData.map((d) => Number(d[item.key] ?? 0));
-        const avg = rates.length
-          ? rates.reduce((a, r) => a + r, 0) / rates.length
-          : 0;
-        const below = rates.filter((r) => r < 80).length;
-        return { ...item, index: i, avg: round1(avg), below, days: rates.length };
-      })
-      .sort((a, b) => b.avg - a.avg);
-  }, [chartData, series]);
+  // Worst-first ranking. Single-expression memo body (no early return, no
+  // in-place mutation) so the React Compiler can preserve this memoization.
+  const ranked = React.useMemo(
+    () =>
+      chartData.length === 0
+        ? []
+        : series
+            .map((item, i) => {
+              const rates = chartData.map((d) => Number(d[item.key] ?? 0));
+              const avg = rates.length
+                ? rates.reduce((a, r) => a + r, 0) / rates.length
+                : 0;
+              const below = rates.filter((r) => r < 80).length;
+              return {
+                ...item,
+                index: i,
+                avg: round1(avg),
+                below,
+                days: rates.length,
+              };
+            })
+            .toSorted((a, b) => b.avg - a.avg),
+    [chartData, series]
+  );
   const strongest = ranked[0] ?? null;
   const weakest = ranked.length > 0 ? ranked[ranked.length - 1]! : null;
   const seriesBelow80 = ranked.filter((r) => r.avg < 80).length;
   const atRisk = (weakest?.avg ?? 100) < 80;
 
   // Defaults hide every series except the weakest (+ the average, which is
-  // never hidden by default). Used until the first manual toggle.
-  const defaultHidden = React.useMemo(() => {
-    const all = new Set(series.map((item) => item.key));
-    if (weakest) all.delete(weakest.key);
-    return all;
-  }, [series, weakest]);
+  // never hidden by default). Used until the first manual toggle. Plain
+  // derivation (not memoized): the compiler cannot preserve memoization of
+  // a freshly built Set, and rebuilding it per render is negligible.
+  const defaultHidden = (() => {
+    const weakestKey = weakest?.key;
+    return new Set(
+      series.map((item) => item.key).filter((k) => k !== weakestKey)
+    );
+  })();
   const effectiveHidden = hidden ?? defaultHidden;
 
   const interpretation = React.useMemo(() => {
@@ -283,7 +294,6 @@ export function SchoolTrend() {
     statusLine && interpretation.length > 1 ? interpretation.slice(0, -1) : interpretation;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
       <Card>
         <CardHeader>
           <div>
@@ -311,12 +321,9 @@ export function SchoolTrend() {
                 </Button>
               ))}
             </div>
-            {termNumber ? (
-              <Badge variant="secondary">Term {termNumber}</Badge>
-            ) : null}
           </CardAction>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-4 px-4">
           {isPending ? (
             <>
               <Skeleton className={styles.skelChart} />
@@ -462,49 +469,41 @@ export function SchoolTrend() {
                   </div>
                 </div>
               ) : null}
+              {interpretation.length > 0 ? (
+                <div className={styles.messageCol}>
+                  <p className={styles.messageHead}>
+                    <MessageSquareText
+                      className={styles.messageIcon}
+                      aria-hidden
+                    />
+                    What this means
+                    {statusLine ? (
+                      <Badge
+                        variant={atRisk ? "destructive" : "success"}
+                        className={styles.messageBadge}
+                      >
+                        {atRisk ? "Needs attention" : "On track"}
+                      </Badge>
+                    ) : null}
+                  </p>
+                  <p className={styles.messageSub}>
+                    Auto-generated read of the per-{noun} trend
+                    {termNumber ? ` for Term ${termNumber}` : ""}.
+                  </p>
+                  <ul className={styles.messageList}>
+                    {[...bodyLines, ...(statusLine ? [statusLine] : [])].map(
+                      (line, i) => (
+                        <li key={i} className={styles.messageLine}>
+                          {line}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              ) : null}
             </>
           )}
         </CardContent>
       </Card>
-
-      {!isPending && interpretation.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquareText
-                  className={styles.messageIcon}
-                  aria-hidden
-                />
-                What this means
-              </CardTitle>
-              <CardDescription>
-                Auto-generated read of the per-{noun} trend
-                {termNumber ? ` for Term ${termNumber}` : ""}.
-              </CardDescription>
-            </div>
-            {statusLine ? (
-              <CardAction>
-                <Badge
-                  variant={atRisk ? "destructive" : "success"}
-                  className={styles.statusBadge}
-                >
-                  {atRisk ? "Needs attention" : "On track"}
-                </Badge>
-              </CardAction>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            <ul className={styles.messageList}>
-              {[...bodyLines, ...(statusLine ? [statusLine] : [])].map((line, i) => (
-                <li key={i} className={styles.messageLine}>
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-    </div>
   );
 }

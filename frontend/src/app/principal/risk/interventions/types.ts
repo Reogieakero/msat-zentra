@@ -2,6 +2,14 @@ export type ApprovalStatus = "pending" | "approved" | "rejected" | "modified";
 export type OutcomeStatus = "ongoing" | "resolved" | "unresolved";
 export type RiskLevelKey = "Low" | "Moderate" | "High";
 
+export interface InterventionSession {
+  id: string;
+  status: string;
+  scheduledAt: string;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 export interface InterventionLink {
   id: string;
   recommendedAction: string;
@@ -9,6 +17,7 @@ export interface InterventionLink {
   assignedStaffName: string | null;
   approvalStatus: ApprovalStatus;
   outcomeStatus: OutcomeStatus;
+  sessions: InterventionSession[];
   createdAt: string | null;
 }
 

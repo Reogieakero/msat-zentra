@@ -76,9 +76,9 @@ export function SectionAverages({
       return res.data;
     },
     staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
-  const termNumber = data?.term?.termNumber;
-
   // Worst first — sections furthest below the 80% mark float to the top.
   const sections = React.useMemo(
     () => [...(data?.sections ?? [])].sort((a, b) => a.rate - b.rate),
@@ -231,9 +231,6 @@ export function SectionAverages({
               <SearchIcon />
             </InputGroupAddon>
           </InputGroup>
-          {termNumber ? (
-            <Badge variant="secondary">Term {termNumber}</Badge>
-          ) : null}
         </CardAction>
       </CardHeader>
 

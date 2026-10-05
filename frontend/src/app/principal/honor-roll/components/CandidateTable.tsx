@@ -1,10 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { Card } from "@/components/ui/card";
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  flexRender,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+} from "@tanstack/react-table";
+import { SearchIcon, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { HonorRollCandidate } from "../honor-roll-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import shared from "../honor-roll.module.css";
 import styles from "./CandidateTable.module.css";
 
@@ -16,6 +37,11 @@ interface Props {
   loading?: boolean;
 }
 
+const PAGE_SIZE = 10;
+
+/* Honor awardees as a data table in the At-Risk Advisees pattern: glow-card
+   shell, title + count, search on the right, fixed-width sortable columns,
+   bordered table, pager footer. Grade tabs scope the list per grade level. */
 export function CandidateTable({
   candidates,
   grades,
@@ -23,8 +49,11 @@ export function CandidateTable({
   onGradeChange,
   loading,
 }: Props) {
-  // Build a stable column set from the union of subject codes present.
-  const columns = React.useMemo(() => {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+
+  // Stable subject column set from the union of subject codes present.
+  const subjectCols = React.useMemo(() => {
     const seen = new Map<string, string>();
     for (const c of candidates) {
       for (const s of c.subjects) {
@@ -34,103 +63,268 @@ export function CandidateTable({
     return Array.from(seen, ([code, subject]) => ({ code, subject }));
   }, [candidates]);
 
-  const rows = React.useMemo(
-    () => [...candidates].sort((a, b) => b.overallAverage - a.overallAverage),
-    [candidates]
-  );
-
-  const windowTitle = `Grade ${activeGrade} — Honor Roll`;
-
-  const body = loading ? (
-    <div className={shared.tableWrap}>
-      <div className={styles.skeletonHead} />
-      {Array.from({ length: 8 }).map((_, i) => (
-        <Skeleton key={i} className={styles.skeletonRow} />
-      ))}
-    </div>
-  ) : rows.length === 0 ? (
-    <div className={styles.emptyState}>No candidates this term.</div>
-  ) : (
-    <div className={shared.tableWrap}>
-      <table className={styles.table}>
-        <thead className={shared.stickyHead}>
-          <tr>
-            <th className={styles.nameCol}>Student</th>
-            <th>Section</th>
-            <th className={styles.numCol}>Term Avg</th>
-            {columns.map((col) => (
-              <th key={col.code} className={styles.subjCol} title={col.subject}>
-                {col.code}
-              </th>
-            ))}
-            <th>Tier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((c) => {
-            const gradeByCode = new Map(c.subjects.map((s) => [s.code, s]));
+  const columns = React.useMemo<ColumnDef<HonorRollCandidate>[]>(
+    () => [
+      {
+        id: "name",
+        accessorFn: (row) => row.name,
+        header: "Student",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <p className={styles.cellMain}>{row.original.name}</p>
+            <p className={shared.mono}>{row.original.lrn}</p>
+          </div>
+        ),
+      },
+      {
+        id: "section",
+        accessorFn: (row) => row.section,
+        header: "Section",
+        size: 150,
+        minSize: 150,
+        maxSize: 150,
+      },
+      {
+        id: "average",
+        accessorFn: (row) => row.overallAverage,
+        header: "Term Avg",
+        size: 110,
+        minSize: 110,
+        maxSize: 110,
+        cell: ({ row }) => (
+          <span className={shared.mono}>{row.original.overallAverage.toFixed(1)}</span>
+        ),
+      },
+      ...subjectCols.map(
+        ({ code, subject }): ColumnDef<HonorRollCandidate> => ({
+          id: `subj-${code}`,
+          accessorFn: (row) =>
+            row.subjects.find((s) => s.code === code)?.transmutedGrade ?? null,
+          header: code,
+          size: 64,
+          minSize: 64,
+          maxSize: 64,
+          cell: ({ row }) => {
+            const g = row.original.subjects.find((s) => s.code === code);
+            if (!g) return <span title={subject}>—</span>;
+            const failing = g.transmutedGrade < 75;
             return (
-              <tr key={c.studentId} className={styles.row}>
-                <td className={styles.nameCol}>
-                  <span className={styles.name}>{c.name}</span>
-                  <span className={shared.mono}>{c.lrn}</span>
-                </td>
-                <td className={styles.muted}>{c.section}</td>
-                <td className={`${styles.numCol} ${shared.mono}`}>
-                  {c.overallAverage.toFixed(1)}
-                </td>
-                {columns.map((col) => {
-                  const g = gradeByCode.get(col.code);
-                  if (!g) return <td key={col.code} className={styles.subjCol} />;
-                  const failing = g.transmutedGrade < 75;
-                  return (
-                    <td
-                      key={col.code}
-                      className={`${styles.subjCol} ${shared.mono} ${
-                        failing ? styles.fail : ""
-                      }`}
-                      title={`${col.subject}: ${g.transmutedGrade}`}
-                    >
-                      {g.transmutedGrade}
-                    </td>
-                  );
-                })}
-                <td>
-                  <Badge variant="secondary" className={styles.tierBadge}>
-                    {c.tier}
-                  </Badge>
-                </td>
-              </tr>
+              <span
+                title={`${subject}: ${g.transmutedGrade}`}
+                className={failing ? styles.fail : undefined}
+              >
+                {g.transmutedGrade}
+              </span>
             );
-          })}
-        </tbody>
-      </table>
-    </div>
+          },
+        })
+      ),
+      {
+        id: "band",
+        accessorFn: (row) => row.band,
+        header: "Band",
+        size: 140,
+        minSize: 140,
+        maxSize: 140,
+        cell: ({ row }) => (
+          <Badge variant="secondary" className={styles.tierBadge}>
+            {row.original.band}
+          </Badge>
+        ),
+      },
+    ],
+    [subjectCols]
   );
+
+  const table = useReactTable({
+    data: candidates,
+    columns,
+    getRowId: (row) => row.studentId,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
+    state: { sorting, columnFilters },
+  });
 
   return (
-    <Card>
-      <div className={styles.head}>
-        <h2 className={styles.headTitle}>{windowTitle}</h2>
-        <div className={styles.tabs} role="tablist" aria-label="Grade level">
-          {grades.map((g) => (
-            <button
-              key={g}
-              type="button"
-              role="tab"
-              aria-selected={String(g) === activeGrade}
-              className={`${styles.tab} ${
-                String(g) === activeGrade ? styles.tabActive : ""
-              }`}
-              onClick={() => onGradeChange(String(g))}
-            >
-              Grade {g}
-            </button>
-          ))}
+    <section aria-label="Honor roll candidates" className="flex min-w-0 flex-col gap-3">
+      <div className={assign.card}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className={styles.headTitle}>
+              Grade {activeGrade} — Academic Excellence
+            </h2>
+            <p className={styles.sectionDesc} aria-live="polite">
+              {candidates.length === 0
+                ? "No awardees this term."
+                : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — average ≥ 90, no grade below 80.`}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <InputGroup className="max-w-40 shrink-0">
+              <InputGroupInput
+                placeholder="Filter students..."
+                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                onChange={(event) =>
+                  table.getColumn("name")?.setFilterValue(event.target.value)
+                }
+                aria-label="Filter students"
+              />
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
         </div>
-      </div>
+        <div className="relative" role="tablist" aria-label="Grade level">
+          <div className={styles.tabs}>
+            {grades.map((g) => (
+              <button
+                key={g}
+                type="button"
+                role="tab"
+                aria-selected={String(g) === activeGrade}
+                className={`${styles.tab} ${
+                  String(g) === activeGrade ? styles.tabActive : ""
+                }`}
+                onClick={() => onGradeChange(String(g))}
+              >
+                Grade {g}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {body}
-    </Card>
+        {loading ? (
+          <div className="relative overflow-x-auto rounded-md border">
+            <Table className="w-full table-fixed" aria-label="Loading honor roll">
+              <TableHeader>
+                <TableRow className="bg-muted/50 [&>th]:border-t-0">
+                  {["Student", "Section", "Term Avg", "Band"].map((h) => (
+                    <TableHead key={h} className="h-10 whitespace-nowrap">
+                      {h}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className={styles.skeletonRow} />
+                    </TableCell>
+                    <TableCell>
+                      <div className={styles.skeletonRow} />
+                    </TableCell>
+                    <TableCell>
+                      <div className={styles.skeletonRow} />
+                    </TableCell>
+                    <TableCell>
+                      <div className={styles.skeletonRow} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : candidates.length === 0 ? (
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <Trophy size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">No awardees this term</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Students averaging 90+ with no grade below 80 will appear here
+              once grades are finalized.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="relative overflow-x-auto rounded-md border">
+              <Table className="w-full table-fixed" aria-label="Honor roll candidates">
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                      {headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          style={{ width: header.getSize() }}
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell
+                            key={cell.id}
+                            style={{ width: cell.column.getSize() }}
+                            className="truncate"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-24 text-center">
+                        No students match your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="relative flex items-center justify-end space-x-2">
+              <div className="text-muted-foreground flex-1 text-sm">
+                {table.getFilteredRowModel().rows.length} awardee
+                {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }

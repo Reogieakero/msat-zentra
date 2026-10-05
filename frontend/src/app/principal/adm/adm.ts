@@ -117,9 +117,10 @@ export function isAwaitingSignature(c: AdmCase): boolean {
   );
 }
 
-/** A case can be returned only after the principal has signed it. */
+/** A signed case is final — return for revision is only offered before
+ *  signing (unsigned cases go back to the ADM Coordinator). */
 export function canReturn(c: AdmCase): boolean {
-  return c.approvedBy !== null;
+  return c.approvedBy === null;
 }
 
 /** Human-readable, title-cased label for a pipeline stage (no underscores). */

@@ -3,14 +3,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, CircleDot } from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -18,8 +10,16 @@ import { FolderCard } from "@/components/ui/FolderCard";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "./records-data";
+import type { BehavioralRecord } from "../types";
 
 const PAGE_SIZE = 21;
+
+// File-slip tone follows severity so each folder reads urgency at a glance.
+function severityTone(severity: BehavioralRecord["severity"]): 2 | 3 | 5 {
+  if (severity === "High") return 5;
+  if (severity === "Moderate") return 3;
+  return 2;
+}
 
 export function RecordsHeatblocks() {
   const [query, setQuery] = React.useState("");
@@ -59,16 +59,16 @@ export function RecordsHeatblocks() {
 
   return (
     <>
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section className={styles.panel} aria-label="Anecdotal records heatblocks">
+      <div className={styles.header}>
         <div className={styles.headerText}>
-          <CardTitle>Anecdotal Records Heatblocks</CardTitle>
-          <CardDescription>
+          <h2 className={styles.title}>Anecdotal Records Heatblocks</h2>
+          <p className={styles.subtitle}>
             One folder per filed anecdotal report. Full reports are kept
             private on this desk.
-          </CardDescription>
+          </p>
         </div>
-        <CardAction className={styles.headerActions}>
+        <div className={styles.headerActions}>
           <div className={styles.search}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
@@ -83,10 +83,10 @@ export function RecordsHeatblocks() {
               className={styles.searchInput}
             />
           </div>
-        </CardAction>
-      </CardHeader>
+        </div>
+      </div>
 
-      <CardContent className={styles.content}>
+      <div className={styles.content}>
         {isPending ? (
           <div className={styles.grid} aria-busy="true" aria-label="Loading student records">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -128,11 +128,13 @@ export function RecordsHeatblocks() {
                       label={s.name}
                       sublabel={`${s.lrn} · ${s.section}`}
                       cornerTag={CATEGORY_META[rec.category].label}
+                      folderColor={CATEGORY_META[rec.category].color}
                       files={[
                         {
                           name: rec.date,
                           tag: `${CATEGORY_META[rec.category].label} • ${rec.severity}`,
                           icon: "doc" as const,
+                          tone: severityTone(rec.severity),
                         },
                       ]}
                     />
@@ -177,8 +179,8 @@ export function RecordsHeatblocks() {
           </>
         )}
 
-      </CardContent>
-    </Card>
+      </div>
+    </section>
 
       <PrivacyNoticeDialog
         open={privacyFor !== null}

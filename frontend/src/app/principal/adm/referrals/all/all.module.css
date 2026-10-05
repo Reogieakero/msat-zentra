@@ -1,28 +1,5 @@
-.feed {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  gap: 1rem;
-  min-width: 0;
-  /* Fill the viewport below the shell offset (6rem) and its vertical
-     padding (2rem) — the shell's own 1rem bottom padding is then the
-     exact 16px bottom gutter. */
-  min-height: calc(100vh - 6rem - 2rem);
-  min-height: calc(100dvh - 6rem - 2rem);
-}
-
-/* Alerts-style list header: title + search/filters on one row. */
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.headerText {
-  min-width: 0;
-}
+/* At-Risk Advisees pattern: title + count, search on the right, the table
+   itself borrows the shared shadcn table inside a bordered wrapper. */
 
 .sectionTitle {
   margin: 0;
@@ -38,96 +15,18 @@
   color: var(--muted-foreground);
 }
 
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.searchWrap {
-  position: relative;
-  width: 16rem;
-  max-width: 100%;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 0.625rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1rem;
-  height: 1rem;
-  color: var(--muted-foreground);
-  pointer-events: none;
-}
-
-.search {
-  padding-left: 2rem;
-}
-
-/* Queue table — same plain bordered list as the interventions desk. */
-.tableBody {
-  margin-top: 0.75rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tableWrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  flex: 1;
-  min-height: 24rem;
-}
-
-.tableWrap th,
-.tableWrap td {
-  padding: 0.875rem 1rem;
-}
-
-.tableWrap thead th {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--muted-foreground);
-  border-bottom: 1px solid var(--border);
-  background-color: transparent;
-  white-space: nowrap;
-}
-
-.tableWrap tbody td {
+.cellMain {
+  margin: 0;
   font-size: 0.8125rem;
-  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 35%);
-}
-
-.tableWrap tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.studentCell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.studentName {
   font-weight: 600;
-  font-size: 0.8125rem;
   color: var(--foreground);
-  letter-spacing: -0.005em;
   white-space: nowrap;
 }
 
-.studentLrn {
-  font-size: 0.8125rem;
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
@@ -147,18 +46,44 @@
   white-space: nowrap;
 }
 
-.stageBadge,
-.eligBadge {
+.stageBadge {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
 
-.forms {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex-wrap: wrap;
+.formsBtn {
+  gap: 0.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Folder grid inside the linked-forms card modal. */
+.folderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 1rem 0.75rem;
+  justify-items: center;
+}
+
+.folderBtn {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  transition: transform 120ms ease;
+}
+
+.folderBtn:hover {
+  transform: translateY(-1px);
+}
+
+.folderBtn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .noForms {
@@ -168,11 +93,6 @@
   white-space: nowrap;
 }
 
-/* Row actions menu — wide enough for single-line items. */
-.rowMenu {
-  min-width: 12rem;
-}
-
 .approvalPending {
   font-size: 0.6875rem;
   color: var(--muted-foreground);
@@ -180,126 +100,19 @@
   white-space: nowrap;
 }
 
-.formBtn {
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  cursor: pointer;
-  line-height: 0;
-}
-
-.formBtn:hover {
-  filter: brightness(1.08);
-}
-
-.formBtn:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-/* ---- Form report overlay ---- */
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  background-color: color-mix(in oklch, var(--background) 40%, transparent);
-  backdrop-filter: blur(6px);
-  animation: overlayIn 180ms ease;
-}
-
-.modal {
-  position: relative;
-  width: min(48rem, 100%);
-  max-height: calc(100vh - 3rem);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--background);
-  color: var(--foreground);
-  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
-  animation: modalIn 200ms ease;
-}
-
-.modalHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.modalHeadText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.modalTitle {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.modalSub {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.modalClose {
+/* Inline sign/return icon buttons in the Approval cell. */
+.actionBtns {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  aspect-ratio: 1 / 1;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  overflow: hidden;
-  line-height: 0;
-  transition: color 150ms ease, background-color 150ms ease;
+  gap: 0.25rem;
 }
 
-.modalClose:hover {
-  color: var(--foreground);
-  background-color: color-mix(in oklch, var(--foreground), transparent 94%);
-}
-
-.modalClose:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.modalCloseIcon {
-  display: block;
-  width: 1.125rem;
-  height: 1.125rem;
-  flex-shrink: 0;
-}
-
-.modalBody {
+/* ---- CardModal preview body ---- */
+.previewBody {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow-y: auto;
-  min-height: 0;
+  min-width: 0;
 }
 
 .previewMeta {
@@ -360,82 +173,11 @@
   color: var(--muted-foreground);
 }
 
-@keyframes overlayIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes modalIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (max-width: 640px) {
-  .overlay {
-    padding: 0.75rem;
-  }
-
-  .modal {
-    padding: 1rem;
-  }
-}
-
 .empty {
   text-align: center;
   padding: 2.5rem 1rem;
   color: var(--muted-foreground);
   font-size: 0.8125rem;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 0.75rem;
-}
-
-.range {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.pagerButtons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.pageLabel {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .skelName {
@@ -451,18 +193,4 @@
 
 .skelCell {
   height: 0.75rem;
-}
-
-.skelChip {
-  width: 1.75rem;
-  height: 1.25rem;
-  border-radius: 999px;
-}
-
-/* Mobile shell offset is 3rem — keep the same exact 16px bottom gutter. */
-@media (max-width: 767px) {
-  .feed {
-    min-height: calc(100vh - 3rem - 2rem);
-    min-height: calc(100dvh - 3rem - 2rem);
-  }
 }

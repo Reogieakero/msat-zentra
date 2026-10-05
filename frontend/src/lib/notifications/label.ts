@@ -259,8 +259,8 @@ export function principalNotificationTarget(
   // section's review page instead of the bare queue.
   if (n.sourceTable === "section_timetable_entries" && n.sourceId)
     return { href: `/principal/academics/schedule/${n.sourceId}` };
-  // ADM device issuance lands on the approvals monitoring view, which
-  // shows per-case device counts.
-  if (n.sourceTable === "adm_devices") return { href: "/principal/adm/approvals/all" };
+  // ADM device issuance lands on the ADM board, the closest surviving
+  // per-case view now that the approvals monitoring page is removed.
+  if (n.sourceTable === "adm_devices") return { href: "/principal/adm" };
   return null;
 }

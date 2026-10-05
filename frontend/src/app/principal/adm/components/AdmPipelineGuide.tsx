@@ -28,6 +28,9 @@ export function AdmPipelineGuide() {
       <div className={styles.grid}>
         {STEPS.map((step, i) => (
           <div key={step.title} className={styles.card}>
+            <span className={styles.glowClip} aria-hidden="true">
+              <span className={styles.cardGlow} />
+            </span>
             <span className={styles.step}>0{i + 1}</span>
             <h3 className={styles.title}>{step.title}</h3>
             <p className={styles.body}>{step.body}</p>

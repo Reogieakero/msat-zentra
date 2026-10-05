@@ -4,13 +4,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ReportKpis as KpiData } from "../reports-data";
 import styles from "./reports-kpis.module.css";
 
-const KPI_DEFS = [
-  { key: "avgTransmuted", label: "Avg Transmuted Grade", suffix: "", delta: "" },
-  { key: "interventionsResolved", label: "Interventions Resolved", suffix: "", delta: "" },
-  { key: "interventionRate", label: "Success Rate", suffix: "%", delta: "" },
-  { key: "sectionsAtRisk", label: "Sections At-Risk", suffix: "", delta: "" },
-  { key: "honorRoll", label: "Honor Roll", suffix: "", delta: "" },
-] as const;
+function bandFor(avg: number): string {
+  if (avg >= 90) return "Advancing band";
+  if (avg >= 80) return "Benchmarking band";
+  if (avg >= 75) return "Connecting band";
+  if (avg >= 65) return "Developing band";
+  return "Emerging band";
+}
 
 export function ReportsKpis({
   loading,
@@ -30,16 +30,57 @@ export function ReportsKpis({
   }
 
   const kpis = data;
+  const totalInterventions =
+    kpis.interventionRate > 0
+      ? Math.round((kpis.interventionsResolved * 100) / kpis.interventionRate)
+      : 0;
+
+  const defs = [
+    {
+      key: "avgTransmuted",
+      label: "Avg Transmuted Grade",
+      value: `${kpis.avgTransmuted}`,
+      message: `${bandFor(kpis.avgTransmuted)} school-wide this term.`,
+    },
+    {
+      key: "interventionsResolved",
+      label: "Interventions Resolved",
+      value: `${kpis.interventionsResolved}`,
+      message: `${kpis.interventionRate}% success rate across cases.`,
+    },
+    {
+      key: "interventionRate",
+      label: "Success Rate",
+      value: `${kpis.interventionRate}%`,
+      message: `${kpis.interventionsResolved} of ${totalInterventions} referred resolved.`,
+    },
+    {
+      key: "sectionsAtRisk",
+      label: "Sections At-Risk",
+      value: `${kpis.sectionsAtRisk}`,
+      message: `${kpis.honorRoll} on honor roll vs ${kpis.sectionsAtRisk} at risk.`,
+    },
+    {
+      key: "honorRoll",
+      label: "Honor Roll",
+      value: `${kpis.honorRoll}`,
+      message: "Academic Excellence awardees, listed alphabetically.",
+    },
+  ] as const;
 
   return (
     <div className={styles.kpiStrip}>
-      {KPI_DEFS.map((def) => (
+      {defs.map((def) => (
         <div key={def.key} className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>{def.label}</span>
-          <span className={styles.kpiValue}>
-            {kpis[def.key]}
-            {def.suffix}
+          <span className={styles.glowClip} aria-hidden="true">
+            <span className={styles.cardGlow} />
           </span>
+          <span className={styles.kpiLabel}>{def.label}</span>
+          <span className={styles.kpiValue}>{def.value}</span>
+          <p className={styles.kpiMessage}>
+            <span className={styles.kpiMessageLabel}>What it means · </span>
+            {def.message}
+          </p>
         </div>
       ))}
     </div>

@@ -152,13 +152,13 @@ export function AuditToolbar({
   return (
     <div className={styles.toolbar}>
       <div className={styles.searchWrap}>
-        <Search className={ivStyles.searchIcon} aria-hidden />
+        <Search className={styles.searchIcon} aria-hidden />
         <input
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search user, reason, or id…"
-          className={ivStyles.search}
+          className={styles.search}
           aria-label="Search audit entries"
         />
       </div>

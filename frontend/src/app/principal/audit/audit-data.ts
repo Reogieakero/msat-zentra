@@ -171,14 +171,4 @@ export async function exportAuditCsv(query: AuditQuery): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export type AuditSourceResponse = {
-  sourceTable: string;
-  sourceId: string;
-  confidential: boolean;
-  fields: { label: string; value: string }[];
-};
 
-export async function fetchAuditSource(id: string): Promise<AuditSourceResponse> {
-  const res = await apiClient.get<AuditSourceResponse>(`/api/audit/${id}/source`);
-  return res.data;
-}

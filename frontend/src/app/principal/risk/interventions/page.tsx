@@ -1,30 +1,17 @@
 "use client";
 
-import * as React from "react";
-import { useGradeMode } from "../../grade-mode-context";
-import type { RiskSnapshotStudent } from "./types";
 import { InterventionsListTable } from "./components/InterventionsListTable";
-import { InterventionDrawer } from "./components/InterventionDrawer";
 import menu from "../heatmaps/components/heatmap.module.css";
 import styles from "./interventions.module.css";
 
 export default function PrincipalInterventionsPage() {
-  const { gradeMode } = useGradeMode();
-  const [selected, setSelected] = React.useState<RiskSnapshotStudent | null>(null);
-
   return (
     <div className={menu.shell}>
       <div className={menu.layout}>
         <section className={styles.page}>
-          <InterventionsListTable onSelect={setSelected} />
+          <InterventionsListTable />
         </section>
       </div>
-
-      <InterventionDrawer
-        student={selected}
-        gradeMode={gradeMode}
-        onClose={() => setSelected(null)}
-      />
     </div>
   );
 }

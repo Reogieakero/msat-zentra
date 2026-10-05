@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { HonorRollCandidate, PotentialHonorCandidate } from "../academics-data";
+import { descriptorBand } from "../academics-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X } from "lucide-react";
 import styles from "./HonorRollTable.module.css";
@@ -15,12 +16,6 @@ interface Props {
   onClose: () => void;
 }
 
-const TIER_RANK: Record<string, number> = {
-  "Highest Honors": 3,
-  "High Honors": 2,
-  "With Honors": 1,
-};
-
 export function HonorRollTable({
   title,
   candidates,
@@ -28,13 +23,9 @@ export function HonorRollTable({
   loading,
   onClose,
 }: Props) {
+  // DO 15, s. 2026: awardees listed alphabetically.
   const rows = React.useMemo(
-    () =>
-      [...candidates].sort((a, b) => {
-        const d = (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0);
-        if (d !== 0) return d;
-        return b.overallAverage - a.overallAverage;
-      }),
+    () => [...candidates].sort((a, b) => a.name.localeCompare(b.name)),
     [candidates]
   );
 
@@ -45,8 +36,8 @@ export function HonorRollTable({
           <h3 className={styles.honorTitle}>{title}</h3>
           <p className={styles.honorSub}>
             {showUnlocked
-              ? "Students whose current grades already meet a DepEd honor band — lock remaining subjects to confirm."
-              : "Confirmed honor roll — all subject grades are locked/finalized."}
+              ? "Students whose current grades already meet the Academic Excellence rule — lock remaining subjects to confirm."
+              : "Confirmed Academic Excellence awardees — all subject grades are locked/finalized."}
           </p>
         </div>
         <button
@@ -70,12 +61,12 @@ export function HonorRollTable({
       ) : (
         <table className={styles.honorTable}>
           <thead>
-            <tr>
-              <th>Student</th>
-              <th>Average</th>
-              <th>Tier</th>
-              {showUnlocked && <th>Unlocked</th>}
-            </tr>
+              <tr>
+                <th>Student</th>
+                <th>Average</th>
+                <th>Band</th>
+                {showUnlocked && <th>Unlocked</th>}
+              </tr>
           </thead>
           <tbody>
             {rows.map((c) => (
@@ -83,8 +74,8 @@ export function HonorRollTable({
                 <td className={styles.honorName}>{c.name}</td>
                 <td className={shared.mono}>{c.overallAverage.toFixed(1)}</td>
                 <td>
-                  <span className={`${styles.tierChip} ${styles[`tier_${c.tier.replace(/\s+/g, "")}`]}`}>
-                    {c.tier}
+                  <span className={`${styles.tierChip} ${styles.band_Advancing}`}>
+                    {descriptorBand(c.overallAverage)}
                   </span>
                 </td>
                 {showUnlocked && (

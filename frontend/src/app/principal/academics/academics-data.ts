@@ -39,20 +39,34 @@ export interface PassFailByGrade {
   failed: number;
 }
 
-export type HonorRollTier = "Highest Honors" | "High Honors" | "With Honors";
+// DO 15, s. 2026 descriptor bands for numeric grades (Key Stages 2-4).
+export type DescriptorBand =
+  | "Advancing"
+  | "Benchmarking"
+  | "Connecting"
+  | "Developing"
+  | "Emerging";
+
+export function descriptorBand(average: number): DescriptorBand {
+  if (average >= 90) return "Advancing";
+  if (average >= 80) return "Benchmarking";
+  if (average >= 75) return "Connecting";
+  if (average >= 65) return "Developing";
+  return "Emerging";
+}
+
+export type AwardStatus = "awarded" | "potential";
 
 export interface HonorRollCandidate {
   studentId: string;
   name: string;
   overallAverage: number;
-  tier: HonorRollTier;
 }
 
 export interface PotentialHonorCandidate {
   studentId: string;
   name: string;
   overallAverage: number;
-  tier: HonorRollTier;
   unlockedSubjects: number;
 }
 

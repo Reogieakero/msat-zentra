@@ -38,7 +38,8 @@
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: white;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
   flex-shrink: 0;
 }
 
