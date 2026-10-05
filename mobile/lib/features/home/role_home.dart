@@ -1,17 +1,17 @@
-// Role shells — thin drawer-routed wrappers (no bottom nav, no tabs).
-// Each route renders its page as child; replace semantics via context.go.
+// Role shells — thin drawer-routed wrappers (no bottom nav, no tabs, no FAB).
+// Advisory pages use AdviserShell; Class + Attendance share WorkspaceShell
+// for both roles (same web data). Replace semantics via context.go.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/session.dart';
 import '../../core/sync_outbox.dart';
 import '../../design/shell.dart';
 
-enum AdviserRoute { advisory, attendance, schedule, bama, referrals }
+enum AdviserRoute { advisory, academic, admCases, schedule, bama, referrals }
 
-enum TeacherRoute { classes, attendance, more }
+enum WorkspaceRoute { classes, attendance, more }
 
 class AdviserShell extends ConsumerWidget {
   final AdviserRoute selected;
@@ -23,28 +23,24 @@ class AdviserShell extends ConsumerWidget {
     final term = ref.watch(termProvider);
     final pending = ref.watch(outboxProvider).pendingCount;
     final termLabel = term == null ? null : '${term.schoolYearName} · Term ${term.termNumber}${pending > 0 ? ' · $pending queued' : ''}';
-    // Bama quick-filing FAB on field screens (not on Bama itself).
-    final showBamaFab = selected == AdviserRoute.advisory ||
-        selected == AdviserRoute.attendance ||
-        selected == AdviserRoute.schedule;
     return ZentraShell(
       termLabel: termLabel,
       selectedPath: selected.path,
-      fab: showBamaFab ? const _BamaFab() : null,
       child: child,
     );
   }
 }
 
-class TeacherShell extends ConsumerWidget {
-  final TeacherRoute selected;
+class WorkspaceShell extends ConsumerWidget {
+  final WorkspaceRoute selected;
   final Widget child;
-  const TeacherShell({super.key, required this.selected, required this.child});
+  const WorkspaceShell({super.key, required this.selected, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final term = ref.watch(termProvider);
-    final termLabel = term == null ? null : '${term.schoolYearName} · Term ${term.termNumber}';
+    final pending = ref.watch(outboxProvider).pendingCount;
+    final termLabel = term == null ? null : '${term.schoolYearName} · Term ${term.termNumber}${pending > 0 ? ' · $pending queued' : ''}';
     return ZentraShell(
       termLabel: termLabel,
       selectedPath: selected.path,
@@ -52,24 +48,6 @@ class TeacherShell extends ConsumerWidget {
     );
   }
 }
-
-class _BamaFab extends StatelessWidget {
-  const _BamaFab();
-  @override
-  Widget build(BuildContext context) => FloatingActionButton.extended(
-        icon: const Icon(Icons.chat_bubble_outline, size: 18),
-        label: const Text('Bama', style: TextStyle(fontSize: 13)),
-        onPressed: () {
-          // Replace semantics: drawer-equivalent destination.
-          // ignore: use_build_context_synchronously
-          context.go('/adviser/bama');
-        },
-      );
-}
-
-// Keep old names compiling for any lingering imports.
-typedef AdviserHome = AdviserShell;
-typedef TeacherHome = TeacherShell;
 
 class TeacherMorePage extends StatelessWidget {
   const TeacherMorePage({super.key});

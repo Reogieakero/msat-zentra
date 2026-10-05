@@ -8,18 +8,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/session.dart';
-import '../features/home/role_home.dart' show AdviserRoute, TeacherRoute;
+import '../features/home/role_home.dart' show AdviserRoute, WorkspaceRoute;
 
 class ZentraShell extends ConsumerWidget {
   final String? termLabel;
   final Widget child;
-  final Widget? fab;
   final String selectedPath;
   const ZentraShell({
     super.key,
     this.termLabel,
     required this.child,
-    this.fab,
     required this.selectedPath,
   });
 
@@ -29,7 +27,6 @@ class ZentraShell extends ConsumerWidget {
       appBar: ZentraAppBar(termLabel: termLabel),
       drawer: ZentraDrawer(selectedPath: selectedPath),
       body: child,
-      floatingActionButton: fab,
     );
   }
 }
@@ -101,23 +98,15 @@ class ZentraDrawer extends ConsumerWidget {
           if (isAdviser) ...[
             const _DrawerHeader('Advisory'),
             _item(context, Icons.group_outlined, 'Advisory list', '/adviser/advisory', _selected('/adviser/advisory')),
-            _item(context, Icons.fact_check_outlined, 'Advisory attendance', '/adviser/attendance', _selected('/adviser/attendance')),
+            _item(context, Icons.school_outlined, 'Academic', '/adviser/academic', _selected('/adviser/academic')),
+            _item(context, Icons.folder_shared_outlined, 'ADM cases', '/adviser/adm-cases', _selected('/adviser/adm-cases')),
             _item(context, Icons.calendar_month_outlined, 'Section schedule', '/adviser/schedule', _selected('/adviser/schedule')),
             _item(context, Icons.chat_bubble_outline, 'Chat with Bama', '/adviser/bama', _selected('/adviser/bama')),
             _item(context, Icons.send_outlined, 'Referrals', '/adviser/referrals', _selected('/adviser/referrals')),
           ],
           const _DrawerHeader('Workspace'),
-          _item(
-            context,
-            Icons.class_outlined,
-            'My classes',
-            isAdviser ? '/adviser/advisory' : '/teacher/classes',
-            _selected(isAdviser ? '/adviser/advisory' : '/teacher/classes'),
-          ),
-          if (!isAdviser) ...[
-            _item(context, Icons.fact_check_outlined, 'Attendance', '/teacher/attendance', _selected('/teacher/attendance')),
-            _item(context, Icons.more_horiz, 'More', '/teacher/more', _selected('/teacher/more')),
-          ],
+          _item(context, Icons.class_outlined, 'Class', '/workspace/classes', _selected('/workspace/classes')),
+          _item(context, Icons.fact_check_outlined, 'Attendance', '/workspace/attendance', _selected('/workspace/attendance')),
           const _DrawerHeader('System'),
           ListTile(
             dense: true,
@@ -157,18 +146,19 @@ class ZentraDrawer extends ConsumerWidget {
 extension AdviserRouteLocation on AdviserRoute {
   String get path => switch (this) {
         AdviserRoute.advisory => '/adviser/advisory',
-        AdviserRoute.attendance => '/adviser/attendance',
+        AdviserRoute.academic => '/adviser/academic',
+        AdviserRoute.admCases => '/adviser/adm-cases',
         AdviserRoute.schedule => '/adviser/schedule',
         AdviserRoute.bama => '/adviser/bama',
         AdviserRoute.referrals => '/adviser/referrals',
       };
 }
 
-extension TeacherRouteLocation on TeacherRoute {
+extension WorkspaceRouteLocation on WorkspaceRoute {
   String get path => switch (this) {
-        TeacherRoute.classes => '/teacher/classes',
-        TeacherRoute.attendance => '/teacher/attendance',
-        TeacherRoute.more => '/teacher/more',
+        WorkspaceRoute.classes => '/workspace/classes',
+        WorkspaceRoute.attendance => '/workspace/attendance',
+        WorkspaceRoute.more => '/teacher/more',
       };
 }
 

@@ -34,7 +34,7 @@ class ClassesPage extends ConsumerWidget {
               final c = ClassSlot.fromJson(classes[i] as Map<String, dynamic>);
               return ZCard(
                 padding: EdgeInsets.zero,
-                onTap: () => context.push('/teacher/gradebook/${Uri.encodeComponent(c.id)}?title=${Uri.encodeComponent('${c.subject} · ${c.section}')}'),
+                onTap: () => context.push('/workspace/classes/${Uri.encodeComponent(c.id)}?title=${Uri.encodeComponent('${c.subject} · ${c.section}')}'),
                 child: IntrinsicHeight(
                   child: Row(children: [
                     Container(width: 3, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: const BorderRadius.horizontal(left: Radius.circular(6)))),

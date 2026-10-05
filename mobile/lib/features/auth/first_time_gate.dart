@@ -160,7 +160,7 @@ class _GateState extends ConsumerState<FirstTimeGate> {
         }
         // Ready — route by role to drawer defaults.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go(isAdviser ? '/adviser/advisory' : '/teacher/classes');
+          if (mounted) context.go(isAdviser ? '/adviser/advisory' : '/workspace/classes');
         });
         return const Scaffold(body: LoadingView(label: 'Opening workspace…'));
       },
