@@ -1,98 +1,75 @@
-// Role home — ZentraShell with bottom nav (bespoke mobile, not TabBar).
-// Adviser: Advisory, Attendance, Bama (FAB center), Schedule, More.
-// Teacher: Classes, Attendance, More.
+// Role shells — thin drawer-routed wrappers (no bottom nav, no tabs).
+// Each route renders its page as child; replace semantics via context.go.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/session.dart';
 import '../../core/sync_outbox.dart';
 import '../../design/shell.dart';
-import '../adviser/advisory_list_page.dart';
-import '../adviser/adviser_schedule_page.dart';
-import '../adviser/adviser_attendance_page.dart';
-import '../bama/bama_chat_page.dart';
-import '../referral/referral_page.dart';
-import '../teacher/classes_page.dart';
-import '../teacher/teacher_attendance_page.dart';
 
-class AdviserHome extends ConsumerStatefulWidget {
-  const AdviserHome({super.key});
-  @override
-  ConsumerState<AdviserHome> createState() => _AdviserState();
-}
+enum AdviserRoute { advisory, attendance, schedule, bama, referrals }
 
-class _AdviserState extends ConsumerState<AdviserHome> {
-  int _i = 0;
+enum TeacherRoute { classes, attendance, more }
+
+class AdviserShell extends ConsumerWidget {
+  final AdviserRoute selected;
+  final Widget child;
+  const AdviserShell({super.key, required this.selected, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final term = ref.watch(termProvider);
     final pending = ref.watch(outboxProvider).pendingCount;
     final termLabel = term == null ? null : '${term.schoolYearName} · Term ${term.termNumber}${pending > 0 ? ' · $pending queued' : ''}';
-    const dests = [
-      ZNavDest(label: 'Advisory', icon: Icons.group_outlined, selectedIcon: Icons.group),
-      ZNavDest(label: 'Attend', icon: Icons.fact_check_outlined, selectedIcon: Icons.fact_check),
-      ZNavDest(label: 'Bama', icon: Icons.chat_bubble_outline, selectedIcon: Icons.chat_bubble),
-      ZNavDest(label: 'Schedule', icon: Icons.calendar_month_outlined, selectedIcon: Icons.calendar_month),
-      ZNavDest(label: 'More', icon: Icons.more_horiz, selectedIcon: Icons.more_horiz),
-    ];
-    final pages = [
-      const AdvisoryListPage(),
-      const AdviserAttendancePage(),
-      const BamaChatPage(),
-      const AdviserSchedulePage(),
-      const ReferralPage(),
-    ];
+    // Bama quick-filing FAB on field screens (not on Bama itself).
+    final showBamaFab = selected == AdviserRoute.advisory ||
+        selected == AdviserRoute.attendance ||
+        selected == AdviserRoute.schedule;
     return ZentraShell(
-      title: 'Adviser',
       termLabel: termLabel,
-      currentIndex: _i,
-      onTap: (v) => setState(() => _i = v),
-      destinations: dests,
-      fab: _i == 2
-          ? null
-          : FloatingActionButton.extended(
-              icon: const Icon(Icons.chat_bubble_outline, size: 18),
-              label: const Text('Bama', style: TextStyle(fontSize: 13)),
-              onPressed: () => setState(() => _i = 2),
-            ),
-      child: IndexedStack(index: _i, children: pages),
+      selectedPath: selected.path,
+      fab: showBamaFab ? const _BamaFab() : null,
+      child: child,
     );
   }
 }
 
-class TeacherHome extends ConsumerStatefulWidget {
-  const TeacherHome({super.key});
-  @override
-  ConsumerState<TeacherHome> createState() => _TeacherState();
-}
+class TeacherShell extends ConsumerWidget {
+  final TeacherRoute selected;
+  final Widget child;
+  const TeacherShell({super.key, required this.selected, required this.child});
 
-class _TeacherState extends ConsumerState<TeacherHome> {
-  int _i = 0;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final term = ref.watch(termProvider);
     final termLabel = term == null ? null : '${term.schoolYearName} · Term ${term.termNumber}';
-    const dests = [
-      ZNavDest(label: 'Classes', icon: Icons.class_outlined, selectedIcon: Icons.class_),
-      ZNavDest(label: 'Attend', icon: Icons.fact_check_outlined, selectedIcon: Icons.fact_check),
-      ZNavDest(label: 'More', icon: Icons.more_horiz, selectedIcon: Icons.more_horiz),
-    ];
     return ZentraShell(
-      title: 'Subject Teacher',
       termLabel: termLabel,
-      currentIndex: _i,
-      onTap: (v) => setState(() => _i = v),
-      destinations: dests,
-      child: IndexedStack(index: _i, children: const [
-        ClassesPage(),
-        TeacherAttendancePage(),
-        TeacherMorePage(),
-      ]),
+      selectedPath: selected.path,
+      child: child,
     );
   }
 }
+
+class _BamaFab extends StatelessWidget {
+  const _BamaFab();
+  @override
+  Widget build(BuildContext context) => FloatingActionButton.extended(
+        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+        label: const Text('Bama', style: TextStyle(fontSize: 13)),
+        onPressed: () {
+          // Replace semantics: drawer-equivalent destination.
+          // ignore: use_build_context_synchronously
+          context.go('/adviser/bama');
+        },
+      );
+}
+
+// Keep old names compiling for any lingering imports.
+typedef AdviserHome = AdviserShell;
+typedef TeacherHome = TeacherShell;
 
 class TeacherMorePage extends StatelessWidget {
   const TeacherMorePage({super.key});

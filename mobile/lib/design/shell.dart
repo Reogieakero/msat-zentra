@@ -1,6 +1,6 @@
-// Zentra app shell — bespoke mobile, web-matched.
+// Zentra app shell — drawer-routed (no bottom nav).
 // Top: [≡] Zentra + term badge (left) | [🔔][avatar] (right).
-// Bottom: role-aware nav. ≡ opens left drawer (BranchedMenu port).
+// ≡ opens left drawer (BranchedMenu port) with real go_router destinations.
 // Branding: left-aligned wordmark after ≡ (matches web topbar brand left).
 
 import 'package:flutter/material.dart';
@@ -8,63 +8,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/session.dart';
-import '../design/tokens.dart';
+import '../features/home/role_home.dart' show AdviserRoute, TeacherRoute;
 
 class ZentraShell extends ConsumerWidget {
-  final String title;
   final String? termLabel;
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-  final List<ZNavDest> destinations;
   final Widget child;
   final Widget? fab;
+  final String selectedPath;
   const ZentraShell({
     super.key,
-    required this.title,
     this.termLabel,
-    required this.currentIndex,
-    required this.onTap,
-    required this.destinations,
     required this.child,
     this.fab,
+    required this.selectedPath,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: ZentraAppBar(title: title, termLabel: termLabel),
-      drawer: const ZentraDrawer(),
-      body: AnimatedSwitcher(
-        duration: ZTokens.micro,
-        switchInCurve: ZTokens.easeOut,
-        switchOutCurve: ZTokens.easeOut,
-        child: KeyedSubtree(key: ValueKey(currentIndex), child: child),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: onTap,
-        height: 68,
-        destinations: [for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon ?? d.icon), label: d.label)],
-      ),
+      appBar: ZentraAppBar(termLabel: termLabel),
+      drawer: ZentraDrawer(selectedPath: selectedPath),
+      body: child,
       floatingActionButton: fab,
     );
   }
 }
 
-class ZNavDest {
-  final String label;
-  final IconData icon;
-  final IconData? selectedIcon;
-  const ZNavDest({required this.label, required this.icon, this.selectedIcon});
-}
-
 class ZentraAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  final String title;
   final String? termLabel;
-  const ZentraAppBar({super.key, required this.title, this.termLabel});
+  const ZentraAppBar({super.key, this.termLabel});
 
   @override
-  Size get preferredSize => const Size.fromHeight(ZTokens.topBarH);
+  Size get preferredSize => const Size.fromHeight(56);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -108,45 +83,93 @@ class ZentraAppBar extends ConsumerWidget implements PreferredSizeWidget {
 }
 
 class ZentraDrawer extends ConsumerWidget {
-  const ZentraDrawer({super.key});
+  final String selectedPath;
+  const ZentraDrawer({super.key, required this.selectedPath});
+
+  bool _selected(String path) => selectedPath == path || selectedPath.startsWith('$path/');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final overview = ref.watch(overviewProvider);
-    final isAdviser = overview.maybeWhen(data: (d) => d['isAdviser'] == true, orElse: () => false);
+    final isAdviser = overview.maybeWhen(data: (d) => d['isAdviser'] == true, orElse: () => ref.read(authProvider).role == 'adviser');
     return Drawer(
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(right: Radius.circular(6))),
       child: SafeArea(
         child: ListView(padding: const EdgeInsets.all(12), children: [
           const ListTile(title: Text('Zentra', style: TextStyle(fontWeight: FontWeight.w700)), subtitle: Text('Staff workspace')),
           const Divider(),
-          const _DrawerHeader('Overview'),
-          _item(context, Icons.dashboard_outlined, 'Dashboard', () => context.go(isAdviser ? '/adviser' : '/teacher')),
           if (isAdviser) ...[
             const _DrawerHeader('Advisory'),
-            _item(context, Icons.group_outlined, 'Advisory list', () => context.go('/adviser')),
-            _item(context, Icons.fact_check_outlined, 'Advisory attendance', () => context.go('/adviser')),
-            _item(context, Icons.calendar_month_outlined, 'Section schedule', () => context.go('/adviser')),
-            _item(context, Icons.send_outlined, 'Referrals', () => context.go('/adviser')),
+            _item(context, Icons.group_outlined, 'Advisory list', '/adviser/advisory', _selected('/adviser/advisory')),
+            _item(context, Icons.fact_check_outlined, 'Advisory attendance', '/adviser/attendance', _selected('/adviser/attendance')),
+            _item(context, Icons.calendar_month_outlined, 'Section schedule', '/adviser/schedule', _selected('/adviser/schedule')),
+            _item(context, Icons.chat_bubble_outline, 'Chat with Bama', '/adviser/bama', _selected('/adviser/bama')),
+            _item(context, Icons.send_outlined, 'Referrals', '/adviser/referrals', _selected('/adviser/referrals')),
           ],
           const _DrawerHeader('Workspace'),
-          _item(context, Icons.class_outlined, 'My classes', () => context.go(isAdviser ? '/adviser' : '/teacher')),
-          if (isAdviser) _item(context, Icons.chat_bubble_outline, 'Chat with Bama', () => context.go('/adviser')),
+          _item(
+            context,
+            Icons.class_outlined,
+            'My classes',
+            isAdviser ? '/adviser/advisory' : '/teacher/classes',
+            _selected(isAdviser ? '/adviser/advisory' : '/teacher/classes'),
+          ),
+          if (!isAdviser) ...[
+            _item(context, Icons.fact_check_outlined, 'Attendance', '/teacher/attendance', _selected('/teacher/attendance')),
+            _item(context, Icons.more_horiz, 'More', '/teacher/more', _selected('/teacher/more')),
+          ],
           const _DrawerHeader('System'),
-          _item(context, Icons.swap_horiz, 'Switch term', () async {
-            await ref.read(termProvider.notifier).clear();
-            if (context.mounted) context.go('/term');
-          }),
-          _item(context, Icons.settings_outlined, 'Settings', () {}),
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.swap_horiz, size: 20),
+            title: const Text('Switch term', style: TextStyle(fontSize: 13)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            onTap: () async {
+              Navigator.pop(context);
+              await ref.read(termProvider.notifier).clear();
+              if (context.mounted) context.go('/term');
+            },
+          ),
+          _item(context, Icons.settings_outlined, 'Settings', '/teacher/more', _selected('/teacher/more')),
         ]),
       ),
     );
   }
 
-  static Widget _item(BuildContext context, IconData icon, String label, VoidCallback onTap) =>
-      ListTile(dense: true, leading: Icon(icon, size: 20), title: Text(label, style: const TextStyle(fontSize: 13)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)), onTap: () {
+  static Widget _item(BuildContext context, IconData icon, String label, String path, bool selected) {
+    final theme = Theme.of(context);
+    return ListTile(
+      dense: true,
+      leading: Icon(icon, size: 20),
+      title: Text(label, style: const TextStyle(fontSize: 13)),
+      selected: selected,
+      selectedTileColor: theme.colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      onTap: () {
         Navigator.pop(context);
-        onTap();
-      });
+        context.go(path);
+      },
+    );
+  }
+}
+
+// Route-location helpers so shells/drawer highlight without prop drilling.
+extension AdviserRouteLocation on AdviserRoute {
+  String get path => switch (this) {
+        AdviserRoute.advisory => '/adviser/advisory',
+        AdviserRoute.attendance => '/adviser/attendance',
+        AdviserRoute.schedule => '/adviser/schedule',
+        AdviserRoute.bama => '/adviser/bama',
+        AdviserRoute.referrals => '/adviser/referrals',
+      };
+}
+
+extension TeacherRouteLocation on TeacherRoute {
+  String get path => switch (this) {
+        TeacherRoute.classes => '/teacher/classes',
+        TeacherRoute.attendance => '/teacher/attendance',
+        TeacherRoute.more => '/teacher/more',
+      };
 }
 
 class _DrawerHeader extends StatelessWidget {

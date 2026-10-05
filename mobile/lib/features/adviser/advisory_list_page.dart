@@ -4,12 +4,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../../core/sync_outbox.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
-import 'student_detail_page.dart';
 
 final advisoryProvider = FutureProvider<List<AdvisoryStudent>>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -88,7 +88,7 @@ class _State extends ConsumerState<AdvisoryListPage> {
                   final s = shown[i];
                   return ZCard(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => StudentDetailPage(student: s))),
+                    onTap: () => context.push('/adviser/students/${Uri.encodeComponent(s.studentId)}', extra: s),
                     child: Row(children: [
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

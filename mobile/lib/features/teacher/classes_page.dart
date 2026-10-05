@@ -2,11 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/session.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
-import 'gradebook_page.dart';
 
 class ClassesPage extends ConsumerWidget {
   const ClassesPage({super.key});
@@ -34,8 +34,7 @@ class ClassesPage extends ConsumerWidget {
               final c = ClassSlot.fromJson(classes[i] as Map<String, dynamic>);
               return ZCard(
                 padding: EdgeInsets.zero,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => GradebookPage(classId: c.id, title: '${c.subject} · ${c.section}'))),
+                onTap: () => context.push('/teacher/gradebook/${Uri.encodeComponent(c.id)}?title=${Uri.encodeComponent('${c.subject} · ${c.section}')}'),
                 child: IntrinsicHeight(
                   child: Row(children: [
                     Container(width: 3, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: const BorderRadius.horizontal(left: Radius.circular(6)))),
