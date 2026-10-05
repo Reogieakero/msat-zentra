@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/session.dart';
 import '../../core/sync_outbox.dart';
+import '../../shared/widgets.dart';
 
 class AdviserAttendancePage extends ConsumerStatefulWidget {
   const AdviserAttendancePage({super.key});
@@ -110,13 +111,13 @@ class _State extends ConsumerState<AdviserAttendancePage> {
   Widget build(BuildContext context) {
     return Column(children: [
       Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         child: Row(children: [
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: _subjectId,
               decoration: const InputDecoration(labelText: 'Subject'),
-              items: [for (final s in _subjects) DropdownMenuItem(value: s['id'] as String, child: Text(s['name']?.toString() ?? ''))],
+              items: [for (final s in _subjects) DropdownMenuItem(value: s['id'] as String, child: Text(s['name']?.toString() ?? '', style: const TextStyle(fontSize: 13)))],
               onChanged: (v) {
                 setState(() => _subjectId = v);
                 _prefill();
@@ -124,7 +125,7 @@ class _State extends ConsumerState<AdviserAttendancePage> {
             ),
           ),
           const SizedBox(width: 8),
-          TextButton(
+          OutlinedButton(
             onPressed: () async {
               final picked = await showDatePicker(context: context, firstDate: DateTime.now().subtract(const Duration(days: 60)), lastDate: DateTime.now(), initialDate: _date);
               if (picked != null) {
@@ -132,29 +133,41 @@ class _State extends ConsumerState<AdviserAttendancePage> {
                 _prefill();
               }
             },
-            child: Text(DateFormat('MMM d').format(_date)),
+            child: Text(DateFormat('MMM d').format(_date), style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
           ),
         ]),
       ),
       Expanded(
         child: _marks.isEmpty
-            ? const Center(child: Text('No roster / pick a subject + date.'))
-            : ListView.builder(
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: ZEmpty(icon: Icons.fact_check_outlined, title: 'No roster', subtitle: 'Pick a subject and date with elapsed meetups.'),
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                 itemCount: _marks.length,
+                separatorBuilder: (context, _) => const SizedBox(height: 8),
                 itemBuilder: (_, i) {
                   final m = _marks[i];
-                  return ListTile(
-                    title: Text(m['name']?.toString() ?? m['studentId'].toString()),
-                    trailing: DropdownButton<String>(
-                      value: (m['status'] ?? 'present').toString(),
-                      items: const [DropdownMenuItem(value: 'present', child: Text('Present')), DropdownMenuItem(value: 'absent', child: Text('Absent')), DropdownMenuItem(value: 'late', child: Text('Late')), DropdownMenuItem(value: 'excused', child: Text('Excused'))],
-                      onChanged: (v) => setState(() => _marks[i] = {...m, 'status': v}),
-                    ),
+                  return ZCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(children: [
+                      Expanded(child: Text(m['name']?.toString() ?? m['studentId'].toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+                      SegTabs<String>(
+                        values: const ['present', 'absent', 'late', 'excused'],
+                        labels: const ['P', 'A', 'L', 'E'],
+                        selected: (m['status'] ?? 'present').toString(),
+                        onChanged: (v) => setState(() => _marks[i] = {...m, 'status': v}),
+                      ),
+                    ]),
                   );
                 },
               ),
       ),
-      Padding(padding: const EdgeInsets.all(12), child: FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Submitting…' : 'Submit attendance'))),
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(width: double.infinity, child: FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Submitting…' : 'Submit attendance'))),
+      ),
     ]);
   }
 }

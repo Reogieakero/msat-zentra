@@ -1,5 +1,4 @@
-// Adviser class schedule — schedule of his/her section.
-// GET /api/teacher/schedule/my-slots (committed APPROVED|SUBMITTED).
+// Adviser schedule — day-grouped agenda (mobile-native, not web grid).
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -22,14 +21,13 @@ final adviserScheduleProvider = FutureProvider<List<TimetableSlot>>((ref) async 
     } else {
       raw = [];
     }
-    // my-slots returns flat list; filter happens server-side to linked sections.
     return [for (final s in raw) TimetableSlot.fromJson(s as Map<String, dynamic>)];
   } on DioException catch (e) {
     throw api.toApiException(e);
   }
 });
 
-const _days = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri'};
+const _days = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday'};
 
 class AdviserSchedulePage extends ConsumerWidget {
   const AdviserSchedulePage({super.key});
@@ -37,22 +35,57 @@ class AdviserSchedulePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final slots = ref.watch(adviserScheduleProvider);
     return slots.when(
-      loading: () => const LoadingView(),
+      loading: () => const Padding(padding: EdgeInsets.all(16), child: ZSkeletonList()),
       error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(adviserScheduleProvider)),
       data: (list) {
-        if (list.isEmpty) return const Center(child: Text('No schedule yet.'));
+        if (list.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: ZEmpty(icon: Icons.calendar_month_outlined, title: 'No schedule yet', subtitle: 'Committed timetable slots appear here once approved.'),
+          );
+        }
+        final byDay = <int, List<TimetableSlot>>{};
+        for (final s in list) {
+          byDay.putIfAbsent(s.day, () => []).add(s);
+        }
+        for (final v in byDay.values) {
+          v.sort((a, b) => a.period.compareTo(b.period));
+        }
         return RefreshIndicator(
           onRefresh: () async => ref.invalidate(adviserScheduleProvider),
-          child: ListView.builder(
-            itemCount: list.length,
-            itemBuilder: (_, i) {
-              final s = list[i];
-              return ListTile(
-                leading: CircleAvatar(child: Text(_days[s.day] ?? '${s.day}')),
-                title: Text('${s.subjectName} · ${s.sectionName}'),
-                subtitle: Text('Period ${s.period + 1} · ${s.status}'),
-              );
-            },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+            children: [
+              for (final day in [1, 2, 3, 4, 5])
+                if (byDay.containsKey(day)) ...[
+                  Text(_days[day]!, style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.4)),
+                  const SizedBox(height: 6),
+                  for (final s in byDay[day]!)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ZCard(
+                        child: Row(children: [
+                          Container(
+                            width: 40,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerLow, borderRadius: BorderRadius.circular(6)),
+                            child: Center(
+                                child: Text('P${s.period + 1}',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.tabularFigures()]))),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(s.subjectName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              Text('${s.sectionName} · ${s.status}', style: Theme.of(context).textTheme.bodySmall),
+                            ]),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+            ],
           ),
         );
       },

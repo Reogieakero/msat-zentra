@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/config.dart';
 import 'core/sync_outbox.dart';
+import 'design/theme.dart';
 import 'features/app_router.dart';
 
 Future<void> main() async {
@@ -30,7 +31,9 @@ class ZentraApp extends ConsumerWidget {
       valueListenable: pending,
       builder: (context, _, _) => MaterialApp.router(
         title: 'Zentra',
-        theme: ThemeData(colorSchemeSeed: const Color(0xFF1B4332), useMaterial3: true),
+        theme: zLightTheme(),
+        darkTheme: zDarkTheme(),
+        themeMode: ThemeMode.system,
         routerConfig: router,
       ),
     );

@@ -191,37 +191,46 @@ class _State extends ConsumerState<BamaChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(children: [
       Expanded(
         child: ListView.builder(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           itemCount: _msgs.length,
-          itemBuilder: (_, i) {
+          itemBuilder: (context, i) {
             final m = _msgs[i];
             return Align(
               alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
-              child: Card(
-                color: m.fromUser ? Theme.of(context).colorScheme.primaryContainer : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(m.text),
-                    if (m.options != null)
-                      Wrap(
-                        spacing: 6,
-                        children: [
-                          for (final o in m.options!.take(12))
-                            ActionChip(
-                              label: Text(o.length > 28 ? '${o.substring(0, 28)}…' : o),
-                              onPressed: () => m.optionKind == null ? _pick(o, 'category') : _pick(o, m.optionKind!),
-                            ),
-                          if (m.optionKind == 'student' || (m.text.contains('student') && _students.isNotEmpty))
-                            for (final s in _students.take(10))
-                              ActionChip(label: Text((s['name'] ?? '').toString()), onPressed: () => _pickStudent(s['id'].toString())),
-                        ],
-                      ),
-                  ]),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: theme.colorScheme.outline),
                 ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(m.text, style: const TextStyle(fontSize: 13)),
+                  if (m.options != null) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final o in m.options!.take(12))
+                          ActionChip(
+                            label: Text(o.length > 28 ? '${o.substring(0, 28)}…' : o, style: const TextStyle(fontSize: 12)),
+                            onPressed: () => m.optionKind == null ? _pick(o, 'category') : _pick(o, m.optionKind!),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        if (m.optionKind == 'student' || (m.text.contains('student') && _students.isNotEmpty))
+                          for (final s in _students.take(10))
+                            ActionChip(label: Text((s['name'] ?? '').toString(), style: const TextStyle(fontSize: 12)), onPressed: () => _pickStudent(s['id'].toString()), visualDensity: VisualDensity.compact),
+                      ],
+                    ),
+                  ],
+                ]),
               ),
             );
           },
@@ -229,14 +238,17 @@ class _State extends ConsumerState<BamaChatPage> {
       ),
       if (_flow.textQuestion != null || _msgs.length <= 2)
         Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Row(children: [
             Expanded(child: TextField(controller: _draft, decoration: InputDecoration(hintText: _flow.textQuestion != null ? textQuestionLabels[_flow.textQuestion] : 'Type…'), onSubmitted: (_) => _sendText())),
-            IconButton(icon: const Icon(Icons.send), onPressed: _sendText),
+            const SizedBox(width: 8),
+            FilledButton(onPressed: _sendText, child: const Icon(Icons.send, size: 16)),
           ]),
         ),
       if (_flow.previewShown)
-        Padding(padding: const EdgeInsets.all(8), child: FilledButton(onPressed: _filing ? null : _file, child: Text(_filing ? 'Filing…' : 'File record'))),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: SizedBox(width: double.infinity, child: FilledButton(onPressed: _filing ? null : _file, child: Text(_filing ? 'Filing…' : 'File record')))),
     ]);
   }
 }

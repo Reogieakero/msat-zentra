@@ -128,45 +128,59 @@ class _GradebookBody extends StatelessWidget {
     final students = [for (final s in (data['students'] as List? ?? [])) GradebookStudent.fromJson(s as Map<String, dynamic>)];
     final components = [for (final c in (data['components'] as List? ?? [])) GradeComponent.fromJson(c as Map<String, dynamic>)];
     if (components.isEmpty) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('No components yet. Add Written Work / Performance Task / Exam.'),
-          const SizedBox(height: 8),
-          FilledButton(onPressed: () => onAdd('WRITTEN_WORK'), child: const Text('Add Written Work')),
-        ]),
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: ZEmpty(
+          icon: Icons.assignment_outlined,
+          title: 'No components yet',
+          subtitle: 'Add Written Work / Performance Task / Exam to start encoding.',
+          actionLabel: 'Add Written Work',
+          onAction: () => onAdd('WRITTEN_WORK'),
+        ),
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
       children: [
         for (final comp in components) ...[
           Row(children: [
-            Expanded(child: Text('${comp.label} · ${comp.type} (${comp.weight}%)', style: Theme.of(context).textTheme.titleSmall)),
-            IconButton(icon: const Icon(Icons.add), tooltip: 'Add assessment', onPressed: () => onAdd(comp.type)),
+            Expanded(
+              child: Text('${comp.label} · ${comp.type} (${comp.weight}%)',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.4, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ),
+            IconButton(icon: const Icon(Icons.add, size: 18), tooltip: 'Add assessment', onPressed: () => onAdd(comp.type)),
           ]),
           for (final a in comp.assessments)
-            Card(
-              child: ExpansionTile(
-                title: Text('${a.title} (/${a.maxScore.toStringAsFixed(0)})'),
-                children: [
-                  for (final s in students)
-                    ListTile(
-                      dense: true,
-                      title: Text(s.name),
-                      trailing: SizedBox(
-                        width: 90,
-                        child: TextFormField(
-                          initialValue: (a.scores[s.id]?.toString() ?? ''),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: '—'),
-                          onFieldSubmitted: (v) {
-                            final raw = double.tryParse(v);
-                            if (raw != null) onScore(assessmentId: a.id, studentId: s.id, raw: raw);
-                          },
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ZCard(
+                padding: EdgeInsets.zero,
+                child: ExpansionTile(
+                  dense: true,
+                  title: Text(a.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: Text('/${a.maxScore.toStringAsFixed(0)} · ${a.scores.length} scored',
+                      style: const TextStyle(fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
+                  children: [
+                    for (final s in students)
+                      ListTile(
+                        dense: true,
+                        title: Text(s.name, style: const TextStyle(fontSize: 13)),
+                        trailing: SizedBox(
+                          width: 90,
+                          child: TextFormField(
+                            initialValue: (a.scores[s.id]?.toString() ?? ''),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(hintText: '—'),
+                            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+                            onFieldSubmitted: (v) {
+                              final raw = double.tryParse(v);
+                              if (raw != null) onScore(assessmentId: a.id, studentId: s.id, raw: raw);
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           const SizedBox(height: 8),

@@ -107,34 +107,54 @@ class _GateState extends ConsumerState<FirstTimeGate> {
         if (teacherName == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Link your classes')),
-            body: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(children: [
-                const Text('First time here? Enter the link code from your Master Teacher to attach your timetable slots.'),
-                const SizedBox(height: 12),
-                TextField(controller: _code, decoration: const InputDecoration(labelText: 'Link code (e.g. MS-101)')),
-                const SizedBox(height: 12),
-                FilledButton(onPressed: _claim, child: const Text('Link classes')),
-              ]),
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: ZCard(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      const Text('Link your classes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text('First time here? Enter the link code from your Master Teacher to attach your timetable slots.',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: 12),
+                      TextField(controller: _code, decoration: const InputDecoration(labelText: 'Link code (e.g. MS-101)'), style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
+                      const SizedBox(height: 12),
+                      FilledButton(onPressed: _claim, child: const Text('Link classes')),
+                    ]),
+                  ),
+                ),
+              ),
             ),
           );
         }
         if (grant == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Verify for this term')),
-            body: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(children: [
-                Text('Hi ${teacherName['name'] ?? ''} — verify access for this term to take attendance and encode grades.'),
-                const SizedBox(height: 12),
-                TextField(controller: _code, decoration: const InputDecoration(labelText: 'Attendance code')),
-                const SizedBox(height: 12),
-                FilledButton(onPressed: _verify, child: const Text('Verify')),
-                if (isAdviser) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton(onPressed: _adviserTapThrough, child: const Text('Continue as adviser (tap-through)')),
-                ],
-              ]),
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: ZCard(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      const Text('Verify for this term', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text('Hi ${teacherName['name'] ?? ''} — verify access for this term to take attendance and encode grades.',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: 12),
+                      TextField(controller: _code, decoration: const InputDecoration(labelText: 'Attendance code')),
+                      const SizedBox(height: 12),
+                      FilledButton(onPressed: _verify, child: const Text('Verify')),
+                      if (isAdviser) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton(onPressed: _adviserTapThrough, child: const Text('Continue as adviser (tap-through)')),
+                      ],
+                    ]),
+                  ),
+                ),
+              ),
             ),
           );
         }

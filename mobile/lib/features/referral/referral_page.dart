@@ -47,40 +47,56 @@ class _State extends ConsumerState<ReferralPage> {
   @override
   Widget build(BuildContext context) {
     final list = ref.watch(referralsProvider);
-    return ListView(padding: const EdgeInsets.all(12), children: [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [
-            TextField(controller: _anecId, decoration: const InputDecoration(labelText: 'Anecdotal record ID')),
-            DropdownButtonFormField<String>(
-              initialValue: _target,
-              decoration: const InputDecoration(labelText: 'Refer to'),
-              items: const [
-                DropdownMenuItem(value: 'nurse', child: Text('Nurse')),
-                DropdownMenuItem(value: 'guidance_counselor', child: Text('Guidance')),
-                DropdownMenuItem(value: 'adm_coordinator', child: Text('ADM Coordinator')),
-                DropdownMenuItem(value: 'principal', child: Text('Principal')),
-              ],
-              onChanged: (v) => setState(() => _target = v ?? _target),
-            ),
-            TextField(controller: _reason, decoration: const InputDecoration(labelText: 'Reason'), maxLines: 3),
-            const SizedBox(height: 8),
-            FilledButton(onPressed: _refer, child: const Text('Send referral')),
-          ]),
-        ),
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 80), children: [
+      ZCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('New referral', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(controller: _anecId, decoration: const InputDecoration(labelText: 'Anecdotal record ID'), style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _target,
+            decoration: const InputDecoration(labelText: 'Refer to'),
+            items: const [
+              DropdownMenuItem(value: 'nurse', child: Text('Nurse', style: TextStyle(fontSize: 13))),
+              DropdownMenuItem(value: 'guidance_counselor', child: Text('Guidance', style: TextStyle(fontSize: 13))),
+              DropdownMenuItem(value: 'adm_coordinator', child: Text('ADM Coordinator', style: TextStyle(fontSize: 13))),
+              DropdownMenuItem(value: 'principal', child: Text('Principal', style: TextStyle(fontSize: 13))),
+            ],
+            onChanged: (v) => setState(() => _target = v ?? _target),
+          ),
+          const SizedBox(height: 8),
+          TextField(controller: _reason, decoration: const InputDecoration(labelText: 'Reason'), maxLines: 3, style: const TextStyle(fontSize: 13)),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: _refer, child: const Text('Send referral')),
+        ]),
       ),
+      const SizedBox(height: 12),
+      Text('Timeline', style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.4)),
       const SizedBox(height: 8),
       list.when(
-        loading: () => const LoadingView(),
+        loading: () => const ZSkeletonList(),
         error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(referralsProvider)),
         data: (items) {
-          if (items.isEmpty) return const Center(child: Text('No referrals this term.'));
+          if (items.isEmpty) {
+            return const ZEmpty(icon: Icons.send_outlined, title: 'No referrals this term', subtitle: 'Sent referrals and their status appear here.');
+          }
           return Column(children: [
             for (final r in items)
-              ListTile(
-                title: Text('${r['referredToRole'] ?? ''} · ${r['status'] ?? ''}'),
-                subtitle: Text(r['reason']?.toString() ?? ''),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ZCard(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(child: Text('${r['referredToRole'] ?? ''}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+                      FlagChip(flag: (r['status']?.toString() ?? 'pending')),
+                    ]),
+                    if ((r['reason']?.toString() ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(r['reason'].toString(), style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ]),
+                ),
               ),
           ]);
         },
