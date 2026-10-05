@@ -4,6 +4,9 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CardModal } from "@/components/ui/CardModal";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
@@ -16,6 +19,8 @@ type ClaimableSection = {
   adviserLabel: string;
   /** Principal's listed name matches this account — shown first. */
   suggested: boolean;
+  /** Principal assigned this seat — the teacher must enter its code to claim. */
+  hasCode?: boolean;
 };
 
 type AdvisedSection = {
@@ -58,16 +63,17 @@ function dismiss(userId: string, schoolYearId: string): void {
 // First-login adviser self-onboarding. Shows once per school year while the
 // teacher advises nothing: step 1 asks "Are you an adviser?" — No dismisses
 // to the workspace; Yes lists sections the principal filed under the
-// teacher's name, and picking one links the account as section adviser.
-// Teachers already linked never see this; a "No" re-asks only while they
-// still advise nothing (e.g. next login), which is exactly when the question
-// is still relevant.
+// teacher's name, and picking one + entering its advisory code links the
+// account as section adviser. Teachers already linked never see this; a "No"
+// re-asks only while they still advise nothing (e.g. next login), which is
+// exactly when the question is still relevant.
 export function AdviserClaimGate() {
   const session = useSession();
   const queryClient = useQueryClient();
   const { activeTerm, promptRequired } = useTerm();
   const [step, setStep] = React.useState<"ask" | "pick">("ask");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [code, setCode] = React.useState("");
   const [error, setError] = React.useState<{ year: string; message: string } | null>(null);
   const [saving, setSaving] = React.useState(false);
   // Dismissals are per school year — a new year re-arms the prompt.
@@ -104,6 +110,8 @@ export function AdviserClaimGate() {
 
   // A term switch mid-pick must not carry a stale selection or error.
   const effectiveSelected = status.claimable.some((s) => s.id === selectedId) ? selectedId : null;
+  const selectedSection = status.claimable.find((s) => s.id === effectiveSelected) ?? null;
+  const codeRequired = !!selectedSection?.hasCode || !!selectedSection?.adviserLabel;
   const visibleError = error?.year === schoolYearId ? error.message : null;
 
   const handleNo = () => {
@@ -111,10 +119,25 @@ export function AdviserClaimGate() {
     setDismissedYear(schoolYearId);
   };
 
+  const handleCloseCodeModal = () => {
+    setSelectedId(null);
+    setCode("");
+    setError(null);
+  };
+
   const handleSave = () => {
     if (!effectiveSelected || saving) return;
     const section = status.claimable.find((s) => s.id === effectiveSelected);
     if (!section) return;
+    const needsCode = !!section.hasCode || !!section.adviserLabel;
+    const trimmedCode = code.trim();
+    if (needsCode && !trimmedCode) {
+      setError({
+        year: schoolYearId,
+        message: `Enter the advisory code your principal shared for ${section.name}.`,
+      });
+      return;
+    }
     const sectionId = effectiveSelected;
     const year = schoolYearId;
     const sectionName = section.name;
@@ -127,7 +150,10 @@ export function AdviserClaimGate() {
     setDismissedYear(year);
     void (async () => {
       try {
-        await apiClient.post("/api/teacher/advisory/claim", { sectionId });
+        await apiClient.post("/api/teacher/advisory/claim", {
+          sectionId,
+          ...(needsCode ? { code: trimmedCode } : {}),
+        });
         // Patch the status cache instantly: claimed section moves to advised.
         const statusKey = ["teacher", "advisory", "claim-status", year];
         queryClient.setQueryData<ClaimStatus>(statusKey, (prev) => {
@@ -212,9 +238,9 @@ export function AdviserClaimGate() {
             <h2 className="text-2xl font-semibold tracking-tight">Select your section</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               These are the unclaimed advisory sections for{" "}
-              <strong>{activeTerm?.schoolYearName ?? "this school year"}</strong>. Picking one saves
-              you as its adviser — even if the listed name is misspelled, just pick your actual
-              section.
+              <strong>{activeTerm?.schoolYearName ?? "this school year"}</strong>. Pick your section
+              and enter the advisory code your principal shared — the code proves you are the
+              listed teacher.
             </p>
             {status.claimable.length === 0 ? (
               <p role="status" className="mt-6 rounded-xl border border-dashed border-input p-5 text-sm text-muted-foreground">
@@ -225,6 +251,7 @@ export function AdviserClaimGate() {
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Your section">
                 {status.claimable.map((s) => {
                   const selected = effectiveSelected === s.id;
+                  const needsCode = !!s.hasCode || !!s.adviserLabel;
                   return (
                     <button
                       key={s.id}
@@ -233,6 +260,7 @@ export function AdviserClaimGate() {
                       aria-checked={selected}
                       onClick={() => {
                         setSelectedId(s.id);
+                        setCode("");
                         setError(null);
                       }}
                       className={`flex min-h-24 flex-col rounded-xl border bg-card p-4 text-left shadow-sm transition-all ${
@@ -243,11 +271,18 @@ export function AdviserClaimGate() {
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-base font-semibold">{s.name}</span>
-                        {s.suggested ? (
-                          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-                            Listed under you
-                          </span>
-                        ) : null}
+                        <span className="flex items-center gap-1.5">
+                          {needsCode ? (
+                            <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                              Code required
+                            </span>
+                          ) : null}
+                          {s.suggested ? (
+                            <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-medium text-primary">
+                              Listed under you
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
                       <span className="mt-1 text-xs font-medium text-muted-foreground">
                         Grade {s.gradeLevel}
@@ -265,7 +300,7 @@ export function AdviserClaimGate() {
                 })}
               </div>
             )}
-            {visibleError ? (
+            {visibleError && !codeRequired ? (
               <p role="alert" className="mt-4 text-sm text-destructive">
                 {visibleError}
               </p>
@@ -274,8 +309,13 @@ export function AdviserClaimGate() {
               <Button variant="outline" size="lg" onClick={handleNo} disabled={saving}>
                 Skip for now
               </Button>
-              {status.claimable.length > 0 ? (
-                <Button size="lg" onClick={() => void handleSave()} disabled={!effectiveSelected || saving} aria-busy={saving || undefined}>
+              {status.claimable.length > 0 && !codeRequired ? (
+                <Button
+                  size="lg"
+                  onClick={() => void handleSave()}
+                  disabled={!effectiveSelected || saving}
+                  aria-busy={saving || undefined}
+                >
                   {saving ? (
                     <>
                       <Loader2 size={16} className="animate-spin" aria-hidden />
@@ -287,6 +327,66 @@ export function AdviserClaimGate() {
                 </Button>
               ) : null}
             </div>
+            {selectedSection && codeRequired ? (
+              <CardModal
+                open
+                onClose={handleCloseCodeModal}
+                size="sm"
+                title="Enter advisory code"
+                description={
+                  <>
+                    <strong>{selectedSection.name}</strong> (Grade {selectedSection.gradeLevel}
+                    {selectedSection.adviserLabel
+                      ? ` · Listed as "${selectedSection.adviserLabel}"`
+                      : ""}
+                    ) needs its advisory code — ask your principal for it. The code proves
+                    you are the listed teacher.
+                  </>
+                }
+                watchKey={selectedSection.id}
+              >
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="adviser-claim-code">Advisory code</Label>
+                  <Input
+                    id="adviser-claim-code"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value.toUpperCase());
+                      setError(null);
+                    }}
+                    placeholder="ADV-XXXXX"
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={16}
+                    style={{ textTransform: "uppercase", fontFamily: "ui-monospace, monospace" }}
+                  />
+                </div>
+                {visibleError ? (
+                  <p role="alert" className="mt-3 text-sm text-destructive">
+                    {visibleError}
+                  </p>
+                ) : null}
+                <div className="mt-6 flex flex-wrap justify-end gap-2">
+                  <Button variant="outline" onClick={handleCloseCodeModal} disabled={saving}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => void handleSave()}
+                    disabled={!code.trim() || saving}
+                    aria-busy={saving || undefined}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" aria-hidden />
+                        <span aria-live="polite">Claiming…</span>
+                      </>
+                    ) : (
+                      "Save advisory section"
+                    )}
+                  </Button>
+                </div>
+              </CardModal>
+            ) : null}
           </>
         )}
       </div>

@@ -21,6 +21,7 @@ import {
   subjectAverageAttendance,
 } from "../../services/attendance.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import { matchesAdviserCode, normalizeAdviserCode } from "../academics/adviserCode.js";
 
 const router = Router();
 
@@ -1260,8 +1261,11 @@ function gradeToNumber(gradeLevel: string): number {
 // Returns sections the teacher already advises plus every unclaimed section
 // (adviserId null) in the session's active school year. Name matches against
 // the principal's free-text label are flagged `suggested` and sorted first,
-// but every unclaimed section is claimable — the listed name is sometimes
-// misspelled, so it never gates the list.
+// but every unclaimed section is listed — the listed name is sometimes
+// misspelled, so it never gates the list. Sections the principal assigned
+// carry `hasCode: true` (the code value itself is never exposed here) and
+// require that code on POST /claim; truly empty sections (no label, no code)
+// stay claimable without one for back-compat.
 router.get(
   "/claim-status",
   requireAuth,
@@ -1287,7 +1291,7 @@ router.get(
         prisma.section.findMany({
           where: { schoolYearId: yearId, adviserId: null },
           orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
-          select: { id: true, name: true, gradeLevel: true, adviserLabel: true },
+          select: { id: true, name: true, gradeLevel: true, adviserLabel: true, adviserCode: true },
         }),
       ]);
 
@@ -1303,8 +1307,12 @@ router.get(
             id: s.id,
             name: s.name,
             gradeLevel: gradeToNumber(s.gradeLevel),
-            adviserLabel: s.adviserLabel ?? "",
-            suggested: matchesAdviserName(s.adviserLabel, teacher.fullName),
+            adviserLabel: (s as { adviserLabel?: string | null }).adviserLabel ?? "",
+            suggested: matchesAdviserName(
+              (s as { adviserLabel?: string | null }).adviserLabel,
+              teacher.fullName,
+            ),
+            hasCode: !!((s as { adviserCode?: string | null }).adviserCode ?? null),
           }))
           .sort(
             (a, b) =>
@@ -1319,13 +1327,16 @@ router.get(
   }
 );
 
-// POST /api/teacher/advisory/claim { sectionId } — link the teacher's account
-// as the section adviser. Guards: section must be in the session's school
-// year and currently unclaimed (any unclaimed section is claimable — the
-// principal's free-text name is sometimes misspelled, so it never gates the
-// claim). The write itself is a conditional updateMany (adviserId still null)
-// so two teachers racing the same section resolve to exactly one winner
-// (409 for the loser).
+// POST /api/teacher/advisory/claim { sectionId, code? } — link the teacher's
+// account as the section adviser. Guards: section must be in the session's
+// school year and currently unclaimed. Sections the principal assigned
+// (adviserLabel present) require their advisory code — the code is the
+// verification that the claimant is the listed teacher. Truly empty sections
+// (no label, no code) stay claimable without one for back-compat. The write
+// itself is a conditional updateMany (adviserId still null + code still
+// matching) so two teachers racing the same section resolve to exactly one
+// winner (409 for the loser); the code is consumed (cleared) on success so it
+// cannot be replayed.
 router.post(
   "/claim",
   requireAuth,
@@ -1333,7 +1344,7 @@ router.post(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const { sectionId } = req.body as { sectionId?: string };
+      const { sectionId, code } = req.body as { sectionId?: string; code?: string };
       if (!sectionId?.trim()) throw new AppError(400, "MISSING_FIELDS", "sectionId is required");
       const yearId = await scopedYearId(req);
 
@@ -1348,6 +1359,7 @@ router.post(
             schoolYearId: true,
             adviserId: true,
             adviserLabel: true,
+            adviserCode: true,
             schoolYear: { select: { name: true } },
           },
         }),
@@ -1367,10 +1379,37 @@ router.post(
           alreadyClaimed: true,
         });
       }
+      const row = section as typeof section & {
+        adviserLabel?: string | null;
+        adviserCode?: string | null;
+      };
+      // Principal-listed seats are code-gated: the teacher must enter the
+      // advisory code the principal shared out-of-band.
+      if (row.adviserLabel) {
+        const entered = normalizeAdviserCode(code);
+        if (!entered) {
+          throw new AppError(
+            400,
+            "CODE_REQUIRED",
+            `Section "${section.name}" is listed under "${row.adviserLabel}" — enter the advisory code from your principal.`,
+          );
+        }
+        if (!matchesAdviserCode(row.adviserCode, entered)) {
+          throw new AppError(
+            403,
+            "CODE_MISMATCH",
+            "Wrong advisory code — ask your principal for the current code for this section.",
+          );
+        }
+      }
 
       const claimed = await prisma.section.updateMany({
-        where: { id: section.id, adviserId: null },
-        data: { adviserId: teacherId },
+        where: {
+          id: section.id,
+          adviserId: null,
+          ...(row.adviserCode ? { adviserCode: row.adviserCode } : {}),
+        },
+        data: { adviserId: teacherId, adviserCode: null },
       });
       if (claimed.count === 0) {
         throw new AppError(
@@ -1435,7 +1474,7 @@ router.delete(
         }
         await prisma.section.updateMany({
           where: { id: owned.id, adviserId: teacherId },
-          data: { adviserId: null },
+          data: { adviserId: null, adviserCode: null },
         });
         released = [{ id: owned.id, name: owned.name }];
       } else {
@@ -1448,7 +1487,7 @@ router.delete(
         }
         await prisma.section.updateMany({
           where: { adviserId: teacherId },
-          data: { adviserId: null },
+          data: { adviserId: null, adviserCode: null },
         });
         released = owned.map((s) => ({ id: s.id, name: s.name }));
       }

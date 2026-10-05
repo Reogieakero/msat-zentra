@@ -404,9 +404,14 @@ model Section {
   schoolYearId String
   adviserId    String?
   // Free-text advisory listing (principal-managed). Written whenever a name
-  // is assigned; the adviserId link is only set when the name resolves to
-  // exactly one active teacher, so listing never blocks on accounts.
+  // is assigned; the adviserId link is only set when the teacher claims the
+  // section with its advisory code, so listing never blocks on accounts.
   adviserLabel String?
+  // Advisory claim code (principal-managed, e.g. ADV-7K2Q9). Minted on every
+  // assignment, consumed (cleared) when the teacher claims with it, cleared
+  // when the adviser is removed. Never exposed to teacher-role routes — the
+  // principal shares it out-of-band and the teacher enters it to claim.
+  adviserCode String? @unique
   schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
   adviser      User?      @relation("AdviserSection", fields: [adviserId], references: [id])
   students     StudentProfile[]

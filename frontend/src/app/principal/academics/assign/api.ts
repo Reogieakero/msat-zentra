@@ -54,6 +54,8 @@ export interface Section {
   adviserName: string;
   /** Free-text advisory listing — shown when no teacher account is linked. */
   adviserLabel: string;
+  /** Advisory claim code (principal-only). Teacher enters this to claim the seat. */
+  adviserCode: string;
   assignments: Assignment[];
 }
 
@@ -162,16 +164,30 @@ export interface SectionAdviserResult {
   adviserId: string;
   adviserName: string;
   adviserLabel: string;
+  /** Freshly minted claim code — share with the listed teacher out-of-band. */
+  adviserCode: string;
 }
 
 // Principal advisory — assign (or clear with null/empty) the section adviser.
+// Assigning files label + a fresh claim code (adviserId stays empty until the
+// teacher claims with the code); clearing wipes all three.
 export async function assignAdviser(
   sectionId: string,
   adviserId: string | null,
+  adviserName?: string | null,
 ): Promise<SectionAdviserResult> {
   const res = await apiClient.patch<SectionAdviserResult>(
     `/api/academics/assign/sections/${sectionId}/adviser`,
-    { adviserId },
+    { adviserId, adviserName },
+  );
+  return res.data;
+}
+
+// Mint a replacement code for a pending (listed, unclaimed) assignment —
+// used when the original code is lost. Rejected for claimed or empty seats.
+export async function regenerateAdviserCode(sectionId: string): Promise<SectionAdviserResult> {
+  const res = await apiClient.post<SectionAdviserResult>(
+    `/api/academics/assign/sections/${sectionId}/adviser-code/regenerate`,
   );
   return res.data;
 }

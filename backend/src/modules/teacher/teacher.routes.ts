@@ -1329,6 +1329,7 @@ router.get(
             name: true,
             gradeLevel: true,
             adviserLabel: true,
+            adviserCode: true,
             adviserId: true,
             adviser: { select: { fullName: true } },
           },
@@ -1348,11 +1349,12 @@ router.get(
           name: s.name,
           gradeLevel: s.gradeLevel,
           gradeNumber: gradeToNumber(s.gradeLevel),
-          adviserLabel: s.adviserLabel ?? "",
+          adviserLabel: (s as { adviserLabel?: string | null }).adviserLabel ?? "",
           claimable: s.adviserId === null,
           advisedByMe: s.adviserId === teacherId,
           holderName: s.adviserId && s.adviserId !== teacherId ? (s.adviser?.fullName ?? null) : null,
           inMasterSchedule: scheduledIds.has(s.id),
+          hasCode: !!((s as { adviserCode?: string | null }).adviserCode ?? null),
         })),
       });
     } catch (e) {

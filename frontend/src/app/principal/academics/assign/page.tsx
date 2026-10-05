@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Inbox, Loader2, TriangleAlert } from "lucide-react";
+import { Check, Copy, Inbox, Loader2, RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/sonner";
 import { DropdownSelect } from "./components/DropdownSelect";
 import { AssignAdviserDialog } from "./components/AssignAdviserDialog";
 import { ConfirmActionDialog } from "./components/ConfirmActionDialog";
@@ -51,7 +52,22 @@ export default function PrincipalAssignPage() {
   // Cached data (react-query): sections for the active year + teachers once.
   const { sectionsQuery, teachersQuery } = useAssignSectionsData(schoolYearId);
   // Optimistic mutations: instant per-row feedback, rollback + toast on failure.
-  const { batch, removeSection, pendingIds } = useAssignAdvisers(schoolYearId, schoolYearName);
+  const { batch, clear, regenerateCode, removeSection, pendingIds } = useAssignAdvisers(
+    schoolYearId,
+    schoolYearName,
+  );
+  const [copiedCode, setCopiedCode] = React.useState<string | null>(null);
+
+  const copyCode = React.useCallback(async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 1600);
+      toast.success({ title: "Code copied", description: `${code} — share it with the teacher.` });
+    } catch {
+      toast.error({ title: "Copy failed", description: "Select the code and copy it manually." });
+    }
+  }, []);
   // Other principals' changes merge silently into the same cache.
   usePrincipalAssignRealtime(!!schoolYearId && sectionsQuery.isSuccess, schoolYearId, schoolYearName);
 
@@ -65,7 +81,7 @@ export default function PrincipalAssignPage() {
   );
 
   const assignedCount = React.useMemo(
-    () => gradeSections.filter((s) => s.adviserId).length,
+    () => gradeSections.filter((s) => s.adviserId || s.adviserName).length,
     [gradeSections],
   );
 
@@ -137,7 +153,7 @@ export default function PrincipalAssignPage() {
                 <h1 className={page.title}>Assigning — Section Advisers</h1>
                 <p className={page.subtitle}>
                   School-wide (Grades 7–12). Working in <strong>{schoolYearName || "…"}</strong> —
-                  input the section name and the adviser name. Change scope from the top-bar badge.
+                  input the section name and the adviser name.
                 </p>
               </div>
               <Button
@@ -186,9 +202,15 @@ export default function PrincipalAssignPage() {
               <div className={assign.grid}>
                 {gradeSections.map((s) => {
                   const pending = pendingIds.has(s.id);
-                  // Claimed = linked to a real teacher account (self-claimed or
-                  // linked by name match). Locked: no Change, no Delete.
+                  // Claimed = teacher entered the advisory code and holds the
+                  // seat. Locked: no Change, no Delete.
+                  // Pending = principal listed a name + code, awaiting claim.
+                  // Empty = no adviser yet.
                   const claimed = !!s.adviserId;
+                  const awaitingClaim = !claimed && !!s.adviserName;
+                  const code = (s as { adviserCode?: string }).adviserCode ?? "";
+                  const busy =
+                    pending || batch.isPending || removeSection.isPending || regenerateCode.isPending;
                   return (
                     <div key={s.id} className={assign.card} aria-busy={pending || undefined}>
                       <span className={assign.glowClip} aria-hidden>
@@ -227,6 +249,15 @@ export default function PrincipalAssignPage() {
                             />
                             <span className={assign.claimLabel}>Claim</span>
                           </span>
+                        ) : awaitingClaim ? (
+                          <span className={assign.claimMark}>
+                            <span
+                              className={assign.statusDot}
+                              style={{ backgroundColor: "#d97706" }}
+                              aria-hidden
+                            />
+                            <span className={assign.claimLabel}>Awaiting claim</span>
+                          </span>
                         ) : null}
                       </div>
                       <div className={assign.teacherBlock}>
@@ -242,23 +273,82 @@ export default function PrincipalAssignPage() {
                           )}
                         </span>
                       </div>
+                      {awaitingClaim && code ? (
+                        <div className={assign.teacherBlock}>
+                          <span className={assign.fieldLabel}>Advisory code</span>
+                          <span
+                            className={assign.itemTeacher}
+                            style={{ display: "flex", alignItems: "center", gap: 8 }}
+                          >
+                            <code
+                              style={{
+                                fontFamily: "ui-monospace, monospace",
+                                fontWeight: 700,
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              {code}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              aria-label={`Copy advisory code for ${s.name}`}
+                              disabled={busy}
+                              onClick={() => void copyCode(code)}
+                            >
+                              {copiedCode === code ? (
+                                <Check size={13} aria-hidden />
+                              ) : (
+                                <Copy size={13} aria-hidden />
+                              )}
+                              {copiedCode === code ? "Copied" : "Copy"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              aria-label={`Regenerate advisory code for ${s.name}`}
+                              title="Mint a replacement code — the old one stops working"
+                              disabled={busy}
+                              onClick={() => regenerateCode.mutate(s.id)}
+                            >
+                              <RefreshCw size={13} aria-hidden />
+                              New code
+                            </Button>
+                          </span>
+                          <span className={assign.itemTerm}>
+                            Share this code with {s.adviserName} — they enter it to claim the seat.
+                          </span>
+                        </div>
+                      ) : null}
                       <div className={`${assign.cardActions} justify-end`}>
                         <Button
                           size="xs"
                           aria-label={`Assign adviser for ${s.name}`}
                           title={claimed ? "Claimed by a teacher — locked" : undefined}
-                          disabled={pending || batch.isPending || removeSection.isPending || claimed}
+                          disabled={busy || claimed}
                           onClick={() => setDialog({ grade: s.gradeLevel, sectionId: s.id })}
                         >
                           {s.adviserName ? "Change" : "Assign"}
                         </Button>
+                        {awaitingClaim ? (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            aria-label={`Clear adviser for ${s.name}`}
+                            title="Clear the listed adviser and code"
+                            disabled={busy}
+                            onClick={() => clear.mutate(s.id)}
+                          >
+                            Clear
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="xs"
                           className={assign.deleteButton}
                           aria-label={`Delete ${s.name} section`}
                           title={claimed ? "Claimed by a teacher — locked" : undefined}
-                          disabled={pending || batch.isPending || removeSection.isPending || claimed}
+                          disabled={busy || claimed}
                           onClick={() => setConfirmDelete({ sectionId: s.id, name: s.name })}
                         >
                           Delete

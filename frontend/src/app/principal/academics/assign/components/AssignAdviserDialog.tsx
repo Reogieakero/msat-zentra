@@ -337,7 +337,8 @@ export function AssignAdviserDialog({
         <>
           One grade level per batch — input each section name and adviser name for{" "}
           <strong>{schoolYearName || "the active school year"}</strong>. Sections that
-          don&apos;t exist yet are created automatically.
+          don&apos;t exist yet are created automatically. Each assignment mints an
+          advisory code — share it with the teacher, they enter it to claim the seat.
         </>
       }
       watchKey={entries.length}

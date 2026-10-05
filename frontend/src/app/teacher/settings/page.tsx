@@ -159,6 +159,7 @@ type AdviserSectionOption = {
   advisedByMe: boolean;
   holderName: string | null;
   inMasterSchedule: boolean;
+  hasCode?: boolean;
 };
 
 function AdviserCard() {
@@ -170,6 +171,7 @@ function AdviserCard() {
   const [picking, setPicking] = React.useState(false);
   const [answeredNo, setAnsweredNo] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [code, setCode] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
   const sectionsQuery = useQuery<{ sections: AdviserSectionOption[] }>({
@@ -212,14 +214,29 @@ function AdviserCard() {
     }
   };
 
+  const selectedTarget = ordered.find((s) => s.id === effectiveSelected) ?? null;
+  const codeRequired = !!selectedTarget?.hasCode || !!selectedTarget?.adviserLabel;
+
   const handleClaim = async () => {
     if (!effectiveSelected || saving) return;
     const target = ordered.find((s) => s.id === effectiveSelected);
     if (!target) return;
+    const needsCode = !!target.hasCode || !!target.adviserLabel;
+    const trimmedCode = code.trim();
+    if (needsCode && !trimmedCode) {
+      toast.error({
+        title: "Code required",
+        description: `Enter the advisory code your principal shared for ${target.name}.`,
+      });
+      return;
+    }
     setSaving(true);
     try {
       const previousMine = mine.length > 0 ? mine.map((m) => m.id) : advisorySection ? [advisorySection.id] : [];
-      await apiClient.post("/api/teacher/advisory/claim", { sectionId: target.id });
+      await apiClient.post("/api/teacher/advisory/claim", {
+        sectionId: target.id,
+        ...(needsCode ? { code: trimmedCode } : {}),
+      });
       // Single-section model: release any previous section after the new
       // claim lands, so a failed claim never leaves the teacher seatless.
       for (const oldId of previousMine.filter((id) => id !== target.id)) {
@@ -240,6 +257,7 @@ function AdviserCard() {
       setPicking(false);
       setAnsweredNo(false);
       setSelectedId(null);
+      setCode("");
       toast.success({
         title: "Advisory saved",
         description: `You are now the adviser of ${target.name}.`,
@@ -289,7 +307,7 @@ function AdviserCard() {
         Adviser
       </h2>
       <p className="relative mt-1 text-sm text-muted-foreground">
-        Are you an adviser? Pick your section from the master teacher&apos;s schedule.
+        Are you an adviser? Pick your section and enter the advisory code your principal shared.
       </p>
       <div className="relative mt-4">
         <p className="text-sm font-medium">Adviser status</p>
@@ -356,6 +374,9 @@ function AdviserCard() {
               loadError={sectionsQuery.isError}
               effectiveSelected={effectiveSelected}
               saving={saving}
+              code={code}
+              codeRequired={codeRequired}
+              onCodeChange={setCode}
               onSelect={(id) => setSelectedId(id)}
               onClaim={() => void handleClaim()}
             />
@@ -369,6 +390,9 @@ function AdviserCard() {
             loadError={sectionsQuery.isError}
             effectiveSelected={effectiveSelected}
             saving={saving}
+            code={code}
+            codeRequired={codeRequired}
+            onCodeChange={setCode}
             onSelect={(id) => setSelectedId(id)}
             onClaim={() => void handleClaim()}
           />
@@ -407,6 +431,9 @@ function AdviserPicker({
   loadError,
   effectiveSelected,
   saving,
+  code,
+  codeRequired,
+  onCodeChange,
   onSelect,
   onClaim,
 }: {
@@ -415,6 +442,9 @@ function AdviserPicker({
   loadError: boolean;
   effectiveSelected: string | null;
   saving: boolean;
+  code: string;
+  codeRequired: boolean;
+  onCodeChange: (v: string) => void;
   onSelect: (id: string) => void;
   onClaim: () => void;
 }) {
@@ -437,12 +467,14 @@ function AdviserPicker({
       </p>
     );
   }
+  const selectedTarget = ordered.find((s) => s.id === effectiveSelected) ?? null;
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Your section">
         {ordered.map((s) => {
           const selectable = s.claimable || s.advisedByMe;
           const selected = effectiveSelected === s.id;
+          const needsCode = !!s.hasCode || !!s.adviserLabel;
           return (
             <button
               key={s.id}
@@ -461,11 +493,18 @@ function AdviserPicker({
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold">{s.name}</span>
-                {s.inMasterSchedule ? (
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
-                    Master schedule
-                  </span>
-                ) : null}
+                <span className="flex items-center gap-1">
+                  {needsCode && selectable ? (
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                      Code required
+                    </span>
+                  ) : null}
+                  {s.inMasterSchedule ? (
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                      Master schedule
+                    </span>
+                  ) : null}
+                </span>
               </span>
               <span className="mt-1 text-[11px] font-medium text-muted-foreground">
                 Grade {s.gradeNumber}
@@ -484,8 +523,32 @@ function AdviserPicker({
           );
         })}
       </div>
+      {selectedTarget && (selectedTarget.hasCode || selectedTarget.adviserLabel) ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="settings-adviser-code">Advisory code</Label>
+          <Input
+            id="settings-adviser-code"
+            value={code}
+            onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
+            placeholder="ADV-XXXXX"
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={16}
+            style={{ textTransform: "uppercase", fontFamily: "ui-monospace, monospace" }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Ask your principal for the code for {selectedTarget.name} — it proves you are the
+            listed adviser.
+          </p>
+        </div>
+      ) : null}
       <div>
-        <Button type="button" onClick={onClaim} disabled={!effectiveSelected || saving} aria-busy={saving || undefined}>
+        <Button
+          type="button"
+          onClick={onClaim}
+          disabled={!effectiveSelected || (codeRequired && !code.trim()) || saving}
+          aria-busy={saving || undefined}
+        >
           {saving ? (
             <>
               <Loader2 size={16} className="animate-spin" aria-hidden />

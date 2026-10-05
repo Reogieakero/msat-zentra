@@ -4081,7 +4081,8 @@ export const SectionScalarFieldEnum = {
   gradeLevel: 'gradeLevel',
   schoolYearId: 'schoolYearId',
   adviserId: 'adviserId',
-  adviserLabel: 'adviserLabel'
+  adviserLabel: 'adviserLabel',
+  adviserCode: 'adviserCode'
 } as const
 
 export type SectionScalarFieldEnum = (typeof SectionScalarFieldEnum)[keyof typeof SectionScalarFieldEnum]

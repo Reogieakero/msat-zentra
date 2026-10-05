@@ -12,6 +12,7 @@ import { resolveActiveTermId } from "../../services/risk.js";
 import { ensureSubjectAssignment, findSubjectTeacherSplits } from "../teacher/teacher.routes.js";
 import { getAcademicsSummary } from "./academics.service.js";
 import { MAX_ADVISER_BATCH, normalizeAdviserBatch, type AdviserBatchInputRow } from "./adviserBatch.js";
+import { mintAdviserCode } from "./adviserCode.js";
 
 const router = Router();
 
@@ -226,8 +227,9 @@ router.get(
           schoolYear: s.schoolYear?.name ?? targetYear?.name ?? "",
           schoolYearId: s.schoolYearId,
           adviserId: s.adviserId ?? "",
-          adviserName: s.adviser?.fullName ?? s.adviserLabel ?? "",
-          adviserLabel: s.adviserLabel ?? "",
+          adviserName: s.adviser?.fullName ?? (s as { adviserLabel?: string | null }).adviserLabel ?? "",
+          adviserLabel: (s as { adviserLabel?: string | null }).adviserLabel ?? "",
+          adviserCode: (s as { adviserCode?: string | null }).adviserCode ?? "",
           assignments: s.teacherAssignments.map((a) => ({
             id: a.id,
             subjectId: a.subject.id,
@@ -433,6 +435,7 @@ function toAdviserResult(updated: {
   schoolYearId: string;
   adviserId: string | null;
   adviserLabel: string | null;
+  adviserCode?: string | null;
   adviser: { fullName: string } | null;
   schoolYear: { name: string } | null;
 }) {
@@ -447,7 +450,28 @@ function toAdviserResult(updated: {
     // listing never depends on a teacher account existing.
     adviserName: updated.adviser?.fullName ?? updated.adviserLabel ?? "",
     adviserLabel: updated.adviserLabel ?? "",
+    // Claim code — principal-only surface. Empty until claimed flow mints one,
+    // consumed (cleared) once the teacher claims with it.
+    adviserCode: updated.adviserCode ?? "",
   };
+}
+
+// Mint a collision-free advisory code (ADV-XXXXX). Retries on the rare
+// unique-clash, same pattern as TeacherName MS-101 codes.
+async function mintUniqueAdviserCode(exclude?: Set<string>): Promise<string> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = mintAdviserCode();
+    if (exclude?.has(candidate)) continue;
+    const clash = await prisma.section.findUnique({
+      where: { adviserCode: candidate },
+      select: { id: true },
+    });
+    if (!clash) {
+      exclude?.add(candidate);
+      return candidate;
+    }
+  }
+  throw new AppError(500, "CODE_MINT_FAILED", "Could not mint a unique advisory code, try again");
 }
 
 function assertInScope(req: { termScope?: { schoolYearId?: string | null } }, schoolYearId: string) {
@@ -727,17 +751,32 @@ router.patch(
       const scopeYearPromise = resolveScopeYear(req);
       const teacherPromise = resolveBatchTeachers(rows);
       const sectionPromise = scopeYearPromise.then((sy) => resolveBatchSections(rows, sy.id));
-      const [sectionIds, { teacherForRow, labelForRow }] = await Promise.all([
+      const [sectionIds, { labelForRow }] = await Promise.all([
         sectionPromise,
         teacherPromise,
       ]);
+
+      // Code-claim model: assigning stores label + freshly minted code with
+      // adviserId NULL — the teacher becomes adviser only after entering the
+      // code. Clearing wipes label + code. Codes are minted pre-transaction
+      // (unique per row) so the atomic write stays a single transaction.
+      const minted = new Set<string>();
+      const codeForRow: (string | null)[] = [];
+      for (const label of labelForRow) {
+        if (label) codeForRow.push(await mintUniqueAdviserCode(minted));
+        else codeForRow.push(null);
+      }
 
       // Atomic transaction: every row writes or none does.
       const updated = await prisma.$transaction(
         sectionIds.map((sectionId, i) =>
           prisma.section.update({
             where: { id: sectionId },
-            data: { adviserId: teacherForRow[i], adviserLabel: labelForRow[i] },
+            data: {
+              adviserId: null,
+              adviserLabel: labelForRow[i],
+              adviserCode: codeForRow[i],
+            },
             include: {
               adviser: { select: { id: true, fullName: true } },
               schoolYear: { select: { id: true, name: true } },
@@ -756,8 +795,8 @@ router.patch(
             actionType: "update",
             sourceTable: "sections",
             sourceId: u.id,
-            reason: u.adviserId
-              ? "Principal assigned section adviser (batch)"
+            reason: (u as { adviserLabel?: string | null }).adviserLabel
+              ? "Principal assigned section adviser + code (batch)"
               : "Principal cleared section adviser (batch)",
           })
         )
@@ -778,19 +817,24 @@ router.patch(
   async (req, res, next) => {
     try {
       const id = String(req.params.id);
-      const { adviserId } = req.body as { adviserId?: string | null };
+      const { adviserId, adviserName } = req.body as {
+        adviserId?: string | null;
+        adviserName?: string | null;
+      };
 
-      const nextAdviserId =
+      const trimmedId =
         adviserId == null || String(adviserId).trim() === "" ? null : String(adviserId).trim();
+      const trimmedName =
+        adviserName == null || String(adviserName).trim() === "" ? null : String(adviserName).trim();
 
       // Section + teacher reads are independent — run them together instead
       // of paying two sequential round trips on every assign/remove.
       const [section, teacher] = await Promise.all([
         prisma.section.findUnique({ where: { id } }),
-        nextAdviserId
+        trimmedId
           ? prisma.user.findFirst({
               where: {
-                id: nextAdviserId,
+                id: trimmedId,
                 role: { in: ["subject_teacher", "adviser"] },
                 status: "active",
               },
@@ -801,15 +845,20 @@ router.patch(
       if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
       assertInScope(req, section.schoolYearId);
 
+      // Code-claim model: the principal files label + code only; adviserId
+      // stays NULL until the teacher claims with the code.
       let nextLabel: string | null = null;
-      if (nextAdviserId) {
+      if (trimmedId) {
         if (!teacher) throw new AppError(404, "TEACHER_NOT_FOUND", "Teacher not found or not active");
         nextLabel = teacher.fullName;
+      } else if (trimmedName) {
+        nextLabel = trimmedName;
       }
+      const nextCode = nextLabel ? await mintUniqueAdviserCode() : null;
 
       const updated = await prisma.section.update({
         where: { id },
-        data: { adviserId: nextAdviserId, adviserLabel: nextLabel },
+        data: { adviserId: null, adviserLabel: nextLabel, adviserCode: nextCode },
         include: {
           adviser: { select: { id: true, fullName: true } },
           schoolYear: { select: { id: true, name: true } },
@@ -821,12 +870,68 @@ router.patch(
         actionType: "update",
         sourceTable: "sections",
         sourceId: updated.id,
-        reason: nextAdviserId
-          ? "Principal assigned section adviser"
+        reason: nextLabel
+          ? "Principal assigned section adviser + code"
           : "Principal cleared section adviser",
       });
       await invalidateTags(["academics", "principal", "registrar", "overview"]);
 
+      res.json(toAdviserResult(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal advisory code regeneration — mints a replacement code for a
+// section that already has a listed adviser (label present, not yet claimed).
+// Used when the code is lost. Claimed sections (adviserId set) and empty
+// sections reject — re-assign instead.
+router.post(
+  "/assign/sections/:id/adviser-code/regenerate",
+  requireAuth,
+  requireRole("principal"),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      const section = await prisma.section.findUnique({ where: { id } });
+      if (!section) throw new AppError(404, "SECTION_NOT_FOUND", "Section not found");
+      assertInScope(req, section.schoolYearId);
+      const row = section as typeof section & {
+        adviserLabel?: string | null;
+        adviserId?: string | null;
+      };
+      if (row.adviserId) {
+        throw new AppError(
+          409,
+          "ALREADY_CLAIMED",
+          "This section is already claimed — codes are single-use and rotate on the next assignment.",
+        );
+      }
+      if (!row.adviserLabel) {
+        throw new AppError(
+          400,
+          "NO_ADVISER_LISTED",
+          "List an adviser first — regeneration needs a pending assignment.",
+        );
+      }
+      const nextCode = await mintUniqueAdviserCode();
+      const updated = await prisma.section.update({
+        where: { id },
+        data: { adviserCode: nextCode },
+        include: {
+          adviser: { select: { id: true, fullName: true } },
+          schoolYear: { select: { id: true, name: true } },
+        },
+      });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "update",
+        sourceTable: "sections",
+        sourceId: updated.id,
+        reason: "Principal regenerated advisory code",
+      });
+      await invalidateTags(["academics", "principal", "registrar", "overview"]);
       res.json(toAdviserResult(updated));
     } catch (e) {
       next(e);

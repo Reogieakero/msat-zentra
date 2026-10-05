@@ -26,6 +26,7 @@ type SectionPayload = {
     schoolYearId?: string;
     adviserId?: string | null;
     adviserLabel?: string | null;
+    adviserCode?: string | null;
   } | null;
   old?: { id?: string } | null;
 };
@@ -66,7 +67,12 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
     let subscribedOnce = false;
     const key = assignSectionsKey(schoolYearId);
 
-    function mergeAdviser(sectionId: string, adviserId: string | null, adviserLabel: string | null) {
+    function mergeAdviser(
+      sectionId: string,
+      adviserId: string | null,
+      adviserLabel: string | null,
+      adviserCode: string | null,
+    ) {
       if (wasRecentPrincipalAssignMutation()) return;
       const teachers = queryClient.getQueryData<Teacher[]>(assignTeachersKey) ?? [];
       let unknownTeacher = false;
@@ -85,6 +91,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
             adviserId: adviserId ?? "",
             adviserName: display,
             adviserLabel: adviserLabel ?? "",
+            adviserCode: adviserCode ?? "",
           };
         });
         return touched ? next : prev;
@@ -106,7 +113,12 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
       if (!id) return;
       const eventKey = realtimeEventKey("Section", payload.eventType ?? "UPDATE", id, payload.commit_timestamp ?? null);
       if (seenRealtimeEvent(eventKey)) return;
-      mergeAdviser(id, payload.new?.adviserId ?? null, payload.new?.adviserLabel ?? null);
+      mergeAdviser(
+        id,
+        payload.new?.adviserId ?? null,
+        payload.new?.adviserLabel ?? null,
+        payload.new?.adviserCode ?? null,
+      );
     }
 
     function handleInsert(payload: SectionPayload) {
@@ -140,6 +152,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
             adviserId: rowAdviserId ?? "",
             adviserName,
             adviserLabel: row.adviserLabel ?? "",
+            adviserCode: row.adviserCode ?? "",
             assignments: [] as Assignment[],
           },
         ].sort((a, b) => a.gradeLevel - b.gradeLevel || a.name.localeCompare(b.name));

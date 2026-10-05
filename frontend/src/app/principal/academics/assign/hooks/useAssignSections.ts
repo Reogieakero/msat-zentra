@@ -10,6 +10,7 @@ import {
   deleteSection,
   fetchSections,
   fetchTeachers,
+  regenerateAdviserCode,
   type AdvisoryEntryInput,
   type AdviserBatchInput,
   type Section,
@@ -78,12 +79,23 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
   }, []);
 
   const applyFragments = React.useCallback(
-    (fragments: Pick<SectionAdviserResult, "id" | "adviserId" | "adviserName" | "adviserLabel">[]) => {
+    (
+      fragments: Pick<
+        SectionAdviserResult,
+        "id" | "adviserId" | "adviserName" | "adviserLabel" | "adviserCode"
+      >[],
+    ) => {
       queryClient.setQueryData<SectionsCache>(key, (prev) =>
         prev?.map((sec) => {
           const u = fragments.find((f) => f.id === sec.id);
           return u
-            ? { ...sec, adviserId: u.adviserId, adviserName: u.adviserName, adviserLabel: u.adviserLabel }
+            ? {
+                ...sec,
+                adviserId: u.adviserId,
+                adviserName: u.adviserName,
+                adviserLabel: u.adviserLabel,
+                adviserCode: (u as { adviserCode?: string }).adviserCode ?? sec.adviserCode ?? "",
+              }
             : sec;
         }),
       );
@@ -146,8 +158,16 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
       const norm = (v: string) => v.trim().toLowerCase();
       // Optimistic: paint the typed adviser name on known sections instantly,
       // and insert provisional cards for brand-new sections so the UI reacts
-      // in the same tick the user submits — no waiting on the server.
-      const optimistic: { id: string; adviserId: string; adviserName: string; adviserLabel: string }[] = [];
+      // in the same tick the user submits — no waiting on the server. Codes
+      // arrive with the server truth (minted there), so optimistic rows keep
+      // the previous code until confirmed.
+      const optimistic: {
+        id: string;
+        adviserId: string;
+        adviserName: string;
+        adviserLabel: string;
+        adviserCode: string;
+      }[] = [];
       const tempRows: Section[] = [];
       const seenTemp = new Set<string>();
       for (const e of entries) {
@@ -156,7 +176,13 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
           (s) => s.gradeLevel === e.gradeLevel && norm(s.name) === norm(e.sectionName),
         );
         if (section) {
-          optimistic.push({ id: section.id, adviserId: "", adviserName: typed, adviserLabel: typed });
+          optimistic.push({
+            id: section.id,
+            adviserId: "",
+            adviserName: typed,
+            adviserLabel: typed,
+            adviserCode: section.adviserCode ?? "",
+          });
         } else {
           const tempKey = `${e.gradeLevel}:${norm(e.sectionName)}`;
           if (seenTemp.has(tempKey)) continue;
@@ -170,6 +196,7 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
             adviserId: "",
             adviserName: typed,
             adviserLabel: typed,
+            adviserCode: "",
             assignments: [],
           });
         }
@@ -212,9 +239,13 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
         created.length > 0
           ? ` · ${created.length} new section${created.length === 1 ? "" : "s"}: ${created.map((s) => s.name).join(", ")}.`
           : "";
+      const codeSuffix =
+        fragments.length === 1 && fragments[0]?.adviserCode
+          ? ` Code ${fragments[0].adviserCode} — share it with ${fragments[0].adviserName}.`
+          : "";
       toast.success({
         title: fragments.length > 1 ? `${fragments.length} advisers assigned` : "Adviser assigned",
-        description: `${fragments.map((f) => `${f.adviserName} → ${f.name}`).join("; ")} (${scope}).${madeSuffix}`,
+        description: `${fragments.map((f) => `${f.adviserName} → ${f.name}`).join("; ")} (${scope}).${madeSuffix}${codeSuffix}`,
       });
     },
     onSettled: (data, _err, _entries, context) => {
@@ -236,7 +267,7 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
     onMutate: async (sectionId) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<SectionsCache>(key);
-      applyFragments([{ id: sectionId, adviserId: "", adviserName: "", adviserLabel: "" }]);
+      applyFragments([{ id: sectionId, adviserId: "", adviserName: "", adviserLabel: "", adviserCode: "" }]);
       markPending([sectionId]);
       return { previous };
     },
@@ -251,6 +282,35 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
       applyFragments([updated]);
       markPrincipalAssignLocalMutation();
       toast.success({ title: "Adviser removed", description: "The section has no adviser now." });
+    },
+    onSettled: (_data, _err, sectionId) => {
+      unmarkPending([sectionId]);
+    },
+  });
+
+  // Regenerate a lost advisory code for a pending (listed, unclaimed) seat.
+  const regenerateCode = useMutation({
+    mutationFn: (sectionId: string) => regenerateAdviserCode(sectionId),
+    onMutate: async (sectionId) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<SectionsCache>(key);
+      markPending([sectionId]);
+      return { previous };
+    },
+    onError: (err, _sectionId, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+      toast.error({
+        title: "Regenerate failed",
+        description: getErrorMessage(err, "Failed to regenerate the advisory code."),
+      });
+    },
+    onSuccess: (updated) => {
+      applyFragments([updated]);
+      markPrincipalAssignLocalMutation();
+      toast.success({
+        title: "New advisory code",
+        description: `${updated.adviserName} → ${updated.name}: Code ${updated.adviserCode} — share it with the teacher.`,
+      });
     },
     onSettled: (_data, _err, sectionId) => {
       unmarkPending([sectionId]);
@@ -286,5 +346,5 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
     },
   });
 
-  return { batch, clear, removeSection, pendingIds };
+  return { batch, clear, regenerateCode, removeSection, pendingIds };
 }

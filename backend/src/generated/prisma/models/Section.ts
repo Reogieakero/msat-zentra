@@ -31,6 +31,7 @@ export type SectionMinAggregateOutputType = {
   schoolYearId: string | null
   adviserId: string | null
   adviserLabel: string | null
+  adviserCode: string | null
 }
 
 export type SectionMaxAggregateOutputType = {
@@ -40,6 +41,7 @@ export type SectionMaxAggregateOutputType = {
   schoolYearId: string | null
   adviserId: string | null
   adviserLabel: string | null
+  adviserCode: string | null
 }
 
 export type SectionCountAggregateOutputType = {
@@ -49,6 +51,7 @@ export type SectionCountAggregateOutputType = {
   schoolYearId: number
   adviserId: number
   adviserLabel: number
+  adviserCode: number
   _all: number
 }
 
@@ -60,6 +63,7 @@ export type SectionMinAggregateInputType = {
   schoolYearId?: true
   adviserId?: true
   adviserLabel?: true
+  adviserCode?: true
 }
 
 export type SectionMaxAggregateInputType = {
@@ -69,6 +73,7 @@ export type SectionMaxAggregateInputType = {
   schoolYearId?: true
   adviserId?: true
   adviserLabel?: true
+  adviserCode?: true
 }
 
 export type SectionCountAggregateInputType = {
@@ -78,6 +83,7 @@ export type SectionCountAggregateInputType = {
   schoolYearId?: true
   adviserId?: true
   adviserLabel?: true
+  adviserCode?: true
   _all?: true
 }
 
@@ -160,6 +166,7 @@ export type SectionGroupByOutputType = {
   schoolYearId: string
   adviserId: string | null
   adviserLabel: string | null
+  adviserCode: string | null
   _count: SectionCountAggregateOutputType | null
   _min: SectionMinAggregateOutputType | null
   _max: SectionMaxAggregateOutputType | null
@@ -190,6 +197,7 @@ export type SectionWhereInput = {
   schoolYearId?: Prisma.StringFilter<"Section"> | string
   adviserId?: Prisma.StringNullableFilter<"Section"> | string | null
   adviserLabel?: Prisma.StringNullableFilter<"Section"> | string | null
+  adviserCode?: Prisma.StringNullableFilter<"Section"> | string | null
   schoolYear?: Prisma.XOR<Prisma.SchoolYearScalarRelationFilter, Prisma.SchoolYearWhereInput>
   adviser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   students?: Prisma.StudentProfileListRelationFilter
@@ -209,6 +217,7 @@ export type SectionOrderByWithRelationInput = {
   schoolYearId?: Prisma.SortOrder
   adviserId?: Prisma.SortOrderInput | Prisma.SortOrder
   adviserLabel?: Prisma.SortOrderInput | Prisma.SortOrder
+  adviserCode?: Prisma.SortOrderInput | Prisma.SortOrder
   schoolYear?: Prisma.SchoolYearOrderByWithRelationInput
   adviser?: Prisma.UserOrderByWithRelationInput
   students?: Prisma.StudentProfileOrderByRelationAggregateInput
@@ -223,6 +232,7 @@ export type SectionOrderByWithRelationInput = {
 
 export type SectionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  adviserCode?: string
   AND?: Prisma.SectionWhereInput | Prisma.SectionWhereInput[]
   OR?: Prisma.SectionWhereInput[]
   NOT?: Prisma.SectionWhereInput | Prisma.SectionWhereInput[]
@@ -241,7 +251,7 @@ export type SectionWhereUniqueInput = Prisma.AtLeast<{
   timetableEntries?: Prisma.SectionTimetableEntryListRelationFilter
   rosterEntries?: Prisma.StudentRosterListRelationFilter
   sf10AccessRequests?: Prisma.AdviserSf10AccessRequestListRelationFilter
-}, "id">
+}, "id" | "adviserCode">
 
 export type SectionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -250,6 +260,7 @@ export type SectionOrderByWithAggregationInput = {
   schoolYearId?: Prisma.SortOrder
   adviserId?: Prisma.SortOrderInput | Prisma.SortOrder
   adviserLabel?: Prisma.SortOrderInput | Prisma.SortOrder
+  adviserCode?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SectionCountOrderByAggregateInput
   _max?: Prisma.SectionMaxOrderByAggregateInput
   _min?: Prisma.SectionMinOrderByAggregateInput
@@ -265,6 +276,7 @@ export type SectionScalarWhereWithAggregatesInput = {
   schoolYearId?: Prisma.StringWithAggregatesFilter<"Section"> | string
   adviserId?: Prisma.StringNullableWithAggregatesFilter<"Section"> | string | null
   adviserLabel?: Prisma.StringNullableWithAggregatesFilter<"Section"> | string | null
+  adviserCode?: Prisma.StringNullableWithAggregatesFilter<"Section"> | string | null
 }
 
 export type SectionCreateInput = {
@@ -272,6 +284,7 @@ export type SectionCreateInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -291,6 +304,7 @@ export type SectionUncheckedCreateInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -306,6 +320,7 @@ export type SectionUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -325,6 +340,7 @@ export type SectionUncheckedUpdateInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -342,6 +358,7 @@ export type SectionCreateManyInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
 }
 
 export type SectionUpdateManyMutationInput = {
@@ -349,6 +366,7 @@ export type SectionUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SectionUncheckedUpdateManyInput = {
@@ -358,6 +376,7 @@ export type SectionUncheckedUpdateManyInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SectionListRelationFilter = {
@@ -382,6 +401,7 @@ export type SectionCountOrderByAggregateInput = {
   schoolYearId?: Prisma.SortOrder
   adviserId?: Prisma.SortOrder
   adviserLabel?: Prisma.SortOrder
+  adviserCode?: Prisma.SortOrder
 }
 
 export type SectionMaxOrderByAggregateInput = {
@@ -391,6 +411,7 @@ export type SectionMaxOrderByAggregateInput = {
   schoolYearId?: Prisma.SortOrder
   adviserId?: Prisma.SortOrder
   adviserLabel?: Prisma.SortOrder
+  adviserCode?: Prisma.SortOrder
 }
 
 export type SectionMinOrderByAggregateInput = {
@@ -400,6 +421,7 @@ export type SectionMinOrderByAggregateInput = {
   schoolYearId?: Prisma.SortOrder
   adviserId?: Prisma.SortOrder
   adviserLabel?: Prisma.SortOrder
+  adviserCode?: Prisma.SortOrder
 }
 
 export type SectionScalarRelationFilter = {
@@ -610,6 +632,7 @@ export type SectionCreateWithoutAdviserInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
@@ -627,6 +650,7 @@ export type SectionUncheckedCreateWithoutAdviserInput = {
   gradeLevel: $Enums.GradeLevel
   schoolYearId: string
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -673,6 +697,7 @@ export type SectionScalarWhereInput = {
   schoolYearId?: Prisma.StringFilter<"Section"> | string
   adviserId?: Prisma.StringNullableFilter<"Section"> | string | null
   adviserLabel?: Prisma.StringNullableFilter<"Section"> | string | null
+  adviserCode?: Prisma.StringNullableFilter<"Section"> | string | null
 }
 
 export type SectionCreateWithoutStudentsInput = {
@@ -680,6 +705,7 @@ export type SectionCreateWithoutStudentsInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
@@ -698,6 +724,7 @@ export type SectionUncheckedCreateWithoutStudentsInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
@@ -728,6 +755,7 @@ export type SectionUpdateWithoutStudentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
@@ -746,6 +774,7 @@ export type SectionUncheckedUpdateWithoutStudentsInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
@@ -760,6 +789,7 @@ export type SectionCreateWithoutSchoolYearInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutSectionInput
@@ -777,6 +807,7 @@ export type SectionUncheckedCreateWithoutSchoolYearInput = {
   gradeLevel: $Enums.GradeLevel
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -818,6 +849,7 @@ export type SectionCreateWithoutRosterEntriesInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -836,6 +868,7 @@ export type SectionUncheckedCreateWithoutRosterEntriesInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -866,6 +899,7 @@ export type SectionUpdateWithoutRosterEntriesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -884,6 +918,7 @@ export type SectionUncheckedUpdateWithoutRosterEntriesInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -898,6 +933,7 @@ export type SectionCreateWithoutTeacherAssignmentsInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -916,6 +952,7 @@ export type SectionUncheckedCreateWithoutTeacherAssignmentsInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -946,6 +983,7 @@ export type SectionUpdateWithoutTeacherAssignmentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -964,6 +1002,7 @@ export type SectionUncheckedUpdateWithoutTeacherAssignmentsInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -978,6 +1017,7 @@ export type SectionCreateWithoutTimetableEntriesInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -996,6 +1036,7 @@ export type SectionUncheckedCreateWithoutTimetableEntriesInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -1026,6 +1067,7 @@ export type SectionUpdateWithoutTimetableEntriesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -1044,6 +1086,7 @@ export type SectionUncheckedUpdateWithoutTimetableEntriesInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -1058,6 +1101,7 @@ export type SectionCreateWithoutGradeFlagsInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -1076,6 +1120,7 @@ export type SectionUncheckedCreateWithoutGradeFlagsInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -1106,6 +1151,7 @@ export type SectionUpdateWithoutGradeFlagsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -1124,6 +1170,7 @@ export type SectionUncheckedUpdateWithoutGradeFlagsInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -1138,6 +1185,7 @@ export type SectionCreateWithoutAttendanceRecordsInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -1156,6 +1204,7 @@ export type SectionUncheckedCreateWithoutAttendanceRecordsInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
@@ -1186,6 +1235,7 @@ export type SectionUpdateWithoutAttendanceRecordsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -1204,6 +1254,7 @@ export type SectionUncheckedUpdateWithoutAttendanceRecordsInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
@@ -1218,6 +1269,7 @@ export type SectionCreateWithoutAnecdotalRecordsInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -1236,6 +1288,7 @@ export type SectionUncheckedCreateWithoutAnecdotalRecordsInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutSectionInput
@@ -1266,6 +1319,7 @@ export type SectionUpdateWithoutAnecdotalRecordsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -1284,6 +1338,7 @@ export type SectionUncheckedUpdateWithoutAnecdotalRecordsInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutSectionNestedInput
@@ -1298,6 +1353,7 @@ export type SectionCreateWithoutSf10AccessRequestsInput = {
   name: string
   gradeLevel: $Enums.GradeLevel
   adviserLabel?: string | null
+  adviserCode?: string | null
   schoolYear: Prisma.SchoolYearCreateNestedOneWithoutSectionsInput
   adviser?: Prisma.UserCreateNestedOneWithoutSectionsAdvisedInput
   students?: Prisma.StudentProfileCreateNestedManyWithoutSectionInput
@@ -1316,6 +1372,7 @@ export type SectionUncheckedCreateWithoutSf10AccessRequestsInput = {
   schoolYearId: string
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
   students?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutSectionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutSectionInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutSectionInput
@@ -1346,6 +1403,7 @@ export type SectionUpdateWithoutSf10AccessRequestsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
@@ -1364,6 +1422,7 @@ export type SectionUncheckedUpdateWithoutSf10AccessRequestsInput = {
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -1379,6 +1438,7 @@ export type SectionCreateManyAdviserInput = {
   gradeLevel: $Enums.GradeLevel
   schoolYearId: string
   adviserLabel?: string | null
+  adviserCode?: string | null
 }
 
 export type SectionUpdateWithoutAdviserInput = {
@@ -1386,6 +1446,7 @@ export type SectionUpdateWithoutAdviserInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutSectionsNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
@@ -1403,6 +1464,7 @@ export type SectionUncheckedUpdateWithoutAdviserInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -1419,6 +1481,7 @@ export type SectionUncheckedUpdateManyWithoutAdviserInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SectionCreateManySchoolYearInput = {
@@ -1427,6 +1490,7 @@ export type SectionCreateManySchoolYearInput = {
   gradeLevel: $Enums.GradeLevel
   adviserId?: string | null
   adviserLabel?: string | null
+  adviserCode?: string | null
 }
 
 export type SectionUpdateWithoutSchoolYearInput = {
@@ -1434,6 +1498,7 @@ export type SectionUpdateWithoutSchoolYearInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviser?: Prisma.UserUpdateOneWithoutSectionsAdvisedNestedInput
   students?: Prisma.StudentProfileUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutSectionNestedInput
@@ -1451,6 +1516,7 @@ export type SectionUncheckedUpdateWithoutSchoolYearInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   students?: Prisma.StudentProfileUncheckedUpdateManyWithoutSectionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutSectionNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutSectionNestedInput
@@ -1467,6 +1533,7 @@ export type SectionUncheckedUpdateManyWithoutSchoolYearInput = {
   gradeLevel?: Prisma.EnumGradeLevelFieldUpdateOperationsInput | $Enums.GradeLevel
   adviserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adviserLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adviserCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -1570,6 +1637,7 @@ export type SectionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   schoolYearId?: boolean
   adviserId?: boolean
   adviserLabel?: boolean
+  adviserCode?: boolean
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   adviser?: boolean | Prisma.Section$adviserArgs<ExtArgs>
   students?: boolean | Prisma.Section$studentsArgs<ExtArgs>
@@ -1590,6 +1658,7 @@ export type SectionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   schoolYearId?: boolean
   adviserId?: boolean
   adviserLabel?: boolean
+  adviserCode?: boolean
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   adviser?: boolean | Prisma.Section$adviserArgs<ExtArgs>
 }, ExtArgs["result"]["section"]>
@@ -1601,6 +1670,7 @@ export type SectionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   schoolYearId?: boolean
   adviserId?: boolean
   adviserLabel?: boolean
+  adviserCode?: boolean
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   adviser?: boolean | Prisma.Section$adviserArgs<ExtArgs>
 }, ExtArgs["result"]["section"]>
@@ -1612,9 +1682,10 @@ export type SectionSelectScalar = {
   schoolYearId?: boolean
   adviserId?: boolean
   adviserLabel?: boolean
+  adviserCode?: boolean
 }
 
-export type SectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "gradeLevel" | "schoolYearId" | "adviserId" | "adviserLabel", ExtArgs["result"]["section"]>
+export type SectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "gradeLevel" | "schoolYearId" | "adviserId" | "adviserLabel" | "adviserCode", ExtArgs["result"]["section"]>
 export type SectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   schoolYear?: boolean | Prisma.SchoolYearDefaultArgs<ExtArgs>
   adviser?: boolean | Prisma.Section$adviserArgs<ExtArgs>
@@ -1658,6 +1729,7 @@ export type $SectionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     schoolYearId: string
     adviserId: string | null
     adviserLabel: string | null
+    adviserCode: string | null
   }, ExtArgs["result"]["section"]>
   composites: {}
 }
@@ -2097,6 +2169,7 @@ export interface SectionFieldRefs {
   readonly schoolYearId: Prisma.FieldRef<"Section", 'String'>
   readonly adviserId: Prisma.FieldRef<"Section", 'String'>
   readonly adviserLabel: Prisma.FieldRef<"Section", 'String'>
+  readonly adviserCode: Prisma.FieldRef<"Section", 'String'>
 }
     
 
