@@ -1,0 +1,47 @@
+/* Fire particles rising bottom → top behind card content. Each particle
+   carries its own --p-size / --p-duration / --p-delay; rise distance
+   inherits --p-rise from the wrapper (fullscreen overlays leave the
+   -100vh default, small cards set a pixel value like -320px). */
+
+.particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  bottom: -8px;
+  width: var(--p-size, 4px);
+  height: var(--p-size, 4px);
+  border-radius: 999px;
+  background-color: var(--primary);
+  filter: blur(1px);
+  opacity: 0;
+  animation: fire-particle-rise var(--p-duration, 7s) linear var(--p-delay, 0s) infinite;
+}
+
+@keyframes fire-particle-rise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(var(--p-rise, -100vh)) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle {
+    animation: none;
+    display: none;
+  }
+}

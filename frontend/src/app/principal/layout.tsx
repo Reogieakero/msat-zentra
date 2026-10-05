@@ -4,9 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/providers";
-import { PrincipalNavbar } from "@/components/principal-navbar";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PrincipalSidebar } from "@/components/principal-sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Command,
   CommandInput,
@@ -19,43 +18,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { PrincipalBell } from "./components/PrincipalBell";
 import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
-import { GradeModeProvider, useGradeMode } from "./grade-mode-context";
+import { GradeModeProvider } from "./grade-mode-context";
+import {
+  PrincipalPaletteGate,
+  usePrincipalProfileSettings,
+} from "./settings/components/profile-settings-data";
 import styles from "./principal.module.css";
-
-function GradeBasisSelector() {
-  const { gradeMode, setGradeMode } = useGradeMode();
-  return (
-    <div className={styles.accountGradeBasis}>
-      <span className={styles.accountGroupLabel}>Grade basis</span>
-      <div className={styles.segmentedCompact} role="group" aria-label="Grade basis">
-        <button
-          type="button"
-          className={`${styles.segmentCompact} ${gradeMode === "final" ? styles.segmentCompactOn : ""}`}
-          aria-pressed={gradeMode === "final"}
-          onClick={() => setGradeMode("final")}
-        >
-          Final
-        </button>
-        <button
-          type="button"
-          className={`${styles.segmentCompact} ${gradeMode === "raw" ? styles.segmentCompactOn : ""}`}
-          aria-pressed={gradeMode === "raw"}
-          onClick={() => setGradeMode("raw")}
-        >
-          Raw
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { openMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -63,6 +38,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   // (e.g. a master teacher sends slots for review), plus the bell and the
   // approval queue refresh. Single channel per mount.
   usePrincipalRealtime();
+  const profile = usePrincipalProfileSettings();
 
   React.useEffect(() => {
     setMounted(true);
@@ -79,21 +55,8 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.wrapper}>
+      <PrincipalPaletteGate />
       <header className={styles.topbar}>
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-label={openMobile ? "Close navigation" : "Open navigation"}
-          aria-expanded={openMobile}
-          onClick={() => setOpenMobile(!openMobile)}
-        >
-          {openMobile ? (
-            <X className={styles.menuIcon} />
-          ) : (
-            <Menu className={styles.menuIcon} />
-          )}
-        </button>
-
         <Link href="/principal/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -122,6 +85,9 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
               aria-label="Account menu"
             >
               <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
                 <AvatarFallback>
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
@@ -131,7 +97,13 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
           <DropdownMenuContent align="end" className={styles.accountMenu}>
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={styles.accountItem}>
+            <DropdownMenuItem
+              className={styles.accountItem}
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/principal/settings");
+              }}
+            >
               <Settings className={styles.accountIcon} />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -167,10 +139,6 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
               </DropdownMenuItem>
             </div>
             <DropdownMenuSeparator />
-            <div className={styles.accountGroup}>
-              <GradeBasisSelector />
-            </div>
-            <DropdownMenuSeparator />
             <DropdownMenuItem
               className={styles.accountItem}
               onSelect={(event) => {
@@ -184,8 +152,8 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <PrincipalNavbar />
-      <div className={styles.shell}>
+      <PrincipalSidebar />
+      <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
     </div>
@@ -198,10 +166,8 @@ export default function PrincipalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider defaultOpen={false}>
-      <GradeModeProvider>
-        <PrincipalShell>{children}</PrincipalShell>
-      </GradeModeProvider>
-    </SidebarProvider>
+    <GradeModeProvider>
+      <PrincipalShell>{children}</PrincipalShell>
+    </GradeModeProvider>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,41 +9,116 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
+import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
+import type {
+  StageTimelineEntry,
+  TrackerCaseInput,
+} from "@/components/adm-tracker/adm-stage-activity";
 import {
   fetchCaseHistory,
   friendlyReason,
+  stageLabel,
   type AdmCaseRow,
+  type AdmHistoryEvent,
 } from "./coordinator-data";
-import { roleLabel } from "@/lib/auth/roles";
-import pageStyles from "../pages.module.css";
+import { stageOrder } from "@/app/teacher/advisory/adm-cases/components/adm-cases-data";
+import trackStyles from "@/app/teacher/advisory/adm-cases/components/AdmCaseDialog.module.css";
 
 export interface HistoryTarget {
   title: string;
   profileId?: string;
   referralId?: string;
+  row: AdmCaseRow;
 }
 
 export function historyTargetFor(row: AdmCaseRow): HistoryTarget {
   if (row.id.startsWith("referral:")) {
-    return { title: row.student, referralId: row.id.replace(/^referral:/, "") };
+    return { title: row.student, referralId: row.id.replace(/^referral:/, ""), row };
   }
-  return { title: row.student, profileId: row.id };
+  return { title: row.student, profileId: row.id, row };
 }
 
-function formatTimestamp(iso: string): string {
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return iso.slice(0, 10);
-  return `${d.toISOString().slice(0, 10)} ${d.toTimeString().slice(0, 5)}`;
+/* Coordinator timeline events → the shared tracker entry shape. Audit
+   action types map onto pipeline stages inside the tracker; unknown
+   sources fall through to the generic case bucket. */
+function toTrackEntries(events: AdmHistoryEvent[]): StageTimelineEntry[] {
+  return events
+    .filter((e) => e && e.at)
+    .map((e) => ({
+      label: friendlyReason(e.reason, e.actionType),
+      detail: null,
+      date: e.at.slice(0, 10),
+      at: e.at,
+      action: e.actionType,
+      byRole: e.actorRole ?? null,
+      source: (
+        e.sourceTable === "referrals"
+          ? "referrals"
+          : e.sourceTable === "adm_parent_meetings"
+            ? "adm_parent_meetings"
+            : "case"
+      ) as StageTimelineEntry["source"],
+    }));
+}
+
+/* Coordinator row + its audit timeline → the shared tracker input (same
+   contents the teacher adm-cases rail renders). Row evidence fills what the
+   row carries; anything the row lacks (modules, devices, home-visit proof)
+   renders as static detail lines. */
+function trackInputFor(row: AdmCaseRow, events: AdmHistoryEvent[]): TrackerCaseInput {
+  const timeline = toTrackEntries(events);
+  // Synthesized pipeline entries (same as the teacher my-cases builder):
+  // the current stage plus the principal signature when present.
+  if (row.datePrepared) {
+    timeline.push({
+      label: `Moved to the ${stageLabel(row.stage)} stage.`,
+      detail: null,
+      date: row.datePrepared,
+      at: `${row.datePrepared}T00:00:00`,
+      action: "adm_stage",
+      byRole: "adm_coordinator",
+      source: "case",
+      stage: row.stage,
+    });
+  }
+  if (row.approvedBy && row.approvalDate) {
+    timeline.push({
+      label: "The principal signed the approval.",
+      detail: null,
+      date: row.approvalDate,
+      at: `${row.approvalDate}T00:00:00`,
+      action: "adm_approved",
+      byRole: "principal",
+      source: "case",
+    });
+  }
+  const order = stageOrder(row.stage);
+  return {
+    stage: row.stage,
+    referralStatus: row.referralStatus ?? null,
+    consultReviewer: row.consultReviewer ?? null,
+    referredBy: null,
+    anecdotalDate: null,
+    referredDate: row.endorsedAt ?? row.datePrepared,
+    meetingAttended: row.meeting ? row.meeting.attended : null,
+    lastMeetingAt: row.meeting?.datetime ?? null,
+    hasHomeVisit: order > stageOrder("home_visitation") || row.stage === "home_visitation",
+    approved: !!row.approvedBy,
+    approvedAt: row.approvalDate ? `${row.approvalDate}T00:00:00` : null,
+    certificationIssued: row.forms.some(
+      (f) => f.formType === "CERTIFICATION" && f.status === "verified",
+    ),
+  };
 }
 
 /**
- * Case history timeline — audit-trail events across the learner profile,
- * its source referral, and its devices. System events only (actor, action,
- * reason), never clinical write-ups.
+ * Track case — read-only case tracking in the teacher adm-cases design:
+ * glow card, student header, Stage-N-of-8 progress, and the shared 8-stage
+ * pipeline timeline with per-stage latest actions. Status-only; no
+ * clinical detail ever renders here.
  */
 export function CaseHistoryDialog({
   target,
@@ -66,76 +143,104 @@ export function CaseHistoryDialog({
   });
 
   const events = historyQuery.data ?? [];
+  const listRef = React.useRef<HTMLDivElement | null>(null);
+  const row = target?.row ?? null;
+  const trackInput = React.useMemo(
+    () => (row ? trackInputFor(row, events) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [row, historyQuery.dataUpdatedAt],
+  );
+  const currentOrder = row ? stageOrder(row.stage) : 2;
 
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent style={{ maxWidth: "32rem" }}>
-        <DialogHeader>
-          <DialogTitle>Case history</DialogTitle>
-          <DialogDescription>
-            {target ? (
-              <>
-                Every recorded event for {target.title}, oldest first.
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
-        {historyQuery.isPending ? (
-          <ol
-            className={pageStyles.historyList}
-            aria-busy="true"
-            aria-label="Loading case history"
+      <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">
+          {target ? `Track case for ${target.title}` : "Track case"}
+        </DialogTitle>
+        {target && row ? (
+          /* Single frame — content sits directly on the DialogContent
+             (which owns the border + its own close button), not nested in
+             a second bordered card with a second X. */
+          <div
+            className="flex min-w-0 flex-col gap-3"
+            aria-label={`Track ADM case for ${row.student}`}
           >
-            {[0, 1, 2, 3, 4].map((i) => (
-              <li key={i} className={pageStyles.historyItem} aria-hidden="true">
-                <span className={pageStyles.historyDot} aria-hidden />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <Skeleton style={{ width: "70%", height: "0.875rem" }} />
-                  <Skeleton
-                    style={{
-                      width: "45%",
-                      height: "0.75rem",
-                      marginTop: "0.375rem",
-                    }}
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold">{row.student} — tracking</h3>
+              <p className="truncate text-xs text-muted-foreground">
+                LRN {row.lrn} · {row.grade}
+              </p>
+            </div>
+
+            <div className="relative flex items-center gap-2">
+              <div
+                className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuenow={Math.round((currentOrder / 8) * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Overall pipeline progress"
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${Math.round((currentOrder / 8) * 100)}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+                Stage {currentOrder} of 8
+              </span>
+            </div>
+
+            {historyQuery.isPending ? (
+              <div className="relative flex flex-col gap-2" aria-busy="true" aria-label="Loading case tracking">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} style={{ width: `${85 - i * 10}%`, height: "0.875rem" }} />
+                ))}
+              </div>
+            ) : historyQuery.isError ? (
+              <div className="relative" role="alert">
+                <p className="text-sm">We couldn&apos;t load the tracking timeline. Please try again.</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2"
+                  disabled={historyQuery.isRefetching}
+                  onClick={() => historyQuery.refetch()}
+                >
+                  {historyQuery.isRefetching ? (
+                    <Loader2 className="animate-spin" aria-hidden />
+                  ) : null}
+                  {historyQuery.isRefetching ? "Loading…" : "Try again"}
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div ref={listRef} className={`relative ${trackStyles.timelineScroll} pr-1`}>
+                  {trackInput ? (
+                    <AdmTrackingTimeline input={trackInput} reader="coordinator" />
+                  ) : null}
+                </div>
+                <div className="flex justify-center pt-1">
+                  <ScrollDownHint
+                    scrollRef={listRef}
+                    watchKey={row.id}
+                    label="Scroll down"
+                    className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
                   />
                 </div>
-              </li>
-            ))}
-          </ol>
-        ) : historyQuery.isError ? (
-          <div className={pageStyles.errorBlock} role="alert">
-            <p className={pageStyles.errorText}>
-              We couldn&apos;t load the history. Please try again.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={historyQuery.isRefetching}
-              onClick={() => historyQuery.refetch()}
-            >
-              {historyQuery.isRefetching ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
-              {historyQuery.isRefetching ? "Loading…" : "Try again"}
-            </Button>
+              </>
+            )}
+
+            <div className="relative flex justify-end">
+              <Button type="button" size="sm" asChild>
+                <Link href={`/coordinator/referrals/${encodeURIComponent(row.id)}`}>
+                  Open case file
+                </Link>
+              </Button>
+            </div>
           </div>
-        ) : events.length === 0 ? (
-          <p className={pageStyles.emptyText}>No recorded events yet.</p>
-        ) : (
-          <ol className={pageStyles.historyList}>
-            {events.map((e) => (
-              <li key={e.id} className={pageStyles.historyItem}>
-                <span className={pageStyles.historyDot} aria-hidden />
-                <div style={{ minWidth: 0 }}>
-                  <p className={pageStyles.historyItemTitle}>
-                    {friendlyReason(e.reason, e.actionType)}
-                  </p>
-                  <p className={pageStyles.historyItemSub}>
-                    {e.actor} · {roleLabel(e.actorRole)} · {formatTimestamp(e.at)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );

@@ -1,10 +1,30 @@
+/* Recent forwards data table — glow card shell, guidance grade-table
+   treatment: header row, bordered table wrap, interpretation footer. */
+
 .card {
-  border: 1px solid var(--border);
+  position: relative;
+  overflow: visible;
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   border-radius: var(--radius-md);
-  background-color: var(--card);
-  box-shadow: none;
-  padding: 0.875rem 1rem;
-  min-width: 0;
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 .sectionTitle {
@@ -20,101 +40,59 @@
   color: var(--muted-foreground);
 }
 
-.panelHead {
+.headerRow {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.panelBody {
-  margin-top: 0.75rem;
-}
-
-.kpiBtnSolid {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-  padding: 0 0.625rem;
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--primary-foreground);
-  text-decoration: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background-color: var(--primary);
-  cursor: pointer;
-  transition: filter 140ms ease-out;
-}
-
-.kpiBtnSolid:hover {
-  filter: brightness(0.92);
-  text-decoration: none;
-}
-
-.kpiBtnSolid:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring);
+  position: relative;
 }
 
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background-color: var(--card);
+  position: relative;
 }
 
-.table {
+/* Queue pager — "Showing X–Y of Z" + Previous / Page N of M / Next. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  position: relative;
+}
+
+.range {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.skelTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
-  min-width: 44rem;
 }
 
-.table th {
-  text-align: left;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-foreground);
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.table td {
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-
-.table tr:last-child td {
-  border-bottom: none;
-}
-
-/* Alerts-queue table treatment — mirrors the nurse/guidance alerts lists:
-   roomy rows, muted small header labels, hairline row dividers. */
-.alertTable th,
-.alertTable td {
-  padding: 0.875rem 1rem;
-}
-
-.alertTable thead th {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  color: var(--muted-foreground);
-}
-
-.alertTable tbody td {
-  font-size: 0.8125rem;
+.skelTable td {
+  padding: 0.25rem 0.5rem;
 }
 
 .cellMain {
@@ -122,6 +100,13 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
   white-space: nowrap;
 }
 
@@ -134,11 +119,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.studentSub {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
 .mono {
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 0.75rem;
@@ -146,11 +126,24 @@
   letter-spacing: 0.01em;
 }
 
-.emptyText {
-  margin: 0;
-  padding: 1.5rem 1rem;
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 2rem 1rem;
   text-align: center;
-  font-size: 0.875rem;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
@@ -187,4 +180,41 @@
   .spin {
     animation: none;
   }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.interpretation {
+  /* auto top margin docks the line to the card bottom (see .body); the
+     top padding keeps today's minimum separation when content runs tall. */
+  margin: auto 0 0;
+  padding: 0.75rem 0 0 0.625rem;
+  border-left: 2px solid color-mix(in oklch, var(--primary), transparent 35%);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  position: relative;
+}
+
+.interpretationLabel {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Card body fills the remaining card height so the interpretation footer
+   below docks to the card bottom instead of floating under the table. */
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }

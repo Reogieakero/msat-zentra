@@ -90,6 +90,9 @@ function toastTitleFor(n: TeacherNotification): string {
   if (n.sourceTable === "adm_parent_meetings") {
     if (n.type === "generic_adm_parent_meetings_outcome")
       return "Meeting outcome recorded";
+    // Invited to the meeting by the coordinator (not the filer path).
+    if (/invited you to a parent meeting/i.test(n.message ?? ""))
+      return "Parent meeting invitation";
     return "Parent meeting booked";
   }
   // Referral toasts match backend `message` text — every referral fanout

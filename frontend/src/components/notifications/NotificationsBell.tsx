@@ -161,7 +161,16 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
       />
       <span className={styles.bellMain}>
         <span className={styles.bellTitle}>{titleOf(n)}</span>
-        <span className={styles.bellMsg}>{n.message}</span>
+        <span
+          className={styles.bellMsg}
+          data-profile-created={
+            /created the learner profile/i.test(n.message ?? "")
+              ? "true"
+              : undefined
+          }
+        >
+          {n.message}
+        </span>
         <span className={styles.bellDate}>
           {formatBellDate(n.createdAt)}
           {readingId === n.id ? " · Marking…" : ""}

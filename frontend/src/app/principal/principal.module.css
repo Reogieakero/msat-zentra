@@ -1,8 +1,13 @@
 .wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+  /* clip (not hidden): still trims horizontal overflow but does not
+     create a scroll container, so sticky descendants keep sticking
+     to the viewport. */
+  overflow-x: clip;
 }
 
 .shell {
@@ -15,12 +20,24 @@
   transition: none;
 }
 
+/* Sidebar layout: no top tab bar (3rem topbar only) and room for the 16rem
+   branched rail. Desktop only — small screens keep the tab bar layout
+   untouched (same as the nurse / teacher desks). */
+@media (min-width: 1024px) {
+  .shellWithRail {
+    margin-top: 3rem;
+    margin-left: 16rem;
+  }
+}
+
 .main {
   flex: 1;
   padding: 1rem;
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  /* clip (not hidden): see .wrapper — keeps sticky working. */
+  overflow-x: clip;
 }
 
 .topbar {
@@ -36,35 +53,6 @@
   padding-inline: 0.75rem;
   border-bottom: 1px solid var(--border);
   background-color: var(--background);
-}
-
-.menuButton {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-  cursor: pointer;
-  outline: none;
-}
-
-.menuButton:focus-visible {
-  box-shadow: 0 0 0 2px var(--ring);
-}
-
-.menuIcon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-@media (max-width: 767px) {
-  .menuButton {
-    display: inline-flex;
-  }
 }
 
 .brand {
@@ -107,37 +95,6 @@
 
 .searchCommand :global([data-slot="command-input"]) {
   height: 2.25rem;
-}
-
-.accountGradeBasis {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.375rem;
-  padding: 0.25rem 0.5rem;
-}
-
-.segmentedCompact {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.segmentCompact {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
-  line-height: 1.1;
-  color: var(--muted-foreground);
-  cursor: pointer;
-}
-
-.segmentCompactOn {
-  background: var(--foreground);
-  color: var(--background);
 }
 
 .avatarButton {
@@ -213,11 +170,11 @@
   }
 }
 
-/* Mobile: 16px gutters on all sides, 3rem offset below the topbar */
+/* Mobile: 16px gutters on all sides, 6rem offset below topbar + tab bar */
 @media (max-width: 767px) {
   .shell {
     margin-left: 0;
-    margin-top: 3rem;
+    margin-top: 6rem;
   }
 
   .main {

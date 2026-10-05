@@ -14,14 +14,17 @@ import {
 import styles from "./adm-tracking-timeline.module.css";
 
 /* Shared ADM tracking timeline — one output on every teacher surface
-   (adm-cases rail card + referrals track dialog): the 8 pipeline steps
-   with state badges and owners, plus the latest action on each stage
-   (who did what, when) so the adviser sees desk activity live, not just
-   stage position. Status-only; no clinical detail ever renders here. */
+   (adm-cases rail card + referrals track dialog) and the coordinator
+   track-case dialog: the 8 pipeline steps with state badges and owners,
+   plus the latest action on each stage (who did what, when). `reader`
+   switches the actor voice ("You" for the filing teacher, desk names for
+   the coordinator). Status-only; no clinical detail ever renders here. */
 export function AdmTrackingTimeline({
   input,
+  reader = "teacher",
 }: {
   input: TrackerCaseInput;
+  reader?: "teacher" | "coordinator";
 }) {
   // Small pure derivation (8 steps, one pass over the timeline) — computed
   // directly so fresh query data repaints live with no memo staleness.
@@ -37,7 +40,7 @@ export function AdmTrackingTimeline({
     approved: input.approved ?? false,
     approvedAt: input.approvedAt ?? null,
   });
-  const latestByStage = latestActionByStage(input);
+  const latestByStage = latestActionByStage(input, reader);
 
   return (
     <ol className={styles.timeline} aria-label="ADM pipeline with latest actions">

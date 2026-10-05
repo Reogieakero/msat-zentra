@@ -1,14 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
+import styles from "./form.module.css";
 
 type Props = {
   title: string;
@@ -32,26 +26,21 @@ export function ConfirmActionDialog({
   onCancel,
 }: Props) {
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
+      onClose={onCancel}
+      size="sm"
+      title={title}
+      description={description}
     >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className={styles.dialogFooter}>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </div>
+    </CardModal>
   );
 }

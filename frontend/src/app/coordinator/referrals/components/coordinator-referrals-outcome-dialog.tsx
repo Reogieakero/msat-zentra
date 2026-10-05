@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  meetingInviteeLabel,
   venueLabel,
   type AdmMeeting,
 } from "../../components/coordinator-data";
@@ -28,6 +29,8 @@ interface CoordinatorReferralsOutcomeDialogProps {
   onMinutesChange: (v: string) => void;
   logbook: string;
   onLogbookChange: (v: string) => void;
+  inviteeIds: string[];
+  onInviteeIdsChange: (v: string[]) => void;
   onClose: () => void;
   onConfirm: () => void;
   pending: boolean;
@@ -41,10 +44,20 @@ export function CoordinatorReferralsOutcomeDialog({
   onMinutesChange,
   logbook,
   onLogbookChange,
+  inviteeIds,
+  onInviteeIdsChange,
   onClose,
   onConfirm,
   pending,
 }: CoordinatorReferralsOutcomeDialogProps) {
+  const invitees = target?.invitees ?? [];
+  function toggleInvitee(id: string) {
+    onInviteeIdsChange(
+      inviteeIds.includes(id)
+        ? inviteeIds.filter((x) => x !== id)
+        : [...inviteeIds, id],
+    );
+  }
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
@@ -73,6 +86,31 @@ export function CoordinatorReferralsOutcomeDialog({
             />
             <span>Parents attended</span>
           </label>
+          {attended && invitees.length > 0 ? (
+            <div className={styles.formField}>
+              <span className={styles.formLabel} id="meet-invitees-label">
+                Invited staff who attended
+                {inviteeIds.length > 0 ? ` · ${inviteeIds.length} present` : ""}
+              </span>
+              <div role="group" aria-labelledby="meet-invitees-label">
+                {invitees.map((u) => {
+                  const checked = inviteeIds.includes(u.id);
+                  return (
+                    <label key={u.id} className={styles.checkRow} style={{ cursor: "pointer" }}>
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() =>
+                          toggleInvitee(u.id)
+                        }
+                        aria-label={`Mark ${u.fullName} attended`}
+                      />
+                      <span>{meetingInviteeLabel(u)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <div className={styles.formField}>
             <Label className={styles.formLabel} htmlFor="meet-minutes">
               Minutes of meeting (optional)

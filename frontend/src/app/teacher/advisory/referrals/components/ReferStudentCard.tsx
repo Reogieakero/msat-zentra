@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, RotateCcw, Send } from "lucide-react";
+import { AlertTriangle, Check, Loader2, RotateCcw, Send, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -441,11 +442,18 @@ interface DismissedMine {
   lrn: string;
   targetRole: string;
   status: string;
+  track: "adm" | "general";
 }
 
 /* Cancelled cases, ready to file again — same reopen as the table row menu
-   (the row flips back to pending, never a duplicate). Hidden when none. */
-function DismissedRereferCard() {
+    (the row flips back to pending, never a duplicate). Hidden when none. */
+function DismissedRereferCard({
+  onOpenChange,
+  onAdmRerefer,
+}: {
+  onOpenChange: (open: boolean) => void;
+  onAdmRerefer?: () => void;
+}) {
   const mineQuery = useQuery<DismissedMine[]>({
     queryKey: ["myReferrals"],
     queryFn: async () => {
@@ -491,17 +499,29 @@ function DismissedRereferCard() {
       ) : (
         <ul className={`relative flex max-h-80 min-w-0 flex-col gap-2 overflow-y-auto ${refStyles.noScrollbar}`}>
           {dismissed.map((r) => (
-            <DismissedRow
-              key={r.id}
-              row={r}
-              busy={isPending}
-              onReopen={(id, desk, reviewer) =>
-                void reopen(
-                  { id },
-                  { referredToRole: desk, ...(reviewer ? { consultReviewer: reviewer } : {}) },
-                )
-              }
-            />
+            r.track === "adm" ? (
+              <DismissedRow
+                key={r.id}
+                row={r}
+                busy={isPending}
+                onReferAgain={() => {
+                  onOpenChange(true);
+                  onAdmRerefer?.();
+                }}
+              />
+            ) : (
+              <DismissedRow
+                key={r.id}
+                row={r}
+                busy={isPending}
+                onReopen={(id, desk, reviewer) =>
+                  void reopen(
+                    { id },
+                    { referredToRole: desk, ...(reviewer ? { consultReviewer: reviewer } : {}) },
+                  )
+                }
+              />
+            )
           ))}
         </ul>
       )}
@@ -510,18 +530,21 @@ function DismissedRereferCard() {
 }
 
 /* One dismissed case: pick who receives the file (grouped by the 2 types),
-   then re-submit. The row flips back to pending, never a duplicate. */
+    then re-submit. The row flips back to pending, never a duplicate. */
 function DismissedRow({
   row,
   busy,
   onReopen,
+  onReferAgain,
 }: {
   row: DismissedMine;
   busy: boolean;
-  onReopen: (id: string, desk: string, reviewer: string | null) => void;
+  onReopen?: (id: string, desk: string, reviewer: string | null) => void;
+  onReferAgain?: () => void;
 }) {
   const [staffValue, setStaffValue] = React.useState("");
   const staff = staffValue ? findStaff(staffValue) : null;
+  const isAdm = row.track === "adm";
   return (
     <li className="flex min-w-0 flex-col gap-1.5 rounded-md border border-transparent px-1 py-1">
       <span className="min-w-0">
@@ -570,37 +593,113 @@ function DismissedRow({
             )}
           </Picker>
         </div>
-        <Button
-          variant="outline"
-          disabled={busy || !staff}
-          onClick={() => staff && onReopen(row.id, staff.desk, staff.reviewer)}
-          aria-label={
-            staff
-              ? `Refer ${row.studentName} again to ${filedToLabel(staff)}`
-              : `Pick staff to refer ${row.studentName} again`
-          }
-          title={staff ? `Re-submit to ${filedToLabel(staff)}` : undefined}
-          className="shrink-0"
-        >
-          {busy ? (
-            <Loader2 size={16} className="animate-spin" aria-hidden />
-          ) : null}
-          Refer again
-        </Button>
+        {isAdm ? (
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => onReferAgain?.()}
+            aria-label={`Start new referral for ${row.studentName}`}
+            title={`Start new referral for ${row.studentName}`}
+            className="shrink-0"
+          >
+            {busy ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+            ) : null}
+            Refer again
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            disabled={busy || !staff}
+            onClick={() => staff && onReopen?.(row.id, staff.desk, staff.reviewer)}
+            aria-label={
+              staff
+                ? `Refer ${row.studentName} again to ${filedToLabel(staff)}`
+                : `Pick staff to refer ${row.studentName} again`
+            }
+            title={staff ? `Re-submit to ${filedToLabel(staff)}` : undefined}
+            className="shrink-0"
+          >
+            {busy ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+            ) : null}
+            Refer again
+          </Button>
+        )}
       </div>
     </li>
   );
 }
 
 /* Action card: a single action. Clicking New referral slides the form card
-   down underneath with student + record dropdowns. The form stays mounted
-   once opened so the collapse animates both ways (inert + hidden while
-   shut, so keyboard focus can't enter it). */
-export function ReferStudentCard() {
-  const [formOpen, setFormOpen] = React.useState(false);
+    down underneath with student + record dropdowns. The form stays mounted
+    once opened so the collapse animates both ways (inert + hidden while
+    shut, so keyboard focus can't enter it). */
+export function ReferStudentCard({
+  open,
+  onOpenChange,
+  resubmitHintSignal,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  resubmitHintSignal?: number;
+}) {
   const [mounted, setMounted] = React.useState(false);
+  const [noticeVisible, setNoticeVisible] = React.useState(false);
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
+  const noticeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSignal = React.useRef(resubmitHintSignal ?? 0);
+  // Reminder only: shown when a dismissed ADM case is filed again via
+  // "Refer again" (rail card or table row menu). Auto-hides after 4s unless
+  // the user closes it first with X.
+  const showReminder = React.useCallback(() => {
+    setNoticeVisible(true);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => {
+      setNoticeVisible(false);
+      noticeTimer.current = null;
+    }, 4000);
+  }, []);
+  React.useEffect(() => {
+    const signal = resubmitHintSignal ?? 0;
+    if (signal !== lastSignal.current) {
+      lastSignal.current = signal;
+      if (signal > 0) showReminder();
+    }
+  }, [resubmitHintSignal, showReminder]);
+  React.useEffect(
+    () => () => {
+      if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    },
+    [],
+  );
+  const handleNoticeClose = React.useCallback(() => {
+    if (noticeTimer.current) {
+      clearTimeout(noticeTimer.current);
+      noticeTimer.current = null;
+    }
+    setNoticeVisible(false);
+  }, []);
   return (
     <div className="flex min-w-0 flex-col gap-3">
+      {noticeVisible && portalTarget
+        ? createPortal(
+            <div className={refStyles.admNotice} role="status" aria-live="polite">
+              <AlertTriangle size={18} className={refStyles.admNoticeIcon} aria-hidden="true" />
+              <div className={refStyles.admNoticeContent}>
+                <p className={refStyles.admNoticeTitle}>ADM case cancelled</p>
+                <p className={refStyles.admNoticeBody}>Re-submit from scratch — pick the record, type, and staff.</p>
+              </div>
+              <button type="button" className={refStyles.admNoticeClose} onClick={handleNoticeClose} aria-label="Dismiss notification">
+                <X size={14} aria-hidden />
+              </button>
+            </div>,
+            portalTarget,
+          )
+        : null}
       <div className={assign.card} aria-label="Refer a student">
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
@@ -623,10 +722,10 @@ export function ReferStudentCard() {
           <Button
             onClick={() => {
               setMounted(true);
-              setFormOpen((v) => !v);
+              onOpenChange(true);
             }}
-            aria-expanded={formOpen}
-            variant={formOpen ? "outline" : "default"}
+            aria-expanded={open}
+            variant={open ? "outline" : "default"}
             className="w-full"
           >
             New referral
@@ -634,14 +733,14 @@ export function ReferStudentCard() {
         </div>
       </div>
       <div
-        className={`${refStyles.collapse} ${formOpen ? refStyles.collapseOpen : ""}`}
-        inert={!formOpen}
+        className={`${refStyles.collapse} ${open ? refStyles.collapseOpen : ""}`}
+        inert={!open}
       >
         <div className={refStyles.collapseInner}>
-          {mounted ? <ReferFormCard onDone={() => setFormOpen(false)} /> : null}
+          {mounted ? <ReferFormCard onDone={() => onOpenChange(false)} /> : null}
         </div>
       </div>
-      <DismissedRereferCard />
+      <DismissedRereferCard onOpenChange={onOpenChange} onAdmRerefer={showReminder} />
     </div>
   );
 }

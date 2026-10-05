@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
 import styles from "./coordinator-overview-kpis.module.css";
 
 interface CoordinatorOverviewKpisProps {
@@ -34,14 +35,12 @@ export function CoordinatorOverviewKpis({
         ? "Nothing needs you"
         : "Referrals, revisions, devices";
 
-  return (
-    <div className={styles.kpiGrid}>
-      <div className={styles.card}>
-        <p className={styles.kpiLabel}>Needs attention</p>
-        <p className={styles.kpiValue}>
-          {!attentionReady ? "…" : (attentionTotal ?? 0)}
-        </p>
-        <p className={styles.kpiHint}>{attentionHint}</p>
+  const cards = [
+    {
+      label: "Needs attention",
+      value: !attentionReady ? "…" : String(attentionTotal ?? 0),
+      hint: attentionHint,
+      action: (
         <button
           type="button"
           className={styles.kpiBtnSolid}
@@ -50,42 +49,68 @@ export function CoordinatorOverviewKpis({
         >
           Review
         </button>
-      </div>
-      <div className={styles.card}>
-        <p className={styles.kpiLabel}>ADM cases referred to me</p>
-        <p className={styles.kpiValue}>{referredToMe}</p>
-        <p className={styles.kpiHint}>All referrals awaiting or in intake</p>
+      ),
+    },
+    {
+      label: "ADM cases referred to me",
+      value: String(referredToMe),
+      hint: "All referrals awaiting or in intake",
+      action: (
         <Link className={styles.kpiBtnSolid} href="/coordinator/referrals">
           Open referrals
         </Link>
-      </div>
-      <div className={styles.card}>
-        <p className={styles.kpiLabel}>Certifications issued</p>
-        <p className={styles.kpiValue}>{certificationsIssued}</p>
-        <p className={styles.kpiHint}>At or past recommendation & certification</p>
+      ),
+    },
+    {
+      label: "Certifications issued",
+      value: String(certificationsIssued),
+      hint: "At or past recommendation & certification",
+      action: (
         <Link className={styles.kpiBtnSolid} href="/coordinator/certifications">
           Open certifications
         </Link>
-      </div>
-      <div className={styles.card}>
-        <p className={styles.kpiLabel}>Awaiting Principal approval</p>
-        <p className={styles.kpiValue}>{awaitingPrincipal}</p>
-        <p className={styles.kpiHint}>Forwarded, eligible, unsigned</p>
+      ),
+    },
+    {
+      label: "Awaiting Principal approval",
+      value: String(awaitingPrincipal),
+      hint: "Forwarded, eligible, unsigned",
+      action: (
         <Link
           className={styles.kpiBtnSolid}
           href="/coordinator/certifications?tab=awaiting"
         >
           Track approvals
         </Link>
-      </div>
-      <div className={styles.card}>
-        <p className={styles.kpiLabel}>Active enrolled</p>
-        <p className={styles.kpiValue}>{activeEnrolled}</p>
-        <p className={styles.kpiHint}>Learners in enrollment monitoring</p>
+      ),
+    },
+    {
+      label: "Active enrolled",
+      value: String(activeEnrolled),
+      hint: "Learners in enrollment monitoring",
+      action: (
         <Link className={styles.kpiBtnSolid} href="/coordinator/enrolled">
           Open enrolled
         </Link>
-      </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className={styles.kpiGrid}>
+      {cards.map((kpi) => (
+        <Card key={kpi.label} size="sm" className={styles.card}>
+          <span className={styles.glowClip} aria-hidden="true">
+            <span className={styles.cardGlow} />
+          </span>
+          <CardContent className={styles.cardBody}>
+            <p className={styles.kpiLabel}>{kpi.label}</p>
+            <p className={styles.kpiValue}>{kpi.value}</p>
+            <p className={styles.kpiHint}>{kpi.hint}</p>
+            <div className={styles.kpiAction}>{kpi.action}</div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

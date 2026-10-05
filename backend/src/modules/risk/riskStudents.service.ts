@@ -1,5 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
-import { resolveActiveTermId, type GradeMode } from "../../services/risk.js";
+import {
+  computeRiskFactors,
+  levelFromFlags,
+  resolveActiveTermId,
+  type GradeMode,
+} from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
@@ -63,7 +68,12 @@ export async function getRiskStudents(
           where: termId ? { termId } : undefined,
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
+        attendanceRecords: {
+          where: termId ? { termId } : undefined,
+          // subjectId drives the engine's dual-mode attendance rule
+          // (subject-era rows vs legacy AM/PM rows).
+          select: { status: true, subjectId: true },
+        },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
       },
     }),
@@ -83,7 +93,10 @@ export async function getRiskStudents(
           where: termId ? { termId } : undefined,
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
+        attendanceRecords: {
+          where: termId ? { termId } : undefined,
+          select: { status: true, subjectId: true },
+        },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
       },
     }),
@@ -98,16 +111,13 @@ export async function getRiskStudents(
   ) as string[];
   const headcounts = await sectionHeadcounts(sectionIds);
 
-  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
-    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
-
   type Candidate = {
     studentId: string;
     lrn: string;
     name: string;
     section: string;
     finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
-    attendanceRecords: { status: string }[];
+    attendanceRecords: { status: string; subjectId: string | null }[];
     anecdotalCount: number;
     enrolled: number;
   };
@@ -137,22 +147,21 @@ export async function getRiskStudents(
   ];
 
   const students: RiskStudentRow[] = candidates.map((s) => {
-    const avg =
-      s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
-          s.finalGrades.length
-        : 100;
-    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    const academic = avg < 75;
-    const attendance = s.enrolled > 0 && present / s.enrolled < 0.8;
-    const behavioral = s.anecdotalCount > 0;
-    // Derive level + count from the live factors so the list always matches
-    // the engine rule (risk.ts): >=2 = High, 1 = Moderate, 0 = Low. The stored
-    // profile columns can be stale, so we never trust them here.
+    // Single source of truth (risk.ts): the same engine the teacher
+    // advisory and overview paths use, so per-student levels agree across
+    // desks. Never trust the stored profile columns here.
+    const flags = computeRiskFactors({
+      finalGrades: s.finalGrades,
+      gradeMode,
+      attendance: s.attendanceRecords,
+      anecdotalCount: s.anecdotalCount,
+      enrolled: s.enrolled,
+    });
+    const liveLevel = levelFromFlags(flags);
     const liveCount =
-      (academic ? 1 : 0) + (attendance ? 1 : 0) + (behavioral ? 1 : 0);
-    const liveLevel: string =
-      liveCount >= 2 ? "High" : liveCount === 1 ? "Moderate" : "Low";
+      (flags.academicFlag ? 1 : 0) +
+      (flags.attendanceFlag ? 1 : 0) +
+      (flags.behavioralFlag ? 1 : 0);
     return {
       studentId: s.studentId,
       lrn: s.lrn,
@@ -160,7 +169,11 @@ export async function getRiskStudents(
       section: s.section,
       riskLevel: liveLevel,
       riskCount: liveCount,
-      factors: { Academic: academic, Attendance: attendance, Behavioral: behavioral },
+      factors: {
+        Academic: flags.academicFlag,
+        Attendance: flags.attendanceFlag,
+        Behavioral: flags.behavioralFlag,
+      },
     };
   });
 

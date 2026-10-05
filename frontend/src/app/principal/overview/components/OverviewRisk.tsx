@@ -19,31 +19,23 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { fetchOverview } from "./overview-data";
-import { useTheme } from "@/components/providers";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewRisk.module.css";
 
-const chartConfigLight = {
-  value: { label: "Students", color: "#171717" },
-} satisfies ChartConfig;
-
-const chartConfigDark = {
-  value: { label: "Students", color: "#e5e5e5" },
+const chartConfig = {
+  value: { label: "Students", color: "var(--primary)" },
 } satisfies ChartConfig;
 
 type FactorKey = "attendance" | "grades" | "behavior";
 
-// Light mode: ink-to-gray ramp for light surfaces.
-// Dark mode: mirrored paper-to-gray ramp so bars stay legible on dark cards.
-const FACTOR_COLORS_LIGHT: Record<FactorKey, string> = {
-  attendance: "#171717",
-  grades: "#525252",
-  behavior: "#a3a3a3",
-};
-
-const FACTOR_COLORS_DARK: Record<FactorKey, string> = {
-  attendance: "#fafafa",
-  grades: "#a3a3a3",
-  behavior: "#525252",
+// Primary-tinted ramps, identical in light and dark mode: the principal's
+// saved palette paints var(--primary) desk-wide (PrincipalPaletteGate), and
+// mixing toward var(--card) keeps each step legible on either surface.
+// Applied through style fills so the CSS vars resolve inside recharts SVG.
+const FACTOR_COLORS: Record<FactorKey, string> = {
+  attendance: "var(--primary)",
+  grades: "color-mix(in oklch, var(--primary) 65%, var(--card))",
+  behavior: "color-mix(in oklch, var(--primary) 35%, var(--card))",
 };
 
 interface FactorRow {
@@ -55,27 +47,13 @@ interface FactorRow {
 
 type LevelKey = "high" | "moderate" | "low";
 
-const LEVEL_COLORS_LIGHT: Record<LevelKey, string> = {
-  high: "#171717",
-  moderate: "#6b7280",
-  low: "#d1d5db",
+const LEVEL_COLORS: Record<LevelKey, string> = {
+  high: "var(--primary)",
+  moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",
+  low: "color-mix(in oklch, var(--primary) 30%, var(--card))",
 };
 
-const LEVEL_COLORS_DARK: Record<LevelKey, string> = {
-  high: "#fafafa",
-  moderate: "#9ca3af",
-  low: "#4b5563",
-};
-
-const GRADE_BAR_LIGHT = "#171717";
-const GRADE_BAR_DARK = "#e5e5e5";
-
-function useIsDark() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-  return mounted && resolvedTheme === "dark";
-}
+const GRADE_BAR_FILL = "var(--primary)";
 
 interface LevelRow {
   key: LevelKey;
@@ -173,21 +151,17 @@ function useOverview() {
 
 export function OverviewRisk() {
   const { data, isPending, isError } = useOverview();
-  const isDark = useIsDark();
-  const chartConfig = isDark ? chartConfigDark : chartConfigLight;
-  const gradeBarFill = isDark ? GRADE_BAR_DARK : GRADE_BAR_LIGHT;
 
   const rows: FactorRow[] = React.useMemo(() => {
     const atRisk = data?.atRisk;
     if (!atRisk) return [];
-    const colors = isDark ? FACTOR_COLORS_DARK : FACTOR_COLORS_LIGHT;
     const items: FactorRow[] = [
-      { key: "attendance", label: "Attendance", value: atRisk.attendance, color: colors.attendance },
-      { key: "grades", label: "Academics", value: atRisk.grades, color: colors.grades },
-      { key: "behavior", label: "Behavior", value: atRisk.behavior, color: colors.behavior },
+      { key: "attendance", label: "Attendance", value: atRisk.attendance, color: FACTOR_COLORS.attendance },
+      { key: "grades", label: "Academics", value: atRisk.grades, color: FACTOR_COLORS.grades },
+      { key: "behavior", label: "Behavior", value: atRisk.behavior, color: FACTOR_COLORS.behavior },
     ];
     return items;
-  }, [data, isDark]);
+  }, [data]);
 
   const interpretation = React.useMemo(
     () =>
@@ -208,14 +182,13 @@ export function OverviewRisk() {
   const levelRows: LevelRow[] = React.useMemo(() => {
     const levels = data?.riskByLevel;
     if (!levels) return [];
-    const colors = isDark ? LEVEL_COLORS_DARK : LEVEL_COLORS_LIGHT;
     const items: LevelRow[] = [
-      { key: "high", label: "High", value: levels.high, color: colors.high },
-      { key: "moderate", label: "Moderate", value: levels.moderate, color: colors.moderate },
-      { key: "low", label: "Low", value: levels.low, color: colors.low },
+      { key: "high", label: "High", value: levels.high, color: LEVEL_COLORS.high },
+      { key: "moderate", label: "Moderate", value: levels.moderate, color: LEVEL_COLORS.moderate },
+      { key: "low", label: "Low", value: levels.low, color: LEVEL_COLORS.low },
     ];
     return items;
-  }, [data, isDark]);
+  }, [data]);
 
   const levelsTotal = levelRows.reduce((sum, r) => sum + r.value, 0);
 
@@ -238,7 +211,10 @@ export function OverviewRisk() {
   return (
     <div className={styles.riskGrid}>
       {/* Card 1 — Risk at a glance */}
-      <Card className={styles.card}>
+      <Card className={`${assign.card} ${styles.card}`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
         <CardHeader className={styles.header}>
           <div className={styles.headerText}>
             <CardTitle>Risk at a glance</CardTitle>
@@ -293,7 +269,7 @@ export function OverviewRisk() {
                     />
                     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                       {rows.map((r) => (
-                        <Cell key={r.key} fill={r.color} />
+                        <Cell key={r.key} style={{ fill: r.color }} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -306,7 +282,10 @@ export function OverviewRisk() {
       </Card>
 
       {/* Card 2 — Students by risk level */}
-      <Card className={styles.card}>
+      <Card className={`${assign.card} ${styles.card}`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
         <CardHeader className={styles.header}>
           <div className={styles.headerText}>
             <CardTitle>Students by risk level</CardTitle>
@@ -354,7 +333,7 @@ export function OverviewRisk() {
                       strokeWidth={0}
                     >
                       {levelRows.map((entry) => (
-                        <Cell key={entry.key} fill={entry.color} />
+                        <Cell key={entry.key} style={{ fill: entry.color }} />
                       ))}
                     </Pie>
                   </PieChart>
@@ -386,7 +365,10 @@ export function OverviewRisk() {
       </Card>
 
       {/* Card 3 — At-risk students by grade */}
-      <Card className={styles.card}>
+      <Card className={`${assign.card} ${styles.card}`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
         <CardHeader className={styles.header}>
           <div className={styles.headerText}>
             <CardTitle>At-risk students by grade</CardTitle>
@@ -431,7 +413,7 @@ export function OverviewRisk() {
                   />
                       <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                         {gradeRows.map((r) => (
-                          <Cell key={r.grade} fill={gradeBarFill} />
+                          <Cell key={r.grade} style={{ fill: GRADE_BAR_FILL }} />
                         ))}
                       </Bar>
                 </BarChart>

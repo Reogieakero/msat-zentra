@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { FACTOR_CHIP, type BackendHeatmap, type RiskFactor } from "../api";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentHeatmap.module.css";
 
 const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];
@@ -46,16 +47,20 @@ export function StudentHeatmap({
 
   return (
     <section aria-label="Section heatmap">
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h2 className={styles.sectionTitle}>Section Heatmap</h2>
-          <p className={styles.sectionDesc}>
-            Intensity of academic, attendance, and behavioral flags per section.
-            Select a row to drill into its students.
-          </p>
+      <div className={assign.card}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 className={styles.sectionTitle}>Section Heatmap</h2>
+            <p className={styles.sectionDesc}>
+              Intensity of academic, attendance, and behavioral flags per section.
+              Select a row to drill into its students.
+            </p>
+          </div>
         </div>
-      </div>
-      <div className={styles.tableBody}>
+        <div className={`${styles.tableBody} relative`}>
         {loading ? (
           <div className={styles.state}>
             <Loader2 className={styles.spinner} aria-hidden />
@@ -117,6 +122,7 @@ export function StudentHeatmap({
             })}
           </div>
         )}
+        </div>
       </div>
     </section>
   );

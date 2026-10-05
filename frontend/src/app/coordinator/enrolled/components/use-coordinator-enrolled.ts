@@ -14,17 +14,10 @@ import {
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { ELIG_OPTIONS } from "./coordinator-enrolled-constants";
 
-export type EnrolledStageTab = "enrollment_monitoring" | "completion";
-
 export interface CoordinatorEnrolledModel {
   now: number;
   rows: AdmCaseRow[];
   total: number;
-  totalPages: number;
-  safePage: number;
-  limit: number;
-  start: number;
-  end: number;
   enrolledPending: boolean;
   enrolledError: boolean;
   enrolledRefetching: boolean;
@@ -37,10 +30,6 @@ export interface CoordinatorEnrolledModel {
   debounced: string;
   elig: "all" | AdmEligibility;
   setElig: (v: "all" | AdmEligibility) => void;
-  stageTab: EnrolledStageTab;
-  setStageTab: (v: EnrolledStageTab) => void;
-  page: number;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
   hasActiveFilters: boolean;
   eligMenuLabel: string;
   clearFilters: () => void;
@@ -61,15 +50,12 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   const [query, setQuery] = React.useState("");
   const [debounced, setDebounced] = React.useState("");
   const [elig, setElig] = React.useState<"all" | AdmEligibility>("all");
-  const [stageTab, setStageTab] =
-    React.useState<EnrolledStageTab>("enrollment_monitoring");
-  const [page, setPage] = React.useState(1);
   const [historyTarget, setHistoryTarget] =
     React.useState<HistoryTarget | null>(null);
   const [completeTarget, setCompleteTarget] =
     React.useState<AdmCaseRow | null>(null);
   const [completingId, setCompletingId] = React.useState<string | null>(null);
-  // Skip the mount fire: the initial "" debounce must not reset page 1.
+  // Skip the mount fire: the initial "" debounce must not refire the query.
   const prevDebouncedRef = React.useRef(debounced);
 
   React.useEffect(() => {
@@ -78,18 +64,20 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
       if (next === prevDebouncedRef.current) return;
       prevDebouncedRef.current = next;
       setDebounced(next);
-      setPage(1);
     }, 300);
     return () => clearTimeout(t);
   }, [query]);
 
+  // No pagination, no stage tabs — the page always shows the first 6
+  // learners in enrollment monitoring (principal-approved, still active).
   const enrolledQuery = useQuery({
-    queryKey: ["coordinator-enrolled", stageTab, page, debounced, elig],
+    queryKey: ["coordinator-enrolled", debounced, elig],
     queryFn: ({ signal }) =>
-      fetchCoordinatorReferrals(page, {
+      fetchCoordinatorReferrals(1, {
         q: debounced || undefined,
-        stage: stageTab,
+        stage: "enrollment_monitoring",
         eligibility: elig,
+        limit: 6,
         signal,
       }),
     placeholderData: (prev) => prev,
@@ -154,25 +142,14 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   function clearFilters() {
     setQuery("");
     setElig("all");
-    setPage(1);
   }
 
   const total = enrolledQuery.data?.total ?? 0;
-  const totalPages = enrolledQuery.data?.totalPages ?? 1;
-  const safePage = Math.min(page, totalPages);
-  const limit = enrolledQuery.data?.limit ?? 20;
-  const start = total === 0 ? 0 : (safePage - 1) * limit + 1;
-  const end = Math.min(safePage * limit, total);
 
   return {
     now,
     rows,
     total,
-    totalPages,
-    safePage,
-    limit,
-    start,
-    end,
     enrolledPending: enrolledQuery.isPending,
     enrolledError: enrolledQuery.isError,
     enrolledRefetching: enrolledQuery.isRefetching,
@@ -184,17 +161,7 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     setQuery,
     debounced,
     elig,
-    setElig: (v: "all" | AdmEligibility) => {
-      setElig(v);
-      setPage(1);
-    },
-    stageTab,
-    setStageTab: (v: EnrolledStageTab) => {
-      setStageTab(v);
-      setPage(1);
-    },
-    page,
-    setPage,
+    setElig,
     hasActiveFilters,
     eligMenuLabel,
     clearFilters,

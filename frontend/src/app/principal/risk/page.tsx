@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { RiskHeader } from "./components/RiskHeader";
 import { RiskLevelDonutCard } from "./components/RiskLevelDonutCard";
 import { RiskLevelBreakdown } from "./components/RiskLevelBreakdown";
 import { RiskLevelDistribution } from "./components/RiskLevelDistribution";
@@ -13,10 +12,6 @@ import styles from "./risk.module.css";
 export default function PrincipalRiskBoardPage() {
   return (
     <section className={styles.page}>
-      <RiskHeader />
-
-      <hr className={styles.divider} />
-
       <div className={styles.topSummary}>
         <RiskLevelDonutCard />
         <RiskLevelBreakdown />

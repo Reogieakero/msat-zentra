@@ -3,16 +3,12 @@ import { apiClient } from "@/lib/api/client";
 export type RiskLevelKey = "High" | "Moderate" | "Low";
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
-export const RISK_LEVEL_COLORS: Record<RiskLevelKey, string> = {
-  High: "#171717",
-  Moderate: "#6b7280",
-  Low: "#d1d5db",
-};
-
+// Cross-desk factor hues (same as the teacher risk table): Academic
+// amber, Attendance green, Behavioral blue.
 export const FACTOR_CHIP: Record<RiskFactor, string> = {
-  Academic: "#171717",
-  Attendance: "#525252",
-  Behavioral: "#a3a3a3",
+  Academic: "#f59e0b",
+  Attendance: "#22c55e",
+  Behavioral: "#3b82f6",
 };
 
 export const FACTOR_LABELS: Record<RiskFactor, string> = {
@@ -34,8 +30,12 @@ export interface BackendHeatmap {
   factorTotals: Record<RiskFactor, number>;
 }
 
-export async function fetchHeatmap(): Promise<BackendHeatmap> {
-  const { data } = await apiClient.get<BackendHeatmap>("/api/risk/heatmap");
+export async function fetchHeatmap(
+  gradeMode: "raw" | "final" = "final"
+): Promise<BackendHeatmap> {
+  const { data } = await apiClient.get<BackendHeatmap>("/api/risk/heatmap", {
+    params: { gradeMode },
+  });
   return data;
 }
 

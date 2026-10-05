@@ -5,20 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, Loader2, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Plus, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -27,8 +21,14 @@ import {
   formatManilaDate,
   formatManilaTime,
   generateLogbookRef,
+  inviteeToAttendee,
   MEETING_ATTENDEE_ROLE_LABELS,
+  meetingInviteeLabel,
+  uploadMeetingAttachments,
+  deleteMeetingAttachment,
   venueLabel,
+  type AdmMeetingAttachment,
+  type AdmMeetingInvitee,
   type MeetingAttendee,
   type MeetingAttendeeRole,
 } from "../../components/coordinator-data";
@@ -46,6 +46,8 @@ export interface ParentMeetingItem {
   minutesOfMeeting: string | null;
   attendanceLogbookRef: string | null;
   attendees: MeetingAttendee[];
+  invitees?: AdmMeetingInvitee[];
+  attachments?: AdmMeetingAttachment[];
   recordedBy: string;
 }
 
@@ -90,6 +92,7 @@ function formatCountdown(ms: number): string {
 interface LocalImage {
   name: string;
   url: string;
+  file: File | null;
 }
 
 export function ParentMeetingCard({
@@ -161,6 +164,16 @@ export function ParentMeetingCard({
   const [attendees, setAttendees] = React.useState<MeetingAttendee[]>(() => [
     ...(m.attendees ?? []),
   ]);
+  // Invitee attendance checklist: which invited staff actually attended.
+  // Prefilled from previously recorded userId-linked entries.
+  const [checkedInvitees, setCheckedInvitees] = React.useState<string[]>(() => {
+    const recorded = new Set(
+      (m.attendees ?? []).map((a) => a.userId).filter((v): v is string => !!v),
+    );
+    return (m.invitees ?? []).map((u) => u.id).filter((id) => recorded.has(id));
+  });
+  const [docPending, setDocPending] = React.useState(false);
+  const [removingDocId, setRemovingDocId] = React.useState<string | null>(null);
   const [rebookDate, setRebookDate] = React.useState("");
   const [rebookTime, setRebookTime] = React.useState("");
   const [rebookLogbook, setRebookLogbook] = React.useState("");
@@ -205,7 +218,7 @@ export function ParentMeetingCard({
     const next: LocalImage[] = [];
     for (const f of Array.from(files)) {
       if (!f.type.startsWith("image/")) continue;
-      next.push({ name: f.name, url: URL.createObjectURL(f) });
+      next.push({ name: f.name, url: URL.createObjectURL(f), file: f });
     }
     setImages((prev) => [...prev, ...next].slice(0, 10));
   }
@@ -224,6 +237,10 @@ export function ParentMeetingCard({
       m.attendanceLogbookRef ?? generateLogbookRef(m.meetingDatetime, m.id),
     );
     setMinutes(m.minutesOfMeeting ?? "");
+    const recorded = new Set(
+      (m.attendees ?? []).map((a) => a.userId).filter((v): v is string => !!v),
+    );
+    setCheckedInvitees((m.invitees ?? []).map((u) => u.id).filter((id) => recorded.has(id)));
     setAttendees([...(m.attendees ?? [])]);
     setRebookDate("");
     setRebookTime("");
@@ -274,6 +291,45 @@ export function ParentMeetingCard({
     setAttendees((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function toggleCheckedInvitee(id: string) {
+    setCheckedInvitees((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  async function uploadPickedDocs(): Promise<{ uploaded: number; failed: boolean }> {
+    const toUpload = images.map((i) => i.file).filter((f): f is File => !!f);
+    let uploaded = 0;
+    let failed = false;
+    // One file per request, dropping each success from the picker as we go —
+    // a mid-batch failure never duplicates on retry.
+    for (const f of toUpload) {
+      try {
+        await uploadMeetingAttachments(m.id, [f]);
+        uploaded += 1;
+        setImages((prev) => prev.filter((i) => i.file !== f));
+      } catch {
+        failed = true;
+        break;
+      }
+    }
+    return { uploaded, failed };
+  }
+
+  async function removeDoc(id: string) {
+    if (removingDocId) return;
+    setRemovingDocId(id);
+    setError(null);
+    try {
+      await deleteMeetingAttachment(m.id, id);
+      onChanged();
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setRemovingDocId(null);
+    }
+  }
+
   async function saveOutcome(attended: boolean) {
     if (attended && (!minutes.trim() || !logbook.trim())) {
       setError("Log the minutes of meeting.");
@@ -282,26 +338,45 @@ export function ParentMeetingCard({
     setPending(true);
     setError(null);
     try {
-      // Drop unnamed rows; cap at the API's 20-entry limit.
-      const cleaned = attendees
+      // Drop unnamed rows; cap at the API's 20-entry limit. Free-text
+      // entries carry no userId; invitee-linked entries are rebuilt from the
+      // checklist below so unchecking removes them.
+      const inviteesById = new Map((m.invitees ?? []).map((u) => [u.id, u]));
+      const freeText = attendees
         .filter((a) => a.name.trim())
-        .slice(0, 20)
         .map((a) => ({ name: a.name.trim(), role: a.role }));
+      const checked = attended
+        ? checkedInvitees
+            .map((id) => inviteesById.get(id))
+            .filter((u): u is AdmMeetingInvitee => !!u)
+            .map(inviteeToAttendee)
+        : [];
+      // Checked invitees win the 20-entry cap over free-text rows.
+      const merged = [...checked, ...freeText].slice(0, 20);
       await apiClient.patch(`/api/adm/meetings/${m.id}`, {
         attended,
         ...(minutes.trim() ? { minutesOfMeeting: minutes.trim() } : {}),
         ...(logbook.trim() ? { attendanceLogbookRef: logbook.trim() } : {}),
-        ...(attended ? { attendees: cleaned } : {}),
+        ...(attended ? { attendees: merged } : {}),
       });
+      let docsFailed = false;
+      let docsUploaded = 0;
       if (attended) {
+        ({ uploaded: docsUploaded, failed: docsFailed } = await uploadPickedDocs());
+      }
+      if (attended) {
+        if (docsFailed) {
+          setError("Outcome saved, but some document images could not be uploaded — retry Attach below.");
+        } else {
+          closeDialog();
+        }
         toast.success({
           title: "Attendance recorded",
           description:
-            images.length > 0
-              ? `Minutes and logbook saved with ${images.length} image${images.length === 1 ? "" : "s"} attached below.`
+            docsUploaded > 0 && !docsFailed
+              ? `Minutes and logbook saved with ${docsUploaded} image${docsUploaded === 1 ? "" : "s"} attached.`
               : "Minutes and logbook saved — the case can move to certification.",
         });
-        closeDialog();
         // Parents attended, so no home visitation is needed — let the page
         // slide the certification fill-up straight in when certifiable.
         onAttendedConfirmed();
@@ -398,97 +473,278 @@ export function ParentMeetingCard({
         </Button>
       </div>
 
-      <Dialog
+      <CardModal
         open={logOpen}
-        onOpenChange={(open) => {
-          if (!open) setLogOpen(false);
-        }}
+        onClose={() => setLogOpen(false)}
+        title="Attendance log"
+        description="Full record of this parent meeting."
+        size="md"
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Attendance log</DialogTitle>
-            <DialogDescription>
-              Full record of this parent meeting.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.logCard} style={{ marginTop: 0 }}>
-            <dl className={styles.metaList}>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Schedule</dt>
-                <dd className={styles.metaValue} style={{ margin: 0 }}>
-                  {formatManilaDate(m.meetingDatetime)} at{" "}
-                  {formatManilaTime(m.meetingDatetime)}
+        <div
+          className={styles.modalBody}
+          style={needsOutcome ? undefined : { marginBottom: 0 }}
+        >
+          <dl className={styles.kpiGrid} style={{ margin: 0 }}>
+            <div className={styles.kpi}>
+              <dt className={styles.metaLabel}>Date</dt>
+              <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                {formatManilaDate(m.meetingDatetime)}
+              </dd>
+            </div>
+            <div className={styles.kpi}>
+              <dt className={styles.metaLabel}>Time</dt>
+              <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                {formatManilaTime(m.meetingDatetime)}
+              </dd>
+            </div>
+            <div className={styles.kpi}>
+              <dt className={styles.metaLabel}>Venue</dt>
+              <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                {venueLabel(m.venue)}
+              </dd>
+            </div>
+            <div className={styles.kpi}>
+              <dt className={styles.metaLabel}>Status</dt>
+              <dd style={{ margin: 0 }}>
+                {m.attended ? (
+                  <Badge variant="success">Attended</Badge>
+                ) : timing.state === "live" ? (
+                  <Badge variant="success">Live now</Badge>
+                ) : timing.state === "overdue" ? (
+                  <Badge variant="destructive">Overdue</Badge>
+                ) : timing.state === "upcoming" ? (
+                  <Badge variant="outline">Upcoming</Badge>
+                ) : (
+                  <Badge variant="outline">Booked</Badge>
+                )}
+              </dd>
+            </div>
+            <div className={`${styles.kpi} ${styles.kpiFull}`}>
+              <dt className={styles.metaLabel}>Booked by</dt>
+              <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                {m.recordedBy}
+              </dd>
+            </div>
+            {showOutcomeRecords && m.attendanceLogbookRef ? (
+              <div className={`${styles.kpi} ${styles.kpiFull}`}>
+                <dt className={styles.metaLabel}>Logbook ref</dt>
+                <dd
+                  className={`${styles.kpiValue} ${styles.mono}`}
+                  style={{ margin: 0 }}
+                >
+                  {m.attendanceLogbookRef}
                 </dd>
-              </div>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Venue</dt>
-                <dd className={styles.metaValue} style={{ margin: 0 }}>
-                  {venueLabel(m.venue)}
-                </dd>
-              </div>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Booked by</dt>
-                <dd className={styles.metaValue} style={{ margin: 0 }}>
-                  {m.recordedBy}
-                </dd>
-              </div>
-              {showOutcomeRecords && m.attendanceLogbookRef ? (
-                <div className={styles.metaItem}>
-                  <dt className={styles.metaLabel}>Logbook ref</dt>
-                  <dd
-                    className={`${styles.metaValue} ${styles.mono}`}
-                    style={{ margin: 0 }}
-                  >
-                    {m.attendanceLogbookRef}
-                  </dd>
-                </div>
-              ) : null}
-              {showOutcomeRecords && (m.attendees ?? []).length > 0 ? (
-                <div className={styles.metaItem}>
-                  <dt className={styles.metaLabel}>
-                    Attendees ({m.attendees.length})
-                  </dt>
-                  <dd className={styles.metaValue} style={{ margin: 0 }}>
-                    {m.attendees.map(attendeeLabel).join("; ")}
-                  </dd>
-                </div>
-              ) : null}
-              {showOutcomeRecords && m.minutesOfMeeting ? (
-                <div className={styles.metaItem}>
-                  <dt className={styles.metaLabel}>Minutes</dt>
-                  <dd className={styles.metaValue} style={{ margin: 0 }}>
-                    {m.minutesOfMeeting}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-            {images.length > 0 ? (
-              <div className={styles.thumbGrid}>
-                {images.map((img) => (
-                  <figure key={img.url} className={styles.thumbItem}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.url}
-                      alt={img.name}
-                      className={styles.thumb}
-                    />
-                    <figcaption className={styles.thumbName} title={img.name}>
-                      {img.name}
-                    </figcaption>
-                  </figure>
-                ))}
               </div>
             ) : null}
-          </div>
+          </dl>
+          {(m.invitees ?? []).length > 0 ? (
+            <div>
+              <p
+                className={styles.metaLabel}
+                style={{ margin: "0 0 0.375rem" }}
+              >
+                Invited · {(m.invitees ?? []).length}
+              </p>
+              <ul
+                className={styles.badgeRow}
+                style={{ margin: 0, padding: 0, listStyle: "none" }}
+              >
+                {(m.invitees ?? []).map((u) => (
+                  <li key={u.id}>
+                    <Badge variant="secondary">
+                      {meetingInviteeLabel(u)}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {showOutcomeRecords && (m.attendees ?? []).length > 0 ? (
+            <div>
+              <p
+                className={styles.metaLabel}
+                style={{ margin: "0 0 0.375rem" }}
+              >
+                Attendees · {m.attendees.length}
+              </p>
+              <ul
+                className={styles.badgeRow}
+                style={{ margin: 0, padding: 0, listStyle: "none" }}
+              >
+                {m.attendees.map((a, idx) => (
+                  <li key={`${a.name}-${idx}`}>
+                    <Badge variant="secondary">{attendeeLabel(a)}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {showOutcomeRecords && (m.attachments ?? []).length > 0 ? (
+            <div>
+              <p
+                className={styles.metaLabel}
+                style={{ margin: "0 0 0.375rem" }}
+              >
+                Documents · {(m.attachments ?? []).length}
+              </p>
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.25rem",
+                }}
+              >
+                {(m.attachments ?? []).map((d) => (
+                  <li key={d.id}>
+                    <a
+                      href={d.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={d.fileName}
+                      className={`${styles.metaValue} ${styles.mono}`}
+                    >
+                      {d.fileName}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {showOutcomeRecords && m.minutesOfMeeting ? (
+            <div>
+              <p
+                className={styles.metaLabel}
+                style={{ margin: "0 0 0.375rem" }}
+              >
+                Minutes
+              </p>
+              <div className={styles.logCard} style={{ marginTop: 0 }}>
+                <p className={styles.cardText} style={{ margin: 0 }}>
+                  {m.minutesOfMeeting}
+                </p>
+              </div>
+            </div>
+          ) : null}
+          {images.length > 0 ? (
+            <div className={styles.thumbGrid}>
+              {images.map((img) => (
+                <figure key={img.url} className={styles.thumbItem}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.name}
+                    className={styles.thumb}
+                  />
+                  <figcaption className={styles.thumbName} title={img.name}>
+                    {img.name}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {needsOutcome ? (
           <div className={styles.attendBtns}>
-            {needsOutcome ? (
-              <>
+            <Button
+              disabled={pending}
+              onClick={() => {
+                setLogOpen(false);
+                openYesDialog();
+              }}
+            >
+              {pending ? (
+                <Loader2
+                  className="animate-spin"
+                  aria-hidden="true"
+                  style={{ width: "0.875rem", height: "0.875rem" }}
+                />
+              ) : null}
+              Yes
+            </Button>
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                setLogOpen(false);
+                openAskDialog();
+              }}
+            >
+              {pending ? (
+                <Loader2
+                  className="animate-spin"
+                  aria-hidden="true"
+                  style={{ width: "0.875rem", height: "0.875rem" }}
+                />
+              ) : null}
+              No
+            </Button>
+          </div>
+        ) : null}
+      </CardModal>
+
+      <CardModal
+        open={dialogOpen}
+        onClose={closeDialog}
+        title={
+          step === "rebook"
+            ? "Book home visitation"
+            : step === "yes"
+              ? "Log attendance"
+              : "Did the parent/guardian attend?"
+        }
+        description={
+          step === "rebook"
+            ? "Pick a new schedule for the home visitation."
+            : step === "yes"
+              ? "Log the attendance and minutes for this meeting."
+              : "Choose an answer to record the outcome."
+        }
+        size={step === "yes" ? "md" : "sm"}
+      >
+          {step === "idle" ? (
+            <>
+              <dl className={styles.kpiGrid} style={{ margin: 0 }}>
+                <div className={styles.kpi}>
+                  <dt className={styles.metaLabel}>Venue</dt>
+                  <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                    {venueLabel(m.venue)}
+                  </dd>
+                </div>
+                <div className={styles.kpi}>
+                  <dt className={styles.metaLabel}>Date</dt>
+                  <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                    {formatManilaDate(m.meetingDatetime)}
+                  </dd>
+                </div>
+                <div className={styles.kpi}>
+                  <dt className={styles.metaLabel}>Time</dt>
+                  <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                    {formatManilaTime(m.meetingDatetime)}
+                  </dd>
+                </div>
+                <div className={styles.kpi}>
+                  <dt className={styles.metaLabel}>Status</dt>
+                  <dd style={{ margin: 0 }}>
+                    {m.attended ? (
+                      <Badge variant="success">Attended</Badge>
+                    ) : timing.state === "live" ? (
+                      <Badge variant="success">Live now</Badge>
+                    ) : timing.state === "overdue" ? (
+                      <Badge variant="destructive">Overdue</Badge>
+                    ) : (
+                      <Badge variant="outline">Upcoming</Badge>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <div className={styles.choiceGrid}>
                 <Button
+                  className={styles.choiceBtn}
                   disabled={pending}
-                  onClick={() => {
-                    setLogOpen(false);
-                    openYesDialog();
-                  }}
+                  onClick={openYesDialog}
                 >
                   {pending ? (
                     <Loader2
@@ -501,11 +757,10 @@ export function ParentMeetingCard({
                 </Button>
                 <Button
                   variant="outline"
+                  className={styles.choiceBtn}
                   disabled={pending}
-                  onClick={() => {
-                    setLogOpen(false);
-                    openAskDialog();
-                  }}
+                  aria-busy={pending || undefined}
+                  onClick={() => void saveOutcome(false)}
                 >
                   {pending ? (
                     <Loader2
@@ -516,102 +771,8 @@ export function ParentMeetingCard({
                   ) : null}
                   No
                 </Button>
-              </>
-            ) : null}
-            <Button variant="ghost" onClick={() => setLogOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          if (!open) closeDialog();
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {step === "rebook"
-                ? "Book home visitation"
-                : step === "yes"
-                  ? "Log attendance"
-                  : "Did the parent/guardian attend?"}
-            </DialogTitle>
-            <DialogDescription>
-              {step === "rebook"
-                ? "Pick a new schedule for the home visitation."
-                : step === "yes"
-                  ? "Log the attendance and minutes for this meeting."
-                  : "Choose an answer to record the outcome."}
-            </DialogDescription>
-          </DialogHeader>
-          {step === "idle" ? (
-            <dl className={styles.metaList}>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Venue</dt>
-                <dd className={styles.metaValue} style={{ margin: 0 }}>
-                  {venueLabel(m.venue)}
-                </dd>
               </div>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Date</dt>
-                <dd className={styles.metaValue} style={{ margin: 0 }}>
-                  {formatManilaDate(m.meetingDatetime)}
-                </dd>
-              </div>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Time</dt>
-                <dd className={styles.metaValue} style={{ margin: 0 }}>
-                  {formatManilaTime(m.meetingDatetime)} (Philippine time)
-                </dd>
-              </div>
-            <div className={styles.metaItem}>
-              <dt className={styles.metaLabel}>Status</dt>
-              <dd className={styles.metaValue} style={{ margin: 0 }}>
-                {m.attended ? (
-                  <Badge variant="success">Attended</Badge>
-                ) : timing.state === "live" ? (
-                  <Badge variant="success">Live now</Badge>
-                ) : timing.state === "overdue" ? (
-                  <Badge variant="destructive">Overdue</Badge>
-                ) : (
-                  <Badge variant="outline">Upcoming</Badge>
-                )}
-              </dd>
-            </div>
-            </dl>
-          ) : null}
-
-          {step === "idle" ? (
-            <div className={styles.attendBtns}>
-              <Button disabled={pending} onClick={openYesDialog}>
-                {pending ? (
-                  <Loader2
-                    className="animate-spin"
-                    aria-hidden="true"
-                    style={{ width: "0.875rem", height: "0.875rem" }}
-                  />
-                ) : null}
-                Yes
-              </Button>
-              <Button
-                variant="outline"
-                disabled={pending} aria-busy={pending || undefined}
-                onClick={() => void saveOutcome(false)}
-              >
-                {pending ? (
-                  <Loader2
-                    className="animate-spin"
-                    aria-hidden="true"
-                    style={{ width: "0.875rem", height: "0.875rem" }}
-                  />
-                ) : null}
-                No
-              </Button>
-            </div>
+            </>
           ) : null}
 
           {step === "yes" ? (
@@ -625,6 +786,44 @@ export function ParentMeetingCard({
                 readOnly
                 aria-readonly="true"
               />
+              {(m.invitees ?? []).length > 0 ? (
+                <>
+                  <p className={styles.metaLabel} style={{ margin: 0 }}>
+                    Invited staff who attended
+                    {checkedInvitees.length > 0 ? ` · ${checkedInvitees.length} present` : ""}
+                  </p>
+                  {(m.invitees ?? []).map((u) => {
+                    const checked = checkedInvitees.includes(u.id);
+                    return (
+                      <label key={u.id} className={styles.inviteeRow}>
+                        <input
+                          type="checkbox"
+                          className={styles.nativeCheck}
+                          checked={checked}
+                          onChange={() =>
+                            setCheckedInvitees((prev) =>
+                              prev.includes(u.id)
+                                ? prev.filter((x) => x !== u.id)
+                                : [...prev, u.id],
+                            )
+                          }
+                          aria-label={`Mark ${u.fullName} attended`}
+                        />
+                        <span
+                          className={styles.customCheck}
+                          data-checked={checked ? "true" : "false"}
+                          aria-hidden="true"
+                        >
+                          {checked ? <Check size={12} strokeWidth={3} /> : null}
+                        </span>
+                        <span className={styles.inviteeName} title={meetingInviteeLabel(u)}>
+                          {meetingInviteeLabel(u)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </>
+              ) : null}
               <p className={styles.metaLabel} style={{ margin: 0 }}>
                 Attendees
               </p>
@@ -711,6 +910,29 @@ export function ParentMeetingCard({
                 multiple
                 onChange={(e) => pickImages(e.target.files)}
               />
+              {(m.attachments ?? []).length > 0 ? (
+                <div className={styles.thumbGrid}>
+                  {(m.attachments ?? []).map((d) => (
+                    <figure key={d.id} className={styles.thumbItem}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={d.fileUrl} alt={d.fileName} className={styles.thumb} />
+                      <figcaption className={styles.thumbName} title={d.fileName}>
+                        {d.fileName}
+                      </figcaption>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        disabled={removingDocId === d.id}
+                        aria-busy={removingDocId === d.id || undefined}
+                        onClick={() => void removeDoc(d.id)}
+                      >
+                        {removingDocId === d.id ? "Removing…" : "Remove"}
+                      </Button>
+                    </figure>
+                  ))}
+                </div>
+              ) : null}
               {images.length > 0 ? (
                 <div className={styles.thumbGrid}>
                   {images.map((img) => (
@@ -733,8 +955,7 @@ export function ParentMeetingCard({
                 </div>
               ) : null}
               <p className={styles.muted} style={{ margin: 0 }}>
-                Images preview here only — meeting document upload isn&apos;t
-                on the server yet.
+                New images upload when you save attendance.
               </p>
               {error ? (
                 <p className={styles.formError} role="alert">
@@ -825,8 +1046,7 @@ export function ParentMeetingCard({
               </div>
             </div>
           ) : null}
-        </DialogContent>
-      </Dialog>
+      </CardModal>
     </li>
   );
 }

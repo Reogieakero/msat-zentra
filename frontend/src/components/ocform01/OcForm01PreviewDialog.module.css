@@ -1,14 +1,5 @@
-/* Shared OCForm-01 preview overlay. Scrollbars stay hidden (content still
-   scrolls) to match the chat and folder surfaces. */
-
-.dialog {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.dialog::-webkit-scrollbar {
-  display: none;
-}
+/* Shared OCForm-01 preview overlay (rendered inside CardModal, which hides
+   the scrollbar and shows the scroll-down hint on overflow). */
 
 .signedLine {
   margin: 0 0 0.625rem;

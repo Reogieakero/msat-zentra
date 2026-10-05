@@ -87,9 +87,118 @@
   min-width: 0;
 }
 
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.admNotice {
+  position: fixed;
+  /* Below the fixed 3rem topbar (+1rem gap) so the navbar never covers it.
+     Portaled to document.body, above navbars (35/40/41) and dropdowns (50),
+     below modal dialogs. */
+  top: 4rem;
+  right: 1rem;
+  z-index: 70;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  max-width: 22rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  background-color: #dc2626;
+  border: 1px solid #b91c1c;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 300ms ease-out forwards;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #ffffff;
+}
+
+.admNoticeClosing {
+  animation: slideOutRight 250ms ease-in forwards;
+}
+
+.admNoticeIcon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: #ffffff;
+}
+
+.admNoticeContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.admNoticeTitle {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #ffffff;
+}
+
+.admNoticeBody {
+  margin-top: 0.125rem;
+  color: #fecaca;
+}
+
+.admNoticeClose {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #fecaca;
+  border-radius: var(--radius-sm);
+  padding: 0;
+}
+
+.admNoticeClose:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .collapse {
     transition: none;
+  }
+  .admNotice {
+    animation: none;
+    opacity: 1;
+  }
+  .admNoticeClosing {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 64rem) {
+  .admNotice {
+    right: 0.5rem;
+    left: 0.5rem;
+    max-width: none;
+    top: auto;
+    bottom: 1rem;
   }
 }
 

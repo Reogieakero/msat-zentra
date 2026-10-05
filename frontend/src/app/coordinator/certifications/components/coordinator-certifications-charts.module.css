@@ -1,8 +1,13 @@
-.card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  box-shadow: none;
+/* Shell now comes from the shared teacher section card (glow card) —
+   this file owns titles, chart furniture, and bars only. */
+
+/* Shell-less chart block — stacks title over content inside the page's
+   single left panel card. */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
 .sectionTitle {

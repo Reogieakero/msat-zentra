@@ -4,15 +4,20 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import {
   fetchCoordinatorReferrals,
   fetchCaseMeetings,
+  fetchCoordinatorCaseDetail,
   apiErrorMessage,
+  inviteeToAttendee,
   stageLabel,
   useNowTick,
   type AdmCaseRow,
   type AdmEligibility,
   type AdmMeeting,
+  type AdmMeetingAttachment,
+  type AdmMeetingInvitee,
 } from "../../components/coordinator-data";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { useTerm } from "@/lib/term/TermContext";
@@ -31,6 +36,10 @@ export interface CoordinatorReferralsModel
   limit: number;
   start: number;
   end: number;
+  /** Queue-wide pipeline counts served with the list response (unaffected
+      by the eligibility filter — the page stays truthful while filtering). */
+  stageCounts: Record<string, number>;
+  totalReferred: number;
   /** Initial load: no data yet — full page skeleton. */
   isInitialLoading: boolean;
   /** Background sync: data visible, refresh in flight — inline indicator. */
@@ -78,6 +87,10 @@ interface CoordinatorReferralsDialogs {
   setOutcomeMinutes: (v: string) => void;
   outcomeLogbook: string;
   setOutcomeLogbook: (v: string) => void;
+  /** Checked invitee ids for the invitee attendance checklist. */
+  outcomeInviteeIds: string[];
+  setOutcomeInviteeIds: (v: string[]) => void;
+  closeOutcome: () => void;
   forwardTarget: AdmCaseRow | null;
   setForwardTarget: (r: AdmCaseRow | null) => void;
   advanceTarget: AdmCaseRow | null;
@@ -93,7 +106,10 @@ interface CoordinatorReferralsActions {
   openBook: () => void;
   bookForRow: (row: AdmCaseRow) => void;
   closeBook: () => void;
-  openOutcome: (m: AdmMeeting) => void;
+  openOutcome: (m: AdmMeeting, row?: AdmCaseRow | null) => void;
+  /** Venue preset for a fresh booking (home-visit follow-up after a
+      no-show). Cleared whenever the book dialog closes. */
+  bookVenuePreset: "school" | "home" | null;
   prepareCreate: (row: AdmCaseRow) => Promise<void>;
   prepareCreatePending: boolean;
   closeSheet: () => void;
@@ -114,11 +130,13 @@ interface CoordinatorReferralsActions {
     datetime: string;
     venue: string;
     logbook?: string | null;
+    invitees?: { id: string; fullName?: string; role?: string }[];
   } | null;
   confirmBook: (fields: {
     meetingDatetime: string;
     venue: "school" | "home";
     logbook: string;
+    inviteeIds: string[];
   }) => void;
   outcomePending: boolean;
   confirmOutcome: () => void;
@@ -146,6 +164,9 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   const [outcomeAttended, setOutcomeAttended] = React.useState(true);
   const [outcomeMinutes, setOutcomeMinutes] = React.useState("");
   const [outcomeLogbook, setOutcomeLogbook] = React.useState("");
+  const [outcomeInviteeIds, setOutcomeInviteeIds] = React.useState<string[]>([]);
+  const [outcomeRow, setOutcomeRow] = React.useState<AdmCaseRow | null>(null);
+  const [bookVenuePreset, setBookVenuePreset] = React.useState<"school" | "home" | null>(null);
   const [forwardTarget, setForwardTarget] = React.useState<AdmCaseRow | null>(
     null,
   );
@@ -182,23 +203,36 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     setBookOpen(true);
   }
 
-  function openOutcome(m: AdmMeeting) {
+  function openOutcome(m: AdmMeeting, row?: AdmCaseRow | null) {
+    setOutcomeRow(row ?? null);
     setOutcomeTarget(m);
     setOutcomeAttended(m.attended);
     setOutcomeMinutes(m.minutesOfMeeting ?? "");
     setOutcomeLogbook(m.attendanceLogbookRef ?? "");
+    // Prefill the invitee checklist from previously recorded attendance
+    // (entries linked by userId); otherwise start unchecked.
+    const recorded = new Set(
+      (m.attendees ?? []).map((a) => a.userId).filter((v): v is string => !!v),
+    );
+    setOutcomeInviteeIds((m.invitees ?? []).map((u) => u.id).filter((id) => recorded.has(id)));
+  }
+
+  function closeOutcome() {
+    setOutcomeTarget(null);
+    setOutcomeInviteeIds([]);
   }
 
   function closeSheet() {
     setSelected(null);
     setBookOpen(false);
     setBookTarget(null);
-    setOutcomeTarget(null);
+    closeOutcome();
   }
 
   function closeBook() {
     setBookOpen(false);
     setBookTarget(null);
+    setBookVenuePreset(null);
     bookMutation.reset();
   }
 
@@ -213,11 +247,13 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   const referralsQuery = useQuery({
     // Eligibility is server-side (backend `eligibility` param) so total /
     // pagination stay truthful when filtering — never filter locally.
-    queryKey: ["coordinator-referrals", page, debounced, elig],
+    // Fixed 10 rows per page.
+    queryKey: ["coordinator-referrals", page, debounced, elig, 10],
     queryFn: ({ signal }) =>
       fetchCoordinatorReferrals(page, {
         q: debounced || undefined,
         eligibility: elig,
+        limit: 10,
         signal,
       }),
     placeholderData: (prev) => prev,
@@ -349,11 +385,32 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
 
   const selectedProfileId =
     selected && !isEarlyRow(selected) ? selected.id : null;
+  // Early referral rows have no profile, but their booked meetings still
+  // need to show live in the case sheet — resolve them through the case
+  // detail endpoint (which serves `referral:<id>` rows with full meeting
+  // fields: attendees, invitees, attachments).
+  const earlyRowId = selected && isEarlyRow(selected) ? selected.id : null;
+  const meetingsKey = selectedProfileId ?? earlyRowId;
   const meetingsQuery = useQuery({
-    queryKey: ["coordinator-meetings", selectedProfileId],
-    queryFn: ({ signal }) =>
-      fetchCaseMeetings(selectedProfileId as string, signal),
-    enabled: selectedProfileId !== null,
+    queryKey: ["coordinator-meetings", meetingsKey],
+    queryFn: async ({ signal }) => {
+      if (selectedProfileId) return fetchCaseMeetings(selectedProfileId, signal);
+      const detail = await fetchCoordinatorCaseDetail(earlyRowId as string, signal);
+      return detail.meetings.map((m) => ({
+        id: m.id,
+        meetingDatetime: m.meetingDatetime,
+        venue: m.venue,
+        attended: m.attended,
+        parentConfirmedAt: m.parentConfirmedAt,
+        minutesOfMeeting: m.minutesOfMeeting,
+        attendanceLogbookRef: m.attendanceLogbookRef,
+        attendees: m.attendees,
+        invitees: m.invitees ?? [],
+        attachments: m.attachments ?? [],
+        recordedBy: m.recordedBy,
+      }));
+    },
+    enabled: meetingsKey !== null,
     staleTime: 30_000,
   });
   const meetings = React.useMemo(
@@ -363,9 +420,9 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
 
   // A case with a still-booked (unattended) meeting cannot take a second
   // booking — the dialog reschedules that meeting instead. Prefer the live
-  // meetings list for the open sheet (profile cases), else fall back to the
-  // row's latest-meeting snapshot (covers table rows, incl. early
-  // referrals, without an extra fetch).
+  // meetings list for the open sheet (profile and early rows), else fall
+  // back to the row's latest-meeting snapshot (covers the table row menu
+  // without an extra fetch).
   const rescheduleMeeting = React.useMemo(() => {
     const target = bookTarget ?? selected;
     if (!target) return null;
@@ -377,6 +434,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
           datetime: pending.meetingDatetime,
           venue: pending.venue,
           logbook: pending.attendanceLogbookRef,
+          invitees: pending.invitees,
         };
       }
       return null;
@@ -387,6 +445,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
         id: rowMeeting.id,
         datetime: rowMeeting.datetime,
         venue: rowMeeting.venue,
+        invitees: (rowMeeting.inviteeIds ?? []).map((id) => ({ id })),
       };
     }
     return null;
@@ -398,9 +457,12 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       meetingDatetime: string;
       venue: "school" | "home";
       logbook: string;
+      inviteeIds: string[];
     }) => {
       // Reschedule path: the case already has a booked (unattended)
-      // meeting — move it instead of creating a second booking.
+      // meeting — move it instead of creating a second booking. The invite
+      // list rides along (omitted only when the dialog never knew it, which
+      // cannot happen — both prefill sources carry it).
       if (rescheduleMeeting) {
         const { data } = await apiClient.patch(
           `/api/adm/meetings/${rescheduleMeeting.id}/reschedule`,
@@ -410,6 +472,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
             ...(fields.logbook.trim()
               ? { attendanceLogbookRef: fields.logbook.trim() }
               : {}),
+            inviteeIds: fields.inviteeIds,
           },
         );
         return { meeting: data, venue: fields.venue, rescheduled: true as const };
@@ -429,12 +492,16 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
         ...(fields.logbook.trim()
           ? { attendanceLogbookRef: fields.logbook.trim() }
           : {}),
+        ...(fields.inviteeIds.length > 0 ? { inviteeIds: fields.inviteeIds } : {}),
       });
       return { meeting: data, venue: fields.venue, rescheduled: false as const };
     },
     onSuccess: ({ venue: bookedVenue, rescheduled }) => {
       void queryClient.invalidateQueries({ queryKey: ["coordinator-meetings"] });
       invalidateReferrals();
+      // A newly booked (or moved) meeting enters reminder evaluation now
+      // instead of waiting for the next 30-second tick.
+      refreshBookingReminders();
       closeBook();
       toast.success({
         title: rescheduled ? "Meeting rescheduled" : "Meeting booked",
@@ -457,6 +524,15 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   const outcomeMutation = useMutation({
     mutationFn: async () => {
       if (!outcomeTarget) throw new Error("No meeting selected.");
+      // Merge the invitee checklist into the stored attendees: free-text
+      // entries are preserved, invitee-linked entries are replaced by the
+      // checked set. Skipped for missed meetings (previous record stands).
+      const byId = new Map((outcomeTarget.invitees ?? []).map((u) => [u.id, u]));
+      const kept = (outcomeTarget.attendees ?? []).filter((a) => !a.userId);
+      const checked = outcomeInviteeIds
+        .map((id) => byId.get(id))
+        .filter((u): u is AdmMeetingInvitee => !!u)
+        .map(inviteeToAttendee);
       const { data } = await apiClient.patch(
         `/api/adm/meetings/${outcomeTarget.id}`,
         {
@@ -467,6 +543,9 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
           ...(outcomeLogbook.trim()
             ? { attendanceLogbookRef: outcomeLogbook.trim() }
             : {}),
+          ...(outcomeAttended
+            ? { attendees: [...checked, ...kept].slice(0, 20) }
+            : {}),
         },
       );
       return data;
@@ -474,13 +553,29 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["coordinator-meetings"] });
       invalidateReferrals();
-      setOutcomeTarget(null);
-      toast.success({
-        title: outcomeAttended ? "Attendance recorded" : "Outcome recorded",
-        description: outcomeAttended
-          ? "Minutes logged — the case can move to certification."
-          : "Marked as not attended — the home visitation path applies.",
-      });
+      // Re-evaluate now so any other due meeting drops its card without
+      // waiting for the next tick.
+      refreshBookingReminders();
+      const wasMissed = !outcomeAttended;
+      const missedRow = outcomeRow;
+      closeOutcome();
+      if (wasMissed && missedRow) {
+        // No-show: move straight into booking the home visitation (venue
+        // preset to home) instead of leaving the coordinator to hunt for it.
+        setBookVenuePreset("home");
+        bookForRow(missedRow);
+        toast.success({
+          title: "Marked as not attended",
+          description: "Booking the home visitation now.",
+        });
+      } else {
+        toast.success({
+          title: outcomeAttended ? "Attendance recorded" : "Outcome recorded",
+          description: outcomeAttended
+            ? "Minutes logged — the case can move to certification."
+            : "Marked as not attended — the home visitation path applies.",
+        });
+      }
     },
     onError: (err) =>
       toast.error({
@@ -505,6 +600,10 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   const limit = referralsQuery.data?.limit ?? 20;
   const start = total === 0 ? 0 : (safePage - 1) * limit + 1;
   const end = Math.min(safePage * limit, total);
+  // Default to zeros (not undefined) so the snapshot card renders
+  // deterministically on first paint instead of flashing blanks.
+  const stageCounts = referralsQuery.data?.stageCounts ?? {};
+  const totalReferred = referralsQuery.data?.totalReferred ?? 0;
 
   return {
     now,
@@ -515,6 +614,8 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     limit,
     start,
     end,
+    stageCounts,
+    totalReferred,
     isInitialLoading: referralsQuery.isPending,
     isSyncing: referralsQuery.isFetching && !referralsQuery.isPending,
     referralsError: referralsQuery.isError || !referralsQuery.data,
@@ -558,6 +659,9 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     setOutcomeMinutes,
     outcomeLogbook,
     setOutcomeLogbook,
+    outcomeInviteeIds,
+    setOutcomeInviteeIds,
+    closeOutcome,
     forwardTarget,
     setForwardTarget,
     advanceTarget,
@@ -594,11 +698,13 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     bookPendingId: bookMutation.isPending ? (bookTarget?.id ?? selected?.id ?? null) : null,
     bookError: bookMutation.error ? apiErrorMessage(bookMutation.error) : null,
     bookMode,
+    bookVenuePreset,
     rescheduleMeeting,
     confirmBook: (fields: {
       meetingDatetime: string;
       venue: "school" | "home";
       logbook: string;
+      inviteeIds: string[];
     }) => {
       if (!bookMutation.isPending) bookMutation.mutate(fields);
     },

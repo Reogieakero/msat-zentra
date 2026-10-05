@@ -3,18 +3,11 @@
 import * as React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FolderCard } from "@/components/ui/FolderCard";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import {
   fetchOcForm01Detail,
@@ -25,10 +18,10 @@ import {
   buildGcForm03Data,
   type GcForm03Data,
 } from "@/app/guidance/adm/components/gcform03-data";
+import { anecdotalCategoryColor } from "@/app/guidance/referrals/components/guidance-referrals-format";
 import {
   admCaseStatusVariant,
   apiErrorMessage,
-  consultReviewerLabel,
   deriveAdmCaseStatus,
   eligibilityLabel,
   endorsementRecommendation,
@@ -45,6 +38,7 @@ import {
   FORM_LABELS,
 } from "../components/coordinator-referrals-constants";
 import { CoordinatorReferralsCreateDialog } from "../components/coordinator-referrals-create-dialog";
+import { CoordinatorReferralsForwardDialog } from "../components/coordinator-referrals-confirm-dialogs";
 import {
   CertificationSheet,
   type CertSheetContext,
@@ -55,6 +49,11 @@ import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";
 import { ParentMeetingCard } from "./parent-meeting-card";
 import { CoordinatorCaseSkeleton } from "./coordinator-case-skeleton";
+import { CASE_STEPS, type CaseStepId } from "./case-steps";
+import {
+  deriveChecklist,
+  EligibilityChecklistCard,
+} from "./eligibility-checklist-card";
 import styles from "./case-page.module.css";
 
 function BackButton() {
@@ -69,6 +68,76 @@ function BackButton() {
       <ChevronLeft aria-hidden="true" />
       <span>Back to referrals</span>
     </button>
+  );
+}
+
+/* Auto-ask endorsement to Principal on the full case file: once the case
+   sits certified (stage certification + recommendation recorded) and
+   unforwarded, pop the forward confirm every visit until it is endorsed.
+   Dismissing stays dismissed for this visit — the flip guard refires only
+   when a newly qualifying case loads. */
+function ForwardToPrincipalGate({
+  caseData,
+  onForwarded,
+}: {
+  caseData: CoordinatorCaseDetail | null;
+  onForwarded: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [forwardOpen, setForwardOpen] = React.useState(false);
+  const forwardMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      const { data } = await apiClient.patch(`/api/adm/${profileId}/stage`, {
+        stage: "principal_approval",
+      });
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["coordinator-referrals"] });
+      void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
+      setForwardOpen(false);
+      toast.success({
+        title: "Endorsed to Principal",
+        description: "The case is now locked awaiting the Principal's signature.",
+      });
+      onForwarded();
+    },
+    onError: (err) =>
+      toast.error({
+        title: "Could not endorse case",
+        description: apiErrorMessage(err),
+      }),
+  });
+
+  const details = caseData?.certificationDetails as
+    | { recommendation?: unknown }
+    | null;
+  const hasRecommendation =
+    typeof details?.recommendation === "string" &&
+    details.recommendation.trim().length > 0;
+  const eligible =
+    caseData?.kind === "profile" &&
+    !!caseData.profileId &&
+    caseData.stage === "certification" &&
+    !caseData.approvedBy &&
+    hasRecommendation;
+  const [wasEligible, setWasEligible] = React.useState(false);
+  if (eligible !== wasEligible) {
+    setWasEligible(eligible);
+    if (eligible && !forwardOpen) setForwardOpen(true);
+  }
+
+  return (
+    <CoordinatorReferralsForwardDialog
+      target={forwardOpen && caseData ? { student: caseData.student } : null}
+      pending={forwardMutation.isPending}
+      onClose={() => setForwardOpen(false)}
+      onConfirm={() => {
+        if (caseData?.profileId && !forwardMutation.isPending) {
+          forwardMutation.mutate(caseData.profileId);
+        }
+      }}
+    />
   );
 }
 
@@ -234,6 +303,9 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
   }
 
   function handleAttendedConfirmed() {
+    // Parents attended → skip the home visit path and land on the final
+    // wizard step, then slide the certification fill-up straight in.
+    setActiveTab("certify");
     if (certContext && profileCertifiable) setCertSheetOpen(true);
   }
 
@@ -280,6 +352,28 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
   // Parent-meetings carousel — one schedule visible at a time. Null
   // means "follow the latest schedule"; chevrons pin an explicit index.
   const [meetingIdx, setMeetingIdx] = React.useState<number | null>(null);
+  // Tabbed wizard — one section at a time, each with its own instructing
+  // card (What / Why / Action). Deep-linkable via ?step=referral etc.;
+  // invalid values fall back to the first tab.
+  const stepParam = searchParams.get("step") as CaseStepId | null;
+  const [activeTab, setActiveTab] = React.useState<CaseStepId>(
+    CASE_STEPS.some((s) => s.id === stepParam) ? (stepParam as CaseStepId) : "referral",
+  );
+  const [wasStepParam, setWasStepParam] = React.useState<string | null>(null);
+  if ((stepParam ?? null) !== wasStepParam) {
+    setWasStepParam(stepParam ?? null);
+    if (stepParam && CASE_STEPS.some((s) => s.id === stepParam)) {
+      setActiveTab(stepParam);
+    }
+  }
+  const activeStepIdx = Math.max(
+    0,
+    CASE_STEPS.findIndex((s) => s.id === activeTab),
+  );
+  function goStep(id: CaseStepId) {
+    setActiveTab(id);
+    setMeetingIdx(null);
+  }
 
   // Evidence "See details": referral + anecdotal rows open their full
   // official previews; everything else opens the details overlay. An
@@ -387,11 +481,12 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
   }
 
   const d = detailQuery.data;
-  const caseStatus = deriveAdmCaseStatus(
-    d.stage,
-    d.eligibilityStatus,
-    d.approvedBy,
-  );
+   const caseStatus = deriveAdmCaseStatus(
+     d.stage,
+     d.eligibilityStatus,
+     d.approvedBy,
+     d.referral?.status ?? null,
+   );
   const anecdotal = d.anecdotal;
   const referral = d.referral;
   // Endorsed to Principal (awaiting signature) locks the anecdotal file:
@@ -402,13 +497,39 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
     d.stage === "principal_approval" &&
     !d.approvedBy &&
     d.eligibilityStatus === "eligible";
+  // Derived checklist input — mirrors backend evaluateAdmEligibility.
+  // Eligibility itself stays server-derived; this only visualises it.
+  const hasMinutes = d.forms.some((f) => f.formType === "MINUTES_OF_MEETING");
+  const hasHomeVisit = d.forms.some((f) => f.formType === "HV_FORM");
+  const hasCertification = d.forms.some(
+    (f) => f.formType === "CERTIFICATION" && f.status === "verified",
+  );
+  const checklist = deriveChecklist({
+    hasReferral: referral !== null,
+    hasAnecdotal: anecdotal !== null,
+    meetingAttended: hasAttendedMeeting,
+    hasMinutes,
+    hasHomeVisit,
+    hasCertification,
+  });
+  const stepDone: Record<CaseStepId, boolean> = {
+    referral: referral !== null,
+    anecdotal: anecdotal !== null,
+    meetings: hasAttendedMeeting || hasHomeVisit,
+    evidence: d.forms.length > 0,
+    certify: hasCertification,
+  };
+  const activeStep = CASE_STEPS[activeStepIdx] ?? CASE_STEPS[0];
 
   return (
     <section className={styles.page} aria-label={`Case file for ${d.student}`}>
       <BackButton />
 
       <header className={styles.header}>
-        <div>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
+        <div className={styles.headerSection}>
           <h1 className={styles.studentName}>{d.student}</h1>
           <p className={styles.studentSub}>
             <span className={styles.inlineLabel}>LRN</span>
@@ -420,49 +541,9 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
               <span className={styles.inlineValue}>{d.grade}</span>
             </p>
           ) : null}
-          <p className={styles.studentSub}>
-            <span className={styles.inlineLabel}>Stage</span>
-            <span className={styles.inlineValue}>
-              {stageLabel(d.stage)}
-            </span>
-          </p>
-          <p className={styles.studentSub}>
-            <span className={styles.inlineLabel}>Eligibility</span>
-            <span className={styles.inlineValue}>
-              {eligibilityLabel(d.eligibilityStatus)}
-            </span>
-          </p>
-          <div className={styles.badgeRow}>
-            <Badge variant="secondary">ADM</Badge>
-            <Badge
-              variant={admCaseStatusVariant(caseStatus.key)}
-              title={stageLabel(d.stage)}
-            >
-              {caseStatus.label}
-            </Badge>
-            <Badge
-              variant={
-                d.eligibilityStatus === "eligible"
-                  ? "secondary"
-                  : d.eligibilityStatus === "ineligible"
-                    ? "destructive"
-                    : "outline"
-              }
-            >
-              {eligibilityLabel(d.eligibilityStatus)}
-            </Badge>
-          </div>
-        </div>
-        <div>
-          {d.kind === "referral" &&
-          orderedMeetings.some((mtg) => mtg.attended) ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginBottom: "0.5rem",
-              }}
-            >
+          <div className={styles.headerActions}>
+            {d.kind === "referral" &&
+            orderedMeetings.some((mtg) => mtg.attended) ? (
               <Button
                 disabled={createMutation.isPending || preparingProfile}
                 aria-busy={
@@ -483,234 +564,254 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
                     ? "Preparing…"
                     : "Create learner profile"}
               </Button>
-            </div>
-          ) : null}
-          {certContext && profileCertifiable && hasAttendedMeeting ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginBottom: "0.5rem",
-              }}
-            >
+            ) : null}
+            {certContext && profileCertifiable && hasAttendedMeeting ? (
               <Button onClick={() => setCertSheetOpen(true)}>
                 Continue to certification
               </Button>
-            </div>
-          ) : null}
-          <p className={styles.headerNote} style={{ margin: 0 }}>
-            Referred by {d.preparedBy || "—"}
-          </p>
-          {d.datePrepared ? (
-            <p className={styles.headerNote} style={{ margin: "0.25rem 0 0" }}>
-              {d.datePrepared}
+            ) : null}
+          </div>
+        </div>
+        <div className={styles.headerDivider} aria-hidden="true" />
+        <div className={styles.headerSection}>
+          <div className={styles.sideField}>
+            <span className={styles.sideFieldLabel}>Stage</span>
+            <span className={styles.sideFieldValue}>
+              {stageLabel(d.stage)}
+            </span>
+          </div>
+          <div className={styles.sideField}>
+            <span className={styles.sideFieldLabel}>Eligibility</span>
+            <span className={styles.sideFieldValue}>
+              {eligibilityLabel(d.eligibilityStatus)}
+            </span>
+          </div>
+          <div className={styles.badgeRow}>
+            <Badge variant="secondary">ADM</Badge>
+            <Badge
+              variant={admCaseStatusVariant(caseStatus.key)}
+              title={stageLabel(d.stage)}
+            >
+              {caseStatus.label}
+            </Badge>
+            <Badge
+              variant={
+                d.eligibilityStatus === "eligible"
+                  ? "secondary"
+                  : d.eligibilityStatus === "ineligible"
+                    ? "destructive"
+                    : "outline"
+              }
+            >
+              {eligibilityLabel(d.eligibilityStatus)}
+            </Badge>
+          </div>
+          <div className={styles.headerNotes}>
+            <p className={styles.headerNote}>
+              Referred by {d.preparedBy || "—"}
             </p>
-          ) : null}
-          {d.approvedBy ? (
-            <p className={styles.headerNote} style={{ margin: "0.25rem 0 0" }}>
-              Approved by {d.approvedBy}
-            </p>
-          ) : null}
-          {d.approvalDate ? (
-            <p className={styles.headerNote} style={{ margin: "0.25rem 0 0" }}>
-              {d.approvalDate}
-            </p>
-          ) : null}
+            {d.datePrepared ? (
+              <p className={styles.headerNote}>{d.datePrepared}</p>
+            ) : null}
+            {d.approvedBy ? (
+              <p className={styles.headerNote}>
+                Approved by {d.approvedBy}
+              </p>
+            ) : null}
+            {d.approvalDate ? (
+              <p className={styles.headerNote}>{d.approvalDate}</p>
+            ) : null}
+          </div>
+        </div>
+        <div className={styles.headerDivider} aria-hidden="true" />
+        <div className={styles.headerSteps} role="tablist" aria-label="Case file sections">
+          {CASE_STEPS.map((s, i) => {
+            const selected = s.id === activeTab;
+            const done = stepDone[s.id];
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`case-panel-${s.id}`}
+                id={`case-tab-${s.id}`}
+                className={styles.tabBtn}
+                data-selected={selected ? "true" : "false"}
+                data-done={done ? "true" : "false"}
+                onClick={() => goStep(s.id)}
+              >
+                <span className={styles.tabDot} aria-hidden="true">
+                  {done ? <Check size={12} strokeWidth={3} /> : `${i + 1}`}
+                </span>
+                <span>{s.short}</span>
+              </button>
+            );
+          })}
         </div>
       </header>
 
-      <div className={styles.grid}>
-        <div className={`${styles.card} ${styles.spanFull}`}>
-          <h2 className={styles.cardTitle}>Anecdotal report</h2>
-          {anecdotal ? (
-            <div className={styles.fileLayout}>
-              <div className={styles.fileSide}>
-                <button
-                  type="button"
-                  className={styles.folderBtn}
-                  onClick={() =>
-                    anecdotalLocked
-                      ? setEndorsedNoticeOpen(true)
-                      : setAnecdotalPreviewId(anecdotal.id)
-                  }
-                  aria-label={
-                    anecdotalLocked
-                      ? `Anecdotal report for ${d.student} is locked awaiting the Principal's signature`
-                      : `Open ${d.student}'s anecdotal report file (GCForm-01)`
-                  }
+      {/* Tabbed wizard: one section at a time, each guided by its own
+          instructing card (What / Why / Action). The sticky checklist
+          visualises the derived eligibility beside the active step. */}
+      <div className={styles.wizardLayout}>
+        <div className={styles.wizardMain}>
+          <div className={styles.instructCard} aria-live="polite">
+            <span className={styles.glowClip} aria-hidden="true">
+              <span className={styles.cardGlow} />
+            </span>
+            <div className={styles.instructHead}>
+              <p className={styles.instructKicker}>
+                Step {activeStepIdx + 1} of {CASE_STEPS.length} · {activeStep.label}
+                {stepDone[activeStep.id] ? " · Done" : ""}
+              </p>
+              <div className={styles.carouselNav}>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className={styles.carouselBtn}
+                  disabled={activeStepIdx <= 0}
+                  onClick={() => goStep(CASE_STEPS[activeStepIdx - 1].id)}
+                  aria-label="Previous step"
                 >
-                  <FolderCard
-                    label={d.student}
-                    sublabel={`${anecdotal.observationDate}, ${anecdotal.section}`}
-                    files={[
-                      {
-                        name: `OCForm-01_${anecdotal.observationDate}`,
-                        tag: `${friendlyWords(anecdotal.category)}, GCForm-01`,
-                        icon: "doc" as const,
-                      },
-                    ]}
-                  />
-                </button>
-                <p className={styles.openHint}>
-                  {anecdotalLocked
-                    ? "Endorsed — awaiting signature"
-                    : "Click the folder to preview"}
-                </p>
+                  <ChevronLeft aria-hidden="true" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className={styles.carouselBtn}
+                  disabled={activeStepIdx >= CASE_STEPS.length - 1}
+                  onClick={() => goStep(CASE_STEPS[activeStepIdx + 1].id)}
+                  aria-label="Next step"
+                >
+                  <ChevronRight aria-hidden="true" />
+                </Button>
               </div>
-              <dl className={styles.kpiGrid} style={{ margin: 0 }}>
-                <div className={styles.kpi}>
-                  <dt className={styles.metaLabel}>Observed</dt>
-                  <dd className={styles.kpiValue}>
-                    {anecdotal.observationDate}
-                  </dd>
-                </div>
-                <div className={styles.kpi}>
-                  <dt className={styles.metaLabel}>Category</dt>
-                  <dd className={styles.kpiValue}>
-                    {friendlyWords(anecdotal.category)}
-                  </dd>
-                </div>
-                <div className={styles.kpi}>
-                  <dt className={styles.metaLabel}>Confidentiality</dt>
-                  <dd className={styles.kpiValue}>
-                    {friendlyWords(anecdotal.confidentialityLevel)}
-                  </dd>
-                </div>
-                <div className={styles.kpi}>
-                  <dt className={styles.metaLabel}>Location</dt>
-                  <dd className={styles.kpiValue}>
-                    {anecdotal.descriptionOfLocation || "—"}
-                  </dd>
-                </div>
-              </dl>
+            </div>
+            <dl className={styles.instructList}>
+              <div className={styles.instructRow}>
+                <dt>What</dt>
+                <dd>{activeStep.what}</dd>
+              </div>
+              <div className={styles.instructRow}>
+                <dt>Why</dt>
+                <dd>{activeStep.why}</dd>
+              </div>
+              <div className={styles.instructRow}>
+                <dt>Next</dt>
+                <dd>{activeStep.action}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div
+            role="tabpanel"
+            id={`case-panel-${activeTab}`}
+            aria-labelledby={`case-tab-${activeTab}`}
+          >
+          {activeTab === "anecdotal" ? (
+          <>
+          {anecdotal ? (
+            <div className={styles.folderCenter}>
+            <button
+              type="button"
+              className={styles.folderBtn}
+              onClick={() =>
+                anecdotalLocked
+                  ? setEndorsedNoticeOpen(true)
+                  : setAnecdotalPreviewId(anecdotal.id)
+              }
+              aria-label={
+                anecdotalLocked
+                  ? `Anecdotal report for ${d.student} is locked awaiting the Principal's signature`
+                  : `Open ${d.student}'s anecdotal report file (GCForm-01)`
+              }
+            >
+              <FolderCard
+                label="GCForm-01"
+                sublabel={`${anecdotal.observationDate}, ${anecdotal.section}`}
+                folderColor={anecdotalCategoryColor(anecdotal.category)}
+                files={[
+                  {
+                    name: `OCForm-01_${anecdotal.observationDate}`,
+                    tag: friendlyWords(anecdotal.category),
+                    icon: "doc" as const,
+                  },
+                ]}
+              />
+            </button>
             </div>
           ) : (
             <p className={styles.muted}>No anecdotal write-up on file.</p>
           )}
-        </div>
-
-        <div className={styles.card}>
-          <h2 className={styles.cardTitle}>Recommendations</h2>
-          {(() => {
-            // The filed recommendation of the desk that endorsed this
-            // case to the ADM coordinator (nurse or guidance counselor).
-            // Direct referrals carry no endorsement — fall back to the
-            // adviser's anecdotal recommendations.
-            const endorsed = endorsementRecommendation(referral?.notes);
-            if (endorsed) {
-              return (
-                <>
-                  <p className={styles.metaLabel}>
-                    {consultReviewerLabel(referral?.consultReviewer ?? null)}{" "}
-                    endorsement
-                  </p>
-                  <p className={styles.cardText}>{endorsed}</p>
-                </>
-              );
-            }
-            if (anecdotal?.recommendations) {
-              return (
-                <>
-                  <p className={styles.metaLabel}>Adviser recommendations</p>
-                  <p className={styles.cardText}>
-                    {anecdotal.recommendations}
-                  </p>
-                </>
-              );
-            }
-            return (
-              <p className={styles.muted}>No recommendations recorded yet.</p>
-            );
-          })()}
-          {referral ? (
-            <>
-              <p className={styles.metaLabel} style={{ marginTop: "0.75rem" }}>
-                Referral reason
-              </p>
-              <p className={styles.cardText}>{referral.reason}</p>
-              <p className={styles.metaLabel} style={{ marginTop: "0.75rem" }}>
-                Status
-              </p>
-              <p className={styles.cardText} style={{ marginBottom: 0 }}>
-                {friendlyWords(referral.status)}
-              </p>
-            </>
+          </>
           ) : null}
-        </div>
-
-        <div className={styles.card}>
-          <h2 className={styles.cardTitle}>GC Form 03 · Referral form</h2>
+          {activeTab === "referral" ? (
+          <>
           {referral && anecdotal ? (
-            <div className={styles.fileLayout}>
-              <div className={styles.fileSide}>
-                <button
-                  type="button"
-                  className={styles.folderBtn}
-                  onClick={() => void openGcForm()}
-                  disabled={gcLoading}
-                  aria-label={`Open the GCForm-03 referral form file for ${d.student}`}
-                >
-                  <FolderCard
-                    label="GCForm-03"
-                    sublabel={`${d.student}, ${anecdotal.observationDate}`}
-                    files={[
-                      {
-                        name: `GCForm-03_${anecdotal.observationDate}`,
-                        tag: "Form completed",
-                        icon: "doc" as const,
-                      },
-                    ]}
-                  />
-                </button>
-                <p className={styles.openHint} role="status">
-                  {gcLoading ? "Loading referral form…" : "Click the folder to preview"}
-                </p>
-                {gcLoading ? (
-                  <Loader2
-                    className="animate-spin"
-                    aria-hidden
-                    style={{ width: "0.875rem", height: "0.875rem" }}
-                  />
-                ) : null}
-              </div>
-              <dl className={styles.kpiGrid} style={{ margin: 0 }}>
-                <div className={styles.kpi}>
-                  <dt className={styles.metaLabel}>Reviewer</dt>
-                  <dd className={styles.kpiValue}>
-                    {referral.consultReviewer
-                      ? friendlyWords(referral.consultReviewer)
-                      : "Direct referral"}
-                  </dd>
-                </div>
-                {referral.intakeNotes ? (
-                  <div className={`${styles.kpi} ${styles.kpiFull}`}>
-                    <dt className={styles.metaLabel}>Intake notes</dt>
-                    <dd className={styles.kpiSub}>{referral.intakeNotes}</dd>
-                  </div>
-                ) : null}
-                {referral.resolutionSummary ? (
-                  <div className={`${styles.kpi} ${styles.kpiFull}`}>
-                    <dt className={styles.metaLabel}>Resolution</dt>
-                    <dd className={styles.kpiSub}>
-                      {referral.resolutionSummary}
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
+            <div className={styles.folderCenter}>
+              <button
+                type="button"
+                className={styles.folderBtn}
+                onClick={() => void openGcForm()}
+                disabled={gcLoading}
+                aria-label={`Open the GCForm-03 referral form file for ${d.student}`}
+              >
+                <FolderCard
+                  label="GCForm-03"
+                  sublabel={`${d.student}, ${anecdotal.observationDate}`}
+                  folderColor={anecdotalCategoryColor(anecdotal.category)}
+                  files={[
+                    {
+                      name: `GCForm-03_${anecdotal.observationDate}`,
+                      tag: friendlyWords(anecdotal.category),
+                      icon: "doc" as const,
+                    },
+                  ]}
+                />
+              </button>
+              {gcLoading ? (
+                <Loader2
+                  className="animate-spin"
+                  aria-hidden
+                  style={{ width: "0.875rem", height: "0.875rem" }}
+                />
+              ) : null}
             </div>
           ) : (
             <p className={styles.muted}>No referral form on file.</p>
           )}
-        </div>
-
-        <div className={styles.card}>
+          </>
+          ) : null}
+          {activeTab === "evidence" ? (
+          <div className={styles.card}>
+          <span className={styles.glowClip} aria-hidden="true">
+            <span className={styles.cardGlow} />
+          </span>
           <h2 className={styles.cardTitle}>Evidence chain</h2>
           {d.forms.length === 0 ? (
-            <p className={styles.headerNote}>
-              {d.kind === "referral"
-                ? "No learner profile yet — create one to start collecting evidence."
-                : "No forms recorded yet."}
-            </p>
+            d.kind === "referral" && hasAttendedMeeting ? (
+              <ul className={styles.evidenceList}>
+                {[
+                  { label: "Referral on file", ok: referral !== null },
+                  { label: "Anecdotal report on file", ok: anecdotal !== null },
+                  { label: "Parent meeting attended", ok: hasAttendedMeeting },
+                ].map((e) => (
+                  <li key={e.label} className={styles.evidenceItem}>
+                    <Badge variant={e.ok ? "success" : "outline"}>
+                      {e.ok ? "On file" : "Missing"}
+                    </Badge>
+                    <span>{e.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.headerNote}>
+                {d.kind === "referral"
+                  ? "No learner profile yet — create one to start collecting evidence."
+                  : "No forms recorded yet."}
+              </p>
+            )
           ) : (
             <ul className={styles.evidenceList}>
               {d.forms.map((f) => (
@@ -741,9 +842,13 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
               ))}
             </ul>
           )}
-        </div>
-
-        <div className={styles.card}>
+          </div>
+          ) : null}
+          {activeTab === "meetings" ? (
+          <div className={styles.card}>
+          <span className={styles.glowClip} aria-hidden="true">
+            <span className={styles.cardGlow} />
+          </span>
           {(() => {
             // Carousel over the schedule history, latest first — position
             // 1 is always the latest reschedule (or the only schedule).
@@ -810,6 +915,88 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
               </>
             );
           })()}
+          </div>
+          ) : null}
+          {activeTab === "certify" ? (
+          <div className={styles.card}>
+            <span className={styles.glowClip} aria-hidden="true">
+              <span className={styles.cardGlow} />
+            </span>
+            <h2 className={styles.cardTitle}>Recommendation &amp; certification</h2>
+            {hasCertification ? (
+              <p className={styles.cardText} style={{ marginBottom: 0 }}>
+                Certification is verified on this case — see the Evidence
+                chain for its details. Endorsing passes it to the Principal
+                for signature.
+              </p>
+            ) : d.kind === "referral" ? (
+              <>
+                <p className={styles.muted}>
+                  This is still an early referral with no learner profile —
+                  create one first so the certification can be filed against
+                  it.
+                </p>
+                <div className={styles.attendBtns} style={{ justifyContent: "flex-start" }}>
+                  <Button
+                    disabled={createMutation.isPending || preparingProfile}
+                    aria-busy={
+                      createMutation.isPending || preparingProfile || undefined
+                    }
+                    onClick={() => void startCreateProfile(d)}
+                  >
+                    {createMutation.isPending
+                      ? "Creating…"
+                      : preparingProfile
+                        ? "Preparing…"
+                        : "Create learner profile"}
+                  </Button>
+                </div>
+              </>
+            ) : !hasAttendedMeeting ? (
+              <p className={styles.muted} style={{ marginBottom: 0 }}>
+                Log an attended parent meeting on step 3 first — the
+                certification fill-up opens once attendance is confirmed.
+              </p>
+            ) : !profileCertifiable ? (
+              <p className={styles.cardText} style={{ marginBottom: 0 }}>
+                This case already carries a certification — no further
+                fill-up is needed here.
+              </p>
+            ) : (
+              <>
+                <p className={styles.muted}>
+                  Everything is gathered — write the ADM recommendation to
+                  certify the case.
+                </p>
+                <div className={styles.attendBtns} style={{ justifyContent: "flex-start" }}>
+                  <Button onClick={() => setCertSheetOpen(true)}>
+                    Continue to certification
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+          ) : null}
+          </div>
+        </div>
+
+        <div className={styles.wizardSide}>
+          <EligibilityChecklistCard
+            checklist={checklist}
+            eligibilityStatus={d.eligibilityStatus}
+            stepIndex={activeStepIdx}
+            stepTotal={CASE_STEPS.length}
+            onPrevStep={
+              activeStepIdx > 0
+                ? () => goStep(CASE_STEPS[activeStepIdx - 1].id)
+                : undefined
+            }
+            onNextStep={
+              activeStepIdx < CASE_STEPS.length - 1
+                ? () => goStep(CASE_STEPS[activeStepIdx + 1].id)
+                : undefined
+            }
+          />
         </div>
       </div>
 
@@ -818,32 +1005,26 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
         recordId={anecdotalPreviewId}
         onClose={() => setAnecdotalPreviewId(null)}
       />
-      <Dialog
+      <CardModal
         open={endorsedNoticeOpen}
-        onOpenChange={(open) => !open && setEndorsedNoticeOpen(false)}
+        onClose={() => setEndorsedNoticeOpen(false)}
+        title="Case endorsed"
+        description="This case is endorsed to the Principal and locked awaiting signature."
+        size="sm"
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Case endorsed</DialogTitle>
-            <DialogDescription>
-              This case is endorsed to the Principal and locked awaiting
-              signature.
-            </DialogDescription>
-          </DialogHeader>
-          <p className={styles.muted} style={{ margin: 0 }}>
-            The anecdotal report can&apos;t be opened until the Principal
-            signs or returns the case.
-          </p>
-          <DialogFooter>
-            <Button
-              type="button"
-              onClick={() => setEndorsedNoticeOpen(false)}
-            >
-              Understood
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <p className={styles.muted} style={{ margin: 0 }}>
+          The anecdotal report can&apos;t be opened until the Principal
+          signs or returns the case.
+        </p>
+        <div className={styles.modalActions}>
+          <Button
+            type="button"
+            onClick={() => setEndorsedNoticeOpen(false)}
+          >
+            Understood
+          </Button>
+        </div>
+      </CardModal>
       <CoordinatorReferralsCreateDialog
         target={createTarget}
         scopeLabel={scopeLabel}
@@ -857,6 +1038,12 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
         context={certContext}
         onClose={() => setCertSheetOpen(false)}
         onCertified={() => {
+          void detailQuery.refetch();
+        }}
+      />
+      <ForwardToPrincipalGate
+        caseData={detailQuery.data ?? null}
+        onForwarded={() => {
           void detailQuery.refetch();
         }}
       />

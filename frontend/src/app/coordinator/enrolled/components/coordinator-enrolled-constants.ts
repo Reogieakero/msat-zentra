@@ -8,8 +8,3 @@ export const ELIG_OPTIONS: { value: "all" | AdmEligibility; label: string }[] = 
   { value: "eligible", label: "Eligible" },
   { value: "ineligible", label: "Ineligible" },
 ];
-
-export const STAGE_TABS = [
-  { value: "enrollment_monitoring", label: "Monitoring" },
-  { value: "completion", label: "Completed" },
-] as const;

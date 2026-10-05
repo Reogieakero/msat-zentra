@@ -8,12 +8,13 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CERT_STATUS_META,
   type CertStatus,
   type CertSummary,
 } from "./coordinator-certifications-data";
+import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
+import { useCoordinatorProfileSettings } from "../../settings/components/profile-settings-data";
 import styles from "./coordinator-certifications-charts.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -43,21 +44,31 @@ function interpretSummary(summary: CertSummary): string {
 }
 
 export function CoordinatorCertificationsCharts({ summary }: { summary: CertSummary }) {
-  const rows = ORDER.map((status) => ({
+  // Donut slices wear the coordinator's own saved palette hex —
+  // deterministic (no probe timing): darkest (pure primary) first,
+  // stepping toward the card surface. Concrete rgb fills because SVG
+  // attributes can't resolve CSS vars. Falls back to the runtime probe
+  // only when no saved palette exists yet.
+  const { data: profile } = useCoordinatorProfileSettings();
+  const scale = usePrimaryScale(ORDER.length, profile?.primaryColor ?? null);
+  const rows = ORDER.map((status, i) => ({
     status,
     label: CERT_STATUS_META[status].label,
     count: summary[status],
+    color: scale[i % scale.length],
   }));
 
   return (
-    <Card className={styles.card}>
-      <CardHeader>
-        <CardTitle className={styles.sectionTitle}>Certifications by status</CardTitle>
-        <CardDescription className={styles.sectionDesc}>
+    /* Shell-less block — the page wraps the whole left panel in one
+       shared glow card, so this renders title + content only. */
+    <div className={styles.block} aria-label="Certifications by status">
+      <div>
+        <h3 className={styles.sectionTitle}>Certifications by status</h3>
+        <p className={styles.sectionDesc}>
           Every certification you issued — live counts.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className={styles.body}>
+        </p>
+      </div>
+      <div className={styles.body}>
         {summary.total === 0 ? (
           <div className={styles.emptyWrap}>
             <p className={styles.empty}>No certifications on file yet.</p>
@@ -79,7 +90,7 @@ export function CoordinatorCertificationsCharts({ summary }: { summary: CertSumm
                     strokeWidth={0}
                   >
                     {rows.map((r) => (
-                      <Cell key={r.status} fill={CERT_STATUS_META[r.status].color} />
+                      <Cell key={r.status} fill={r.color} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -96,7 +107,7 @@ export function CoordinatorCertificationsCharts({ summary }: { summary: CertSumm
                   <span className={styles.legendLabel}>
                     <span
                       className={styles.legendDot}
-                      style={{ backgroundColor: CERT_STATUS_META[r.status].color }}
+                      style={{ backgroundColor: r.color }}
                       aria-hidden
                     />
                     {r.label}
@@ -110,7 +121,7 @@ export function CoordinatorCertificationsCharts({ summary }: { summary: CertSumm
         {summary.total > 0 ? (
           <p className={styles.interpretation}>{interpretSummary(summary)}</p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

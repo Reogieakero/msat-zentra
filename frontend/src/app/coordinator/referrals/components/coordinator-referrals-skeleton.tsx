@@ -1,54 +1,34 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import tableStyles from "./coordinator-referrals-table.module.css";
 import styles from "./coordinator-referrals-skeleton.module.css";
 
 const HEADS = [
   "Student",
-  "Type",
+  "Referred by",
   "Case status",
   "Eligibility",
-  "Meeting",
   "Meeting time",
   "Date referred",
+  "Latest action",
   "",
 ];
 
-/* Full-page loading state that mirrors the referrals layout 1:1 — header
-   (title + description + search + status filter), the 8-column table with
-   per-column shapes (two-line student, badge pills, book-button pill,
-   two-line datetime, date, kebab), and the pager — so skeleton → content
-   swaps with minimal layout shift. The table reuses the real table
-   container (same min-width + scroll), so mobile matches automatically.
-   Pass includeHeader={false} when the real filters header is already
-   mounted above (in-table initial load) to avoid a duplicated header. */
-export function CoordinatorReferralsSkeleton({
-  rows = 10,
-  includeHeader = true,
-}: {
-  rows?: number;
-  includeHeader?: boolean;
-}) {
+function TableCardSkeleton({ rows }: { rows: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading referrals">
-      {includeHeader ? (
-        <div className={styles.head} aria-hidden="true">
-          <div>
-            <Skeleton className={styles.title} />
-            <Skeleton className={styles.desc} />
-          </div>
-          <div className={styles.actions}>
-            <Skeleton className={styles.search} />
-            <Skeleton className={styles.filterBtn} />
-          </div>
+    <div className={styles.tableCard} aria-hidden="true">
+      <div className={styles.cardHeadRow}>
+        <div className={styles.cardHeadText}>
+          <Skeleton className={styles.cardTitle} />
+          <Skeleton className={styles.cardDesc} />
         </div>
-      ) : null}
-
-      <div className={tableStyles.tableWrap} aria-hidden="true">
-        <table
-          className={`${tableStyles.table} ${tableStyles.alertTable}`}
-        >
+        <div className={styles.cardHeadActions}>
+          <Skeleton className={styles.search} />
+          <Skeleton className={styles.filterBtn} />
+        </div>
+      </div>
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
           <thead>
             <tr>
               {HEADS.map((h, i) => (
@@ -66,13 +46,10 @@ export function CoordinatorReferralsSkeleton({
                   <Skeleton className={styles.sub} />
                 </td>
                 <td>
-                  <Skeleton className={styles.badgeSm} />
+                  <Skeleton className={styles.dateSm} />
                 </td>
                 <td>
                   <Skeleton className={styles.badgeLg} />
-                </td>
-                <td>
-                  <Skeleton className={styles.badgeMd} />
                 </td>
                 <td>
                   <Skeleton className={styles.badgeMd} />
@@ -85,6 +62,10 @@ export function CoordinatorReferralsSkeleton({
                   <Skeleton className={styles.dateSm} />
                 </td>
                 <td>
+                  <Skeleton className={styles.date} />
+                  <Skeleton className={styles.sub} />
+                </td>
+                <td>
                   <Skeleton className={styles.kebab} />
                 </td>
               </tr>
@@ -92,14 +73,59 @@ export function CoordinatorReferralsSkeleton({
           </tbody>
         </table>
       </div>
+      <Skeleton className={styles.interpretation} />
+    </div>
+  );
+}
 
-      <div className={styles.pager} aria-hidden="true">
-        <Skeleton className={styles.range} />
-        <div className={styles.pagerButtons}>
-          <Skeleton className={styles.pageBtn} />
-          <Skeleton className={styles.pageLabel} />
-          <Skeleton className={styles.pageBtn} />
+function RailSkeleton() {
+  return (
+    <div aria-hidden="true" className={styles.railRow}>
+      {[4, 2, 3, 4].map((lines, i) => (
+        <div key={i} className={styles.railCard}>
+          <Skeleton className={styles.railTitle} />
+          <Skeleton className={styles.railDesc} />
+          {Array.from({ length: lines }).map((_, j) => (
+            <Skeleton key={j} className={styles.railLine} />
+          ))}
         </div>
+      ))}
+    </div>
+  );
+}
+
+/* Loading state that mirrors the referrals layout 1:1 — glow table card
+   (header controls + 7-column rows + interpretation), the 4 rail cards,
+   and the pager — so skeleton → content swaps with minimal layout shift.
+   Pass layout="table" when the rail is already mounted around it (in-table
+   initial load) to avoid duplicates. */
+export function CoordinatorReferralsSkeleton({
+  rows = 10,
+  layout = "full",
+}: {
+  rows?: number;
+  layout?: "full" | "table";
+}) {
+  if (layout === "table") {
+    return (
+      <div aria-busy="true" aria-label="Loading referrals">
+        <TableCardSkeleton rows={rows} />
+      </div>
+    );
+  }
+  return (
+    <div aria-busy="true" aria-label="Loading referrals">
+      <div className={styles.main} aria-hidden="true">
+        <TableCardSkeleton rows={rows} />
+        <div className={styles.pager}>
+          <Skeleton className={styles.range} />
+          <div className={styles.pagerButtons}>
+            <Skeleton className={styles.pageBtn} />
+            <Skeleton className={styles.pageLabel} />
+            <Skeleton className={styles.pageBtn} />
+          </div>
+        </div>
+        <RailSkeleton />
       </div>
     </div>
   );

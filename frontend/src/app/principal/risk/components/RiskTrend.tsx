@@ -20,13 +20,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardDescription,
-  CardAction,
-} from "@/components/ui/card";
-import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -37,7 +30,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useTerm } from "@/lib/term/TermContext";
-import { RISK_LEVEL_COLORS } from "../riskData";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { RiskTrendData } from "../riskBoard";
 import styles from "./RiskTrend.module.css";
 
@@ -49,16 +42,22 @@ type SchoolYearOption = {
   terms: { id: string; termNumber: number }[];
 };
 
+const LEVEL_FILL = {
+  high: "var(--primary)",
+  moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",
+  low: "color-mix(in oklch, var(--primary) 30%, var(--card))",
+} as const;
+
 const chartConfig = {
-  high: { label: "High risk", color: RISK_LEVEL_COLORS.High },
-  moderate: { label: "Moderate", color: RISK_LEVEL_COLORS.Moderate },
-  low: { label: "Low risk", color: RISK_LEVEL_COLORS.Low },
+  high: { label: "High risk", color: LEVEL_FILL.high },
+  moderate: { label: "Moderate", color: LEVEL_FILL.moderate },
+  low: { label: "Low risk", color: LEVEL_FILL.low },
 } satisfies ChartConfig;
 
 const SERIES = [
-  { key: "high", color: RISK_LEVEL_COLORS.High },
-  { key: "moderate", color: RISK_LEVEL_COLORS.Moderate },
-  { key: "low", color: RISK_LEVEL_COLORS.Low },
+  { key: "high", color: LEVEL_FILL.high },
+  { key: "moderate", color: LEVEL_FILL.moderate },
+  { key: "low", color: LEVEL_FILL.low },
 ] as const;
 
 const RANGES = [
@@ -283,14 +282,17 @@ export function RiskTrend() {
         </div>
       </div>
 
-      <Card className={styles.card}>
-        <CardHeader className={styles.cardHeader}>
-          <CardDescription className={styles.cardDesc}>
+      <div className={`${assign.card} ${styles.card}`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div className={`${styles.cardHeader} relative`}>
+          <p className={styles.cardDesc}>
             {isDaily
               ? "Daily risk levels for the selected term"
               : "Risk levels aggregated per term"}
-          </CardDescription>
-          <CardAction className={styles.cardActions}>
+          </p>
+          <div className={styles.cardActions}>
             {isDaily && (
               <div className={styles.rangeGroup}>
                 {RANGES.map((r) => (
@@ -307,9 +309,9 @@ export function RiskTrend() {
                 ))}
               </div>
             )}
-          </CardAction>
-        </CardHeader>
-        <CardContent>
+          </div>
+        </div>
+        <div className="relative">
           {isPending ? (
             <div className={styles.skeleton} />
           ) : !hasData ? (
@@ -328,7 +330,7 @@ export function RiskTrend() {
                   margin={{ top: 8, right: 8, bottom: 8, left: 4 }}
                 >
                   <defs>
-                    {SERIES.map((s) => (
+                      {SERIES.map((s) => (
                       <linearGradient
                         key={s.key}
                         id={`${gradId}-${s.key}`}
@@ -339,12 +341,12 @@ export function RiskTrend() {
                       >
                         <stop
                           offset="5%"
-                          stopColor={s.color}
+                          style={{ stopColor: s.color }}
                           stopOpacity={0.35}
                         />
                         <stop
                           offset="95%"
-                          stopColor={s.color}
+                          style={{ stopColor: s.color }}
                           stopOpacity={0.02}
                         />
                       </linearGradient>
@@ -376,8 +378,8 @@ export function RiskTrend() {
                       dataKey={s.key}
                       name={s.key}
                       type="monotone"
-                      stroke={s.color}
                       strokeWidth={2}
+                      style={{ stroke: s.color }}
                       fill={`url(#${gradId}-${s.key})`}
                       dot={false}
                     />
@@ -391,8 +393,8 @@ export function RiskTrend() {
               </ChartContainer>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </section>
   );
 }

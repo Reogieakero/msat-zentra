@@ -1,6 +1,5 @@
 "use client";
 
-import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAction } from "./components/OverviewAction";
 import { OverviewRisk } from "./components/OverviewRisk";
 import { OverviewPopulation } from "./components/OverviewPopulation";
@@ -17,8 +16,6 @@ export default function PrincipalOverviewPage() {
 
           <OverviewAction />
         </div>
-
-        <OverviewHeader />
       </div>
     </section>
   );

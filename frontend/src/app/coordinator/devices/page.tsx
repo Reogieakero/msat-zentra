@@ -1,80 +1,46 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Loader2, Search, TabletSmartphone, X } from "lucide-react";
+import { Loader2, TabletSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import {
+  fetchCoordinatorApprovals,
   fetchCoordinatorDevices,
-  fetchCoordinatorReferrals,
   apiErrorMessage,
   type AdmDeviceRow,
 } from "../components/coordinator-data";
+import {
+  CoordinatorDevicesTable,
+  type DeviceFilter,
+} from "./components/coordinator-devices-table";
+import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
 import pageStyles from "../pages.module.css";
-
-type DeviceFilter = "all" | "issued" | "returned";
-
-const DEVICE_TYPE_OPTIONS = ["Tablet", "Phone", "Laptop", "Chromebook"] as const;
-
-const STATUS_OPTIONS: { value: DeviceFilter; label: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: "issued", label: "Issued" },
-  { value: "returned", label: "Returned" },
-];
 
 const DEVICE_PAGE_SIZE = 20;
 
-export default function CoordinatorDevicesPage() {
+function CoordinatorDevicesPageInner() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [debounced, setDebounced] = React.useState("");
   const [filter, setFilter] = React.useState<DeviceFilter>("all");
   const [page, setPage] = React.useState(1);
   const [issueOpen, setIssueOpen] = React.useState(false);
   const [returnTarget, setReturnTarget] = React.useState<AdmDeviceRow | null>(null);
-  const [profileId, setProfileId] = React.useState("");
-  const [deviceType, setDeviceType] = React.useState("Tablet");
-  const [deviceSerial, setDeviceSerial] = React.useState("");
-  const [conditionNotes, setConditionNotes] = React.useState("");
-  /** Inline issue-dialog error (validation + duplicate serial). */
-  const [issueError, setIssueError] = React.useState<string | null>(null);
-  /** Id of the device being returned — its confirm shows
-      `Recording…` while every other card stays usable. */
+  /** Id of the device being returned — its row button shows `Recording…`
+      while every other row stays usable. */
   const [returningId, setReturningId] = React.useState<string | null>(null);
-  const [candidateQuery, setCandidateQuery] = React.useState("");
   const debouncedRef = React.useRef("");
-  const candidateDebouncedRef = React.useRef("");
+  // Deep-link from the sidebar needs-device reminder (?issue=1): open the
+  // issue dialog once, then clear the param so it never reopens.
+  const openedForIssue = React.useRef(false);
 
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -86,6 +52,15 @@ export default function CoordinatorDevicesPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [query]);
+
+  React.useEffect(() => {
+    if (openedForIssue.current) return;
+    if (searchParams.get("issue") === "1") {
+      openedForIssue.current = true;
+      setIssueOpen(true);
+      router.replace(pathname);
+    }
+  }, [searchParams, pathname, router]);
 
   const devicesQuery = useQuery({
     queryKey: ["coordinator-devices", debounced, filter, page],
@@ -101,63 +76,27 @@ export default function CoordinatorDevicesPage() {
     staleTime: 30_000,
   });
 
-  // Candidate profiles for issuance: active pipeline cases, searchable.
-  const [candidateDebounced, setCandidateDebounced] = React.useState("");
-  React.useEffect(() => {
-    if (!issueOpen) return;
-    const t = setTimeout(() => {
-      const next = candidateQuery.trim();
-      if (next === candidateDebouncedRef.current) return;
-      candidateDebouncedRef.current = next;
-      setCandidateDebounced(next);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [candidateQuery, issueOpen]);
-
-  const candidatesQuery = useQuery({
-    queryKey: ["coordinator-devices", "candidates", candidateDebounced],
+  // Principal-approved cases with no device issued yet — powers the
+  // centered needs prompt and scopes the issue dialog's learner picker.
+  const needsQuery = useQuery({
+    queryKey: ["coordinator-devices", "needs-device"],
     queryFn: ({ signal }) =>
-      fetchCoordinatorReferrals(1, {
-        q: candidateDebounced || undefined,
-        limit: 50,
-        signal,
-      }),
-    enabled: issueOpen,
+      fetchCoordinatorApprovals(1, { limit: 200, signal }),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
   });
+  const needsDevice = React.useMemo(
+    () =>
+      (needsQuery.data?.rows ?? []).filter(
+        (r) => (r.devicesIssued ?? 0) === 0,
+      ),
+    [needsQuery.data],
+  );
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["coordinator-devices"] });
     void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
   };
-
-  const issueMutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await apiClient.post("/api/adm/devices/issue", {
-        admLearnerProfileId: profileId,
-        deviceType: deviceType.trim(),
-        deviceSerial: deviceSerial.trim(),
-        ...(conditionNotes.trim() ? { conditionNotes: conditionNotes.trim() } : {}),
-      });
-      return data;
-    },
-    onSuccess: () => {
-      invalidate();
-      setIssueOpen(false);
-      setProfileId("");
-      setDeviceSerial("");
-      setConditionNotes("");
-      setIssueError(null);
-      setCandidateQuery("");
-      toast.success({ title: "Device issued", description: `Serial ${deviceSerial.trim()} recorded as issued.` });
-    },
-    onError: (err) => {
-      const message = apiErrorMessage(err);
-      setIssueError(message);
-      toast.error({ title: "Could not issue device", description: message });
-    },
-  });
 
   const returnMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -165,7 +104,7 @@ export default function CoordinatorDevicesPage() {
       return data;
     },
     onSuccess: (_data, id) => {
-      // The returned card flips immediately — patch cached ledger pages
+      // The returned row flips immediately — patch cached ledger pages
       // instead of waiting for the refetch.
       const today = new Date().toISOString().slice(0, 10);
       queryClient.setQueriesData<{ rows?: AdmDeviceRow[]; total?: number }>(
@@ -198,14 +137,9 @@ export default function CoordinatorDevicesPage() {
   const deviceEnd = Math.min(deviceSafePage * deviceLimit, deviceTotal);
   const deviceBackground = devicesQuery.isFetching && !devicesQuery.isPending;
 
-  const candidates = React.useMemo(
-    () => (candidatesQuery.data?.rows ?? []).filter((r) => !r.id.startsWith("referral:")),
-    [candidatesQuery.data],
-  );
-  const selectedCandidate = candidates.find((r) => r.id === profileId) ?? null;
-
   const hasActiveFilters = filter !== "all" || debounced !== "";
-  const statusLabel = STATUS_OPTIONS.find((o) => o.value === filter)?.label ?? "Status";
+  const statusLabel =
+    filter === "issued" ? "Issued" : filter === "returned" ? "Returned" : "Status";
 
   const clearFilters = () => {
     setFilter("all");
@@ -213,425 +147,135 @@ export default function CoordinatorDevicesPage() {
     setPage(1);
   };
 
+  const showNeeds = !needsQuery.isPending && needsDevice.length > 0;
+  const needsCountText = `${needsDevice.length} principal-approved case${
+    needsDevice.length === 1 ? "" : "s"
+  } still ${needsDevice.length === 1 ? "needs" : "need"} a device.`;
+  // Truly empty ledger (loaded, no error, no active filters): the table
+  // (with its title + search) steps aside so one centered block owns the
+  // page. Filtered-to-zero keeps the table so the search can be cleared.
+  const ledgerTrulyEmpty =
+    !devicesQuery.isPending &&
+    !devicesQuery.isError &&
+    !!devicesQuery.data &&
+    rows.length === 0 &&
+    !hasActiveFilters;
+
   return (
     <section className={pageStyles.page}>
-      <header className={pageStyles.header}>
-        <div>
-          <h1 className={pageStyles.title}>Learning Devices</h1>
-          <p className={pageStyles.subtitle}>
-            {devicesQuery.data
-              ? `${devicesQuery.data.issued} issued · ${devicesQuery.data.returned} returned${deviceBackground ? " · Syncing…" : ""}`
-              : "Tablet issuance and return ledger"}
-          </p>
-        </div>
-        <Button onClick={() => setIssueOpen(true)}>
-          Issue device
-        </Button>
-      </header>
-
-      <div className={pageStyles.filterRow}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={`${pageStyles.toolbarFilterBtn} ${filter !== "all" ? pageStyles.toolbarFilterActive : ""}`}
-            >
-              {filter === "all" ? "Status" : statusLabel}
-              {filter !== "all" && <span className={pageStyles.filterDot} aria-hidden />}
-              <ChevronDown aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {STATUS_OPTIONS.map((item, index) => (
-              <div key={item.value}>
-                {index === 1 && <DropdownMenuSeparator />}
-                <DropdownMenuCheckboxItem
-                  checked={filter === item.value}
-                  onCheckedChange={() => {
-                    setFilter(item.value);
-                    setPage(1);
-                  }}
-                >
-                  {item.label}
-                </DropdownMenuCheckboxItem>
-              </div>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className={pageStyles.toolbarSearchWrap}>
-          <Search className={pageStyles.toolbarSearchIcon} aria-hidden />
-          <Input
-            className={pageStyles.toolbarSearch}
-            placeholder="Search serial, student, or LRN…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search devices"
-          />
-        </div>
-
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            <X aria-hidden />
-            Clear
-          </Button>
-        )}
-      </div>
-
-      {devicesQuery.isPending ? (
-        <div
-          className={pageStyles.deviceGrid}
-          aria-busy="true"
-          aria-label="Loading devices"
-        >
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div key={i} className={pageStyles.deviceCard} aria-hidden="true">
-              <div className={pageStyles.deviceCardTop}>
-                <div className={pageStyles.deviceIdentity}>
-                  <Skeleton style={{ width: "2rem", height: "2rem" }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <Skeleton style={{ width: "4.5rem", height: "0.875rem" }} />
-                    <Skeleton
-                      style={{
-                        width: "5.5rem",
-                        height: "0.75rem",
-                        marginTop: "0.25rem",
-                      }}
-                    />
-                  </div>
-                </div>
-                <Skeleton
-                  style={{ width: "3.5rem", height: "1.375rem", borderRadius: "999px" }}
-                />
-              </div>
-              <div className={pageStyles.deviceMeta}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={pageStyles.deviceMetaRow}>
-                    <Skeleton style={{ width: "3rem", height: "0.6875rem" }} />
-                    <Skeleton style={{ width: "6rem", height: "0.8125rem" }} />
-                  </div>
-                ))}
-              </div>
-              <div className={pageStyles.deviceCardFoot}>
-                <Skeleton style={{ width: "6.5rem", height: "1.75rem" }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : devicesQuery.isError || !devicesQuery.data ? (
-        <div className={pageStyles.errorBlock} role="alert">
-          <p className={pageStyles.errorText}>
-            We couldn&apos;t load the device ledger. Please check your internet connection and try again.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={devicesQuery.isRefetching}
-            onClick={() => devicesQuery.refetch()}
-          >
-            {devicesQuery.isRefetching ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
-            {devicesQuery.isRefetching ? "Loading…" : "Try again"}
-          </Button>
-        </div>
-      ) : rows.length === 0 ? (
-        <div className={pageStyles.deviceEmptyWrap}>
-          <p className={pageStyles.emptyText}>
-            {debounced || filter !== "all"
-              ? "No devices match the current filters."
-              : "No devices issued yet."}
-          </p>
-        </div>
-      ) : (
-        <div className={pageStyles.deviceGrid}>
-          {rows.map((d) => (
-            <article key={d.id} className={pageStyles.deviceCard} aria-label={`${d.deviceType} ${d.deviceSerial}`}>
-              <div className={pageStyles.deviceCardTop}>
-                <div className={pageStyles.deviceIdentity}>
-                  <span className={pageStyles.deviceIcon} aria-hidden="true">
-                    <TabletSmartphone />
-                  </span>
-                  <div style={{ minWidth: 0 }}>
-                    <p className={pageStyles.deviceType} title={d.deviceType}>
-                      {d.deviceType}
-                    </p>
-                    <p className={pageStyles.deviceSerial} title={d.deviceSerial}>
-                      {d.deviceSerial}
-                    </p>
-                  </div>
-                </div>
-                <Badge variant={d.status === "issued" ? "secondary" : "outline"}>
-                  {d.status === "issued" ? "Issued" : "Returned"}
-                </Badge>
-              </div>
-
-              <div className={pageStyles.deviceMeta}>
-                <div className={pageStyles.deviceMetaRow}>
-                  <span className={pageStyles.deviceMetaLabel}>Student</span>
-                  <span className={pageStyles.deviceMetaValue} title={`${d.student} · ${d.lrn}`}>
-                    {d.student}
-                  </span>
-                </div>
-                <div className={pageStyles.deviceMetaRow}>
-                  <span className={pageStyles.deviceMetaLabel}>LRN</span>
-                  <span className={`${pageStyles.deviceMetaValue} ${pageStyles.mono}`}>{d.lrn}</span>
-                </div>
-                <div className={pageStyles.deviceMetaRow}>
-                  <span className={pageStyles.deviceMetaLabel}>Issued</span>
-                  <span className={`${pageStyles.deviceMetaValue} ${pageStyles.mono}`} title={`by ${d.issuedBy}`}>
-                    {d.issuedDate}
-                  </span>
-                </div>
-                <div className={pageStyles.deviceMetaRow}>
-                  <span className={pageStyles.deviceMetaLabel}>Returned</span>
-                  <span className={`${pageStyles.deviceMetaValue} ${pageStyles.mono}`}>
-                    {d.returnedDate ?? "—"}
-                  </span>
-                </div>
-              </div>
-
-              {d.conditionNotes ? (
-                <p className={pageStyles.deviceNotes}>{d.conditionNotes}</p>
-              ) : null}
-
-              <div className={pageStyles.deviceCardFoot}>
-                {d.status === "issued" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={returningId === d.id}
-                    onClick={() => setReturnTarget(d)}
-                  >
-                    {returningId === d.id ? (
-                      <>
-                        <Loader2 className={pageStyles.spin} aria-hidden="true" />
-                        Recording…
-                      </>
-                    ) : (
-                      "Record return"
-                    )}
-                  </Button>
-                ) : null}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {!devicesQuery.isPending &&
-      !devicesQuery.isError &&
-      devicesQuery.data &&
-      rows.length > 0 ? (
-        <div className={pageStyles.pagination}>
-          <span>
-            Showing {deviceStart}–{deviceEnd} of {deviceTotal}
-            {deviceBackground ? (
-              <span aria-live="polite"> · Syncing…</span>
-            ) : null}
-          </span>
-          <div className={pageStyles.paginationBtns}>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={deviceSafePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <span aria-live="polite">
-              Page {deviceSafePage} of {deviceTotalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={deviceSafePage >= deviceTotalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Issue dialog */}
-      <Dialog
-        open={issueOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIssueOpen(false);
-            setIssueError(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Issue device</DialogTitle>
-            <DialogDescription>
-              Records a learning device as issued to an ADM learner.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={pageStyles.formGrid}>
-            <div className={pageStyles.formField}>
-              <Label className={pageStyles.formLabel} htmlFor="dev-profile">
-                Learner case
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    id="dev-profile"
-                    variant="outline"
-                    style={{ width: "100%", justifyContent: "space-between" }}
-                  >
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {selectedCandidate
-                        ? `${selectedCandidate.student} · ${selectedCandidate.lrn}`
-                        : "Select a case…"}
-                    </span>
-                    <ChevronDown aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" style={{ maxWidth: "22rem" }}>
-                  <div style={{ padding: "0.375rem" }}>
-                    <Input
-                      placeholder="Search cases…"
-                      value={candidateQuery}
-                      onChange={(e) => setCandidateQuery(e.target.value)}
-                      aria-label="Search candidate cases"
-                      style={{ height: "2rem", fontSize: "0.8125rem" }}
-                    />
-                  </div>
-                  {candidatesQuery.isPending && candidates.length === 0 ? (
-                    <DropdownMenuItem disabled>Loading cases…</DropdownMenuItem>
-                  ) : candidates.length === 0 ? (
-                    <DropdownMenuItem disabled>
-                      {candidateDebounced
-                        ? "No cases match this search."
-                        : "No eligible cases"}
-                    </DropdownMenuItem>
-                  ) : (
-                    candidates.map((r) => (
-                      <DropdownMenuItem key={r.id} onSelect={() => setProfileId(r.id)}>
-                        {r.student} · {r.lrn}
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className={pageStyles.formField}>
-              <Label className={pageStyles.formLabel} htmlFor="dev-type">
-                Device type
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    id="dev-type"
-                    variant="outline"
-                    style={{ width: "100%", justifyContent: "space-between" }}
-                  >
-                    {deviceType || "Select device type…"}
-                    <ChevronDown aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {DEVICE_TYPE_OPTIONS.map((t) => (
-                    <DropdownMenuItem key={t} onSelect={() => setDeviceType(t)}>
-                      {t}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className={pageStyles.formField}>
-              <Label className={pageStyles.formLabel} htmlFor="dev-serial">
-                Serial number
-              </Label>
-              <Input
-                id="dev-serial"
-                value={deviceSerial}
-                onChange={(e) => {
-                  setDeviceSerial(e.target.value);
-                  if (issueError) setIssueError(null);
-                }}
-                placeholder="e.g. SN48213"
-                aria-invalid={issueError ? true : undefined}
-              />
-            </div>
-            <div className={pageStyles.formField}>
-              <Label className={pageStyles.formLabel} htmlFor="dev-condition">
-                Condition at issuance (optional)
-              </Label>
-              <Input
-                id="dev-condition"
-                value={conditionNotes}
-                onChange={(e) => setConditionNotes(e.target.value)}
-                placeholder="e.g. New, with charger and case"
-              />
-            </div>
-          </div>
-          {issueError ? (
-            <p role="alert" style={{ margin: "0.75rem 0 0", fontSize: "0.8125rem", color: "#dc2626" }}>
-              {issueError}
+      {ledgerTrulyEmpty ? (
+        <div className={pageStyles.centerEmpty}>
+          {showNeeds ? (
+            <p className={pageStyles.needsMessage}>
+              <TabletSmartphone aria-hidden="true" />
+              {needsCountText}
             </p>
           ) : null}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
-            <Button variant="destructive" className={pageStyles.btnRed} onClick={() => setIssueOpen(false)}>
-              Cancel
+          <p className={pageStyles.emptyHint}>No devices issued yet.</p>
+          {showNeeds ? (
+            <Button onClick={() => setIssueOpen(true)}>
+              Issue device
             </Button>
-            <Button
-              disabled={issueMutation.isPending || !profileId || !deviceType.trim() || !deviceSerial.trim()}
-              onClick={() => {
-                if (!profileId || !deviceSerial.trim()) {
-                  setIssueError("Select a learner case and enter the device serial number.");
-                  return;
-                }
-                issueMutation.mutate();
-              }}
-            >
-              {issueMutation.isPending ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
-              {issueMutation.isPending ? "Issuing…" : "Issue device"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          {showNeeds ? (
+            <div className={pageStyles.needsPrompt}>
+              <p className={pageStyles.needsMessage}>
+                <TabletSmartphone aria-hidden="true" />
+                {needsCountText}
+              </p>
+              <Button onClick={() => setIssueOpen(true)}>
+                Issue device
+              </Button>
+            </div>
+          ) : null}
 
-      {/* Return confirm */}
-      <AlertDialog open={returnTarget !== null} onOpenChange={(open) => !open && setReturnTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Record device return?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {returnTarget ? (
-                <>
-                  {returnTarget.deviceType} ({returnTarget.deviceSerial}) issued to{" "}
-                  {returnTarget.student} will be marked returned today.
-                </>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={returnMutation.isPending}
-              onClick={() => {
-                if (returnTarget && !returnMutation.isPending) {
-                  setReturningId(returnTarget.id);
-                  returnMutation.mutate(returnTarget.id);
-                }
-              }}
-            >
-              {returnMutation.isPending ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
-              {returnMutation.isPending ? "Recording…" : "Record return"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <CoordinatorDevicesTable
+            rows={rows}
+            isPending={devicesQuery.isPending}
+            isError={devicesQuery.isError || !devicesQuery.data}
+            isRefetching={devicesQuery.isRefetching}
+            query={query}
+            onQueryChange={setQuery}
+            filter={filter}
+            statusLabel={statusLabel}
+            onFilterChange={(v) => {
+              setFilter(v);
+              setPage(1);
+            }}
+            hasActiveFilters={hasActiveFilters}
+            onClear={clearFilters}
+            returningId={returningId}
+            total={deviceTotal}
+            start={deviceStart}
+            end={deviceEnd}
+            page={deviceSafePage}
+            totalPages={deviceTotalPages}
+            isBackground={deviceBackground}
+            onRetry={() => devicesQuery.refetch()}
+            onPageChange={(next) => setPage(next)}
+            onRecordReturn={setReturnTarget}
+          />
+        </>
+      )}
+
+      {/* Issue to an approved case without a device */}
+      <CoordinatorDevicesIssueDialog
+        open={issueOpen}
+        candidates={needsDevice}
+        candidatesPending={needsQuery.isPending}
+        onClose={() => setIssueOpen(false)}
+        onIssued={invalidate}
+      />
+
+      {/* Return confirm — same card-modal UI as every other dialog. */}
+      <CardModal
+        open={returnTarget !== null}
+        onClose={() => setReturnTarget(null)}
+        title="Record device return?"
+        description={
+          returnTarget ? (
+            <>
+              {returnTarget.deviceType} ({returnTarget.deviceSerial}) issued to{" "}
+              {returnTarget.student} will be marked returned today.
+            </>
+          ) : undefined
+        }
+        size="sm"
+      >
+        <div className={pageStyles.modalActions}>
+          <Button
+            variant="outline"
+            onClick={() => setReturnTarget(null)}
+            disabled={returnMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={returnMutation.isPending}
+            aria-busy={returnMutation.isPending || undefined}
+            onClick={() => {
+              if (returnTarget && !returnMutation.isPending) {
+                setReturningId(returnTarget.id);
+                returnMutation.mutate(returnTarget.id);
+              }
+            }}
+          >
+            {returnMutation.isPending ? <Loader2 className={pageStyles.spin} aria-hidden="true" /> : null}
+            {returnMutation.isPending ? "Recording…" : "Record return"}
+          </Button>
+        </div>
+      </CardModal>
     </section>
+  );
+}
+
+export default function CoordinatorDevicesPage() {
+  return (
+    <React.Suspense>
+      <CoordinatorDevicesPageInner />
+    </React.Suspense>
   );
 }

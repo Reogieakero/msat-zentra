@@ -86,6 +86,8 @@ function toastTitleFor(n: NurseInboxRow): string {
   // Cross-desk booking on a shared ADM case (the other desk booked) — the
   // reviewer learns live with the same title as a clinic booking.
   if (/guidance booked a session/i.test(n.message)) return "Guidance session booked";
+  // Invited to an ADM parent meeting by the coordinator.
+  if (/invited you to a parent meeting/i.test(n.message ?? "")) return "Parent meeting invitation";
   return "New notification";
 }
 

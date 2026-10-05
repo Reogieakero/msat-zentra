@@ -1,9 +1,11 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +26,8 @@ import {
   consultReviewerLabel,
   deriveAdmCaseStatus,
   formatElapsedShort,
+  friendlyActionType,
+  latestActionFallback,
   msSinceDate,
   type AdmCaseRow,
 } from "../../components/coordinator-data";
@@ -41,6 +45,31 @@ interface CoordinatorOverviewForwardsProps {
   onHistory: (target: HistoryTarget) => void;
 }
 
+const PAGE_SIZE = 5;
+
+function buildInterpretation(rows: AdmCaseRow[], now: number): string {
+  if (rows.length === 0) {
+    return "No consultation hand-offs are waiting — intake is clear.";
+  }
+  const elapsedList = rows
+    .map((r) => msSinceDate(r.endorsedAt ?? r.datePrepared, now))
+    .filter((v): v is number => v !== null);
+  const oldest =
+    elapsedList.length > 0 ? formatElapsedShort(Math.max(...elapsedList)) : null;
+  const nurse = rows.filter((r) => r.consultReviewer === "nurse").length;
+  const guidance = rows.length - nurse;
+  const mix =
+    nurse > 0 && guidance > 0
+      ? ` (${nurse} from the Nurse, ${guidance} from Guidance)`
+      : nurse > 0
+        ? " (all from the Nurse)"
+        : " (all from Guidance)";
+  return (
+    `${rows.length} pending forward${rows.length === 1 ? "" : "s"} waiting for a learner profile${mix}.` +
+    (oldest ? ` Longest waiting ${oldest} ago.` : "")
+  );
+}
+
 export function CoordinatorOverviewForwards({
   rows,
   isPending,
@@ -50,32 +79,42 @@ export function CoordinatorOverviewForwards({
   onRetry,
   onHistory,
 }: CoordinatorOverviewForwardsProps) {
+  // Client-side pagination, 5 rows per page. The query fetches the full
+  // consultation queue (wide limit) so paging never needs a round-trip.
+  const [page, setPage] = React.useState(1);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+  const end = Math.min(start + PAGE_SIZE, rows.length);
   return (
-    <div className={styles.card}>
-      <div className={styles.panelHead}>
-        <div>
-          <h2 className={styles.sectionTitle}>
-            Recent forwards from Nurse / Guidance
-          </h2>
-          <p className={styles.sectionDesc}>
-            The freshest consultation hand-offs waiting for your learner profile.
-          </p>
+    <Card className={styles.card}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
+      <CardHeader>
+        <div className={styles.headerRow}>
+          <div>
+            <CardTitle className={styles.sectionTitle}>
+              Recent forwards from Nurse / Guidance
+            </CardTitle>
+            <CardDescription className={styles.sectionDesc}>
+              The freshest consultation hand-offs waiting for your learner profile.
+            </CardDescription>
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/coordinator/referrals">See all</Link>
+          </Button>
         </div>
-        <Link className={styles.kpiBtnSolid} href="/coordinator/referrals">
-          See all
-        </Link>
-      </div>
-      <div className={styles.panelBody}>
+      </CardHeader>
+      <CardContent className={styles.body}>
         {isPending ? (
           <div className={styles.tableWrap} aria-busy="true">
-            <table
-              className={`${styles.table} ${styles.alertTable}`}
-              aria-hidden="true"
-            >
+            <table className={styles.skelTable} aria-hidden="true">
               <tbody>
                 {[0, 1, 2, 3, 4].map((i) => (
                   <tr key={i}>
-                    <td colSpan={6}>
+                    <td>
                       <Skeleton style={{ width: "100%", height: "2rem" }} />
                     </td>
                   </tr>
@@ -102,52 +141,55 @@ export function CoordinatorOverviewForwards({
             </Button>
           </div>
         ) : rows.length === 0 ? (
-          <p className={styles.emptyText}>
-            No pending forwards — intake is clear.
-          </p>
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>No pending forwards</p>
+            <p className={styles.emptyHint}>
+              New consultation hand-offs will appear here once filed.
+            </p>
+          </div>
         ) : (
-          <div className={styles.tableWrap}>
-            <Table
-              className={`${styles.table} ${styles.alertTable}`}
-              aria-label="Recent ADM forwards"
-            >
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Forwarded by</TableHead>
-                  <TableHead>Case status</TableHead>
-                  <TableHead>Time elapsed</TableHead>
-                  <TableHead>Date referred</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Open</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => {
+          <>
+            <div className={styles.tableWrap}>
+              <Table aria-label="Recent ADM forwards">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Forwarded by</TableHead>
+                    <TableHead>Case status</TableHead>
+                    <TableHead>Time elapsed</TableHead>
+                    <TableHead>Date referred</TableHead>
+                    <TableHead>Latest action</TableHead>
+                    <TableHead>
+                      <span className={styles.srOnly}>Row actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pageRows.map((r) => {
                   // Elapsed runs from the guidance/nurse hand-off, falling
                   // back to the observation date only for legacy rows.
                   const elapsed = msSinceDate(r.endorsedAt ?? r.datePrepared, now);
-                  const caseStatus = deriveAdmCaseStatus(
-                    r.stage,
-                    r.eligibilityStatus,
-                    r.approvedBy,
-                  );
+                   const caseStatus = deriveAdmCaseStatus(
+                     r.stage,
+                     r.eligibilityStatus,
+                     r.approvedBy,
+                     r.referralStatus,
+                   );
                   return (
                     <TableRow key={r.id}>
                       <TableCell>
                         <p className={styles.cellMain}>{r.student}</p>
-                        <div className={`${styles.studentSub} ${styles.mono}`}>
+                        <p className={`${styles.cellSub} ${styles.mono}`}>
                           {r.lrn}
-                        </div>
+                        </p>
                       </TableCell>
                       <TableCell>
                         <p className={styles.cellMain}>
                           {consultReviewerLabel(r.consultReviewer)}:
                         </p>
-                        <div className={styles.studentSub}>
+                        <p className={styles.cellSub}>
                           Adviser: {r.preparedBy}
-                        </div>
+                        </p>
                       </TableCell>
                       <TableCell>
                         <Badge variant={admCaseStatusVariant(caseStatus.key)}>
@@ -167,6 +209,38 @@ export function CoordinatorOverviewForwards({
                             ? r.endorsedAt.slice(0, 10)
                             : (r.datePrepared ?? "—")}
                         </p>
+                      </TableCell>
+                      <TableCell>
+                        {r.lastActionType ? (
+                          <>
+                            <p className={styles.cellMain}>
+                              {friendlyActionType(r.lastActionType)}
+                            </p>
+                            <p className={styles.cellSub} aria-live="off">
+                              {(() => {
+                                const ms = r.lastActionAt ? msSinceDate(r.lastActionAt, now) : null;
+                                return ms === null ? "—" : `${formatElapsedShort(ms)} ago`;
+                              })()}
+                            </p>
+                          </>
+                        ) : (
+                          (() => {
+                            // Same rule as the referrals queue: no audit
+                            // trail still reads the row's own latest
+                            // timestamp, whatever the status.
+                            const fb = latestActionFallback(r);
+                            if (!fb) return <p className={styles.cellMain}>—</p>;
+                            const ms = msSinceDate(fb.at, now);
+                            return (
+                              <>
+                                <p className={styles.cellMain}>{fb.label}</p>
+                                <p className={styles.cellSub} aria-live="off">
+                                  {ms === null ? "—" : `${formatElapsedShort(ms)} ago`}
+                                </p>
+                              </>
+                            );
+                          })()
+                        )}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -190,7 +264,7 @@ export function CoordinatorOverviewForwards({
                             <DropdownMenuItem
                               onSelect={() => onHistory(historyTargetFor(r))}
                             >
-                              See history
+                              Track case
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -198,11 +272,46 @@ export function CoordinatorOverviewForwards({
                     </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </div>
+                </TableBody>
+              </Table>
+            </div>
+            {rows.length > PAGE_SIZE ? (
+              <div className={styles.pager}>
+                <p className={styles.range}>
+                  Showing {start + 1}–{end} of {rows.length}
+                </p>
+                <div className={styles.pagerButtons}>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={safePage <= 1}
+                    onClick={() => setPage(safePage - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <span className={styles.pageLabel} aria-live="polite">
+                    Page {safePage} of {totalPages}
+                  </span>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={safePage >= totalPages}
+                    onClick={() => setPage(safePage + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
-      </div>
-    </div>
+        {!isPending && !isError ? (
+          <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
+            {buildInterpretation(rows, now)}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

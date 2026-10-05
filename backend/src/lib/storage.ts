@@ -99,3 +99,8 @@ export function clinicSessionObjectPath(sessionId: string, originalName: string)
   const ext = (originalName.split(".").pop() ?? "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
   return `clinic/${sessionId}-${Date.now()}.${ext}`;
 }
+
+export function admMeetingObjectPath(meetingId: string, originalName: string): string {
+  const ext = (originalName.split(".").pop() ?? "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+  return `adm-meetings/${meetingId}-${Date.now()}.${ext}`;
+}

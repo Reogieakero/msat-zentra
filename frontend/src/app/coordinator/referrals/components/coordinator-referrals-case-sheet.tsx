@@ -1,8 +1,12 @@
 "use client";
 
+import * as React from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -12,11 +16,16 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import {
+  apiErrorMessage,
   friendlyWords,
   formatManilaDate,
+  formatManilaDateLong,
   formatManilaTime,
+  meetingInviteeLabel,
   stageLabel,
   eligibilityLabel,
+  uploadMeetingAttachments,
+  deleteMeetingAttachment,
   venueLabel,
   type AdmCaseRow,
   type AdmMeeting,
@@ -37,13 +46,147 @@ interface CoordinatorReferralsCaseSheetProps {
   onRetryMeetings: () => void;
   onClose: () => void;
   onBook: () => void;
-  onOutcome: (m: AdmMeeting) => void;
+  onOutcome: (m: AdmMeeting, row: AdmCaseRow | null) => void;
   onAdvance: (row: AdmCaseRow) => void;
   onForward: (row: AdmCaseRow) => void;
   onPrepareCreate: (row: AdmCaseRow) => void;
   prepareCreatePending: boolean;
   /** Row id currently being booked/rescheduled — disables its button only. */
   bookPendingId: string | null;
+  /** Page clock for live/overdue meeting chips. */
+  now: number;
+}
+
+/* Live-state thresholds shared with the full case file card: a meeting
+   opens 15 min early and stays live 60 min after its start. */
+const JOIN_EARLY_MS = 15 * 60_000;
+const MEETING_LEN_MS = 60 * 60_000;
+
+function liveChip(
+  m: Pick<AdmMeeting, "meetingDatetime" | "attended">,
+  now: number,
+): "live" | "overdue" | null {
+  if (m.attended) return null;
+  const start = new Date(m.meetingDatetime).getTime();
+  if (!Number.isFinite(start)) return null;
+  if (now < start - JOIN_EARLY_MS) return null;
+  return now <= start + MEETING_LEN_MS ? "live" : "overdue";
+}
+
+/* Per-meeting documentation in the sheet: persisted thumbs with remove,
+   plus an image picker + upload. Refreshes the meetings list on change. */
+function MeetingDocsRow({
+  meeting,
+  onRefresh,
+}: {
+  meeting: Pick<AdmMeeting, "id" | "attachments">;
+  onRefresh: () => void;
+}) {
+  const [picked, setPicked] = React.useState<File[]>([]);
+  const [uploading, setUploading] = React.useState(false);
+  const [removingId, setRemovingId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const docs = meeting.attachments ?? [];
+
+  function pick(files: FileList | null) {
+    if (!files) return;
+    const next = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (next.length === 0) {
+      setError("Pick JPG, PNG, or WEBP images.");
+      return;
+    }
+    setError(null);
+    setPicked((prev) => [...prev, ...next].slice(0, 10));
+  }
+
+  async function upload() {
+    if (picked.length === 0 || uploading) return;
+    setUploading(true);
+    setError(null);
+    try {
+      await uploadMeetingAttachments(meeting.id, picked);
+      setPicked([]);
+      if (inputRef.current) inputRef.current.value = "";
+      onRefresh();
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (removingId) return;
+    setRemovingId(id);
+    setError(null);
+    try {
+      await deleteMeetingAttachment(meeting.id, id);
+      onRefresh();
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: "0.375rem" }}>
+      {docs.length > 0 ? (
+        <ul className={styles.evidenceList}>
+          {docs.map((d) => (
+            <li key={d.id} className={styles.evidenceItem}>
+              <a
+                href={d.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.studentSub}
+                style={{ margin: 0, minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                title={d.fileName}
+              >
+                {d.fileName}
+              </a>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={removingId === d.id}
+                aria-busy={removingId === d.id || undefined}
+                aria-label={`Remove ${d.fileName}`}
+                onClick={() => void remove(d.id)}
+              >
+                {removingId === d.id ? "Removing…" : "Remove"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem", flexWrap: "wrap" }}>
+        <Input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          aria-label="Attach meeting documents"
+          onChange={(e) => pick(e.target.files)}
+          style={{ flex: 1, minWidth: "10rem" }}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={uploading || picked.length === 0}
+          aria-busy={uploading || undefined}
+          onClick={() => void upload()}
+        >
+          {uploading ? "Uploading…" : `Attach${picked.length > 0 ? ` (${picked.length})` : ""}`}
+        </Button>
+      </div>
+      {error ? (
+        <p className={styles.note} role="alert" style={{ margin: "0.25rem 0 0" }}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 export function CoordinatorReferralsCaseSheet({
@@ -61,6 +204,7 @@ export function CoordinatorReferralsCaseSheet({
   onPrepareCreate,
   prepareCreatePending,
   bookPendingId,
+  now,
 }: CoordinatorReferralsCaseSheetProps) {
   // A still-booked (unattended) meeting blocks a second booking — the
   // action reschedules it instead. Profile cases read the live meetings
@@ -88,17 +232,24 @@ export function CoordinatorReferralsCaseSheet({
         </SheetHeader>
         {selected ? (
           <div className={styles.sheetBody}>
-            <div>
-              <p className={styles.sheetSectionTitle}>Student</p>
-              <p className={styles.studentName}>{selected.student}</p>
-              <p className={`${styles.studentSub} ${styles.mono}`}>
-                {selected.lrn} · {selected.grade}
-              </p>
-              <p className={styles.studentSub}>
-                Stage: {stageLabel(selected.stage)} ·{" "}
-                {eligibilityLabel(selected.eligibilityStatus)}
-              </p>
-            </div>
+            <Card className={styles.infoCard}>
+              <span className={styles.glowClip} aria-hidden="true">
+                <span className={styles.cardGlow} />
+              </span>
+              <CardHeader>
+                <p className={styles.sheetSectionTitle}>Student</p>
+              </CardHeader>
+              <CardContent>
+                <p className={styles.studentName}>{selected.student}</p>
+                <p className={`${styles.studentSub} ${styles.mono}`}>
+                  {selected.lrn} · {selected.grade}
+                </p>
+                <p className={styles.studentSub}>
+                  Stage: {stageLabel(selected.stage)} ·{" "}
+                  {eligibilityLabel(selected.eligibilityStatus)}
+                </p>
+              </CardContent>
+            </Card>
             <div>
               <p className={styles.sheetSectionTitle}>Evidence chain</p>
               {selected.forms.length === 0 ? (
@@ -129,7 +280,10 @@ export function CoordinatorReferralsCaseSheet({
             </div>
             <div>
               <p className={styles.sheetSectionTitle}>Parent meetings</p>
-              {!isProfile ? (
+              {!isProfile &&
+              meetings.length === 0 &&
+              !meetingsPending &&
+              !meetingsError ? (
                 <>
                   <p className={styles.note}>
                     No learner profile yet — you can still book the parent
@@ -155,12 +309,8 @@ export function CoordinatorReferralsCaseSheet({
                           />
                         ) : null}
                         {bookPendingId === selected.id
-                          ? pendingMeeting
-                            ? "Rescheduling…"
-                            : "Booking…"
-                          : pendingMeeting
-                            ? "Reschedule meeting"
-                            : "Book meeting"}
+                          ? "Booking…"
+                          : "Book meeting"}
                       </Button>
                     </div>
                   ) : null}
@@ -220,51 +370,69 @@ export function CoordinatorReferralsCaseSheet({
                 </p>
               ) : (
                 <ul className={styles.evidenceList}>
-                  {meetings.map((m) => (
-                    <li
-                      key={m.id}
-                      className={styles.evidenceItem}
-                      style={{ alignItems: "flex-start" }}
-                    >
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div className={styles.badgeRow}>
-                          <Badge
-                            variant={m.venue === "home" ? "secondary" : "outline"}
-                          >
-                            {venueLabel(m.venue)}
-                          </Badge>
-                          <Badge variant={m.attended ? "success" : "outline"}>
-                            {m.attended ? "Attended" : "Booked"}
-                          </Badge>
-                        </div>
-                        <p
-                          className={styles.studentSub}
-                          style={{ margin: "0.25rem 0 0" }}
-                        >
-                          {formatManilaDate(m.meetingDatetime)} ·{" "}
-                          {formatManilaTime(m.meetingDatetime)} · booked by{" "}
-                          {m.recordedBy}
-                        </p>
-                        {m.minutesOfMeeting ? (
+                  {meetings.map((m) => {
+                    const live = liveChip(m, now);
+                    const invited = m.invitees ?? [];
+                    return (
+                      <li
+                        key={m.id}
+                        className={styles.evidenceItem}
+                        style={{ alignItems: "flex-start" }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className={styles.badgeRow}>
+                            <Badge
+                              variant={m.venue === "home" ? "secondary" : "outline"}
+                            >
+                              {venueLabel(m.venue)}
+                            </Badge>
+                            <Badge variant={m.attended ? "success" : "outline"}>
+                              {m.attended ? "Attended" : "Booked"}
+                            </Badge>
+                            {live === "live" ? (
+                              <Badge variant="success">Live now</Badge>
+                            ) : live === "overdue" ? (
+                              <Badge variant="destructive">Overdue</Badge>
+                            ) : null}
+                          </div>
                           <p
                             className={styles.studentSub}
                             style={{ margin: "0.25rem 0 0" }}
                           >
-                            {m.minutesOfMeeting}
+                            {formatManilaDate(m.meetingDatetime)} ·{" "}
+                            {formatManilaTime(m.meetingDatetime)} · booked by{" "}
+                            {m.recordedBy}
                           </p>
+                          {invited.length > 0 ? (
+                            <p
+                              className={styles.studentSub}
+                              style={{ margin: "0.25rem 0 0" }}
+                            >
+                              Invited: {invited.map(meetingInviteeLabel).join("; ")}
+                            </p>
+                          ) : null}
+                          {m.minutesOfMeeting ? (
+                            <p
+                              className={styles.studentSub}
+                              style={{ margin: "0.25rem 0 0" }}
+                            >
+                              {m.minutesOfMeeting}
+                            </p>
+                          ) : null}
+                          <MeetingDocsRow meeting={m} onRefresh={onRetryMeetings} />
+                        </div>
+                        {!m.attended ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onOutcome(m, selected)}
+                          >
+                            Record outcome
+                          </Button>
                         ) : null}
-                      </div>
-                      {!m.attended ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onOutcome(m)}
-                        >
-                          Record outcome
-                        </Button>
-                      ) : null}
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               {isProfile ? (
@@ -279,6 +447,41 @@ export function CoordinatorReferralsCaseSheet({
                     </p>
                   ) : null}
                 </div>
+              ) : !meetingsPending &&
+                !meetingsError &&
+                meetings.length > 0 ? (
+                // Early row with a booked meeting: the row menu reschedules
+                // it, and so does this button (the hook resolves the live
+                // meeting either way).
+                <div className={styles.sheetActions}>
+                  <Button size="sm" variant="outline" onClick={onBook}>
+                    {meetings.some((m) => !m.attended)
+                      ? "Reschedule meeting"
+                      : "Book meeting"}
+                  </Button>
+                  {meetings.some((m) => !m.attended) ? (
+                    <p className={styles.note} style={{ margin: 0 }}>
+                      Already booked — reschedule instead of booking another
+                      one.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {/* Attended meeting recorded: hand the case to the full file's
+                  recommendation + certification fill-up. */}
+              {isProfile &&
+              (selected.stage === "meeting_parents" ||
+                selected.stage === "home_visitation") &&
+              meetings.some((m) => m.attended) ? (
+                <div className={styles.sheetActions}>
+                  <Button size="sm" asChild>
+                    <Link
+                      href={`/coordinator/referrals/${encodeURIComponent(selected.id)}?certify=1`}
+                    >
+                      Continue to certification
+                    </Link>
+                  </Button>
+                </div>
               ) : null}
             </div>
             <div>
@@ -286,15 +489,15 @@ export function CoordinatorReferralsCaseSheet({
               <p className={styles.studentSub} style={{ margin: 0 }}>
                 Referred by {selected.preparedBy}
                 {(selected.endorsedAt
-                  ? ` · endorsed ${selected.endorsedAt.slice(0, 10)}`
+                  ? ` · endorsed ${formatManilaDateLong(selected.endorsedAt)}`
                   : selected.datePrepared
-                    ? ` · ${selected.datePrepared}`
+                    ? ` · ${formatManilaDateLong(selected.datePrepared)}`
                     : "")}
               </p>
               {selected.approvedBy ? (
                 <p className={styles.studentSub} style={{ margin: 0 }}>
                   Approved by {selected.approvedBy}
-                  {selected.approvalDate ? ` · ${selected.approvalDate}` : ""}
+                  {selected.approvalDate ? ` · ${formatManilaDateLong(selected.approvalDate)}` : ""}
                 </p>
               ) : null}
             </div>

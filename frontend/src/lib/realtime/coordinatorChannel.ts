@@ -82,6 +82,14 @@ function currentUserId(): string | null {
   }
 }
 
+/* Own-write receipts already showed a local success toast at mutation time
+   (book/reschedule confirmations) — the bell row still lands for the badge,
+   but a second sileo must never pop. Matched by message phrasing, mirroring
+   the nurse/teacher echo guards: self rows always start with "You …". */
+function isSelfReceipt(n: CoordinatorNotification): boolean {
+  return /^you (booked|moved|rescheduled)\b/i.test(n.message ?? "");
+}
+
 function toastTitleFor(n: CoordinatorNotification): string {
   if (n.sourceTable === "adm_devices") {
     return "Device update";
@@ -160,8 +168,11 @@ export function useCoordinatorRealtime(enabled = true) {
 
     function notify(rows: CoordinatorNotification[]) {
       if (rows.length === 0) return;
-      // Oldest first so the newest toast stays on top.
-      const ordered = [...rows].reverse().slice(0, MAX_TOASTS_PER_POLL);
+      // Own receipts merge silently into bell + badge — never re-toasted.
+      const ordered = [...rows]
+        .filter((r) => !isSelfReceipt(r))
+        .reverse()
+        .slice(0, MAX_TOASTS_PER_POLL);
       for (const row of ordered) {
         toast.info({
           title: toastTitleFor(row),

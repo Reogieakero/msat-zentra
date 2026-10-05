@@ -170,6 +170,14 @@
   color: var(--muted-foreground);
 }
 
+/* Right side of a heatblock card head: count + drill-down icon button. */
+.headRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
 .enrolledIcon {
   width: 0.8125rem;
   height: 0.8125rem;
@@ -414,10 +422,19 @@
   gap: 0.375rem;
 }
 
-/* Grid cards: 4 section cards per row, wrapping. No strip, no scrolling. */
+/* Filter modal footer: Cancel + Show results, pinned right. */
+.modalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Grid cards: 3 section cards per row, wrapping. No strip, no scrolling. */
 .gridCards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -426,10 +443,15 @@
   min-height: 14rem;
 }
 
-@media (max-width: 1500px) {
-  .gridCards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+/* Meta row inside section-style cards: section + headcount left,
+   inspect action pinned right. */
+.cardMeta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 @media (max-width: 1200px) {

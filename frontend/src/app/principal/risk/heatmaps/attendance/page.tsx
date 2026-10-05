@@ -12,12 +12,13 @@ import { SubjectHeatblocks } from "./components/SubjectHeatblocks";
 import { SectionAverages } from "./components/SectionAverages";
 import { SchoolTrend } from "./components/SchoolTrend";
 import { NeedsAttention } from "./components/NeedsAttention";
+import {
+  SectionAttendanceModal,
+  type SectionSelection,
+} from "./components/SectionAttendanceModal";
 import styles from "./components/attendance.module.css";
 
-type Session = "AM" | "PM";
 type View = "daily" | "subject" | "averages" | "trend" | "attention";
-
-const SESSION_KEY = "attendance-heatmap:session";
 
 // URL tabs for the sidebar card navigation: ?tab=daily-heatblocks etc.
 const TAB_PARAM = "tab";
@@ -48,7 +49,6 @@ function PageInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [session, setSession] = usePersistentState<Session>(SESSION_KEY, "AM");
 
   // View lives in the URL (?tab=...) so sidebar clicks are shareable and
   // survive reloads. Falls back to the last persisted view, then daily.
@@ -57,6 +57,19 @@ function PageInner() {
     "daily"
   );
   const view = viewFromTab(searchParams.get(TAB_PARAM)) ?? storedView;
+
+  // Section drill-down (read-only CardModal): opened from any heatblock,
+  // table row, or the sidebar drill card. Null selection shows the picker.
+  const [drillOpen, setDrillOpen] = React.useState(false);
+  const [drillSelection, setDrillSelection] =
+    React.useState<SectionSelection | null>(null);
+  const openSection = React.useCallback(
+    (sectionId: string, sectionName: string) => {
+      setDrillSelection({ sectionId, sectionName });
+      setDrillOpen(true);
+    },
+    []
+  );
 
   // Right-sidebar cards are the only navigation: each one swaps the main
   // panel content (and the URL tab) without moving the scroll position —
@@ -73,20 +86,34 @@ function PageInner() {
       <div className={styles.layout}>
         <div className={styles.main}>
           {view === "daily" ? (
-            <AttendanceHeatblocks session={session} onSessionChange={setSession} />
+            <AttendanceHeatblocks onInspectSection={openSection} />
           ) : view === "subject" ? (
-            <SubjectHeatblocks />
+            <SubjectHeatblocks onInspectSection={openSection} />
           ) : view === "averages" ? (
-            <SectionAverages session={session} onSessionChange={setSession} />
+            <SectionAverages onInspectSection={openSection} />
           ) : view === "trend" ? (
-            <SchoolTrend session={session} onSessionChange={setSession} />
+            <SchoolTrend />
           ) : (
-            <NeedsAttention session={session} onSessionChange={setSession} />
+            <NeedsAttention onInspectSection={openSection} />
           )}
         </div>
 
-        <AttendanceHeader active={view} onNavigate={handleNavigate} />
+        <AttendanceHeader
+          active={view}
+          onNavigate={handleNavigate}
+          onDrillSection={() => {
+            setDrillSelection(null);
+            setDrillOpen(true);
+          }}
+        />
       </div>
+      <SectionAttendanceModal
+        open={drillOpen}
+        selection={drillSelection}
+        onPick={(s) => setDrillSelection(s)}
+        onBack={() => setDrillSelection(null)}
+        onClose={() => setDrillOpen(false)}
+      />
     </section>
   );
 }

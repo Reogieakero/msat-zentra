@@ -15,6 +15,7 @@ import {
   CoordinatorOverviewError,
   CoordinatorOverviewSkeleton,
 } from "./components/coordinator-overview-states";
+import { useCoordinatorProfileSettings } from "../settings/components/profile-settings-data";
 import styles from "./components/coordinator-overview.module.css";
 
 export default function CoordinatorOverviewPage() {
@@ -22,6 +23,11 @@ export default function CoordinatorOverviewPage() {
     React.useState<HistoryTarget | null>(null);
   const [attentionOpen, setAttentionOpen] = React.useState(false);
   const overview = useCoordinatorOverview();
+
+  // Saved settings hex — the stage donut builds its scale straight from it,
+  // so slices always wear the coordinator's primary.
+  const profile = useCoordinatorProfileSettings();
+  const primary = profile.data?.primaryColor ?? null;
 
   if (overview.isPending) return <CoordinatorOverviewSkeleton />;
   if (overview.isError) {
@@ -56,30 +62,32 @@ export default function CoordinatorOverviewPage() {
         onRetry={overview.devices.refetch}
       />
 
-      <div className={styles.railRow}>
-        <CoordinatorOverviewStageChart stageDonut={overview.stageDonut} />
-        <CoordinatorOverviewForwards
-          rows={overview.forwards.rows}
-          isPending={overview.forwards.isPending}
-          isError={overview.forwards.isError}
-          isRefetching={overview.forwards.isRefetching}
+      <CoordinatorOverviewForwards
+        rows={overview.forwards.rows}
+        isPending={overview.forwards.isPending}
+        isError={overview.forwards.isError}
+        isRefetching={overview.forwards.isRefetching}
+        now={overview.now}
+        onRetry={overview.forwards.refetch}
+        onHistory={setHistoryTarget}
+      />
+
+      <hr className={styles.divider} />
+
+      <div className={styles.chartRow}>
+        <CoordinatorOverviewStageChart stageDonut={overview.stageDonut} primary={primary} />
+        <CoordinatorOverviewDevices
+          issued={overview.devices.data?.issued ?? null}
+          returned={overview.devices.data?.returned ?? null}
+          hasData={Boolean(overview.devices.data)}
+          isPending={overview.devices.isPending}
+          isError={overview.devices.isError}
+          isRefetching={overview.devices.isRefetching}
+          oldestOut={overview.devices.oldestOut}
           now={overview.now}
-          onRetry={overview.forwards.refetch}
-          onHistory={setHistoryTarget}
+          onRetry={overview.devices.refetch}
         />
       </div>
-
-      <CoordinatorOverviewDevices
-        issued={overview.devices.data?.issued ?? null}
-        returned={overview.devices.data?.returned ?? null}
-        hasData={Boolean(overview.devices.data)}
-        isPending={overview.devices.isPending}
-        isError={overview.devices.isError}
-        isRefetching={overview.devices.isRefetching}
-        oldestOut={overview.devices.oldestOut}
-        now={overview.now}
-        onRetry={overview.devices.refetch}
-      />
 
       <CaseHistoryDialog
         target={historyTarget}

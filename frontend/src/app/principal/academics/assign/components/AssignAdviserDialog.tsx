@@ -5,14 +5,7 @@ import { Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { DropdownSelect } from "./DropdownSelect";
 import type {
   AdvisoryEntryInput,
@@ -335,23 +328,21 @@ export function AssignAdviserDialog({
     grade != null && entries.some((e) => e.sectionName.trim() !== "" && e.adviserName.trim() !== "");
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      size="md"
+      title="Assign Advisory"
+      description={
+        <>
+          One grade level per batch — input each section name and adviser name for{" "}
+          <strong>{schoolYearName || "the active school year"}</strong>. Sections that
+          don&apos;t exist yet are created automatically.
+        </>
+      }
+      watchKey={entries.length}
     >
-      <DialogContent className="max-h-[calc(100dvh-4rem)] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Assign Advisory</DialogTitle>
-          <DialogDescription>
-            One grade level per batch — input each section name and adviser name for{" "}
-            <strong>{schoolYearName || "the active school year"}</strong>. Sections that
-            don&apos;t exist yet are created automatically.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className={styles.form}>
+      <div className={styles.form}>
           <div className={styles.field}>
             <Label className={styles.label} htmlFor="adviser-dialog-grade">
               Grade Level <span className={styles.required}>*</span>
@@ -408,7 +399,7 @@ export function AssignAdviserDialog({
           ) : null}
         </div>
 
-        <DialogFooter>
+        <div className={styles.stickyFooter}>
           <Button variant="outline" onClick={onClose} disabled={isAssigning}>
             Cancel
           </Button>
@@ -430,8 +421,7 @@ export function AssignAdviserDialog({
               "Assign Adviser"
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

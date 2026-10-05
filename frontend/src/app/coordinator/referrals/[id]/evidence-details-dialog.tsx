@@ -1,14 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   attendeeLabel,
   formatManilaDate,
@@ -78,109 +71,152 @@ export function EvidenceDetailsDialog({
   const cert = certificationRecord(certificationDetails);
 
   return (
-    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            {target ? (
-              <>
-                Status: {friendlyWords(target.status)}
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
-
-        {target?.formType === "MINUTES_OF_MEETING" ? (
-          attended.length === 0 ? (
-            <p className={styles.muted} style={{ margin: 0 }}>
-              No attended meeting on record yet.
-            </p>
-          ) : (
-            <div className={styles.sheetBody}>
-              {attended.map((m) => (
-                <dl key={m.id} className={styles.metaList}>
-                  <div className={styles.metaItem}>
-                    <dt className={styles.metaLabel}>Schedule</dt>
-                    <dd className={styles.metaValue} style={{ margin: 0 }}>
-                      {formatManilaDate(m.meetingDatetime)} at{" "}
+    <CardModal
+      open={target !== null}
+      onClose={onClose}
+      title={title}
+      description={
+        target ? <>Status: {friendlyWords(target.status)}</> : undefined
+      }
+      size="md"
+    >
+      {target?.formType === "MINUTES_OF_MEETING" ? (
+        attended.length === 0 ? (
+          <p className={styles.muted} style={{ margin: 0 }}>
+            No attended meeting on record yet.
+          </p>
+        ) : (
+          <div className={styles.modalBody} style={{ marginBottom: 0 }}>
+            {attended.map((m, i) => (
+              <section
+                key={m.id}
+                aria-label={
+                  attended.length > 1
+                    ? `Attended meeting ${i + 1} of ${attended.length}`
+                    : "Attended meeting"
+                }
+              >
+                {attended.length > 1 ? (
+                  <p className={styles.modalSectionTitle}>
+                    Meeting {i + 1} of {attended.length}
+                  </p>
+                ) : null}
+                <dl className={styles.kpiGrid} style={{ margin: 0 }}>
+                  <div className={styles.kpi}>
+                    <dt className={styles.metaLabel}>Date</dt>
+                    <dd className={styles.kpiValue} style={{ margin: 0 }}>
+                      {formatManilaDate(m.meetingDatetime)}
+                    </dd>
+                  </div>
+                  <div className={styles.kpi}>
+                    <dt className={styles.metaLabel}>Time</dt>
+                    <dd className={styles.kpiValue} style={{ margin: 0 }}>
                       {formatManilaTime(m.meetingDatetime)}
                     </dd>
                   </div>
-                  <div className={styles.metaItem}>
+                  <div className={styles.kpi}>
                     <dt className={styles.metaLabel}>Venue</dt>
-                    <dd className={styles.metaValue} style={{ margin: 0 }}>
+                    <dd className={styles.kpiValue} style={{ margin: 0 }}>
                       {venueLabel(m.venue)}
                     </dd>
                   </div>
+                  <div className={styles.kpi}>
+                    <dt className={styles.metaLabel}>Status</dt>
+                    <dd style={{ margin: 0 }}>
+                      <Badge variant="success">Attended</Badge>
+                    </dd>
+                  </div>
                   {m.attendanceLogbookRef ? (
-                    <div className={styles.metaItem}>
+                    <div className={`${styles.kpi} ${styles.kpiFull}`}>
                       <dt className={styles.metaLabel}>Logbook ref</dt>
                       <dd
-                        className={`${styles.metaValue} ${styles.mono}`}
+                        className={`${styles.kpiValue} ${styles.mono}`}
                         style={{ margin: 0 }}
                       >
                         {m.attendanceLogbookRef}
                       </dd>
                     </div>
                   ) : null}
-                  {m.attendees.length > 0 ? (
-                    <div className={styles.metaItem}>
-                      <dt className={styles.metaLabel}>
-                        Attendees ({m.attendees.length})
-                      </dt>
-                      <dd className={styles.metaValue} style={{ margin: 0 }}>
-                        {m.attendees.map(attendeeLabel).join("; ")}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {m.minutesOfMeeting ? (
-                    <div className={styles.metaItem}>
-                      <dt className={styles.metaLabel}>Minutes</dt>
-                      <dd className={styles.metaValue} style={{ margin: 0 }}>
-                        {m.minutesOfMeeting}
-                      </dd>
-                    </div>
-                  ) : null}
                 </dl>
-              ))}
-            </div>
-          )
-        ) : target?.formType === "CERTIFICATION" ? (
-          <div>
-            {cert?.recommendation ? (
-              <p className={styles.cardText} style={{ marginTop: 0 }}>
-                {cert.recommendation}
-              </p>
-            ) : (
-              <p className={styles.muted} style={{ margin: 0 }}>
-                No recommendation text recorded yet.
-              </p>
-            )}
-            {cert?.certifiedAt ? (
-              <p className={styles.muted} style={{ margin: "0.5rem 0 0" }}>
-                Certified {cert.certifiedAt.slice(0, 10)}
-                {cert.certifiedBy ? ` · ${cert.certifiedBy}` : ""}
-              </p>
-            ) : null}
+                {m.attendees.length > 0 ? (
+                  <div style={{ marginTop: "0.75rem" }}>
+                    <p
+                      className={styles.metaLabel}
+                      style={{ margin: "0 0 0.375rem" }}
+                    >
+                      Attendees · {m.attendees.length}
+                    </p>
+                    <ul
+                      className={styles.badgeRow}
+                      style={{
+                        margin: 0,
+                        padding: 0,
+                        listStyle: "none",
+                      }}
+                    >
+                      {m.attendees.map((a, idx) => (
+                        <li key={`${a.name}-${idx}`}>
+                          <Badge variant="secondary">
+                            {attendeeLabel(a)}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {m.minutesOfMeeting ? (
+                  <div style={{ marginTop: "0.75rem" }}>
+                    <p
+                      className={styles.metaLabel}
+                      style={{ margin: "0 0 0.375rem" }}
+                    >
+                      Minutes
+                    </p>
+                    <div
+                      className={styles.logCard}
+                      style={{ marginTop: 0 }}
+                    >
+                      <p
+                        className={styles.cardText}
+                        style={{ margin: 0 }}
+                      >
+                        {m.minutesOfMeeting}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ))}
           </div>
-        ) : target?.formType === "HV_FORM" ? (
-          <p className={styles.muted} style={{ margin: 0 }}>
-            Recorded from the home visitation on this case. The full visit
-            report stays with the guidance desk.
-          </p>
-        ) : target ? (
-          <p className={styles.muted} style={{ margin: 0 }}>
-            {title} — {friendlyWords(target.status)}.
-          </p>
-        ) : null}
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        )
+      ) : target?.formType === "CERTIFICATION" ? (
+        <div>
+          {cert?.recommendation ? (
+            <p className={styles.cardText} style={{ marginTop: 0 }}>
+              {cert.recommendation}
+            </p>
+          ) : (
+            <p className={styles.muted} style={{ margin: 0 }}>
+              No recommendation text recorded yet.
+            </p>
+          )}
+          {cert?.certifiedAt ? (
+            <p className={styles.muted} style={{ margin: "0.5rem 0 0" }}>
+              Certified {cert.certifiedAt.slice(0, 10)}
+              {cert.certifiedBy ? ` · ${cert.certifiedBy}` : ""}
+            </p>
+          ) : null}
+        </div>
+      ) : target?.formType === "HV_FORM" ? (
+        <p className={styles.muted} style={{ margin: 0 }}>
+          Recorded from the home visitation on this case. The full visit
+          report stays with the guidance desk.
+        </p>
+      ) : target ? (
+        <p className={styles.muted} style={{ margin: 0 }}>
+          {title} — {friendlyWords(target.status)}.
+        </p>
+      ) : null}
+    </CardModal>
   );
 }

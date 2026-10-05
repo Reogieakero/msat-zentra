@@ -122,11 +122,20 @@ export default function TeacherAdvisoryReferralsPage() {
   });
 
   const [trackTarget, setTrackTarget] = React.useState<TrackableReferral | null>(null);
-  const { reopen: reopenReferral, isPending: reopenPending } = useReopenReferral();
-  const [cancelTarget, setCancelTarget] = React.useState<ReferralActionTarget | null>(null);
-  const [cancelReason, setCancelReason] = React.useState("");
-  const [cancelPending, setCancelPending] = React.useState(false);
-  const [actionError, setActionError] = React.useState<string | null>(null);
+   const { reopen: reopenReferral, isPending: reopenPending } = useReopenReferral();
+   const [cancelTarget, setCancelTarget] = React.useState<ReferralActionTarget | null>(null);
+   const [cancelReason, setCancelReason] = React.useState("");
+   const [cancelPending, setCancelPending] = React.useState(false);
+   const [actionError, setActionError] = React.useState<string | null>(null);
+   const [newReferralOpen, setNewReferralOpen] = React.useState(false);
+   // Bumped every time a dismissed ADM case is filed again from the table —
+   // the rail shows the "Re-submit from scratch" reminder for 4s.
+   const [admResubmitSignal, setAdmResubmitSignal] = React.useState(0);
+
+   const handleAdmReferAgain = React.useCallback(() => {
+     setNewReferralOpen(true);
+     setAdmResubmitSignal((s) => s + 1);
+   }, []);
 
   const requestCancel = React.useCallback((row: ReferralRow) => {
     setCancelTarget({ id: row.id, studentName: row.studentName });
@@ -188,7 +197,7 @@ export default function TeacherAdvisoryReferralsPage() {
       {
         id: "status",
         accessorFn: (row) => row.status,
-        header: "Status",
+        header: "Case status",
         size: 130,
         minSize: 130,
         maxSize: 130,
@@ -281,7 +290,13 @@ export default function TeacherAdvisoryReferralsPage() {
                   {dismissed ? (
                     <DropdownMenuItem
                       disabled={reopenPending}
-                      onSelect={() => void reopenReferral(r)}
+                      onSelect={() => {
+                        if (r.track === "adm") {
+                          handleAdmReferAgain();
+                        } else {
+                          void reopenReferral(r);
+                        }
+                      }}
                     >
                       <RotateCcw size={16} strokeWidth={1.8} aria-hidden />
                       {reopenPending ? "Re-submitting…" : "Refer again"}
@@ -303,7 +318,7 @@ export default function TeacherAdvisoryReferralsPage() {
         },
       },
     ],
-    [requestCancel],
+    [requestCancel, handleAdmReferAgain, reopenReferral, reopenPending],
   );
 
   const table = useReactTable({
@@ -475,7 +490,11 @@ export default function TeacherAdvisoryReferralsPage() {
       <div className={refStyles.layout}>
         <div className={refStyles.body}>{body}</div>
         <aside className={refStyles.sideList} aria-label="Refer a student">
-          <ReferStudentCard />
+          <ReferStudentCard
+            open={newReferralOpen}
+            onOpenChange={setNewReferralOpen}
+            resubmitHintSignal={admResubmitSignal}
+          />
         </aside>
       </div>
 

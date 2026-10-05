@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/components/providers";
 import { CoordinatorSidebar } from "@/components/coordinator-sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Command,
   CommandInput,
@@ -23,7 +23,12 @@ import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { useCoordinatorRealtime } from "@/lib/realtime/coordinatorChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { CoordinatorNotificationsBell } from "./components/coordinator-notifications-bell";
+import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import {
+  CoordinatorPaletteGate,
+  useCoordinatorProfileSettings,
+} from "./settings/components/profile-settings-data";
 import styles from "./coordinator.module.css";
 
 function CoordinatorShell({ children }: { children: React.ReactNode }) {
@@ -36,6 +41,7 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
   useCoordinatorRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = React.useState("");
+  const profile = useCoordinatorProfileSettings();
 
   const isDark = resolvedTheme === "dark";
 
@@ -92,6 +98,9 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
               aria-label="Account menu"
             >
               <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
                 <AvatarFallback>
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
@@ -104,7 +113,13 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
           >
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={styles.accountItem}>
+            <DropdownMenuItem
+              className={styles.accountItem}
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/coordinator/settings");
+              }}
+            >
               <Settings className={styles.accountIcon} />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -154,9 +169,13 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
         </DropdownMenu>
       </header>
       <CoordinatorSidebar />
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
+      <CoordinatorPaletteGate />
+      {/* Live parent-meeting reminder: drops a top-center card when a booked
+          meeting enters the 5-minute window or runs overdue unattended. */}
+      <BookingReminderStack desk="coordinator" />
     </div>
   );
 }

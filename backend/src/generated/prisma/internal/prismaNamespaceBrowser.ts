@@ -85,6 +85,8 @@ export const ModelName = {
   HomeVisitationRecord: 'HomeVisitationRecord',
   AdmLearnerProfile: 'AdmLearnerProfile',
   AdmParentMeeting: 'AdmParentMeeting',
+  AdmMeetingInvitee: 'AdmMeetingInvitee',
+  AdmMeetingAttachment: 'AdmMeetingAttachment',
   AdmModule: 'AdmModule',
   AdmDevice: 'AdmDevice',
   AdmForm: 'AdmForm',
@@ -630,6 +632,30 @@ export const AdmParentMeetingScalarFieldEnum = {
 } as const
 
 export type AdmParentMeetingScalarFieldEnum = (typeof AdmParentMeetingScalarFieldEnum)[keyof typeof AdmParentMeetingScalarFieldEnum]
+
+
+export const AdmMeetingInviteeScalarFieldEnum = {
+  id: 'id',
+  meetingId: 'meetingId',
+  userId: 'userId',
+  invitedAt: 'invitedAt'
+} as const
+
+export type AdmMeetingInviteeScalarFieldEnum = (typeof AdmMeetingInviteeScalarFieldEnum)[keyof typeof AdmMeetingInviteeScalarFieldEnum]
+
+
+export const AdmMeetingAttachmentScalarFieldEnum = {
+  id: 'id',
+  meetingId: 'meetingId',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  fileSize: 'fileSize',
+  uploadedBy: 'uploadedBy',
+  uploadedAt: 'uploadedAt'
+} as const
+
+export type AdmMeetingAttachmentScalarFieldEnum = (typeof AdmMeetingAttachmentScalarFieldEnum)[keyof typeof AdmMeetingAttachmentScalarFieldEnum]
 
 
 export const AdmModuleScalarFieldEnum = {

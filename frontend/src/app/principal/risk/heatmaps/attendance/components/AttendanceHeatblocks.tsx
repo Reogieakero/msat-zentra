@@ -2,16 +2,19 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarRange, Check, ChevronDown } from "lucide-react";
+import { CalendarRange, Users } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -20,7 +23,6 @@ import {
 } from "@/components/ui/tooltip";
 import styles from "./AttendanceHeatblocks.module.css";
 
-type Session = "AM" | "PM";
 type Row = {
   sectionId: string;
   section: string;
@@ -52,19 +54,17 @@ function ratioColor(ratio: number): string {
 }
 
 export function AttendanceHeatblocks({
-  session,
-  onSessionChange,
+  onInspectSection,
 }: {
-  session: Session;
-  onSessionChange: (s: Session) => void;
+  onInspectSection: (sectionId: string, sectionName: string) => void;
 }) {
   const { data, isPending } = useQuery({
-    queryKey: ["attendance-section-heatmap", session],
+    queryKey: ["attendance-section-heatmap"],
     queryFn: async () => {
       const res = await apiClient.get<{
         sections: Row[];
         term?: { id: string; termNumber: number };
-      }>("/api/attendance/section-heatmap", { params: { session } });
+      }>("/api/attendance/section-heatmap");
       return res.data;
     },
   });
@@ -75,45 +75,26 @@ export function AttendanceHeatblocks({
   const termNumber = data?.term?.termNumber;
 
   return (
-    <div className={styles.content}>
-      <div className={styles.toolbar}>
-        <div className={styles.titleWrap}>
-          <h1 className={styles.title}>Section Attendance Heatblocks</h1>
-          <p className={styles.subtitle}>
-            Daily attendance for every section of the school — {session}{" "}
-            session
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Section Attendance Heatblocks</CardTitle>
+          <CardDescription>
+            Daily attendance for every section of the school — a student
+            counts present for a day only when present in every subject
+            offered that day
             {termNumber ? ` · Term ${termNumber}` : ""}, color-coded against
             the 80% threshold.
-          </p>
+          </CardDescription>
         </div>
-        <div className={styles.toolbarRight}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-label="Session filter"
-              >
-                {session} session
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {(["AM", "PM"] as Session[]).map((s) => (
-                <DropdownMenuItem
-                  key={s}
-                  onSelect={() => onSessionChange(s)}
-                >
-                  {session === s ? <Check aria-hidden /> : <span className={styles.checkSpacer} />}
-                  <span>{s} session</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+        <CardAction className="flex items-center gap-2">
+          {termNumber ? (
+            <Badge variant="secondary">Term {termNumber}</Badge>
+          ) : null}
+        </CardAction>
+      </CardHeader>
 
+      <CardContent className="flex flex-col gap-4">
       {isPending ? (
         <div className={styles.gridCards}>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -140,9 +121,21 @@ export function AttendanceHeatblocks({
               >
                 <div className={styles.shellHead}>
                   <span className={styles.grade}>{s.section}</span>
-                  <span className={styles.enrolled}>
-                    <CalendarRange className={styles.enrolledIcon} aria-hidden />
-                    {s.enrolled} students
+                  <span className={styles.headRight}>
+                    <span className={styles.enrolled}>
+                      <CalendarRange className={styles.enrolledIcon} aria-hidden />
+                      {s.enrolled} students
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onInspectSection(s.sectionId, s.section)}
+                      aria-label={`Show per-student attendance for ${s.section}`}
+                      title={`Show per-student attendance for ${s.section}`}
+                    >
+                      <Users size={14} aria-hidden />
+                    </Button>
                   </span>
                 </div>
                 <div className={styles.grid}>
@@ -163,7 +156,7 @@ export function AttendanceHeatblocks({
                       <TooltipContent>
                         <span className={styles.tooltipLine}>
                           <span>
-                            {d.date} &middot; {session}
+                            {d.date}
                           </span>
                           <span>
                             {d.present} present &middot; {d.late} late
@@ -193,6 +186,7 @@ export function AttendanceHeatblocks({
           </div>
         </TooltipProvider>
       )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

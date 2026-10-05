@@ -42,25 +42,56 @@
 .grades {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0.625rem 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
-.grade {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--card);
+.resultCount {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Padding around the datatable inside an expanded grade — the expandable
+   grid animation needs a plain wrapper, not the table itself. Aligned to
+   the card padding. */
+.tablePad {
+  position: relative;
+  padding: 0 1.125rem 1.125rem;
+  min-height: 0;
   overflow: hidden;
 }
 
+.grade {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background-color: var(--card);
+  /* Visible (not hidden) so the straddling count pill is never cut.
+     The expandable table still clips via .tablePad's own overflow. */
+  overflow: visible;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.grade:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
 .gradeBtn {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem 0.875rem;
+  padding: 1.125rem;
   border: none;
   background: none;
   font: inherit;
@@ -76,21 +107,19 @@
   color: var(--muted-foreground);
 }
 
-.gradeIdentity {
-  flex: 1;
-  min-width: 0;
-}
-
 .gradeName {
-  display: block;
-  font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.gradeMeta {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
+/* Worst-rate label next to the status dot — always red to flag attention. */
+.worstLabel {
+  color: var(--destructive);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Smooth slide in/out for the student list (grid-rows animation handles
@@ -106,7 +135,8 @@
     visibility 200ms ease-out;
 }
 
-.expandable > ul {
+.expandable > ul,
+.expandable > div {
   overflow: hidden;
   min-height: 0;
 }
@@ -119,6 +149,14 @@
 @media (prefers-reduced-motion: reduce) {
   .expandable {
     transition: none;
+  }
+
+  .grade {
+    transition: none;
+  }
+
+  .grade:hover {
+    transform: none;
   }
 }
 

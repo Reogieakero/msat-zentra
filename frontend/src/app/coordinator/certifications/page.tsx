@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CoordinatorCertificationsCharts } from "./components/coordinator-certifications-charts";
 import { CoordinatorCertificationsGradeChart } from "./components/coordinator-certifications-grade";
 import { CoordinatorCertificationsFolders } from "./components/coordinator-certifications-folders";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
   fetchCertApprovalRows,
   fetchCertStageRows,
@@ -17,8 +18,6 @@ import {
   type CertStatusFilter,
 } from "./components/coordinator-certifications-data";
 import styles from "./components/coordinator-certifications.module.css";
-
-const PAGE_SIZE = 24;
 
 function tabToStatus(tab: string | null): CertStatusFilter {
   if (tab === "awaiting" || tab === "revision" || tab === "approved" || tab === "prepared") {
@@ -34,7 +33,6 @@ function CertificationsBody() {
   const [status, setStatus] = React.useState<CertStatusFilter>(() =>
     tabToStatus(params.get("tab")),
   );
-  const [page, setPage] = React.useState(1);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -45,7 +43,6 @@ function CertificationsBody() {
 
   const handleQueryInputChange = (value: string) => {
     setQueryInput(value);
-    setPage(1);
   };
 
   const certQuery = useQuery({
@@ -92,36 +89,6 @@ function CertificationsBody() {
     return (
       <section className={styles.page} aria-busy="true">
         <div className={styles.layout}>
-          <div className={styles.side}>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <Skeleton className={styles.skelChart} />
-              <div className={styles.skelLegend}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelLegendRow}>
-                    <Skeleton className={styles.skelLegendLabel} />
-                    <Skeleton className={styles.skelLegendCount} />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className={styles.skelInterpretation} />
-            </div>
-            <div className={styles.skelCard}>
-              <Skeleton className={styles.skelCardTitle} />
-              <Skeleton className={styles.skelCardDesc} />
-              <div className={styles.skelGradeBars}>
-                {[0, 1, 2, 3].map((j) => (
-                  <div key={j} className={styles.skelGradeRow}>
-                    <Skeleton className={styles.skelGradeLabel} />
-                    <Skeleton className={styles.skelGradeBar} />
-                    <Skeleton className={styles.skelGradeCount} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           <div className={styles.main}>
             <div className={styles.skelPanel}>
               <div className={styles.skelPanelHead}>
@@ -147,13 +114,34 @@ function CertificationsBody() {
                   </div>
                 ))}
               </div>
-              <div className={styles.skelPager}>
-                <Skeleton className={styles.skelRange} />
-                <div className={styles.skelPagerBtns}>
-                  <Skeleton className={styles.skelBtn} />
-                  <Skeleton className={styles.skelPageLabel} />
-                  <Skeleton className={styles.skelBtn} />
-                </div>
+            </div>
+          </div>
+
+          <div className={styles.side}>
+            <div className={styles.skelSidePanel}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <Skeleton className={styles.skelChart} />
+              <div className={styles.skelLegend}>
+                {[0, 1, 2, 3].map((j) => (
+                  <div key={j} className={styles.skelLegendRow}>
+                    <Skeleton className={styles.skelLegendLabel} />
+                    <Skeleton className={styles.skelLegendCount} />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className={styles.skelInterpretation} />
+              <hr className={styles.divider} />
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <div className={styles.skelGradeBars}>
+                {[0, 1, 2, 3].map((j) => (
+                  <div key={j} className={styles.skelGradeRow}>
+                    <Skeleton className={styles.skelGradeLabel} />
+                    <Skeleton className={styles.skelGradeBar} />
+                    <Skeleton className={styles.skelGradeCount} />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -189,27 +177,31 @@ function CertificationsBody() {
   return (
     <section className={styles.page} aria-label="Certifications">
       <div className={styles.layout}>
-        <aside className={styles.side}>
-          <CoordinatorCertificationsCharts summary={summary} />
-          <CoordinatorCertificationsGradeChart summary={summary} />
-        </aside>
-
+        {/* Certification folders sit flat on the page (no card
+            background); the insights panel on the right carries the
+            shared glow-card design. */}
         <div className={styles.main}>
           <CoordinatorCertificationsFolders
             records={records}
-            page={page}
-            pageSize={PAGE_SIZE}
-            onPageChange={setPage}
             query={queryInput}
             onQueryChange={handleQueryInputChange}
             status={status}
-            onStatusChange={(value) => {
-              setStatus(value);
-              setPage(1);
-            }}
-            isNavigating={isFetching && !isPending}
+            onStatusChange={setStatus}
           />
         </div>
+
+        <aside className={styles.side}>
+          <section className={assign.card} aria-label="Certification insights">
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
+            </span>
+            <div className="relative flex min-w-0 flex-col gap-5">
+              <CoordinatorCertificationsCharts summary={summary} />
+              <hr className={styles.divider} />
+              <CoordinatorCertificationsGradeChart summary={summary} />
+            </div>
+          </section>
+        </aside>
       </div>
     </section>
   );

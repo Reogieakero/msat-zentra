@@ -242,7 +242,7 @@ export default function PrincipalAssignPage() {
                           )}
                         </span>
                       </div>
-                      <div className={assign.cardActions}>
+                      <div className={`${assign.cardActions} justify-end`}>
                         <Button
                           size="xs"
                           aria-label={`Assign adviser for ${s.name}`}

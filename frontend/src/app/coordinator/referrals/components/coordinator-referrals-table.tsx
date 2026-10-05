@@ -1,8 +1,11 @@
 "use client";
 
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, Loader2, MoreHorizontal, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { CoordinatorReferralsSkeleton } from "./coordinator-referrals-skeleton";
 import {
   Table,
@@ -14,27 +17,29 @@ import {
 } from "@/components/ui/table";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   admCaseStatusVariant,
+  consultReviewerLabel,
   deriveAdmCaseStatus,
-  formatManilaDate,
+  formatElapsedShort,
+  formatManilaDateLong,
   formatManilaTime,
-  meetingTooltip,
+  friendlyActionType,
+  msSinceDate,
   stageLabel,
   eligibilityLabel,
   useNowTick,
   venueLabel,
+  latestActionFallback,
   type AdmCaseRow,
+  type AdmEligibility,
 } from "../../components/coordinator-data";
+import { ELIG_OPTIONS } from "./coordinator-referrals-constants";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
 import styles from "./coordinator-referrals-table.module.css";
@@ -47,45 +52,20 @@ interface CoordinatorReferralsTableProps {
   isSyncing: boolean;
   isError: boolean;
   isRefetching: boolean;
+  total: number;
+  query: string;
+  onQueryChange: (v: string) => void;
+  elig: "all" | AdmEligibility;
+  onEligChange: (v: "all" | AdmEligibility) => void;
+  eligMenuLabel: string;
   hasActiveFilters: boolean;
+  onClear: () => void;
   /** Row id currently being booked/rescheduled — only it disables. */
   bookPendingId: string | null;
   onRetry: () => void;
-  onOpenCase: (row: AdmCaseRow) => void;
   onHistory: (target: HistoryTarget) => void;
   onBook: (row: AdmCaseRow) => void;
 }
-
-type MeetingLiveStatus = "attended" | "live" | "upcoming" | "overdue";
-
-// Bookings carry no duration, so "live" is a window around the scheduled
-// start: joinable 15 minutes early, live for 60 minutes after. Anything
-// unattended past that window is overdue for an outcome record.
-const LIVE_EARLY_MS = 15 * 60_000;
-const LIVE_LATE_MS = 60 * 60_000;
-
-function deriveMeetingLiveStatus(
-  meeting: { datetime: string; attended: boolean },
-  now: number,
-): MeetingLiveStatus {
-  if (meeting.attended) return "attended";
-  const t = new Date(meeting.datetime).getTime();
-  if (!Number.isFinite(t)) return "upcoming";
-  const diff = t - now;
-  if (diff <= LIVE_EARLY_MS && diff >= -LIVE_LATE_MS) return "live";
-  if (diff > LIVE_EARLY_MS) return "upcoming";
-  return "overdue";
-}
-
-const MEETING_LIVE_BADGE: Record<
-  MeetingLiveStatus,
-  { label: string; variant: "success" | "destructive" | "outline" | "warning" }
-> = {
-  attended: { label: "Attended", variant: "success" },
-  live: { label: "Live", variant: "destructive" },
-  upcoming: { label: "Upcoming", variant: "outline" },
-  overdue: { label: "Overdue", variant: "warning" },
-};
 
 /* Mirrors the backend booking guards (POST /:id/meetings and
    POST /referral/:referralId/meetings both allow only pre-certification
@@ -94,8 +74,102 @@ const MEETING_LIVE_BADGE: Record<
    anecdotal/consultation, and certification+ is locked. Rows that fail this
    get no inline booking button (the backend 409 remains the backstop). */
 function isBookableRow(r: AdmCaseRow): boolean {
+  if (r.referralStatus === "dismissed" || r.referralStatus === "resolved") return false;
   if (r.id.startsWith("referral:")) return true;
   return r.stage === "meeting_parents";
+}
+
+/* Card header shared by the empty and data states: title + live total on
+   the left, search + eligibility filter + clear on the right (guidance
+   grade-table pattern — controls live inside the card). */
+function TableCardHeader({
+  total,
+  isSyncing,
+  query,
+  onQueryChange,
+  elig,
+  onEligChange,
+  eligMenuLabel,
+  hasActiveFilters,
+  onClear,
+}: {
+  total: number;
+  isSyncing: boolean;
+  query: string;
+  onQueryChange: (v: string) => void;
+  elig: "all" | AdmEligibility;
+  onEligChange: (v: "all" | AdmEligibility) => void;
+  eligMenuLabel: string;
+  hasActiveFilters: boolean;
+  onClear: () => void;
+}) {
+  return (
+    <CardHeader>
+      <div className={styles.headerRow}>
+        <div>
+          <CardTitle className={styles.sectionTitle}>Referrals</CardTitle>
+          <CardDescription className={styles.sectionDesc}>
+            Every student referred for Alternative Delivery Mode — {total} case
+            {total === 1 ? "" : "s"}.{isSyncing ? " Syncing…" : ""}
+          </CardDescription>
+        </div>
+        <div className={styles.headerActions}>
+          <div className={styles.searchWrap}>
+            <Search className={styles.searchIcon} aria-hidden />
+            <Input
+              style={{ height: "2rem", paddingLeft: "2rem" }}
+              placeholder="Search name, LRN, or case ID…"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              aria-label="Search referrals"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                style={{ height: "2rem" }}
+                aria-label={`Filter by status, currently: ${eligMenuLabel}`}
+              >
+                {elig === "all" ? "Status" : eligMenuLabel}
+                {elig !== "all" && (
+                  <span className={styles.filterDot} aria-hidden />
+                )}
+                <ChevronDown aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {ELIG_OPTIONS.map((item) => (
+                <DropdownMenuCheckboxItem
+                  key={item.value}
+                  checked={elig === item.value}
+                  onCheckedChange={() => onEligChange(item.value)}
+                >
+                  {item.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={onClear}>
+              <X aria-hidden />
+              Show all
+            </Button>
+          )}
+        </div>
+      </div>
+    </CardHeader>
+  );
+}
+
+function buildInterpretation(rows: AdmCaseRow[]): string {  const atMeeting = rows.filter((r) => r.stage === "meeting_parents").length;
+  const unbooked = rows.filter((r) => !r.meeting && isBookableRow(r)).length;
+  return (
+    `${rows.length} case${rows.length === 1 ? "" : "s"} on this page` +
+    ` · ${atMeeting} at parent meeting` +
+    ` · ${unbooked} bookable without a meeting booked.`
+  );
 }
 
 export function CoordinatorReferralsTable({
@@ -104,21 +178,28 @@ export function CoordinatorReferralsTable({
   isSyncing,
   isError,
   isRefetching,
+  total,
+  query,
+  onQueryChange,
+  elig,
+  onEligChange,
+  eligMenuLabel,
   hasActiveFilters,
+  onClear,
   bookPendingId,
   onRetry,
-  onOpenCase,
   onHistory,
   onBook,
 }: CoordinatorReferralsTableProps) {
-  // Ticks every 30s so Upcoming → Live → Overdue flips on its own —
-  // no refetch needed for the badge to stay truthful.
+  const router = useRouter();
+  // Ticks so "x ago" readouts in the Latest action column stay live.
+  // Called before any early return (rules of hooks).
   const now = useNowTick();
   if (isInitialLoading) {
-    // Real filters header + pager stay mounted in the page around this —
-    // only the table body is skeletonized here (header/pager mirrors would
-    // duplicate the live controls).
-    return <CoordinatorReferralsSkeleton rows={10} includeHeader={false} />;
+    // Real filters header, rail, and pager stay mounted in the page around
+    // this — only the table card is skeletonized here (other mirrors would
+    // duplicate the live regions).
+    return <CoordinatorReferralsSkeleton rows={10} layout="table" />;
   }
 
   if (isError) {
@@ -145,195 +226,249 @@ export function CoordinatorReferralsTable({
 
   if (rows.length === 0) {
     return (
-      <p className={styles.emptyText}>
-        {hasActiveFilters
-          ? `No cases match your search and filters.`
-          : `No referrals found.`}
-      </p>
+      <Card className={styles.card}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
+        <TableCardHeader
+          total={total}
+          isSyncing={isSyncing}
+          query={query}
+          onQueryChange={onQueryChange}
+          elig={elig}
+          onEligChange={onEligChange}
+          eligMenuLabel={eligMenuLabel}
+          hasActiveFilters={hasActiveFilters}
+          onClear={onClear}
+        />
+        <CardContent>
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>
+              {hasActiveFilters ? "No cases match your filters" : "No referrals found"}
+            </p>
+            <p className={styles.emptyHint}>
+              {hasActiveFilters
+                ? "Try a different search or clear the eligibility filter."
+                : "New referrals will appear here once filed."}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div aria-busy={isSyncing || undefined}>
-      {isSyncing ? (
-        <p className={styles.syncBar} role="status" aria-live="polite">
-          <Loader2 className={styles.spin} aria-hidden="true" />
-          Syncing…
-        </p>
-      ) : null}
-      <div className={styles.tableWrap}>
-      <Table
-        className={`${styles.table} ${styles.alertTable}`}
-        aria-label="ADM referrals"
-      >
-        <TableHeader>
-          <TableRow>
-            <TableHead>Student</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Case status</TableHead>
-            <TableHead>Eligibility</TableHead>
-            <TableHead>Meeting</TableHead>
-            <TableHead>Meeting time</TableHead>
-            <TableHead>Date referred</TableHead>
-            <TableHead>
-              <span className="sr-only">Row actions</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((r) => {
-            const caseStatus = deriveAdmCaseStatus(
-              r.stage,
-              r.eligibilityStatus,
-              r.approvedBy,
-            );
-            const rowDate = r.endorsedAt ?? r.datePrepared;
-            const meeting = r.meeting ?? null;
-            // Only the row being booked disables — every other row stays
-            // usable while its mutation runs.
-            const bookingThis = bookPendingId === r.id;
-            // Booking lives in the row ⋯ menu (never as an inline row
-            // button) and only where the backend accepts it; locked
-            // (post-meeting) cases keep the menu item disabled with the
-            // reason instead of failing on confirm.
-            const bookable = isBookableRow(r);
-            const needsReschedule = meeting !== null && !meeting.attended;
-            // Informative hover readout in Philippine time (stored ISO is
-            // UTC — never slice it raw or an 8am booking shows predawn).
-            const meetingTip = meeting ? meetingTooltip(meeting) : null;
-            return (
-              <TableRow key={r.id}>
-                <TableCell>
-                  <p className={styles.cellMain}>{r.student}</p>
-                  <div className={`${styles.studentSub} ${styles.mono}`}>
-                    {r.lrn}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">ADM</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={admCaseStatusVariant(caseStatus.key)}
-                    title={stageLabel(r.stage)}
-                  >
-                    {caseStatus.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      r.eligibilityStatus === "eligible"
-                        ? "secondary"
-                        : r.eligibilityStatus === "ineligible"
-                          ? "destructive"
-                          : "outline"
-                    }
-                  >
-                    {eligibilityLabel(r.eligibilityStatus)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {meeting ? (
-                    <div className={styles.meetingCell}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span style={{ display: "inline-flex" }}>
-                            {(() => {
-                              const live = deriveMeetingLiveStatus(meeting, now);
-                              const badge = MEETING_LIVE_BADGE[live];
-                              return (
-                                <Badge variant={badge.variant}>
-                                  {live === "live" ? (
-                                    <span
-                                      className={styles.liveDot}
-                                      aria-hidden="true"
-                                    />
-                                  ) : null}
-                                  {badge.label}
-                                </Badge>
-                              );
-                            })()}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>{meetingTip}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  ) : (
-                    <p className={styles.notBooked}>Not booked</p>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {meeting ? (
-                    <div>
-                      <p className={`${styles.cellMain} ${styles.mono}`}>
-                        {formatManilaDate(meeting.datetime)}
-                      </p>
-                      <div className={styles.studentSub}>
-                        {formatManilaTime(meeting.datetime)} ·{" "}
-                        {venueLabel(meeting.venue)}
+    <Card className={styles.card} aria-busy={isSyncing || undefined}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
+      <TableCardHeader
+        total={total}
+        isSyncing={isSyncing}
+        query={query}
+        onQueryChange={onQueryChange}
+        elig={elig}
+        onEligChange={onEligChange}
+        eligMenuLabel={eligMenuLabel}
+        hasActiveFilters={hasActiveFilters}
+        onClear={onClear}
+      />
+      <CardContent>
+        <div className={styles.tableWrap}>
+        <Table className={styles.table} aria-label="ADM referrals">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Student</TableHead>
+              <TableHead>Referred by</TableHead>
+              <TableHead>Case status</TableHead>
+              <TableHead>Eligibility</TableHead>
+              <TableHead>Meeting time</TableHead>
+              <TableHead>Date referred</TableHead>
+              <TableHead>Latest action</TableHead>
+              <TableHead>
+                <span className={styles.srOnly}>Row actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => {
+               const caseStatus = deriveAdmCaseStatus(
+                 r.stage,
+                 r.eligibilityStatus,
+                 r.approvedBy,
+                 r.referralStatus,
+               );
+              const rowDate = r.endorsedAt ?? r.datePrepared;
+              const meeting = r.meeting ?? null;
+              // Only the row being booked disables — every other row stays
+              // usable while its mutation runs.
+              const bookingThis = bookPendingId === r.id;
+              // Booking lives in the row ⋯ menu (never as an inline row
+              // button) and only where the backend accepts it; locked
+              // (post-meeting) cases keep the menu item disabled with the
+              // reason instead of failing on confirm.
+              const bookable = isBookableRow(r);
+              const closedRow = r.referralStatus === "dismissed" || r.referralStatus === "resolved";
+              const needsReschedule = meeting !== null && !meeting.attended;
+              return (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <p className={styles.cellMain}>{r.student}</p>
+                    <p className={`${styles.cellSub} ${styles.mono}`}>
+                      {r.lrn}
+                    </p>
+                  </TableCell>
+                  {/* Source phrase so the coordinator sees at a glance whether
+                      the case came straight to ADM or was endorsed by a desk
+                      (nurse / guidance / LRPC). Filed-by name on hover. */}
+                  <TableCell>
+                    <p
+                      className={styles.cellMain}
+                      title={r.preparedBy ? `Filed by ${r.preparedBy}` : undefined}
+                    >
+                      {r.consultReviewer
+                        ? `Endorsed by ${consultReviewerLabel(r.consultReviewer)}`
+                        : "Direct referral"}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={admCaseStatusVariant(caseStatus.key)}
+                      title={stageLabel(r.stage)}
+                    >
+                      {caseStatus.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        r.eligibilityStatus === "eligible"
+                          ? "secondary"
+                          : r.eligibilityStatus === "ineligible"
+                            ? "destructive"
+                            : "outline"
+                      }
+                    >
+                      {eligibilityLabel(r.eligibilityStatus)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {meeting ? (
+                      <div>
+                        <p className={`${styles.cellMain} ${styles.mono}`}>
+                          {formatManilaDateLong(meeting.datetime)}
+                        </p>
+                        <p className={styles.cellSub}>
+                          {formatManilaTime(meeting.datetime)} ·{" "}
+                          {venueLabel(meeting.venue)}
+                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <p className={styles.cellMain}>—</p>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <p className={styles.cellMain}>
-                    {rowDate ? rowDate.slice(0, 10) : "—"}
-                  </p>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        aria-label={`Actions for ${r.student}`}
-                      >
-                        <MoreHorizontal aria-hidden />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onOpenCase(r)}>
-                        Open case
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => onHistory(historyTargetFor(r))}
-                      >
-                        See history
-                      </DropdownMenuItem>
-                      {/* An attended meeting is done — no follow-up booking
-                          is offered. Only unattended meetings reschedule
-                          and only meeting-less cases schedule. */}
-                      {meeting !== null && meeting.attended ? null : (
-                        <DropdownMenuItem
-                          disabled={bookingThis || !bookable}
-                          title={
-                            bookable
-                              ? undefined
-                              : "Meetings can only be booked before certification"
-                          }
-                          onSelect={() => onBook(r)}
+                    ) : (
+                      <p className={styles.cellMain}>—</p>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <p className={styles.cellMain}>
+                      {rowDate ? formatManilaDateLong(rowDate) : "—"}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    {r.lastActionType ? (
+                      <>
+                        <p className={styles.cellMain}>
+                          {friendlyActionType(r.lastActionType)}
+                        </p>
+                        <p className={styles.cellSub} aria-live="off">
+                          {(() => {
+                            const ms = r.lastActionAt ? msSinceDate(r.lastActionAt, now) : null;
+                            return ms === null ? "—" : `${formatElapsedShort(ms)} ago`;
+                          })()}
+                        </p>
+                      </>
+                    ) : (
+                      (() => {
+                        // No audit trail for this case (legacy / unaudited
+                        // rows) — fall back to the row's own latest
+                        // timestamp so the column still reads the latest,
+                        // whatever the status.
+                        const fb = latestActionFallback(r);
+                        if (!fb) return <p className={styles.cellMain}>—</p>;
+                        const ms = msSinceDate(fb.at, now);
+                        return (
+                          <>
+                            <p className={styles.cellMain}>{fb.label}</p>
+                            <p className={styles.cellSub} aria-live="off">
+                              {ms === null ? "—" : `${formatElapsedShort(ms)} ago`}
+                            </p>
+                          </>
+                        );
+                      })()
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Actions for ${r.student}`}
                         >
-                          {bookingThis
-                            ? needsReschedule
-                              ? "Rescheduling…"
-                              : "Booking…"
-                            : needsReschedule
-                              ? "Reschedule meeting"
-                              : "Schedule meeting"}
+                          <MoreHorizontal aria-hidden />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            router.push(
+                              `/coordinator/referrals/${encodeURIComponent(r.id)}`,
+                            )
+                          }
+                        >
+                          See details
                         </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-      </div>
-    </div>
+                            <DropdownMenuItem
+                              onSelect={() => onHistory(historyTargetFor(r))}
+                            >
+                              Track case
+                            </DropdownMenuItem>
+                        {/* An attended meeting is done — no follow-up booking
+                            is offered. Only unattended meetings reschedule
+                            and only meeting-less cases schedule. */}
+                        {meeting !== null && meeting.attended ? null : (
+                          <DropdownMenuItem
+                            disabled={bookingThis || !bookable}
+                            title={
+                              bookable
+                                ? undefined
+                                : closedRow
+                                  ? "This referral was cancelled/resolved — meetings can no longer be booked"
+                                  : "Meetings can only be booked before certification"
+                            }
+                            onSelect={() => onBook(r)}
+                          >
+                            {bookingThis
+                              ? needsReschedule
+                                ? "Rescheduling…"
+                                : "Booking…"
+                              : needsReschedule
+                                ? "Reschedule meeting"
+                                : "Schedule meeting"}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        </div>
+        <p className={styles.interpretation}>
+          <span className={styles.interpretationLabel}>What it means · </span>
+          {buildInterpretation(rows)}
+        </p>
+      </CardContent>
+    </Card>
   );
 }

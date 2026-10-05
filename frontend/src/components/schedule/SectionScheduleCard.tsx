@@ -72,15 +72,24 @@ interface SectionScheduleCardProps {
   ariaLabel: string;
   /** Grade badge hides when absent (e.g. attendance sections without grade data). */
   gradeLevel?: string | null;
+  /** Custom floating pill (e.g. a live metric). Overrides the grade badge. */
+  pill?: ReactNode;
+  /** Rendered inside the avatar circle instead of name initials. */
+  avatarIcon?: ReactNode;
   /** Field label above the title. Defaults to "Section". */
   titleLabel?: string;
   sectionName: string;
   adviserName: string | null;
-  timetableEntries: StatusEntry[];
+  /** Schedule-status entries. Omit when `statusMeta` is given directly. */
+  timetableEntries?: StatusEntry[];
+  /** Explicit dot + label, bypassing the timetable computation. */
+  statusMeta?: { color: string; label: string };
   /** Bottom hint line (e.g. "No schedule yet — tap to set up"). Omit for none. */
   hint?: string | null;
   /** Replaces the Teacher block (e.g. attendance cards list subjects). */
   middle?: ReactNode;
+  /** Extra content below the hint (e.g. a heatblock grid). */
+  children?: ReactNode;
   /** Selected-ring tone. Defaults to "primary". */
   tone?: "primary" | "green";
 }
@@ -91,16 +100,20 @@ export function SectionScheduleCard({
   selected,
   ariaLabel,
   gradeLevel,
+  pill,
+  avatarIcon,
   titleLabel = "Section",
   sectionName,
   adviserName,
   timetableEntries,
+  statusMeta,
   hint,
   middle,
+  children,
   tone = "primary",
 }: SectionScheduleCardProps) {
-  const status = sectionCardStatus(timetableEntries);
-  const meta = SECTION_CARD_STATUS_META[status];
+  const status = timetableEntries ? sectionCardStatus(timetableEntries) : "empty";
+  const meta = statusMeta ?? SECTION_CARD_STATUS_META[status];
   const selectedClass =
     onSelect && selected
       ? tone === "green"
@@ -113,7 +126,7 @@ export function SectionScheduleCard({
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      {gradeLevel ? (
+      {pill ?? (gradeLevel ? (
         <Badge
           variant="secondary"
           className={`${assign.gradeBadge} ${assign.gradeFloat}`}
@@ -125,10 +138,10 @@ export function SectionScheduleCard({
         >
           Grade {gradeLevel.replace("G", "")}
         </Badge>
-      ) : null}
+      ) : null)}
       <span className={assign.cardHead}>
         <span className={assign.avatar} aria-hidden="true">
-          {sectionInitials(sectionName)}
+          {avatarIcon ?? sectionInitials(sectionName)}
         </span>
         <span className={assign.cardTitleBlock}>
           <span className={assign.fieldLabel}>{titleLabel}</span>
@@ -158,6 +171,7 @@ export function SectionScheduleCard({
         </span>
       )}
       {hint ? <span className={assign.itemTerm}>{hint}</span> : null}
+      {children}
     </>
   );
   if (onSelect) {
@@ -173,13 +187,22 @@ export function SectionScheduleCard({
       </button>
     );
   }
+  if (href) {
+    return (
+      <Link
+        href={href}
+        aria-label={ariaLabel}
+        className={className}
+      >
+        {inner}
+      </Link>
+    );
+  }
+  // Static mode — plain card, no navigation (e.g. dashboard tiles with
+  // their own action buttons inside).
   return (
-    <Link
-      href={href as string}
-      aria-label={ariaLabel}
-      className={className}
-    >
+    <article aria-label={ariaLabel} className={className}>
       {inner}
-    </Link>
+    </article>
   );
 }

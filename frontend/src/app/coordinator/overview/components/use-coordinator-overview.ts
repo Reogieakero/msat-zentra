@@ -72,10 +72,12 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
   });
 
   // Fresh forwards still at consultation — the nurse/guidance hand-off queue.
+  // Fetched with a wide limit so the overview table can paginate client-side
+  // (5 per page) without extra round-trips.
   const forwardsQuery = useQuery({
-    queryKey: ["coordinator-referrals", 1, "", "consultation"],
+    queryKey: ["coordinator-referrals", 1, "", "consultation", 100],
     queryFn: ({ signal }) =>
-      fetchCoordinatorReferrals(1, { stage: "consultation", signal }),
+      fetchCoordinatorReferrals(1, { stage: "consultation", limit: 100, signal }),
     staleTime: 30_000,
   });
 
@@ -126,8 +128,9 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
     [data],
   );
 
+  // Full consultation queue — the table paginates client-side (5 per page).
   const recentRows = React.useMemo(
-    () => (forwardsQuery.data?.rows ?? []).slice(0, 5),
+    () => forwardsQuery.data?.rows ?? [],
     [forwardsQuery.data],
   );
   const newReferrals = React.useMemo(

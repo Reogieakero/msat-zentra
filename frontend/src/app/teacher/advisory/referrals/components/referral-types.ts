@@ -86,9 +86,12 @@ function reviewerLabel(value: string | null): string {
   return "ADM queue";
 }
 
-/* Where the file lands: the desk itself, or the ADM Coordinator via the
-   picked reviewer. */
+/* Where the file lands: the desk itself, or — for ADM cases with a nurse /
+   guidance reviewer — the reviewer first, moving to the ADM Coordinator
+   only on endorsement. (lrpc has no reviewer step, so it stays direct.) */
 export function filedToLabel(opt: StaffOption): string {
   if (opt.desk !== "adm_coordinator") return opt.label;
-  return opt.reviewer ? `ADM Coordinator · ${reviewerLabel(opt.reviewer)}` : "ADM Coordinator";
+  if (!opt.reviewer) return "ADM Coordinator";
+  if (opt.reviewer === "lrpc") return `ADM Coordinator · ${reviewerLabel(opt.reviewer)}`;
+  return `${reviewerLabel(opt.reviewer)} — moves to ADM Coordinator on endorsement`;
 }

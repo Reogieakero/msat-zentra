@@ -3,8 +3,16 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table";
+import {
   Search,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -13,15 +21,6 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../grade-mode-context";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -43,6 +42,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { BackendStudent, RiskFactor } from "../students/api";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./HighRiskStudentsTable.module.css";
 
 const FACTOR_LABEL: Record<RiskFactor, string> = {
@@ -74,7 +74,8 @@ export function HighRiskStudentsTable() {
     "zentra.risk.highRisk.factor",
     "all"
   );
-  const [page, setPage] = React.useState(1);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [pageIndex, setPageIndex] = React.useState(0);
 
   const { data, isPending } = useQuery({
     queryKey: ["risk-students", gradeMode],
@@ -127,32 +128,141 @@ export function HighRiskStudentsTable() {
 
   const hasActiveFilters = sectionFilter !== "all" || factorFilter !== "all";
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
+  const applySearch = (value: string) => {
+    setQuery(value);
+    setPageIndex(0);
+  };
+
+  const applySection = (value: string) => {
+    setSectionFilter(value);
+    setPageIndex(0);
+  };
+
+  const applyFactor = (value: "all" | RiskFactor) => {
+    setFactorFilter(value);
+    setPageIndex(0);
+  };
+
+  const clearFilters = () => {
+    setSectionFilter("all");
+    setFactorFilter("all");
+    setPageIndex(0);
+  };
+
+  const columns = React.useMemo<ColumnDef<BackendStudent>[]>(
+    () => [
+      {
+        id: "name",
+        accessorFn: (row) => row.name,
+        header: "Student",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        cell: ({ row }) => (
+          <div className={styles.studentCell}>
+            <span className={styles.studentName}>{row.original.name}</span>
+            <span className={styles.studentLrn}>{row.original.lrn}</span>
+          </div>
+        ),
+      },
+      {
+        id: "section",
+        accessorFn: (row) => row.section,
+        header: "Section",
+        size: 160,
+        minSize: 160,
+        maxSize: 160,
+        cell: ({ row }) => (
+          <span className={styles.section}>{row.original.section}</span>
+        ),
+      },
+      {
+        id: "risk",
+        accessorFn: (row) => row.riskLevel,
+        header: "Risk",
+        size: 130,
+        minSize: 130,
+        maxSize: 130,
+        cell: ({ row }) => (
+          <Badge variant="red">{row.original.riskLevel}</Badge>
+        ),
+      },
+      {
+        id: "factors",
+        accessorFn: (row) =>
+          (Object.keys(row.factors) as RiskFactor[])
+            .filter((f) => row.factors[f])
+            .join(","),
+        header: "Factors",
+        size: 220,
+        minSize: 220,
+        maxSize: 220,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className={styles.factors}>
+            {(Object.keys(row.original.factors) as RiskFactor[]).map((f) => (
+              <span
+                key={f}
+                className={`${styles.factorChip} ${
+                  row.original.factors[f] ? styles.factorOn : styles.factorOff
+                }`}
+              >
+                {FACTOR_LABEL[f]}
+              </span>
+            ))}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: filtered,
+    columns,
+    getRowId: (row) => row.studentId,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: { pagination: { pageSize: PAGE_SIZE } },
+    state: { sorting, pagination: { pageIndex, pageSize: PAGE_SIZE } },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === "function"
+          ? updater({ pageIndex, pageSize: PAGE_SIZE })
+          : updater;
+      setPageIndex(next.pageIndex);
+    },
+  });
+
+  const pageCount = table.getPageCount();
+  const safePageIndex = Math.min(pageIndex, Math.max(0, pageCount - 1));
+  const rows = table.getRowModel().rows;
+  const start = filtered.length === 0 ? 0 : safePageIndex * PAGE_SIZE + 1;
+  const end = Math.min((safePageIndex + 1) * PAGE_SIZE, filtered.length);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <div className={`${assign.card} ${styles.card}`}>
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${styles.header} relative`}>
         <div className={styles.headerText}>
-          <CardTitle>High Risk Students</CardTitle>
-          <CardDescription>
-            Students flagged as high risk that need priority review.
-          </CardDescription>
+          <h3 className="text-sm font-semibold">High Risk Students</h3>
+          <p className="text-sm text-muted-foreground">
+            Students flagged as high risk that need priority review —{" "}
+            {filtered.length} student{filtered.length === 1 ? "" : "s"}.
+          </p>
         </div>
-        <CardAction className={styles.headerActions}>
+        <div className={styles.headerActions}>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
               className={styles.search}
               placeholder="Search name or LRN…"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => applySearch(e.target.value)}
               aria-label="Search high-risk students"
             />
           </div>
@@ -173,10 +283,7 @@ export function HighRiskStudentsTable() {
             <DropdownMenuContent align="end" className={styles.filterMenu}>
               <DropdownMenuCheckboxItem
                 checked={sectionFilter === "all"}
-                onCheckedChange={() => {
-                  setSectionFilter("all");
-                  setPage(1);
-                }}
+                onCheckedChange={() => applySection("all")}
               >
                 All sections
               </DropdownMenuCheckboxItem>
@@ -191,10 +298,7 @@ export function HighRiskStudentsTable() {
                       <DropdownMenuCheckboxItem
                         key={s}
                         checked={sectionFilter === s}
-                        onCheckedChange={() => {
-                          setSectionFilter(s);
-                          setPage(1);
-                        }}
+                        onCheckedChange={() => applySection(s)}
                       >
                         {s}
                       </DropdownMenuCheckboxItem>
@@ -222,10 +326,7 @@ export function HighRiskStudentsTable() {
             <DropdownMenuContent align="end" className={styles.filterMenu}>
               <DropdownMenuCheckboxItem
                 checked={factorFilter === "all"}
-                onCheckedChange={() => {
-                  setFactorFilter("all");
-                  setPage(1);
-                }}
+                onCheckedChange={() => applyFactor("all")}
               >
                 All factors
               </DropdownMenuCheckboxItem>
@@ -234,10 +335,7 @@ export function HighRiskStudentsTable() {
                 <DropdownMenuCheckboxItem
                   key={f}
                   checked={factorFilter === f}
-                  onCheckedChange={() => {
-                    setFactorFilter(f);
-                    setPage(1);
-                  }}
+                  onCheckedChange={() => applyFactor(f)}
                 >
                   {FACTOR_LABEL[f]}
                 </DropdownMenuCheckboxItem>
@@ -250,104 +348,79 @@ export function HighRiskStudentsTable() {
               variant="ghost"
               size="sm"
               className={styles.clearBtn}
-              onClick={() => {
-                setSectionFilter("all");
-                setFactorFilter("all");
-                setPage(1);
-              }}
+              onClick={clearFilters}
             >
               <X aria-hidden />
               Clear
             </Button>
           )}
-        </CardAction>
-      </CardHeader>
+        </div>
+      </div>
 
-      <CardContent className={styles.content}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Section</TableHead>
-              <TableHead>Risk</TableHead>
-              <TableHead>Factors</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <SkeletonRows />
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className={styles.empty}>
-                  {query.trim()
-                    ? `No high-risk students match “${query}”.`
-                    : hasActiveFilters
-                      ? "No high-risk students match the selected filters."
-                      : "No high-risk students."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageRows.map((s) => (
-                <TableRow key={s.studentId}>
-                  <TableCell>
-                    <div className={styles.studentCell}>
-                      <span className={styles.studentName}>{s.name}</span>
-                      <span className={styles.studentLrn}>{s.lrn}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className={styles.section}>{s.section}</TableCell>
-                  <TableCell>
-                    <Badge variant="destructive">{s.riskLevel}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className={styles.factors}>
-                      {(Object.keys(s.factors) as RiskFactor[]).map((f) => (
-                        <span
-                          key={f}
-                          className={`${styles.factorChip} ${
-                            s.factors[f] ? styles.factorOn : styles.factorOff
-                          }`}
-                        >
-                          {FACTOR_LABEL[f]}
-                        </span>
-                      ))}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View details</DropdownMenuItem>
-                        <DropdownMenuItem>Assign intervention</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Send alert</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+      <div className={`${styles.content} relative`}>
+        <div className="overflow-x-auto rounded-md border">
+          <Table className="w-full table-fixed">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      style={{ width: header.getSize() }}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {isPending ? (
+                <SkeletonRows />
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className={styles.empty}>
+                    {query.trim()
+                      ? `No high-risk students match “${query}”.`
+                      : hasActiveFilters
+                        ? "No high-risk students match the selected filters."
+                        : "No high-risk students."}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
+              ) : (
+                rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        className="truncate"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
-      <CardFooter className={styles.footer}>
+      <div className={`${styles.footer} relative`}>
         <span className={styles.footerInfo}>
-          {filtered.length > 0
-            ? `${start}–${end} of ${filtered.length}`
-            : "0 of 0"}
+          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
         </span>
         <div className={styles.footerActions}>
           <Button
             variant="outline"
             size="sm"
-            disabled={safePage <= 1 || filtered.length === 0}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={!table.getCanPreviousPage() || filtered.length === 0}
+            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
           >
             <ChevronLeft aria-hidden />
             Previous
@@ -355,15 +428,15 @@ export function HighRiskStudentsTable() {
           <Button
             variant="outline"
             size="sm"
-            disabled={safePage >= totalPages || filtered.length === 0}
-            onClick={() => setPage((p) => p + 1)}
+            disabled={!table.getCanNextPage() || filtered.length === 0}
+            onClick={() => setPageIndex((p) => p + 1)}
           >
             Next
             <ChevronRight aria-hidden />
           </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -391,7 +464,6 @@ function SkeletonRows() {
               <span className={styles.skelChip} />
             </span>
           </TableCell>
-          <TableCell />
         </TableRow>
       ))}
     </>

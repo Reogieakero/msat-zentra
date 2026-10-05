@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Download, PenLine, Printer, Trash2 } from "lucide-react";
@@ -155,23 +149,15 @@ export function OcForm01PreviewDialog({
   }
 
   return (
-    <Dialog
+    <CardModal
       open={recordId !== null}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
+      onClose={onClose}
+      title="GCForm-01 — Anecdotal Report"
+      description="Official template preview (GCForm-01). Prints to A4 portrait."
+      size="lg"
+      watchKey={detail ? (signing ? "signing" : "detail") : "loading"}
     >
-      <DialogContent
-        style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}
-        className={styles.dialog}
-      >
-        <DialogHeader>
-          <DialogTitle>GCForm-01 — Anecdotal Report</DialogTitle>
-          <DialogDescription>
-            Official template preview (GCForm-01). Prints to A4 portrait.
-          </DialogDescription>
-        </DialogHeader>
-        {loading ? (
+      {loading ? (
           <div className="flex flex-col gap-2 py-4" aria-busy="true">
             <Skeleton className="h-3.5 w-full" />
             <Skeleton className="h-3.5 w-full" />
@@ -287,7 +273,6 @@ export function OcForm01PreviewDialog({
             </>
           )
         ) : null}
-      </DialogContent>
-    </Dialog>
+    </CardModal>
   );
 }

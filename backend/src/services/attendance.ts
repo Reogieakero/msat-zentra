@@ -377,6 +377,158 @@ async function countOfferedSubjectsFor(
 }
 
 // ---------------------------------------------------------------------------
+// Strict per-day section attendance (principal canonical basis).
+//
+// A student counts PRESENT for a section-day only when present in EVERY
+// subject offered that weekday. Late / absent / excused / unrecorded all
+// break the day. This is a different basis from per-subject attendance
+// (per-take present ÷ takes) — the two must never be mixed.
+//
+// Day-of-week uses the timetable convention (1=Mon..5=Fri); the school-day
+// axis never contains weekends, so 0/6 never match an offering.
+// ---------------------------------------------------------------------------
+
+export interface SectionSubjectTake {
+  sectionId: string;
+  /** Profile userId or `roster:<id>` — caller maps roster/profile identity. */
+  studentKey: string;
+  subjectId: string;
+  date: Date;
+  status: AttendanceStatus;
+}
+
+export type StudentDayOutcome = "present" | "late" | "excused" | "absent";
+
+export interface SectionStrictDay {
+  /** Distinct keys strictly present (all required subjects present). */
+  present: Set<string>;
+  /** Distinct keys with any late take (and not present). */
+  late: Set<string>;
+  /** Distinct keys with any excused take (and not present/late). */
+  excused: Set<string>;
+  /** Distinct keys with any take at all (gates below-80% evaluation). */
+  taken: Set<string>;
+}
+
+/** Timetable offerings: sectionId -> weekday (1=Mon..5=Fri) -> subjectIds. */
+export function buildOfferedMap(
+  entries: { sectionId: string; subjectId: string; day: number }[]
+): Map<string, Map<number, Set<string>>> {
+  const map = new Map<string, Map<number, Set<string>>>();
+  for (const e of entries) {
+    if (!map.has(e.sectionId)) map.set(e.sectionId, new Map());
+    const days = map.get(e.sectionId)!;
+    if (!days.has(e.day)) days.set(e.day, new Set());
+    days.get(e.day)!.add(e.subjectId);
+  }
+  return map;
+}
+
+function weekdayOfKey(key: string): number {
+  return new Date(key + "T00:00:00Z").getUTCDay();
+}
+
+/**
+ * Strict per-day evaluation over subject-era takes. Priority per
+ * student-day: present (all required present) > late (any late) >
+ * excused (any excused) > absent (everything else, incl. unrecorded).
+ * Required subjects = timetable offerings that weekday; when a section
+ * has no offerings that day, the distinct recorded subjects that day
+ * are required instead; with no takes at all nobody is present.
+ */
+export function sectionStrictDays(
+  takes: SectionSubjectTake[],
+  offeredBySectionWeekday: Map<string, Map<number, Set<string>>>
+): Map<string, Map<string, SectionStrictDay>> {
+  type Take = { subjectId: string; status: AttendanceStatus };
+  const bySectionDayStudent = new Map<string, Map<string, Map<string, Take[]>>>();
+  for (const t of takes) {
+    const key = t.date.toISOString().slice(0, 10);
+    if (!bySectionDayStudent.has(t.sectionId))
+      bySectionDayStudent.set(t.sectionId, new Map());
+    const days = bySectionDayStudent.get(t.sectionId)!;
+    if (!days.has(key)) days.set(key, new Map());
+    const students = days.get(key)!;
+    if (!students.has(t.studentKey)) students.set(t.studentKey, []);
+    students.get(t.studentKey)!.push({ subjectId: t.subjectId, status: t.status });
+  }
+
+  const result = new Map<string, Map<string, SectionStrictDay>>();
+  for (const [sectionId, days] of bySectionDayStudent) {
+    if (!result.has(sectionId)) result.set(sectionId, new Map());
+    const out = result.get(sectionId)!;
+    for (const [key, students] of days) {
+      const required = new Set(
+        offeredBySectionWeekday.get(sectionId)?.get(weekdayOfKey(key)) ?? []
+      );
+      if (required.size === 0) {
+        // No timetable offering that weekday — require what was recorded.
+        for (const list of students.values())
+          for (const t of list) required.add(t.subjectId);
+      }
+      const day: SectionStrictDay = {
+        present: new Set(),
+        late: new Set(),
+        excused: new Set(),
+        taken: new Set(students.keys()),
+      };
+      if (required.size > 0) {
+        for (const [studentKey, list] of students) {
+          const bySubject = new Map<string, AttendanceStatus[]>();
+          for (const t of list) {
+            if (!bySubject.has(t.subjectId)) bySubject.set(t.subjectId, []);
+            bySubject.get(t.subjectId)!.push(t.status);
+          }
+          let allPresent = true;
+          for (const sid of required) {
+            const marks = bySubject.get(sid);
+            if (!marks || marks.length === 0 || marks.some((m) => m !== "present")) {
+              allPresent = false;
+              break;
+            }
+          }
+          if (allPresent) day.present.add(studentKey);
+          else if (list.some((t) => t.status === "late")) day.late.add(studentKey);
+          else if (list.some((t) => t.status === "excused")) day.excused.add(studentKey);
+          // Else absent (all-absent takes) — counted via complement downstream.
+        }
+      }
+      out.set(key, day);
+    }
+  }
+  return result;
+}
+
+/**
+ * Per-student day-outcome counts for one section over the given day axis.
+ * Every axis day classifies exactly one outcome, so present + late +
+ * excused + absent always equals the axis length.
+ */
+export function studentDayOutcomes(
+  sectionDays: Map<string, SectionStrictDay> | undefined,
+  studentKeys: string[],
+  dayKeys: string[]
+): Map<string, { present: number; late: number; excused: number; absent: number }> {
+  const result = new Map<
+    string,
+    { present: number; late: number; excused: number; absent: number }
+  >();
+  for (const k of studentKeys)
+    result.set(k, { present: 0, late: 0, excused: 0, absent: 0 });
+  for (const day of dayKeys) {
+    const cell = sectionDays?.get(day);
+    for (const k of studentKeys) {
+      const row = result.get(k)!;
+      if (cell?.present.has(k)) row.present++;
+      else if (cell?.late.has(k)) row.late++;
+      else if (cell?.excused.has(k)) row.excused++;
+      else row.absent++;
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Subject-average attendance for at-risk flagging (replaces AM/PM sessions).
 // Same definition as the advisory attendance average: per subject,
 // present in-window sessions ÷ elapsed timetable meetups, averaged across

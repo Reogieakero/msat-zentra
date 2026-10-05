@@ -1,22 +1,23 @@
 import { Badge } from "@/components/ui/badge";
 import type { RiskLevel } from "../academics-data";
-import styles from "./RiskBadge.module.css";
 
-const RISK_META: Record<
-  RiskLevel,
-  { label: string; className: string }
-> = {
-  High: { label: "High risk", className: styles.riskHigh },
-  Moderate: { label: "Needs watch", className: styles.riskModerate },
-  Low: { label: "On track", className: styles.riskLow },
+/* Risk-level color code — Low green, Moderate amber, High red — same as
+   the guidance interventions desk. NOTE: the app theme is monochrome
+   (`--destructive`/`--success`/`--warning` are near-black/white ink), so
+   this uses the explicit red/amber/green badge variants — theme tokens
+   would render gray. */
+const RISK_VARIANT: Record<RiskLevel, "red" | "amber" | "green"> = {
+  High: "red",
+  Moderate: "amber",
+  Low: "green",
+};
+
+const RISK_LABEL: Record<RiskLevel, string> = {
+  High: "High",
+  Moderate: "Moderate",
+  Low: "Low",
 };
 
 export function RiskBadge({ level }: { level: RiskLevel }) {
-  const meta = RISK_META[level];
-  return (
-    <Badge variant="outline" className={`${styles.badge} ${meta.className}`}>
-      <span className={styles.dot} aria-hidden />
-      {meta.label}
-    </Badge>
-  );
+  return <Badge variant={RISK_VARIANT[level]}>{RISK_LABEL[level]}</Badge>;
 }

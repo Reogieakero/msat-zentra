@@ -2,7 +2,36 @@
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  padding: 0.25rem 0 1rem;
+  /* Same 1rem side gutters as SheetHeader/SheetFooter (p-4) — SheetContent
+     itself carries no padding, so the body must bring its own. */
+  padding: 0.25rem 1rem 1rem;
+}
+
+/* Glow info card — same shell as the desk table/rail cards. */
+.infoCard {
+  position: relative;
+  overflow: visible;
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 .sheetSectionTitle {

@@ -1,14 +1,5 @@
-/* GCForm-03 preview overlay. Scrollbars stay hidden (content still
-   scrolls) to match the anecdotal preview dialog. */
-
-.dialog {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.dialog::-webkit-scrollbar {
-  display: none;
-}
+/* GCForm-03 preview overlay (rendered inside CardModal, which hides the
+   scrollbar and shows the scroll-down hint on overflow). */
 
 /* Excel-sheet preview surface (rendered straight from the workbook). */
 .sheetWrap {

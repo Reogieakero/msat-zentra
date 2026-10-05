@@ -5,9 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { apiClient } from "@/lib/api/client";
 import { useGradeMode } from "../../grade-mode-context";
-import { RISK_LEVEL_COLORS } from "../riskData";
 import type { BackendStudent } from "../students/api";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./RiskLevelDistribution.module.css";
+
+// Primary-tinted level ramp, identical in light and dark mode (same as
+// the board donut and overview charts). Applied through style fills so
+// the CSS vars resolve inside recharts SVG.
+const LEVEL_FILL: Record<"High" | "Moderate" | "Low", string> = {
+  High: "var(--primary)",
+  Moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",
+  Low: "color-mix(in oklch, var(--primary) 30%, var(--card))",
+};
 
 const ORDERS: { level: "High" | "Moderate" | "Low"; label: string }[] = [
   { level: "High", label: "High risk" },
@@ -76,8 +85,11 @@ export function RiskLevelDistribution() {
             const pct = (n: number) =>
               e.total === 0 ? 0 : Math.round((n / e.total) * 100);
             return (
-              <article key={grade} className={styles.card}>
-                <div className={styles.cardHead}>
+              <article key={grade} className={assign.card}>
+                <span className={assign.glowClip} aria-hidden="true">
+                  <span className={assign.cardGlow} />
+                </span>
+                <div className={`${styles.cardHead} relative`}>
                   <h3 className={styles.cardTitle}>Grade {grade}</h3>
                   <span className={styles.cardTotal}>{e.total} students</span>
                 </div>
@@ -96,12 +108,12 @@ export function RiskLevelDistribution() {
                         isAnimationActive
                         animationDuration={800}
                       >
-                        {series.map((d) => (
-                          <Cell
-                            key={d.level}
-                            fill={RISK_LEVEL_COLORS[d.level]}
-                          />
-                        ))}
+                      {series.map((d) => (
+                        <Cell
+                          key={d.level}
+                          style={{ fill: LEVEL_FILL[d.level] }}
+                        />
+                      ))}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
@@ -113,12 +125,12 @@ export function RiskLevelDistribution() {
                   </div>
                 </div>
 
-                <ul className={styles.legend}>
+                <ul className={`${styles.legend} relative`}>
                   {ORDERS.map((o) => (
                     <li key={o.level} className={styles.legendItem}>
                       <span
                         className={styles.swatch}
-                        style={{ background: RISK_LEVEL_COLORS[o.level] }}
+                        style={{ background: LEVEL_FILL[o.level] }}
                       />
                       <span className={styles.legendLabel}>{o.label}</span>
                       <span className={styles.legendValue}>

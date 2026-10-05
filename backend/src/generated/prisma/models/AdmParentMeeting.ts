@@ -229,6 +229,8 @@ export type AdmParentMeetingWhereInput = {
   admLearnerProfile?: Prisma.XOR<Prisma.AdmLearnerProfileNullableScalarRelationFilter, Prisma.AdmLearnerProfileWhereInput> | null
   referral?: Prisma.XOR<Prisma.ReferralNullableScalarRelationFilter, Prisma.ReferralWhereInput> | null
   recorder?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  invitees?: Prisma.AdmMeetingInviteeListRelationFilter
+  attachments?: Prisma.AdmMeetingAttachmentListRelationFilter
 }
 
 export type AdmParentMeetingOrderByWithRelationInput = {
@@ -246,6 +248,8 @@ export type AdmParentMeetingOrderByWithRelationInput = {
   admLearnerProfile?: Prisma.AdmLearnerProfileOrderByWithRelationInput
   referral?: Prisma.ReferralOrderByWithRelationInput
   recorder?: Prisma.UserOrderByWithRelationInput
+  invitees?: Prisma.AdmMeetingInviteeOrderByRelationAggregateInput
+  attachments?: Prisma.AdmMeetingAttachmentOrderByRelationAggregateInput
 }
 
 export type AdmParentMeetingWhereUniqueInput = Prisma.AtLeast<{
@@ -266,6 +270,8 @@ export type AdmParentMeetingWhereUniqueInput = Prisma.AtLeast<{
   admLearnerProfile?: Prisma.XOR<Prisma.AdmLearnerProfileNullableScalarRelationFilter, Prisma.AdmLearnerProfileWhereInput> | null
   referral?: Prisma.XOR<Prisma.ReferralNullableScalarRelationFilter, Prisma.ReferralWhereInput> | null
   recorder?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  invitees?: Prisma.AdmMeetingInviteeListRelationFilter
+  attachments?: Prisma.AdmMeetingAttachmentListRelationFilter
 }, "id">
 
 export type AdmParentMeetingOrderByWithAggregationInput = {
@@ -314,6 +320,8 @@ export type AdmParentMeetingCreateInput = {
   admLearnerProfile?: Prisma.AdmLearnerProfileCreateNestedOneWithoutParentMeetingsInput
   referral?: Prisma.ReferralCreateNestedOneWithoutAdmMeetingsInput
   recorder: Prisma.UserCreateNestedOneWithoutAdmMeetingsInput
+  invitees?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingUncheckedCreateInput = {
@@ -328,6 +336,8 @@ export type AdmParentMeetingUncheckedCreateInput = {
   minutesOfMeeting?: string | null
   attendanceLogbookRef?: string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingUpdateInput = {
@@ -342,6 +352,8 @@ export type AdmParentMeetingUpdateInput = {
   admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneWithoutParentMeetingsNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutAdmMeetingsNestedInput
   recorder?: Prisma.UserUpdateOneRequiredWithoutAdmMeetingsNestedInput
+  invitees?: Prisma.AdmMeetingInviteeUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateInput = {
@@ -356,6 +368,8 @@ export type AdmParentMeetingUncheckedUpdateInput = {
   minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingCreateManyInput = {
@@ -445,6 +459,11 @@ export type AdmParentMeetingMinOrderByAggregateInput = {
   parentConfirmedAt?: Prisma.SortOrder
   minutesOfMeeting?: Prisma.SortOrder
   attendanceLogbookRef?: Prisma.SortOrder
+}
+
+export type AdmParentMeetingScalarRelationFilter = {
+  is?: Prisma.AdmParentMeetingWhereInput
+  isNot?: Prisma.AdmParentMeetingWhereInput
 }
 
 export type AdmParentMeetingCreateNestedManyWithoutRecorderInput = {
@@ -573,6 +592,34 @@ export type AdmParentMeetingUncheckedUpdateManyWithoutAdmLearnerProfileNestedInp
   deleteMany?: Prisma.AdmParentMeetingScalarWhereInput | Prisma.AdmParentMeetingScalarWhereInput[]
 }
 
+export type AdmParentMeetingCreateNestedOneWithoutInviteesInput = {
+  create?: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutInviteesInput, Prisma.AdmParentMeetingUncheckedCreateWithoutInviteesInput>
+  connectOrCreate?: Prisma.AdmParentMeetingCreateOrConnectWithoutInviteesInput
+  connect?: Prisma.AdmParentMeetingWhereUniqueInput
+}
+
+export type AdmParentMeetingUpdateOneRequiredWithoutInviteesNestedInput = {
+  create?: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutInviteesInput, Prisma.AdmParentMeetingUncheckedCreateWithoutInviteesInput>
+  connectOrCreate?: Prisma.AdmParentMeetingCreateOrConnectWithoutInviteesInput
+  upsert?: Prisma.AdmParentMeetingUpsertWithoutInviteesInput
+  connect?: Prisma.AdmParentMeetingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AdmParentMeetingUpdateToOneWithWhereWithoutInviteesInput, Prisma.AdmParentMeetingUpdateWithoutInviteesInput>, Prisma.AdmParentMeetingUncheckedUpdateWithoutInviteesInput>
+}
+
+export type AdmParentMeetingCreateNestedOneWithoutAttachmentsInput = {
+  create?: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutAttachmentsInput, Prisma.AdmParentMeetingUncheckedCreateWithoutAttachmentsInput>
+  connectOrCreate?: Prisma.AdmParentMeetingCreateOrConnectWithoutAttachmentsInput
+  connect?: Prisma.AdmParentMeetingWhereUniqueInput
+}
+
+export type AdmParentMeetingUpdateOneRequiredWithoutAttachmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutAttachmentsInput, Prisma.AdmParentMeetingUncheckedCreateWithoutAttachmentsInput>
+  connectOrCreate?: Prisma.AdmParentMeetingCreateOrConnectWithoutAttachmentsInput
+  upsert?: Prisma.AdmParentMeetingUpsertWithoutAttachmentsInput
+  connect?: Prisma.AdmParentMeetingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AdmParentMeetingUpdateToOneWithWhereWithoutAttachmentsInput, Prisma.AdmParentMeetingUpdateWithoutAttachmentsInput>, Prisma.AdmParentMeetingUncheckedUpdateWithoutAttachmentsInput>
+}
+
 export type AdmParentMeetingCreateWithoutRecorderInput = {
   id?: string
   meetingDatetime: Date | string
@@ -584,6 +631,8 @@ export type AdmParentMeetingCreateWithoutRecorderInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   admLearnerProfile?: Prisma.AdmLearnerProfileCreateNestedOneWithoutParentMeetingsInput
   referral?: Prisma.ReferralCreateNestedOneWithoutAdmMeetingsInput
+  invitees?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingUncheckedCreateWithoutRecorderInput = {
@@ -597,6 +646,8 @@ export type AdmParentMeetingUncheckedCreateWithoutRecorderInput = {
   minutesOfMeeting?: string | null
   attendanceLogbookRef?: string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingCreateOrConnectWithoutRecorderInput = {
@@ -653,6 +704,8 @@ export type AdmParentMeetingCreateWithoutReferralInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   admLearnerProfile?: Prisma.AdmLearnerProfileCreateNestedOneWithoutParentMeetingsInput
   recorder: Prisma.UserCreateNestedOneWithoutAdmMeetingsInput
+  invitees?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingUncheckedCreateWithoutReferralInput = {
@@ -666,6 +719,8 @@ export type AdmParentMeetingUncheckedCreateWithoutReferralInput = {
   minutesOfMeeting?: string | null
   attendanceLogbookRef?: string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingCreateOrConnectWithoutReferralInput = {
@@ -705,6 +760,8 @@ export type AdmParentMeetingCreateWithoutAdmLearnerProfileInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   referral?: Prisma.ReferralCreateNestedOneWithoutAdmMeetingsInput
   recorder: Prisma.UserCreateNestedOneWithoutAdmMeetingsInput
+  invitees?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingUncheckedCreateWithoutAdmLearnerProfileInput = {
@@ -718,6 +775,8 @@ export type AdmParentMeetingUncheckedCreateWithoutAdmLearnerProfileInput = {
   minutesOfMeeting?: string | null
   attendanceLogbookRef?: string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutMeetingInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutMeetingInput
 }
 
 export type AdmParentMeetingCreateOrConnectWithoutAdmLearnerProfileInput = {
@@ -746,6 +805,158 @@ export type AdmParentMeetingUpdateManyWithWhereWithoutAdmLearnerProfileInput = {
   data: Prisma.XOR<Prisma.AdmParentMeetingUpdateManyMutationInput, Prisma.AdmParentMeetingUncheckedUpdateManyWithoutAdmLearnerProfileInput>
 }
 
+export type AdmParentMeetingCreateWithoutInviteesInput = {
+  id?: string
+  meetingDatetime: Date | string
+  venue?: string
+  attended: boolean
+  parentConfirmedAt?: Date | string | null
+  minutesOfMeeting?: string | null
+  attendanceLogbookRef?: string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  admLearnerProfile?: Prisma.AdmLearnerProfileCreateNestedOneWithoutParentMeetingsInput
+  referral?: Prisma.ReferralCreateNestedOneWithoutAdmMeetingsInput
+  recorder: Prisma.UserCreateNestedOneWithoutAdmMeetingsInput
+  attachments?: Prisma.AdmMeetingAttachmentCreateNestedManyWithoutMeetingInput
+}
+
+export type AdmParentMeetingUncheckedCreateWithoutInviteesInput = {
+  id?: string
+  admLearnerProfileId?: string | null
+  referralId?: string | null
+  recordedBy: string
+  meetingDatetime: Date | string
+  venue?: string
+  attended: boolean
+  parentConfirmedAt?: Date | string | null
+  minutesOfMeeting?: string | null
+  attendanceLogbookRef?: string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedCreateNestedManyWithoutMeetingInput
+}
+
+export type AdmParentMeetingCreateOrConnectWithoutInviteesInput = {
+  where: Prisma.AdmParentMeetingWhereUniqueInput
+  create: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutInviteesInput, Prisma.AdmParentMeetingUncheckedCreateWithoutInviteesInput>
+}
+
+export type AdmParentMeetingUpsertWithoutInviteesInput = {
+  update: Prisma.XOR<Prisma.AdmParentMeetingUpdateWithoutInviteesInput, Prisma.AdmParentMeetingUncheckedUpdateWithoutInviteesInput>
+  create: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutInviteesInput, Prisma.AdmParentMeetingUncheckedCreateWithoutInviteesInput>
+  where?: Prisma.AdmParentMeetingWhereInput
+}
+
+export type AdmParentMeetingUpdateToOneWithWhereWithoutInviteesInput = {
+  where?: Prisma.AdmParentMeetingWhereInput
+  data: Prisma.XOR<Prisma.AdmParentMeetingUpdateWithoutInviteesInput, Prisma.AdmParentMeetingUncheckedUpdateWithoutInviteesInput>
+}
+
+export type AdmParentMeetingUpdateWithoutInviteesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  meetingDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  attended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  parentConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneWithoutParentMeetingsNestedInput
+  referral?: Prisma.ReferralUpdateOneWithoutAdmMeetingsNestedInput
+  recorder?: Prisma.UserUpdateOneRequiredWithoutAdmMeetingsNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutMeetingNestedInput
+}
+
+export type AdmParentMeetingUncheckedUpdateWithoutInviteesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  admLearnerProfileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  referralId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recordedBy?: Prisma.StringFieldUpdateOperationsInput | string
+  meetingDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  attended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  parentConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutMeetingNestedInput
+}
+
+export type AdmParentMeetingCreateWithoutAttachmentsInput = {
+  id?: string
+  meetingDatetime: Date | string
+  venue?: string
+  attended: boolean
+  parentConfirmedAt?: Date | string | null
+  minutesOfMeeting?: string | null
+  attendanceLogbookRef?: string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  admLearnerProfile?: Prisma.AdmLearnerProfileCreateNestedOneWithoutParentMeetingsInput
+  referral?: Prisma.ReferralCreateNestedOneWithoutAdmMeetingsInput
+  recorder: Prisma.UserCreateNestedOneWithoutAdmMeetingsInput
+  invitees?: Prisma.AdmMeetingInviteeCreateNestedManyWithoutMeetingInput
+}
+
+export type AdmParentMeetingUncheckedCreateWithoutAttachmentsInput = {
+  id?: string
+  admLearnerProfileId?: string | null
+  referralId?: string | null
+  recordedBy: string
+  meetingDatetime: Date | string
+  venue?: string
+  attended: boolean
+  parentConfirmedAt?: Date | string | null
+  minutesOfMeeting?: string | null
+  attendanceLogbookRef?: string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedCreateNestedManyWithoutMeetingInput
+}
+
+export type AdmParentMeetingCreateOrConnectWithoutAttachmentsInput = {
+  where: Prisma.AdmParentMeetingWhereUniqueInput
+  create: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutAttachmentsInput, Prisma.AdmParentMeetingUncheckedCreateWithoutAttachmentsInput>
+}
+
+export type AdmParentMeetingUpsertWithoutAttachmentsInput = {
+  update: Prisma.XOR<Prisma.AdmParentMeetingUpdateWithoutAttachmentsInput, Prisma.AdmParentMeetingUncheckedUpdateWithoutAttachmentsInput>
+  create: Prisma.XOR<Prisma.AdmParentMeetingCreateWithoutAttachmentsInput, Prisma.AdmParentMeetingUncheckedCreateWithoutAttachmentsInput>
+  where?: Prisma.AdmParentMeetingWhereInput
+}
+
+export type AdmParentMeetingUpdateToOneWithWhereWithoutAttachmentsInput = {
+  where?: Prisma.AdmParentMeetingWhereInput
+  data: Prisma.XOR<Prisma.AdmParentMeetingUpdateWithoutAttachmentsInput, Prisma.AdmParentMeetingUncheckedUpdateWithoutAttachmentsInput>
+}
+
+export type AdmParentMeetingUpdateWithoutAttachmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  meetingDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  attended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  parentConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneWithoutParentMeetingsNestedInput
+  referral?: Prisma.ReferralUpdateOneWithoutAdmMeetingsNestedInput
+  recorder?: Prisma.UserUpdateOneRequiredWithoutAdmMeetingsNestedInput
+  invitees?: Prisma.AdmMeetingInviteeUpdateManyWithoutMeetingNestedInput
+}
+
+export type AdmParentMeetingUncheckedUpdateWithoutAttachmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  admLearnerProfileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  referralId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recordedBy?: Prisma.StringFieldUpdateOperationsInput | string
+  meetingDatetime?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  venue?: Prisma.StringFieldUpdateOperationsInput | string
+  attended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  parentConfirmedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutMeetingNestedInput
+}
+
 export type AdmParentMeetingCreateManyRecorderInput = {
   id?: string
   admLearnerProfileId?: string | null
@@ -770,6 +981,8 @@ export type AdmParentMeetingUpdateWithoutRecorderInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneWithoutParentMeetingsNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutAdmMeetingsNestedInput
+  invitees?: Prisma.AdmMeetingInviteeUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateWithoutRecorderInput = {
@@ -783,6 +996,8 @@ export type AdmParentMeetingUncheckedUpdateWithoutRecorderInput = {
   minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateManyWithoutRecorderInput = {
@@ -822,6 +1037,8 @@ export type AdmParentMeetingUpdateWithoutReferralInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   admLearnerProfile?: Prisma.AdmLearnerProfileUpdateOneWithoutParentMeetingsNestedInput
   recorder?: Prisma.UserUpdateOneRequiredWithoutAdmMeetingsNestedInput
+  invitees?: Prisma.AdmMeetingInviteeUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateWithoutReferralInput = {
@@ -835,6 +1052,8 @@ export type AdmParentMeetingUncheckedUpdateWithoutReferralInput = {
   minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateManyWithoutReferralInput = {
@@ -874,6 +1093,8 @@ export type AdmParentMeetingUpdateWithoutAdmLearnerProfileInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   referral?: Prisma.ReferralUpdateOneWithoutAdmMeetingsNestedInput
   recorder?: Prisma.UserUpdateOneRequiredWithoutAdmMeetingsNestedInput
+  invitees?: Prisma.AdmMeetingInviteeUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateWithoutAdmLearnerProfileInput = {
@@ -887,6 +1108,8 @@ export type AdmParentMeetingUncheckedUpdateWithoutAdmLearnerProfileInput = {
   minutesOfMeeting?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendanceLogbookRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  invitees?: Prisma.AdmMeetingInviteeUncheckedUpdateManyWithoutMeetingNestedInput
+  attachments?: Prisma.AdmMeetingAttachmentUncheckedUpdateManyWithoutMeetingNestedInput
 }
 
 export type AdmParentMeetingUncheckedUpdateManyWithoutAdmLearnerProfileInput = {
@@ -902,6 +1125,44 @@ export type AdmParentMeetingUncheckedUpdateManyWithoutAdmLearnerProfileInput = {
   attendees?: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
+
+/**
+ * Count Type AdmParentMeetingCountOutputType
+ */
+
+export type AdmParentMeetingCountOutputType = {
+  invitees: number
+  attachments: number
+}
+
+export type AdmParentMeetingCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  invitees?: boolean | AdmParentMeetingCountOutputTypeCountInviteesArgs
+  attachments?: boolean | AdmParentMeetingCountOutputTypeCountAttachmentsArgs
+}
+
+/**
+ * AdmParentMeetingCountOutputType without action
+ */
+export type AdmParentMeetingCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdmParentMeetingCountOutputType
+   */
+  select?: Prisma.AdmParentMeetingCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * AdmParentMeetingCountOutputType without action
+ */
+export type AdmParentMeetingCountOutputTypeCountInviteesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdmMeetingInviteeWhereInput
+}
+
+/**
+ * AdmParentMeetingCountOutputType without action
+ */
+export type AdmParentMeetingCountOutputTypeCountAttachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdmMeetingAttachmentWhereInput
+}
 
 
 export type AdmParentMeetingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -919,6 +1180,9 @@ export type AdmParentMeetingSelect<ExtArgs extends runtime.Types.Extensions.Inte
   admLearnerProfile?: boolean | Prisma.AdmParentMeeting$admLearnerProfileArgs<ExtArgs>
   referral?: boolean | Prisma.AdmParentMeeting$referralArgs<ExtArgs>
   recorder?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  invitees?: boolean | Prisma.AdmParentMeeting$inviteesArgs<ExtArgs>
+  attachments?: boolean | Prisma.AdmParentMeeting$attachmentsArgs<ExtArgs>
+  _count?: boolean | Prisma.AdmParentMeetingCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["admParentMeeting"]>
 
 export type AdmParentMeetingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -974,6 +1238,9 @@ export type AdmParentMeetingInclude<ExtArgs extends runtime.Types.Extensions.Int
   admLearnerProfile?: boolean | Prisma.AdmParentMeeting$admLearnerProfileArgs<ExtArgs>
   referral?: boolean | Prisma.AdmParentMeeting$referralArgs<ExtArgs>
   recorder?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  invitees?: boolean | Prisma.AdmParentMeeting$inviteesArgs<ExtArgs>
+  attachments?: boolean | Prisma.AdmParentMeeting$attachmentsArgs<ExtArgs>
+  _count?: boolean | Prisma.AdmParentMeetingCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AdmParentMeetingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   admLearnerProfile?: boolean | Prisma.AdmParentMeeting$admLearnerProfileArgs<ExtArgs>
@@ -992,6 +1259,8 @@ export type $AdmParentMeetingPayload<ExtArgs extends runtime.Types.Extensions.In
     admLearnerProfile: Prisma.$AdmLearnerProfilePayload<ExtArgs> | null
     referral: Prisma.$ReferralPayload<ExtArgs> | null
     recorder: Prisma.$UserPayload<ExtArgs>
+    invitees: Prisma.$AdmMeetingInviteePayload<ExtArgs>[]
+    attachments: Prisma.$AdmMeetingAttachmentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1402,6 +1671,8 @@ export interface Prisma__AdmParentMeetingClient<T, Null = never, ExtArgs extends
   admLearnerProfile<T extends Prisma.AdmParentMeeting$admLearnerProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AdmParentMeeting$admLearnerProfileArgs<ExtArgs>>): Prisma.Prisma__AdmLearnerProfileClient<runtime.Types.Result.GetResult<Prisma.$AdmLearnerProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   referral<T extends Prisma.AdmParentMeeting$referralArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AdmParentMeeting$referralArgs<ExtArgs>>): Prisma.Prisma__ReferralClient<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   recorder<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  invitees<T extends Prisma.AdmParentMeeting$inviteesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AdmParentMeeting$inviteesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmMeetingInviteePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  attachments<T extends Prisma.AdmParentMeeting$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AdmParentMeeting$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmMeetingAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1878,6 +2149,54 @@ export type AdmParentMeeting$referralArgs<ExtArgs extends runtime.Types.Extensio
    */
   include?: Prisma.ReferralInclude<ExtArgs> | null
   where?: Prisma.ReferralWhereInput
+}
+
+/**
+ * AdmParentMeeting.invitees
+ */
+export type AdmParentMeeting$inviteesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdmMeetingInvitee
+   */
+  select?: Prisma.AdmMeetingInviteeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdmMeetingInvitee
+   */
+  omit?: Prisma.AdmMeetingInviteeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdmMeetingInviteeInclude<ExtArgs> | null
+  where?: Prisma.AdmMeetingInviteeWhereInput
+  orderBy?: Prisma.AdmMeetingInviteeOrderByWithRelationInput | Prisma.AdmMeetingInviteeOrderByWithRelationInput[]
+  cursor?: Prisma.AdmMeetingInviteeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdmMeetingInviteeScalarFieldEnum | Prisma.AdmMeetingInviteeScalarFieldEnum[]
+}
+
+/**
+ * AdmParentMeeting.attachments
+ */
+export type AdmParentMeeting$attachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdmMeetingAttachment
+   */
+  select?: Prisma.AdmMeetingAttachmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdmMeetingAttachment
+   */
+  omit?: Prisma.AdmMeetingAttachmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdmMeetingAttachmentInclude<ExtArgs> | null
+  where?: Prisma.AdmMeetingAttachmentWhereInput
+  orderBy?: Prisma.AdmMeetingAttachmentOrderByWithRelationInput | Prisma.AdmMeetingAttachmentOrderByWithRelationInput[]
+  cursor?: Prisma.AdmMeetingAttachmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdmMeetingAttachmentScalarFieldEnum | Prisma.AdmMeetingAttachmentScalarFieldEnum[]
 }
 
 /**

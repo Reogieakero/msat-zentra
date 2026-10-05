@@ -57,6 +57,7 @@ function toastTitleFor(n: PrincipalNotification): string {
   if (n.type === "schedule_submitted") return "Schedule sent for review";
   if (n.type === "schedule_approved") return "Schedule approved";
   if (n.type === "schedule_rejected") return "Schedule sent back";
+  if (n.type === "device_issued") return "Device issued";
   return "New notification";
 }
 

@@ -40,6 +40,9 @@ export interface AdmCaseRow {
     datetime: string;
     venue: string;
     attended: boolean;
+    /** Invited staff user ids — prefills the reschedule picker so editing
+        time/venue never wipes the invite list. */
+    inviteeIds?: string[];
   } | null;
   /* Guidance/nurse hand-off timestamp (full ISO) on early referral rows —
      the moment the referral to the ADM Coordinator was created. Waiting-time
@@ -49,6 +52,15 @@ export interface AdmCaseRow {
   consultReviewer?: string | null;
   /** Referral-level status on early referral rows (pending | in_progress | …). */
   referralStatus?: string;
+  /** Latest audit action across the case (referral + profile + meetings),
+      served per row by /referrals/all for the Latest action column. */
+  lastActionAt?: string | null;
+  lastActionType?: string | null;
+  /* Module pass-tracking (from /referrals/all on profile rows) — submitted
+     vs released ADM modules. Early (pre-profile) rows carry 0/0. Optional
+     so older cached pages without the fields still type-check. */
+  modulesSubmitted?: number;
+  modulesTotal?: number;
 }
 
 export const CONSULT_REVIEWER_LABELS: Record<string, string> = {
@@ -148,7 +160,14 @@ export function deriveAdmCaseStatus(
   stage: string,
   eligibility: AdmEligibility,
   approvedBy: string | null,
+  referralStatus?: string | null,
 ): AdmCaseStatus {
+  if (referralStatus === "dismissed") {
+    return { key: "cancelled", label: "Cancelled" };
+  }
+  if (referralStatus === "resolved") {
+    return { key: "resolved_case", label: "Resolved" };
+  }
   switch (stage) {
     case "consultation":
       return { key: "need_review", label: "Need review by ADM" };
@@ -176,8 +195,12 @@ export function deriveAdmCaseStatus(
 
 export function admCaseStatusVariant(
   key: string,
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
+): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" | "red" {
   switch (key) {
+    case "cancelled":
+      return "red";
+    case "resolved_case":
+      return "success";
     case "need_review":
     case "for_certification":
       return "warning";
@@ -220,6 +243,13 @@ export interface AdmReferralsPage {
 
 export interface AdmApprovalRow extends AdmCaseRow {
   section?: string;
+  /* Devices ever issued to this learner profile (GET /api/adm/approvals
+     serves devicesIssued per row). 0 = principal-approved with no device
+     yet — the devices page uses this for its needs-device list. Optional
+     so older cached pages without the field still type-check. */
+  devicesIssued?: number;
+  modulesSubmitted?: number;
+  modulesTotal?: number;
 }
 
 export interface AdmApprovalsPage {
@@ -388,6 +418,53 @@ export function msSinceDate(date: string | null, now: number): number | null {
   return Math.max(0, now - t);
 }
 
+export interface LatestActionFallback {
+  label: string;
+  at: string;
+}
+
+function parseActionTime(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value;
+  const t = new Date(iso).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+/* Latest-action fallback — guarantees the Latest action column reads the
+   most recent known event for EVERY row, whatever the status (approved,
+   cancelled, resolved, anything). Audit data wins whenever present —
+   callers check lastActionType first and only call this when it is
+   missing. Otherwise the latest timestamp among the row's own fields
+   supplies a plain-words label (same status-only vocabulary as the
+   timeline — never clinical detail). Null only when the row carries no
+   usable timestamps at all, in which case the cell keeps "—". */
+export function latestActionFallback(
+  row: Pick<
+    AdmCaseRow,
+    "approvalDate" | "meeting" | "endorsedAt" | "datePrepared"
+  >,
+): LatestActionFallback | null {
+  const candidates: { label: string; at: string; t: number }[] = [];
+  const consider = (label: string, at: string | null | undefined) => {
+    const t = parseActionTime(at);
+    if (t === null || !at) return;
+    candidates.push({ label, at, t });
+  };
+  consider("Principal approval", row.approvalDate);
+  if (row.meeting) {
+    consider(
+      row.meeting.attended ? "Parent meeting attended" : "Parent meeting booked",
+      row.meeting.datetime,
+    );
+  }
+  consider("Referred for ADM", row.endorsedAt);
+  consider("Case filed", row.datePrepared);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.t - a.t);
+  const winner = candidates[0];
+  return { label: winner.label, at: winner.at };
+}
+
 /* Referral-status badge variant — same vocabulary as the nurse/guidance
    alerts queues so every surface agrees. */
 export function referralStatusVariant(
@@ -439,6 +516,35 @@ export async function fetchCaseHistory(
   return res.data.events;
 }
 
+/* Staff invited to a parent meeting at booking time (guidance / nurse /
+   adviser accounts) — separate from `attendees` (free-text people present,
+   recorded with the outcome). */
+export interface AdmMeetingInvitee {
+  id: string;
+  fullName: string;
+  role: string;
+}
+
+export const MEETING_INVITER_ROLE_LABELS: Record<string, string> = {
+  guidance_counselor: "Guidance Counselor",
+  nurse: "School Nurse",
+  adviser: "Adviser",
+};
+
+export function meetingInviteeLabel(u: Pick<AdmMeetingInvitee, "fullName" | "role">): string {
+  const role = MEETING_INVITER_ROLE_LABELS[u.role] ?? friendlyWords(u.role);
+  return `${u.fullName} · ${role}`;
+}
+
+export interface AdmMeetingAttachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
 export interface AdmMeeting {
   id: string;
   meetingDatetime: string;
@@ -448,6 +554,8 @@ export interface AdmMeeting {
   minutesOfMeeting: string | null;
   attendanceLogbookRef: string | null;
   attendees: MeetingAttendee[];
+  invitees: AdmMeetingInvitee[];
+  attachments: AdmMeetingAttachment[];
   recordedBy: string;
 }
 
@@ -471,6 +579,33 @@ export type MeetingAttendeeRole =
 export interface MeetingAttendee {
   name: string;
   role: MeetingAttendeeRole;
+  /** Present when the entry came from the invitee checklist (booking-time
+      invite), linking attendance back to the invited staff account. */
+  userId?: string;
+}
+
+/* Staff-login role → attendance role for invitee checklist entries. The
+   attendance set has no plain "adviser", so section advisers (adviser or
+   subject_teacher logins) file as teachers. */
+const INVITEE_ATTENDEE_ROLES: Record<string, MeetingAttendeeRole> = {
+  guidance_counselor: "guidance_counselor",
+  nurse: "nurse",
+  adviser: "teacher",
+  subject_teacher: "teacher",
+  principal: "principal",
+  lrpc: "lrpc",
+};
+
+export function inviteeToAttendee(u: {
+  id: string;
+  fullName: string;
+  role: string;
+}): MeetingAttendee {
+  return {
+    name: u.fullName,
+    role: INVITEE_ATTENDEE_ROLES[u.role] ?? "other",
+    userId: u.id,
+  };
 }
 
 export const MEETING_ATTENDEE_ROLE_LABELS: Record<MeetingAttendeeRole, string> = {
@@ -495,13 +630,16 @@ export function parseMeetingAttendees(value: unknown): MeetingAttendee[] {
   const out: MeetingAttendee[] = [];
   for (const item of value) {
     if (typeof item !== "object" || item === null) continue;
-    const raw = item as { name?: unknown; role?: unknown };
+    const raw = item as { name?: unknown; role?: unknown; userId?: unknown };
     if (typeof raw.name !== "string" || !raw.name.trim()) continue;
     out.push({
       name: raw.name.trim().slice(0, 100),
       role: (typeof raw.role === "string" && ATTENDEE_ROLES.has(raw.role)
         ? raw.role
         : "other") as MeetingAttendeeRole,
+      ...(typeof raw.userId === "string" && raw.userId
+        ? { userId: raw.userId }
+        : {}),
     });
     if (out.length >= 20) break;
   }
@@ -541,6 +679,19 @@ export function formatManilaDate(iso: string): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+  }).format(d);
+}
+
+/* Formal long date for display ("Sep 29, 2026") — sheet lines, table date
+   cells, and details facts. Falls back to the raw YYYY-MM-DD slice. */
+export function formatManilaDateLong(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return iso.slice(0, 10);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: MANILA_TZ,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   }).format(d);
 }
 
@@ -606,6 +757,35 @@ export function endorsementRecommendation(
   return text || null;
 }
 
+/* Meeting documentation upload — images only (server enforces JPG/PNG/WEBP,
+   5 MB each, max 5 per request, 10 per meeting). Same FormData pattern as the
+   clinic session documentation flow. */
+export async function uploadMeetingAttachments(
+  meetingId: string,
+  files: File[],
+): Promise<AdmMeetingAttachment[]> {
+  const form = new FormData();
+  for (const f of files) form.append("files", f, f.name);
+  const { data } = await apiClient.post<AdmMeetingAttachment[]>(
+    `/api/adm/meetings/${encodeURIComponent(meetingId)}/attachments`,
+    form,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60_000,
+    },
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function deleteMeetingAttachment(
+  meetingId: string,
+  attachmentId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `/api/adm/meetings/${encodeURIComponent(meetingId)}/attachments/${encodeURIComponent(attachmentId)}`,
+  );
+}
+
 export async function fetchCaseMeetings(
   profileId: string,
   signal?: AbortSignal,
@@ -619,6 +799,12 @@ export async function fetchCaseMeetings(
     attendees: parseMeetingAttendees(
       (m as { attendees?: unknown }).attendees,
     ),
+    invitees: Array.isArray((m as { invitees?: unknown }).invitees)
+      ? ((m as { invitees?: unknown }).invitees as AdmMeetingInvitee[])
+      : [],
+    attachments: Array.isArray((m as { attachments?: unknown }).attachments)
+      ? ((m as { attachments?: unknown }).attachments as AdmMeetingAttachment[])
+      : [],
   }));
 }
 
@@ -676,6 +862,8 @@ export interface CoordinatorCaseDetail {
     minutesOfMeeting: string | null;
     attendanceLogbookRef: string | null;
     attendees: MeetingAttendee[];
+    invitees?: AdmMeetingInvitee[];
+    attachments?: AdmMeetingAttachment[];
     recordedBy: string;
   }[];
   sessions: {
@@ -705,6 +893,12 @@ export async function fetchCoordinatorCaseDetail(
       attendees: parseMeetingAttendees(
         (m as { attendees?: unknown }).attendees,
       ),
+      invitees: Array.isArray((m as { invitees?: unknown }).invitees)
+        ? ((m as { invitees?: unknown }).invitees as AdmMeetingInvitee[])
+        : [],
+      attachments: Array.isArray((m as { attachments?: unknown }).attachments)
+        ? ((m as { attachments?: unknown }).attachments as AdmMeetingAttachment[])
+        : [],
     })),
   };
 }

@@ -2,14 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import type { AdmCaseRow } from "../../components/coordinator-data";
 import styles from "./coordinator-referrals-create-dialog.module.css";
 
@@ -32,46 +25,46 @@ export function CoordinatorReferralsCreateDialog({
   canConfirm,
 }: CoordinatorReferralsCreateDialogProps) {
   return (
-    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create learner profile</DialogTitle>
-          <DialogDescription>
-            {target ? (
-              <>
-                For {target.student} ({target.lrn}). The case starts at the
-                parent-meeting stage.
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
-        <div className={styles.formGrid}>
-          <p className={styles.scopeNote}>
-            Filed under <strong>{scopeLabel}</strong> — the session&apos;s active
-            scope. Change it from the top-bar badge.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            className={styles.btnRed}
-            onClick={onClose}
-            disabled={pending}
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={!canConfirm}
-            aria-busy={pending || undefined}
-            onClick={onConfirm}
-          >
-            {pending ? (
-              <Loader2 className={styles.spin} aria-hidden="true" />
-            ) : null}
-            {pending ? "Creating…" : "Create profile"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CardModal
+      open={target !== null}
+      onClose={onClose}
+      title="Create learner profile"
+      description={
+        target ? (
+          <>
+            For {target.student} ({target.lrn}). The case starts at the
+            parent-meeting stage.
+          </>
+        ) : undefined
+      }
+      size="sm"
+    >
+      <div className={styles.formGrid}>
+        <p className={styles.scopeNote}>
+          Filed under <strong>{scopeLabel}</strong> — the session&apos;s active
+          scope. Change it from the top-bar badge.
+        </p>
+      </div>
+      <div className={styles.actions}>
+        <Button
+          variant="destructive"
+          className={styles.btnRed}
+          onClick={onClose}
+          disabled={pending}
+        >
+          Cancel
+        </Button>
+        <Button
+          disabled={!canConfirm}
+          aria-busy={pending || undefined}
+          onClick={onConfirm}
+        >
+          {pending ? (
+            <Loader2 className={styles.spin} aria-hidden="true" />
+          ) : null}
+          {pending ? "Creating…" : "Create profile"}
+        </Button>
+      </div>
+    </CardModal>
   );
 }

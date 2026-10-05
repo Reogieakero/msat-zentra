@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CertSummary } from "./coordinator-certifications-data";
 import styles from "./coordinator-certifications-charts.module.css";
 
@@ -9,14 +8,16 @@ export function CoordinatorCertificationsGradeChart({ summary }: { summary: Cert
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader>
-        <CardTitle className={styles.sectionTitle}>Certifications by grade level</CardTitle>
-        <CardDescription className={styles.sectionDesc}>
+    /* Shell-less block — the page wraps the whole left panel in one
+       shared glow card, so this renders title + content only. */
+    <div className={styles.block} aria-label="Certifications by grade level">
+      <div>
+        <h3 className={styles.sectionTitle}>Certifications by grade level</h3>
+        <p className={styles.sectionDesc}>
           Live counts across every certification you issued.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className={styles.body}>
+        </p>
+      </div>
+      <div className={styles.body}>
         {summary.total === 0 || rows.length === 0 ? (
           <div className={styles.emptyWrapGrade}>
             <p className={styles.empty}>No certifications on file yet.</p>
@@ -37,7 +38,7 @@ export function CoordinatorCertificationsGradeChart({ summary }: { summary: Cert
             ))}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

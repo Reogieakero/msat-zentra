@@ -1,0 +1,139 @@
+/* Shared pro-table helpers for the attendance heatmap views — same visual
+   language as the risk StudentsListTable: search field, bordered table wrap,
+   sortable headers, pager. Imported alongside each view's own module. */
+
+.searchWrap {
+  position: relative;
+  width: 16rem;
+  max-width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.search {
+  padding-left: 2rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.tableWrap th,
+.tableWrap td {
+  padding: 0.625rem 0.875rem;
+}
+
+.tableWrap thead th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tableWrap tbody td {
+  font-size: 0.8125rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 35%);
+}
+
+.tableWrap tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Sortable column header — full-width ghost button inside the th. */
+.thSort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.thSort:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rateBadge {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pager — same as the risk students table. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.range {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: 0;
+  padding: 1.5rem 0;
+  font-size: 0.875rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+/* Clickable row affordance for drill-down rows. */
+.clickableRow {
+  cursor: pointer;
+}

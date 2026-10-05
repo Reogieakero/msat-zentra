@@ -2,7 +2,9 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.25rem 0.25rem 2rem;
+  /* No extra padding — the layout's `.main` already gives exactly 16px
+     from the navbar and gutter, so content sits 16px out, nothing more. */
+  padding: 0 0 2rem;
   min-height: 100%;
   background-color: var(--background);
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -16,7 +18,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 25%) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 25%);
   gap: 1rem;
   align-items: stretch;
 }
@@ -52,18 +54,18 @@
   font-size: 0.875rem;
 }
 
-/* Skeleton mirrors the loaded layout block-for-block: side rail with
-   donut card (168px + 4-row legend + interpretation) and grade-bars
-   card, main panel with title/help/desc + 32px filters, folder grid,
-   and pager with middle page label. */
-.skelCard {
+/* Skeleton mirrors the loaded layout block-for-block: flat folders
+   panel (title/help/desc + 32px filters, folder grid, pager) on the
+   left, single card-design side panel (donut + 4-row legend +
+   interpretation, divider, grade-bars) on the right. */
+.skelSidePanel {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 1rem;
   background-color: var(--card);
-  padding: 1rem;
+  padding: 1.125rem;
   min-width: 0;
 }
 
@@ -156,10 +158,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  padding: 1rem;
 }
 
 .skelPanelHead {
@@ -258,38 +256,6 @@
 
 .skelFolderSub {
   width: 65%;
-  height: 0.75rem;
-  border-radius: 0.25rem;
-}
-
-.skelBtn {
-  width: 5.5rem;
-  height: 1.5rem;
-  border-radius: var(--radius-md);
-}
-
-.skelPager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.skelRange {
-  width: 9rem;
-  height: 0.75rem;
-  border-radius: 0.25rem;
-}
-
-.skelPagerBtns {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.skelPageLabel {
-  width: 5rem;
   height: 0.75rem;
   border-radius: 0.25rem;
 }

@@ -2,13 +2,11 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  CaseHistoryDialog,
-} from "../components/CaseHistoryDialog";
+import { CaseHistoryDialog } from "../components/CaseHistoryDialog";
 import { useCoordinatorReferrals } from "./components/use-coordinator-referrals";
-import { CoordinatorReferralsFilters } from "./components/coordinator-referrals-filters";
 import { CoordinatorReferralsSkeleton } from "./components/coordinator-referrals-skeleton";
 import { CoordinatorReferralsTable } from "./components/coordinator-referrals-table";
+import { CoordinatorReferralsRail } from "./components/coordinator-referrals-rail";
 import { CoordinatorReferralsPager } from "./components/coordinator-referrals-pager";
 import { CoordinatorReferralsCaseSheet } from "./components/coordinator-referrals-case-sheet";
 import {
@@ -40,49 +38,66 @@ function CoordinatorReferralsPageInner() {
     }
   }, [highlight, rows, isInitialLoading, selected, setSelected]);
 
+  // Auto-ask endorsement: opening the case file on a certified-but-
+  // unforwarded case pops the forward confirm every visit until the case is
+  // endorsed. Dismissing stays dismissed for this sheet opening (the flip
+  // guard only refires on a newly selected row).
+  const autoForwardEligible =
+    r.selected !== null &&
+    r.selected.stage === "certification" &&
+    !r.selected.approvedBy;
+  const [wasAutoForward, setWasAutoForward] = React.useState(false);
+  if (autoForwardEligible !== wasAutoForward) {
+    setWasAutoForward(autoForwardEligible);
+    if (autoForwardEligible && r.forwardTarget === null && r.selected) {
+      r.setForwardTarget(r.selected);
+    }
+  }
+
   return (
     <section className={styles.page} aria-label="Referrals">
-      <CoordinatorReferralsFilters
-        total={r.total}
-        query={r.query}
-        onQueryChange={r.setQuery}
-        elig={r.elig}
-        onEligChange={r.setElig}
-        eligMenuLabel={r.eligMenuLabel}
-        hasActiveFilters={r.hasActiveFilters}
-        onClear={r.clearFilters}
-      />
-      <CoordinatorReferralsTable
-        rows={r.rows}
-        isInitialLoading={r.isInitialLoading}
-        isSyncing={r.isSyncing}
-        isError={r.referralsError}
-        isRefetching={r.referralsRefetching}
-        hasActiveFilters={r.hasActiveFilters}
-        bookPendingId={r.bookPendingId}
-        onRetry={r.refetchReferrals}
-        onOpenCase={(row) => {
-          window.open(
-            `/coordinator/referrals/${encodeURIComponent(row.id)}`,
-            "_blank",
-            "noopener,noreferrer",
-          );
-        }}
-        onHistory={r.setHistoryTarget}
-        onBook={r.bookForRow}
-      />
-      {/* During initial load the table skeleton below already reserves the
-          pager space, so nothing renders here (no duplicated skeleton). */}
-      {!r.isInitialLoading && !r.referralsError ? (
-        <CoordinatorReferralsPager
-          total={r.total}
-          start={r.start}
-          end={r.end}
-          page={r.safePage}
-          totalPages={r.totalPages}
-          onPageChange={(next) => r.setPage(next)}
-        />
-      ) : null}
+      <div className={styles.contentSingle}>
+        {!r.referralsError ? (
+          <CoordinatorReferralsRail
+            stageCounts={r.stageCounts}
+            totalReferred={r.totalReferred}
+            isLoading={r.isInitialLoading}
+          />
+        ) : null}
+        <div className={styles.main}>
+          <CoordinatorReferralsTable
+            rows={r.rows}
+            isInitialLoading={r.isInitialLoading}
+            isSyncing={r.isSyncing}
+            isError={r.referralsError}
+            isRefetching={r.referralsRefetching}
+            total={r.total}
+            query={r.query}
+            onQueryChange={r.setQuery}
+            elig={r.elig}
+            onEligChange={r.setElig}
+            eligMenuLabel={r.eligMenuLabel}
+            hasActiveFilters={r.hasActiveFilters}
+            onClear={r.clearFilters}
+            bookPendingId={r.bookPendingId}
+            onRetry={r.refetchReferrals}
+            onHistory={r.setHistoryTarget}
+            onBook={r.bookForRow}
+          />
+          {/* During initial load the table skeleton below already reserves the
+              pager space, so nothing renders here (no duplicated skeleton). */}
+          {!r.isInitialLoading && !r.referralsError ? (
+            <CoordinatorReferralsPager
+              total={r.total}
+              start={r.start}
+              end={r.end}
+              page={r.safePage}
+              totalPages={r.totalPages}
+              onPageChange={(next) => r.setPage(next)}
+            />
+          ) : null}
+        </div>
+      </div>
 
       {/* Case file */}
       <CaseHistoryDialog
@@ -95,6 +110,7 @@ function CoordinatorReferralsPageInner() {
         meetings={r.meetings}
         meetingsPending={r.meetingsPending}
         meetingsError={r.meetingsError}
+        now={r.now}
         onRetryMeetings={r.refetchMeetings}
         onClose={r.closeSheet}
         onBook={r.openBook}
@@ -138,6 +154,7 @@ function CoordinatorReferralsPageInner() {
         open={r.bookOpen}
         selected={r.bookTarget ?? r.selected}
         rescheduleMeeting={r.rescheduleMeeting}
+        venuePreset={r.bookVenuePreset}
         pending={r.bookPending}
         serverError={r.bookError}
         onClose={r.closeBook}
@@ -153,7 +170,9 @@ function CoordinatorReferralsPageInner() {
         onMinutesChange={r.setOutcomeMinutes}
         logbook={r.outcomeLogbook}
         onLogbookChange={r.setOutcomeLogbook}
-        onClose={() => r.setOutcomeTarget(null)}
+        inviteeIds={r.outcomeInviteeIds}
+        onInviteeIdsChange={r.setOutcomeInviteeIds}
+        onClose={r.closeOutcome}
         onConfirm={r.confirmOutcome}
         pending={r.outcomePending}
       />

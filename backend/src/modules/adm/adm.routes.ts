@@ -1,8 +1,10 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import argon2 from "argon2";
 import crypto from "crypto";
 import { prisma } from "../../lib/prisma.js";
+import { admMeetingObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
@@ -16,6 +18,32 @@ import { buildCaseTimeline } from "../referrals/timeline.js";
 
 const router = Router();
 
+// Meeting documentation uploads: photos filed on a parent meeting (signed
+// logbook, venue, agreements…). Images only, 5 MB each, max 5 per request,
+// 10 per meeting — mirrors the clinic session documentation flow.
+const meetingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  fileFilter: (_req, file, cb) => {
+    if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPG, PNG, or WEBP images are allowed for meeting documentation."));
+    }
+  },
+});
+
+/* Display name of the acting user for handoff messages — one lookup per
+   call site, "Someone" fallback so a deleted/renamed account never blanks
+   the notification. */
+async function actorName(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { fullName: true },
+  });
+  return u?.fullName ?? "Someone";
+}
+
 router.get(
   "/pipeline",
   requireAuth,
@@ -25,6 +53,75 @@ router.get(
   }
 );
 
+
+// Staff directory for parent-meeting invites — active guidance counselors,
+// nurses, and advisers the coordinator can invite by name.
+// Status-only directory: id, name, role. No student data.
+// The adviser group is scoped to the case: pass referralId (pre-profile) or
+// profileId and only that student's section adviser is listed — the whole
+// adviser roster never crowds the picker. Without a case context, all active
+// advisers are returned (fallback).
+router.get(
+  "/staff",
+  requireAuth,
+  requireRole("adm_coordinator"),
+  async (req, res, next) => {
+    try {
+      const referralId =
+        typeof req.query.referralId === "string" && req.query.referralId.trim()
+          ? req.query.referralId.trim()
+          : null;
+      const profileId =
+        typeof req.query.profileId === "string" && req.query.profileId.trim()
+          ? req.query.profileId.trim()
+          : null;
+      let sectionAdviserId: string | null = null;
+      if (profileId) {
+        const p = await prisma.admLearnerProfile.findUnique({
+          where: { id: profileId },
+          select: {
+            student: { select: { section: { select: { adviserId: true } } } },
+          },
+        });
+        sectionAdviserId = p?.student?.section?.adviserId ?? null;
+      } else if (referralId) {
+        const r = await prisma.referral.findUnique({
+          where: { id: referralId },
+          select: {
+            student: { select: { section: { select: { adviserId: true } } } },
+            roster: { select: { section: { select: { adviserId: true } } } },
+          },
+        });
+        sectionAdviserId =
+          r?.student?.section?.adviserId ?? r?.roster?.section?.adviserId ?? null;
+      }
+      const scoped = referralId !== null || profileId !== null;
+      // The student's adviser is whoever the section names (adviserId) —
+      // that account often logs in under the subject_teacher role, so the
+      // scoped lookup trusts the assignment, not the login role.
+      const staff = await prisma.user.findMany({
+        where: {
+          status: "active",
+          OR: [
+            { role: { in: ["nurse", "guidance_counselor"] } },
+            // Scoped: just the student's adviser. Unscoped: every adviser.
+            // Scoped-but-unresolvable (no section/adviser): no adviser rows.
+            ...(scoped && sectionAdviserId
+              ? [{ id: sectionAdviserId }]
+              : scoped
+                ? [{ id: "__none__" }]
+                : [{ role: "adviser" as const }]),
+          ],
+        },
+        select: { id: true, fullName: true, role: true },
+        orderBy: [{ role: "asc" }, { fullName: "asc" }],
+      });
+      res.json({ staff, sectionAdviserId: scoped ? sectionAdviserId : null });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 router.get(
   "/dashboard",
@@ -59,8 +156,17 @@ router.get(
           by: ["stage"],
           _count: { _all: true },
         }),
+        // Same endorsement gate as the queue: pending reviewer-owned cases
+        // count on the reviewer's desk, never here.
         prisma.referral.count({
-          where: { referredToRole: "adm_coordinator", admProfiles: { none: {} } },
+          where: {
+            referredToRole: "adm_coordinator",
+            admProfiles: { none: {} },
+            NOT: {
+              status: "pending",
+              consultReviewer: { in: ["nurse", "guidance_counselor"] },
+            },
+          },
         }),
         // Gate matches isAwaitingSignature() on the frontend so the KPI only
         // counts cases the sign action can actually act on.
@@ -230,6 +336,11 @@ const ENROLLED_STAGES: AdmStage[] = [
   "completion",
 ];
 
+/* Freshly-signed cases stay put in the intake-facing views for this many
+   days after the Principal's signature instead of vanishing from the
+   coordinator's tables the moment they leave the pipeline. */
+const RECENT_APPROVAL_DAYS = 7;
+
 router.get(
   "/referrals/all",
   requireAuth,
@@ -275,13 +386,22 @@ router.get(
           : "";
 
       // Default (no stage) stays referral-only so the Referrals queue never
-      // mixes in enrolled learners. Explicit enrollment_monitoring /
-      // completion filters serve the coordinator Enrolled page (approved
-      // cases from the Principal).
+      // mixes in enrolled learners — except freshly-signed ones, which stay
+      // put while they are the latest: enrolled stages signed within the
+      // recent-approval window ride along. The consultation view (overview
+      // forwards) likewise keeps window-signed cases. Explicit stage views
+      // (certification / principal_approval / enrolled / completion) are
+      // untouched.
       // Principals keep seeing endorsed cases after signing: their
       // principal_approval view also includes enrollment_monitoring cases
       // (every one of them passed through endorsement + signature), so a
       // signed case never vanishes from the desk.
+      const recentApprovalWhere: Prisma.AdmLearnerProfileWhereInput = {
+        stage: { in: ENROLLED_STAGES },
+        approvedAt: {
+          gte: new Date(Date.now() - RECENT_APPROVAL_DAYS * 86_400_000),
+        },
+      };
       const effectiveStageFilter: AdmStage | { in: AdmStage[] } =
         stageFilter === "principal_approval" && req.user!.role === "principal"
           ? { in: ["principal_approval", "enrollment_monitoring"] as AdmStage[] }
@@ -290,8 +410,8 @@ router.get(
         ...(stageFilter && stageFilter !== "consultation"
           ? { stage: effectiveStageFilter }
           : stageFilter === ""
-            ? { stage: { in: REFERRAL_STAGES } }
-            : { id: "__none__" }),
+            ? { OR: [{ stage: { in: REFERRAL_STAGES } }, recentApprovalWhere] }
+            : { OR: [recentApprovalWhere] }),
         ...(eligibilityFilter ? { eligibilityStatus: eligibilityFilter } : {}),
         ...(q
           ? {
@@ -312,9 +432,21 @@ router.get(
       const includeEarly =
         (!stageFilter || stageFilter === "consultation") &&
         (!eligibilityFilter || eligibilityFilter === "pending");
-      const earlyWhere = {
-        referredToRole: "adm_coordinator" as const,
+      // Coordinator queue is ADM-directed only: pre-profile rows are pinned
+      // to referredToRole adm_coordinator, and profile rows are ADM learner
+      // profiles by nature — no other track may surface on this desk.
+      // Endorsement-gated visibility: a case filed with a nurse/guidance
+      // consultation reviewer sits at the reviewer's step — it surfaces here
+      // only once endorsed (status leaves pending). Direct (no reviewer) and
+      // lrpc filings have no reviewer step, so they show immediately;
+      // dismissed rows stay visible as the closed-case trail.
+      const earlyWhere: Prisma.ReferralWhereInput = {
+        referredToRole: "adm_coordinator",
         admProfiles: { none: {} },
+        NOT: {
+          status: "pending",
+          consultReviewer: { in: ["nurse", "guidance_counselor"] },
+        },
         ...(q
           ? {
               OR: [
@@ -339,12 +471,31 @@ router.get(
           where,
           include: {
             student: { include: { user: true, section: { select: { name: true } } } },
-            referral: { select: { anecdotalRecordId: true } },
+            // consultReviewer powers the queue's "Referred by" source phrase
+            // (Direct referral vs Endorsed by …) on profile-stage rows too —
+            // without it the source is lost once the profile is created.
+            referral: { select: { anecdotalRecordId: true, status: true, consultReviewer: true } },
             preparedByUser: true,
             forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
-            parentMeetings: { orderBy: { meetingDatetime: "desc" }, take: 1 },
+            // Invitee ids ride the row snapshot so rescheduling from the
+            // table menu prefills (never wipes) the invite list.
+            parentMeetings: {
+              orderBy: { meetingDatetime: "desc" },
+              take: 1,
+              include: { invitees: { select: { userId: true } } },
+            },
+            // Module pass-tracking for the enrolled (monitoring) cards —
+            // submitted/total counts per learner profile.
+            modules: { select: { submitted: true } },
           },
-          orderBy: { createdAt: "desc" },
+          // Recently-signed cases float first (nulls last keeps the rest in
+          // newest-created order) so a fresh approval stays put as the
+          // latest. Unapproved-only views are unaffected — every approvedAt
+          // there is null.
+          orderBy: [
+            { approvedAt: { sort: "desc", nulls: "last" } },
+            { createdAt: "desc" },
+          ],
           ...(useDbPaging ? { skip, take: limit } : {}),
         }),
         prisma.admLearnerProfile.groupBy({
@@ -391,7 +542,7 @@ router.get(
 
       const profileRows = profileItems.map((p) => {
         const stage = p.stage;
-        const latestMeeting = (p as unknown as { parentMeetings?: { id: string; meetingDatetime: Date; venue: string; attended: boolean }[] }).parentMeetings?.[0] ?? null;
+        const latestMeeting = (p as unknown as { parentMeetings?: { id: string; meetingDatetime: Date; venue: string; attended: boolean; invitees?: { userId: string }[] }[] }).parentMeetings?.[0] ?? null;
         const base = {
           id: p.id,
           lrn: p.student.lrn,
@@ -410,6 +561,13 @@ router.get(
           datePrepared: p.createdAt ? p.createdAt.toISOString().slice(0, 10) : null,
           approvedBy: p.approvedBy ? "Principal" : null,
           approvalDate: p.approvedAt ? p.approvedAt.toISOString().slice(0, 10) : null,
+          // Referral-level terminal state — a cancelled (dismissed) or resolved
+          // referral reads as such on the desk, not as a live pipeline stage.
+          referralStatus: p.referral?.status ?? null,
+          // Endorsement source for the "Referred by" column — the desk that
+          // endorsed the case (nurse | guidance_counselor | lrpc), or null
+          // when the teacher filed it straight to the ADM Coordinator.
+          consultReviewer: p.referral?.consultReviewer ?? null,
           forms: p.forms.map((f) => ({
             id: f.id,
             formType: f.formType,
@@ -422,8 +580,12 @@ router.get(
                 datetime: latestMeeting.meetingDatetime.toISOString(),
                 venue: latestMeeting.venue,
                 attended: latestMeeting.attended,
+                inviteeIds: (latestMeeting.invitees ?? []).map((i) => i.userId),
               }
             : null,
+          // Module pass-tracking for the enrolled (monitoring) cards.
+          modulesSubmitted: p.modules.filter((m) => m.submitted).length,
+          modulesTotal: p.modules.length,
         };
         // Principal: status-only — strip confidential fields
         return req.user!.role === "principal" ? base : { ...base, studentId: p.studentId };
@@ -454,10 +616,11 @@ router.get(
 
       // Pre-profile referral bookings (no account needed) — latest per
       // referral so the Meeting column stays truthful for early rows.
-      const meetingByReferralId = new Map<string, { id: string; datetime: string; venue: string; attended: boolean }>();
+      const meetingByReferralId = new Map<string, { id: string; datetime: string; venue: string; attended: boolean; inviteeIds: string[] }>();
       if (earlyItems.length > 0) {
         const referralMeetings = await prisma.admParentMeeting.findMany({
           where: { referralId: { in: earlyItems.map((r) => r.id) } },
+          include: { invitees: { select: { userId: true } } },
           orderBy: { meetingDatetime: "desc" },
         });
         for (const m of referralMeetings) {
@@ -467,6 +630,7 @@ router.get(
               datetime: m.meetingDatetime.toISOString(),
               venue: m.venue,
               attended: m.attended,
+              inviteeIds: m.invitees.map((i) => i.userId),
             });
           }
         }
@@ -496,14 +660,25 @@ router.get(
           referralStatus: r.status,
           forms: [] as { id: string; formType: string; title: string; status: string }[],
           meeting: meetingByReferralId.get(r.id) ?? null,
+          // Early rows have no profile (hence no modules) — zeros keep the
+          // row shape identical to profile rows.
+          modulesSubmitted: 0,
+          modulesTotal: 0,
         };
         return req.user!.role === "principal" ? base : { ...base, studentId: "" };
       });
 
       // Newest hand-off first: early rows sort by endorse time, profiles by
-      // creation date (they carry no endorse timestamp).
-      const sortKey = (row: { datePrepared: string | null; endorsedAt?: string | null }) =>
-        row.endorsedAt ? String(row.endorsedAt).slice(0, 10) : (row.datePrepared ?? "");
+      // creation date (they carry no endorse timestamp) — except
+      // recently-signed ones, which sort by approval date so a fresh
+      // approval stays put as the latest (mirrors the DB orderBy above).
+      const sortKey = (row: {
+        datePrepared: string | null;
+        endorsedAt?: string | null;
+        approvalDate?: string | null;
+      }) =>
+        row.approvalDate ??
+        (row.endorsedAt ? String(row.endorsedAt).slice(0, 10) : (row.datePrepared ?? ""));
       const merged = [...profileRows, ...earlyRows].sort((a, b) =>
         sortKey(b).localeCompare(sortKey(a)),
       );
@@ -516,8 +691,77 @@ router.get(
         ? merged
         : merged.slice((clampedPage - 1) * limit, clampedPage * limit);
 
+      // Latest audit action per case for the Latest action column — one
+      // batched read over the page slice (source referrals + profiles +
+      // their meetings, the same source set as the /history timeline).
+      // Newest-first scan, first hit per case wins.
+      const withAction = await (async () => {
+        const refIds = new Set<string>();
+        const profIds = new Set<string>();
+        const meetingIds = new Set<string>();
+        const referralByProfile = new Map(profileItems.map((p) => [p.id, p.referralId]));
+        const profileByReferral = new Map<string, string>();
+        for (const [pid, rid] of referralByProfile) {
+          if (!profileByReferral.has(rid)) profileByReferral.set(rid, pid);
+        }
+        const meetingToCase = new Map<string, string>();
+        for (const row of slice as { id: string; meeting?: { id: string } | null }[]) {
+          if (row.id.startsWith("referral:")) {
+            const rid = row.id.slice("referral:".length);
+            refIds.add(rid);
+            if (row.meeting) {
+              meetingIds.add(row.meeting.id);
+              meetingToCase.set(row.meeting.id, row.id);
+            }
+          } else {
+            profIds.add(row.id);
+            const rid = referralByProfile.get(row.id);
+            if (rid) refIds.add(rid);
+            if (row.meeting) {
+              meetingIds.add(row.meeting.id);
+              meetingToCase.set(row.meeting.id, row.id);
+            }
+          }
+        }
+        const lastActionByCase = new Map<string, { type: string; at: string }>();
+        if (refIds.size > 0 || profIds.size > 0 || meetingIds.size > 0) {
+          const logs = await prisma.auditLog.findMany({
+            where: {
+              OR: [
+                ...(refIds.size > 0 ? [{ sourceTable: "referrals", sourceId: { in: [...refIds] } }] : []),
+                ...(profIds.size > 0 ? [{ sourceTable: "adm_learner_profiles", sourceId: { in: [...profIds] } }] : []),
+                ...(meetingIds.size > 0 ? [{ sourceTable: "adm_parent_meetings", sourceId: { in: [...meetingIds] } }] : []),
+              ],
+            },
+            select: { sourceId: true, sourceTable: true, actionType: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+          });
+          for (const log of logs) {
+            let caseKey: string | null = null;
+            if (log.sourceTable === "referrals") {
+              const pid = profileByReferral.get(log.sourceId);
+              caseKey = pid ?? `referral:${log.sourceId}`;
+            } else if (log.sourceTable === "adm_learner_profiles") {
+              caseKey = log.sourceId;
+            } else {
+              caseKey = meetingToCase.get(log.sourceId) ?? null;
+            }
+            if (!caseKey || lastActionByCase.has(caseKey)) continue;
+            lastActionByCase.set(caseKey, {
+              type: String(log.actionType),
+              at: log.createdAt.toISOString(),
+            });
+          }
+        }
+        return slice.map((row) => ({
+          ...row,
+          lastActionAt: lastActionByCase.get(row.id)?.at ?? null,
+          lastActionType: lastActionByCase.get(row.id)?.type ?? null,
+        }));
+      })();
+
       res.json({
-        rows: slice,
+        rows: withAction,
         total,
         totalReferred,
         stageCounts: countsByStage,
@@ -719,10 +963,17 @@ router.get(
       // grants access; it never copies prior terms' cases over.
       const scopeTermId = req.termScope?.termId ?? (await scopedTermRow(req))?.id ?? null;
       const termFilter = scopeTermId ? { termId: scopeTermId } : {};
+      // Pending/ongoing only: cancelled (dismissed) cases never surface here —
+      // they live on the teacher's referrals table (with Refer again).
+      // Resolved (successfully closed) cases stay as history.
+      const liveReferral: Prisma.ReferralWhereInput = {
+        referredBy: teacherId,
+        status: { not: "dismissed" },
+      };
       const where: Prisma.AdmLearnerProfileWhereInput =
         sectionIds.length > 0
-          ? { student: { sectionId: { in: sectionIds } }, referral: { referredBy: teacherId }, ...termFilter }
-          : { referral: { referredBy: teacherId }, ...termFilter };
+          ? { student: { sectionId: { in: sectionIds } }, referral: liveReferral, ...termFilter }
+          : { referral: liveReferral, ...termFilter };
 
       const profiles = await prisma.admLearnerProfile.findMany({
         where,
@@ -768,6 +1019,7 @@ router.get(
           ? {
               referredToRole: "adm_coordinator",
               referredBy: teacherId,
+              status: { not: "dismissed" },
               admProfiles: { none: {} },
               ...termFilter,
               OR: [
@@ -778,6 +1030,7 @@ router.get(
           : {
               referredBy: teacherId,
               referredToRole: "adm_coordinator",
+              status: { not: "dismissed" },
               admProfiles: { none: {} },
               ...termFilter,
             };
@@ -970,6 +1223,11 @@ router.post(
         },
       });
       if (!referral) throw new AppError(404, "REFERRAL_NOT_FOUND", "Referral required for ADM profile");
+      // Only referrals directed to the ADM Coordinator may become ADM cases —
+      // a referral filed to any other desk must never surface on this queue.
+      if (referral.referredToRole !== "adm_coordinator") {
+        throw new AppError(400, "NOT_ADM_REFERRAL", "Only referrals directed to the ADM Coordinator can become ADM cases");
+      }
       let studentId = req.body.studentId as string | undefined;
       let provisioned = false;
       if (studentId) {
@@ -1088,18 +1346,20 @@ router.post(
         void invalidateTags(["registrar", "record-keeper"]);
       }
       // Realtime handoff (background, off the coordinator critical path):
-      // the referring adviser learns the profile exists without refreshing.
+      // the referring adviser learns the profile exists without refreshing —
+      // naming the coordinator who created it.
       // Previously this notified the coordinator themselves — never useful.
+      const studentName =
+        referral.student?.user?.fullName ??
+        referral.roster?.fullName ??
+        "your student";
+      const actor = await actorName(me);
       if (referral.referredBy !== me) {
-        const studentName =
-          referral.student?.user?.fullName ??
-          referral.roster?.fullName ??
-          "your student";
         void fanoutNotification({
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `Learner profile created for ${studentName} — parent meeting can now be booked.`,
+          message: `${actor} created the learner profile for ${studentName} — now waiting for endorsement to the Principal.`,
           sourceId: referral.id,
         });
       }
@@ -1107,9 +1367,11 @@ router.post(
       void fanoutToRole("adm_coordinator", {
         sourceTable: "referrals",
         action: "status",
-        message: `Learner profile created — parent meeting can now be booked.`,
+        message: `Learner profile created — now waiting for endorsement to the Principal.`,
         sourceId: referral.id,
         excludeUserId: me,
+        messageFor: (r) =>
+          `${actor} created the learner profile for ${studentName} — sent to you, ${r.fullName}; now waiting for endorsement to the Principal.`,
       });
     } catch (e) { next(e); }
   }
@@ -1125,10 +1387,13 @@ router.post(
         where: { id: String(req.params.id) },
         include: {
           student: { select: { user: { select: { fullName: true } } } },
-          referral: { select: { id: true, referredBy: true } },
+          referral: { select: { id: true, referredBy: true, status: true } },
         },
       });
       if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+      if (profile.referral && (profile.referral.status === "dismissed" || profile.referral.status === "resolved")) {
+        throw new AppError(409, "REFERRAL_CLOSED", "This referral was cancelled/resolved — meetings can no longer be booked");
+      }
       if (profile.approvedBy) throw new AppError(409, "ALREADY_APPROVED", "Already signed by principal");
       if (profile.eligibilityStatus !== "eligible")
         throw new AppError(409, "NOT_CERTIFIED", "Case must pass Recommendation & Certification before School Head approval");
@@ -1142,26 +1407,29 @@ router.post(
       res.json(updated);
       // Cache purge is non-critical — never delay the confirmed response.
       void invalidateTags(["adm", "overview", "principal"]);
-      // The referring adviser learns the case was signed without refreshing.
+      // The referring adviser learns the case was signed without refreshing —
+      // naming the signing principal.
+      const studentName = profile.student?.user?.fullName ?? "your student";
+      const actor = await actorName(req.user!.id);
       if (profile.referral && profile.referral.referredBy !== req.user!.id) {
-        const studentName = profile.student?.user?.fullName ?? "your student";
         void fanoutNotification({
           userId: profile.referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `ADM case for ${studentName} signed by the Principal.`,
+          message: `${actor} signed the ADM case for ${studentName}.`,
           sourceId: profile.referral.id,
         });
       }
       // The coordinator desk learns the approval (all-transactions rule).
       {
-        const studentName = profile.student?.user?.fullName ?? "a case";
         void fanoutToRole("adm_coordinator", {
           sourceTable: "referrals",
           action: "status",
           message: `ADM case for ${studentName} signed by the Principal — ready for enrollment monitoring.`,
           sourceId: profile.referral?.id ?? profile.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} signed the ADM case for ${studentName} — sent to you, ${r.fullName}.`,
         });
       }
     } catch (e) { next(e); }
@@ -1213,14 +1481,15 @@ router.post(
       void invalidateTags(["adm", "overview", "principal"]);
       // Returned cases go back to the coordinator who prepared them — notify
       // them (previously this notified the principal themselves). Background,
-      // off the critical path.
+      // off the critical path — naming the returning principal.
+      const studentName = profile.student?.user?.fullName ?? "your student";
+      const actor = await actorName(req.user!.id);
       if (profile.preparedBy !== req.user!.id) {
-        const studentName = profile.student?.user?.fullName ?? "your student";
         void fanoutNotification({
           userId: profile.preparedBy,
           sourceTable: "referrals",
           action: "status",
-          message: `ADM case for ${studentName} returned by the Principal for revision.`,
+          message: `${actor} returned the ADM case for ${studentName} for revision.`,
           sourceId: profile.referralId,
         });
       }
@@ -1232,6 +1501,8 @@ router.post(
         message: `ADM case returned by the Principal for revision.`,
         sourceId: profile.referralId,
         excludeUserId: req.user!.id,
+        messageFor: (r) =>
+          `${actor} returned the ADM case for ${studentName} for revision — sent to you, ${r.fullName}.`,
       });
     } catch (e) {
       next(e);
@@ -1330,26 +1601,26 @@ router.patch(
       // Cache purge is non-critical — never delay the confirmed response.
       void invalidateTags(["adm", "overview", "principal"]);
       // Realtime handoff (background, off the critical path): the referring
-      // adviser learns the case moved without refreshing. Best-effort —
-      // never delays the response.
+      // adviser learns the case moved without refreshing — naming the actor.
+      // Best-effort — never delays the response.
+      const studentName = profile.student?.user?.fullName ?? "your student";
+      const stageWords = target.replace(/_/g, " ");
+      const actor = await actorName(req.user!.id);
       if (profile.referral && profile.referral.referredBy !== req.user!.id) {
-        const studentName = profile.student?.user?.fullName ?? "your student";
-        const stageWords = target.replace(/_/g, " ");
         void fanoutNotification({
           userId: profile.referral.referredBy,
           sourceTable: "referrals",
           action: "status",
           message:
             target === "principal_approval"
-              ? `ADM case for ${studentName} endorsed to the Principal.`
-              : `ADM case for ${studentName} moved to ${stageWords}.`,
+              ? `${actor} endorsed the ADM case for ${studentName} to the Principal.`
+              : `${actor} moved the ADM case for ${studentName} to ${stageWords}.`,
           sourceId: profile.referral.id,
         });
       }
       // Coordinator desk tracks every stage move (all-transactions rule),
       // including moves the acting coordinator performed themselves.
       {
-        const stageWords = target.replace(/_/g, " ");
         void fanoutToRole("adm_coordinator", {
           sourceTable: "referrals",
           action: "status",
@@ -1359,6 +1630,10 @@ router.patch(
               : `ADM case moved to ${stageWords}.`,
           sourceId: profile.referral?.id ?? profile.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            target === "principal_approval"
+              ? `${actor} endorsed the ADM case for ${studentName} to the Principal — sent to you, ${r.fullName}.`
+              : `${actor} moved the ADM case for ${studentName} to ${stageWords} — sent to you, ${r.fullName}.`,
         });
       }
     } catch (e) {
@@ -1476,14 +1751,16 @@ router.post(
       // Cache purge is non-critical — never delay the confirmed response.
       void invalidateTags(["adm", "overview", "principal"]);
       // Realtime handoff (background, off the critical path): the referring
-      // adviser learns the case was certified without refreshing.
+      // adviser learns the case was certified without refreshing — naming
+      // the certifying coordinator.
+      const studentName = profile.student?.user?.fullName ?? "your student";
+      const actor = await actorName(req.user!.id);
       if (profile.referral && profile.referral.referredBy !== req.user!.id) {
-        const studentName = profile.student?.user?.fullName ?? "your student";
         void fanoutNotification({
           userId: profile.referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `ADM case for ${studentName} certified and endorsed to the Principal.`,
+          message: `${actor} certified the ADM case for ${studentName} and endorsed it to the Principal.`,
           sourceId: profile.referral.id,
         });
       }
@@ -1493,6 +1770,8 @@ router.post(
         message: `ADM case certified and endorsed to the Principal.`,
         sourceId: profile.referral?.id ?? profile.id,
         excludeUserId: req.user!.id,
+        messageFor: (r) =>
+          `${actor} certified the ADM case for ${studentName} and endorsed it to the Principal — sent to you, ${r.fullName}.`,
       });
     } catch (e) {
       next(e);
@@ -1535,14 +1814,16 @@ router.post(
       // Non-critical work stays off the response path.
       void invalidateTags(["adm", "overview", "principal"]);
       // Realtime handoff: the referring adviser learns the device moved
-      // without refreshing. Best-effort — never delays the response.
+      // without refreshing — naming the issuing coordinator. Best-effort —
+      // never delays the response.
+      const studentName = profile.student?.user?.fullName ?? "your student";
+      const actor = await actorName(req.user!.id);
       if (profile.referral && profile.referral.referredBy !== req.user!.id) {
-        const studentName = profile.student?.user?.fullName ?? "your student";
         void fanoutNotification({
           userId: profile.referral.referredBy,
           sourceTable: "adm_devices",
           action: "issue",
-          message: `Learning device ${serial} issued to ${studentName}.`,
+          message: `${actor} issued learning device ${serial} to ${studentName}.`,
           sourceId: device.id,
         });
       }
@@ -1552,6 +1833,18 @@ router.post(
         message: `Learning device ${serial} issued.`,
         sourceId: device.id,
         excludeUserId: req.user!.id,
+        messageFor: (r) =>
+          `${actor} issued learning device ${serial} to ${studentName} — sent to you, ${r.fullName}.`,
+      });
+      // The Principal signs every ADM case, so issuance is principal-visible
+      // too: same realtime toast + badge + row on the principal desk.
+      void fanoutToRole("principal", {
+        sourceTable: "adm_devices",
+        action: "issue",
+        message: `Learning device ${serial} issued to ${studentName}.`,
+        sourceId: device.id,
+        messageFor: (r) =>
+          `${actor} issued learning device ${serial} to ${studentName} — sent to you, ${r.fullName}.`,
       });
     } catch (e) { next(e); }
   }
@@ -1584,15 +1877,17 @@ router.post(
       // Non-critical work stays off the response path.
       void invalidateTags(["adm", "overview", "principal"]);
       // Realtime handoff: the referring adviser learns of the return
-      // without refreshing. Best-effort — never delays the response.
+      // without refreshing — naming the coordinator. Best-effort — never
+      // delays the response.
       const ref = device.admLearnerProfile?.referral;
+      const studentName = device.admLearnerProfile?.student?.user?.fullName ?? "your student";
+      const actor = await actorName(req.user!.id);
       if (ref && ref.referredBy !== req.user!.id) {
-        const studentName = device.admLearnerProfile?.student?.user?.fullName ?? "your student";
         void fanoutNotification({
           userId: ref.referredBy,
           sourceTable: "adm_devices",
           action: "return",
-          message: `Learning device ${device.deviceSerial} marked returned for ${studentName}.`,
+          message: `${actor} marked learning device ${device.deviceSerial} returned for ${studentName}.`,
           sourceId: device.id,
         });
       }
@@ -1602,6 +1897,8 @@ router.post(
         message: `Learning device ${device.deviceSerial} marked returned.`,
         sourceId: device.id,
         excludeUserId: req.user!.id,
+        messageFor: (r) =>
+          `${actor} marked learning device ${device.deviceSerial} returned for ${studentName} — sent to you, ${r.fullName}.`,
       });
     } catch (e) { next(e); }
   }
@@ -1723,7 +2020,92 @@ const meetingBookSchema = z.object({
   venue: z.enum(["school", "home"]).default("school"),
   minutesOfMeeting: z.string().optional(),
   attendanceLogbookRef: z.string().optional(),
+  // Staff invited to the meeting (guidance / nurse / adviser user ids).
+  inviteeIds: z.array(z.string().uuid()).max(10).optional(),
 });
+
+// Roles the coordinator may invite to a parent meeting: specific people,
+// never whole desks. Shared by both booking endpoints and reschedule.
+// subject_teacher is included because section advisers often log in under
+// it — the staff directory only ever surfaces the case's own adviser, so
+// this never opens whole-roster invites.
+const INVITABLE_ROLES = ["nurse", "guidance_counselor", "adviser", "subject_teacher"] as const;
+
+/* Validate a booking-time invite list: deduped, actor excluded, every id an
+   active invitable-role account. Returns the resolved people (id + name +
+   role) for row creation and personalized notifications. Empty when omitted. */
+async function resolveInvitees(
+  actorId: string,
+  raw: unknown,
+): Promise<{ id: string; fullName: string; role: string }[]> {
+  if (raw === undefined) return [];
+  const ids = [
+    ...new Set(
+      (Array.isArray(raw) ? raw : []).filter(
+        (v): v is string => typeof v === "string" && v.length > 0,
+      ),
+    ),
+  ].filter((id) => id !== actorId);
+  if (ids.length === 0) return [];
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids }, status: "active" },
+    select: { id: true, fullName: true, role: true },
+  });
+  const byId = new Map(users.map((u) => [u.id, u]));
+  return ids.map((id) => {
+    const u = byId.get(id);
+    if (!u)
+      throw new AppError(
+        400,
+        "INVITEE_NOT_FOUND",
+        "An invited person no longer has an active account",
+      );
+    if (!(INVITABLE_ROLES as readonly string[]).includes(u.role)) {
+      throw new AppError(
+        400,
+        "INVITEE_ROLE",
+        "Only guidance, nurse, adviser, and teacher staff can be invited",
+      );
+    }
+    return { id: u.id, fullName: u.fullName, role: u.role };
+  });
+}
+
+/* Persist one meeting's invitee set (booking creates; reschedule replaces).
+   Names feed the audit trail. */
+async function saveMeetingInvitees(
+  meetingId: string,
+  invitees: { id: string; fullName: string }[],
+): Promise<void> {
+  if (invitees.length === 0) return;
+  await prisma.admMeetingInvitee.createMany({
+    data: invitees.map((u) => ({ meetingId, userId: u.id })),
+    skipDuplicates: true,
+  });
+}
+
+function inviteeNames(invitees: { fullName: string }[]): string {
+  return invitees.map((u) => u.fullName).join(", ");
+}
+
+/* Invited staff on a parent meeting — id + name + role for the meeting card,
+   the reschedule prefill, and invitee reminder routing. */
+const meetingInviteeInclude = {
+  invitees: {
+    include: { user: { select: { id: true, fullName: true, role: true } } },
+    orderBy: { invitedAt: "asc" as const },
+  },
+} as const;
+
+function meetingInviteeList(m: {
+  invitees?: { user: { id: string; fullName: string; role: string } }[];
+}): { id: string; fullName: string; role: string }[] {
+  return (m.invitees ?? []).map((i) => ({
+    id: i.user.id,
+    fullName: i.user.fullName,
+    role: i.user.role,
+  }));
+}
 
 const PRE_CERT_STAGES: AdmStage[] = ["anecdotal", "consultation", "meeting_parents"];
 
@@ -1738,10 +2120,22 @@ router.post(
         where: { id: String(req.params.id) },
         include: {
           student: { select: { user: { select: { fullName: true } } } },
-          referral: { select: { id: true, referredBy: true } },
+          referral: { select: { id: true, referredBy: true, status: true, consultReviewer: true } },
         },
       });
       if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
+      if (profile.referral?.status === "dismissed" || profile.referral?.status === "resolved") {
+        throw new AppError(409, "REFERRAL_CLOSED", "This referral was cancelled/resolved — meetings can no longer be booked");
+      }
+      // Endorsement gate: a case still pending with its nurse/guidance
+      // reviewer isn't the coordinator's yet — booking opens on endorse.
+      if (
+        profile.referral?.status === "pending" &&
+        (profile.referral?.consultReviewer === "nurse" ||
+          profile.referral?.consultReviewer === "guidance_counselor")
+      ) {
+        throw new AppError(409, "NOT_ENDORSED", "This case is still under consultation review — booking opens once it is endorsed to ADM");
+      }
       if (profile.approvedBy || !PRE_CERT_STAGES.includes(profile.stage)) {
         throw new AppError(409, "MEETING_LOCKED", "Meetings can only be booked before certification");
       }
@@ -1758,6 +2152,9 @@ router.post(
           "This case already has a booked meeting — reschedule it instead of booking another one"
         );
       }
+      // Invitees resolve before the write so a bad id fails the booking
+      // with a 400 instead of leaving a meeting with no invites.
+      const invitees = await resolveInvitees(req.user!.id, req.body.inviteeIds);
       const meeting = await prisma.admParentMeeting.create({
         data: {
           admLearnerProfileId: profile.id,
@@ -1769,12 +2166,13 @@ router.post(
           attendanceLogbookRef: req.body.attendanceLogbookRef,
         },
       });
+      await saveMeetingInvitees(meeting.id, invitees);
       await writeAudit({
         userId: req.user!.id,
         actionType: "adm_edit",
         sourceTable: "adm_parent_meetings",
         sourceId: meeting.id,
-        reason: `Parent meeting booked (${req.body.venue === "home" ? "home visitation" : "in school"})`,
+        reason: `Parent meeting booked (${req.body.venue === "home" ? "home visitation" : "in school"})${invitees.length > 0 ? ` · invited: ${inviteeNames(invitees)}` : ""}`,
       });
       await invalidateTags(["adm", "overview", "principal"]);
       res.status(201).json(meeting);
@@ -1782,18 +2180,47 @@ router.post(
       // the referring adviser sees a sileo toast on their current page the
       // moment this booking lands. fanoutNotification is best-effort and
       // never throws, so the coordinator's 201 is never delayed by it.
-      if (profile.referral && profile.referral.referredBy !== req.user!.id) {
-        const adviserId = profile.referral.referredBy;
+      {
         const studentName = profile.student?.user?.fullName ?? "your student";
         const when = meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ");
         const venueLabel = req.body.venue === "home" ? "home visitation" : "in school";
+        if (profile.referral && profile.referral.referredBy !== req.user!.id) {
+          void fanoutNotification({
+            userId: profile.referral.referredBy,
+            sourceTable: "adm_parent_meetings",
+            action: "book",
+            message: `Parent meeting booked for ${studentName} on ${when} (${venueLabel}).`,
+            sourceId: meeting.id,
+          });
+        }
+        // Self row for the booking coordinator's own bell + badge. Phrased
+        // "You …" so the desk echo guard swallows the realtime toast (the
+        // local "Meeting booked" success already fired) while the row lands.
         void fanoutNotification({
-          userId: adviserId,
+          userId: req.user!.id,
           sourceTable: "adm_parent_meetings",
           action: "book",
-          message: `Parent meeting booked for ${studentName} on ${when} (${venueLabel}).`,
+          message: `You booked a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
           sourceId: meeting.id,
         });
+      }
+      // Invited staff learn they are wanted in the room — sileo + bell + badge.
+      // The filing adviser already got their own booking message above.
+      if (invitees.length > 0) {
+        const actor = await actorName(req.user!.id);
+        const studentName = profile.student?.user?.fullName ?? "your student";
+        const when = meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ");
+        const venueLabel = req.body.venue === "home" ? "home visitation" : "in school";
+        for (const inv of invitees) {
+          if (inv.id === profile.referral?.referredBy) continue;
+          void fanoutNotification({
+            userId: inv.id,
+            sourceTable: "adm_parent_meetings",
+            action: "book",
+            message: `${actor} invited you to a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
+            sourceId: meeting.id,
+          });
+        }
       }
       void fanoutToRole("adm_coordinator", {
         sourceTable: "adm_parent_meetings",
@@ -1826,8 +2253,20 @@ router.post(
         },
       });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      if (referral.status === "dismissed" || referral.status === "resolved") {
+        throw new AppError(409, "REFERRAL_CLOSED", "This referral was cancelled/resolved — meetings can no longer be booked");
+      }
       if (referral.referredToRole !== "adm_coordinator") {
         throw new AppError(409, "NOT_ADM_CASE", "This referral is not routed to ADM");
+      }
+      // Endorsement gate: a case still pending with its nurse/guidance
+      // reviewer isn't the coordinator's yet — booking opens on endorse.
+      if (
+        referral.status === "pending" &&
+        (referral.consultReviewer === "nurse" ||
+          referral.consultReviewer === "guidance_counselor")
+      ) {
+        throw new AppError(409, "NOT_ENDORSED", "This case is still under consultation review — booking opens once it is endorsed to ADM");
       }
       const profile = referral.admProfiles[0] ?? null;
       if (profile && (profile.approvedBy || !PRE_CERT_STAGES.includes(profile.stage as (typeof PRE_CERT_STAGES)[number]))) {
@@ -1848,6 +2287,9 @@ router.post(
           "This case already has a booked meeting — reschedule it instead of booking another one"
         );
       }
+      // Invitees resolve before the write so a bad id fails the booking
+      // with a 400 instead of leaving a meeting with no invites.
+      const invitees = await resolveInvitees(req.user!.id, req.body.inviteeIds);
       const meeting = await prisma.admParentMeeting.create({
         data: {
           admLearnerProfileId: profile ? profile.id : null,
@@ -1860,29 +2302,54 @@ router.post(
           attendanceLogbookRef: req.body.attendanceLogbookRef,
         },
       });
+      await saveMeetingInvitees(meeting.id, invitees);
       await writeAudit({
         userId: req.user!.id,
         actionType: "adm_edit",
         sourceTable: "adm_parent_meetings",
         sourceId: meeting.id,
-        reason: `Parent meeting booked (${req.body.venue === "home" ? "home visitation" : "in school"})`,
+        reason: `Parent meeting booked (${req.body.venue === "home" ? "home visitation" : "in school"})${invitees.length > 0 ? ` · invited: ${inviteeNames(invitees)}` : ""}`,
       });
       await invalidateTags(["adm", "overview", "principal"]);
       res.status(201).json(meeting);
       // Realtime handoff (background, off the coordinator critical path):
       // the referring adviser sees a sileo toast on their current page the
-      // moment this booking lands. Best-effort — never delays the 201.
+      // moment this booking lands — naming the booking coordinator.
+      // Best-effort — never delays the 201.
+      const studentName =
+        referral.student?.user?.fullName ?? referral.roster?.fullName ?? "your student";
+      const when = meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ");
+      const venueLabel = req.body.venue === "home" ? "home visitation" : "in school";
+      const actor = await actorName(req.user!.id);
       if (referral.referredBy !== req.user!.id) {
         const adviserId = referral.referredBy;
-        const studentName =
-          referral.student?.user?.fullName ?? referral.roster?.fullName ?? "your student";
-        const when = meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ");
-        const venueLabel = req.body.venue === "home" ? "home visitation" : "in school";
         void fanoutNotification({
           userId: adviserId,
           sourceTable: "adm_parent_meetings",
           action: "book",
-          message: `Parent meeting booked for ${studentName} on ${when} (${venueLabel}).`,
+          message: `${actor} booked a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
+          sourceId: meeting.id,
+        });
+      }
+      // Self row for the booking coordinator's own bell + badge. Phrased
+      // "You …" so the desk echo guard swallows the realtime toast (the
+      // local "Meeting booked" success already fired) while the row lands.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "adm_parent_meetings",
+        action: "book",
+        message: `You booked a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
+        sourceId: meeting.id,
+      });
+      // Invited staff learn they are wanted in the room — sileo + bell + badge.
+      // The filing adviser already got their own booking message above.
+      for (const inv of invitees) {
+        if (inv.id === referral.referredBy) continue;
+        void fanoutNotification({
+          userId: inv.id,
+          sourceTable: "adm_parent_meetings",
+          action: "book",
+          message: `${actor} invited you to a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
           sourceId: meeting.id,
         });
       }
@@ -1892,6 +2359,8 @@ router.post(
         message: `Parent meeting booked for ${meeting.meetingDatetime.toISOString().slice(0, 16).replace("T", " ")}.`,
         sourceId: meeting.id,
         excludeUserId: req.user!.id,
+        messageFor: (r) =>
+          `${actor} booked a parent meeting for ${studentName} on ${when} (${venueLabel}) — sent to you, ${r.fullName}.`,
       });
     } catch (e) { next(e); }
   }
@@ -1904,6 +2373,8 @@ const meetingRescheduleSchema = z.object({
   meetingDatetime: z.string().datetime(),
   venue: z.enum(["school", "home"]).default("school"),
   attendanceLogbookRef: z.string().trim().max(200).optional(),
+  // Omitted = keep the current invite list; provided = replace it.
+  inviteeIds: z.array(z.string().uuid()).max(10).optional(),
 });
 
 router.patch(
@@ -1925,6 +2396,8 @@ router.patch(
               referral: {
                 select: {
                   referredBy: true,
+                  status: true,
+                  consultReviewer: true,
                   student: { select: { user: { select: { fullName: true } } } },
                   roster: { select: { fullName: true } },
                 },
@@ -1936,6 +2409,8 @@ router.patch(
               id: true,
               referredToRole: true,
               referredBy: true,
+              status: true,
+              consultReviewer: true,
               student: { select: { user: { select: { fullName: true } } } },
               roster: { select: { fullName: true } },
             },
@@ -1943,6 +2418,23 @@ router.patch(
         },
       });
       if (!meeting) throw new AppError(404, "NOT_FOUND", "Meeting not found");
+      if (
+        (meeting.referral && (meeting.referral.status === "dismissed" || meeting.referral.status === "resolved")) ||
+        (meeting.admLearnerProfile?.referral && (meeting.admLearnerProfile.referral.status === "dismissed" || meeting.admLearnerProfile.referral.status === "resolved"))
+      ) {
+        throw new AppError(409, "REFERRAL_CLOSED", "This referral was cancelled/resolved — meetings can no longer be rescheduled");
+      }
+      // Endorsement gate, same as booking: pending reviewer-owned cases
+      // aren't the coordinator's yet.
+      {
+        const ref = meeting.referral ?? meeting.admLearnerProfile?.referral ?? null;
+        if (
+          ref?.status === "pending" &&
+          (ref?.consultReviewer === "nurse" || ref?.consultReviewer === "guidance_counselor")
+        ) {
+          throw new AppError(409, "NOT_ENDORSED", "This case is still under consultation review — rescheduling opens once it is endorsed to ADM");
+        }
+      }
       if (meeting.attended) {
         throw new AppError(
           409,
@@ -1964,6 +2456,20 @@ router.patch(
       if (Number.isNaN(nextAt.getTime()) || nextAt.getTime() <= Date.now()) {
         throw new AppError(400, "INVALID_DATE", "Pick a future date and time for the meeting");
       }
+      // Invite-list edit rides along only when the coordinator sends it —
+      // omitted keeps the current list untouched.
+      const editInvitees = req.body.inviteeIds !== undefined;
+      const nextInvitees = editInvitees
+        ? await resolveInvitees(req.user!.id, req.body.inviteeIds)
+        : null;
+      const prevInviteeIds = editInvitees
+        ? (
+            await prisma.admMeetingInvitee.findMany({
+              where: { meetingId: meeting.id },
+              select: { userId: true },
+            })
+          ).map((r) => r.userId)
+        : [];
       const updated = await prisma.admParentMeeting.update({
         where: { id: meeting.id },
         data: {
@@ -1974,40 +2480,98 @@ router.patch(
             : {}),
         },
       });
+      let addedInvitees: { id: string; fullName: string }[] = [];
+      if (nextInvitees) {
+        const nextIds = new Set(nextInvitees.map((u) => u.id));
+        const prevIds = new Set(prevInviteeIds);
+        const removed = [...prevIds].filter((id) => !nextIds.has(id));
+        addedInvitees = nextInvitees.filter((u) => !prevIds.has(u.id));
+        if (removed.length > 0) {
+          await prisma.admMeetingInvitee.deleteMany({
+            where: { meetingId: meeting.id, userId: { in: removed } },
+          });
+        }
+        await saveMeetingInvitees(meeting.id, addedInvitees);
+      }
       await writeAudit({
         userId: req.user!.id,
         actionType: "adm_edit",
         sourceTable: "adm_parent_meetings",
         sourceId: meeting.id,
-        reason: `Parent meeting rescheduled to ${nextAt.toISOString().slice(0, 16).replace("T", " ")} (${req.body.venue === "home" ? "home visitation" : "in school"})`,
+        reason: `Parent meeting rescheduled to ${nextAt.toISOString().slice(0, 16).replace("T", " ")} (${req.body.venue === "home" ? "home visitation" : "in school"})${nextInvitees && addedInvitees.length > 0 ? ` · invited: ${inviteeNames(addedInvitees)}` : ""}`,
         oldValue: { meetingDatetime: meeting.meetingDatetime, venue: meeting.venue },
         newValue: { meetingDatetime: nextAt, venue: req.body.venue },
       });
       await invalidateTags(["adm", "overview", "principal"]);
       res.json(updated);
-      // The referring adviser learns the new schedule without refreshing.
+      // The referring adviser learns the new schedule without refreshing —
+      // naming the rescheduling coordinator.
       // (Book + outcome already fan out; reschedule previously stayed silent.)
       const actorId = req.user!.id;
       const adviserId =
         meeting.referral?.referredBy ??
         meeting.admLearnerProfile?.referral?.referredBy ??
         null;
+      const studentName =
+        meeting.referral?.student?.user?.fullName ??
+        meeting.referral?.roster?.fullName ??
+        meeting.admLearnerProfile?.student?.user?.fullName ??
+        meeting.admLearnerProfile?.referral?.student?.user?.fullName ??
+        meeting.admLearnerProfile?.referral?.roster?.fullName ??
+        "your student";
+      const when = nextAt.toISOString().slice(0, 16).replace("T", " ");
+      const actor = await actorName(actorId);
       if (adviserId && adviserId !== actorId) {
-        const studentName =
-          meeting.referral?.student?.user?.fullName ??
-          meeting.referral?.roster?.fullName ??
-          meeting.admLearnerProfile?.student?.user?.fullName ??
-          meeting.admLearnerProfile?.referral?.student?.user?.fullName ??
-          meeting.admLearnerProfile?.referral?.roster?.fullName ??
-          "your student";
-        const when = nextAt.toISOString().slice(0, 16).replace("T", " ");
         void fanoutNotification({
           userId: adviserId,
           sourceTable: "adm_parent_meetings",
           action: "reschedule",
-          message: `Parent meeting for ${studentName} moved to ${when}.`,
+          message: `${actor} moved the parent meeting for ${studentName} to ${when}.`,
           sourceId: meeting.id,
         });
+      }
+      // Self row for the rescheduling coordinator's own bell + badge. Phrased
+      // "You …" so the desk echo guard swallows the realtime toast (the
+      // local "Meeting rescheduled" success already fired) while the row lands.
+      void fanoutNotification({
+        userId: actorId,
+        sourceTable: "adm_parent_meetings",
+        action: "reschedule",
+        message: `You moved the parent meeting for ${studentName} to ${when}.`,
+        sourceId: meeting.id,
+      });
+      // Invitees follow the meeting: newly added staff get the invitation,
+      // kept staff learn the new schedule. Removed staff go quiet.
+      {
+        const keptInvitees = nextInvitees
+          ? nextInvitees.filter((u) => !addedInvitees.some((a) => a.id === u.id))
+          : (
+              await prisma.admMeetingInvitee.findMany({
+                where: { meetingId: meeting.id },
+                select: { user: { select: { fullName: true } }, userId: true },
+              })
+            ).map((r) => ({ id: r.userId, fullName: r.user.fullName }));
+        const venueLabel = req.body.venue === "home" ? "home visitation" : "in school";
+        for (const inv of addedInvitees) {
+          if (inv.id === adviserId) continue;
+          void fanoutNotification({
+            userId: inv.id,
+            sourceTable: "adm_parent_meetings",
+            action: "reschedule",
+            message: `${actor} invited you to a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
+            sourceId: meeting.id,
+          });
+        }
+        for (const inv of keptInvitees) {
+          if (inv.id === adviserId) continue;
+          void fanoutNotification({
+            userId: inv.id,
+            sourceTable: "adm_parent_meetings",
+            action: "reschedule",
+            message: `${actor} moved the parent meeting for ${studentName} to ${when} (${venueLabel}).`,
+            sourceId: meeting.id,
+          });
+        }
       }
       void fanoutToRole("adm_coordinator", {
         sourceTable: "adm_parent_meetings",
@@ -2015,8 +2579,144 @@ router.patch(
         message: `Parent meeting moved to ${nextAt.toISOString().slice(0, 16).replace("T", " ")}.`,
         sourceId: meeting.id,
         excludeUserId: actorId,
+        messageFor: (r) =>
+          `${actor} moved the parent meeting for ${studentName} to ${when} — sent to you, ${r.fullName}.`,
       });
     } catch (e) { next(e); }
+  }
+);
+
+// Meeting documentation (photos filed on a parent meeting: signed logbook,
+// venue, agreements…). Documentation unlocks once the meeting time arrives
+// (or after it was attended) — upcoming meetings reject new files. Closed
+// referrals reject. Mirrors the clinic session documentation flow.
+async function getDocumentableMeeting(meetingId: string) {
+  const meeting = await prisma.admParentMeeting.findUnique({
+    where: { id: meetingId },
+    include: {
+      referral: { select: { status: true } },
+      admLearnerProfile: { select: { referral: { select: { status: true } } } },
+    },
+  });
+  if (!meeting) throw new AppError(404, "NOT_FOUND", "Meeting not found");
+  const status =
+    meeting.referral?.status ??
+    meeting.admLearnerProfile?.referral?.status ??
+    null;
+  if (status === "dismissed" || status === "resolved") {
+    throw new AppError(400, "INVALID_ACTION", "Cannot add documentation to a closed case");
+  }
+  if (!meeting.attended && meeting.meetingDatetime.getTime() > Date.now()) {
+    throw new AppError(
+      400,
+      "SESSION_NOT_STARTED",
+      "This meeting hasn't started yet — documentation unlocks once the scheduled time arrives"
+    );
+  }
+  return meeting;
+}
+
+function formatMeetingAttachment(a: {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: Date;
+}) {
+  return {
+    id: a.id,
+    fileName: a.fileName,
+    fileUrl: a.fileUrl,
+    mimeType: a.mimeType,
+    fileSize: a.fileSize,
+    uploadedAt: a.uploadedAt.toISOString(),
+  };
+}
+
+router.post(
+  "/meetings/:meetingId/attachments",
+  requireAuth,
+  requireRole("adm_coordinator"),
+  meetingUpload.array("files", 5),
+  async (req, res, next) => {
+    try {
+      const meeting = await getDocumentableMeeting(String(req.params.meetingId));
+      const files = (
+        req as unknown as {
+          files?: Array<{ buffer: Buffer; originalname: string; mimetype: string; size: number }>;
+        }
+      ).files ?? [];
+      if (files.length === 0) {
+        throw new AppError(400, "BAD_REQUEST", "Attach at least one image");
+      }
+      const existing = await prisma.admMeetingAttachment.count({
+        where: { meetingId: meeting.id },
+      });
+      if (existing + files.length > 10) {
+        throw new AppError(400, "BAD_REQUEST", "A meeting can hold at most 10 documentation images");
+      }
+      const created = [];
+      for (const file of files) {
+        const path = admMeetingObjectPath(meeting.id, file.originalname);
+        const fileUrl = await uploadFile(file.buffer, path, file.mimetype, getReferralBucket());
+        const row = await prisma.admMeetingAttachment.create({
+          data: {
+            meetingId: meeting.id,
+            fileUrl,
+            fileName: file.originalname.slice(0, 200),
+            mimeType: file.mimetype,
+            fileSize: file.size,
+            uploadedBy: req.user!.id,
+          },
+        });
+        created.push(row);
+      }
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "adm_edit",
+        sourceTable: "adm_parent_meetings",
+        sourceId: meeting.id,
+        reason: `${created.length} documentation image${created.length === 1 ? "" : "s"} filed`,
+        oldValue: null,
+        newValue: { count: created.length },
+      });
+      await invalidateTags(["adm", "overview"]);
+      res.status(201).json(created.map(formatMeetingAttachment));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  "/meetings/:meetingId/attachments/:attachmentId",
+  requireAuth,
+  requireRole("adm_coordinator"),
+  async (req, res, next) => {
+    try {
+      const meeting = await getDocumentableMeeting(String(req.params.meetingId));
+      const row = await prisma.admMeetingAttachment.findUnique({
+        where: { id: String(req.params.attachmentId) },
+      });
+      if (!row || row.meetingId !== meeting.id) {
+        throw new AppError(404, "NOT_FOUND", "Documentation not found");
+      }
+      await prisma.admMeetingAttachment.delete({ where: { id: row.id } });
+      await writeAudit({
+        userId: req.user!.id,
+        actionType: "adm_edit",
+        sourceTable: "adm_parent_meetings",
+        sourceId: meeting.id,
+        reason: `Documentation removed: ${row.fileName}`,
+        oldValue: { fileName: row.fileName },
+        newValue: null,
+      });
+      await invalidateTags(["adm", "overview"]);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 
@@ -2146,13 +2846,41 @@ router.get(
       const meetings = profile
         ? await prisma.admParentMeeting.findMany({
             where: { admLearnerProfileId: profile.id },
-            include: { recorder: { select: { fullName: true } } },
+            include: {
+              recorder: { select: { fullName: true } },
+              ...meetingInviteeInclude,
+              attachments: {
+                select: {
+                  id: true,
+                  fileUrl: true,
+                  fileName: true,
+                  mimeType: true,
+                  fileSize: true,
+                  uploadedAt: true,
+                },
+                orderBy: { uploadedAt: "asc" },
+              },
+            },
             orderBy: { meetingDatetime: "asc" },
           })
         : referralId
           ? await prisma.admParentMeeting.findMany({
               where: { referralId },
-              include: { recorder: { select: { fullName: true } } },
+              include: {
+                recorder: { select: { fullName: true } },
+                ...meetingInviteeInclude,
+                attachments: {
+                  select: {
+                    id: true,
+                    fileUrl: true,
+                    fileName: true,
+                    mimeType: true,
+                    fileSize: true,
+                    uploadedAt: true,
+                  },
+                  orderBy: { uploadedAt: "asc" },
+                },
+              },
               orderBy: { meetingDatetime: "asc" },
             })
           : [];
@@ -2247,6 +2975,8 @@ router.get(
           minutesOfMeeting: m.minutesOfMeeting,
           attendanceLogbookRef: m.attendanceLogbookRef,
           attendees: m.attendees ?? [],
+          invitees: meetingInviteeList(m),
+          attachments: m.attachments.map(formatMeetingAttachment),
           recordedBy: m.recorder.fullName,
         })),
         sessions: (referral?.counselingSessions ?? []).map((s) => ({
@@ -2276,7 +3006,21 @@ router.get(
       if (!profile) throw new AppError(404, "NOT_FOUND", "ADM profile not found");
       const meetings = await prisma.admParentMeeting.findMany({
         where: { admLearnerProfileId: profile.id },
-        include: { recorder: { select: { fullName: true } } },
+        include: {
+          recorder: { select: { fullName: true } },
+          ...meetingInviteeInclude,
+          attachments: {
+            select: {
+              id: true,
+              fileUrl: true,
+              fileName: true,
+              mimeType: true,
+              fileSize: true,
+              uploadedAt: true,
+            },
+            orderBy: { uploadedAt: "asc" },
+          },
+        },
         orderBy: { meetingDatetime: "asc" },
       });
       res.json({
@@ -2289,6 +3033,8 @@ router.get(
           minutesOfMeeting: m.minutesOfMeeting,
           attendanceLogbookRef: m.attendanceLogbookRef,
           attendees: m.attendees ?? [],
+          invitees: meetingInviteeList(m),
+          attachments: m.attachments.map(formatMeetingAttachment),
           recordedBy: m.recorder.fullName,
         })),
       });
@@ -2302,7 +3048,9 @@ const meetingOutcomeSchema = z.object({
   attendanceLogbookRef: z.string().optional(),
   parentConfirmedAt: z.string().datetime().optional(),
   // People present, logged by the ADM Coordinator with the outcome:
-  // at most 20 { name, role } entries.
+  // at most 20 { name, role } entries. Entries checked off the invitee
+  // checklist carry the invited staff account id (userId) so attendance
+  // links back to the invite.
   attendees: z
     .array(
       z.object({
@@ -2317,6 +3065,7 @@ const meetingOutcomeSchema = z.object({
           "lrpc",
           "other",
         ]),
+        userId: z.string().uuid().optional(),
       }),
     )
     .max(20)
@@ -2347,13 +3096,14 @@ router.patch(
               },
             },
           },
-          referral: {
-            select: {
-              referredBy: true,
-              student: { select: { user: { select: { fullName: true } } } },
-              roster: { select: { fullName: true } },
-            },
-          },
+              referral: {
+                select: {
+                  referredBy: true,
+                  status: true,
+                  student: { select: { user: { select: { fullName: true } } } },
+                  roster: { select: { fullName: true } },
+                },
+              },
         },
       });
       if (!meeting) throw new AppError(404, "NOT_FOUND", "Meeting not found");
@@ -2400,21 +3150,22 @@ router.patch(
         meeting.referral?.referredBy ??
         meeting.admLearnerProfile?.referral?.referredBy ??
         null;
+      const studentName =
+        meeting.referral?.student?.user?.fullName ??
+        meeting.referral?.roster?.fullName ??
+        meeting.admLearnerProfile?.student?.user?.fullName ??
+        meeting.admLearnerProfile?.referral?.student?.user?.fullName ??
+        meeting.admLearnerProfile?.referral?.roster?.fullName ??
+        "your student";
+      const actor = await actorName(actorId);
       if (adviserId && adviserId !== actorId) {
-        const studentName =
-          meeting.referral?.student?.user?.fullName ??
-          meeting.referral?.roster?.fullName ??
-          meeting.admLearnerProfile?.student?.user?.fullName ??
-          meeting.admLearnerProfile?.referral?.student?.user?.fullName ??
-          meeting.admLearnerProfile?.referral?.roster?.fullName ??
-          "your student";
         void fanoutNotification({
           userId: adviserId,
           sourceTable: "adm_parent_meetings",
           action: "outcome",
           message: attended
-            ? `Parents attended the meeting for ${studentName}.`
-            : `Parents did not attend the meeting for ${studentName} — home visitation path applies.`,
+            ? `${actor} recorded that parents attended the meeting for ${studentName}.`
+            : `${actor} recorded that parents did not attend the meeting for ${studentName} — home visitation path applies.`,
           sourceId: meeting.id,
         });
       }
@@ -2426,6 +3177,10 @@ router.patch(
           : `Parents did not attend — home visitation path applies.`,
         sourceId: meeting.id,
         excludeUserId: actorId,
+        messageFor: (r) =>
+          attended
+            ? `${actor} recorded that parents attended the meeting for ${studentName} — sent to you, ${r.fullName}.`
+            : `${actor} recorded that parents did not attend the meeting for ${studentName} — home visitation path applies — sent to you, ${r.fullName}.`,
       });
     } catch (e) { next(e); }
   }
@@ -2499,6 +3254,146 @@ router.get(
         })),
       });
     } catch (e) { next(e); }
+  }
+);
+
+const HEX_COLOR = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
+
+async function readCoordinatorProfileSettings(coordinatorId: string) {
+  const [user, profile] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: coordinatorId },
+      select: { fullName: true },
+    }),
+    prisma.staffProfile.findUnique({
+      where: { userId: coordinatorId },
+      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+    }),
+  ]);
+  return {
+    fullName: user?.fullName ?? "",
+    photoUrl: profile?.photoUrl ?? null,
+    primaryColor: profile?.primaryColor ?? null,
+    secondaryColor: profile?.secondaryColor ?? null,
+  };
+}
+
+// GET /api/adm/settings/profile — own display name, photo, palette.
+router.get(
+  "/settings/profile",
+  requireAuth,
+  requireRole("adm_coordinator"),
+  async (req, res, next) => {
+    try {
+      res.json(await readCoordinatorProfileSettings(req.user!.id));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// PATCH /api/adm/settings/profile — display name + workspace palette.
+// Mirrors the nurse/guidance endpoints; adviser / master-teacher fields are
+// intentionally absent for the coordinator desk.
+router.patch(
+  "/settings/profile",
+  requireAuth,
+  requireRole("adm_coordinator"),
+  validate(
+    "body",
+    z.object({
+      fullName: z.string().trim().min(1).max(100).optional(),
+      primaryColor: HEX_COLOR.nullable().optional(),
+      secondaryColor: HEX_COLOR.nullable().optional(),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const coordinatorId = req.user!.id;
+      const { fullName, primaryColor, secondaryColor } = req.body as {
+        fullName?: string;
+        primaryColor?: string | null;
+        secondaryColor?: string | null;
+      };
+      await prisma.$transaction(async (tx) => {
+        if (fullName !== undefined) {
+          await tx.user.update({
+            where: { id: coordinatorId },
+            data: { fullName },
+          });
+        }
+        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+        if (primaryColor !== undefined) palette.primaryColor = primaryColor;
+        if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+        if (Object.keys(palette).length > 0) {
+          await tx.staffProfile.upsert({
+            where: { userId: coordinatorId },
+            update: palette,
+            create: {
+              userId: coordinatorId,
+              employeeId: `A-${coordinatorId.slice(0, 8)}`,
+              ...palette,
+            },
+          });
+        }
+      });
+      await writeAudit({
+        userId: coordinatorId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: coordinatorId,
+        reason: "ADM coordinator updated profile settings",
+      });
+      await invalidateTags(["adm", "overview"]);
+      res.json(await readCoordinatorProfileSettings(coordinatorId));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/adm/settings/photo — profile photo upload (JSON data URL).
+// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
+router.post(
+  "/settings/photo",
+  requireAuth,
+  requireRole("adm_coordinator"),
+  validate(
+    "body",
+    z.object({
+      photoUrl: z
+        .string()
+        .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
+        .max(2_800_000),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const coordinatorId = req.user!.id;
+      const { photoUrl } = req.body as { photoUrl: string };
+      await prisma.staffProfile.upsert({
+        where: { userId: coordinatorId },
+        update: { photoUrl },
+        create: {
+          userId: coordinatorId,
+          employeeId: `A-${coordinatorId.slice(0, 8)}`,
+          photoUrl,
+        },
+      });
+      await writeAudit({
+        userId: coordinatorId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: coordinatorId,
+        reason: "ADM coordinator updated profile photo",
+      });
+      await invalidateTags(["adm", "overview"]);
+      res.json({ photoUrl });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 

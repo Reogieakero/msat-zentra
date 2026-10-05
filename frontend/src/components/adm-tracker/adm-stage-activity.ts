@@ -63,8 +63,14 @@ const ROLE_LABELS: Record<string, string> = {
   principal: "Principal",
 };
 
-export function actorLabel(byRole: string | null | undefined): string | null {
+export function actorLabel(
+  byRole: string | null | undefined,
+  reader: "teacher" | "coordinator" = "teacher",
+): string | null {
   if (!byRole) return null;
+  if (byRole === "adviser" || byRole === "subject_teacher") {
+    return reader === "coordinator" ? "Adviser" : "You";
+  }
   return ROLE_LABELS[byRole] ?? "Staff";
 }
 
@@ -103,7 +109,10 @@ export function stageForEntry(entry: Pick<StageTimelineEntry, "action" | "source
   return null;
 }
 
-function entryLine(entry: StageTimelineEntry): StageActionLine {
+function entryLine(
+  entry: StageTimelineEntry,
+  reader: "teacher" | "coordinator" = "teacher",
+): StageActionLine {
   // Same actor-first wording as the desk alerts timelines ("Cancelled by
   // adviser", "Session booked by School Nurse", ...) — the reader here is
   // the filing teacher, so the mapper's teacher scope applies. Unknown
@@ -117,7 +126,7 @@ function entryLine(entry: StageTimelineEntry): StageActionLine {
     fallback: entry.label,
   });
   return {
-    actor: actorLabel(entry.byRole),
+    actor: actorLabel(entry.byRole, reader),
     text: label,
     detail: entry.detail ?? null,
     at: entry.at || null,
@@ -126,9 +135,12 @@ function entryLine(entry: StageTimelineEntry): StageActionLine {
 
 /* Latest action per stage: newest audit-mapped entry wins; row evidence
    fills stages the audit trail never touches (meetings, home visits,
-   certification, approvals, modules, closure). Null = static detail line. */
+   certification, approvals, modules, closure). Null = static detail line.
+   `reader` controls the actor voice ("You" for the filing teacher,
+   "Adviser" for the coordinator desk). */
 export function latestActionByStage(
-  input: TrackerCaseInput
+  input: TrackerCaseInput,
+  reader: "teacher" | "coordinator" = "teacher",
 ): Record<AdmTrackStageKey, StageActionLine | null> {
   const out: Record<AdmTrackStageKey, StageActionLine | null> = {
     anecdotal: null,
@@ -153,7 +165,7 @@ export function latestActionByStage(
   for (const [stage, list] of byStage) {
     list.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
     const latest = list[list.length - 1];
-    out[stage] = entryLine(latest);
+    out[stage] = entryLine(latest, reader);
   }
 
   // Row-evidence fallbacks (actor implied by route guards that wrote them).

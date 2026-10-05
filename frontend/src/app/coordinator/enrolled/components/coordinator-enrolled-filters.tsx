@@ -10,8 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { AdmEligibility } from "../../components/coordinator-data";
-import { ELIG_OPTIONS, STAGE_TABS } from "./coordinator-enrolled-constants";
-import type { EnrolledStageTab } from "./use-coordinator-enrolled";
+import { ELIG_OPTIONS } from "./coordinator-enrolled-constants";
 import styles from "./coordinator-enrolled-filters.module.css";
 
 interface CoordinatorEnrolledFiltersProps {
@@ -21,8 +20,6 @@ interface CoordinatorEnrolledFiltersProps {
   elig: "all" | AdmEligibility;
   onEligChange: (v: "all" | AdmEligibility) => void;
   eligMenuLabel: string;
-  stageTab: EnrolledStageTab;
-  onStageTabChange: (v: EnrolledStageTab) => void;
   hasActiveFilters: boolean;
   onClear: () => void;
 }
@@ -34,8 +31,6 @@ export function CoordinatorEnrolledFilters({
   elig,
   onEligChange,
   eligMenuLabel,
-  stageTab,
-  onStageTabChange,
   hasActiveFilters,
   onClear,
 }: CoordinatorEnrolledFiltersProps) {
@@ -49,23 +44,6 @@ export function CoordinatorEnrolledFilters({
         </p>
       </div>
       <div className={styles.headerActions}>
-        <div
-          className={styles.stageTabs}
-          role="group"
-          aria-label="Enrolled stages"
-        >
-          {STAGE_TABS.map((t) => (
-            <Button
-              key={t.value}
-              variant={stageTab === t.value ? "secondary" : "ghost"}
-              size="sm"
-              style={{ height: "2rem" }}
-              onClick={() => onStageTabChange(t.value)}
-            >
-              {t.label}
-            </Button>
-          ))}
-        </div>
         <div className={styles.searchWrap}>
           <Search className={styles.searchIcon} aria-hidden />
           <Input

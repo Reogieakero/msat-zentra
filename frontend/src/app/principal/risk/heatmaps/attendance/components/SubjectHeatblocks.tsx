@@ -2,10 +2,25 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarRange, Check, ChevronDown } from "lucide-react";
+import { BookOpen, CalendarRange, Check, ChevronDown, Users } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CardModal } from "@/components/ui/CardModal";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SectionScheduleCard,
+  SECTION_CARD_STATUS_META,
+} from "@/components/schedule/SectionScheduleCard";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +87,27 @@ function shortSection(name: string): string {
   return name.replace(/^Grade\s+/i, "");
 }
 
+// Status dot for one subject card: average present ratio across its days.
+// No takes at all reads as neutral (same empty-token language as the blocks).
+function cardStatus(
+  section: Row,
+  i: number
+): { color: string; label: string } {
+  const cells = section.days
+    .map((d) => d.cells[i])
+    .filter((c): c is Cell => !!c);
+  const hasTakes = cells.some((c) => c.total > 0);
+  if (!hasTakes)
+    return { color: SECTION_CARD_STATUS_META.empty.color, label: "No takes" };
+  const avg =
+    cells.reduce((sum, c) => sum + c.ratio, 0) / Math.max(1, cells.length);
+  if (avg >= 80)
+    return { color: SECTION_CARD_STATUS_META.approved.color, label: "On track" };
+  if (avg >= 50)
+    return { color: SECTION_CARD_STATUS_META.returned.color, label: "Mixed" };
+  return { color: SECTION_CARD_STATUS_META.draft.color, label: "Low" };
+}
+
 function FilterDropdown({
   label,
   display,
@@ -122,7 +158,11 @@ function FilterItem({
   );
 }
 
-export function SubjectHeatblocks() {
+export function SubjectHeatblocks({
+  onInspectSection,
+}: {
+  onInspectSection: (sectionId: string, sectionName: string) => void;
+}) {
   // Draft picks (dropdowns only edit these — nothing fetches/displays yet).
   const [grade, setGrade] = React.useState<string>(ALL_GRADES);
   const [sectionId, setSectionId] = React.useState<string>(ALL_SECTIONS);
@@ -136,7 +176,9 @@ export function SubjectHeatblocks() {
   });
   const [submitted, setSubmitted] = React.useState(false);
   // Gate: the grid stays hidden until Filter is pressed — the page never
-  // dumps all sections at once.
+  // dumps all sections at once. Picks live in the filter modal; applying
+  // copies the drafts into `applied` and reveals the grid.
+  const [filterOpen, setFilterOpen] = React.useState(false);
 
   const { data, isPending } = useQuery({
     queryKey: ["attendance-section-subject-heatmap", "all"],
@@ -229,10 +271,12 @@ export function SubjectHeatblocks() {
   function applyFilters() {
     setApplied({ grade, sectionId, subjectId });
     setSubmitted(true);
+    setFilterOpen(false);
   }
 
   const gated = !submitted;
 
+  // Draft picks only — applying happens in the modal footer.
   const picker = (
     <div className={styles.filterBar} role="group" aria-label="Subject view filters">
       <FilterDropdown label="Grade" display={gradeDisplay}>
@@ -279,24 +323,26 @@ export function SubjectHeatblocks() {
           </FilterItem>
         ))}
       </FilterDropdown>
-      <Button type="button" size="sm" onClick={applyFilters}>
-        Filter
-      </Button>
     </div>
   );
 
   return (
-    <div className={styles.content}>
-      <div className={styles.toolbar}>
-        <div className={styles.titleWrap}>
-          <h1 className={styles.title}>Section Attendance Heatblocks</h1>
-          <p className={styles.subtitle}>
-            Per-section, per-day blocks for each subject — one row per subject
-            {termNumber ? ` · Term ${termNumber}` : ""}, color-coded against
-            the 80% threshold.
-          </p>
+    <>
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Subjects &amp; Sessions Heatblocks</CardTitle>
+          <CardDescription>
+            Per-section, per-day blocks for each subject — one row per subject.
+          </CardDescription>
         </div>
-      </div>
+        {termNumber ? (
+          <CardAction>
+            <Badge variant="secondary">Term {termNumber}</Badge>
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
       {!isPending && !gated ? (
         <div className={styles.activeBar}>
           <Button
@@ -304,7 +350,7 @@ export function SubjectHeatblocks() {
             variant="default"
             size="sm"
             className={styles.changeBtn}
-            onClick={() => setSubmitted(false)}
+            onClick={() => setFilterOpen(true)}
           >
             Change filter
           </Button>
@@ -330,10 +376,12 @@ export function SubjectHeatblocks() {
           <div className={styles.gate}>
             <p className={styles.gateTitle}>Narrow the view to begin</p>
             <p className={styles.gateBody}>
-              Pick a grade level, section, or subject below, then press Filter
+              Pick a grade level, section, or subject, then press Filter
               to display the matching blocks.
             </p>
-            {picker}
+            <Button type="button" onClick={() => setFilterOpen(true)}>
+              Choose filters
+            </Button>
           </div>
         ) : sections.length === 0 && allSections.length === 0 ? (
           <p className={styles.empty}>No attendance data available.</p>
@@ -345,35 +393,92 @@ export function SubjectHeatblocks() {
                   No sections match the selected grade and section.
                 </p>
               ) : null}
-              {cards.map((c) => (
-                <article
-                  key={c.key}
-                  data-section-id={c.section.sectionId}
-                  className={styles.cardShell}
-                >
-                  <div className={styles.shellHead}>
-                    <div className={styles.headMain}>
-                      {c.sub ? (
-                        <span className={styles.eyebrow}>Subject</span>
-                      ) : null}
-                      <span className={styles.grade}>
-                        {c.sub ? c.sub.name : c.section.section}
+              {cards.map((c) => {
+                if (!c.sub) {
+                  return (
+                    <SectionScheduleCard
+                      key={c.key}
+                      ariaLabel={`${c.section.section} — no subject attendance yet`}
+                      avatarIcon={<BookOpen size={20} aria-hidden />}
+                      titleLabel="Section"
+                      sectionName={c.section.section}
+                      adviserName={null}
+                      statusMeta={{
+                        color: SECTION_CARD_STATUS_META.empty.color,
+                        label: "Empty",
+                      }}
+                      middle={
+                        <span className={styles.cardMeta}>
+                          <span className={styles.enrolled}>
+                            <CalendarRange
+                              className={styles.enrolledIcon}
+                              aria-hidden
+                            />
+                            {c.section.enrolled} students
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() =>
+                              onInspectSection(
+                                c.section.sectionId,
+                                c.section.section
+                              )
+                            }
+                            aria-label={`Show per-student attendance for ${c.section.section}`}
+                            title={`Show per-student attendance for ${c.section.section}`}
+                          >
+                            <Users size={14} aria-hidden />
+                          </Button>
+                        </span>
+                      }
+                      hint="No subject attendance yet."
+                    />
+                  );
+                }
+                const meta = cardStatus(c.section, c.i);
+                return (
+                  <SectionScheduleCard
+                    key={c.key}
+                    ariaLabel={`${c.sub.name} in ${c.section.section} — ${meta.label}`}
+                    pill={
+                      <Badge variant="secondary" className={assign.gradeFloat}>
+                        {c.sub.code}
+                      </Badge>
+                    }
+                    avatarIcon={<BookOpen size={20} aria-hidden />}
+                    titleLabel="Subject"
+                    sectionName={c.sub.name}
+                    adviserName={null}
+                    statusMeta={meta}
+                    middle={
+                      <span className={styles.cardMeta}>
+                        <span className={styles.enrolled}>
+                          <CalendarRange
+                            className={styles.enrolledIcon}
+                            aria-hidden
+                          />
+                          {c.section.section} · {c.section.enrolled} students
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() =>
+                            onInspectSection(
+                              c.section.sectionId,
+                              c.section.section
+                            )
+                          }
+                          aria-label={`Show per-student attendance for ${c.section.section}`}
+                          title={`Show per-student attendance for ${c.section.section}`}
+                        >
+                          <Users size={14} aria-hidden />
+                        </Button>
                       </span>
-                      <span className={styles.enrolled}>
-                        {c.section.section}
-                        {c.sub ? ` · ${c.sub.code}` : ""}
-                      </span>
-                    </div>
-                    <span className={styles.headCount}>
-                      <CalendarRange className={styles.enrolledIcon} aria-hidden />
-                      {c.section.enrolled} students
-                    </span>
-                  </div>
-                  {!c.sub ? (
-                    <p className={styles.noSubjects}>
-                      No subject attendance yet.
-                    </p>
-                  ) : (
+                    }
+                  >
                     <div className={styles.grid}>
                       {c.section.days.map((d) => {
                         const cell = d.cells[c.i];
@@ -408,9 +513,9 @@ export function SubjectHeatblocks() {
                         );
                       })}
                     </div>
-                  )}
-                </article>
-              ))}
+                  </SectionScheduleCard>
+                );
+              })}
                 </div>
             <div className={styles.legend}>
               <span className={styles.legendLabel}>Present: 0</span>
@@ -427,6 +532,30 @@ export function SubjectHeatblocks() {
             </div>
           </TooltipProvider>
         )}
-    </div>
+      </CardContent>
+    </Card>
+    <CardModal
+      open={filterOpen}
+      onClose={() => setFilterOpen(false)}
+      size="md"
+      title="Filter subject blocks"
+      description="Pick a grade level, section, or subject, then show the matching blocks."
+      watchKey={`${grade}|${sectionId}|${subjectId}`}
+    >
+      {picker}
+      <div className={styles.modalActions}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setFilterOpen(false)}
+        >
+          Cancel
+        </Button>
+        <Button type="button" onClick={applyFilters}>
+          Show results
+        </Button>
+      </div>
+    </CardModal>
+    </>
   );
 }

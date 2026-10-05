@@ -10,7 +10,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   min-width: 0;
@@ -27,10 +27,4 @@
   margin: 0;
   border: none;
   border-top: 1px solid var(--border, #e5e5e5);
-}
-
-@media (max-width: 1023px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -30,6 +32,26 @@ interface CoordinatorOverviewDevicesProps {
   onRetry: () => void;
 }
 
+function buildInterpretation(
+  oldestOut: AdmDeviceRow[],
+  issued: number | null,
+  now: number,
+): string {
+  if (oldestOut.length === 0) {
+    return "No tablets are currently issued — the ledger is clear.";
+  }
+  const elapsedList = oldestOut
+    .map((d) => msSinceDate(d.issuedDate, now))
+    .filter((v): v is number => v !== null);
+  const longest =
+    elapsedList.length > 0 ? formatElapsedShort(Math.max(...elapsedList)) : null;
+  const total = issued ?? oldestOut.length;
+  return (
+    `${total} tablet${total === 1 ? "" : "s"} still out.` +
+    (longest ? ` Longest outstanding ${longest} ago — follow up with that learner first.` : "")
+  );
+}
+
 export function CoordinatorOverviewDevices({
   issued,
   returned,
@@ -42,29 +64,39 @@ export function CoordinatorOverviewDevices({
   onRetry,
 }: CoordinatorOverviewDevicesProps) {
   return (
-    <div className={styles.card}>
-      <div className={styles.panelHead}>
-        <div>
-          <h2 className={styles.sectionTitle}>Learning devices</h2>
-          <p className={styles.sectionDesc}>
-            {hasData
-              ? `${issued} still out · ${returned} returned.`
-              : "Tablet issuance and return ledger."}
-          </p>
+    <Card className={styles.card}>
+      <span className={styles.glowClip} aria-hidden="true">
+        <span className={styles.cardGlow} />
+      </span>
+      <CardHeader>
+        <div className={styles.headerRow}>
+          <div>
+            <CardTitle className={styles.sectionTitle}>Learning devices</CardTitle>
+            <CardDescription className={styles.sectionDesc}>
+              {hasData
+                ? `${issued} still out · ${returned} returned.`
+                : "Tablet issuance and return ledger."}
+            </CardDescription>
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/coordinator/devices">See all</Link>
+          </Button>
         </div>
-        <Link className={styles.kpiBtnSolid} href="/coordinator/devices">
-          See all
-        </Link>
-      </div>
-      <div className={styles.panelBody}>
+      </CardHeader>
+      <CardContent className={styles.body}>
         {isPending ? (
-          <div
-            aria-busy="true"
-            className={styles.skelList}
-          >
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} style={{ width: "100%", height: "2rem" }} />
-            ))}
+          <div className={styles.tableWrap} aria-busy="true">
+            <table className={styles.skelTable} aria-hidden="true">
+              <tbody>
+                {[0, 1, 2].map((i) => (
+                  <tr key={i}>
+                    <td>
+                      <Skeleton style={{ width: "100%", height: "2rem" }} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : isError ? (
           <div className={styles.errorBlock} role="alert">
@@ -77,17 +109,22 @@ export function CoordinatorOverviewDevices({
               disabled={isRefetching}
               onClick={onRetry}
             >
+              {isRefetching ? (
+                <Loader2 className={styles.spin} aria-hidden="true" />
+              ) : null}
               {isRefetching ? "Loading…" : "Try again"}
             </Button>
           </div>
         ) : oldestOut.length === 0 ? (
-          <p className={styles.emptyText}>No tablets currently issued.</p>
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>No tablets currently issued</p>
+            <p className={styles.emptyHint}>
+              Newly issued tablets will appear here, longest-out first.
+            </p>
+          </div>
         ) : (
           <div className={styles.tableWrap}>
-            <Table
-              className={`${styles.table} ${styles.alertTable}`}
-              aria-label="Longest-outstanding tablets"
-            >
+            <Table aria-label="Longest-outstanding tablets">
               <TableHeader>
                 <TableRow>
                   <TableHead>Device</TableHead>
@@ -103,15 +140,15 @@ export function CoordinatorOverviewDevices({
                     <TableRow key={d.id}>
                       <TableCell>
                         <p className={styles.cellMain}>{d.deviceType}</p>
-                        <div className={`${styles.studentSub} ${styles.mono}`}>
+                        <p className={`${styles.cellSub} ${styles.mono}`}>
                           {d.deviceSerial}
-                        </div>
+                        </p>
                       </TableCell>
                       <TableCell>
                         <p className={styles.cellMain}>{d.student}</p>
-                        <div className={`${styles.studentSub} ${styles.mono}`}>
+                        <p className={`${styles.cellSub} ${styles.mono}`}>
                           {d.lrn}
-                        </div>
+                        </p>
                       </TableCell>
                       <TableCell>
                         <p className={styles.cellMain}>{d.issuedDate}</p>
@@ -130,7 +167,13 @@ export function CoordinatorOverviewDevices({
             </Table>
           </div>
         )}
-      </div>
-    </div>
+        {!isPending && !isError ? (
+          <p className={styles.interpretation}>
+            <span className={styles.interpretationLabel}>What it means · </span>
+            {buildInterpretation(oldestOut, issued, now)}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

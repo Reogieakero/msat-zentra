@@ -1,6 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
 import type { RiskLevel, OutcomeStatus } from "../../generated/prisma/client.js";
-import { resolveActiveTermId, type GradeMode } from "../../services/risk.js";
+import {
+  computeRiskFactors,
+  levelFromFlags,
+  resolveActiveTermId,
+  type GradeMode,
+} from "../../services/risk.js";
+import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
 export interface RiskBoardResult {
@@ -61,11 +67,17 @@ export async function getRiskBoard(
       where: schoolYearId ? { section: { schoolYearId } } : undefined,
       select: {
         lrn: true,
+        section: { select: { id: true } },
         finalGrades: {
           where: { termId: activeTermId ?? undefined },
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
+        attendanceRecords: {
+          where: { termId: activeTermId ?? undefined },
+          // subjectId drives the engine's dual-mode attendance rule
+          // (subject-era rows vs legacy AM/PM rows).
+          select: { status: true, subjectId: true },
+        },
         anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
       },
     }),
@@ -74,27 +86,35 @@ export async function getRiskBoard(
       where: schoolYearId ? { schoolYearId } : undefined,
       select: {
         lrn: true,
+        sectionId: true,
         finalGrades: {
           where: { termId: activeTermId ?? undefined },
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: { termId: activeTermId ?? undefined }, select: { status: true } },
+        attendanceRecords: {
+          where: { termId: activeTermId ?? undefined },
+          select: { status: true, subjectId: true },
+        },
         anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
       },
     }),
   ]);
   const registeredLrns = new Set(profileStudents.map((s) => s.lrn));
-  const Students = [
-    ...profileStudents,
-    ...rosterStudents.filter((r) => !registeredLrns.has(r.lrn)),
-  ];
 
-  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
-    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
+  const headcounts = await sectionHeadcounts(
+    Array.from(
+      new Set(
+        [
+          ...profileStudents.map((s) => s.section?.id),
+          ...rosterStudents.map((r) => r.sectionId),
+        ].filter((id): id is string => !!id),
+      ),
+    ),
+  );
 
-  // Level distribution + factor totals are both derived live from the same
-  // factor logic (>=2 = High, 1 = Moderate, 0 = Low) so the board and the
-  // students list share one source of truth and never trust stale stored
+  // Level distribution + factor totals are derived live from the shared
+  // engine (risk.ts) — the same source of truth as the students list,
+  // overview, and teacher advisory paths — and never trust stale stored
   // riskLevel columns.
   let academic = 0;
   let attendance = 0;
@@ -102,26 +122,37 @@ export async function getRiskBoard(
   let high = 0;
   let moderate = 0;
   let low = 0;
-  for (const s of Students) {
-    const avg =
-      s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
-          s.finalGrades.length
-        : 100;
-    const aFlag = avg < 75;
-    if (aFlag) academic++;
+  const candidates = [
+    ...profileStudents.map((s) => ({
+      finalGrades: s.finalGrades,
+      attendanceRecords: s.attendanceRecords,
+      anecdotalCount: s.anecdotalRecords.length,
+      enrolled: headcounts.get(s.section?.id ?? "") ?? 0,
+    })),
+    ...rosterStudents
+      .filter((r) => !registeredLrns.has(r.lrn))
+      .map((r) => ({
+        finalGrades: r.finalGrades,
+        attendanceRecords: r.attendanceRecords,
+        anecdotalCount: r.anecdotalRecords.length,
+        enrolled: headcounts.get(r.sectionId ?? "") ?? 0,
+      })),
+  ];
+  for (const s of candidates) {
+    const flags = computeRiskFactors({
+      finalGrades: s.finalGrades,
+      gradeMode,
+      attendance: s.attendanceRecords,
+      anecdotalCount: s.anecdotalCount,
+      enrolled: s.enrolled,
+    });
+    if (flags.academicFlag) academic++;
+    if (flags.attendanceFlag) attendance++;
+    if (flags.behavioralFlag) behavioral++;
 
-    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    const total = s.attendanceRecords.length;
-    const tFlag = total > 0 && present / total < 0.8;
-    if (tFlag) attendance++;
-
-    const bFlag = s.anecdotalRecords.length > 0;
-    if (bFlag) behavioral++;
-
-    const count = (aFlag ? 1 : 0) + (tFlag ? 1 : 0) + (bFlag ? 1 : 0);
-    if (count >= 2) high++;
-    else if (count === 1) moderate++;
+    const level = levelFromFlags(flags);
+    if (level === "High") high++;
+    else if (level === "Moderate") moderate++;
     else low++;
   }
 

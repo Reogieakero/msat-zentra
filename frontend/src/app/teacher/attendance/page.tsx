@@ -18,6 +18,8 @@ import {
 } from "./components/attendance-taking-data";
 import { KeyRound } from "lucide-react";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
+import { TermAccessCard } from "@/components/schedule/TermAccessCard";
+import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { useSession } from "@/lib/auth/useSession";
 import {
   useCachedMasterTeacher,
@@ -93,7 +95,7 @@ export default function TeacherAdvisoryAttendancePage() {
   // This page has its own code input, separate from My Classes. The entered
   // code must match the schedule link code or attendance stays locked. The
   // unlock persists in the database on the link row, so leaving and coming
-  // back never asks again until the row is unlinked.
+  // back never asks again until the teacher leaves the term.
   const [attCode, setAttCode] = useState("");
   const [attCodeError, setAttCodeError] = useState<string | null>(null);
   // NOTE (Rules of Hooks): all state lives up here — nothing may hook
@@ -633,15 +635,37 @@ export default function TeacherAdvisoryAttendancePage() {
   return (
     <section className={styles.page}>
       {isMasterTeacher && pairs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Master Teacher — no code needed. Your student and subject records open directly;
-          schedule subjects in the Schedule workspace to attach sections here.
-        </p>
+        // No code linked yet: just the centered code input — no info panel.
+        !linked ? (
+          <TermAccessCard
+            linkedName={null}
+            termLabel={termLabel}
+            claimTitle="Link your teacher code"
+            claimDescription="Enter the code next to your name in the teacher list (e.g. MS-101). Your subjects and each section's students will attach here for per-subject attendance."
+            successTitle="Attendance unlocked"
+            successDescription={`Your code matches — per-subject sheets are now open for ${termLabel}.`}
+          />
+        ) : (
+          <div className="flex min-h-[calc(100dvh-10rem)] items-center justify-center">
+            <div className="w-full max-w-3xl">
+              <NoTermRecordsPanel
+                termLabel={termLabel}
+                isMasterTeacher
+                teacherName={linked.name}
+              />
+            </div>
+          </div>
+        )
       ) : pairs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No sections attached yet — your sections will appear here once the master
-          teacher schedules your linked name.
-        </p>
+        <div className="flex min-h-[calc(100dvh-10rem)] items-center justify-center">
+          <div className="w-full max-w-3xl">
+            <NoTermRecordsPanel
+              termLabel={termLabel}
+              isMasterTeacher={false}
+              teacherName={linked?.name ?? "your linked name"}
+            />
+          </div>
+        </div>
       ) : (
         <div className={styles.layout}>
           <div className={styles.main}>

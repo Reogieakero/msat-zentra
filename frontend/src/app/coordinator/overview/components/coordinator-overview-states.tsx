@@ -21,7 +21,21 @@ export function CoordinatorOverviewSkeleton() {
           </div>
         ))}
       </div>
-      <div className={styles.railRow} aria-hidden="true">
+      <div className={styles.card} aria-hidden="true">
+        <Skeleton style={{ width: "16rem", height: "0.9375rem" }} />
+        <Skeleton
+          style={{ width: "60%", height: "0.8rem", marginTop: "0.375rem" }}
+        />
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Skeleton
+            key={i}
+            style={{ width: "100%", height: "2rem", marginTop: "0.5rem" }}
+          />
+        ))}
+        <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.75rem" }} />
+      </div>
+      <hr className={styles.divider} aria-hidden="true" />
+      <div className={styles.chartRow} aria-hidden="true">
         <div className={styles.card}>
           <Skeleton style={{ width: "12rem", height: "0.9375rem" }} />
           <Skeleton
@@ -33,25 +47,21 @@ export function CoordinatorOverviewSkeleton() {
               style={{ width: "100%", height: "1.25rem", marginTop: "0.5rem" }}
             />
           ))}
+          <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.75rem" }} />
         </div>
         <div className={styles.card}>
           <Skeleton style={{ width: "16rem", height: "0.9375rem" }} />
-          {[0, 1, 2, 3, 4].map((i) => (
+          <Skeleton
+            style={{ width: "60%", height: "0.8rem", marginTop: "0.375rem" }}
+          />
+          {[0, 1, 2].map((i) => (
             <Skeleton
               key={i}
               style={{ width: "100%", height: "2rem", marginTop: "0.5rem" }}
             />
           ))}
+          <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.75rem" }} />
         </div>
-      </div>
-      <div className={styles.card} aria-hidden="true">
-        <Skeleton style={{ width: "16rem", height: "0.9375rem" }} />
-        {[0, 1, 2].map((i) => (
-          <Skeleton
-            key={i}
-            style={{ width: "100%", height: "2rem", marginTop: "0.5rem" }}
-          />
-        ))}
       </div>
     </section>
   );

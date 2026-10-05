@@ -65,6 +65,8 @@ export function nurseNotificationTitle(n: {
   if (/you forwarded an ADM referral/i.test(msg)) return "Sent to coordinator";
   if (/you did not endorse/i.test(msg)) return "ADM referral closed";
   if (/you completed the referral form/i.test(msg)) return "Referral form completed";
+  // Invited to an ADM parent meeting by the coordinator.
+  if (/invited you to a parent meeting/i.test(msg)) return "Parent meeting invitation";
   // Cross-desk booking on a shared ADM case (guidance booked).
   if (/guidance booked a session/i.test(msg)) return "Guidance session booked";
   return prettifyNotificationType(n.type);
@@ -84,6 +86,10 @@ export function nurseNotificationTarget(
     return { href: "/nurse/alerts" };
   }
   if (n.sourceTable === "adm_learner_profiles") return { href: "/nurse/referrals/adm" };
+  // Invited to an ADM parent meeting — land on the ADM cases page (the
+  // message + reminder card carry the student, time, and a deep link).
+  if (n.sourceTable === "adm_parent_meetings") return { href: "/nurse/referrals/adm" };
+  if (n.sourceTable === "adm_profiles") return { href: "/nurse/referrals/adm" };
   return null;
 }
 
@@ -104,6 +110,11 @@ export function guidanceNotificationTarget(n: {
   }
   // Engine-detected interventions land on the interventions desk.
   if (n.sourceTable === "interventions") return { href: "/guidance/interventions" };
+  // Invited to an ADM parent meeting — the meeting id can't highlight a case
+  // row, so land on the ADM timeline (the message + reminder card carry the
+  // student, time, and a deep link).
+  if (n.sourceTable === "adm_parent_meetings") return { href: "/guidance/referrals/adm" };
+  if (n.sourceTable === "adm_profiles") return { href: "/guidance/referrals/adm" };
   return null;
 }
 
@@ -131,6 +142,8 @@ export function guidanceNotificationTitle(n: {
   // Cross-desk booking on a shared ADM case (clinic booked).
   if (/clinic booked a session/i.test(msg)) return "Clinic session booked";
   if (/you opened a .* follow-up/i.test(msg)) return "Follow-up opened";
+  // Invited to an ADM parent meeting by the coordinator.
+  if (/invited you to a parent meeting/i.test(msg)) return "Parent meeting invitation";
   // Intervention session events (interventions.routes.ts session
   // endpoints) — self-receipts ("You …") land in the counselor's own bell;
   // assigned-to-another-counselor rows read "Guidance …".
@@ -152,6 +165,8 @@ export function teacherNotificationTitle(n: {
   message: string;
 }): string {
   if (n.sourceTable === "adm_devices") return "Device update";
+  // Invited to an ADM parent meeting by the coordinator.
+  if (/invited you to a parent meeting/i.test(n.message ?? "")) return "Parent meeting invitation";
   if (n.sourceTable === "adm_parent_meetings") {
     if (n.type === "generic_adm_parent_meetings_outcome") return "Meeting outcome recorded";
     return "Parent meeting booked";
@@ -230,6 +245,10 @@ export function teacherNotificationTarget(
   // Engine-detected interventions on the adviser's section land on the
   // same referrals list (closest case surface for the advisee).
   if (n.sourceTable === "interventions") return { href: "/teacher/advisory/referrals" };
+  // Invited to an ADM parent meeting — land on the referrals list (the
+  // message + reminder card carry the student, time, and a deep link).
+  if (n.sourceTable === "adm_parent_meetings") return { href: "/teacher/advisory/referrals" };
+  if (n.sourceTable === "adm_profiles") return { href: "/teacher/advisory/referrals" };
   return null;
 }
 
@@ -240,5 +259,8 @@ export function principalNotificationTarget(
   // section's review page instead of the bare queue.
   if (n.sourceTable === "section_timetable_entries" && n.sourceId)
     return { href: `/principal/academics/schedule/${n.sourceId}` };
+  // ADM device issuance lands on the approvals monitoring view, which
+  // shows per-case device counts.
+  if (n.sourceTable === "adm_devices") return { href: "/principal/adm/approvals/all" };
   return null;
 }

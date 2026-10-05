@@ -431,6 +431,8 @@ export const ModelName = {
   HomeVisitationRecord: 'HomeVisitationRecord',
   AdmLearnerProfile: 'AdmLearnerProfile',
   AdmParentMeeting: 'AdmParentMeeting',
+  AdmMeetingInvitee: 'AdmMeetingInvitee',
+  AdmMeetingAttachment: 'AdmMeetingAttachment',
   AdmModule: 'AdmModule',
   AdmDevice: 'AdmDevice',
   AdmForm: 'AdmForm',
@@ -457,7 +459,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
+    modelProps: "user" | "studentProfile" | "parentProfile" | "parentStudentLink" | "staffProfile" | "schoolYear" | "term" | "section" | "studentRoster" | "subject" | "teacherSubjectAssignment" | "scheduleConfig" | "sectionTimetableEntry" | "teacherName" | "teacherTermGrant" | "adviserArchivedStudent" | "gradeComponent" | "assessment" | "studentGrade" | "finalGrade" | "gradeFlag" | "attendanceRecord" | "attendanceRecordLegacy" | "anecdotalRecord" | "anecdotalFolder" | "anecdotalRecordFollowup" | "referral" | "counselingSession" | "clinicSessionAttachment" | "intervention" | "healthRecord" | "homeVisitationRecord" | "admLearnerProfile" | "admParentMeeting" | "admMeetingInvitee" | "admMeetingAttachment" | "admModule" | "admDevice" | "admForm" | "sf10Record" | "sf10RecordVersion" | "auditLog" | "riskSnapshot" | "reportSnapshot" | "adviserSf10AccessRequest" | "notification" | "refreshToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2977,6 +2979,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    AdmMeetingInvitee: {
+      payload: Prisma.$AdmMeetingInviteePayload<ExtArgs>
+      fields: Prisma.AdmMeetingInviteeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdmMeetingInviteeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdmMeetingInviteeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>
+        }
+        findFirst: {
+          args: Prisma.AdmMeetingInviteeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdmMeetingInviteeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>
+        }
+        findMany: {
+          args: Prisma.AdmMeetingInviteeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>[]
+        }
+        create: {
+          args: Prisma.AdmMeetingInviteeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>
+        }
+        createMany: {
+          args: Prisma.AdmMeetingInviteeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdmMeetingInviteeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>[]
+        }
+        delete: {
+          args: Prisma.AdmMeetingInviteeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>
+        }
+        update: {
+          args: Prisma.AdmMeetingInviteeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>
+        }
+        deleteMany: {
+          args: Prisma.AdmMeetingInviteeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdmMeetingInviteeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdmMeetingInviteeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>[]
+        }
+        upsert: {
+          args: Prisma.AdmMeetingInviteeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingInviteePayload>
+        }
+        aggregate: {
+          args: Prisma.AdmMeetingInviteeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdmMeetingInvitee>
+        }
+        groupBy: {
+          args: Prisma.AdmMeetingInviteeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdmMeetingInviteeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdmMeetingInviteeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdmMeetingInviteeCountAggregateOutputType> | number
+        }
+      }
+    }
+    AdmMeetingAttachment: {
+      payload: Prisma.$AdmMeetingAttachmentPayload<ExtArgs>
+      fields: Prisma.AdmMeetingAttachmentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdmMeetingAttachmentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdmMeetingAttachmentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>
+        }
+        findFirst: {
+          args: Prisma.AdmMeetingAttachmentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdmMeetingAttachmentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>
+        }
+        findMany: {
+          args: Prisma.AdmMeetingAttachmentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>[]
+        }
+        create: {
+          args: Prisma.AdmMeetingAttachmentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>
+        }
+        createMany: {
+          args: Prisma.AdmMeetingAttachmentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdmMeetingAttachmentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>[]
+        }
+        delete: {
+          args: Prisma.AdmMeetingAttachmentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>
+        }
+        update: {
+          args: Prisma.AdmMeetingAttachmentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>
+        }
+        deleteMany: {
+          args: Prisma.AdmMeetingAttachmentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdmMeetingAttachmentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdmMeetingAttachmentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>[]
+        }
+        upsert: {
+          args: Prisma.AdmMeetingAttachmentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdmMeetingAttachmentPayload>
+        }
+        aggregate: {
+          args: Prisma.AdmMeetingAttachmentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdmMeetingAttachment>
+        }
+        groupBy: {
+          args: Prisma.AdmMeetingAttachmentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdmMeetingAttachmentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdmMeetingAttachmentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdmMeetingAttachmentCountAggregateOutputType> | number
+        }
+      }
+    }
     AdmModule: {
       payload: Prisma.$AdmModulePayload<ExtArgs>
       fields: Prisma.AdmModuleFieldRefs
@@ -4348,6 +4498,30 @@ export const AdmParentMeetingScalarFieldEnum = {
 export type AdmParentMeetingScalarFieldEnum = (typeof AdmParentMeetingScalarFieldEnum)[keyof typeof AdmParentMeetingScalarFieldEnum]
 
 
+export const AdmMeetingInviteeScalarFieldEnum = {
+  id: 'id',
+  meetingId: 'meetingId',
+  userId: 'userId',
+  invitedAt: 'invitedAt'
+} as const
+
+export type AdmMeetingInviteeScalarFieldEnum = (typeof AdmMeetingInviteeScalarFieldEnum)[keyof typeof AdmMeetingInviteeScalarFieldEnum]
+
+
+export const AdmMeetingAttachmentScalarFieldEnum = {
+  id: 'id',
+  meetingId: 'meetingId',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  fileSize: 'fileSize',
+  uploadedBy: 'uploadedBy',
+  uploadedAt: 'uploadedAt'
+} as const
+
+export type AdmMeetingAttachmentScalarFieldEnum = (typeof AdmMeetingAttachmentScalarFieldEnum)[keyof typeof AdmMeetingAttachmentScalarFieldEnum]
+
+
 export const AdmModuleScalarFieldEnum = {
   id: 'id',
   admLearnerProfileId: 'admLearnerProfileId',
@@ -5216,6 +5390,8 @@ export type GlobalOmitConfig = {
   homeVisitationRecord?: Prisma.HomeVisitationRecordOmit
   admLearnerProfile?: Prisma.AdmLearnerProfileOmit
   admParentMeeting?: Prisma.AdmParentMeetingOmit
+  admMeetingInvitee?: Prisma.AdmMeetingInviteeOmit
+  admMeetingAttachment?: Prisma.AdmMeetingAttachmentOmit
   admModule?: Prisma.AdmModuleOmit
   admDevice?: Prisma.AdmDeviceOmit
   admForm?: Prisma.AdmFormOmit

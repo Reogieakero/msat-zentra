@@ -29,6 +29,7 @@ import advisoryRoutes from "./modules/teacher/advisory.routes.js";
 import gradingRoutes from "./modules/teacher/grading.routes.js";
 import guidanceRoutes from "./modules/guidance/guidance.routes.js";
 import nurseRoutes from "./modules/nurse/nurse.routes.js";
+import principalRoutes from "./modules/principal/principal.routes.js";
 import sessionsRoutes from "./modules/sessions/sessions.routes.js";
 
 export function createApp() {
@@ -73,6 +74,7 @@ app.use("/api/teacher/advisory", advisoryRoutes);
 app.use("/api/teacher/grading", gradingRoutes);
   app.use("/api/guidance", guidanceRoutes);
   app.use("/api/nurse", nurseRoutes);
+  app.use("/api/principal", principalRoutes);
   app.use("/api/my-sessions", sessionsRoutes);
 
   app.use(notFound);

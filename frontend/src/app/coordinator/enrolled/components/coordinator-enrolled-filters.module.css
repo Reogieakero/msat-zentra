@@ -20,18 +20,12 @@
 }
 
 /* Queue header actions — mirrors the referrals queue:
-   stage tabs + search + filter dropdowns + clear, right-aligned. */
+   search + filter dropdowns + clear, right-aligned. */
 .headerActions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.stageTabs {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
 }
 
 .searchWrap {

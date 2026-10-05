@@ -6,7 +6,7 @@ const router = Router();
 
 export interface UpcomingSessionRow {
   sessionId: string;
-  sourceTable: "referrals" | "interventions";
+  sourceTable: "referrals" | "interventions" | "adm_profiles";
   sourceId: string;
   track: string;
   student: string;
@@ -24,6 +24,109 @@ const SESSION_SELECT = {
   venue: true,
   status: true,
 } as const;
+
+// ADM parent meeting with both linkage sides resolved for card text —
+// pre-profile referral bookings (student or roster names) and learner-profile
+// bookings. Emitted as "scheduled" so the shared due-window logic (5 minutes
+// ahead + overdue) applies unchanged.
+const ADM_MEETING_SELECT = {
+  id: true,
+  meetingDatetime: true,
+  venue: true,
+  referral: {
+    select: {
+      id: true,
+      student: {
+        select: {
+          user: { select: { fullName: true } },
+          section: { select: { name: true } },
+        },
+      },
+      roster: {
+        select: {
+          fullName: true,
+          section: { select: { name: true } },
+        },
+      },
+    },
+  },
+  admLearnerProfile: {
+    select: {
+      id: true,
+      student: {
+        select: {
+          user: { select: { fullName: true } },
+          section: { select: { name: true } },
+        },
+      },
+    },
+  },
+} as const;
+
+type AdmMeetingRow = {
+  id: string;
+  meetingDatetime: Date;
+  venue: string | null;
+  referral: {
+    id: string;
+    student: {
+      user: { fullName: string } | null;
+      section: { name: string } | null;
+    } | null;
+    roster: {
+      fullName: string;
+      section: { name: string } | null;
+    } | null;
+  } | null;
+  admLearnerProfile: {
+    id: string;
+    student: {
+      user: { fullName: string } | null;
+      section: { name: string } | null;
+    } | null;
+  } | null;
+};
+
+function pushAdmMeeting(m: AdmMeetingRow, out: UpcomingSessionRow[]): void {
+  if (m.referral) {
+    const student =
+      m.referral.student?.user?.fullName ??
+      m.referral.roster?.fullName ??
+      "the student";
+    const section =
+      m.referral.student?.section?.name ??
+      m.referral.roster?.section?.name ??
+      "";
+    out.push({
+      sessionId: m.id,
+      sourceTable: "referrals",
+      sourceId: m.referral.id,
+      track: "ADM",
+      student: section ? `${student} (${section})` : student,
+      section,
+      sessionType: "parent_conference",
+      scheduledAt: m.meetingDatetime.toISOString(),
+      venue: m.venue ?? "",
+      status: "scheduled",
+    });
+  } else if (m.admLearnerProfile) {
+    const student =
+      m.admLearnerProfile.student?.user?.fullName ?? "the student";
+    const section = m.admLearnerProfile.student?.section?.name ?? "";
+    out.push({
+      sessionId: m.id,
+      sourceTable: "adm_profiles",
+      sourceId: m.admLearnerProfile.id,
+      track: "ADM",
+      student: section ? `${student} (${section})` : student,
+      section,
+      sessionType: "parent_conference",
+      scheduledAt: m.meetingDatetime.toISOString(),
+      venue: m.venue ?? "",
+      status: "scheduled",
+    });
+  }
+}
 
 // Status-only upcoming sessions connected to the signed-in user — the
 // reminder card's data source (sileo + bell stay notification-driven).
@@ -201,6 +304,68 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
             status: s.status,
           });
         }
+      }
+    } else if (role === "adm_coordinator") {
+      // Unattended ADM parent meetings that belong to the coordinator's queue —
+      // same stage + routing filters as /api/adm/referrals/all so the sidebar
+      // reminder never shows a case the ADM Cases list filters out.
+      // Profile-side: only stages in the default queue view.
+      // Referral-side (early, pre-profile): ADM-directed, not pending-with-reviewer.
+      const meetings = await prisma.admParentMeeting.findMany({
+        where: {
+          attended: false,
+          OR: [
+            {
+              referral: {
+                referredToRole: "adm_coordinator",
+                status: { notIn: ["dismissed", "resolved"] },
+                NOT: { status: "pending", consultReviewer: { in: ["nurse", "guidance_counselor"] } },
+              },
+            },
+            {
+              admLearnerProfile: {
+                stage: { in: ["meeting_parents", "home_visitation", "certification", "principal_approval"] },
+                referral: { status: { notIn: ["dismissed", "resolved"] } },
+              },
+            },
+          ],
+        },
+        select: ADM_MEETING_SELECT,
+        orderBy: { meetingDatetime: "asc" },
+        take: 50,
+      });
+      for (const m of meetings) pushAdmMeeting(m, out);
+    }
+
+    // Invited staff see their ADM parent meetings on their own desk —
+    // desk-agnostic (an invited nurse on a guidance-reviewed case matches
+    // none of the role branches above). Skipped for the coordinator, whose
+    // branch already covers every meeting. Session-key dedup guards overlap.
+    if (role !== "adm_coordinator") {
+      const seen = new Set(out.map((s) => s.sessionId));
+      const invited = await prisma.admMeetingInvitee.findMany({
+        where: {
+          userId: me,
+          meeting: {
+            attended: false,
+            OR: [
+              { referral: { status: { notIn: ["dismissed", "resolved"] } } },
+              {
+                admLearnerProfile: {
+                  referral: { status: { notIn: ["dismissed", "resolved"] } },
+                },
+              },
+            ],
+          },
+        },
+        select: { meeting: { select: ADM_MEETING_SELECT } },
+        orderBy: { meeting: { meetingDatetime: "asc" } },
+        take: 50,
+      });
+      for (const row of invited) {
+        if (seen.has(row.meeting.id)) continue;
+        seen.add(row.meeting.id);
+        pushAdmMeeting(row.meeting, out);
       }
     }
 

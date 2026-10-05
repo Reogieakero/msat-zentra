@@ -3,14 +3,6 @@
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FolderCard } from "@/components/ui/FolderCard";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -59,15 +51,14 @@ function timeAgo(iso: string | null): string {
 
 interface CoordinatorCertificationsFoldersProps {
   records: CertRecord[];
-  page: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
   status: CertStatusFilter;
   onStatusChange: (value: CertStatusFilter) => void;
-  isNavigating?: boolean;
 }
+
+/* No pagination — the grid shows the first 18 matches only. */
+const DISPLAY_LIMIT = 18;
 
 /**
  * Certification files — one folder per certification the ADM Coordinator
@@ -76,14 +67,10 @@ interface CoordinatorCertificationsFoldersProps {
  */
 export function CoordinatorCertificationsFolders({
   records,
-  page,
-  pageSize,
-  onPageChange,
   query,
   onQueryChange,
   status,
   onStatusChange,
-  isNavigating = false,
 }: CoordinatorCertificationsFoldersProps) {
   const queryClient = useQueryClient();
   const [forwardTarget, setForwardTarget] =
@@ -142,11 +129,7 @@ export function CoordinatorCertificationsFolders({
   const filtered =
     status === "all" ? records : records.filter((r) => r.status === status);
   const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const end = Math.min(safePage * pageSize, total);
-  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visible = filtered.slice(0, DISPLAY_LIMIT);
 
   const openRecord = (record: CertRecord) => {
     window.open(
@@ -158,13 +141,15 @@ export function CoordinatorCertificationsFolders({
 
   return (
     <>
-      <Card className={styles.panel}>
-        <CardHeader className={styles.header}>
+      {/* Flat panel — no card background/border; folders sit directly on
+          the page like the reference. */}
+      <div className={styles.panel}>
+        <div className={styles.header}>
           <div className={styles.headerText}>
             <div className={styles.titleRow}>
-              <CardTitle className={styles.sectionTitle}>
+              <h3 className={styles.sectionTitle}>
                 Certification files
-              </CardTitle>
+              </h3>
               <button
                 type="button"
                 className={styles.helpBtn}
@@ -175,21 +160,21 @@ export function CoordinatorCertificationsFolders({
                 <HelpCircle aria-hidden="true" />
               </button>
             </div>
-            <CardDescription className={styles.sectionDesc}>
+            <p className={styles.sectionDesc}>
               One folder per certification you issued — {total} record
               {total === 1 ? "" : "s"}.
-            </CardDescription>
+            </p>
           </div>
-          <CardAction className={styles.headerActions}>
+          <div className={styles.headerActions}>
             <CoordinatorCertificationsFilters
               query={query}
               onQueryChange={onQueryChange}
               status={status}
               onStatusChange={onStatusChange}
             />
-          </CardAction>
-        </CardHeader>
-        <CardContent className={styles.content}>
+          </div>
+        </div>
+        <div className={styles.content}>
           {visible.length === 0 ? (
             <p className={styles.empty}>
               No certification files match the current filters.
@@ -220,6 +205,10 @@ export function CoordinatorCertificationsFolders({
                         <FolderCard
                           label={record.student}
                           sublabel={`${record.lrn} · ${record.grade}`}
+                          /* Folder body follows the coordinator's saved
+                             palette — --primary is painted on <html> by the
+                             palette gate, so folders repaint live. */
+                          folderColor="var(--primary)"
                           files={[
                             {
                               name: `CERT_${(date ?? "").slice(0, 10) || record.id.slice(0, 8)}`,
@@ -276,53 +265,8 @@ export function CoordinatorCertificationsFolders({
               })}
             </div>
           )}
-          {total > 0 ? (
-            <div className={styles.pager}>
-              <p className={styles.range}>
-                Showing {start}–{end} of {total}
-              </p>
-              <div className={styles.pagerButtons}>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={safePage <= 1 || isNavigating}
-                  onClick={() => onPageChange(safePage - 1)}
-                >
-                  Previous
-                </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  {isNavigating ? (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.375rem",
-                      }}
-                    >
-                      <Loader2
-                        className="animate-spin"
-                        aria-hidden
-                        style={{ width: "0.875rem", height: "0.875rem" }}
-                      />
-                      Loading…
-                    </span>
-                  ) : (
-                    `Page ${safePage} of ${totalPages}`
-                  )}
-                </span>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={safePage >= totalPages || isNavigating}
-                  onClick={() => onPageChange(safePage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <AlertDialog
         open={forwardTarget !== null}

@@ -1,7 +1,7 @@
-/* Coordinator top navbar — same GitHub-style tab bar as the guidance and
-   nurse desks, fixed under the real topbar. One flattened row of section
-   tabs with an active underline; scrolls horizontally on narrow screens
-   instead of collapsing behind a menu. */
+/* Coordinator nav — branched left rail on desktop (same as the guidance,
+   nurse, and teacher desks), flattened GitHub-style tab bar on small
+   screens. One row of section tabs with an active underline; scrolls
+   horizontally on narrow screens instead of collapsing behind a menu. */
 
 .navbar {
   position: fixed;
@@ -98,5 +98,60 @@
 @media (prefers-reduced-motion: reduce) {
   .tab {
     transition: none;
+  }
+}
+
+/* Branched left rail (sidebar layout): fixed under the topbar, above page
+   content but below the topbar, tab bar, and overlays. The rail never
+   scrolls — nav + live-meeting reminder card always fit without overflow. */
+.rail {
+  display: none;
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  bottom: 0;
+  width: 16rem;
+  z-index: 31;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--background);
+  padding: 1rem 0.75rem 0.375rem 1.25rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.railScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  /* No scroll clearance needed — the rail never scrolls. */
+  padding-bottom: 0.75rem;
+}
+
+.reminderWrap {
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 0 0.5rem 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* Empty when no live meeting — collapse so the nav keeps its spacing. */
+.reminderWrap:empty {
+  display: none;
+}
+
+.tabsMobile {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .railDesktop {
+    display: flex;
+  }
+  .tabsMobile {
+    display: none;
   }
 }

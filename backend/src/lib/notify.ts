@@ -161,14 +161,23 @@ export async function notifyInterventionDetected(input: {
 // Callers invoke it with `void` after `res.json`. The 60s per-user dedup in
 // fanoutNotification suppresses doubles when the same recipient is also
 // notified directly (e.g. preparedBy + role fanout).
+//
+// `messageFor` personalizes the text per recipient — handoff messages name
+// the actor AND the receiving user ("…referred to you, Juan Dela Cruz —
+// filed by Ana Reyes"), so each inbox row reads for its owner. The callback
+// receives the recipient's id + fullName; plain `message` keeps working for
+// callers that don't personalize.
 export async function fanoutToRole(
   role: string,
-  input: Omit<NotifyInput, "userId"> & { excludeUserId?: string },
+  input: Omit<NotifyInput, "userId"> & {
+    excludeUserId?: string;
+    messageFor?: (recipient: { id: string; fullName: string }) => string;
+  },
 ) {
   try {
     const users = await prisma.user.findMany({
       where: { role: role as never, status: "active" },
-      select: { id: true },
+      select: { id: true, fullName: true },
       take: 10,
     });
     await Promise.all(
@@ -179,7 +188,7 @@ export async function fanoutToRole(
             userId: u.id,
             sourceTable: input.sourceTable,
             action: input.action,
-            message: input.message,
+            message: input.messageFor?.(u) ?? input.message,
             sourceId: input.sourceId,
             channel: input.channel,
           }),

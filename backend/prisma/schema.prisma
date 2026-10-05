@@ -259,6 +259,8 @@ model User {
   admProfilesPrepared AdmLearnerProfile[]    @relation("AdmPreparedBy")
   admProfilesApproved AdmLearnerProfile[]    @relation("AdmApprovedBy")
   admMeetings         AdmParentMeeting[]
+  admMeetingInvites   AdmMeetingInvitee[]
+  admMeetingAttachments AdmMeetingAttachment[]
   admModules          AdmModule[]
   admDevicesIssued    AdmDevice[]            @relation("DeviceIssuedBy")
   admFormsUploaded    AdmForm[]
@@ -1061,7 +1063,42 @@ model AdmParentMeeting {
   admLearnerProfile     AdmLearnerProfile? @relation(fields: [admLearnerProfileId], references: [id], onDelete: Cascade)
   referral              Referral?          @relation(fields: [referralId], references: [id], onDelete: Cascade)
   recorder              User               @relation(fields: [recordedBy], references: [id])
+  invitees              AdmMeetingInvitee[]
+  attachments           AdmMeetingAttachment[]
   @@index([referralId])
+}
+
+// Staff invited to an ADM parent meeting (picked by the ADM Coordinator at
+// booking: guidance counselor, nurse, adviser). Invitees get a booking
+// notification plus the 5-minute top-center card while the meeting is due.
+// Separate from `attendees` (free-text people present, recorded at outcome).
+model AdmMeetingInvitee {
+  id        String           @id @default(uuid())
+  meetingId String
+  userId    String
+  invitedAt DateTime         @default(now())
+  meeting   AdmParentMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([meetingId, userId])
+  @@index([userId])
+}
+
+// Meeting documentation filed on an ADM parent meeting (photos of the
+// signed logbook, venue, agreements…). Mirrors ClinicSessionAttachment:
+// images only, capped per meeting, uploaded by the coordinator once the
+// meeting is live (or after it was attended).
+model AdmMeetingAttachment {
+  id         String           @id @default(uuid())
+  meetingId  String
+  fileUrl    String
+  fileName   String
+  mimeType   String
+  fileSize   Int
+  uploadedBy String
+  uploadedAt DateTime         @default(now())
+  meeting    AdmParentMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  uploader   User             @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+  @@index([meetingId])
 }
 
 model AdmModule {

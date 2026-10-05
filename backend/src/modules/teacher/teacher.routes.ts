@@ -1898,7 +1898,7 @@ router.post(
         );
       }
       // Persist the unlock on THIS term's grant — attendance stops asking
-      // for this term only, until the row is unlinked.
+      // for this term only, until the teacher leaves the term.
       await prisma.teacherTermGrant.upsert({
         where: { userId_termId: { userId: teacherId, termId } },
         update: { via: "code", teacherNameId: mine.id, attendanceVerifiedAt: new Date() },
@@ -1947,7 +1947,11 @@ router.post(
   }
 );
 
-// Release the teacher's catalog row (for wrongly claimed codes).
+// Leave the active term (per-term): drops ONLY this term's grant row.
+// The catalog link and every other term's grants stay intact — leaving
+// Term 1 never affects Term 2, because access is scoped by term, not by
+// school year. No master fanout: the link itself is unchanged, so there is
+// nothing for the teacher list to react to.
 router.delete(
   "/schedule/teachers/me",
   requireAuth,
@@ -1955,6 +1959,10 @@ router.delete(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
+      const termId = req.termScope?.termId ?? null;
+      if (!termId) {
+        throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
+      }
       const mine = await prisma.teacherName.findUnique({
         where: { userId: teacherId },
         select: { id: true, name: true, code: true },
@@ -1962,25 +1970,19 @@ router.delete(
       if (!mine) {
         throw new AppError(404, "NOT_LINKED", "This login is not linked to any teacher list entry");
       }
-      await prisma.teacherName.update({
-        where: { id: mine.id },
-        data: { userId: null, attendanceVerifiedAt: null },
-      });
-      // Drop every term grant on this link — a later login claiming the row
-      // must answer each term fresh; stale grants must never leak across.
+      // Idempotent: leaving a term with no grant row still succeeds.
       await prisma.teacherTermGrant.deleteMany({
-        where: { teacherNameId: mine.id },
+        where: { userId: teacherId, termId },
       });
       await writeAudit({
         userId: teacherId,
         actionType: "update",
-        sourceTable: "teacher_names",
+        sourceTable: "teacher_term_grants",
         sourceId: mine.id,
-        reason: "Teacher unlinked login from teacher list entry",
+        reason: "Teacher left the active term (per-term leave; link and other terms kept)",
       });
       await invalidateTags(["teacher", "schedule"]);
       res.json({ released: true });
-      void notifyMastersTeacherLinkChanged(mine.id, mine.name, mine.code, "unclaim");
     } catch (e) {
       next(e);
     }

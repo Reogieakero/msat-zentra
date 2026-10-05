@@ -1,0 +1,96 @@
+/* Section drill-down modal body — picker list + read-only student table.
+   Table chrome comes from the shared heatmap-table module. */
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.meta {
+  margin: 0 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.searchWrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pickBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.pickBtn:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 60%);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+}
+
+.pickBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.pickIdentity {
+  flex: 1;
+  min-width: 0;
+}
+
+.pickName {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickMeta {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.skelPick {
+  height: 3.5rem;
+  border-radius: var(--radius-md);
+}
+
+.skelRow {
+  height: 2.5rem;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pickBtn {
+    transition: none;
+  }
+}

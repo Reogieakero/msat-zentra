@@ -8,6 +8,17 @@ import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { resolveActiveTermId, recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
+
+/* Display name of the acting user for handoff messages — one lookup per
+   call site, "Someone" fallback so a deleted/renamed account never blanks
+   the notification. */
+async function actorName(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { fullName: true },
+  });
+  return u?.fullName ?? "Someone";
+}
 import { scopedTermRow } from "../../lib/termScope.js";
 import {
   buildOcForm01Buffer,
@@ -205,9 +216,8 @@ router.post(
           : req.body.reason;
       res.status(201).json(referral);
       // Realtime handoff (background, off the adviser critical path): the
-      // receiving desk gets a sileo toast the moment the referral lands —
-      // every referred role (ADM, clinic, guidance, principal), never just
-      // some. Best-effort — never delays the 201.
+      // desk that owns the next step gets a sileo toast the moment the
+      // referral lands. Best-effort — never delays the 201.
       {
         const actorId = req.user!.id;
         const referralId = (referral as { id: string }).id;
@@ -216,19 +226,34 @@ router.post(
           | "guidance_counselor"
           | "adm_coordinator"
           | "principal";
+        const actor = await actorName(req.user!.id);
         const roleMessage: Record<typeof role, string> = {
-          adm_coordinator: `New ADM referral submitted — ${filedWho}${req.body.consultReviewer ? ` (consult: ${req.body.consultReviewer})` : ""}: ${reasonSnippet}.`,
-          nurse: `New clinic referral submitted — ${filedWho}: ${reasonSnippet}.`,
-          guidance_counselor: `New guidance referral submitted — ${filedWho}: ${reasonSnippet}.`,
-          principal: `New principal referral submitted — ${filedWho}: ${reasonSnippet}.`,
+          adm_coordinator: `${actor} referred ${filedWho} to ADM${req.body.consultReviewer ? ` (consult: ${req.body.consultReviewer})` : ""}: ${reasonSnippet}.`,
+          nurse: `${actor} referred ${filedWho} to the clinic: ${reasonSnippet}.`,
+          guidance_counselor: `${actor} referred ${filedWho} to guidance: ${reasonSnippet}.`,
+          principal: `${actor} referred ${filedWho} to the principal: ${reasonSnippet}.`,
         };
-        void fanoutToRole(role, {
-          sourceTable: "referrals",
-          action: "status",
-          message: roleMessage[role],
-          sourceId: referralId,
-          excludeUserId: actorId,
-        });
+        // Step-scoped notify: an ADM case with a nurse/guidance consultation
+        // reviewer sits at the reviewer's step, not the coordinator's — the
+        // reviewer fanout below is the only desk ping. The coordinator learns
+        // about the case when it is endorsed to them. Direct (no reviewer)
+        // and lrpc filings still ping the coordinator, since nobody else can
+        // act on those.
+        const reviewerOwned =
+          role === "adm_coordinator" &&
+          (req.body.consultReviewer === "nurse" ||
+            req.body.consultReviewer === "guidance_counselor");
+        if (!reviewerOwned) {
+          void fanoutToRole(role, {
+            sourceTable: "referrals",
+            action: "status",
+            message: roleMessage[role],
+            sourceId: referralId,
+            excludeUserId: actorId,
+            messageFor: (r) =>
+              `${actor} referred ${filedWho} to you, ${r.fullName}${req.body.consultReviewer ? ` (consult: ${req.body.consultReviewer})` : ""}: ${reasonSnippet}.`,
+          });
+        }
         // ADM consultation reviewer acts on the case too — notify them
         // directly. (lrpc has no login role, so only nurse/guidance
         // reviewers fan out.)
@@ -243,6 +268,8 @@ router.post(
             message: `New ADM referral needs consultation review — ${filedWho}.`,
             sourceId: referralId,
             excludeUserId: actorId,
+            messageFor: (r) =>
+              `${actor} referred ${filedWho} to ADM and picked you, ${r.fullName}, for consultation review.`,
           });
         }
         // Filing confirmation for the adviser themselves — the bell badge

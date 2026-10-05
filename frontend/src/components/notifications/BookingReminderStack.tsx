@@ -31,7 +31,7 @@ const UPCOMING_WINDOW_MS = 5 * 60 * 1000;
 
 interface DeskSession {
   sessionId: string;
-  sourceTable: "referrals" | "interventions";
+  sourceTable: "referrals" | "interventions" | "adm_profiles";
   sourceId: string;
   track: string;
   student: string;
@@ -77,6 +77,15 @@ function hrefFor(
         message: routingMessage,
       })?.href ?? null
     );
+  }
+  if (desk === "coordinator") {
+    // Profile-stage cases open the full case file; pre-profile referrals
+    // highlight their consultation row on the queue (same deep-link the
+    // overview forwards table uses).
+    if (s.sourceTable === "adm_profiles") {
+      return `/coordinator/referrals/${encodeURIComponent(s.sourceId)}`;
+    }
+    return `/coordinator/referrals?highlight=${encodeURIComponent(`referral:${s.sourceId}`)}`;
   }
   return (
     teacherNotificationTarget({
@@ -228,7 +237,7 @@ function snapshot(): BookingReminder[] {
   return reminders;
 }
 
-export type ReminderDesk = "nurse" | "guidance" | "teacher";
+export type ReminderDesk = "nurse" | "guidance" | "teacher" | "coordinator";
 
 let activeDesk: ReminderDesk | null = null;
 let lastRefreshAt = 0;

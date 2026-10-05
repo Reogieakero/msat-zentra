@@ -17,11 +17,43 @@
 }
 
 .card {
+  position: relative;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--card);
   box-shadow: none;
-  padding: 0.875rem 1rem;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary), transparent 55%);
+  box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
+}
+
+.glowClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: auto -25% -50% -25%;
+  height: 75%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary), transparent 80%),
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
 }
 
 .kpiLabel {
@@ -37,6 +69,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  color: var(--foreground);
 }
 
 .kpiHint {
@@ -45,15 +78,30 @@
   color: var(--muted-foreground);
 }
 
-/* Solid 24px button — primary tokens flip with the theme (next-themes
+/* Card body stretches to the full card height so the action row can pin
+   itself to the bottom-right corner of every card. */
+.cardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.kpiAction {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  position: relative;
+}
+
+/* Solid 32px button — primary tokens flip with the theme (next-themes
    light/dark), so contrast holds under either system preference. */
 .kpiBtnSolid {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
-  padding: 0 0.625rem;
-  margin-top: 0.5rem;
+  height: 32px;
+  padding: 0 0.75rem;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;

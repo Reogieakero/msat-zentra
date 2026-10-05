@@ -107,6 +107,17 @@ async function referralCard(referral: {
   };
 }
 
+/* Display name of the acting user for handoff messages — one lookup per
+   call site, "Someone" fallback so a deleted/renamed account never blanks
+   the notification. */
+async function actorName(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { fullName: true },
+  });
+  return u?.fullName ?? "Someone";
+}
+
 const statusSchema = z.object({
   status: z.enum(["pending", "in_progress", "resolved", "escalated", "info_requested", "dismissed", "follow_up"]),
   resolutionSummary: z.string().trim().min(1).max(2000).optional(),
@@ -352,8 +363,10 @@ router.post(
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.escalationReason, 120);
+      const actor = await actorName(req.user!.id);
       res.json(updated);
-      // Escalation handoff: the receiving desk learns immediately.
+      // Escalation handoff: the receiving desk learns immediately — each
+      // recipient's row names the actor AND the recipient ("…to you, {name}").
       if (req.body.escalatedTo === "nurse") {
         void fanoutToRole("nurse", {
           sourceTable: "referrals",
@@ -361,6 +374,8 @@ router.post(
           message: `A case was escalated to the clinic — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} escalated ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
         });
       } else if (req.body.escalatedTo === "adm_coordinator") {
         void fanoutToRole("adm_coordinator", {
@@ -369,6 +384,8 @@ router.post(
           message: `A case was escalated to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} escalated ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
         });
       } else if (req.body.escalatedTo === "principal") {
         void fanoutToRole("principal", {
@@ -377,9 +394,11 @@ router.post(
           message: `A case was escalated to the principal — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} escalated ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
         });
       }
-      // The filing adviser learns where the case went.
+      // The filing adviser learns where the case went — naming the actor.
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
         const dest =
           req.body.escalatedTo === "nurse"
@@ -391,7 +410,7 @@ router.post(
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `Your referral for ${card.who} was escalated to ${dest}.`,
+          message: `${actor} escalated your referral for ${card.who} to ${dest}.`,
           sourceId: referral.id,
         });
       }
@@ -436,8 +455,10 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       const card = await referralCard(referral);
+      const actor = await actorName(req.user!.id);
       res.json(updated);
-      // Reassignment handoff: the new owning desk learns immediately.
+      // Reassignment handoff: the new owning desk learns immediately — each
+      // recipient's row names the actor AND the recipient.
       if (req.body.referredToRole === "nurse") {
         void fanoutToRole("nurse", {
           sourceTable: "referrals",
@@ -445,6 +466,8 @@ router.post(
           message: `A case was reassigned to the clinic — ${card.who}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} reassigned ${card.who} to you, ${r.fullName}.`,
         });
       } else if (req.body.referredToRole === "adm_coordinator") {
         void fanoutToRole("adm_coordinator", {
@@ -453,6 +476,8 @@ router.post(
           message: `A case was reassigned to ADM — ${card.who}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} reassigned ${card.who} to you, ${r.fullName}.`,
         });
       } else if (req.body.referredToRole === "guidance_counselor") {
         void fanoutToRole("guidance_counselor", {
@@ -461,9 +486,11 @@ router.post(
           message: `A case was reassigned to guidance — ${card.who}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} reassigned ${card.who} to you, ${r.fullName}.`,
         });
       }
-      // The filing adviser learns where the case went.
+      // The filing adviser learns where the case went — naming the actor.
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
         const dest =
           req.body.referredToRole === "nurse"
@@ -477,7 +504,7 @@ router.post(
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `Your referral for ${card.who} was reassigned to ${dest}.`,
+          message: `${actor} reassigned your referral for ${card.who} to ${dest}.`,
           sourceId: referral.id,
         });
       }
@@ -655,6 +682,7 @@ router.post(
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.reason, 120);
+      const actor = await actorName(req.user!.id);
       res.json(updated);
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
         const dest =
@@ -667,7 +695,7 @@ router.post(
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `Your referral for ${card.who} was sent to ${dest}.`,
+          message: `${actor} sent your referral for ${card.who} to ${dest}.`,
           sourceId: referral.id,
         });
       }
@@ -678,6 +706,8 @@ router.post(
           message: `A case was referred to the clinic — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} referred ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
         });
       } else if (req.body.referredToRole === "adm_coordinator") {
         void fanoutToRole("adm_coordinator", {
@@ -686,6 +716,8 @@ router.post(
           message: `A case was referred to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} referred ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
         });
       }
       // Counselor receipt: bell row for the acting counselor.
@@ -730,13 +762,14 @@ router.post(
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.reason, 120);
+      const actor = await actorName(req.user!.id);
       res.json(updated);
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
         void fanoutNotification({
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `Your referral for ${card.who} was sent to ADM.`,
+          message: `${actor} sent your referral for ${card.who} to ADM.`,
           sourceId: referral.id,
         });
       }
@@ -746,6 +779,8 @@ router.post(
         message: `A case was referred to ADM — ${card.who}${why ? `: ${why}` : ""}. Filed by ${card.filerName}.`,
         sourceId: referral.id,
         excludeUserId: req.user!.id,
+        messageFor: (r) =>
+          `${actor} referred ${card.who} to you, ${r.fullName}${why ? `: ${why}` : ""}.`,
       });
       // Counselor receipt: bell row for the acting counselor.
       void fanoutNotification({
@@ -1357,6 +1392,7 @@ router.post(
       await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
       const card = await referralCard(referral);
       const recNote = truncate(recommendation.trim(), 120);
+      const actor = await actorName(req.user!.id);
       res.json(updated);
       // Nurse consultation endorse hands the case to the ADM coordinators
       // (coordinator toast kept); the filing adviser learns the outcome too.
@@ -1367,13 +1403,15 @@ router.post(
           message: `ADM consultation endorsed — ${card.who} ready for the parent meeting${recNote ? `: ${recNote}` : ""}${session ? ` (clinic session ${formatWhen(session.scheduledAt)})` : ""}.`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actor} endorsed the ADM consultation for ${card.who} — sent to you, ${r.fullName}${recNote ? `: ${recNote}` : ""}.`,
         });
         if (referral.referredBy && referral.referredBy !== req.user!.id) {
           void fanoutNotification({
             userId: referral.referredBy,
             sourceTable: "referrals",
             action: "status",
-            message: `ADM consultation endorsed for ${card.who} — now with the coordinator.`,
+            message: `${actor} endorsed the ADM consultation for ${card.who} — now with the coordinator.`,
             sourceId: referral.id,
           });
         }
@@ -1713,14 +1751,17 @@ router.post(
       const card = await referralCard(referral);
       const when = formatWhen(created.scheduledAt);
       const where = created.venue ? ` at ${created.venue}` : "";
+      const actor = await actorName(req.user!.id);
+      const actorLabel =
+        req.user!.role === "nurse"
+          ? `${actor} (Clinic)`
+          : `${actor} (Guidance)`;
       res.status(201).json(formatSession(created));
-      // Session booking is handling — the filing adviser learns live.
-      // Clinic matters stay adviser-only (never fan out to the coordinator).
+      // Session booking is handling — the filing adviser learns live, naming
+      // who booked it. Clinic matters stay adviser-only (never fan out to
+      // the coordinator).
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
-        const message =
-          req.user!.role === "nurse"
-            ? `Clinic booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`
-            : `Guidance booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`;
+        const message = `${actorLabel} booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`;
         void fanoutNotification({
           userId: referral.referredBy,
           sourceTable: "referrals",
@@ -1742,12 +1783,11 @@ router.post(
         void fanoutToRole(referral.consultReviewer, {
           sourceTable: "referrals",
           action: "status",
-          message:
-            req.user!.role === "nurse"
-              ? `Clinic booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`
-              : `Guidance booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`,
+          message: `${actorLabel} booked a session for ${card.who} (${created.sessionType}, ${when}${where}).`,
           sourceId: referral.id,
           excludeUserId: req.user!.id,
+          messageFor: (r) =>
+            `${actorLabel} booked a session for ${card.who} (${created.sessionType}, ${when}${where}) — sent to you, ${r.fullName}.`,
         });
       }
       // Nurse receipt: bell row for the acting nurse.
@@ -2701,14 +2741,17 @@ router.post(
   validate("body", reopenSchema),
   async (req, res, next) => {
     try {
-      const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
-      if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
-      if (referral.referredBy !== req.user!.id) {
-        throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can re-submit it");
-      }
-      if (referral.status !== "dismissed") {
-        throw new AppError(400, "INVALID_ACTION", "Only a cancelled referral can be re-submitted");
-      }
+       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
+       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+       if (referral.referredToRole === "adm_coordinator") {
+         throw new AppError(400, "INVALID_ACTION", "Cancelled ADM cases cannot be re-submitted — start a new referral from the beginning.");
+       }
+       if (referral.referredBy !== req.user!.id) {
+         throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can re-submit it");
+       }
+       if (referral.status !== "dismissed") {
+         throw new AppError(400, "INVALID_ACTION", "Only a cancelled referral can be re-submitted");
+       }
       const nextRole = req.body.referredToRole ?? referral.referredToRole;
       const nextReviewer = nextRole === "adm_coordinator" ? (req.body.consultReviewer ?? null) : null;
       if (req.body.consultReviewer && nextRole !== "adm_coordinator") {
@@ -2755,13 +2798,22 @@ router.post(
           guidance_counselor: `A cancelled guidance referral was re-submitted — ${card.who}.`,
           principal: `A cancelled principal referral was re-submitted — ${card.who}.`,
         };
-        void fanoutToRole(role, {
-          sourceTable: "referrals",
-          action: "status",
-          message: roleMessage[role],
-          sourceId: referral.id,
-          excludeUserId: actorId,
-        });
+        // Step-scoped notify (mirrors filing): a re-submitted ADM case with
+        // a nurse/guidance reviewer sits at the reviewer's step — only the
+        // reviewer is pinged, and the coordinator learns about it at endorse
+        // time. Direct and lrpc re-submits still ping the coordinator.
+        const reviewerOwned =
+          role === "adm_coordinator" &&
+          (nextReviewer === "nurse" || nextReviewer === "guidance_counselor");
+        if (!reviewerOwned) {
+          void fanoutToRole(role, {
+            sourceTable: "referrals",
+            action: "status",
+            message: roleMessage[role],
+            sourceId: referral.id,
+            excludeUserId: actorId,
+          });
+        }
         if (
           role === "adm_coordinator" &&
           (nextReviewer === "nurse" || nextReviewer === "guidance_counselor")

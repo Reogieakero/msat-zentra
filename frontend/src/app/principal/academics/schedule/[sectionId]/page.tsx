@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, ClipboardCheck, Clock, Coffee, Inbox, Info, Loader2, Pencil, UserRound, Utensils } from "lucide-react";
+import { ArrowLeft, Check, ClipboardCheck, Clock, Coffee, Inbox, Info, Loader2, PanelRightClose, PanelRightOpen, Pencil, UserRound, Utensils } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,38 @@ export default function PrincipalSectionSchedulePage() {
   // Which decision is in flight — only that button shows a spinner, so the
   // other button never changes size or label while processing.
   const [pendingAction, setPendingAction] = useState<"approve" | "reject" | null>(null);
+  // Right-rail visibility (same pattern as the master-teacher setup view):
+  // persisted per browser, effect-applied after mount so server and client
+  // render the same first frame (no hydration mismatch).
+  const [railOpen, setRailOpenState] = useState(true);
+  useEffect(() => {
+    const apply = () => {
+      try {
+        const stored = window.localStorage.getItem("zentra.principal-schedule-rail");
+        if (stored === "open" || stored === "closed") {
+          setRailOpenState((current) =>
+            (current ? "open" : "closed") === stored ? current : stored === "open",
+          );
+        }
+      } catch {
+        // Private mode etc. — default holds for the visit.
+      }
+    };
+    apply();
+    window.addEventListener("storage", apply);
+    return () => window.removeEventListener("storage", apply);
+  }, []);
+  const setRailOpen = (next: boolean | ((v: boolean) => boolean)) => {
+    setRailOpenState((prev) => {
+      const value = typeof next === "function" ? next(prev) : next;
+      try {
+        window.localStorage.setItem("zentra.principal-schedule-rail", value ? "open" : "closed");
+      } catch {
+        // Private mode etc. — choice holds for the visit.
+      }
+      return value;
+    });
+  };
 
   const sectionsQuery = useQuery<{ sections: Submission[] }>({
     queryKey: ["principal-schedule-sections"],
@@ -241,7 +273,11 @@ export default function PrincipalSectionSchedulePage() {
 
   return (
     <section className="flex w-full flex-col gap-5">
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div
+        className={`grid items-start gap-4 transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none ${
+          railOpen ? "lg:grid-cols-[minmax(0,1fr)_17rem]" : "lg:grid-cols-[minmax(0,1fr)_0rem]"
+        }`}
+      >
         <div className="flex min-w-0 flex-col gap-5">
           <div>
             <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2">
@@ -250,9 +286,30 @@ export default function PrincipalSectionSchedulePage() {
                 Sections
               </Link>
             </Button>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Schedule for {submission.name}
-            </h1>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Schedule for {submission.name}
+                </h1>
+              </div>
+              <div className="flex shrink-0 items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setRailOpen((v) => !v)}
+                  aria-label={railOpen ? "Hide sidebar" : "Show sidebar"}
+                  title={railOpen ? "Hide sidebar" : "Show sidebar"}
+                  aria-expanded={railOpen}
+                >
+                  {railOpen ? (
+                    <PanelRightClose size={16} aria-hidden />
+                  ) : (
+                    <PanelRightOpen size={16} aria-hidden />
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Weekly grid — identical framing to the master-teacher setup view
@@ -377,8 +434,17 @@ export default function PrincipalSectionSchedulePage() {
           )}
         </div>
 
-        {/* Right rail — same card pattern as the teacher setup view. */}
-        <div className="flex min-w-0 flex-col gap-4">
+        {/* Right rail — same card pattern as the teacher setup view.
+            Collapsible via the header sidebar icon; hidden content is inert
+            so it is skipped by keyboard and assistive tech. */}
+        <div className="min-w-0 overflow-hidden" inert={!railOpen}>
+          <div
+            className={`flex w-full flex-col gap-4 transition-all duration-300 ease-out motion-reduce:transition-none lg:w-[17rem] lg:max-w-[17rem] ${
+              railOpen
+                ? "translate-x-0 opacity-100"
+                : "pointer-events-none opacity-0 lg:translate-x-6"
+            }`}
+          >
           <div
             className={assign.card}
             aria-label={`Section adviser for ${submission.name}`}
@@ -525,6 +591,7 @@ export default function PrincipalSectionSchedulePage() {
                 Approved — official
               </span>
             </div>
+          </div>
           </div>
         </div>
       </div>

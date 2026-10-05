@@ -4,12 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./case-page.module.css";
 import skel from "./case-skeleton.module.css";
 
-/* Detail loading state that mirrors the case file layout 1:1 — back
-   button, header card (student name, LRN/grade/stage/eligibility lines,
-   badge row, referred-by notes), then the card grid (full-span anecdotal
-   file with folder + KPI tiles, recommendations, GC Form 03, evidence
-   chain, parent meetings) — so skeleton → content swaps with minimal
-   layout shift. Titles stay readable; only values shimmer. */
+/* Detail loading state that mirrors the wizard layout 1:1 — back
+   button, header card, then the tab bar + instructing card + active
+   section card beside the sticky eligibility checklist — so skeleton →
+   content swaps with minimal layout shift. Titles stay readable; only
+   values shimmer. */
 export function CoordinatorCaseSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading case file">
@@ -34,73 +33,56 @@ export function CoordinatorCaseSkeleton() {
           </div>
         </div>
 
-        <div className={styles.grid} style={{ marginTop: "1rem" }}>
-          <div className={`${styles.card} ${styles.spanFull}`}>
-            <p className={styles.cardTitle}>Anecdotal report</p>
-            <div className={styles.fileLayout}>
-              <div className={styles.fileSide}>
-                <Skeleton className={skel.folder} />
-                <Skeleton className={skel.hint} />
-              </div>
-              <div className={styles.kpiGrid}>
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className={styles.kpi}>
-                    <Skeleton className={skel.kpiLabel} />
-                    <Skeleton className={skel.kpiValue} />
-                  </div>
-                ))}
-              </div>
+        <div className={styles.wizardLayout} style={{ marginTop: "1rem" }}>
+          <div className={styles.wizardMain}>
+            <div className={styles.tabBar} aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton
+                  key={i}
+                  className={skel.badgeLg}
+                  style={{ height: "2rem" }}
+                />
+              ))}
             </div>
-          </div>
-
-          <div className={styles.card}>
-            <p className={styles.cardTitle}>Recommendations</p>
-            <Skeleton className={skel.label} />
-            <Skeleton className={skel.text} />
-            <Skeleton className={skel.textShort} />
-            <Skeleton className={skel.label} />
-            <Skeleton className={skel.text} />
-          </div>
-
-          <div className={styles.card}>
-            <p className={styles.cardTitle}>GC Form 03 · Referral form</p>
-            <div className={styles.fileLayout}>
-              <div className={styles.fileSide}>
-                <Skeleton className={skel.folder} />
-                <Skeleton className={skel.hint} />
-              </div>
-              <div className={styles.kpiGrid}>
-                <div className={styles.kpi}>
-                  <Skeleton className={skel.kpiLabel} />
-                  <Skeleton className={skel.kpiValue} />
+            <div className={styles.instructCard} aria-hidden="true">
+              <Skeleton className={skel.label} />
+              <Skeleton className={skel.text} />
+              <Skeleton className={skel.textShort} />
+            </div>
+            <div className={styles.card}>
+              <p className={styles.cardTitle}>Anecdotal report</p>
+              <div className={styles.fileLayout}>
+                <div className={styles.fileSide}>
+                  <Skeleton className={skel.folder} />
+                  <Skeleton className={skel.hint} />
+                </div>
+                <div className={styles.kpiGrid}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className={styles.kpi}>
+                      <Skeleton className={skel.kpiLabel} />
+                      <Skeleton className={skel.kpiValue} />
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+            <div className={styles.stepFooter} aria-hidden="true">
+              <Skeleton className={skel.badgeMd} />
+              <Skeleton className={skel.badgeSm} />
+              <Skeleton className={skel.badgeMd} />
+            </div>
           </div>
-
-          <div className={styles.card}>
-            <p className={styles.cardTitle}>Evidence chain</p>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className={skel.evidenceRow}>
-                <Skeleton className={skel.dot} />
-                <Skeleton className={skel.evidenceLabel} />
-                <Skeleton className={skel.badgeSm} />
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.card}>
-            <p className={styles.cardTitle}>Parent meetings</p>
-            {[0, 1].map((i) => (
-              <div key={i} className={skel.meetingRow}>
-                <div className={styles.badgeRow} style={{ marginTop: 0 }}>
-                  <Skeleton className={skel.badgeMd} />
+          <div className={styles.wizardSide}>
+            <div className={styles.checklistCard} aria-hidden="true">
+              <p className={styles.cardTitle}>Eligibility checklist</p>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className={skel.evidenceRow}>
+                  <Skeleton className={skel.dot} />
+                  <Skeleton className={skel.evidenceLabel} />
                   <Skeleton className={skel.badgeSm} />
                 </div>
-                <Skeleton className={skel.text} />
-                <Skeleton className={skel.textShort} />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

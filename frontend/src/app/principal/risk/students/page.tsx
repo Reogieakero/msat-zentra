@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchHeatmap } from "./api";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
+import { useGradeMode } from "../../grade-mode-context";
 import { StudentHeatmap } from "./components/StudentHeatmap";
 import { StudentsListTable } from "./components/StudentsListTable";
 import styles from "./students.module.css";
@@ -11,14 +12,15 @@ import styles from "./students.module.css";
 const ACTIVE_SECTION_KEY = "zentra.risk.students.activeSection";
 
 export default function RiskBoardStudentsPage() {
+  const { gradeMode } = useGradeMode();
   const [selectedSection, setSelectedSection] = usePersistentState<string>(
     ACTIVE_SECTION_KEY,
     "all"
   );
 
   const { data: heat, isPending: heatLoading } = useQuery({
-    queryKey: ["risk-heatmap"],
-    queryFn: fetchHeatmap,
+    queryKey: ["risk-heatmap", gradeMode],
+    queryFn: () => fetchHeatmap(gradeMode),
   });
 
   const tableRef = React.useRef<HTMLDivElement>(null);

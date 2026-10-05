@@ -212,6 +212,16 @@ export type AdmLearnerProfile = Prisma.AdmLearnerProfileModel
  */
 export type AdmParentMeeting = Prisma.AdmParentMeetingModel
 /**
+ * Model AdmMeetingInvitee
+ * 
+ */
+export type AdmMeetingInvitee = Prisma.AdmMeetingInviteeModel
+/**
+ * Model AdmMeetingAttachment
+ * 
+ */
+export type AdmMeetingAttachment = Prisma.AdmMeetingAttachmentModel
+/**
  * Model AdmModule
  * 
  */

@@ -26,6 +26,8 @@ import {
 } from "@/app/teacher/schedule/components/schedule-time";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
+import { TermAccessCard } from "@/components/schedule/TermAccessCard";
+import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { MyWeekGrid } from "./MyWeekGrid";
 import { useSession } from "@/lib/auth/useSession";
 import {
@@ -151,13 +153,13 @@ export function MyTimetable() {
       setConfirmReleaseOpen(false);
       refresh();
       toast.success({
-        title: "Teacher code unlinked",
-        description: "Enter the correct code to link your classes again.",
+        title: `Left ${termLabel}`,
+        description: "Only this term's entry was cleared — your link and other terms are untouched.",
       });
     },
     onError: (err: unknown) => {
-      const message = getErrorMessage(err, "Failed to unlink teacher code.");
-      toast.error({ title: "Could not unlink code", description: message });
+      const message = getErrorMessage(err, "Failed to leave this term.");
+      toast.error({ title: "Could not leave term", description: message });
     },
   });
 
@@ -337,9 +339,41 @@ export function MyTimetable() {
     );
   }
 
+  // No code linked yet (a Master with no link — unlinked regular teachers
+  // exit at the claim gate above): code input only. No page header, no
+  // sidebar, no info panels.
+  if (!linked) {
+    return (
+      <TermAccessCard
+        linkedName={null}
+        termLabel={termLabel}
+        claimTitle="Link your teacher code"
+        claimDescription="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your assigned subjects and their timeslots will attach to this calendar."
+        successTitle="Term entered"
+        successDescription={`Your code matches — classes are now open for ${termLabel}.`}
+      />
+    );
+  }
+
   const loadingSlots = slotsQuery.isPending || configQuery.isPending;
   const slots = slotsQuery.data?.slots ?? [];
   const config = configQuery.data?.config ?? null;
+
+  // No records this term: no header title — just the panel, centered in
+  // the page (not top-center).
+  if (!loadingSlots && !slotsQuery.isError && config && slots.length === 0) {
+    return (
+      <div className="flex min-h-[calc(100dvh-10rem)] items-center justify-center">
+        <div className="w-full max-w-3xl">
+          <NoTermRecordsPanel
+            termLabel={termLabel}
+            isMasterTeacher={isMasterTeacher}
+            teacherName={linked.name}
+          />
+        </div>
+      </div>
+    );
+  }
 
   // Reminder: current class right now, else today's next class — resolved
   // against the real day-shape clock so it always matches the grid.
@@ -432,32 +466,19 @@ export function MyTimetable() {
             : "Your attached timetable for the week."}
         </p>
       </div>
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="min-w-0">
-          {loadingSlots ? (
-            <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading timetable">
-              <div className="h-72 rounded-lg border bg-muted/40" />
-            </div>
-          ) : slotsQuery.isError || !config ? (
-            <p role="alert" className="text-sm text-destructive">
-              Could not load your timetable slots.
-            </p>
-          ) : slots.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-input bg-card p-12 text-center">
-              <span className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-                <CalendarDays size={32} className="text-primary" />
-              </span>
-              <h3 className="text-lg font-semibold">No classes attached yet</h3>
-              <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                {isMasterTeacher
-                  ? "No classes are attached to your login yet — schedule subjects in the Schedule workspace. Records open here without a code."
-                  : `Your subjects and timeslots will appear here once the master teacher schedules ${linked?.name ?? "your linked name"} and the slots are sent for review or approved.`}
-              </p>
-            </div>
-          ) : (
-            <MyWeekGrid slots={slots} config={config} />
-          )}
+      {loadingSlots ? (
+        <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading timetable">
+          <div className="h-72 rounded-lg border bg-muted/40" />
         </div>
+      ) : slotsQuery.isError || !config ? (
+        <p role="alert" className="text-sm text-destructive">
+          Could not load your timetable slots.
+        </p>
+      ) : (
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+          <div className="min-w-0">
+            <MyWeekGrid slots={slots} config={config} />
+          </div>
         <div className="flex min-w-0 flex-col gap-4">
           {linked ? (
           <div className={assign.card} aria-label={`Linked teacher code for ${linked.name}`}>
@@ -488,7 +509,7 @@ export function MyTimetable() {
                 onClick={() => setConfirmReleaseOpen(true)}
                 className="h-auto p-0 text-xs text-destructive"
               >
-                Unlink
+                Leave this term
               </Button>
             </div>
           </div>
@@ -564,8 +585,9 @@ export function MyTimetable() {
               </div>
             </div>
           ) : null}
+          </div>
         </div>
-      </div>
+      )}
 
       {confirmReleaseOpen && linked ? (
         <Dialog
@@ -576,11 +598,11 @@ export function MyTimetable() {
         >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>Unlink teacher code?</DialogTitle>
+              <DialogTitle>Leave {termLabel}?</DialogTitle>
               <DialogDescription>
-                This detaches {linked.name}
-                {linked.code ? ` (${linked.code})` : ""} from your login and clears this
-                calendar. You can link a code again any time.
+                This clears only this term&apos;s entry for {linked.name}
+                {linked.code ? ` (${linked.code})` : ""} — your link and other
+                terms stay attached. Re-enter your code any time to come back.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -596,10 +618,10 @@ export function MyTimetable() {
                 {release.isPending ? (
                   <>
                     <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Unlinking…</span>
+                    <span aria-live="polite">Leaving…</span>
                   </>
                 ) : (
-                  "Unlink"
+                  "Leave term"
                 )}
               </Button>
             </DialogFooter>

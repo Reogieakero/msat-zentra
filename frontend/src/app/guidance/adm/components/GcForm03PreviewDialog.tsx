@@ -3,13 +3,7 @@
 import * as React from "react";
 import { Download, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadGcForm03 } from "./gcform03-workbook";
 import type { GcForm03Data } from "./gcform03-data";
@@ -100,25 +94,19 @@ export function GcForm03PreviewDialog({
   const loadingSheet = open && data && !sheetHtml && !sheetError;
 
   return (
-    <Dialog
+    <CardModal
       open={open}
-      onOpenChange={(next) => {
-        if (!next) handleClose();
-      }}
+      onClose={handleClose}
+      title={
+        <>
+          GCForm-03 — Referral Form
+          {data ? ` — ${data.studentName}` : null}
+        </>
+      }
+      description="Official Excel file preview (GCForm-03). Prints to A4 portrait."
+      size="lg"
+      watchKey={sheetHtml ? "ready" : "loading"}
     >
-      <DialogContent
-        style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}
-        className={styles.dialog}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            GCForm-03 — Referral Form
-            {data ? ` — ${data.studentName}` : null}
-          </DialogTitle>
-          <DialogDescription>
-            Official Excel file preview (GCForm-03). Prints to A4 portrait.
-          </DialogDescription>
-        </DialogHeader>
 
         {loadingSheet ? (
           <div className="flex flex-col gap-2 py-4" aria-busy="true" aria-label="Loading referral form preview">
@@ -201,7 +189,6 @@ export function GcForm03PreviewDialog({
             </Button>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </CardModal>
   );
 }

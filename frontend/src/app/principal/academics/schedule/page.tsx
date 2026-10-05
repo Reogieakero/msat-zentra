@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api/client";
 // teacher/schedule and principal/academics/schedule render the identical
 // design from `SectionScheduleCard`.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { AuroraBanner } from "../../overview/components/AuroraBanner";
 import {
   sectionCardStatus,
   SectionScheduleCard,
@@ -158,31 +159,16 @@ export default function PrincipalSchedulePage() {
             )}
           </div>
           <div className="flex min-w-0 flex-col gap-4">
-            <div
-              className={assign.card}
-              role="status"
-              aria-label={`Schedule status: ${railMeta.title} — ${railMeta.message}`}
-              style={{
-                borderColor: `color-mix(in oklch, ${railMeta.from} 45%, transparent)`,
-                background: `linear-gradient(135deg, color-mix(in oklch, ${railMeta.from} 26%, var(--card)), color-mix(in oklch, ${railMeta.to} 18%, var(--card)))`,
-              }}
-            >
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex items-center gap-3">
-                <span
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${railMeta.chip}`}
-                  aria-hidden="true"
-                >
-                  <RailIcon size={20} className={railMeta.icon} />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="font-semibold">{railMeta.title}</h3>
-                  <p className="text-xs text-muted-foreground">{railMeta.message}</p>
-                </div>
-              </div>
-            </div>
+            <AuroraBanner
+              static
+              icon={RailIcon}
+              pill="Schedule status"
+              count={railVariant === "blue" ? awaitingTotal : railVariant === "green" ? sections.length : 0}
+              title={railMeta.title}
+              sub={railMeta.message}
+              accent={railMeta.from}
+              label={`Schedule status: ${railMeta.title} — ${railMeta.message}`}
+            />
 
             <div className={assign.card} aria-label="Section status legend">
               <span className={assign.glowClip} aria-hidden="true">

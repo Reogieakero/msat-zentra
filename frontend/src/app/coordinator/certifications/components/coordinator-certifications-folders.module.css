@@ -1,16 +1,16 @@
+/* Flat panel — no card background/border/radius; the folder grid sits
+   directly on the page. */
 .panel {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--card);
-  box-shadow: none;
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
   height: 100%;
 }
 
 .content {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
   flex: 1 1 auto;
 }
 
@@ -192,35 +192,6 @@
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
-}
-
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: auto;
-  padding-top: 0.75rem;
-}
-
-.range {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.pagerButtons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.pageLabel {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
 }
 
 .spin {

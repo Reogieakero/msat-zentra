@@ -1,8 +1,12 @@
 "use client";
 
+import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
 import {
   BookSessionDialog,
   type BookSessionFields,
+  type InviteStaffOption,
 } from "@/components/session-booking/BookSessionDialog";
 import type { AdmCaseRow } from "../../components/coordinator-data";
 
@@ -10,6 +14,7 @@ export interface CoordinatorBookFields {
   meetingDatetime: string;
   venue: "school" | "home";
   logbook: string;
+  inviteeIds: string[];
 }
 
 export interface CoordinatorBookInitial {
@@ -17,6 +22,10 @@ export interface CoordinatorBookInitial {
   datetime: string;
   venue: string;
   logbook?: string | null;
+  /** Current invitees for reschedule prefill — full profiles from the
+      meetings query, or id-only stubs from the table row snapshot (the
+      picker resolves names from the staff directory either way). */
+  invitees?: { id: string; fullName?: string; role?: string }[];
 }
 
 interface CoordinatorReferralsBookDialogProps {
@@ -25,6 +34,8 @@ interface CoordinatorReferralsBookDialogProps {
   /** Set when the case already has a booked (unattended) meeting — the
       dialog reschedules it instead of creating a second booking. */
   rescheduleMeeting?: CoordinatorBookInitial | null;
+  /** Fresh-booking venue preset (home-visit follow-up after a no-show). */
+  venuePreset?: "school" | "home" | null;
   pending: boolean;
   serverError?: string | null;
   onClose: () => void;
@@ -55,11 +66,45 @@ export function CoordinatorReferralsBookDialog({
   open,
   selected,
   rescheduleMeeting = null,
+  venuePreset = null,
   pending,
   serverError = null,
   onClose,
   onSubmit,
 }: CoordinatorReferralsBookDialogProps) {
+  // Invitable staff for the invite picker — loaded only while the dialog is
+  // open, scoped to the case so the adviser group holds just the student's
+  // own adviser (early `referral:<id>` rows pass referralId, profile rows
+  // pass profileId).
+  const caseParams =
+    selected && selected.id.startsWith("referral:")
+      ? { referralId: selected.id.slice("referral:".length) }
+      : selected
+        ? { profileId: selected.id }
+        : {};
+  const caseKey = "referralId" in caseParams ? `r:${caseParams.referralId}` : "profileId" in caseParams ? `p:${caseParams.profileId}` : "none";
+  const staffQuery = useQuery<{ staff: InviteStaffOption[]; sectionAdviserId: string | null }>({
+    queryKey: ["coordinator-invite-staff", caseKey],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/api/adm/staff", { params: caseParams });
+      return data;
+    },
+    enabled: open,
+    staleTime: 1000 * 60 * 5,
+  });
+  const scopedAdviserId = staffQuery.data?.sectionAdviserId ?? null;
+  // Scoped to a case but its section names no adviser: say so plainly
+  // instead of rendering a silently adviser-less picker.
+  const adviserRow = (staffQuery.data?.staff ?? []).find(
+    (s) => s.role === "adviser" || (scopedAdviserId !== null && s.id === scopedAdviserId),
+  );
+  const noAdviserAssigned =
+    open &&
+    caseKey !== "none" &&
+    !staffQuery.isPending &&
+    !staffQuery.isError &&
+    !adviserRow;
+
   if (!open) return null;
 
   function handleSubmit(f: BookSessionFields) {
@@ -67,6 +112,7 @@ export function CoordinatorReferralsBookDialog({
       meetingDatetime: f.scheduledAt,
       venue: f.sessionType === "home" ? "home" : "school",
       logbook: f.venue,
+      inviteeIds: f.inviteeIds ?? [],
     });
   }
 
@@ -78,6 +124,14 @@ export function CoordinatorReferralsBookDialog({
       open
       onClose={onClose}
       onSubmit={handleSubmit}
+      inviteStaff={staffQuery.data?.staff}
+      initialInviteIds={(rescheduleMeeting?.invitees ?? []).map((u) => u.id)}
+      sectionAdviserId={scopedAdviserId}
+      inviteHint={
+        noAdviserAssigned
+          ? "No adviser is assigned to this student's section — ask the principal or registrar to assign one to invite them."
+          : "Invited staff get a notification now and a reminder card 5 minutes before the meeting."
+      }
       title={isReschedule ? "Reschedule meeting" : "Book session"}
       description={
         selected
@@ -96,7 +150,6 @@ export function CoordinatorReferralsBookDialog({
         { value: "school", label: "In school" },
         { value: "home", label: "Home visitation" },
       ]}
-      defaultSessionType="school"
       initialDate={initial?.date ?? ""}
       initialTime={initial?.time ?? ""}
       initialVenue={rescheduleMeeting?.logbook ?? ""}
@@ -105,8 +158,9 @@ export function CoordinatorReferralsBookDialog({
           ? rescheduleMeeting.venue === "home"
             ? "home"
             : "school"
-          : undefined
+          : (venuePreset ?? undefined)
       }
+      defaultSessionType={venuePreset ?? "school"}
       busy={pending}
       serverError={serverError}
       submitLabel={isReschedule ? "Reschedule meeting" : "Book meeting"}

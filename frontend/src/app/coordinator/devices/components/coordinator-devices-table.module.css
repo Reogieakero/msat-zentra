@@ -1,0 +1,144 @@
+/* Device ledger table — At-Risk table design: section title/desc,
+   two-line truncate cells, modal detail rows, skeleton mirrors. The glow
+   shell, header layout, footer, and empty state ride Tailwind + the shared
+   section card, same as the reference. */
+
+/* Ledger shell sits still — the shared glow card lifts on hover, which
+   reads as a glitch on a full-width table panel. This outranks
+   assign.card:hover (later in the bundle via import order). */
+.steady,
+.steady:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.spin {
+  width: 0.875rem;
+  height: 0.875rem;
+  animation: coord-devices-spin 1s linear infinite;
+}
+
+@keyframes coord-devices-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Details modal rows. */
+.modalRows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.modalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.modalRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.modalTerm {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.modalValue {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: right;
+  color: var(--foreground);
+  min-width: 0;
+}
+
+/* Loading mirrors. */
+.skelTitle {
+  width: 9rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+}
+
+.skelDesc {
+  width: 12rem;
+  height: 0.8rem;
+  border-radius: 0.25rem;
+  margin-top: 0.375rem;
+}
+
+.skelSearch {
+  width: 10rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.skelTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.skelTable td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.skelTable tr:last-child td {
+  border-bottom: none;
+}
+
+.skelRow {
+  width: 100%;
+  height: 2.25rem;
+  border-radius: 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
