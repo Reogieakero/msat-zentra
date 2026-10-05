@@ -1,5 +1,6 @@
 // Bama flow constants — direct Dart port of
-// frontend/src/app/teacher/chat/components/bama-flow.ts.
+// frontend/src/app/teacher/chat/components/bama-flow.ts +
+// anecdotal-data.ts label maps.
 // Bama is a guided wizard with pre-configured replies (NOT an LLM):
 // student -> class -> category -> tier -> datetime -> 5 texts -> preview -> file.
 
@@ -13,6 +14,14 @@ const textQuestionLabels = {
   TextQuestion.attendance: 'Attendance in Classes for the last 2 weeks/Month',
 };
 
+const textQuestionPlaceholders = {
+  TextQuestion.incident: 'Describe the incident factually…',
+  TextQuestion.location: 'e.g. Classroom, playground, gate…',
+  TextQuestion.notes: 'Next steps, monitoring, referrals…',
+  TextQuestion.classPerformance: 'e.g. Below expectations in Math…',
+  TextQuestion.attendance: 'e.g. 5 absences in the last 2 weeks…',
+};
+
 const nextQuestion = {
   TextQuestion.incident: TextQuestion.location,
   TextQuestion.location: TextQuestion.notes,
@@ -22,7 +31,28 @@ const nextQuestion = {
 };
 
 const anecdotalCategories = ['behavioral', 'bullying', 'academic', 'attendance', 'health'];
+
+const anecdotalCategoryLabels = {
+  'behavioral': 'Behavioral',
+  'bullying': 'Bullying',
+  'academic': 'Academic',
+  'attendance': 'Attendance',
+  'health': 'Health',
+};
+
 const anecdotalTiers = ['restricted', 'confidential'];
+
+const anecdotalTierLabels = {
+  'restricted': 'Restricted',
+  'confidential': 'Confidential',
+};
+
+String filingStageFor(int progress) {
+  if (progress < 30) return 'Validating answers…';
+  if (progress < 65) return 'Filing anecdotal record…';
+  if (progress < 97) return 'Autofilling GCForm-01…';
+  return 'Finishing…';
+}
 
 class FlowSnapshot {
   String studentId;
@@ -37,6 +67,9 @@ class FlowSnapshot {
   String classPerf;
   String attendance;
   TextQuestion? textQuestion;
+  bool askedCategory;
+  bool askedTier;
+  bool askedDatetime;
   bool previewShown;
   FlowSnapshot({
     this.studentId = '',
@@ -51,6 +84,9 @@ class FlowSnapshot {
     this.classPerf = '',
     this.attendance = '',
     this.textQuestion,
+    this.askedCategory = false,
+    this.askedTier = false,
+    this.askedDatetime = false,
     this.previewShown = false,
   });
 
@@ -67,6 +103,9 @@ class FlowSnapshot {
         'classPerf': classPerf,
         'attendance': attendance,
         'textQuestion': textQuestion?.name,
+        'askedCategory': askedCategory,
+        'askedTier': askedTier,
+        'askedDatetime': askedDatetime,
         'previewShown': previewShown,
       };
 
@@ -83,6 +122,9 @@ class FlowSnapshot {
         classPerf: j['classPerf']?.toString() ?? '',
         attendance: j['attendance']?.toString() ?? '',
         textQuestion: j['textQuestion'] == null ? null : TextQuestion.values.byName(j['textQuestion'].toString()),
+        askedCategory: (j['askedCategory'] ?? false) as bool,
+        askedTier: (j['askedTier'] ?? false) as bool,
+        askedDatetime: (j['askedDatetime'] ?? false) as bool,
         previewShown: (j['previewShown'] ?? false) as bool,
       );
 }
