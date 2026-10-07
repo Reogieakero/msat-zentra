@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { GuidanceRiskFactorRow } from "../../components/guidance-risk-data";
+import type { GuidanceRiskFactorRow } from "@/services/guidance/risk.types";
 import styles from "./guidance-heatmap-visual.module.css";
 
 const FACTORS = [

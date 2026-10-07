@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchGuidanceRiskHeatmap } from "../components/guidance-risk-data";
+import { fetchGuidanceRiskHeatmap } from "@/services/guidance/risk.service";
 import { GuidanceHeatmapVisual } from "./components/guidance-heatmap-visual";
 import { GuidanceSectionCards } from "./components/guidance-section-cards";
 import styles from "../../pages.module.css";

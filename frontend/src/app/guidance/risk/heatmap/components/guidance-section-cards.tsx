@@ -1,6 +1,6 @@
 "use client";
 
-import type { GuidanceRiskFactorRow } from "../../components/guidance-risk-data";
+import type { GuidanceRiskFactorRow } from "@/services/guidance/risk.types";
 import styles from "./guidance-section-cards.module.css";
 
 interface GuidanceSectionCardsProps {
