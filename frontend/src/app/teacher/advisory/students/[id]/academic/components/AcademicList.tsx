@@ -12,7 +12,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { humanize } from "@/services/teacher/adviseeAcademic.service";
+import { humanize } from "@/lib/utils";
 import {
   VERSION_LABELS,
   type AcademicGrade,

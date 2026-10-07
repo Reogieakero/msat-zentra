@@ -1,8 +1,8 @@
 // Shared shapes for the teacher advisory desk (advisee roster + detail).
 // Pure types only. Note: `AdvisorySectionInfo` duplicates the identical
 // shape in overview.types (same backend section projection, defined per
-// desk); `initialsOf` below mirrors the attendance sheet helper — both
-// pre-existing duplications, kept local to avoid cross-service coupling.
+// desk) — pre-existing, kept local to avoid cross-service coupling.
+// (`humanize`/`initialsOf` previously duplicated here now live in lib/utils.)
 export type AdviseeRiskLevel = "Low" | "Moderate" | "High";
 export type AdviseeRiskFlag = "academic" | "attendance" | "behavioral";
 export type DrawerSection = "grades" | "attendance" | "anecdotal";

@@ -16,8 +16,8 @@ import {
   submitSheet,
   useSheetContext,
   useSheetMarks,
-  initialsOf,
 } from "@/services/teacher/attendance.service";
+import { initialsOf } from "@/lib/utils";
 import type {
   SheetContext,
   SheetStatus,

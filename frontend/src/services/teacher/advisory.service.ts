@@ -65,20 +65,3 @@ export function formatBirthdate(iso: string | null): string {
     year: "numeric",
   });
 }
-
-export function initialsOf(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-// "in_progress" -> "In Progress", "guidance_counselor" -> "Guidance Counselor".
-export function humanize(value: string): string {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}

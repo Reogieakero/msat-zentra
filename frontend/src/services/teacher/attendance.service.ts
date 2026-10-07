@@ -279,15 +279,6 @@ export async function submitSheet(payload: SubmitSheetPayload): Promise<{ count:
   return data;
 }
 
-export function initialsOf(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
 // Philippines calendar day — matches the backend lock clock.
 export function phTodayKey(): string {
   return new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 10);

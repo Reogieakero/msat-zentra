@@ -40,3 +40,25 @@ export function formatGrade(raw: string | null | undefined): string {
   if (match) return `Grade ${match[1]}`;
   return raw;
 }
+
+// "in_progress" -> "In Progress", "guidance_counselor" -> "Guidance Counselor".
+// Single home for the snake_case-to-words helper previously copied across
+// teacher services and table components.
+export function humanize(value: string): string {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+// Avatar initials: first letters of the first two words, uppercased.
+// ("Maria Santos" -> "MS".) Single home for the copy previously duplicated
+// across teacher services.
+export function initialsOf(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
