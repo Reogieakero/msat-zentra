@@ -1,36 +1,41 @@
 import { Router } from "express";
-import type { Request, Response, NextFunction } from "express";
-import { z } from "zod";
-import { GradeLevel } from "../../generated/prisma/client.js";
-import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { validate } from "../../middleware/validate.js";
-import { schoolYearWhere, scopedYearId } from "../../lib/termScope.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
-import { writeAudit } from "../../lib/audit.js";
-import { fanoutNotification } from "../../lib/notify.js";
-import { AppError } from "../../lib/errors.js";
+import { validate } from "../../middleware/validate.js";
+import { scopedYearId } from "../../lib/termScope.js";
+import {
+  GRADE_BAND_7_10,
+} from "../registry/registry.repository.js";
+import { RECORD_KEEPER_IDENTITY } from "../../services/registry/registry.types.js";
+import {
+  registryPhotoSchema,
+  registryProfileSchema,
+} from "../registry/registry.schemas.js";
+import { getOverview } from "../../services/registry/overview.service.js";
+import { listFinalGrades } from "../../services/registry/finals.service.js";
+import {
+  buildRecordKeeperBreakdown,
+  getAccountBreakdown,
+  getAccountsAudit,
+} from "../../services/registry/accounts.service.js";
+import {
+  decideAccess,
+  getAccessRecords,
+  listAccessRequests,
+} from "../../services/registry/access.service.js";
+import {
+  readProfileSettings,
+  updateProfilePhoto,
+  updateProfileSettings,
+} from "../../services/registry/settings.service.js";
 
 const router = Router();
 
-const GRADE_BAND_7_10: GradeLevel[] = ["G7", "G8", "G9", "G10"];
-
-const GRADE_LABELS: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
-
-function gradeLabel(gradeLevel: string): string {
-  return GRADE_LABELS[gradeLevel] ?? gradeLevel;
+function ctxOf(req: { user?: { id: string; role: string } }) {
+  return { userId: req.user!.id, role: req.user!.role, band: GRADE_BAND_7_10 };
 }
 
-// Record Keeper overview (G7–G10 authority only). Every query is scoped to the
-// record keeper grade band so counts/lists never leak upper-grade data.
-// All values computed live from the database — no mocked data.
+// Record Keeper overview (G7–G10 authority only).
 router.get(
   "/overview",
   requireAuth,
@@ -38,252 +43,15 @@ router.get(
   cache({ tags: ["record-keeper", "overview"] }),
   async (req, res, next) => {
     try {
-      // pendingAdviserAccess: adviser staff accounts whose User is still pending.
-      const pendingAdviserAccess = await prisma.staffProfile.count({
-        where: { isAdviser: true, user: { status: "pending" } },
-      });
-
-      // Report cards: every final-grade row for G7–10 students (one row ≈ one
-      // report-card subject entry). Used as a proxy since there is no dedicated
-      // "report card" model. Roster-enlisted students without accounts count too.
-      // Single read: the total is the row count (was a duplicate count query).
-      const inBand = {
-        OR: [
-          { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
-          { roster: { gradeLevel: { in: GRADE_BAND_7_10 } } },
-        ],
-      };
-
-      // The record keeper is view-only in the grade pipeline: a student's term grades
-      const viewableFinalRows = await prisma.finalGrade.findMany({
-        where: inBand,
-        select: {
-          lockStatus: true,
-          studentId: true,
-          rosterId: true,
-          termId: true,
-          subjectId: true,
-        },
-      });
-      const byStudentTerm = new Map<string, typeof viewableFinalRows>();
-      for (const r of viewableFinalRows) {
-        const key = `${r.studentId ?? `roster:${r.rosterId}`}|${r.termId}`;
-        if (!byStudentTerm.has(key)) byStudentTerm.set(key, []);
-        byStudentTerm.get(key)!.push(r);
-      }
-      let readyRows = 0;
-      let readyStudents = 0;
-      for (const group of byStudentTerm.values()) {
-        if (group.length > 0 && group.every((r) => r.lockStatus === "adviser_approved")) {
-          readyRows += group.length;
-          readyStudents++;
-        }
-      }
-      const awaitingRows = readyRows;
-      const reportCards = viewableFinalRows.length;
-
-      // sections/subjects: G7–10 active sections and subjects (KPI metrics).
-      // Totals derive from the grouped reads below — no duplicate counts.
-      // sf10ByStatus / sectionsByGrade / subjectsByGrade feed the overview
-      // header's KPI charts (donuts + per-grade bars).
-      const [sf10ByStatus, sectionsGrouped, subjectsGrouped] = await Promise.all([
-        prisma.sf10Record.groupBy({
-          by: ["status"],
-          where: { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
-          _count: { _all: true },
-        }),
-        prisma.section.groupBy({
-          by: ["gradeLevel"],
-          where: { gradeLevel: { in: GRADE_BAND_7_10 }, ...schoolYearWhere(req) },
-          _count: { _all: true },
-        }),
-        prisma.subject.groupBy({
-          by: ["gradeLevel"],
-          where: { gradeLevel: { in: GRADE_BAND_7_10 } },
-          _count: { _all: true },
-        }),
-      ]);
-
-      const sf10Total = sf10ByStatus.reduce((sum, r) => sum + r._count._all, 0);
-      const sections = sectionsGrouped.reduce((sum, r) => sum + r._count._all, 0);
-      const subjects = subjectsGrouped.reduce((sum, r) => sum + r._count._all, 0);
-      const sf10Released = sf10ByStatus.find((r) => r.status === "released")?._count._all ?? 0;
-      const sf10Available = sf10ByStatus.find((r) => r.status === "available")?._count._all ?? 0;
-      const sf10Attach = sf10ByStatus.find((r) => r.status === "attach")?._count._all ?? 0;
-
-      // latestAttachments: most recent SF10 records in "attach" status (G7–10).
-      // Sf10Record has no updatedAt, so order by validatedAt (nullable) desc.
-      const latestAttachRows = await prisma.sf10Record.findMany({
-        where: { status: "attach", student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
-        orderBy: { validatedAt: "desc" },
-        take: 100,
-        select: {
-          validatedAt: true,
-          student: {
-            select: { lrn: true, gradeLevel: true, user: { select: { fullName: true } } },
-          },
-        },
-      });
-      const latestAttachments = latestAttachRows.map((r) => ({
-        student: r.student.user.fullName,
-        lrn: r.student.lrn,
-        grade: gradeLabel(r.student.gradeLevel),
-        when: (r.validatedAt ?? new Date(0)).toISOString(),
-      }));
-
-      // missingSf10: G7–10 students with NO sf10Record at all.
-      const missingRows = await prisma.studentProfile.findMany({
-        where: { gradeLevel: { in: GRADE_BAND_7_10 }, sf10Records: { none: {} } },
-        select: {
-          lrn: true,
-          gradeLevel: true,
-          section: { select: { name: true } },
-          user: { select: { fullName: true } },
-        },
-      });
-      const missingSf10 = missingRows.map((s) => ({
-        student: s.user.fullName,
-        lrn: s.lrn,
-        grade: gradeLabel(s.gradeLevel),
-        section: s.section?.name ?? "—",
-      }));
-
-      // pendingStudents: G7–10 students whose User is still pending (newly
-      // enrolled awaiting approval). Includes both profiled students and bare
-      // self-sign-ups with no profile yet (their claimed LRN resolves them into
-      // the band from the official StudentRoster), reconciling with /api/auth/pending.
-      // Include first linked parent fullName.
-      const [profiledPending, barePending] = await Promise.all([
-        prisma.studentProfile.findMany({
-          where: { gradeLevel: { in: GRADE_BAND_7_10 }, user: { status: "pending" } },
-          select: {
-            lrn: true,
-            gradeLevel: true,
-            user: { select: { fullName: true } },
-            parentLinks: {
-              take: 1,
-              select: { parent: { select: { user: { select: { fullName: true } } } } },
-            },
-          },
-        }),
-        prisma.user.findMany({
-          where: { status: "pending", role: "student", studentProfile: null },
-          select: { fullName: true, lrn: true },
-        }),
-      ]);
-
-      // Resolve bare sign-ups into the band from the roster; skip only the ones
-      // whose LRN resolves to a roster entry OUTSIDE the band. A bare sign-up
-      // with an unresolvable LRN is still included (mirrors /api/auth/pending),
-      // shown with an unknown grade so the Overview and Accounts counts match.
-      // Single batched read (was N sequential findFirst calls).
-      const bareLrns = [...new Set(barePending.map((u) => u.lrn).filter((l): l is string => !!l))];
-      const bareRosters =
-        bareLrns.length > 0
-          ? await prisma.studentRoster.findMany({
-              where: { lrn: { in: bareLrns } },
-              select: { lrn: true, gradeLevel: true, schoolYearId: true },
-            })
-          : [];
-      const latestRosterByLrn = new Map<string, (typeof bareRosters)[number]>();
-      for (const r of bareRosters) {
-        const prev = latestRosterByLrn.get(r.lrn);
-        if (!prev || r.schoolYearId > prev.schoolYearId) latestRosterByLrn.set(r.lrn, r);
-      }
-      const bareRows: { name: string; lrn: string; gradeLevel: string }[] = [];
-      for (const u of barePending) {
-        if (!u.lrn) continue;
-        const roster = latestRosterByLrn.get(u.lrn);
-        if (roster) {
-          if (!GRADE_BAND_7_10.includes(roster.gradeLevel)) continue;
-          bareRows.push({ name: u.fullName, lrn: u.lrn, gradeLevel: roster.gradeLevel });
-        } else {
-          bareRows.push({ name: u.fullName, lrn: u.lrn, gradeLevel: "—" });
-        }
-      }
-
-      const pendingStudents = [
-        ...profiledPending.map((s) => ({
-          name: s.user.fullName,
-          lrn: s.lrn,
-          grade: gradeLabel(s.gradeLevel),
-          parent: s.parentLinks[0]?.parent.user.fullName ?? "—",
-        })),
-        ...bareRows.map((r) => ({
-          name: r.name,
-          lrn: r.lrn,
-          grade: gradeLabel(r.gradeLevel),
-          parent: "—",
-        })),
-      ];
-
-      // sf10Students: G7–10 students who have an SF10 record (any status), take 5.
-      const sf10StudentRows = await prisma.studentProfile.findMany({
-        where: { gradeLevel: { in: GRADE_BAND_7_10 }, sf10Records: { some: {} } },
-        take: 5,
-        select: {
-          lrn: true,
-          gradeLevel: true,
-          user: { select: { fullName: true } },
-        },
-      });
-      const sf10Students = sf10StudentRows.map((s) => ({
-        name: s.user.fullName,
-        lrn: s.lrn,
-        grade: gradeLabel(s.gradeLevel),
-      }));
-
-      // pendingAccounts: account requests the record keeper can action — G7–10 student
-      // enrollments awaiting approval plus adviser-access requests.
-      const pendingAccounts = pendingStudents.length + pendingAdviserAccess;
-
-      res.json({
-        pendingAccounts,
-        pendingAdviserAccess,
-        lockedFinalsAwaiting: awaitingRows,
-        sf10Released,
-        sections,
-        subjects,
-        reportCards,
-        latestAttachments,
-        missingSf10,
-        pendingStudents,
-        sf10Students,
-        finals: {
-          total: reportCards,
-          finalized: 0,
-          awaiting: awaitingRows,
-          draft: reportCards - awaitingRows,
-        },
-        sf10: {
-          total: sf10Total,
-          released: sf10Released,
-          available: sf10Available,
-          attach: sf10Attach,
-        },
-        sectionsByGrade: GRADE_BAND_7_10.map((g) => ({
-          grade: gradeLabel(g),
-          count: sectionsGrouped.find((r) => r.gradeLevel === g)?._count._all ?? 0,
-        })),
-        subjectsByGrade: GRADE_BAND_7_10.map((g) => ({
-          grade: gradeLabel(g),
-          count: subjectsGrouped.find((r) => r.gradeLevel === g)?._count._all ?? 0,
-        })),
-      });
+      const schoolYearId = req.termScope?.schoolYearId ?? null;
+      res.json(await getOverview(ctxOf(req), { attachTake: 100 }, schoolYearId));
     } catch (e) {
       next(e);
     }
   }
 );
 
-// Record Keeper final-grade viewer (G7–10). The record keeper has a view-only role
-// in the grade pipeline:
-//   1. Subject teacher locks a subject's final grade (lockStatus "locked").
-//   2. Adviser approves it (lockStatus "adviser_approved").
-//   3. A student's grades become visible to the record keeper ONLY when every subject
-//      for that student (in the term) has been adviser-approved.
-// The record keeper cannot approve — this endpoint simply returns the complete,
-// viewable grade sets grouped by student. All values computed live — no mocks.
+// Record Keeper final-grade viewer (G7–10). View-only role in the grade pipeline.
 router.get(
   "/final-grades",
   requireAuth,
@@ -293,173 +61,8 @@ router.get(
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
-
-      // Every final-grade row for the record keeper band, with the info needed to
-      // decide which students have a fully adviser-approved term. Roster rows
-      // resolve names/sections from the enlistment instead of a profile.
-      const rows = await prisma.finalGrade.findMany({
-        where: {
-          OR: [
-            { student: { gradeLevel: { in: GRADE_BAND_7_10 } } },
-            { roster: { gradeLevel: { in: GRADE_BAND_7_10 } } },
-          ],
-        },
-        select: {
-          id: true,
-          lockStatus: true,
-          computedAverage: true,
-          transmutedGrade: true,
-          remarks: true,
-          subjectId: true,
-          termId: true,
-          student: {
-            select: {
-              lrn: true,
-              gradeLevel: true,
-              sectionId: true,
-              section: { select: { name: true } },
-              user: { select: { fullName: true } },
-            },
-          },
-          roster: {
-            select: {
-              lrn: true,
-              fullName: true,
-              gradeLevel: true,
-              sectionId: true,
-              section: { select: { name: true } },
-            },
-          },
-          subject: { select: { name: true } },
-          term: { select: { id: true, termNumber: true, schoolYear: { select: { name: true } } } },
-        },
-        orderBy: [{ termId: "asc" }, { student: { user: { fullName: "asc" } } }, { subject: { name: "asc" } }],
-      });
-
-      const lrnOf = (r: (typeof rows)[number]) => r.student?.lrn ?? r.roster?.lrn ?? "";
-      const nameOf = (r: (typeof rows)[number]) =>
-        r.student?.user.fullName ?? r.roster?.fullName ?? "";
-      const sectionIdOf = (r: (typeof rows)[number]) =>
-        r.student?.sectionId ?? r.roster?.sectionId ?? "";
-
-      // Batch-fetch teacher assignments for all unique (subject, section, term)
-      // combinations present in the result set. Single term-scoped read
-      // filtered in memory (was one OR branch per unique triple).
-      const teacherKeys = new Set<string>();
-      const teacherTermIds = new Set<string>();
-      for (const r of rows) {
-        const sectionId = sectionIdOf(r);
-        teacherTermIds.add(r.termId);
-        if (sectionId) teacherKeys.add(`${r.subjectId}|${sectionId}|${r.termId}`);
-      }
-      const teacherAssignments = await prisma.teacherSubjectAssignment.findMany({
-        where: { termId: { in: [...teacherTermIds] } },
-        select: {
-          subjectId: true,
-          sectionId: true,
-          termId: true,
-          teacher: { select: { fullName: true } },
-        },
-      });
-      const teacherMap = new Map<string, string>();
-      for (const ta of teacherAssignments) {
-        const key = `${ta.subjectId}|${ta.sectionId}|${ta.termId}`;
-        if (teacherKeys.has(key)) teacherMap.set(key, ta.teacher.fullName);
-      }
-
-      // Group rows by (studentId, termId).
-      const byKey = new Map<string, typeof rows>();
-      for (const r of rows) {
-        const key = `${lrnOf(r)}|${r.term.id}`;
-        if (!byKey.has(key)) byKey.set(key, []);
-        byKey.get(key)!.push(r);
-      }
-
-      // A set is "viewable" when every subject the student is enrolled in for the
-      // term has an adviser-approved final grade. We approximate enrolment by the
-      // subjects present in the term for that student. One row per complete student.
-      const viewableGroups: (typeof rows)[] = [];
-      for (const group of byKey.values()) {
-        if (group.length > 0 && group.every((r) => r.lockStatus === "adviser_approved")) {
-          viewableGroups.push(group);
-        }
-      }
-
-      // Order complete students by name (the rows within a group are already
-      // ordered by term + name + subject).
-      viewableGroups.sort((a, b) => nameOf(a[0]).localeCompare(nameOf(b[0])));
-
-      // Server search: ?q= filters complete sets by student name / LRN /
-      // section / subject before paging (registrar precedent). Stats below
-      // stay global (unfiltered) for the tiles; `total` is the filtered
-      // count that drives the pager.
       const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      const matchedGroups = q
-        ? viewableGroups.filter((group) => {
-            const r0 = group[0];
-            const sectionName =
-              r0.student?.section?.name ?? r0.roster?.section?.name ?? "";
-            return (
-              nameOf(r0).toLowerCase().includes(q) ||
-              lrnOf(r0).toLowerCase().includes(q) ||
-              sectionName.toLowerCase().includes(q) ||
-              group.some((r) => r.subject.name.toLowerCase().includes(q))
-            );
-          })
-        : viewableGroups;
-
-      const totalStudents = matchedGroups.length;
-      const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize));
-      const clampedPage = Math.min(page, totalPages);
-      const slice = matchedGroups.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
-
-      // Stats: "ready" = fully adviser-approved (viewable) rows; "complete" =
-      // distinct viewable student-terms. Both are informational for the record keeper.
-      // "locked" / "adviserApproved" feed the grade pipeline stages on the page.
-      const readyCount = viewableGroups.reduce((sum, g) => sum + g.length, 0);
-      const completeCount = totalStudents;
-      const lockedCount = rows.filter((r) => r.lockStatus === "locked").length;
-      const adviserApprovedCount = rows.filter((r) => r.lockStatus === "adviser_approved").length;
-
-      const students = slice.map((group) => {
-        const r0 = group[0];
-        return {
-          id: `${lrnOf(r0)}|${r0.term.id}`,
-          lrn: lrnOf(r0),
-          name: nameOf(r0),
-          gradeLevel: r0.student?.gradeLevel ?? r0.roster?.gradeLevel ?? "",
-          section: r0.student?.section?.name ?? r0.roster?.section?.name ?? "—",
-          hasAccount: r0.student != null,
-          term: `${r0.term.schoolYear.name.split(" ")[0]} T${r0.term.termNumber}`,
-          overall: Math.round(
-            (group.reduce((sum, r) => sum + (r.transmutedGrade ?? 0), 0) / group.length) * 100
-          ) / 100,
-          subjects: group.map((r) => {
-            const teacherKey = `${r.subjectId}|${sectionIdOf(r)}|${r.termId}`;
-            return {
-              id: r.id,
-              subject: r.subject.name,
-              teacher: teacherMap.get(teacherKey) ?? "—",
-              computedAverage: r.computedAverage ?? 0,
-              transmutedGrade: r.transmutedGrade ?? 0,
-              remarks: r.remarks ?? "—",
-              status: "approved" as const,
-            };
-          }),
-          status: "approved" as const,
-        };
-      });
-
-      res.json({
-        students,
-        total: totalStudents,
-        ready: readyCount,
-        complete: completeCount,
-        locked: lockedCount,
-        adviserApproved: adviserApprovedCount,
-        page: clampedPage,
-        pageSize,
-      });
+      res.json(await listFinalGrades(ctxOf(req), { page, pageSize, q }));
     } catch (e) {
       next(e);
     }
@@ -474,63 +77,16 @@ router.get(
   cache({ tags: ["record-keeper", "accounts"] }),
   async (req, res, next) => {
     try {
-      // Roster scope follows the session's active School Year.
       const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
-
-      const roster = await prisma.studentRoster.findMany({
-        where: { gradeLevel: { in: GRADE_BAND_7_10 }, schoolYearId: schoolYearId ?? "__none__" },
-        select: { lrn: true, gradeLevel: true, section: { select: { name: true } } },
-      });
-
-      const rosteredLrns = new Set(roster.map((r) => r.lrn));
-
-      // LRNs that actually have a student_profiles/login account, with their status.
-      const lrns = roster.map((r) => r.lrn);
-      const profiles = await prisma.studentProfile.findMany({
-        where: { lrn: { in: lrns } },
-        select: { lrn: true, user: { select: { status: true } } },
-      });
-      const statusByLrn = new Map<string, string>();
-      for (const pr of profiles) statusByLrn.set(pr.lrn, pr.user.status);
-
-      const groups = new Map<
-        string,
-        { label: string; grade: string; withAccount: number; pending: number }
-      >();
-      for (const r of roster) {
-        const label = `${gradeLabel(r.gradeLevel)} · ${r.section?.name ?? "Unsectioned"}`;
-        if (!groups.has(label))
-          groups.set(label, { label, grade: gradeLabel(r.gradeLevel), withAccount: 0, pending: 0 });
-        const g = groups.get(label)!;
-        const status = statusByLrn.get(r.lrn);
-        if (status === "active") g.withAccount++;
-        else if (status === "pending") g.pending++;
-      }
-
-      // Pending sign-ups that have no roster entry yet (e.g. just registered) still
-      // count toward the pending total shown in the Pending Students table, so the
-      // breakdown and the table reconcile. Attribute them by their profile grade/section.
-      const pendingUsers = await prisma.studentProfile.findMany({
-        where: { gradeLevel: { in: GRADE_BAND_7_10 }, user: { status: "pending" }, lrn: { notIn: Array.from(rosteredLrns) } },
-        select: { gradeLevel: true, section: { select: { name: true } } },
-      });
-      for (const p of pendingUsers) {
-        const label = `${gradeLabel(p.gradeLevel)} · ${p.section?.name ?? "Unsectioned"}`;
-        if (!groups.has(label))
-          groups.set(label, { label, grade: gradeLabel(p.gradeLevel), withAccount: 0, pending: 0 });
-        groups.get(label)!.pending++;
-      }
-
-      const data = Array.from(groups.values()).map((g, i) => ({ id: `g${i}-${g.label}`, ...g }));
-      res.json({ data });
+      const { roster, statusByLrn } = await getAccountBreakdown(ctxOf(req), { schoolYearId });
+      res.json({ data: await buildRecordKeeperBreakdown(GRADE_BAND_7_10, roster, statusByLrn) });
     } catch (e) {
       next(e);
     }
   }
 );
 
-// Record Keeper accounts audit (G7–10 band only). Shows approval/rejection history
-// for student accounts in the record keeper's grade band. No cache — live state.
+// Record Keeper accounts audit (G7–10 band only). No cache — live state.
 router.get(
   "/accounts-audit",
   requireAuth,
@@ -539,77 +95,14 @@ router.get(
     try {
       const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
       const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "10"), 10) || 10, 1), 50);
-      const skip = (page - 1) * pageSize;
-
-      // Affected users that belong to the record keeper band (G7–G10).
-      const bandProfiles = await prisma.studentProfile.findMany({
-        where: { gradeLevel: { in: GRADE_BAND_7_10 } },
-        select: { userId: true },
-      });
-      const bandUserIds = bandProfiles.map((p) => p.userId);
-
-      const where: any = {
-        actionType: "account_approval",
-        sourceTable: "users",
-        sourceId: { in: bandUserIds },
-      };
-
-      const [rows, total] = await Promise.all([
-        prisma.auditLog.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: pageSize,
-          include: {
-            user: { select: { email: true, role: true, fullName: true } },
-          },
-        }),
-        prisma.auditLog.count({ where }),
-      ]);
-
-      // Resolve the affected student's details from the source user id.
-      const affectedIds = rows
-        .map((r) => r.sourceId)
-        .filter((id): id is string => Boolean(id));
-      const affected = await prisma.user.findMany({
-        where: { id: { in: affectedIds } },
-        select: {
-          id: true,
-          fullName: true,
-          status: true,
-          studentProfile: { select: { lrn: true, gradeLevel: true, section: { select: { name: true } } } },
-        },
-      });
-      const affectedByUserId = new Map(affected.map((u) => [u.id, u]));
-
-      const entries = rows.map((r) => {
-        const a = affectedByUserId.get(r.sourceId ?? "");
-        const approved = (r.newValue as { status?: string } | null)?.status === "active"
-          || (a?.status === "active");
-        return {
-          id: r.id,
-          timestamp: r.createdAt.toISOString(),
-          actor: r.user?.fullName ?? r.user?.email ?? "system",
-          actorRole: r.user?.role ?? "system",
-          studentName: a?.fullName ?? (r.reason || "Student"),
-          lrn: a?.studentProfile?.lrn ?? null,
-          gradeLevel: a?.studentProfile?.gradeLevel ?? null,
-          section: a?.studentProfile?.section?.name ?? null,
-          action: approved ? "approve" : "reject",
-          reason: approved ? "Account activated" : (r.reason ?? "Account rejected"),
-        };
-      });
-
-      res.json({ entries, total, page, pageSize });
+      res.json(await getAccountsAudit({ band: GRADE_BAND_7_10, page, pageSize }));
     } catch (e) {
       next(e);
     }
   }
 );
 
-// Record Keeper adviser SF10 access requests (G7–10 band only). Server-side
-// filter: requests whose section gradeLevel is in the record-keeper band.
-// Live from the database — no mocked data.
+// Record Keeper adviser SF10 access requests (G7–10 band only).
 router.get(
   "/adviser-access-requests",
   requireAuth,
@@ -617,88 +110,10 @@ router.get(
   cache({ tags: ["record-keeper", "adviser-access"] }),
   async (req, res, next) => {
     try {
-      const statusFilter = req.query.status
-        ? String(req.query.status)
-        : undefined;
-
-      const where = {
-        gradeLevel: { in: GRADE_BAND_7_10 },
-        ...(statusFilter ? { status: statusFilter as any } : {}),
-      };
-
-      const rows = await prisma.adviserSf10AccessRequest.findMany({
-        where,
-        include: {
-          adviser: {
-            select: {
-              id: true,
-              fullName: true,
-              staffProfile: { select: { employeeId: true } },
-            },
-          },
-          section: { select: { name: true, gradeLevel: true } },
-        },
-        orderBy: [{ requestedAt: "desc" }],
-      });
-
-      // Single batched advisee read across all request sections (was one
-      // findMany per request). Grouped in memory by sectionId.
-      const sectionIds = [...new Set(rows.map((r) => r.sectionId).filter((id): id is string => !!id))];
-      const allStudents =
-        sectionIds.length > 0
-          ? await prisma.studentProfile.findMany({
-              where: { sectionId: { in: sectionIds }, gradeLevel: { in: GRADE_BAND_7_10 } },
-              select: {
-                sectionId: true,
-                lrn: true,
-                user: { select: { fullName: true } },
-                sf10Records: { select: { status: true } },
-              },
-              orderBy: { lrn: "asc" },
-            })
-          : [];
-      const studentsBySection = new Map<string, typeof allStudents>();
-      for (const s of allStudents) {
-        const key = s.sectionId ?? "";
-        const list = studentsBySection.get(key) ?? [];
-        list.push(s);
-        studentsBySection.set(key, list);
-      }
-
-      const requests = rows.map((r) => {
-          const students = studentsBySection.get(r.sectionId ?? "") ?? [];
-          const affectedAdvisees = students.map((s) => {
-            const sf10 = s.sf10Records[0]?.status;
-            return {
-              lrn: s.lrn,
-              name: s.user.fullName,
-              gradeLevel: r.gradeLevel,
-              section: r.section.name,
-              sf10Status:
-                sf10 === "released"
-                  ? "validated"
-                  : sf10 === "available"
-                    ? "verified"
-                    : "pending",
-            };
-          });
-          return {
-            id: r.id,
-            adviserId: r.adviserId,
-            adviserName: r.adviser?.fullName ?? "Unknown adviser",
-            employeeId: r.adviser?.staffProfile?.employeeId ?? "—",
-            section: r.section?.name ?? "Unsectioned",
-            gradeLevel: r.gradeLevel,
-            reason: r.reason,
-            status: r.status,
-            decisionReason: r.decisionReason,
-            requestedAt: r.requestedAt.toISOString(),
-            decidedAt: r.decidedAt?.toISOString() ?? null,
-            affectedAdvisees,
-          };
-        });
-
-      res.json({ requests });
+      const statusFilter = req.query.status ? String(req.query.status) : undefined;
+      res.json(
+        await listAccessRequests({ band: GRADE_BAND_7_10, scope: "request", status: statusFilter }),
+      );
     } catch (e) {
       next(e);
     }
@@ -712,48 +127,13 @@ router.get(
   requireRole("record_keeper"),
   async (req, res, next) => {
     try {
-      const id = String(req.params.id);
-      const request = await prisma.adviserSf10AccessRequest.findUnique({
-        where: { id },
-        include: {
-          section: { select: { name: true, gradeLevel: true } },
-        },
-      });
-      if (!request) throw new AppError(404, "REQUEST_NOT_FOUND", "Access request not found");
-      if (!GRADE_BAND_7_10.includes(request.gradeLevel as GradeLevel)) {
-        throw new AppError(403, "FORBIDDEN", "Not in record-keeper grade band");
-      }
-
-      const students = await prisma.studentProfile.findMany({
-        where: { sectionId: request.sectionId, gradeLevel: { in: GRADE_BAND_7_10 } },
-        select: {
-          lrn: true,
-          user: { select: { fullName: true } },
-          sf10Records: { select: { id: true, status: true, source: true, uploadedFileUrl: true, verifiedAt: true, validatedAt: true, currentVersion: true } },
-        },
-        orderBy: { lrn: "asc" },
-      });
-
-      const records = students.map((s) => {
-        const rec = s.sf10Records[0];
-        return {
-          lrn: s.lrn,
-          name: s.user.fullName,
-          record: rec
-            ? {
-                id: rec.id,
-                source: rec.source,
-                status: rec.status,
-                fileUrl: rec.uploadedFileUrl,
-                verifiedAt: rec.verifiedAt?.toISOString() ?? null,
-                validatedAt: rec.validatedAt?.toISOString() ?? null,
-                currentVersion: rec.currentVersion,
-              }
-            : null,
-        };
-      });
-
-      res.json({ requestId: id, records });
+      res.json(
+        await getAccessRecords({
+          requestId: String(req.params.id),
+          band: GRADE_BAND_7_10,
+          enforceBand: true,
+        }),
+      );
     } catch (e) {
       next(e);
     }
@@ -761,87 +141,6 @@ router.get(
 );
 
 // Decide (approve or deny) an adviser SF10 access request (record-keeper G7–10).
-async function decideAccessRequestRK(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-  approved: boolean
-) {
-  try {
-    const id = String(req.params.id);
-    const request = await prisma.adviserSf10AccessRequest.findUnique({
-      where: { id },
-      include: {
-        adviser: { select: { fullName: true } },
-        section: { select: { name: true, gradeLevel: true } },
-      },
-    });
-    if (!request) throw new AppError(404, "REQUEST_NOT_FOUND", "Access request not found");
-    if (!GRADE_BAND_7_10.includes(request.gradeLevel as GradeLevel)) {
-      throw new AppError(403, "FORBIDDEN", "Not in record-keeper grade band");
-    }
-    if (request.status !== "pending")
-      throw new AppError(409, "ALREADY_DECIDED", "Request already processed");
-
-    const reason = approved
-      ? null
-      : String((req.body as { reason?: string })?.reason ?? "Denied by record keeper");
-
-    const updated = await prisma.adviserSf10AccessRequest.update({
-      where: { id },
-      data: {
-        status: approved ? "approved" : "denied",
-        decidedBy: req.user!.id,
-        decidedAt: new Date(),
-        decisionReason: reason,
-      },
-      include: { section: { select: { name: true } } },
-    });
-
-    await writeAudit({
-      userId: req.user!.id,
-      actionType: approved ? "sf10_access_grant" : "sf10_access_deny",
-      sourceTable: "adviser_sf10_access_requests",
-      sourceId: updated.id,
-      reason: approved ? "SF10 read access granted" : (reason ?? undefined),
-    });
-
-    await fanoutNotification({
-      userId: updated.adviserId,
-      sourceTable: "adviser_sf10_access_requests",
-      action: approved ? "approve" : "deny",
-      message: approved
-        ? `Your request for SF10 read access (${updated.section.name}) was approved.`
-        : `Your request for SF10 read access (${updated.section.name}) was denied.`,
-      sourceId: updated.id,
-    });
-
-    // Own-bell receipt: the acting record keeper's badge bumps live (their
-    // echo toast is suppressed client-side — the mutation toast already
-    // confirmed it).
-    await fanoutNotification({
-      userId: req.user!.id,
-      sourceTable: "adviser_sf10_access_requests",
-      action: "decide_self",
-      message: approved
-        ? `You granted ${request.adviser?.fullName ?? "the adviser"} (${updated.section.name}) SF10 read access.`
-        : `You denied ${request.adviser?.fullName ?? "the adviser"} (${updated.section.name}) SF10 read access.`,
-      sourceId: updated.id,
-    });
-
-    await invalidateTags(["record-keeper", "record-keeper-access", "record-keeper-overview", "adviser-access", "overview"]);
-
-    res.json({
-      id: updated.id,
-      status: updated.status,
-      decisionReason: updated.decisionReason,
-      decidedAt: updated.decidedAt?.toISOString() ?? undefined,
-    });
-  } catch (e) {
-    next(e);
-  }
-}
-
 router.post(
   "/adviser-access-requests/:id/approve",
   requireAuth,
@@ -860,27 +159,20 @@ router.post(
   }
 );
 
-const HEX_COLOR = z
-  .string()
-  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
-
-async function readRecordKeeperProfileSettings(recordKeeperId: string) {
-  const [user, profile] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: recordKeeperId },
-      select: { fullName: true },
-    }),
-    prisma.staffProfile.findUnique({
-      where: { userId: recordKeeperId },
-      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
-    }),
-  ]);
-  return {
-    fullName: user?.fullName ?? "",
-    photoUrl: profile?.photoUrl ?? null,
-    primaryColor: profile?.primaryColor ?? null,
-    secondaryColor: profile?.secondaryColor ?? null,
-  };
+async function decideAccessRequestRK(req: any, res: any, next: any, approved: boolean) {
+  try {
+    const result = await decideAccess(ctxOf(req), {
+      requestId: String(req.params.id),
+      approved,
+      denyReason: (req.body as { reason?: string })?.reason,
+      enforceBand: true,
+      denyDefault: "Denied by record keeper",
+    });
+    await invalidateTags(["record-keeper", "record-keeper-access", "record-keeper-overview", "adviser-access", "overview"]);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
 }
 
 // GET /api/record-keeper/settings/profile — own display name, photo, palette.
@@ -890,7 +182,7 @@ router.get(
   requireRole("record_keeper"),
   async (req, res, next) => {
     try {
-      res.json(await readRecordKeeperProfileSettings(req.user!.id));
+      res.json(await readProfileSettings(req.user!.id));
     } catch (e) {
       next(e);
     }
@@ -902,53 +194,21 @@ router.patch(
   "/settings/profile",
   requireAuth,
   requireRole("record_keeper"),
-  validate(
-    "body",
-    z.object({
-      fullName: z.string().trim().min(1).max(100).optional(),
-      primaryColor: HEX_COLOR.nullable().optional(),
-      secondaryColor: HEX_COLOR.nullable().optional(),
-    })
-  ),
+  validate("body", registryProfileSchema),
   async (req, res, next) => {
     try {
-      const recordKeeperId = req.user!.id;
       const { fullName, primaryColor, secondaryColor } = req.body as {
         fullName?: string;
         primaryColor?: string | null;
         secondaryColor?: string | null;
       };
-      await prisma.$transaction(async (tx) => {
-        if (fullName !== undefined) {
-          await tx.user.update({
-            where: { id: recordKeeperId },
-            data: { fullName },
-          });
-        }
-        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
-        if (primaryColor !== undefined) palette.primaryColor = primaryColor;
-        if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
-        if (Object.keys(palette).length > 0) {
-          await tx.staffProfile.upsert({
-            where: { userId: recordKeeperId },
-            update: palette,
-            create: {
-              userId: recordKeeperId,
-              employeeId: `RK-${recordKeeperId.slice(0, 8)}`,
-              ...palette,
-            },
-          });
-        }
-      });
-      await writeAudit({
-        userId: recordKeeperId,
-        actionType: "update",
-        sourceTable: "staff_profiles",
-        sourceId: recordKeeperId,
-        reason: "Record Keeper updated profile settings",
+      const result = await updateProfileSettings(ctxOf(req), RECORD_KEEPER_IDENTITY, {
+        fullName,
+        primaryColor,
+        secondaryColor,
       });
       await invalidateTags(["record-keeper", "overview"]);
-      res.json(await readRecordKeeperProfileSettings(recordKeeperId));
+      res.json(result);
     } catch (e) {
       next(e);
     }
@@ -961,37 +221,13 @@ router.post(
   "/settings/photo",
   requireAuth,
   requireRole("record_keeper"),
-  validate(
-    "body",
-    z.object({
-      photoUrl: z
-        .string()
-        .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
-        .max(2_800_000),
-    })
-  ),
+  validate("body", registryPhotoSchema),
   async (req, res, next) => {
     try {
-      const recordKeeperId = req.user!.id;
       const { photoUrl } = req.body as { photoUrl: string };
-      await prisma.staffProfile.upsert({
-        where: { userId: recordKeeperId },
-        update: { photoUrl },
-        create: {
-          userId: recordKeeperId,
-          employeeId: `RK-${recordKeeperId.slice(0, 8)}`,
-          photoUrl,
-        },
-      });
-      await writeAudit({
-        userId: recordKeeperId,
-        actionType: "update",
-        sourceTable: "staff_profiles",
-        sourceId: recordKeeperId,
-        reason: "Record Keeper updated profile photo",
-      });
+      const result = await updateProfilePhoto(ctxOf(req), RECORD_KEEPER_IDENTITY, photoUrl);
       await invalidateTags(["record-keeper", "overview"]);
-      res.json({ photoUrl });
+      res.json(result);
     } catch (e) {
       next(e);
     }
