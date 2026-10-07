@@ -29,7 +29,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import type { TeacherActivityRow } from "./teacher-overview-data";
+import type { TeacherActivityRow } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-activity.module.css";
 
 const PAGE_SIZE = 10;

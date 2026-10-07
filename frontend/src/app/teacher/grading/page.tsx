@@ -1,7 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTeacherOverviewGradebook } from "../overview/components/teacher-overview-data";
+import { useTeacherOverviewGradebook } from "@/services/teacher/overview.service";
 import { GradebookCards } from "./components/GradebookCards";
 import styles from "./components/gradebook.module.css";
 

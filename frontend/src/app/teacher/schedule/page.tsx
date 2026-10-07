@@ -7,10 +7,8 @@ import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { useSession } from "@/lib/auth/useSession";
-import {
-  useCachedMasterTeacher,
-  useTeacherOverview,
-} from "../overview/components/teacher-overview-data";
+import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { Inbox, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";

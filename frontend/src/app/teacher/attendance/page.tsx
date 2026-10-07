@@ -23,10 +23,8 @@ import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { useSession } from "@/lib/auth/useSession";
-import {
-  useCachedMasterTeacher,
-  useTeacherOverview,
-} from "@/app/teacher/overview/components/teacher-overview-data";
+import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import BranchedMenu from "@/components/nav/BranchedMenu";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";

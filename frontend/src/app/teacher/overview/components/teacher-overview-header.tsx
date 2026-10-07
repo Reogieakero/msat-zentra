@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTeacherProfileSettings } from "@/services/settings/profile-settings";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { GRADE_GRADIENT } from "@/components/schedule/SectionScheduleCard";
-import type { AdvisorySectionInfo } from "./teacher-overview-data";
+import type { AdvisorySectionInfo } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-header.module.css";
 
 interface TeacherOverviewHeaderProps {

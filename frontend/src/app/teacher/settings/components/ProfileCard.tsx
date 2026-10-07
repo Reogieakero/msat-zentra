@@ -11,7 +11,7 @@ import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { useTeacherOverview } from "../../overview/components/teacher-overview-data";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { useTeacherProfileSettings } from "@/services/settings/profile-settings";
 

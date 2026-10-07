@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BamaChat } from "./components/BamaChat";
-import { useTeacherOverview } from "../overview/components/teacher-overview-data";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 
 // Chat with Bama is an adviser-only filing surface: regular subject
 // teachers get no nav item, and a direct URL bounces them back to Overview

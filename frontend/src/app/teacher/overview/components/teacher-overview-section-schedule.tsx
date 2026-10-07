@@ -8,7 +8,7 @@ import {
   type DayConfig,
 } from "@/app/teacher/schedule/components/schedule-time";
 import { MyWeekGrid, type MyWeekSlot } from "@/app/teacher/classes/components/MyWeekGrid";
-import { useTeacherOverview } from "./teacher-overview-data";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./teacher-overview-advisory.module.css";

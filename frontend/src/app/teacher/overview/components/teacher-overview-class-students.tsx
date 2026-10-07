@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "./teacher-overview-advisory";
-import type { ClassStudentRow } from "./teacher-overview-data";
+import type { ClassStudentRow } from "@/services/teacher/overview.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./teacher-overview-advisory.module.css";
 

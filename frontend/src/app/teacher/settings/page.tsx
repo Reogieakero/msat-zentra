@@ -16,10 +16,8 @@ import { useSession } from "@/lib/auth/useSession";
 import { useTheme } from "@/components/providers";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import {
-  useCachedMasterTeacher,
-  useTeacherOverview,
-} from "../overview/components/teacher-overview-data";
+import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 
 function getErrorMessage(err: unknown, fallback: string): string {

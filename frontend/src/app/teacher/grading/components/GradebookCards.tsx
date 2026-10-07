@@ -7,7 +7,7 @@ import type {
   ClassAverageRow,
   SubjectAssessmentRow,
   TeacherClassRow,
-} from "../../overview/components/teacher-overview-data";
+} from "@/services/teacher/overview.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./GradebookCards.module.css";
 

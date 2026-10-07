@@ -21,7 +21,7 @@ import {
   fetchTeacherOverviewGradebook,
   teacherOverviewGradebookKey,
   useTeacherOverview,
-} from "./components/teacher-overview-data";
+} from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/teacher-overview.module.css";
 

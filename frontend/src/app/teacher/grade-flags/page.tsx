@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useTeacherOverview } from "../overview/components/teacher-overview-data";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { RaiseFlagChat } from "./components/RaiseFlagChat";
 import { FlagHistory } from "./components/FlagHistory";
 import styles from "./components/grade-flags.module.css";

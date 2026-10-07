@@ -9,7 +9,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Users } from "lucide-react";
-import type { TeacherClassRow } from "./teacher-overview-data";
+import type { TeacherClassRow } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-classes.module.css";
 
 interface TeacherOverviewClassesProps {

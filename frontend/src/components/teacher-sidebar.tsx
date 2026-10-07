@@ -27,8 +27,8 @@ import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import {
   useCachedAdviser,
   useCachedMasterTeacher,
-  useTeacherOverview,
-} from "@/app/teacher/overview/components/teacher-overview-data";
+} from "@/services/teacher/flagCache";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useSession } from "@/lib/auth/useSession";
 
 type NavItem = {

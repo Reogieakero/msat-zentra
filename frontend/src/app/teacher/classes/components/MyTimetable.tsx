@@ -23,10 +23,8 @@ import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { MyWeekGrid } from "./MyWeekGrid";
 import { useSession } from "@/lib/auth/useSession";
-import {
-  useCachedMasterTeacher,
-  useTeacherOverview,
-} from "@/app/teacher/overview/components/teacher-overview-data";
+import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 
 interface LinkedName {
   id: string;

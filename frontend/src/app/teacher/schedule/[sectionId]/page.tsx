@@ -6,10 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
-import {
-  useCachedMasterTeacher,
-  useTeacherOverview,
-} from "../../overview/components/teacher-overview-data";
+import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
+import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { ScheduleWeekSetup } from "../components/ScheduleWeekSetup";
 import type { ScheduleSection } from "../page";
 

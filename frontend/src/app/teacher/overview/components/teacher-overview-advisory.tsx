@@ -64,7 +64,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { DragAlongCell, DraggableHeader } from "@/components/data-table/drag-columns";
 import { riskBadgeVariant } from "@/lib/risk/status";
-import type { AdvisoryStatusRow } from "./teacher-overview-data";
+import type { AdvisoryStatusRow } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-advisory.module.css";
 
 type StatusFilter = "" | AdvisoryStatusRow["riskLevel"];
