@@ -28,7 +28,7 @@ import { RiskTrendLines } from "@/components/risk-dashboard/RiskTrendLines";
 import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
 import { findHotspot, RiskHotspot } from "@/components/risk-dashboard/RiskHotspot";
 import { buildRiskWatch, RiskWatchCard } from "./components/RiskWatch";
-import { useNurseProfileSettings } from "../settings/components/profile-settings-data";
+import { useNurseProfileSettings } from "@/services/settings/profile-settings";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
 /**

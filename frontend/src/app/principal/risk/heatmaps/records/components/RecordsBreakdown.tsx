@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
-import { usePrincipalProfileSettings } from "@/app/principal/settings/components/profile-settings-data";
+import { usePrincipalProfileSettings } from "@/services/settings/profile-settings";
 import type { RecordStudent } from "../types";
 import {
   CATEGORY_KEYS,

@@ -24,7 +24,7 @@ import { GradeModeProvider } from "./grade-mode-context";
 import {
   PrincipalPaletteGate,
   usePrincipalProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import styles from "./principal.module.css";
 
 function PrincipalShell({ children }: { children: React.ReactNode }) {

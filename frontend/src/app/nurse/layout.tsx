@@ -25,7 +25,7 @@ import { BookingReminderStack } from "@/components/notifications/BookingReminder
 import {
   NursePaletteGate,
   useNurseProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import styles from "./nurse.module.css";
 
 function NurseShell({ children }: { children: React.ReactNode }) {

@@ -13,7 +13,7 @@ import {
   fetchGuidanceOverview,
   type GuidanceOverviewData,
 } from "./components/guidance-overview-data";
-import { useGuidanceProfileSettings } from "../settings/components/profile-settings-data";
+import { useGuidanceProfileSettings } from "@/services/settings/profile-settings";
 import styles from "./components/guidance-overview.module.css";
 
 export default function GuidanceOverviewPage() {

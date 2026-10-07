@@ -29,7 +29,7 @@ import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import {
   CoordinatorPaletteGate,
   useCoordinatorProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import styles from "./coordinator.module.css";
 
 function CoordinatorShell({ children }: { children: React.ReactNode }) {

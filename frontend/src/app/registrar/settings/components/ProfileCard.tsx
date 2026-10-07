@@ -15,7 +15,7 @@ import assign from "@/app/principal/academics/assign/components/section-assignme
 import {
   registrarProfileSettingsKey,
   useRegistrarProfileSettings,
-} from "./profile-settings-data";
+} from "@/services/settings/profile-settings";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

@@ -29,7 +29,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePrincipalProfileSettings } from "@/app/principal/settings/components/profile-settings-data";
+import { usePrincipalProfileSettings } from "@/services/settings/profile-settings";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import styles from "./SchoolTrend.module.css";
 

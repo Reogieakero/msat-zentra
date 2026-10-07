@@ -25,7 +25,7 @@ import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { useGuidanceRealtime } from "@/lib/realtime/guidanceChannel";
 import { GuidanceNotificationsBell } from "./components/GuidanceNotificationsBell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
-import { GuidancePaletteGate } from "./settings/components/profile-settings-data";
+import { GuidancePaletteGate } from "@/services/settings/profile-settings";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import styles from "./guidance.module.css";
 

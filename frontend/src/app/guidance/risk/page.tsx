@@ -30,7 +30,7 @@ import {
   fetchAllGuidanceAlertFactors,
   GuidanceRiskWatchCard,
 } from "./components/GuidanceRiskWatch";
-import { useGuidanceProfileSettings } from "../settings/components/profile-settings-data";
+import { useGuidanceProfileSettings } from "@/services/settings/profile-settings";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
 /**

@@ -26,7 +26,7 @@ import { AdviserClaimGate } from "./components/AdviserClaimGate";
 import {
   TeacherPaletteGate,
   useTeacherProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import { TeacherNotificationsBell } from "./components/TeacherNotificationsBell";
 import { BookingReminderStack } from "@/components/notifications/BookingReminderStack";
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";

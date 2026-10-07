@@ -19,7 +19,7 @@ import {
   applyPalette,
   guidanceProfileSettingsKey,
   useGuidanceProfileSettings,
-} from "./profile-settings-data";
+} from "@/services/settings/profile-settings";
 
 const PRIMARY_PRESETS = [
   "#7c3aed",

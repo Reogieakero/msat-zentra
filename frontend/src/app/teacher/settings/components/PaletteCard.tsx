@@ -16,7 +16,7 @@ import assign from "@/app/principal/academics/assign/components/section-assignme
 import {
   applyPalette,
   useTeacherProfileSettings,
-} from "./profile-settings-data";
+} from "@/services/settings/profile-settings";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 
 const PRIMARY_PRESETS = [

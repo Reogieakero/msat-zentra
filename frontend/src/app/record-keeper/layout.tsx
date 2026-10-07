@@ -25,7 +25,7 @@ import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import {
   RecordKeeperPaletteGate,
   useRecordKeeperProfileSettings,
-} from "./settings/components/profile-settings-data";
+} from "@/services/settings/profile-settings";
 import { RecordKeeperNotificationsBell } from "./components/RecordKeeperNotificationsBell";
 import { useRecordKeeperRealtime } from "@/lib/realtime/recordKeeperChannel";
 import styles from "./record-keeper.module.css";

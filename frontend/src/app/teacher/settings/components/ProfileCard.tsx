@@ -13,7 +13,7 @@ import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { useTeacherOverview } from "../../overview/components/teacher-overview-data";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
-import { useTeacherProfileSettings } from "./profile-settings-data";
+import { useTeacherProfileSettings } from "@/services/settings/profile-settings";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

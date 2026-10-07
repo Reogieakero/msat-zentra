@@ -15,7 +15,7 @@ import {
   CoordinatorOverviewError,
   CoordinatorOverviewSkeleton,
 } from "./components/coordinator-overview-states";
-import { useCoordinatorProfileSettings } from "../settings/components/profile-settings-data";
+import { useCoordinatorProfileSettings } from "@/services/settings/profile-settings";
 import styles from "./components/coordinator-overview.module.css";
 
 export default function CoordinatorOverviewPage() {

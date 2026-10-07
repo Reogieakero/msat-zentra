@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
-import { useCoordinatorProfileSettings } from "../../settings/components/profile-settings-data";
+import { useCoordinatorProfileSettings } from "@/services/settings/profile-settings";
 import styles from "./coordinator-referrals-rail.module.css";
 
 interface CoordinatorReferralsRailProps {

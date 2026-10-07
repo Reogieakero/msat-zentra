@@ -14,7 +14,7 @@ import {
   type CertSummary,
 } from "./coordinator-certifications-data";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
-import { useCoordinatorProfileSettings } from "../../settings/components/profile-settings-data";
+import { useCoordinatorProfileSettings } from "@/services/settings/profile-settings";
 import styles from "./coordinator-certifications-charts.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {
