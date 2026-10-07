@@ -41,9 +41,9 @@ import type {
   AdmReferralForm,
   AdmReferralRow,
 } from "@/services/principal/adm.types";
-import { FormIcon } from "../../../adm/components/FormIcon";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
+import { SignReturnConfirmDialog } from "./SignReturnConfirmDialog";
 import { buildGcForm03Data } from "@/services/guidance/gcform03.service";
 import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import {
@@ -58,10 +58,8 @@ import {
   canReturn,
   type AdmCase,
 } from "../../../adm/adm";
-import dialog from "../../../adm/components/admDialog.module.css";
 import styles from "./all.module.css";
 import assign from "../../../academics/assign/components/section-assignments.module.css";
-import formStyles from "../../../academics/assign/components/form.module.css";
 
 const PAGE_SIZE = 20;
 
@@ -766,78 +764,17 @@ export default function PrincipalAdmReferralsAllPage() {
         viewOnly
       />
 
-      <CardModal
-        open={pendingAction !== null}
-        onClose={() => {
-          if (actionId) return;
+      <SignReturnConfirmDialog
+        pendingAction={pendingAction}
+        busyActionId={actionId}
+        pendingRow={pendingRow}
+        onClose={() => setPendingAction(null)}
+        onConfirm={(target) => {
           setPendingAction(null);
+          if (target.type === "sign") void handleSign(target.id);
+          else void handleReturn(target.id);
         }}
-        size="sm"
-        title={
-          pendingAction?.type === "sign"
-            ? "Sign & approve this case?"
-            : "Return this case for revision?"
-        }
-        description={
-          pendingAction?.type === "sign"
-            ? "You are final-signing this ADM profile. This authorizes module release and moves the case to monitoring."
-            : "The case will be sent back to the ADM Coordinator at the eligibility stage."
-        }
-        dismissable={actionId === null}
-        watchKey={pendingAction?.id}
-      >
-        {pendingRow ? (
-          <div className={dialog.dialogDocs}>
-            <span className={dialog.dialogDocsName}>
-              {pendingRow.student}{" "}
-              <span className={styles.mono}>({pendingRow.lrn})</span>
-            </span>
-            <div className={dialog.dialogDocsRow}>
-              {(pendingRow.forms ?? []).map((f, i) => (
-                <FormIcon
-                  key={f.id}
-                  formType={f.formType}
-                  title={f.title}
-                  status={f.status}
-                  index={i}
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
-        <div className={formStyles.dialogFooter}>
-          <Button
-            variant="outline"
-            onClick={() => setPendingAction(null)}
-            disabled={actionId !== null}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant={pendingAction?.type === "sign" ? "default" : "destructive"}
-            disabled={actionId !== null}
-            aria-busy={actionId !== null}
-            onClick={() => {
-              if (!pendingAction || actionId) return;
-              const target = pendingAction;
-              setPendingAction(null);
-              if (target.type === "sign") void handleSign(target.id);
-              else void handleReturn(target.id);
-            }}
-          >
-            {actionId !== null ? (
-              <>
-                <Spinner className="size-4" aria-hidden />
-                {pendingAction?.type === "sign" ? "Signing…" : "Returning…"}
-              </>
-            ) : pendingAction?.type === "sign" ? (
-              "Sign & Approve"
-            ) : (
-              "Confirm Return"
-            )}
-          </Button>
-        </div>
-      </CardModal>
+      />
     </section>
   );
 }
