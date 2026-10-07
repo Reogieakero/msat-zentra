@@ -15,10 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchGuidanceAnecdotal,
-  type GuidanceAnecdotalData,
-} from "../../anecdotal/components/guidance-anecdotal-data";
+import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
+import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import {

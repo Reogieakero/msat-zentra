@@ -14,7 +14,7 @@ import {
 import type {
   GuidanceAnecdotalCategory,
   GuidanceAnecdotalSummary,
-} from "../../../anecdotal/components/guidance-anecdotal-data";
+} from "@/services/guidance/anecdotal.types";
 import styles from "./guidance-behavioral-filters.module.css";
 
 export type BehavioralCategoryFilter = "all" | GuidanceAnecdotalCategory;

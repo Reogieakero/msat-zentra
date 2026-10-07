@@ -16,10 +16,8 @@ import {
   docSlipsFor,
 } from "./components/guidance-session-documents-folders";
 import type { TypeFilter } from "@/app/guidance/anecdotal/components/guidance-anecdotal-filters";
-import {
-  fetchGuidanceAnecdotal,
-  type GuidanceAnecdotalData,
-} from "@/app/guidance/anecdotal/components/guidance-anecdotal-data";
+import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
+import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";

@@ -1,7 +1,7 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import type { GuidanceAnecdotalSummary } from "../../../anecdotal/components/guidance-anecdotal-data";
+import type { GuidanceAnecdotalSummary } from "@/services/guidance/anecdotal.types";
 import styles from "./guidance-category-donut.module.css";
 
 /** Neutral ink scale — darkest slice always marks the leading category. */

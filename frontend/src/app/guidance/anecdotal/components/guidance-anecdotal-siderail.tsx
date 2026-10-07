@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Files } from "lucide-react";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import type { GuidanceAnecdotalTopStudent } from "./guidance-anecdotal-data";
+import type { GuidanceAnecdotalTopStudent } from "@/services/guidance/anecdotal.types";
 
 /* Top students by referred-case count — same card design as the teacher
    repo rail (assign.card + glow), guidance-worded copy. Fed by the

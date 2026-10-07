@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { HelpCircle, Loader2 } from "lucide-react";
 import { CATEGORY_COLORS } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
-import type { GuidanceAnecdotalRecord } from "@/app/guidance/anecdotal/components/guidance-anecdotal-data";
+import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
 import {
   GuidanceAnecdotalFilters,
   type TypeFilter,

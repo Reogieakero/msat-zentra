@@ -10,10 +10,8 @@ import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSi
 import { TopReferredCard } from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
-import {
-  fetchGuidanceAnecdotal,
-  type GuidanceAnecdotalData,
-} from "./components/guidance-anecdotal-data";
+import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
+import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
