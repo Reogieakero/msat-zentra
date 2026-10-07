@@ -8,10 +8,8 @@ import { Loader2 } from "lucide-react";
 import { NurseAlertsTable } from "../components/NurseAlertsTable";
 import { NurseReferralsSkeleton } from "../components/NurseReferralsSkeleton";
 import { NurseRefreshBadge } from "../../components/nurse-refresh-badge";
-import {
-  fetchNurseAlerts,
-  type NurseAlertsPage,
-} from "../../alerts/components/nurse-alerts-data";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "../nurse-referrals-page.module.css";

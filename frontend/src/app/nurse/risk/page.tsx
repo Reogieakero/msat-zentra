@@ -12,10 +12,12 @@ import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import {
   fetchNurseRiskFactors,
   fetchNurseRiskLevels,
-  type NurseRiskFactors,
-  type NurseRiskLevel,
-} from "../alerts/components/nurse-alerts-data";
-import { fetchNurseRisk } from "./components/nurse-risk-data";
+  fetchNurseRisk,
+} from "@/services/nurse/risk.service";
+import type {
+  NurseRiskFactors,
+  NurseRiskLevel,
+} from "@/services/nurse/nurse.types";
 import {
   buildCategoryTrend,
   buildRiskDashboard,

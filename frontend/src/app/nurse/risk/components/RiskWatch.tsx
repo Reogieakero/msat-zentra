@@ -9,11 +9,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
-import {
-  RISK_FACTOR_WORDS,
-  type NurseRiskFactors,
-  type NurseRiskLevel,
-} from "../../alerts/components/nurse-alerts-data";
+import { RISK_FACTOR_WORDS } from "@/services/nurse/risk.service";
+import type {
+  NurseRiskFactors,
+  NurseRiskLevel,
+} from "@/services/nurse/nurse.types";
 import styles from "./risk-watch.module.css";
 
 export interface RiskWatchedStudent {

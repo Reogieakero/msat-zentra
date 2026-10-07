@@ -59,7 +59,7 @@ import {
 import {
   type NurseAlertItem,
   type NurseRiskLevel,
-} from "./nurse-alerts-data";
+} from "@/services/nurse/nurse.types";
 import styles from "./nurse-alerts.module.css";
 
 const PAGE_SIZE = 15;

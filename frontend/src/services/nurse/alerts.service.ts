@@ -1,65 +1,18 @@
+// Alerts feed for the nurse desk: rule-based alert building over live
+// referrals + notification inbox, the paginated alerts fetch, and inbox
+// read markers.
 import { apiClient } from "@/lib/api/client";
-import {
-  deriveActionStatus,
-  isNurseScope,
-  toQueueRow,
-} from "@/services/nurse/labels";
+import { deriveActionStatus, isNurseScope, toQueueRow } from "./labels";
 import type {
-  NurseQueueRow,
+  NurseAlertItem,
+  NurseAlertSeverity,
+  NurseAlertsData,
+  NurseAlertsPage,
+  NurseAlertsPageParams,
+  NurseAlertsSummary,
+  NurseNotificationItem,
   RawReferral,
-} from "@/services/nurse/nurse.types";
-
-export type NurseAlertSeverity = "urgent" | "new" | "info" | "done";
-
-// Live rule-based risk level from the risk engine (High/Moderate/Low).
-// Null when the student has no account-backed profile (roster-only) or the
-// lookup failed — the table renders "—" for those rows.
-export type NurseRiskLevel = "High" | "Moderate" | "Low";
-
-export interface NurseAlertItem {
-  key: string;
-  severity: NurseAlertSeverity;
-  title: string;
-  detail: string;
-  // One-line waiting / due / resolved line for the card bullets.
-  waiting: string;
-  date: string;
-  sortTime: number;
-  // Account userId (or roster id for enlisted students without accounts)
-  // for the live risk lookup. The endpoint serves both, so every referred
-  // student resolves a level instead of "—".
-  studentId: string | null;
-  row: NurseQueueRow;
-}
-
-export interface NurseNotificationItem {
-  id: string;
-  label: string;
-  message: string;
-  date: string;
-  isRead: boolean;
-}
-
-export interface NurseAlertsSummary {
-  urgent: number;
-  fresh: number;
-  followUps: number;
-  resolvedWeek: number;
-  closed: number;
-  total: number;
-}
-
-export interface NurseAlertsData {
-  summary: NurseAlertsSummary;
-  alerts: NurseAlertItem[];
-  // Every nurse-scope referral in EVERY status (pending through dismissed),
-  // one item per case — desk-wide insights read this list. The `alerts`
-  // feed carries the same rows with action-oriented titles, so nothing
-  // ever disappears from the desk unless the nurse deletes the case.
-  cases: NurseAlertItem[];
-  notifications: NurseNotificationItem[];
-  unread: number;
-}
+} from "./nurse.types";
 
 export const NURSE_SEVERITY_LABELS: Record<NurseAlertSeverity, string> = {
   urgent: "Urgent",
@@ -292,25 +245,6 @@ export function buildNurseAlerts(
   };
 }
 
-export interface NurseAlertsPageParams {
-  q?: string;
-  page?: number;
-  pageSize?: number;
-  track?: "clinic" | "adm";
-  highlight?: string;
-  signal?: AbortSignal;
-}
-
-export interface NurseAlertsPage extends NurseAlertsData {
-  /** Filtered pager count (shrinks on search). */
-  total: number;
-  /** UNFILTERED desk total — tile stats never shrink on search. */
-  unfilteredTotal: number;
-  page: number;
-  totalPages: number;
-  pageSize: number;
-}
-
 interface PaginatedReferrals {
   data?: RawReferral[];
   rows?: RawReferral[];
@@ -376,93 +310,4 @@ export async function markNurseNotificationRead(id: string): Promise<void> {
 
 export async function markAllNurseNotificationsRead(): Promise<void> {
   await apiClient.post("/api/notifications/read-all");
-}
-
-// Status-only factor flags per student (same posture as levels — no
-// confidential fields). Lets desks explain *why* in plain words.
-export type NurseRiskFactors = {
-  Academic: boolean;
-  Attendance: boolean;
-  Behavioral: boolean;
-};
-
-// Plain words for non-technical readers — single source of truth so every
-// desk says the same thing about the same level or factor.
-export const RISK_LEVEL_WORDS: Record<NurseRiskLevel, string> = {
-  High: "Needs urgent attention",
-  Moderate: "Keep an eye on",
-  Low: "Doing okay",
-};
-
-export const RISK_FACTOR_WORDS: Record<keyof NurseRiskFactors, string> = {
-  Academic: "low grades",
-  Attendance: "missing classes",
-  Behavioral: "behavior notes",
-};
-
-// Live factor flags per referred student — same batched endpoint as levels
-// (additive `factors` map). Ids with no result stay absent. Never throws:
-// an empty map simply hides the driver lines.
-export async function fetchNurseRiskFactors(
-  studentIds: string[]
-): Promise<Record<string, NurseRiskFactors>> {
-  const unique = [...new Set(studentIds.filter(Boolean))];
-  if (unique.length === 0) return {};
-  try {
-    const { data } = await apiClient.get<{
-      factors?: Record<string, Partial<NurseRiskFactors> | null>;
-    }>("/api/risk/students/batch", { params: { ids: unique.join(",") } });
-    const map: Record<string, NurseRiskFactors> = {};
-    for (const [id, f] of Object.entries(data?.factors ?? {})) {
-      map[id] = {
-        Academic: f?.Academic === true,
-        Attendance: f?.Attendance === true,
-        Behavioral: f?.Behavioral === true,
-      };
-    }
-    return map;
-  } catch {
-    return {};
-  }
-}
-
-// Live rule-based risk level per referred student — single batched call
-// (GET /api/risk/students/batch?ids=…) replacing the old per-student N+1
-// fan-out. Falls back to per-id requests only if the batch endpoint is
-// unavailable (transitional). Ids with no result stay absent (table "—").
-export async function fetchNurseRiskLevels(
-  studentIds: string[]
-): Promise<Record<string, NurseRiskLevel>> {
-  const unique = [...new Set(studentIds.filter(Boolean))];
-  if (unique.length === 0) return {};
-  const isLevel = (v: unknown): v is NurseRiskLevel =>
-    v === "High" || v === "Moderate" || v === "Low";
-  try {
-    const { data } = await apiClient.get<{ levels: Record<string, string> }>(
-      "/api/risk/students/batch",
-      { params: { ids: unique.join(",") } }
-    );
-    const map: Record<string, NurseRiskLevel> = {};
-    for (const [id, level] of Object.entries(data?.levels ?? {})) {
-      if (isLevel(level)) map[id] = level;
-    }
-    return map;
-  } catch {
-    // Transitional fallback — one failure never blocks the rest.
-    const settled = await Promise.allSettled(
-      unique.map(async (id) => {
-        const { data } = await apiClient.get<{ lrn: string; riskLevel: NurseRiskLevel }>(
-          `/api/risk/students/${id}`
-        );
-        return { id, riskLevel: data?.riskLevel ?? null };
-      })
-    );
-    const map: Record<string, NurseRiskLevel> = {};
-    for (const s of settled) {
-      if (s.status === "fulfilled" && s.value.riskLevel !== null && isLevel(s.value.riskLevel)) {
-        map[s.value.id] = s.value.riskLevel;
-      }
-    }
-    return map;
-  }
 }

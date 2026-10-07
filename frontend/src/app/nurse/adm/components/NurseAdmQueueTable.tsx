@@ -24,7 +24,7 @@ import { NurseAdmReferralFormSheet } from "../../referrals/components/NurseAdmRe
 import type {
   NurseAlertItem,
   NurseRiskLevel,
-} from "../../alerts/components/nurse-alerts-data";
+} from "@/services/nurse/nurse.types";
 import styles from "./nurse-adm.module.css";
 
 /**

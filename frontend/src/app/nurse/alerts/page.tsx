@@ -7,12 +7,12 @@ import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NurseReferralsTable } from "./components/NurseReferralsTable";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
-import {
-  fetchNurseAlerts,
-  fetchNurseRiskLevels,
-  type NurseAlertsPage,
-  type NurseRiskLevel,
-} from "./components/nurse-alerts-data";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
+import type {
+  NurseAlertsPage,
+  NurseRiskLevel,
+} from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../overview/components/use-nurse-mutation";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";

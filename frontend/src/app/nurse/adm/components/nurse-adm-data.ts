@@ -2,7 +2,7 @@ import { deriveActionStatus } from "@/services/nurse/labels";
 import type {
   NurseAlertItem,
   NurseRiskLevel,
-} from "../../alerts/components/nurse-alerts-data";
+} from "@/services/nurse/nurse.types";
 
 export interface NurseAdmActionCount {
   action: string;

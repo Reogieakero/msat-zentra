@@ -4,7 +4,7 @@ import type {
   NurseQueueRow,
   NurseSessionItem,
 } from "@/services/nurse/nurse.types";
-import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
+import type { NurseAlertItem } from "@/services/nurse/nurse.types";
 
 export interface DocEntry {
   key: string;

@@ -7,12 +7,12 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchNurseAlerts,
-  fetchNurseRiskLevels,
-  type NurseAlertsPage,
-  type NurseRiskLevel,
-} from "../alerts/components/nurse-alerts-data";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
+import type {
+  NurseAlertsPage,
+  NurseRiskLevel,
+} from "@/services/nurse/nurse.types";
 import {
   buildNurseAdmInsights,
   buildNurseAdmReferrals,

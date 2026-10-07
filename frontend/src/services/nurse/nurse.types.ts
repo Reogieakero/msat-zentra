@@ -261,3 +261,82 @@ export interface NurseReferralDraft {
   recommendation: string;
   scheduledAt?: string;
 }
+
+export type NurseAlertSeverity = "urgent" | "new" | "info" | "done";
+
+// Live rule-based risk level from the risk engine (High/Moderate/Low).
+// Null when the student has no account-backed profile (roster-only) or the
+// lookup failed — the table renders "—" for those rows.
+export type NurseRiskLevel = "High" | "Moderate" | "Low";
+
+export interface NurseAlertItem {
+  key: string;
+  severity: NurseAlertSeverity;
+  title: string;
+  detail: string;
+  // One-line waiting / due / resolved line for the card bullets.
+  waiting: string;
+  date: string;
+  sortTime: number;
+  // Account userId (or roster id for enlisted students without accounts)
+  // for the live risk lookup. The endpoint serves both, so every referred
+  // student resolves a level instead of "—".
+  studentId: string | null;
+  row: NurseQueueRow;
+}
+
+export interface NurseNotificationItem {
+  id: string;
+  label: string;
+  message: string;
+  date: string;
+  isRead: boolean;
+}
+
+export interface NurseAlertsSummary {
+  urgent: number;
+  fresh: number;
+  followUps: number;
+  resolvedWeek: number;
+  closed: number;
+  total: number;
+}
+
+export interface NurseAlertsData {
+  summary: NurseAlertsSummary;
+  alerts: NurseAlertItem[];
+  // Every nurse-scope referral in EVERY status (pending through dismissed),
+  // one item per case — desk-wide insights read this list. The `alerts`
+  // feed carries the same rows with action-oriented titles, so nothing
+  // ever disappears from the desk unless the nurse deletes the case.
+  cases: NurseAlertItem[];
+  notifications: NurseNotificationItem[];
+  unread: number;
+}
+
+export interface NurseAlertsPageParams {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  track?: "clinic" | "adm";
+  highlight?: string;
+  signal?: AbortSignal;
+}
+
+export interface NurseAlertsPage extends NurseAlertsData {
+  /** Filtered pager count (shrinks on search). */
+  total: number;
+  /** UNFILTERED desk total — tile stats never shrink on search. */
+  unfilteredTotal: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+}
+
+// Status-only factor flags per student (same posture as levels — no
+// confidential fields). Lets desks explain *why* in plain words.
+export type NurseRiskFactors = {
+  Academic: boolean;
+  Attendance: boolean;
+  Behavioral: boolean;
+};

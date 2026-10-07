@@ -4,10 +4,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchNurseAlerts,
-  type NurseAlertsPage,
-} from "../alerts/components/nurse-alerts-data";
+import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
+import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useTerm } from "@/lib/term/TermContext";
 import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
