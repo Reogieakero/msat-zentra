@@ -6,24 +6,22 @@ import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 
-const PRINCIPAL_KEYS = [
-  ["principal-notifications"],
-  // The schedule grid + detail pages read ["principal-schedule-sections"],
-  // so master-teacher submissions repaint the cards with no page refresh.
-  // (Keys match element-wise — each workspace key is listed explicitly.)
-  ["principal-schedule-sections"],
-  ["principal-schedule-config"],
-  // Academic heatmap trend page reads ["academic-insights", "live"] (always
-  // raw). Invalidating the prefix keeps the line chart live on grade saves
-  // with no manual refresh; a 15s poll on the page covers anything missed.
-  ["academic-insights"],
-  // Attendance heatmap stacked page (trend + averages + attention). Prefix
-  // invalidation keeps every section live on attendance saves; a 30s poll on
-  // the page covers anything missed.
-  ["attendance-section-averages"],
-  ["attendance-needs-attention"],
-  ["attendance-section-subject-heatmap"],
-] as const;
+// Targeted invalidation map: notification type/source → exact query keys.
+// Never a 7-key blast, and never the ["academic-insights"] prefix (live and
+// honor-roll are distinct keys so one never kills the other).
+const KEY_FOR_SOURCE: Record<string, string[][]> = {
+  schedule_submitted: [["principal-schedule-sections"], ["principal-schedule-config"]],
+  schedule_approved: [["principal-schedule-sections"], ["principal-schedule-config"]],
+  schedule_rejected: [["principal-schedule-sections"], ["principal-schedule-config"]],
+  referral_status_change: [["adm-dashboard"]],
+  new_adm_case: [["adm-dashboard"]],
+  device_issued: [["adm-dashboard"]],
+  grade_lock: [["academic-insights", "live"], ["academic-insights", "honor-roll-live"], ["academics"]],
+  grade_unlock: [["academic-insights", "live"], ["academic-insights", "honor-roll-live"], ["academics"]],
+  intervention_approval: [["interventions-list"]],
+  attendance: [["attendance-section-averages"], ["attendance-needs-attention"]],
+};
+const ALWAYS_KEYS: string[][] = [["principal-notifications"]];
 
 interface PrincipalNotification {
   id: string;
@@ -39,9 +37,10 @@ interface PrincipalNotification {
 // net: the browser Supabase client authenticates as anon (the app's sessions
 // are backend-signed JWTs, not Supabase Auth), so row-scoped Realtime events
 // never reach it even with the table published. Cheap indexed query, and
-// rows already toasted are skipped through `seenIds`. Kept short so master
-// submissions surface within seconds.
-const FALLBACK_POLL_MS = 5_000;
+// rows already toasted are skipped through `seenIds`. 15s (was 5s) —
+// focused polling is per-page (academics: none, attendance: 60s) so the
+// shell poll doesn't need to be aggressive.
+const FALLBACK_POLL_MS = 15_000;
 const MAX_TOASTS_PER_POLL = 3;
 
 /** Current user id from the stored access JWT (backend signs `sub`). */
@@ -105,7 +104,7 @@ export function usePrincipalRealtime(enabled = true) {
         title: toastTitleFor(row),
         description: row.message,
       });
-      void invalidate();
+      void invalidate(row);
     }
 
     try {
@@ -176,13 +175,25 @@ export function usePrincipalRealtime(enabled = true) {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
-    function invalidate() {
+    function invalidate(row?: PrincipalNotification) {
       // Throttle bursts to one invalidate per 2s (toasts still fire per row).
       const now = Date.now();
       if (now - lastInvalidated.current < 2000) return;
       lastInvalidated.current = now;
-      for (const key of PRINCIPAL_KEYS) {
+      // Targeted: resolve keys from the notification type; fall back to the
+      // bell only when the type is unknown (never a full-desk blast).
+      const extra = row ? (KEY_FOR_SOURCE[row.type] ?? []) : [];
+      // Attendance-sourced rows without a typed key still refresh attendance.
+      const keys = [...ALWAYS_KEYS, ...extra];
+      for (const key of keys) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
+      }
+      if (row && extra.length === 0 && row.type !== "referral_status_change") {
+        // Unknown type: bell already refreshed above; nothing else to do.
+      }
+      if (!row) {
+        // Overflow path (capped toasts): refresh bell only; lists revalidate
+        // on their own stale timers.
       }
     }
 

@@ -115,7 +115,12 @@ export interface GuidanceOverviewData {
   admQueue: GuidanceAdmRow[];
 }
 
-export async function fetchGuidanceOverview(): Promise<GuidanceOverviewData> {
-  const { data } = await apiClient.get<GuidanceOverviewData>("/api/guidance/overview");
+export async function fetchGuidanceOverview(
+  signal?: AbortSignal
+): Promise<GuidanceOverviewData> {
+  const { data } = await apiClient.get<GuidanceOverviewData>(
+    "/api/guidance/overview",
+    { signal }
+  );
   return data;
 }

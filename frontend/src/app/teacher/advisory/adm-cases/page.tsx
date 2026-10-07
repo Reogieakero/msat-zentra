@@ -1,19 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { writeLastViewedReferralId } from "../referrals/last-viewed";
 import { AdmCaseCard } from "./components/AdmCaseCard";
 import { AdmCaseRail } from "./components/AdmCaseRail";
-import { fetchMyAdmCases, type AdmCase } from "./components/adm-cases-data";
+import {
+  fetchMyAdmCases,
+  type AdmCase,
+  type MyAdmCasesPage,
+} from "./components/adm-cases-data";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/adm-cases.module.css";
 
-const PAGE_SIZE = 50;
+const TEACHER_ADM_CASES_PAGE_SIZE = 15;
 
 // Narrower cards than the section grid default.
 const GRID_STYLE: React.CSSProperties = {
@@ -28,23 +33,58 @@ const GRID_STYLE: React.CSSProperties = {
  * (pending or principal-approved), one section-grid card per case.
  * Read-only — stage and status only, never confidential detail.
  */
-export default function TeacherAdvisoryAdmCasesPage() {
+function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | null }) {
   const router = useRouter();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [page, setPage] = useState(1);
+  const [takeover, setTakeover] = useState(false);
   const [detailCase, setDetailCase] = useState<AdmCase | null>(null);
+  // Bell deep-links (?highlight=<id>) serve the case's own page; the first
+  // pager touch takes over with plain params. Derived, no effects.
+  const landing = !takeover && highlightId !== null;
 
-  const casesQuery = useQuery({
-    queryKey: ["adm-my-cases"],
-    queryFn: fetchMyAdmCases,
+  const casesQuery = useQuery<MyAdmCasesPage>({
+    queryKey: ["adm-my-cases", takeover || !landing ? page : 1, termKey, landing ? (highlightId ?? "") : ""],
+    queryFn: ({ signal }) =>
+      fetchMyAdmCases({
+        page: takeover || !landing ? page : 1,
+        pageSize: TEACHER_ADM_CASES_PAGE_SIZE,
+        ...(landing && highlightId ? { highlight: highlightId } : {}),
+        signal,
+      }),
+    // Page turns reuse the previous page so they never flash skeletons.
+    placeholderData: keepPreviousData,
     retry: false,
   });
-  const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
+  const goToPage = (next: number) => {
+    setTakeover(true);
+    setPage(next);
+  };
 
-  const totalPages = Math.max(1, Math.ceil(cases.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = cases.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = cases.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, cases.length);
+  // Scroll the highlighted case into view once its page renders. The
+  // backend serves the highlight's own page, so the card is mounted here.
+  useEffect(() => {
+    if (!highlightId) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`teacher-adm-case-${highlightId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [highlightId, casesQuery.data]);
+  // Stable reference so downstream memos don't recompute every render.
+  const cases = useMemo(
+    () => (Array.isArray(casesQuery.data?.cases) ? casesQuery.data.cases : []),
+    [casesQuery.data]
+  );
+  const total = casesQuery.data?.total ?? cases.length;
+  const unfilteredTotal = casesQuery.data?.unfilteredTotal ?? cases.length;
+
+  // Derived, never setState-in-effect.
+  const totalPages = Math.max(1, casesQuery.data?.totalPages ?? 1);
+  const safePage = Math.min(casesQuery.data?.page ?? page, totalPages);
+  const pageRows = cases;
 
   function handleTrack(caseData: AdmCase) {
     // Deep-link into the referrals workflow canvas on this case's referral.
@@ -59,7 +99,8 @@ export default function TeacherAdvisoryAdmCasesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">ADM Cases</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {cases.length === 1 ? "1 referred case" : `${cases.length} referred cases`}.
+            {total === 1 ? "1 referred case" : `${total} referred cases`}
+            {unfilteredTotal !== total ? ` (of ${unfilteredTotal} total)` : ""}.
           </p>
         </div>
 
@@ -91,7 +132,7 @@ export default function TeacherAdvisoryAdmCasesPage() {
             No advisory section assigned, or the cases could not be loaded. Contact the
             school office.
           </p>
-        ) : cases.length === 0 ? (
+        ) : total === 0 ? (
           <div className="flex min-h-[60vh] flex-1 flex-col items-center justify-center">
             <div className={`${assign.card} mx-auto w-full max-w-md`}>
               <span className={assign.glowClip} aria-hidden="true">
@@ -123,37 +164,50 @@ export default function TeacherAdvisoryAdmCasesPage() {
           >
             <div className="flex min-w-0 flex-col gap-4">
               <div style={GRID_STYLE} role="group" aria-label="ADM cases">
-                {pageRows.map((c) => (
-                  <AdmCaseCard
-                    key={c.id}
-                    caseData={c}
-                    onDetails={() => setDetailCase(c)}
-                  />
-                ))}
+                {pageRows.map((c) => {
+                  const highlighted =
+                    highlightId !== null &&
+                    (highlightId === c.id || highlightId === c.referralId);
+                  return (
+                    <div
+                      key={c.id}
+                      id={highlighted ? `teacher-adm-case-${highlightId}` : undefined}
+                      data-highlighted={highlighted || undefined}
+                      className={highlighted ? "rounded-md ring-2 ring-amber-500" : undefined}
+                    >
+                      <AdmCaseCard
+                        caseData={c}
+                        onDetails={() => setDetailCase(c)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-              <div className={`${styles.footer} mt-auto`}>
-                <span className={styles.footerInfo}>
-                  {cases.length > 0 ? `${start}–${end} of ${cases.length}` : "0 of 0"}
-                </span>
-                <div className={styles.footerActions}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={safePage <= 1 || cases.length === 0}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={safePage >= totalPages || cases.length === 0}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
+              {total > TEACHER_ADM_CASES_PAGE_SIZE ? (
+                <div className="relative flex items-center justify-end space-x-2">
+                  <div className="text-muted-foreground flex-1 text-sm">
+                    {total} case{total === 1 ? "" : "s"}
+                  </div>
+                  <div className="space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={safePage <= 1 || total === 0}
+                      onClick={() => goToPage(Math.max(1, safePage - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={safePage >= totalPages || total === 0}
+                      onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
             <div className={`min-w-0 ${detailCase ? "" : "overflow-hidden"}`} inert={!detailCase}>
               <div
@@ -174,5 +228,19 @@ export default function TeacherAdvisoryAdmCasesPage() {
         )}
       </div>
     </section>
+  );
+}
+
+function TeacherAdvisoryAdmCasesPageWithHighlight() {
+  // useSearchParams needs a Suspense boundary under the app router.
+  const params = useSearchParams();
+  return <TeacherAdvisoryAdmCasesView highlightId={params.get("highlight")} />;
+}
+
+export default function TeacherAdvisoryAdmCasesPage() {
+  return (
+    <Suspense fallback={<section className={styles.page} aria-busy="true" />}>
+      <TeacherAdvisoryAdmCasesPageWithHighlight />
+    </Suspense>
   );
 }

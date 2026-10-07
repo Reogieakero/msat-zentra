@@ -39,6 +39,11 @@ export type PendingStudent = {
 
 export type PendingStudentsResponse = {
   students: PendingStudent[];
+  /** Present when the request asked for server pagination (?page/?q). */
+  total?: number;
+  unfilteredTotal?: number;
+  page?: number;
+  pageSize?: number;
 };
 
 export function formatRelativeTime(iso: string): string {

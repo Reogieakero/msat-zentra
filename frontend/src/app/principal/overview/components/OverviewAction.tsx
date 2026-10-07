@@ -10,6 +10,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "./overview-data";
 import { AuroraBanner } from "./AuroraBanner";
 import styles from "./OverviewAction.module.css";
@@ -25,9 +26,12 @@ interface Action {
 }
 
 export function OverviewAction() {
+  const { activeTerm } = useTerm();
   const { data, isPending, isError } = useQuery({
-    queryKey: ["overview"],
+    queryKey: ["overview", activeTerm?.termId ?? null],
     queryFn: fetchOverview,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const actions: Action[] = [

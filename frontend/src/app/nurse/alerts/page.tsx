@@ -1,23 +1,54 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NurseReferralsTable } from "./components/NurseReferralsTable";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
-import { fetchNurseAlerts, fetchNurseRiskLevels } from "./components/nurse-alerts-data";
+import {
+  fetchNurseAlerts,
+  fetchNurseRiskLevels,
+  type NurseAlertsPage,
+  type NurseRiskLevel,
+} from "./components/nurse-alerts-data";
+import { useNurseInvalidate } from "../overview/components/use-nurse-mutation";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/nurse-alerts.module.css";
 
+const NURSE_ALERTS_PAGE_SIZE = 15;
+
 export default function NurseAlertsPage() {
-  const queryClient = useQueryClient();
-  const { data, isPending, isError, refetch, isFetching } = useQuery({
-    queryKey: ["nurse-alerts"],
-    queryFn: fetchNurseAlerts,
-    staleTime: 60_000,
-  });
+  const invalidateNurse = useNurseInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const [query, setQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const debounced = useDebouncedValue(query.trim(), 300);
+
+  const { data, isPending, isError, refetch, isFetching } =
+    useQuery<NurseAlertsPage>({
+      queryKey: ["nurse-alerts", page, debounced, termKey],
+      queryFn: ({ signal }) =>
+        fetchNurseAlerts({
+          q: debounced || undefined,
+          page,
+          pageSize: NURSE_ALERTS_PAGE_SIZE,
+          signal,
+        }),
+      // Page turns reuse the previous page so they never flash skeletons.
+      placeholderData: keepPreviousData,
+      staleTime: 60_000,
+    });
+
+  // Derived, never setState-in-effect: the server clamps too, this keeps
+  // the pager truthful while a filter shrinks the list under the cursor.
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(page, totalPages);
 
   // Live rule-based risk level per student behind these cases (account id
   // or roster id — the endpoint serves both).
@@ -28,7 +59,7 @@ export default function NurseAlertsPage() {
           .map((a) => a.studentId)
           .filter((id): id is string => id !== null)
       ),
-    ],
+    ].sort(),
     [data]
   );
   const {
@@ -37,8 +68,8 @@ export default function NurseAlertsPage() {
     isFetching: riskFetching,
     isError: riskError,
     refetch: refetchRisk,
-  } = useQuery({
-    queryKey: ["nurse-risk-levels", studentIds],
+  } = useQuery<Record<string, NurseRiskLevel>>({
+    queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
     enabled: studentIds.length > 0,
@@ -129,15 +160,22 @@ export default function NurseAlertsPage() {
         </p>
       ) : null}
       <NurseReferralsTable
-        alerts={data.alerts}
+        alerts={Array.isArray(data.alerts) ? data.alerts : []}
         riskByStudent={riskByStudent ?? {}}
         riskLoading={riskLoading}
+        query={query}
+        onQueryChange={(v) => {
+          setQuery(v);
+          setPage(1);
+        }}
+        page={safePage}
+        totalPages={totalPages}
+        total={data.total}
+        unfilteredTotal={data.unfilteredTotal}
+        onPageChange={setPage}
+        serverPaged
         onChanged={() => {
-          void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
-          void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
-          void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
-          void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
-          void queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
+          invalidateNurse();
         }}
       />
     </section>

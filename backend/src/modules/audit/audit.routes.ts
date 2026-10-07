@@ -6,8 +6,189 @@ const router = Router();
 
 const MAX_PAGE_SIZE = 100;
 
-// Resolve a human-readable label for an audit entry's source record. Prefers the
-// related student's name; falls back to "table #id" when not resolvable.
+// Batched label resolution: groups entries by source table and issues one
+// findMany per table (+ one studentProfile lookup), instead of 1-2 findUnique
+// per row (N+1). Falls back to "table #id" when not resolvable.
+async function resolveSourceLabels(
+  entries: { sourceTable: string; sourceId: string }[],
+): Promise<Map<string, string>> {
+  const labels = new Map<string, string>();
+  const key = (t: string, id: string) => `${t.toLowerCase()}::${id}`;
+  try {
+    const byTable = new Map<string, string[]>();
+    for (const e of entries) {
+      const t = e.sourceTable.toLowerCase();
+      if (!byTable.has(t)) byTable.set(t, []);
+      if (!byTable.get(t)!.includes(e.sourceId)) byTable.get(t)!.push(e.sourceId);
+    }
+
+    const studentNameById = new Map<string, string>();
+    const collectStudentIds: string[] = [];
+    const collectRosterHints = new Map<string, { table: string; id: string }>();
+
+    const needStudentName = (table: string) =>
+      [
+        "adm_learner_profiles",
+        "health_records",
+        "home_visitation_records",
+        "anecdotal_records",
+        "interventions",
+        "referrals",
+        "sf10_records",
+        "final_grades",
+      ].includes(table);
+
+    // First pass: bulk-fetch source rows per table (select studentId/roster only).
+    const sourceStudent = new Map<string, string | null>();
+    const sourceRoster = new Map<string, string | null>();
+    for (const [table, ids] of byTable) {
+      try {
+        if (table === "adm_learner_profiles") {
+          const rows = await prisma.admLearnerProfile.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, studentId: true },
+          });
+          for (const r of rows) {
+            sourceStudent.set(key(table, r.id), r.studentId ?? null);
+            if (r.studentId) collectStudentIds.push(r.studentId);
+          }
+        } else if (table === "health_records") {
+          const rows = await prisma.healthRecord.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, studentId: true },
+          });
+          for (const r of rows) {
+            sourceStudent.set(key(table, r.id), r.studentId ?? null);
+            if (r.studentId) collectStudentIds.push(r.studentId);
+          }
+        } else if (table === "home_visitation_records") {
+          const rows = await prisma.homeVisitationRecord.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, studentId: true },
+          });
+          for (const r of rows) {
+            sourceStudent.set(key(table, r.id), r.studentId ?? null);
+            if (r.studentId) collectStudentIds.push(r.studentId);
+          }
+        } else if (
+          table === "anecdotal_records" ||
+          table === "interventions" ||
+          table === "referrals" ||
+          table === "final_grades"
+        ) {
+          const model =
+            table === "anecdotal_records"
+              ? prisma.anecdotalRecord
+              : table === "interventions"
+                ? prisma.intervention
+                : table === "referrals"
+                  ? prisma.referral
+                  : prisma.finalGrade;
+          const rows = await (model as any).findMany({
+            where: { id: { in: ids } },
+            select: { id: true, studentId: true, roster: { select: { fullName: true } } },
+          });
+          for (const r of rows) {
+            sourceStudent.set(key(table, r.id), r.studentId ?? null);
+            sourceRoster.set(key(table, r.id), r.roster?.fullName ?? null);
+            if (r.studentId) collectStudentIds.push(r.studentId);
+          }
+        } else if (table === "sf10_records") {
+          const rows = await prisma.sf10Record.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, studentId: true },
+          });
+          for (const r of rows) {
+            sourceStudent.set(key(table, r.id), r.studentId ?? null);
+            if (r.studentId) collectStudentIds.push(r.studentId);
+          }
+        } else if (table === "student_profiles" || table === "studentprofile") {
+          const rows = await prisma.studentProfile.findMany({
+            where: { userId: { in: ids } },
+            include: { user: { select: { fullName: true } } },
+          });
+          for (const r of rows) studentNameById.set(r.userId, r.user.fullName);
+        } else if (table === "users") {
+          const rows = await prisma.user.findMany({
+            where: { id: { in: ids } },
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              studentProfile: { select: { userId: true } },
+            },
+          });
+          for (const r of rows) {
+            const name = r.fullName || r.email;
+            labels.set(key(table, r.id), r.studentProfile ? `Student · ${name}` : name);
+          }
+        } else if (table === "school_years") {
+          const rows = await prisma.schoolYear.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, name: true },
+          });
+          for (const r of rows) labels.set(key(table, r.id), r.name);
+        }
+        if (needStudentName(table)) void collectRosterHints;
+      } catch {
+        // Per-table failure falls back to "table #id" below.
+      }
+    }
+
+    if (collectStudentIds.length > 0) {
+      const uniq = Array.from(new Set(collectStudentIds));
+      const profiles = await prisma.studentProfile.findMany({
+        where: { userId: { in: uniq } },
+        include: { user: { select: { fullName: true } } },
+      });
+      for (const p of profiles) studentNameById.set(p.userId, p.user.fullName);
+    }
+
+    const prefixFor = (table: string) => {
+      switch (table) {
+        case "adm_learner_profiles":
+          return "ADM";
+        case "health_records":
+          return "Health";
+        case "home_visitation_records":
+          return "Home Visit";
+        case "anecdotal_records":
+          return "Anecdotal";
+        case "interventions":
+          return "Intervention";
+        case "referrals":
+          return "Referral";
+        case "sf10_records":
+          return "SF10";
+        case "final_grades":
+          return "Final Grade";
+        default:
+          return null;
+      }
+    };
+
+    for (const e of entries) {
+      const k = key(e.sourceTable, e.sourceId);
+      if (labels.has(k)) continue;
+      const table = e.sourceTable.toLowerCase();
+      const prefix = prefixFor(table);
+      if (prefix) {
+        const sid = sourceStudent.get(k);
+        const profileName = sid ? (studentNameById.get(sid) ?? null) : null;
+        const rosterName = sourceRoster.get(k) ?? null;
+        const resolved = profileName ?? rosterName;
+        labels.set(k, resolved ? `${prefix} · ${resolved}` : `${e.sourceTable} #${e.sourceId}`);
+      } else if (!labels.has(k)) {
+        labels.set(k, `${e.sourceTable} #${e.sourceId}`);
+      }
+    }
+  } catch {
+    // Fallback handled by caller.
+  }
+  return labels;
+}
+
+// Legacy single-row resolver kept for compatibility (unused in list path).
 async function resolveSourceLabel(
   sourceTable: string,
   sourceId: string,
@@ -203,12 +384,16 @@ router.get(
         newValue: r.newValue as Record<string, unknown> | null,
       }));
 
-      const entries = await Promise.all(
-        baseEntries.map(async (e) => ({
-          ...e,
-          sourceLabel: await resolveSourceLabel(e.sourceTable, e.sourceId),
-        })),
+      // Batched: ~3-5 queries per page instead of ~40 (N+1).
+      const labelMap = await resolveSourceLabels(
+        baseEntries.map((e) => ({ sourceTable: e.sourceTable, sourceId: e.sourceId })),
       );
+      const entries = baseEntries.map((e) => ({
+        ...e,
+        sourceLabel:
+          labelMap.get(`${e.sourceTable.toLowerCase()}::${e.sourceId}`) ??
+          `${e.sourceTable} #${e.sourceId}`,
+      }));
 
       res.json({ entries, total, page: Math.max(parseInt(page, 10) || 1, 1), pageSize: take });
     } catch (e) {

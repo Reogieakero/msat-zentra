@@ -16,12 +16,16 @@ import {
   docSlipsFor,
 } from "./components/guidance-session-documents-folders";
 import type { TypeFilter } from "@/app/guidance/anecdotal/components/guidance-anecdotal-filters";
-import { fetchGuidanceAnecdotal } from "@/app/guidance/anecdotal/components/guidance-anecdotal-data";
+import {
+  fetchGuidanceAnecdotal,
+  type GuidanceAnecdotalData,
+} from "@/app/guidance/anecdotal/components/guidance-anecdotal-data";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/guidance/anecdotal/components/guidance-anecdotal.module.css";
 
-const FETCH_SIZE = 200;
-const PAGE_SIZE = 24;
+const GUIDANCE_SESSION_DOCS_PAGE_SIZE = 15;
 
 function hasDocsCheck(record: { sessionDocs?: { files: { mimeType: string }[] }[] }): boolean {
   return (record.sessionDocs ?? []).some((s) =>
@@ -35,33 +39,42 @@ function hasDocsCheck(record: { sessionDocs?: { files: { mimeType: string }[] }[
  * files only). Same privacy gates as the case files.
  */
 export default function GuidanceSessionDocumentsPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
-  const [query, setQuery] = React.useState("");
   const [type, setType] = React.useState<TypeFilter>("");
   const [page, setPage] = React.useState(1);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setQuery(queryInput.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [queryInput]);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const query = useDebouncedValue(queryInput.trim(), 300);
 
   const handleQueryInputChange = (value: string) => {
     setQueryInput(value);
     setPage(1);
   };
 
-  const { data, isPending, isError, isFetching, refetch, isRefetching } = useQuery({
-    queryKey: ["guidance-session-documents", query, type],
-    queryFn: ({ signal }) =>
-      fetchGuidanceAnecdotal({ q: query, type, page: 1, pageSize: FETCH_SIZE }, { signal }),
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
-  });
+  const { data, isPending, isError, isFetching, refetch, isRefetching } =
+    useQuery<GuidanceAnecdotalData>({
+      queryKey: ["guidance-session-documents", page, query, type, termKey],
+      queryFn: ({ signal }) =>
+        fetchGuidanceAnecdotal(
+          {
+            q: query || undefined,
+            type,
+            docsOnly: true,
+            page,
+            pageSize: GUIDANCE_SESSION_DOCS_PAGE_SIZE,
+          },
+          { signal }
+        ),
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
+    });
 
+  // The endpoint already serves only filings with filed images (docs=1);
+  // the client check stays as a safety net on the served page rows.
   const docsRecords = React.useMemo(
-    () => (data?.records ?? []).filter(hasDocsCheck),
+    () =>
+      (Array.isArray(data?.records) ? data.records : []).filter(hasDocsCheck),
     [data]
   );
 
@@ -70,10 +83,11 @@ export default function GuidanceSessionDocumentsPage() {
     [docsRecords]
   );
 
-  const total = docsRecords.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const visible = docsRecords.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  // Derived, never setState-in-effect.
+  const total = data?.total ?? docsRecords.length;
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(data?.page ?? page, totalPages);
+  const visible = docsRecords;
 
   if (isPending) {
     return (
@@ -201,7 +215,7 @@ export default function GuidanceSessionDocumentsPage() {
           <GuidanceSessionDocumentsFolders
             records={visible}
             page={safePage}
-            pageSize={PAGE_SIZE}
+            pageSize={data.pageSize}
             total={total}
             totalPages={totalPages}
             totalFiles={totalFiles}

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { SheetStatus } from "./attendance-taking-data";
@@ -37,40 +30,48 @@ export function SubmitConfirmDialog({
     .map((s) => `${counts[s]} ${s}`);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={styles.dialog}>
-        <DialogHeader>
-          <DialogTitle>Submit attendance?</DialogTitle>
-          <DialogDescription>
-            {contextLabel} for {dateLabel} — {parts.join(", ")}.
-          </DialogDescription>
-        </DialogHeader>
-        <p className={styles.note}>
-          This locks the sheet for this subject and period. Students you did
-          not mark are submitted as Present. You can still edit it afterwards
-          from here.
-        </p>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => onOpenChange(false)}
-            disabled={confirming}
-          >
-            Cancel
-          </Button>
-          <Button type="button" onClick={onConfirm} disabled={confirming}>
-            {confirming ? (
-              <>
-                <Loader2 className="animate-spin" aria-hidden />
-                Submitting…
-              </>
-            ) : (
-              "Confirm submit"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CardModal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      dismissable={!confirming}
+      size="sm"
+      title="Submit attendance?"
+      description={
+        <>
+          {contextLabel} for {dateLabel} — {parts.join(", ")}.
+        </>
+      }
+    >
+      <p className={styles.note}>
+        This locks the sheet for this subject and period. Students you did
+        not mark are submitted as Present. You can still edit it afterwards
+        from here.
+      </p>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={() => onOpenChange(false)}
+          disabled={confirming}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={onConfirm}
+          disabled={confirming}
+          aria-busy={confirming || undefined}
+        >
+          {confirming ? (
+            <>
+              <Loader2 className="animate-spin" aria-hidden />
+              Submitting…
+            </>
+          ) : (
+            "Confirm submit"
+          )}
+        </Button>
+      </div>
+    </CardModal>
   );
 }

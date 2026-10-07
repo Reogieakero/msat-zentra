@@ -2,12 +2,19 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Loader2, TabletSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorDevices,
@@ -21,49 +28,44 @@ import {
 import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
 import pageStyles from "../pages.module.css";
 
-const DEVICE_PAGE_SIZE = 20;
+/* Desk-level pagination standard: full list pages = 15. */
+const DEVICE_PAGE_SIZE = 15;
 
 function CoordinatorDevicesPageInner() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const [query, setQuery] = React.useState("");
-  const [debounced, setDebounced] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState("");
+  // Debounced 300ms server search (registrar precedent).
+  const debounced = useDebouncedValue(queryInput.trim(), 300);
   const [filter, setFilter] = React.useState<DeviceFilter>("all");
   const [page, setPage] = React.useState(1);
-  const [issueOpen, setIssueOpen] = React.useState(false);
+  // Deep-link from the sidebar needs-device reminder (?issue=1): initial
+  // state derives from the URL (no effect); the effect below only clears
+  // the param so a later close never reopens it.
+  const [issueOpen, setIssueOpen] = React.useState(
+    () => searchParams.get("issue") === "1",
+  );
   const [returnTarget, setReturnTarget] = React.useState<AdmDeviceRow | null>(null);
   /** Id of the device being returned — its row button shows `Recording…`
       while every other row stays usable. */
   const [returningId, setReturningId] = React.useState<string | null>(null);
-  const debouncedRef = React.useRef("");
-  // Deep-link from the sidebar needs-device reminder (?issue=1): open the
-  // issue dialog once, then clear the param so it never reopens.
-  const openedForIssue = React.useRef(false);
-
+  const issueParamCleared = React.useRef(false);
   React.useEffect(() => {
-    const t = setTimeout(() => {
-      const next = query.trim();
-      if (next === debouncedRef.current) return;
-      debouncedRef.current = next;
-      setDebounced(next);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  React.useEffect(() => {
-    if (openedForIssue.current) return;
+    if (issueParamCleared.current) return;
     if (searchParams.get("issue") === "1") {
-      openedForIssue.current = true;
-      setIssueOpen(true);
+      issueParamCleared.current = true;
       router.replace(pathname);
     }
   }, [searchParams, pathname, router]);
+  const setQuery = React.useCallback((v: string) => {
+    setQueryInput(v);
+    setPage(1);
+  }, []);
 
   const devicesQuery = useQuery({
-    queryKey: ["coordinator-devices", debounced, filter, page],
+    queryKey: ["coordinator-devices", page, debounced, filter, DEVICE_PAGE_SIZE],
     queryFn: ({ signal }) =>
       fetchCoordinatorDevices({
         q: debounced || undefined,
@@ -72,22 +74,23 @@ function CoordinatorDevicesPageInner() {
         limit: DEVICE_PAGE_SIZE,
         signal,
       }),
-    placeholderData: (prev) => prev,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
   // Principal-approved cases with no device issued yet — powers the
   // centered needs prompt and scopes the issue dialog's learner picker.
+  // Preview shape (distinct key suffix) so it never poisons the paged list.
   const needsQuery = useQuery({
-    queryKey: ["coordinator-devices", "needs-device"],
+    queryKey: ["coordinator-devices", "preview", "needs-device"],
     queryFn: ({ signal }) =>
       fetchCoordinatorApprovals(1, { limit: 200, signal }),
-    placeholderData: (prev) => prev,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
   const needsDevice = React.useMemo(
     () =>
-      (needsQuery.data?.rows ?? []).filter(
+      (Array.isArray(needsQuery.data?.rows) ? needsQuery.data.rows : []).filter(
         (r) => (r.devicesIssued ?? 0) === 0,
       ),
     [needsQuery.data],
@@ -96,6 +99,7 @@ function CoordinatorDevicesPageInner() {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["coordinator-devices"] });
     void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
+    void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
   };
 
   const returnMutation = useMutation({
@@ -103,23 +107,12 @@ function CoordinatorDevicesPageInner() {
       const { data } = await apiClient.post(`/api/adm/devices/${id}/return`, {});
       return data;
     },
-    onSuccess: (_data, id) => {
-      // The returned row flips immediately — patch cached ledger pages
-      // instead of waiting for the refetch.
-      const today = new Date().toISOString().slice(0, 10);
-      queryClient.setQueriesData<{ rows?: AdmDeviceRow[]; total?: number }>(
-        { queryKey: ["coordinator-devices"] },
-        (cached) => {
-          if (!cached || !Array.isArray(cached.rows)) return cached;
-          if (!cached.rows.some((r) => r.id === id)) return cached;
-          return {
-            ...cached,
-            rows: cached.rows.map((r) =>
-              r.id === id ? { ...r, status: "returned" as const, returnedDate: today } : r,
-            ),
-          };
-        },
-      );
+    // Pessimistic: the row flips only via the refetch below after the
+    // server confirms. No optimistic patch: the UI must never outrun the
+    // processing. The acting row shows Recording… until settle.
+    onSuccess: (data, id) => {
+      void data;
+      markSelfNotified(id);
       invalidate();
       setReturnTarget(null);
       toast.success({ title: "Device returned", description: "Return recorded." });
@@ -128,9 +121,15 @@ function CoordinatorDevicesPageInner() {
     onSettled: () => setReturningId(null),
   });
 
-  const rows = React.useMemo(() => devicesQuery.data?.rows ?? [], [devicesQuery.data]);
+  // Defensive: non-array payloads (cached/error shapes) never crash the table.
+  const rows = React.useMemo(
+    () => (Array.isArray(devicesQuery.data?.rows) ? devicesQuery.data.rows : []),
+    [devicesQuery.data],
+  );
+  // `total` = filtered pager count; tiles read the UNFILTERED globals.
   const deviceTotal = devicesQuery.data?.total ?? 0;
   const deviceTotalPages = devicesQuery.data?.totalPages ?? 1;
+  // Derived clamp — never setState in an effect.
   const deviceSafePage = Math.min(page, deviceTotalPages);
   const deviceLimit = devicesQuery.data?.limit ?? DEVICE_PAGE_SIZE;
   const deviceStart = deviceTotal === 0 ? 0 : (deviceSafePage - 1) * deviceLimit + 1;
@@ -197,7 +196,7 @@ function CoordinatorDevicesPageInner() {
             isPending={devicesQuery.isPending}
             isError={devicesQuery.isError || !devicesQuery.data}
             isRefetching={devicesQuery.isRefetching}
-            query={query}
+            query={queryInput}
             onQueryChange={setQuery}
             filter={filter}
             statusLabel={statusLabel}
@@ -234,6 +233,7 @@ function CoordinatorDevicesPageInner() {
       <CardModal
         open={returnTarget !== null}
         onClose={() => setReturnTarget(null)}
+        dismissable={!returnMutation.isPending}
         title="Record device return?"
         description={
           returnTarget ? (

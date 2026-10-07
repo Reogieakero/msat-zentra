@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MousePointerClick } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { useGradeMode } from "../../grade-mode-context";
 import { SectionCardGrid } from "./SectionCardGrid";
 import { SectionStudentsTable } from "./SectionStudentsTable";
@@ -19,14 +20,20 @@ export function StudentsAcademicsGrid() {
   const [selectedSectionId, setSelectedSectionId] = React.useState<string | null>(null);
   const tableRef = React.useRef<HTMLDivElement | null>(null);
 
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
   const {
     data,
     isPending,
     error: queryError,
   } = useQuery({
-    queryKey: ["academics", gradeMode],
+    // Term-scoped shared summary (heatmaps/honor-roll select from their own
+    // keys; backend caches per term). No polling — realtime invalidates.
+    queryKey: ["academics", termId, gradeMode],
     queryFn: async () =>
       (await apiClient.get<AcademicsMock>("/api/academics", { params: { mode: gradeMode } })).data,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const sections = React.useMemo(() => data?.sections ?? [], [data]);

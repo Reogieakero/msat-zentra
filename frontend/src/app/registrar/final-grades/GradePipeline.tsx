@@ -1,29 +1,36 @@
 "use client";
 
 import * as React from "react";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./GradePipeline.module.css";
 
+// Primary-tinted ramp that follows the saved workspace palette
+// (RegistrarPaletteGate paints var(--primary) desk-wide). Progression
+// intensifies toward full primary at the registrar's stage.
 const STAGES = [
   {
     key: "locked",
     order: 1,
     label: "Final Grade Locked",
     owner: "Subject Teacher",
-    color: "#a3a3a3",
+    color: "color-mix(in oklch, var(--primary) 40%, var(--card))",
+    text: "var(--foreground)",
   },
   {
     key: "adviserApproved",
     order: 2,
     label: "Adviser Approved",
     owner: "Class Adviser",
-    color: "#525252",
+    color: "color-mix(in oklch, var(--primary) 70%, var(--card))",
+    text: "var(--foreground)",
   },
   {
     key: "complete",
     order: 3,
     label: "Complete Set Ready",
     owner: "Registrar",
-    color: "#171717",
+    color: "var(--primary)",
+    text: "var(--primary-foreground)",
   },
 ] as const;
 
@@ -42,13 +49,20 @@ interface GradePipelineProps {
 export function GradePipeline({ counts, isLoading, orientation = "horizontal" }: GradePipelineProps) {
   const vertical = orientation === "vertical";
   return (
-    <section className={`${styles.section} ${vertical ? styles.sectionVertical : ""}`}>
-      <h2 className={styles.heading}>Final Grade Approval Pipeline</h2>
-      <p className={styles.subheading}>
-        Grades move from the subject teacher to the adviser; the registrar is view-only
-        once a student&apos;s full term is adviser-approved.
-      </p>
-      <div className={`${styles.track} ${vertical ? styles.trackVertical : ""}`}>
+    <section className={assign.card} aria-labelledby="finals-pipeline">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className="relative">
+        <h2 id="finals-pipeline" className="text-base font-semibold">
+          Final Grade Approval Pipeline
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Grades move from the subject teacher to the adviser; the registrar is view-only
+          once a student&apos;s full term is adviser-approved.
+        </p>
+      </div>
+      <div className={`${styles.track} ${vertical ? styles.trackVertical : ""} relative`}>
         {STAGES.map((step, i) => {
           const isLast = i === STAGES.length - 1;
           const count = counts[step.key];
@@ -57,7 +71,7 @@ export function GradePipeline({ counts, isLoading, orientation = "horizontal" }:
               <div className={`${styles.stage} ${vertical ? styles.stageVertical : ""}`}>
                 <span
                   className={styles.marker}
-                  style={{ backgroundColor: step.color }}
+                  style={{ backgroundColor: step.color, color: step.text }}
                 >
                   {step.order}
                 </span>

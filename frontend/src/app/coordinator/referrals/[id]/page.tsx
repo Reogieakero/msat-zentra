@@ -46,6 +46,7 @@ import {
 import { EvidenceDetailsDialog } from "./evidence-details-dialog";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { toast } from "@/components/ui/sonner";
 import { ParentMeetingCard } from "./parent-meeting-card";
 import { CoordinatorCaseSkeleton } from "./coordinator-case-skeleton";
@@ -92,9 +93,12 @@ function ForwardToPrincipalGate({
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, profileId) => {
+      void data;
+      markSelfNotified(profileId);
       void queryClient.invalidateQueries({ queryKey: ["coordinator-referrals"] });
       void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
       setForwardOpen(false);
       toast.success({
         title: "Endorsed to Principal",
@@ -121,6 +125,8 @@ function ForwardToPrincipalGate({
     caseData.stage === "certification" &&
     !caseData.approvedBy &&
     hasRecommendation;
+  // Auto-pop the forward confirm once the case becomes certifiable
+  // (derived state during render — guarded so it only fires on transition).
   const [wasEligible, setWasEligible] = React.useState(false);
   if (eligible !== wasEligible) {
     setWasEligible(eligible);
@@ -179,8 +185,10 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
       return data as { id: string };
     },
     onSuccess: (profile) => {
+      if (profile?.id) markSelfNotified(profile.id);
       void queryClient.invalidateQueries({ queryKey: ["coordinator-referrals"] });
       void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
       setCreateTarget(null);
       toast.success({
         title: "Learner profile created",

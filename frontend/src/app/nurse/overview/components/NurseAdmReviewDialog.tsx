@@ -46,6 +46,7 @@ export function NurseAdmReviewDialog({
       `${row.student}'s case stays pending until you confirm the referral.`,
     errorFallback: "Could not book the session. Try again.",
     silentError: true,
+    sourceId: row.id,
     onSuccessExtra: () => onChanged(),
   });
 
@@ -57,6 +58,7 @@ export function NurseAdmReviewDialog({
       `${row.student}'s case was closed without ADM follow-through.`,
     errorFallback: "Could not submit your review. Try again.",
     silentError: true,
+    sourceId: row.id,
     onSuccessExtra: () => onChanged(),
   });
 

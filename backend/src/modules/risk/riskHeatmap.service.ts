@@ -120,13 +120,94 @@ export async function getRiskHeatmap(
     Behavioral: 0,
   };
 
-  // Sections are independent — fetch all factor blocks in parallel instead
-  // of one serial round-trip per section.
-  const factorsList = await Promise.all(
-    sections.map((sec) => sectionFactors(sec.id, termId, gradeMode))
-  );
-  const result: HeatmapSection[] = sections.map((sec, i) => {
-    const factors = factorsList[i];
+  // Bulk mode: 2 queries total (profiles + roster for ALL sections),
+  // grouped in JS — instead of 2×N per-section round-trips. Same factor
+  // rules as sectionFactors() (kept for the single-section drill-down).
+  const sectionIds = sections.map((s) => s.id);
+  const gradeOf = (g: { computedAverage: number | null; transmutedGrade: number | null }) =>
+    gradeMode === "raw" ? g.computedAverage : g.transmutedGrade;
+
+  const [allProfiles, allRoster] = await Promise.all([
+    sectionIds.length
+      ? prisma.studentProfile.findMany({
+          where: { sectionId: { in: sectionIds } },
+          select: {
+            lrn: true,
+            sectionId: true,
+            finalGrades: {
+              where: { termId },
+              select: { computedAverage: true, transmutedGrade: true },
+            },
+            attendanceRecords: { where: { termId }, select: { status: true } },
+            anecdotalRecords: { where: { termId }, select: { id: true } },
+          },
+        })
+      : Promise.resolve([]),
+    sectionIds.length
+      ? prisma.studentRoster.findMany({
+          where: { sectionId: { in: sectionIds } },
+          select: {
+            lrn: true,
+            sectionId: true,
+            finalGrades: {
+              where: { termId },
+              select: { computedAverage: true, transmutedGrade: true },
+            },
+            attendanceRecords: { where: { termId }, select: { status: true } },
+            anecdotalRecords: { where: { termId }, select: { id: true } },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  type BulkRow = {
+    lrn: string;
+    sectionId: string | null;
+    finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
+    attendanceRecords: { status: string }[];
+    anecdotalRecords: { id: string }[];
+  };
+  const bySection = new Map<string, { profiles: BulkRow[]; roster: BulkRow[] }>();
+  for (const sec of sections) bySection.set(sec.id, { profiles: [], roster: [] });
+  for (const p of allProfiles as BulkRow[]) {
+    if (p.sectionId) bySection.get(p.sectionId)?.profiles.push(p);
+  }
+  for (const r of allRoster as BulkRow[]) {
+    if (r.sectionId) bySection.get(r.sectionId)?.roster.push(r);
+  }
+
+  const result: HeatmapSection[] = sections.map((sec) => {
+    const bucket = bySection.get(sec.id) ?? { profiles: [], roster: [] };
+    const registeredLrns = new Set(bucket.profiles.map((s) => s.lrn));
+    const rosterOnly = bucket.roster.filter((r) => !registeredLrns.has(r.lrn));
+    const cohort = [
+      ...bucket.profiles.map((s) => ({
+        finalGrades: s.finalGrades,
+        attendanceRecords: s.attendanceRecords,
+        anecdotalCount: s.anecdotalRecords.length,
+      })),
+      ...rosterOnly.map((r) => ({
+        finalGrades: r.finalGrades,
+        attendanceRecords: r.attendanceRecords,
+        anecdotalCount: r.anecdotalRecords.length,
+      })),
+    ];
+    const enrolled = cohort.length;
+    let academic = 0;
+    let attendance = 0;
+    let behavioral = 0;
+    for (const s of cohort) {
+      const avg =
+        s.finalGrades.length > 0
+          ? s.finalGrades.reduce((sum, g) => sum + (gradeOf(g) ?? 0), 0) /
+            s.finalGrades.length
+          : 100;
+      if (avg < 75) academic++;
+      const present = s.attendanceRecords.filter((a) => a.status === "present").length;
+      if (enrolled > 0 && present / enrolled < 0.8) attendance++;
+      if (s.anecdotalCount > 0) behavioral++;
+    }
+    const factors = { Academic: academic, Attendance: attendance, Behavioral: behavioral };
     factorTotals.Academic += factors.Academic;
     factorTotals.Attendance += factors.Attendance;
     factorTotals.Behavioral += factors.Behavioral;

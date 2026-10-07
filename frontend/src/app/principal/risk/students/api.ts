@@ -80,9 +80,12 @@ export interface BackendStudentsResult {
 
 export async function fetchRiskStudents(
   section?: string,
-  gradeMode: "raw" | "final" = "final"
+  gradeMode: "raw" | "final" = "final",
+  pageSize = 50,
 ): Promise<BackendStudentsResult> {
-  const params: Record<string, string> = { pageSize: "1000" };
+  // Default 50 (Teacher-aligned); explicit pageSize=1000 preserved for
+  // export/full-scan callers. Server cap stays 1000.
+  const params: Record<string, string> = { pageSize: String(pageSize) };
   if (section) params.section = section;
   params.gradeMode = gradeMode;
   const { data } = await apiClient.get<BackendStudentsResult>("/api/risk/students", {

@@ -108,7 +108,9 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 1000));
+      // Default 50 (Teacher-aligned small pages); cap 1000 preserved for
+      // explicit export/full-scan callers. Tables render ≤20 rows/page.
+      const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 50));
       const section =
         typeof req.query.section === "string" ? req.query.section : undefined;
       const gradeMode =
@@ -638,13 +640,16 @@ router.get(
         (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
           ? (req.query.gradeMode as "raw" | "final")
           : undefined;
+      // Service clamps to 100 internally; pass 100 explicitly instead of
+      // 1000 so the intent is honest. Follow-up: dedicated groupBy/count
+      // stats query to avoid materializing student rows for 6 ints.
       const result = await getInterventionStudents(
         {
           gradeMode,
           includeRecovered: true,
           fullCohort: true,
           page: 1,
-          pageSize: 1000,
+          pageSize: 100,
         },
         req.termScope ?? undefined,
       );

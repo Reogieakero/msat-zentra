@@ -122,14 +122,14 @@ export function NurseAdmQueueTable({
     <>
       <AdmQueueTable
         title="Latest referrals needing action"
-        description="The 5 most recent ADM cases waiting on your review, decision, or session work. Closed cases stay in the alerts list and count in the reports above."
+        description="The 10 most recent ADM cases waiting on your review, decision, or session work. Closed cases stay in the alerts list and count in the reports above."
         searchPlaceholder="Search student…"
         emptyTitle="No ADM cases need action"
         emptyHint="You're all caught up — new referrals will appear here."
         rows={rows}
         renderActions={renderActions}
         riskLoading={riskLoading}
-        limit={5}
+        limit={10}
         onRowClick={(id) => router.push(`/nurse/referrals/adm?highlight=${id}`)}
       />
 

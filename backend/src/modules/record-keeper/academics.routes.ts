@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { rosterCountsByGrade, rosterCountsBySection } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
+import { notifyAcademicsSelf } from "../../lib/notify.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
 
@@ -243,6 +244,14 @@ router.post(
       ]);
       const enrolled = profiles + (rosterByGrade.get(gl) ?? 0);
 
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "subjects",
+        verb: "created",
+        label: `subject ${subject.name} (${subject.code})`,
+        sourceId: subject.id,
+      });
+
       res.status(201).json({
         id: subject.id,
         code: subject.code,
@@ -287,6 +296,14 @@ router.patch(
         reason: "Record keeper updated subject",
       });
       await invalidateTags(["record-keeper", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "subjects",
+        verb: "updated",
+        label: `subject ${updated.name} (${updated.code})`,
+        sourceId: updated.id,
+      });
 
       res.json({
         id: updated.id,
@@ -581,6 +598,14 @@ router.post(
       });
       await invalidateTags(["record-keeper", "academics", "overview"]);
 
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "sections",
+        verb: "created",
+        label: `section ${section.name}`,
+        sourceId: section.id,
+      });
+
       res.status(201).json({
         id: section.id,
         name: section.name,
@@ -633,6 +658,14 @@ router.patch(
         reason: "Record keeper updated section",
       });
       await invalidateTags(["record-keeper", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "sections",
+        verb: "updated",
+        label: `section ${updated.name}`,
+        sourceId: updated.id,
+      });
 
       res.json({
         id: updated.id,
@@ -844,6 +877,14 @@ router.post(
       });
       await invalidateTags(["record-keeper", "academics"]);
 
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "teacher_subject_assignments",
+        verb: "assigned",
+        label: `${assignment.teacher.fullName} to ${assignment.subject.code} (Term ${assignment.term.termNumber})`,
+        sourceId: assignment.id,
+      });
+
       res.status(201).json({
         id: assignment.id,
         subjectId: assignment.subject.id,
@@ -883,6 +924,14 @@ router.delete(
         reason: "Record keeper removed teacher assignment",
       });
       await invalidateTags(["record-keeper", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "teacher_subject_assignments",
+        verb: "removed",
+        label: `a teacher assignment`,
+        sourceId: id,
+      });
 
       res.json({ id, deleted: true });
     } catch (e) {

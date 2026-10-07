@@ -11,14 +11,7 @@ import {
 import { FolderCard } from "@/components/ui/FolderCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { sileo } from "@/components/ui/sonner";
@@ -639,43 +632,39 @@ export function ReferralComposer({ referables, admActiveLrns, onCancel, onCreate
       </div>
 
       {/* Pick-a-report choice: preview the anecdotal or continue with it. */}
-      <Dialog
+      <CardModal
         open={pendingRecord !== null && previewId === null}
-        onOpenChange={(open) => {
-          if (!open) handleModalClose();
-        }}
+        onClose={handleModalClose}
+        size="md"
+        title={
+          pendingRecord
+            ? `${CATEGORY_LABELS[pendingRecord.category] ?? pendingRecord.category} report — ${pendingRecord.studentName}`
+            : "Report"
+        }
+        description={
+          pendingRecord
+            ? `Observed ${pendingRecord.observationDate} · LRN ${pendingRecord.lrn} · ${pendingRecord.section}`
+            : "Choose what to do with this report."
+        }
+        watchKey={pendingRecord?.id}
       >
-        <DialogContent className={styles.choiceDialog}>
-          <DialogHeader>
-            <DialogTitle>
-              {pendingRecord
-                ? `${CATEGORY_LABELS[pendingRecord.category] ?? pendingRecord.category} report — ${pendingRecord.studentName}`
-                : "Report"}
-            </DialogTitle>
-            <DialogDescription>
-              {pendingRecord
-                ? `Observed ${pendingRecord.observationDate} · LRN ${pendingRecord.lrn} · ${pendingRecord.section}`
-                : "Choose what to do with this report."}
-            </DialogDescription>
-          </DialogHeader>
-          {pendingRecord ? (
-            <div className={styles.choiceSummary}>
-              <p className={styles.choiceExcerpt}>
-                “{truncate(pendingRecord.excerpt, 160)}”
-              </p>
-              <Badge variant="outline">Ready to refer</Badge>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleModalView}>
-              View anecdotal
-            </Button>
-            <Button type="button" onClick={handleModalContinue}>
-              Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {pendingRecord ? (
+          <div className={styles.choiceSummary}>
+            <p className={styles.choiceExcerpt}>
+              “{truncate(pendingRecord.excerpt, 160)}”
+            </p>
+            <Badge variant="outline">Ready to refer</Badge>
+          </div>
+        ) : null}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleModalView}>
+            View anecdotal
+          </Button>
+          <Button type="button" onClick={handleModalContinue}>
+            Continue
+          </Button>
+        </div>
+      </CardModal>
 
       <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
     </div>

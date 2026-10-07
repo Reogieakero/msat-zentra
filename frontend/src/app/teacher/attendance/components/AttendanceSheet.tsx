@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import {
   Card,
   CardHeader,
@@ -21,16 +21,7 @@ import {
   type SheetStatus,
 } from "./attendance-taking-data";
 import { sileo } from "@/components/ui/sonner";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { SubmitConfirmDialog } from "./SubmitConfirmDialog";
 import { SheetRowsSkeleton } from "./attendance-skeleton";
 import styles from "./AttendanceSheet.module.css";
@@ -63,7 +54,7 @@ export function AttendanceSheet({
   editable,
   roster,
 }: AttendanceSheetProps) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
   const [marks, setMarks] = useState<Record<string, SheetStatus>>({});
   const [query, setQuery] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -111,10 +102,12 @@ export function AttendanceSheet({
   }, [marks, serverMarks, students, date, subjectId, slot]);
 
   const needle = query.trim().toLowerCase();
-  const visibleStudents = students.filter((s) => {
-    if (!needle) return true;
-    return s.name.toLowerCase().includes(needle) || s.lrn.includes(needle);
-  });
+  const visibleStudents = useMemo(() => {
+    if (!needle) return students;
+    return students.filter(
+      (s) => s.name.toLowerCase().includes(needle) || s.lrn.includes(needle),
+    );
+  }, [students, needle]);
 
   function setAll(status: SheetStatus) {
     setMarks((prev) => {
@@ -149,9 +142,7 @@ export function AttendanceSheet({
         slot,
         records: students.map((s) => ({ studentId: s.studentId, status: statusOf(s.studentId) })),
       });
-      queryClient.invalidateQueries({ queryKey: ["attendance-sheet-marks"] });
-      queryClient.invalidateQueries({ queryKey: ["advisory-students"] });
-      queryClient.invalidateQueries({ queryKey: ["advisee-attendance"] });
+      invalidateTeacher.marks();
       setConfirmOpen(false);
       setSubmitted(true);
       setEditing(false);
@@ -204,28 +195,32 @@ export function AttendanceSheet({
             </Button>
           </CardContent>
         </Card>
-        <AlertDialog open={editConfirmOpen} onOpenChange={setEditConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Edit submitted marks?</AlertDialogTitle>
-              <AlertDialogDescription>
-                The sheet reopens with the submitted marks. Nothing changes on the
-                server until you submit again.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel variant="destructive">Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setEditing(true);
-                  setSubmitted(false);
-                }}
-              >
-                Edit marks
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <CardModal
+          open={editConfirmOpen}
+          onClose={() => setEditConfirmOpen(false)}
+          size="sm"
+          title="Edit submitted marks?"
+          description="The sheet reopens with the submitted marks. Nothing changes on the server until you submit again."
+        >
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setEditConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setEditing(true);
+                setSubmitted(false);
+              }}
+            >
+              Edit marks
+            </Button>
+          </div>
+        </CardModal>
         <SubmitConfirmDialog
           open={confirmOpen}
           onOpenChange={setConfirmOpen}

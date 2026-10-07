@@ -1,14 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AdmReferralFormSheet,
   type AdmReferralFormDraft,
 } from "@/components/adm-referral-form/AdmReferralFormPage";
 import type { GuidanceAdmCase } from "./guidance-adm-data";
 import { listAdmConsultationSessions, reviewAdmConsultation } from "./guidance-adm-data";
-import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
+import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
+import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 import type { GcForm03Data } from "./gcform03-data";
 
 /**
@@ -35,7 +36,7 @@ export function GuidanceAdmReferralFormSheet({
   counselorName?: string;
   onChanged: () => void;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateGuidance = useGuidanceInvalidate();
   const referralId = adapter.referralId;
 
   // Sessions already booked on the case — confirming is blocked while one
@@ -55,9 +56,10 @@ export function GuidanceAdmReferralFormSheet({
   }
 
   function onConfirmed() {
-    for (const key of GUIDANCE_QUERY_KEYS) {
-      void queryClient.invalidateQueries({ queryKey: [...key] });
-    }
+    // Confirmed server-side: suppress the realtime echo, bump every
+    // guidance query (notifications included) via the shared invalidator.
+    markSelfNotified(referralId);
+    invalidateGuidance();
     onChanged();
     onClose();
   }

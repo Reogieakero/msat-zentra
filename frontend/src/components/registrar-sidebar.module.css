@@ -1,7 +1,7 @@
-/* Registrar top navbar — GitHub-style tab bar fixed under the real topbar.
-   Same pattern as the nurse role: one flattened row of section tabs with
-   an active underline; scrolls horizontally on narrow screens instead of
-   collapsing behind a menu. */
+/* Registrar nav — branched left rail on desktop (same as the principal /
+   nurse / teacher / guidance / coordinator desks), flattened GitHub-style
+   tab bar on small screens. The tab bar is fixed under the real topbar; the
+   rail is fixed under the topbar on the left. */
 
 .navbar {
   position: fixed;
@@ -98,5 +98,64 @@
 @media (prefers-reduced-motion: reduce) {
   .tab {
     transition: none;
+  }
+}
+
+/* Branched left rail (sidebar layout): fixed under the topbar, above page
+   content but below the topbar, tab bar, and overlays. The nav itself
+   scrolls with a hidden scrollbar; a scroll-down hint pill floats at the
+   bottom instead of a scrollbar. */
+.rail {
+  display: none;
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  bottom: 0;
+  width: 16rem;
+  z-index: 31;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--background);
+  padding: 1rem 0.75rem 0.375rem 1.25rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.railScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Clearance so the last nav item never hides under the hint pill. */
+  padding-bottom: 1.5rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.railScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.railHintWrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0.75rem 0.375rem;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--background) 55%, transparent);
+}
+
+.tabsMobile {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .railDesktop {
+    display: flex;
+  }
+  .tabsMobile {
+    display: none;
   }
 }

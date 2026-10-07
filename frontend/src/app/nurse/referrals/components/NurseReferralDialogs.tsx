@@ -91,6 +91,7 @@ export function ScheduleSessionDialog({
     successDescription: () => `Clinic session booked for ${row.student}.`,
     errorFallback: "Could not book the session. Try again.",
     silentError: true,
+    sourceId: row.id,
     onSuccessExtra: () => {
       onClose();
       onChanged();
@@ -168,6 +169,7 @@ export function FinishSessionDialog({
         : "The session was marked done.",
     errorFallback: "Could not finish the session. Try again.",
     silentError: true,
+    sourceId: referralId,
     onSuccessExtra: () => {
       onClose();
       setFiles([]);
@@ -270,6 +272,7 @@ export function MoveSessionDialog({
     successDescription: () => "The session was moved.",
     errorFallback: "Could not move the session. Try again.",
     silentError: true,
+    sourceId: referralId,
     onSuccessExtra: () => {
       onClose();
       onChanged();
@@ -310,6 +313,7 @@ export function CancelSessionDialog({
     successDescription: () => "The session was cancelled.",
     errorFallback: "Could not cancel the session. Try again.",
     silentError: true,
+    sourceId: referralId,
     onSuccessExtra: () => {
       onClose();
       onChanged();
@@ -351,6 +355,7 @@ export function DeleteSessionDialog({
     successDescription: () => "The cancelled session was removed.",
     errorFallback: "Could not delete the session. Try again.",
     silentError: true,
+    sourceId: referralId,
     onSuccessExtra: () => {
       onClose();
       onChanged();
@@ -392,6 +397,7 @@ export function ResolveCaseDialog({
     successDescription: () => `${row.student}'s case is resolved.`,
     errorFallback: "Could not resolve this case. Try again.",
     silentError: true,
+    sourceId: row.id,
     onSuccessExtra: () => {
       onClose();
       setSummary("");
@@ -422,8 +428,8 @@ export function ResolveCaseDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); resolveMutation.reset(); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
+    <Dialog open onOpenChange={(next) => { if (!next && !acting) { onClose(); setError(null); resolveMutation.reset(); } }}>
+      <DialogContent className={styles.dialogScrollHidden} aria-busy={acting || undefined}>
         <DialogHeader>
           <DialogTitle>Finish &amp; close</DialogTitle>
           <DialogDescription>
@@ -455,7 +461,7 @@ export function ResolveCaseDialog({
           <Button variant="destructive" className={styles.btnRed} onClick={onClose} disabled={acting}>
             Cancel
           </Button>
-          <Button onClick={() => save()} disabled={acting || !canResolve}>
+          <Button onClick={() => save()} disabled={acting || !canResolve} aria-busy={acting || undefined}>
             {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
             {acting ? "Closing…" : "Finish & close"}
           </Button>
@@ -499,6 +505,7 @@ export function SessionDocsDialog({
       `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
     errorFallback: "Could not upload the photos. Try again.",
     silentError: true,
+    sourceId: referralId,
     onSuccessExtra: (added) => {
       setDocs((prev) => [...prev, ...added]);
       setError(null);
@@ -511,6 +518,7 @@ export function SessionDocsDialog({
     successDescription: () => "The photo was removed from this session.",
     errorFallback: "Could not remove that photo. Try again.",
     silentError: true,
+    sourceId: referralId,
     onSuccessExtra: (_data, id) => {
       setDocs((prev) => prev.filter((d) => d.id !== id));
       setError(null);
@@ -565,8 +573,8 @@ export function SessionDocsDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { closeDocs(); } }}>
-      <DialogContent className={styles.dialogScrollHidden}>
+    <Dialog open onOpenChange={(next) => { if (!next && !uploading && !removeMutation.isPending) { closeDocs(); } }}>
+      <DialogContent className={styles.dialogScrollHidden} aria-busy={(uploading || removeMutation.isPending) || undefined}>
         <DialogHeader>
           <DialogTitle>Session documentation</DialogTitle>
           <DialogDescription>
@@ -630,7 +638,11 @@ export function SessionDocsDialog({
         ) : null}
         {displayError ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{displayError}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={() => closeDocs()}>
+          <Button
+            variant="outline"
+            onClick={() => closeDocs()}
+            disabled={uploading || removeMutation.isPending}
+          >
             Done
           </Button>
         </DialogFooter>
@@ -696,6 +708,7 @@ export function NurseReferralFormViewModal({
     successDescription: () => `${row.student}'s case moves to the ADM coordinator.`,
     errorFallback: "Could not endorse this case. Try again.",
     silentError: true,
+    sourceId: row.id,
     onSuccessExtra: () => {
       onClose();
       onChanged();
@@ -814,8 +827,8 @@ export function NurseReferralFormViewModal({
   const loading = !sheetHtml && !loadError;
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); } }}>
-      <DialogContent className={styles.dialogScrollHidden} style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }}>
+    <Dialog open onOpenChange={(next) => { if (!next && !endorsing) { onClose(); } }}>
+      <DialogContent className={styles.dialogScrollHidden} style={{ maxWidth: 900, maxHeight: "90vh", overflowY: "auto" }} aria-busy={endorsing || undefined}>
         <DialogHeader>
           <DialogTitle>Referral form — {row.student}</DialogTitle>
           <DialogDescription>
@@ -892,7 +905,7 @@ export function NurseReferralFormViewModal({
 
         <DialogFooter>
           <div className="flex gap-2 justify-end pt-4 print:hidden" style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", width: "100%" }}>
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={endorsing}>
               Close
             </Button>
             <Button
@@ -917,7 +930,7 @@ export function NurseReferralFormViewModal({
               {downloadPending ? "Preparing…" : "Download .xlsx"}
             </Button>
             {needsEndorse ? (
-              <Button type="button" size="sm" disabled={endorsing} onClick={() => endorse()}>
+              <Button type="button" size="sm" disabled={endorsing} onClick={() => endorse()} aria-busy={endorsing || undefined}>
                 {endorsing ? <Loader2 className="animate-spin" aria-hidden /> : null}
                 {endorsing ? "Endorsing…" : "Confirm & endorse"}
               </Button>

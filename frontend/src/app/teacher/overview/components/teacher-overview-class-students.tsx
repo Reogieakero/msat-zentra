@@ -148,7 +148,7 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 8 } },
+    initialState: { pagination: { pageSize: 10 } },
     state: { sorting, columnFilters },
   });
 

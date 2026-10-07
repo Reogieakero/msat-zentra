@@ -25,6 +25,7 @@ export function CoordinatorReferralsAdvanceDialog({
     <CardModal
       open={target !== null}
       onClose={onClose}
+      dismissable={!pending}
       title="Advance to parent meeting?"
       description={
         target ? (
@@ -70,6 +71,7 @@ export function CoordinatorReferralsForwardDialog({
     <CardModal
       open={target !== null}
       onClose={onClose}
+      dismissable={!pending}
       title="Endorse to Principal?"
       description={
         target ? (

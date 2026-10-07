@@ -4,17 +4,11 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { GraduationCap } from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./FinalGradeApprovals.module.css";
 
 const FETCH_PAGE_SIZE = 8;
@@ -52,7 +46,10 @@ function fetchViewableFinals() {
 export function FinalGradeApprovals() {
   const router = useRouter();
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-final-grades"],
+    // Namespaced preview key: shares the "registrar-final-grades" prefix so
+    // realtime invalidation refreshes it, without colliding with the paged
+    // list key ["registrar-final-grades", page, q].
+    queryKey: ["registrar-final-grades", "preview"],
     queryFn: fetchViewableFinals,
   });
 
@@ -66,16 +63,21 @@ export function FinalGradeApprovals() {
   }, [router]);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section className={assign.card} aria-labelledby="overview-finals-ready">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${styles.header} relative`}>
         <div className={styles.headerText}>
-          <CardTitle>Final Grade Approvals</CardTitle>
-          <CardDescription>
+          <h2 id="overview-finals-ready" className="text-base font-semibold">
+            Final Grade Approvals
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Students whose grades are fully adviser-approved and ready for you to view.
-          </CardDescription>
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className={styles.content}>
+      </div>
+      <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.skelWrap}>
             {Array.from({ length: 5 }).map((_, i) => (
@@ -109,14 +111,14 @@ export function FinalGradeApprovals() {
             ))}
           </ul>
         )}
-      </CardContent>
+      </div>
       {viewable.length > 0 && (
-        <div className={styles.footer}>
+        <div className={`${styles.footer} relative`}>
           <Button className={styles.footerBtn} onClick={goFinals}>
             View all finals
           </Button>
         </div>
       )}
-    </Card>
+    </section>
   );
 }

@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { rosterCountsByGrade, rosterCountsBySection } from "../../services/enrollment.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
+import { notifyAcademicsSelf } from "../../lib/notify.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AppError } from "../../lib/errors.js";
 
@@ -42,7 +43,7 @@ router.get(
   "/subjects",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (_req, res, next) => {
     try {
       const subjects = await prisma.subject.findMany({
@@ -98,7 +99,7 @@ router.get(
   "/overview",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (_req, res, next) => {
     try {
       const activeYear = await prisma.schoolYear.findFirst({
@@ -239,7 +240,7 @@ router.post(
         sourceId: subject.id,
         reason: "Registrar created subject",
       });
-      await invalidateTags(["registrar", "academics", "overview", "principal"]);
+      await invalidateTags(["registrar", "registrar-academics", "registrar-overview", "academics", "overview", "principal"]);
 
       // "enrolled" reflects the students in this grade level who take the
       // subject — derived from student enrollment, not final-grade rows.
@@ -249,6 +250,14 @@ router.post(
         rosterCountsByGrade([gl]),
       ]);
       const enrolled = profiles + (rosterByGrade.get(gl) ?? 0);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "subjects",
+        verb: "created",
+        label: `subject ${subject.name} (${subject.code})`,
+        sourceId: subject.id,
+      });
 
       res.status(201).json({
         id: subject.id,
@@ -294,7 +303,15 @@ router.patch(
         sourceId: updated.id,
         reason: "Registrar updated subject",
       });
-      await invalidateTags(["registrar", "academics"]);
+      await invalidateTags(["registrar", "registrar-academics", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "subjects",
+        verb: "updated",
+        label: `subject ${updated.name} (${updated.code})`,
+        sourceId: updated.id,
+      });
 
       res.json({
         id: updated.id,
@@ -318,7 +335,7 @@ router.get(
   "/school-years",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (_req, res, next) => {
     try {
       const years = await prisma.schoolYear.findMany({
@@ -340,7 +357,7 @@ router.get(
   "/sections",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (req, res, next) => {
     try {
       // Optional ?schoolYearId= lets callers list sections for any year.
@@ -415,7 +432,7 @@ router.get(
   "/terms",
   requireAuth,
   requireRole("registrar", "record_keeper", "adm_coordinator"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (req, res, next) => {
     try {
       // Defaults to the session's active School Year — pages no longer ask.
@@ -456,7 +473,7 @@ router.get(
             .map((termNumber) => ({ schoolYearId: targetYear!.id, termNumber })),
           skipDuplicates: true,
         });
-        await invalidateTags(["registrar", "academics"]);
+        await invalidateTags(["registrar", "registrar-academics", "academics"]);
         terms = await prisma.term.findMany({
           where: { schoolYearId: targetYear.id },
           orderBy: { termNumber: "asc" },
@@ -591,7 +608,15 @@ router.post(
         sourceId: section.id,
         reason: "Registrar created section",
       });
-      await invalidateTags(["registrar", "academics", "overview", "principal"]);
+      await invalidateTags(["registrar", "registrar-academics", "registrar-overview", "academics", "overview", "principal"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "sections",
+        verb: "created",
+        label: `section ${section.name}`,
+        sourceId: section.id,
+      });
 
       res.status(201).json({
         id: section.id,
@@ -644,7 +669,15 @@ router.patch(
         sourceId: updated.id,
         reason: "Registrar updated section",
       });
-      await invalidateTags(["registrar", "academics"]);
+      await invalidateTags(["registrar", "registrar-academics", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "sections",
+        verb: "updated",
+        label: `section ${updated.name}`,
+        sourceId: updated.id,
+      });
 
       res.json({
         id: updated.id,
@@ -669,7 +702,7 @@ router.get(
   "/teachers",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (_req, res, next) => {
     try {
       const teachers = await prisma.user.findMany({
@@ -745,7 +778,7 @@ router.get(
   "/teachers/:id",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (req, res, next) => {
     try {
       const userId = String(req.params.id);
@@ -865,7 +898,15 @@ router.post(
         sourceId: assignment.id,
         reason: "Registrar assigned teacher to section subject",
       });
-      await invalidateTags(["registrar", "academics"]);
+      await invalidateTags(["registrar", "registrar-academics", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "teacher_subject_assignments",
+        verb: "assigned",
+        label: `${assignment.teacher.fullName} to ${assignment.subject.code} (Term ${assignment.term.termNumber})`,
+        sourceId: assignment.id,
+      });
 
       res.status(201).json({
         id: assignment.id,
@@ -905,7 +946,15 @@ router.delete(
         sourceId: id,
         reason: "Registrar removed teacher assignment",
       });
-      await invalidateTags(["registrar", "academics"]);
+      await invalidateTags(["registrar", "registrar-academics", "academics"]);
+
+      await notifyAcademicsSelf({
+        userId: req.user!.id,
+        sourceTable: "teacher_subject_assignments",
+        verb: "removed",
+        label: `a teacher assignment`,
+        sourceId: id,
+      });
 
       res.json({ id, deleted: true });
     } catch (e) {
@@ -922,7 +971,7 @@ router.get(
   "/subjects/:id/students",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics"] }),
+  cache({ tags: ["registrar", "registrar-academics", "academics"] }),
   async (req, res, next) => {
     try {
       const id = String(req.params.id);

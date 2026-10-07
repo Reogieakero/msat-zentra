@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -9,15 +14,25 @@ import {
   apiErrorMessage,
   type AdmCaseRow,
   type AdmEligibility,
-  type AdmReferralsPage,
 } from "../../components/coordinator-data";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { ELIG_OPTIONS } from "./coordinator-enrolled-constants";
+
+/* Desk-level pagination standard: full list pages = 15. */
+export const ENROLLED_PAGE_SIZE = 15;
 
 export interface CoordinatorEnrolledModel {
   now: number;
   rows: AdmCaseRow[];
   total: number;
+  page: number;
+  setPage: React.Dispatch<React.SetStateAction<number>>;
+  totalPages: number;
+  safePage: number;
+  start: number;
+  end: number;
   enrolledPending: boolean;
   enrolledError: boolean;
   enrolledRefetching: boolean;
@@ -47,68 +62,51 @@ export interface CoordinatorEnrolledModel {
 export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   const queryClient = useQueryClient();
   const [now] = React.useState(() => Date.now());
-  const [query, setQuery] = React.useState("");
-  const [debounced, setDebounced] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState("");
+  // Debounced 300ms server search (registrar precedent).
+  const debounced = useDebouncedValue(queryInput.trim(), 300);
   const [elig, setElig] = React.useState<"all" | AdmEligibility>("all");
+  const [page, setPage] = React.useState(1);
   const [historyTarget, setHistoryTarget] =
     React.useState<HistoryTarget | null>(null);
   const [completeTarget, setCompleteTarget] =
     React.useState<AdmCaseRow | null>(null);
   const [completingId, setCompletingId] = React.useState<string | null>(null);
-  // Skip the mount fire: the initial "" debounce must not refire the query.
-  const prevDebouncedRef = React.useRef(debounced);
+  const setQuery = React.useCallback((v: string) => {
+    setQueryInput(v);
+    setPage(1);
+  }, []);
 
-  React.useEffect(() => {
-    const t = setTimeout(() => {
-      const next = query.trim();
-      if (next === prevDebouncedRef.current) return;
-      prevDebouncedRef.current = next;
-      setDebounced(next);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  // No pagination, no stage tabs — the page always shows the first 6
-  // learners in enrollment monitoring (principal-approved, still active).
+  // Server-paginated enrollment monitoring (strict 15-row list pages).
   const enrolledQuery = useQuery({
-    queryKey: ["coordinator-enrolled", debounced, elig],
+    queryKey: ["coordinator-enrolled", page, debounced, elig, ENROLLED_PAGE_SIZE],
     queryFn: ({ signal }) =>
-      fetchCoordinatorReferrals(1, {
+      fetchCoordinatorReferrals(page, {
         q: debounced || undefined,
         stage: "enrollment_monitoring",
         eligibility: elig,
-        limit: 6,
+        limit: ENROLLED_PAGE_SIZE,
         signal,
       }),
-    placeholderData: (prev) => prev,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
   // Enrolled = approved by the Principal. Guard against any unapproved
   // row leaking through (e.g. stale cache from before signing).
   // Eligibility itself is filtered server-side (?eligibility=).
+  // Defensive: non-array payloads never crash the grid.
   const rows = React.useMemo(() => {
-    const all = enrolledQuery.data?.rows ?? [];
+    const all = Array.isArray(enrolledQuery.data?.rows)
+      ? enrolledQuery.data.rows
+      : [];
     return all.filter((r) => r.approvedBy);
   }, [enrolledQuery.data]);
-
-  const dropRowFromEnrolledCache = (id: string) => {
-    // A completed case leaves the monitoring tab immediately — patch every
-    // cached enrolled page instead of waiting for the refetch.
-    queryClient.setQueriesData<AdmReferralsPage>(
-      { queryKey: ["coordinator-enrolled"] },
-      (cached) => {
-        if (!cached || !Array.isArray(cached.rows)) return cached;
-        if (!cached.rows.some((r) => r.id === id)) return cached;
-        const rows = cached.rows.filter((r) => r.id !== id);
-        return { ...cached, rows, total: Math.max(0, cached.total - 1) };
-      },
-    );
-  };
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["coordinator-enrolled"] });
     void queryClient.invalidateQueries({ queryKey: ["coordinator-dashboard"] });
+    void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
   };
 
   const completeMutation = useMutation({
@@ -118,8 +116,11 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
       });
       return data;
     },
+    // Pessimistic: the row leaves the tab only via the refetch below after
+    // the server confirms. No optimistic removal: the UI must never outrun
+    // the processing. The acting row shows Completing… until settle.
     onSuccess: (_data, vars) => {
-      dropRowFromEnrolledCache(vars.id);
+      markSelfNotified(vars.id);
       invalidate();
       setCompleteTarget(null);
       toast.success({
@@ -140,16 +141,30 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     ELIG_OPTIONS.find((o) => o.value === elig)?.label ?? "All statuses";
 
   function clearFilters() {
-    setQuery("");
+    setQueryInput("");
     setElig("all");
+    setPage(1);
   }
 
+  // `total` = filtered pager count; tiles read the UNFILTERED globals.
   const total = enrolledQuery.data?.total ?? 0;
+  const totalPages = enrolledQuery.data?.totalPages ?? 1;
+  // Derived clamp — never setState in an effect.
+  const safePage = Math.min(page, totalPages);
+  const limit = enrolledQuery.data?.limit ?? ENROLLED_PAGE_SIZE;
+  const start = total === 0 ? 0 : (safePage - 1) * limit + 1;
+  const end = Math.min(safePage * limit, total);
 
   return {
     now,
     rows,
     total,
+    page,
+    setPage,
+    totalPages,
+    safePage,
+    start,
+    end,
     enrolledPending: enrolledQuery.isPending,
     enrolledError: enrolledQuery.isError,
     enrolledRefetching: enrolledQuery.isRefetching,
@@ -157,11 +172,14 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     refetchEnrolled: () => {
       void enrolledQuery.refetch();
     },
-    query,
+    query: queryInput,
     setQuery,
     debounced,
     elig,
-    setElig,
+    setElig: (v: "all" | AdmEligibility) => {
+      setElig(v);
+      setPage(1);
+    },
     hasActiveFilters,
     eligMenuLabel,
     clearFilters,

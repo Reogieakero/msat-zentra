@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { useGradeMode } from "../../grade-mode-context";
 import type { RiskBoardData, RiskLevelKey } from "../riskBoard";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -27,14 +28,17 @@ const FALLBACK: { level: RiskLevelKey; count: number }[] = [
 export function RiskLevelDonutCard() {
   const { gradeMode } = useGradeMode();
 
+  const { activeTerm } = useTerm();
   const { data, isPending } = useQuery({
-    queryKey: ["risk-board", gradeMode],
+    queryKey: ["risk-board", activeTerm?.termId ?? null, gradeMode],
     queryFn: async () => {
       const res = await apiClient.get<RiskBoardData>("/api/risk/board", {
         params: { gradeMode },
       });
       return res.data;
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const series = (data?.levelDistribution ?? FALLBACK).map((d) => ({

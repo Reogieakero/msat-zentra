@@ -1,6 +1,4 @@
-.dialog {
-  max-width: 32rem;
-}
+/* Width is owned by CardModal size="md" — no overlay class needed. */
 
 .groups {
   display: flex;

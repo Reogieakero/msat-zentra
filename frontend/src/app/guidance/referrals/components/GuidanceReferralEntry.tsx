@@ -283,9 +283,13 @@ export function GuidanceReferralEntry({
               variant="outline"
               style={{ height: "32px" }}
               disabled={actionPending}
+              aria-busy={actionPending || undefined}
               onClick={() => onReviewAdm(row)}
             >
-              Review ADM case
+              {actionPending ? (
+                <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+              ) : null}
+              {actionPending ? "Working…" : "Review ADM case"}
             </Button>
           ) : (
             <>
@@ -333,6 +337,7 @@ export function GuidanceReferralEntry({
                   variant="default"
                   style={{ height: "32px" }}
                   disabled={actionPending || booked}
+                  aria-busy={actionPending || undefined}
                   title={
                     booked
                       ? "Finish or cancel the existing session before booking another one"
@@ -340,7 +345,10 @@ export function GuidanceReferralEntry({
                   }
                   onClick={() => onOpenDialog(row.id, "schedule")}
                 >
-                  Book session
+                  {actionPending ? (
+                    <Loader2 className="animate-spin" aria-hidden style={{ width: "1rem", height: "1rem" }} />
+                  ) : null}
+                  {actionPending ? "Working…" : "Book session"}
                 </Button>
               )}
             </>

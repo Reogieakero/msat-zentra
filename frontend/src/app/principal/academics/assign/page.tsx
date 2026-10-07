@@ -14,6 +14,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import type { AdvisoryEntryInput, GradeLevel } from "./api";
 import { useAssignAdvisers, useAssignSectionsData } from "./hooks/useAssignSections";
 import { usePrincipalAssignRealtime } from "@/lib/realtime/principalAssignChannel";
+import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
 import assign from "./components/section-assignments.module.css";
 import page from "./assign.module.css";
 
@@ -147,23 +148,23 @@ export default function PrincipalAssignPage() {
         </div>
       ) : (
         <>
-          <header className={page.header}>
-            <div className={page.headerRow}>
-              <div>
-                <h1 className={page.title}>Assigning — Section Advisers</h1>
-                <p className={page.subtitle}>
-                  School-wide (Grades 7–12). Working in <strong>{schoolYearName || "…"}</strong> —
-                  input the section name and the adviser name.
-                </p>
-              </div>
+          <PrincipalPageHeader
+            title="Assigning — Section Advisers"
+            description={
+              <>
+                School-wide (Grades 7–12). Working in <strong>{schoolYearName || "…"}</strong> —
+                input the section name and the adviser name.
+              </>
+            }
+            actions={
               <Button
                 onClick={() => setDialog({ grade, sectionId: "" })}
                 disabled={batch.isPending}
               >
                 Assign Advisory
               </Button>
-            </div>
-          </header>
+            }
+          />
 
           <div className={page.card}>
             <div className={assign.filterRow}>

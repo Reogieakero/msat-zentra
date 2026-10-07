@@ -74,7 +74,24 @@ const GRADE_LABELS: Record<string, string> = {
   G12: "Grade 12",
 };
 
-const TAGS = ["guidance", "overview", "alerts", "referrals", "risk", "teacher"];
+const TAGS = [
+  "guidance",
+  "guidance-interventions",
+  "guidance-risk",
+  "overview",
+  "alerts",
+  "referrals",
+  "risk",
+  "teacher",
+  "adm",
+  "nurse",
+  "nurse-overview",
+  "nurse-alerts",
+  "nurse-referrals",
+  "nurse-clinic",
+  "nurse-adm",
+  "nurse-risk",
+];
 
 // Guidance at-risk engine queue: LIVE high-risk students for the active term,
 // each carrying the risk factors that tripped plus their current follow-up
@@ -86,7 +103,7 @@ router.get(
   "/",
   requireAuth,
   requireRole("guidance_counselor"),
-  cache({ tags: ["guidance", "interventions"] }),
+  cache({ tags: ["guidance", "guidance-interventions", "interventions"] }),
   async (req, res, next) => {
     try {
       const me = req.user!.id;
@@ -111,7 +128,13 @@ router.get(
       const q =
         typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+      const qRaw = req.query as Record<string, unknown>;
+      const rawSize =
+        typeof qRaw.pageSize !== "undefined" ? Number(qRaw.pageSize) : Number(qRaw.limit);
+      const pageSize =
+        !Number.isFinite(rawSize) || rawSize <= 0
+          ? 15
+          : Math.min(Math.floor(rawSize), 100);
 
       // One full-cohort engine read; every view below filters the LIVE values
       // in memory so counts and pages always agree with each other.
@@ -283,6 +306,8 @@ router.get(
         }
       }
 
+      // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+      const unfilteredTotal = cohort.students.length;
       res.json({
         summary: {
           high: cohort.students.filter((s) => s.riskLevel === "High").length,
@@ -299,12 +324,14 @@ router.get(
               s.intervention?.outcomeStatus === "unresolved"
           ).length,
           mine: cohort.students.filter((s) => s.intervention?.assignedTo === me).length,
+          total: unfilteredTotal,
         },
         students,
         page: safePage,
         pageSize,
         total,
         totalPages,
+        unfilteredTotal,
       });
     } catch (e) {
       next(e);
@@ -635,6 +662,7 @@ router.post(
       const open = await prisma.intervention.findFirst({
         where: {
           ...(studentId ? { studentId } : { rosterId: rosterId! }),
+          termId,
           outcomeStatus: { not: "resolved" },
           approvalStatus: { not: "rejected" },
         },
@@ -650,6 +678,7 @@ router.post(
         data: {
           studentId: studentId ?? null,
           rosterId: rosterId ?? null,
+          termId,
           riskLevelAtFlag: liveLevel as "High" | "Moderate",
           recommendedAction: req.body.recommendedAction.trim(),
           priority: req.body.priority,
@@ -688,7 +717,7 @@ router.post(
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "interventions",
-        action: "session",
+        action: "session_self",
         message: `You opened a ${liveLevel}-risk follow-up.`,
         sourceId: created.id,
       });
@@ -698,12 +727,17 @@ router.post(
   }
 );
 
-async function getIntervention(id: string) {
+async function getIntervention(id: string, scopeTermId?: string | null) {
   const row = await prisma.intervention.findUnique({
     where: { id },
     include: { assignee: { select: { id: true, fullName: true } } },
   });
   if (!row) throw new AppError(404, "NOT_FOUND", "Intervention not found");
+  // Prior-term follow-ups are read-only history — reads/writes stay in the
+  // active term so the desk never leaks cases across terms.
+  if (scopeTermId && row.termId !== scopeTermId) {
+    throw new AppError(404, "NOT_FOUND", "Intervention not found in the active term");
+  }
   return row;
 }
 
@@ -793,7 +827,10 @@ router.post(
   validate("body", interventionSessionSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       ensureWorkable(row);
       if (!(SESSION_TYPES as readonly string[]).includes(req.body.sessionType)) {
         throw new AppError(400, "INVALID_ACTION", "Unknown session type");
@@ -836,7 +873,7 @@ router.post(
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "interventions",
-        action: "session",
+        action: "session_self",
         message: `You booked an intervention session (${created.sessionType}, ${when}${venue}).`,
         sourceId: row.id,
       });
@@ -863,7 +900,10 @@ router.post(
   validate("body", completeInterventionSessionSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       ensureWorkable(row);
       const session = await getInterventionSession(row.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -944,7 +984,7 @@ router.post(
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "interventions",
-        action: "session",
+        action: "session_self",
         message: `You completed an intervention session (${updated.sessionType}, ${doneWhen}).`,
         sourceId: row.id,
       });
@@ -963,7 +1003,10 @@ router.post(
   validate("body", rescheduleInterventionSessionSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       ensureWorkable(row);
       const session = await getInterventionSession(row.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -1002,7 +1045,7 @@ router.post(
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "interventions",
-        action: "session",
+        action: "session_self",
         message: `You rescheduled an intervention session — now ${nowMoved} (was ${wasMoved}).`,
         sourceId: row.id,
       });
@@ -1021,7 +1064,10 @@ router.post(
   validate("body", cancelInterventionSessionSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       ensureWorkable(row);
       const session = await getInterventionSession(row.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -1062,7 +1108,7 @@ router.post(
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "interventions",
-        action: "session",
+        action: "session_self",
         message: `You cancelled an intervention session (${session.sessionType}, ${wasDropped}).`,
         sourceId: row.id,
       });
@@ -1082,7 +1128,10 @@ router.post(
   validate("body", reviewSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       if (row.outcomeStatus === "resolved") {
         throw new AppError(400, "INVALID_ACTION", "A resolved intervention can no longer be reviewed");
       }
@@ -1112,8 +1161,11 @@ router.post(
             : {}),
         },
       });
+      await invalidateTags(TAGS);
+      res.json(updated);
+      // Best-effort fan-outs after the confirmed response (never block it).
       if (row.assignedTo && row.assignedTo !== req.user!.id) {
-        await fanoutNotification({
+        void fanoutNotification({
           userId: row.assignedTo,
           sourceTable: "interventions",
           action: "approve",
@@ -1121,13 +1173,19 @@ router.post(
           message: `Your intervention was ${req.body.decision} by guidance`,
         });
       }
+      // Reviewer receipt: bell row for the acting counselor.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "interventions",
+        action: "approve",
+        sourceId: row.id,
+        message: `You ${req.body.decision} an intervention plan.`,
+      });
       notifyInterventionAdviser(
         row,
         req.user!.id,
         (name) => `Guidance ${req.body.decision} the intervention plan for ${name}.`
       );
-      await invalidateTags(TAGS);
-      res.json(updated);
     } catch (e) {
       next(e);
     }
@@ -1145,7 +1203,10 @@ router.post(
   validate("body", assignSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       if (row.outcomeStatus === "resolved") {
         throw new AppError(400, "INVALID_ACTION", "A resolved intervention can no longer be reassigned");
       }
@@ -1178,8 +1239,11 @@ router.post(
         oldValue: { assignedTo: row.assignedTo },
         newValue: { assignedTo: assigneeId },
       });
+      await invalidateTags(TAGS);
+      res.json(updated);
+      // Best-effort fan-out after the confirmed response (never blocks it).
       if (assigneeId && assigneeId !== req.user!.id) {
-        await fanoutNotification({
+        void fanoutNotification({
           userId: assigneeId,
           sourceTable: "interventions",
           action: "assign",
@@ -1187,8 +1251,6 @@ router.post(
           message: "An intervention was assigned to you by guidance",
         });
       }
-      await invalidateTags(TAGS);
-      res.json(updated);
     } catch (e) {
       next(e);
     }
@@ -1207,7 +1269,10 @@ router.post(
   validate("body", outcomeSchema),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       if (
         (req.body.outcomeStatus === "resolved" ||
           req.body.outcomeStatus === "unresolved") &&
@@ -1271,8 +1336,11 @@ router.post(
         oldValue: { outcomeStatus: row.outcomeStatus },
         newValue: { outcomeStatus: req.body.outcomeStatus },
       });
+      await invalidateTags(TAGS);
+      res.json(updated);
+      // Best-effort fan-outs after the confirmed response (never block it).
       if (row.assignedTo && row.assignedTo !== req.user!.id) {
-        await fanoutNotification({
+        void fanoutNotification({
           userId: row.assignedTo,
           sourceTable: "interventions",
           action: "outcome",
@@ -1285,8 +1353,6 @@ router.post(
         req.user!.id,
         (name) => `Guidance recorded an outcome for ${name}'s follow-up: ${req.body.outcomeStatus}.`
       );
-      await invalidateTags(TAGS);
-      res.json(updated);
     } catch (e) {
       next(e);
     }
@@ -1305,7 +1371,10 @@ router.get(
   requireRole("guidance_counselor", "principal"),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       const session = await getInterventionSession(row.id, String(req.params.sessionId));
       const rows = await prisma.clinicSessionAttachment.findMany({
         where: { sessionId: session.id },
@@ -1323,7 +1392,10 @@ router.post(
   sessionDocsUpload.array("files", 5),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       // Resolved follow-ups stay open for late documentary filing;
       // discontinued ones do not accumulate further evidence.
       if (row.outcomeStatus === "unresolved") {
@@ -1368,6 +1440,23 @@ router.post(
       });
       await invalidateTags(TAGS);
       res.status(201).json(created.map(formatSessionDoc));
+      // Previously silent: owner + actor both learn documentation landed.
+      if (row.assignedTo && row.assignedTo !== req.user!.id) {
+        void fanoutNotification({
+          userId: row.assignedTo,
+          sourceTable: "session_attachments",
+          action: "create",
+          message: "Session documentation was added to your follow-up.",
+          sourceId: row.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "session_attachments",
+        action: "create_self",
+        message: "You added session photos to a follow-up.",
+        sourceId: row.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1380,7 +1469,10 @@ router.get(
   requireRole("guidance_counselor"),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       const sessions = await prisma.counselingSession.findMany({
         where: { interventionId: row.id },
         orderBy: { scheduledAt: "asc" },
@@ -1396,7 +1488,10 @@ router.delete(
   requireRole("guidance_counselor"),
   async (req, res, next) => {
     try {
-      const row = await getIntervention(String(req.params.id));
+      const row = await getIntervention(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       if (row.outcomeStatus === "unresolved") {
         throw new AppError(400, "INVALID_ACTION", "Cannot remove documentation from a discontinued follow-up");
       }
@@ -1419,6 +1514,23 @@ router.delete(
       });
       await invalidateTags(TAGS);
       res.json({ ok: true });
+      // Previously silent: owner + actor both learn documentation was removed.
+      if (row.assignedTo && row.assignedTo !== req.user!.id) {
+        void fanoutNotification({
+          userId: row.assignedTo,
+          sourceTable: "session_attachments",
+          action: "delete",
+          message: "Session documentation was removed from your follow-up.",
+          sourceId: row.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "session_attachments",
+        action: "delete_self",
+        message: "You removed a session photo from a follow-up.",
+        sourceId: row.id,
+      });
     } catch (e) { next(e); }
   }
 );

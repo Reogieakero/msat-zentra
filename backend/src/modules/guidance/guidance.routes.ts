@@ -22,6 +22,19 @@ import { ADM_STAGE_FLOW, type AdmStage } from "../../services/adm.js";
 
 const router = Router();
 
+/* Desk-level pagination standard: full list pages = 15, overview previews
+   page at the same list size (or 10). Accepts both `pageSize` (new) and
+   `limit` (legacy). */
+const GUIDANCE_QUEUE_PAGE_SIZE = 15;
+const GUIDANCE_QUEUE_MAX_PAGE_SIZE = 100;
+function resolveGuidancePageSize(req: { query: unknown }): number {
+  const q = req.query as Record<string, unknown>;
+  const raw =
+    typeof q.pageSize !== "undefined" ? Number(q.pageSize) : Number(q.limit);
+  if (!Number.isFinite(raw) || raw <= 0) return GUIDANCE_QUEUE_PAGE_SIZE;
+  return Math.min(Math.floor(raw), GUIDANCE_QUEUE_MAX_PAGE_SIZE);
+}
+
 const GRADE_LABELS: Record<string, string> = {
   G7: "Grade 7",
   G8: "Grade 8",
@@ -103,6 +116,7 @@ router.get(
         prisma.referral.count({
           where: {
             status: "pending",
+            ...(termId ? { termId } : {}),
             OR: [
               { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
               {
@@ -116,6 +130,7 @@ router.get(
           where: {
             status: "pending",
             referredToRole: "guidance_counselor",
+            ...(termId ? { termId } : {}),
             // NULL escalatedTo fails a bare NOT in SQL three-valued logic,
             // so un-escalated rows are matched explicitly.
             OR: [{ escalatedTo: null }, { NOT: { escalatedTo: "adm_coordinator" } }],
@@ -127,6 +142,7 @@ router.get(
         prisma.referral.count({
           where: {
             status: "in_progress",
+            ...(termId ? { termId } : {}),
             OR: [
               { referredToRole: "guidance_counselor", escalatedTo: "adm_coordinator" },
               {
@@ -137,7 +153,10 @@ router.get(
           },
         }),
         prisma.referral.findMany({
-          where: { referredToRole: "guidance_counselor" },
+          where: {
+            referredToRole: "guidance_counselor",
+            ...(termId ? { termId } : {}),
+          },
           // Referral has no createdAt — newest filing = latest observation date.
           orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
           take: 5,
@@ -166,13 +185,23 @@ router.get(
           },
         }),
         prisma.intervention.count({
-          where: { outcomeStatus: "ongoing" },
+          where: {
+            outcomeStatus: "ongoing",
+            ...(termId ? { termId } : {}),
+          },
         }),
         prisma.intervention.count({
-          where: { assignedTo: counselorId, outcomeStatus: "ongoing" },
+          where: {
+            assignedTo: counselorId,
+            outcomeStatus: "ongoing",
+            ...(termId ? { termId } : {}),
+          },
         }),
         prisma.intervention.findMany({
-          where: { outcomeStatus: "ongoing" },
+          where: {
+            outcomeStatus: "ongoing",
+            ...(termId ? { termId } : {}),
+          },
           orderBy: [{ assignedAt: "desc" }, { id: "desc" }],
           take: 5,
           select: {
@@ -202,11 +231,11 @@ router.get(
         // Referral-scoped view of anecdotal filings: every case on the
         // guidance desk — direct counseling referrals PLUS ADM-track cases
         // picked for guidance as consultation reviewer (same scope as the
-        // ADM / Counseling referrals pages). NOT term-filtered — the
-        // overview is a caseload view, and a term mismatch must never hide
-        // referred cases.
+        // ADM / Counseling referrals pages). Term-scoped like every other
+        // desk queue: each term shows only transactions executed under it.
         prisma.referral.findMany({
           where: {
+            ...(termId ? { termId } : {}),
             OR: [
               { referredToRole: "guidance_counselor" },
               {
@@ -247,6 +276,7 @@ router.get(
           },
         }),
         prisma.admLearnerProfile.findMany({
+          where: termId ? { termId } : undefined,
           orderBy: { createdAt: "desc" },
           take: 5,
           select: {
@@ -271,6 +301,7 @@ router.get(
             referredToRole: "adm_coordinator",
             status: { in: ["pending", "in_progress"] },
             admProfiles: { none: {} },
+            ...(termId ? { termId } : {}),
           },
           orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
           take: 5,
@@ -630,7 +661,7 @@ router.get(
       const q =
         typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+      const pageSize = resolveGuidancePageSize(req);
 
       // Session's active year when carried; legacy lookup otherwise.
       const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
@@ -858,23 +889,27 @@ router.get(
       const safePage = Math.min(page, totalPages);
       const alerts = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
+      // Tile stats stay UNFILTERED so searching never shrinks the tiles;
+      // `total` is the filtered pager count.
+      const unfilteredTotal = flagged.length;
       res.json({
         termLabel,
         summary: {
           high: flagged.filter((a) => a.level === "High").length,
           moderate: flagged.filter((a) => a.level === "Moderate").length,
-          total: flagged.length,
+          total: unfilteredTotal,
           academic: academicTotal,
           attendance: attendanceTotal,
           behavioral: behavioralTotal,
           referred: referredTotal,
-          unreferred: flagged.length - referredTotal,
+          unreferred: unfilteredTotal - referredTotal,
         },
         alerts,
         page: safePage,
         pageSize,
         total,
         totalPages,
+        unfilteredTotal,
       });
     } catch (e) {
       next(e);
@@ -925,7 +960,9 @@ router.get(
       const completedFilter = req.query.completed === "1";
       const openFilter = req.query.open === "1";
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+      const pageSize = resolveGuidancePageSize(req);
+      // Term-scoped: prior-term cases never leak into the active term queue.
+      const scopeTermId = req.termScope?.termId ?? null;
 
       const rows = await prisma.referral.findMany({
         // The desk receives direct counseling referrals PLUS ADM-track
@@ -934,6 +971,7 @@ router.get(
         // picks never land here). Both tracks render on the referrals
         // page; the mapped `type` below keeps them separable.
         where: {
+          ...(scopeTermId ? { termId: scopeTermId } : {}),
           OR: [
             { referredToRole: "guidance_counselor" },
             {
@@ -1161,7 +1199,20 @@ router.get(
 
       const total = filtered.length;
       const totalPages = Math.max(1, Math.ceil(total / pageSize));
-      const safePage = Math.min(page, totalPages);
+      // Deep-link landing (?highlight=<id>): serve the page containing the
+      // case so bell links land with highlight, no extra round-trip.
+      const highlightRaw = req.query.highlight;
+      const highlight =
+        typeof highlightRaw === "string" && highlightRaw.trim()
+          ? highlightRaw.trim()
+          : "";
+      let safePage = Math.min(page, totalPages);
+      if (highlight) {
+        const idx = filtered.findIndex(
+          (r) => (r as { id?: unknown }).id === highlight
+        );
+        if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
+      }
       const referrals = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
       // Adviser/subject-teacher withdrawals ("Cancelled") vs desk
@@ -1171,6 +1222,8 @@ router.get(
         r.status === "dismissed" &&
         (dismissedByRole.get(r.id) === "adviser" ||
           dismissedByRole.get(r.id) === "subject_teacher");
+      // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+      const unfilteredTotal = mapped.length;
 
       res.json({
         summary: {
@@ -1231,6 +1284,7 @@ router.get(
         pageSize,
         total,
         totalPages,
+        unfilteredTotal,
       });
     } catch (e) {
       next(e);
@@ -1269,7 +1323,9 @@ router.get(
           ? (req.query.type as "adm" | "counseling")
           : null;
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+      const pageSize = resolveGuidancePageSize(req);
+      // Term-scoped: prior-term filings never leak into the active term view.
+      const scopeTermId = req.termScope?.termId ?? null;
 
       const rows = await prisma.referral.findMany({
         // Same desk scope as GET /api/guidance/referrals: direct
@@ -1279,6 +1335,7 @@ router.get(
         // anecdotal files, and endorsed ADM cases disappear instead of
         // staying listed with the "with the ADM coordinator" overlay.
         where: {
+          ...(scopeTermId ? { termId: scopeTermId } : {}),
           OR: [
             { referredToRole: "guidance_counselor" },
             {
@@ -1389,10 +1446,20 @@ router.get(
         referralType: trackOf(r),
       }));
 
+      // Session-documents view: only filings whose sessions carry filed
+      // images (the hasDocs facet lives server-side so pages stay dense).
+      const docsOnly = req.query.docs === "1";
       const filtered = mapped.filter((r) => {
         if (categoryFilter && r.category !== categoryFilter) return false;
         if (anecdotalTypeFilter === "adm" && r.referralType !== "ADM") return false;
         if (anecdotalTypeFilter === "counseling" && r.referralType !== "Counseling") return false;
+        if (
+          docsOnly &&
+          !r.sessionDocs.some((s) =>
+            s.files.some((f) => f.mimeType.toLowerCase().startsWith("image/"))
+          )
+        )
+          return false;
         if (
           q &&
           !`${r.student} ${r.lrn} ${r.section} ${r.observer} ${r.referredBy}`
@@ -1407,6 +1474,8 @@ router.get(
       const totalPages = Math.max(1, Math.ceil(total / pageSize));
       const safePage = Math.min(page, totalPages);
       const records = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+      // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+      const unfilteredTotal = mapped.length;
 
       const countBy = (cat: string) => mapped.filter((r) => r.category === cat).length;
       const byGrade = GRADE_ORDER.map((g) => ({
@@ -1441,6 +1510,7 @@ router.get(
         pageSize,
         total,
         totalPages,
+        unfilteredTotal,
       });
     } catch (e) {
       next(e);
@@ -1476,11 +1546,14 @@ router.get(
       const q =
         typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 12));
+      const pageSize = resolveGuidancePageSize(req);
+      // Term-scoped: prior-term ADM work never leaks into the active term.
+      const scopeTermId = req.termScope?.termId ?? null;
 
       const [profiles, earlyReferrals, consultationReferrals, consultAudits, counselor] =
         await Promise.all([
         prisma.admLearnerProfile.findMany({
+          where: scopeTermId ? { termId: scopeTermId } : undefined,
           orderBy: { createdAt: "desc" },
           take: 1000,
           select: {
@@ -1518,6 +1591,7 @@ router.get(
           where: {
             referredToRole: "adm_coordinator",
             admProfiles: { none: {} },
+            ...(scopeTermId ? { termId: scopeTermId } : {}),
             // Receiver scoping: only cases picked for guidance (plus legacy
             // rows with no stored pick) reach this queue — nurse/LRPC-picked
             // cases never appear here, even read-only.
@@ -1570,6 +1644,7 @@ router.get(
           where: {
             referredToRole: "guidance_counselor",
             status: { in: ["pending", "in_progress"] },
+            ...(scopeTermId ? { termId: scopeTermId } : {}),
           },
           orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
           take: 100,
@@ -1854,6 +1929,8 @@ router.get(
         totalSessions: r.counselingSessions.length,
       }));
 
+      // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+      const unfilteredTotal = merged.length;
       res.json({
         summary: {
           ...summary,
@@ -1870,6 +1947,7 @@ router.get(
         pageSize,
         total,
         totalPages,
+        unfilteredTotal,
       });
     } catch (e) {
       next(e);
@@ -1957,6 +2035,11 @@ router.post(
           "NOT_YOUR_QUEUE",
           "This case was routed to another consultation reviewer"
         );
+      }
+      // Prior-term cases are read-only history — consultation review stays
+      // in the active term.
+      if (req.termScope?.termId && referral.termId !== req.termScope.termId) {
+        throw new AppError(404, "NOT_FOUND", "Referral not found in the active term");
       }
       const { recommendation, outcome } = req.body as {
         recommendation: string;

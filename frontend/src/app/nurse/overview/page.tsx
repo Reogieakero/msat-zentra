@@ -9,16 +9,24 @@ import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
 import { NurseOverviewBreakdown } from "./components/NurseOverviewBreakdown";
 import { NurseOverviewTrends } from "./components/NurseOverviewTrends";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
-import { fetchNurseOverview } from "./components/nurse-overview-data";
-import { useQuery } from "@tanstack/react-query";
+import {
+  fetchNurseOverview,
+  type NurseOverviewData,
+} from "./components/nurse-overview-data";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/nurse-overview.module.css";
 
 export default function NurseOverviewPage() {
-  const { data, isPending, isError, refetch, isFetching } = useQuery({
-    queryKey: ["nurse-overview"],
-    queryFn: fetchNurseOverview,
-    staleTime: 60_000,
-  });
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const { data, isPending, isError, refetch, isFetching } =
+    useQuery<NurseOverviewData>({
+      queryKey: ["nurse-overview", "preview", termKey],
+      queryFn: ({ signal }) => fetchNurseOverview(signal),
+      placeholderData: keepPreviousData,
+      staleTime: 60_000,
+    });
 
   if (isPending) {
     // Skeleton mirrors the real layout one-to-one (teacher body grid: main

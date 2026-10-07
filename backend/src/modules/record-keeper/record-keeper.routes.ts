@@ -1,8 +1,10 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { GradeLevel } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { schoolYearWhere, scopedYearId } from "../../lib/termScope.js";
 import { cache, invalidateTags } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
@@ -780,7 +782,20 @@ async function decideAccessRequestRK(
       sourceId: updated.id,
     });
 
-    await invalidateTags(["record-keeper", "adviser-access", "overview"]);
+    // Own-bell receipt: the acting record keeper's badge bumps live (their
+    // echo toast is suppressed client-side — the mutation toast already
+    // confirmed it).
+    await fanoutNotification({
+      userId: req.user!.id,
+      sourceTable: "adviser_sf10_access_requests",
+      action: "decide_self",
+      message: approved
+        ? `You granted ${request.adviser?.fullName ?? "the adviser"} (${updated.section.name}) SF10 read access.`
+        : `You denied ${request.adviser?.fullName ?? "the adviser"} (${updated.section.name}) SF10 read access.`,
+      sourceId: updated.id,
+    });
+
+    await invalidateTags(["record-keeper", "record-keeper-access", "record-keeper-overview", "adviser-access", "overview"]);
 
     res.json({
       id: updated.id,
@@ -808,6 +823,144 @@ router.post(
   requireRole("record_keeper"),
   (req, res, next) => {
     decideAccessRequestRK(req, res, next, false).catch(next);
+  }
+);
+
+const HEX_COLOR = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
+
+async function readRecordKeeperProfileSettings(recordKeeperId: string) {
+  const [user, profile] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: recordKeeperId },
+      select: { fullName: true },
+    }),
+    prisma.staffProfile.findUnique({
+      where: { userId: recordKeeperId },
+      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+    }),
+  ]);
+  return {
+    fullName: user?.fullName ?? "",
+    photoUrl: profile?.photoUrl ?? null,
+    primaryColor: profile?.primaryColor ?? null,
+    secondaryColor: profile?.secondaryColor ?? null,
+  };
+}
+
+// GET /api/record-keeper/settings/profile — own display name, photo, palette.
+router.get(
+  "/settings/profile",
+  requireAuth,
+  requireRole("record_keeper"),
+  async (req, res, next) => {
+    try {
+      res.json(await readRecordKeeperProfileSettings(req.user!.id));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// PATCH /api/record-keeper/settings/profile — display name + workspace palette.
+router.patch(
+  "/settings/profile",
+  requireAuth,
+  requireRole("record_keeper"),
+  validate(
+    "body",
+    z.object({
+      fullName: z.string().trim().min(1).max(100).optional(),
+      primaryColor: HEX_COLOR.nullable().optional(),
+      secondaryColor: HEX_COLOR.nullable().optional(),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const recordKeeperId = req.user!.id;
+      const { fullName, primaryColor, secondaryColor } = req.body as {
+        fullName?: string;
+        primaryColor?: string | null;
+        secondaryColor?: string | null;
+      };
+      await prisma.$transaction(async (tx) => {
+        if (fullName !== undefined) {
+          await tx.user.update({
+            where: { id: recordKeeperId },
+            data: { fullName },
+          });
+        }
+        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+        if (primaryColor !== undefined) palette.primaryColor = primaryColor;
+        if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+        if (Object.keys(palette).length > 0) {
+          await tx.staffProfile.upsert({
+            where: { userId: recordKeeperId },
+            update: palette,
+            create: {
+              userId: recordKeeperId,
+              employeeId: `RK-${recordKeeperId.slice(0, 8)}`,
+              ...palette,
+            },
+          });
+        }
+      });
+      await writeAudit({
+        userId: recordKeeperId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: recordKeeperId,
+        reason: "Record Keeper updated profile settings",
+      });
+      await invalidateTags(["record-keeper", "overview"]);
+      res.json(await readRecordKeeperProfileSettings(recordKeeperId));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/record-keeper/settings/photo — profile photo upload (JSON data URL).
+// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
+router.post(
+  "/settings/photo",
+  requireAuth,
+  requireRole("record_keeper"),
+  validate(
+    "body",
+    z.object({
+      photoUrl: z
+        .string()
+        .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
+        .max(2_800_000),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const recordKeeperId = req.user!.id;
+      const { photoUrl } = req.body as { photoUrl: string };
+      await prisma.staffProfile.upsert({
+        where: { userId: recordKeeperId },
+        update: { photoUrl },
+        create: {
+          userId: recordKeeperId,
+          employeeId: `RK-${recordKeeperId.slice(0, 8)}`,
+          photoUrl,
+        },
+      });
+      await writeAudit({
+        userId: recordKeeperId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: recordKeeperId,
+        reason: "Record Keeper updated profile photo",
+      });
+      await invalidateTags(["record-keeper", "overview"]);
+      res.json({ photoUrl });
+    } catch (e) {
+      next(e);
+    }
   }
 );
 

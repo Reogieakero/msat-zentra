@@ -5,25 +5,26 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchGuidanceInterventions } from "./components/guidance-interventions-data";
+import {
+  fetchGuidanceInterventions,
+  type GuidanceInterventionsData,
+} from "./components/guidance-interventions-data";
 import {
   GuidanceInterventionsTable,
 } from "./components/guidance-interventions-table";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/guidance-interventions.module.css";
 
-const PAGE_SIZE = 50;
+const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 15;
 
 export default function GuidanceInterventionsPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [query, setQuery] = React.useState("");
-  const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
-
-  React.useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const debounced = useDebouncedValue(query.trim(), 300);
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
@@ -31,22 +32,28 @@ export default function GuidanceInterventionsPage() {
   };
 
   const { data, isPending, isError, refetch, isRefetching, isFetching } =
-    useQuery({
-      queryKey: ["guidance-interventions", { q: debouncedQuery, page, pageSize: PAGE_SIZE }],
+    useQuery<GuidanceInterventionsData>({
+      queryKey: ["guidance-interventions", page, debounced, termKey],
       queryFn: ({ signal }) =>
         fetchGuidanceInterventions(
           {
-            q: debouncedQuery || undefined,
+            q: debounced || undefined,
             level: "All",
             outcome: "all",
             page,
-            pageSize: PAGE_SIZE,
+            pageSize: GUIDANCE_INTERVENTIONS_PAGE_SIZE,
           },
           { signal }
         ),
-      staleTime: 60_000,
+      // Page turns reuse the previous page so they never flash skeletons.
       placeholderData: keepPreviousData,
+      staleTime: 60_000,
     });
+
+  // Derived, never setState-in-effect: the server clamps too, this keeps
+  // the pager truthful while a filter shrinks the list under the cursor.
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(data?.page ?? page, totalPages);
 
   return (
     <section className={styles.page}>
@@ -63,7 +70,12 @@ export default function GuidanceInterventionsPage() {
             <div className={styles.skelTable}>
               <div className={styles.skelHeadRow}>
                 {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <Skeleton key={i} className={styles.skelTh} />
+                  <div key={i} className={styles.skelCell}>
+                    <Skeleton
+                      className={styles.skelBar}
+                      style={{ width: i % 3 === 0 ? "70%" : "45%" }}
+                    />
+                  </div>
                 ))}
               </div>
               {[0, 1, 2, 3, 4].map((row) => (
@@ -110,11 +122,12 @@ export default function GuidanceInterventionsPage() {
       ) : (
         <GuidanceInterventionsTable
           summary={data.summary}
-          students={data.students}
-          page={data.page}
+          students={Array.isArray(data.students) ? data.students : []}
+          page={safePage}
           pageSize={data.pageSize}
           total={data.total}
-          totalPages={data.totalPages}
+          totalPages={totalPages}
+          unfilteredTotal={data.unfilteredTotal}
           onPageChange={setPage}
           query={query}
           onQueryChange={handleQueryChange}

@@ -13,15 +13,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/sonner";
 import {
-  apiErrorMessage,
   deleteSessionAttachment,
   sessionAttachmentError,
   uploadSessionAttachments,
   type CounselingSessionAttachment,
   type CounselingSessionItem,
 } from "./guidance-referrals-data";
+import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import styles from "./GuidanceReferralDialogs.module.css";
 
 /* Live clock for the docs lock — ticks every second while open so the
@@ -57,10 +56,42 @@ export function SessionDocsDialog({
   onChanged: () => void;
 }) {
   const [docs, setDocs] = React.useState<CounselingSessionAttachment[]>(session.attachments ?? []);
-  const [uploading, setUploading] = React.useState(false);
-  const [removingId, setRemovingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const now = useNowTick(open);
+  const uploadMutation = useGuidanceMutation({
+    mutationFn: (picked: File[]) =>
+      uploadSessionAttachments(referralId, session.id, picked),
+    sourceId: referralId,
+    successTitle: "Photos filed",
+    successDescription: (_vars, added) =>
+      `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
+    errorFallback: "Could not upload the photos. Try again.",
+    silentError: true,
+    onSuccessExtra: (added) => {
+      setDocs((prev) => [...prev, ...added]);
+      setError(null);
+      onChanged();
+    },
+  });
+  const removeMutation = useGuidanceMutation({
+    mutationFn: (id: string) => deleteSessionAttachment(referralId, session.id, id),
+    sourceId: referralId,
+    successTitle: "Photo removed",
+    successDescription: () => "The photo was removed from this session.",
+    errorFallback: "Could not remove that photo. Try again.",
+    silentError: true,
+    onSuccessExtra: (_data, id) => {
+      setDocs((prev) => prev.filter((d) => d.id !== id));
+      setError(null);
+      onChanged();
+    },
+  });
+  const uploading = uploadMutation.isPending;
+  const removingId = removeMutation.isPending
+    ? ((removeMutation.variables as string | undefined) ?? null)
+    : null;
+  const mutationError = uploadMutation.error ?? removeMutation.error;
+  const displayError = error ?? (mutationError ? mutationError.message : null);
 
   if (!open) return null;
 
@@ -70,8 +101,8 @@ export function SessionDocsDialog({
     session.status === "scheduled" &&
     new Date(session.scheduledAt).getTime() > now;
 
-  async function onPick(list: FileList | null) {
-    if (!list) return;
+  function onPick(list: FileList | null) {
+    if (!list || uploading) return;
     if (docsLocked) {
       setError("This session hasn't started yet — you can file documentation once the scheduled time arrives.");
       return;
@@ -83,39 +114,18 @@ export function SessionDocsDialog({
       return;
     }
     setError(null);
-    setUploading(true);
-    try {
-      const added = await uploadSessionAttachments(referralId, session.id, picked);
-      setDocs((prev) => [...prev, ...added]);
-      toast.success({
-        title: "Photos filed",
-        description: `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
-      });
-      onChanged();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Could not upload the photos. Try again."));
-    } finally {
-      setUploading(false);
-    }
+    uploadMutation.mutate(picked);
   }
 
-  async function onRemove(id: string) {
+  function onRemove(id: string) {
+    if (removeMutation.isPending) return;
     setError(null);
-    setRemovingId(id);
-    try {
-      await deleteSessionAttachment(referralId, session.id, id);
-      setDocs((prev) => prev.filter((d) => d.id !== id));
-      onChanged();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Could not remove that photo. Try again."));
-    } finally {
-      setRemovingId(null);
-    }
+    removeMutation.mutate(id);
   }
 
   return (
-    <Dialog open onOpenChange={(next) => { if (!next) { onClose(); setError(null); } }}>
-      <DialogContent>
+    <Dialog open onOpenChange={(next) => { if (!next && !uploading && !removeMutation.isPending) { onClose(); setError(null); } }}>
+      <DialogContent aria-busy={(uploading || removeMutation.isPending) || undefined}>
         <DialogHeader>
           <DialogTitle>Session documentation</DialogTitle>
           <DialogDescription>
@@ -182,9 +192,13 @@ export function SessionDocsDialog({
               Uploading photos…
             </p>
           ) : null}
-          {error ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{error}</p></div>) : null}
+          {displayError ? (<div className={styles.errorBlock} role="alert"><p className={styles.errorText}>{displayError}</p></div>) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={uploading || removeMutation.isPending}
+          >
             Done
           </Button>
         </DialogFooter>

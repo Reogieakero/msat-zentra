@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +20,10 @@ import { RiskCategories } from "@/components/risk-dashboard/RiskCategories";
 import { RiskTrendLines } from "@/components/risk-dashboard/RiskTrendLines";
 import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
 import { findHotspot, RiskHotspot } from "@/components/risk-dashboard/RiskHotspot";
-import { fetchGuidanceRiskLevels } from "../referrals/components/guidance-referrals-data";
+import {
+  fetchGuidanceRiskLevels,
+  type GuidanceRiskLevel,
+} from "../referrals/components/guidance-referrals-data";
 import { fetchGuidanceRisk } from "./components/guidance-risk-dashboard";
 import {
   buildGuidanceRiskWatch,
@@ -42,9 +46,13 @@ export default function GuidanceRiskPage() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+
   const riskQuery = useQuery({
-    queryKey: ["guidance-risk"],
-    queryFn: fetchGuidanceRisk,
+    queryKey: ["guidance-risk", termKey],
+    queryFn: () => fetchGuidanceRisk(),
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
 
@@ -54,12 +62,14 @@ export default function GuidanceRiskPage() {
   const primary = profile.data?.primaryColor ?? null;
 
   const studentIds = React.useMemo(
-    () => [...new Set(Object.values(riskQuery.data?.caseToStudent ?? {}).filter((id): id is string => id !== null))],
+    () =>
+      [...new Set(Object.values(riskQuery.data?.caseToStudent ?? {}).filter((id): id is string => id !== null))].sort(),
     [riskQuery.data]
   );
-  const levelsQuery = useQuery({
-    queryKey: ["guidance-risk-levels", studentIds],
+  const levelsQuery = useQuery<Record<string, GuidanceRiskLevel>>({
+    queryKey: ["guidance-risk-levels", studentIds, termKey],
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
+    placeholderData: keepPreviousData,
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });
@@ -80,8 +90,9 @@ export default function GuidanceRiskPage() {
   // Factor flags behind the watch card — same students, so drivers repaint
   // with levels and the desk.
   const factorsQuery = useQuery({
-    queryKey: ["guidance-risk-alert-factors"],
+    queryKey: ["guidance-risk-alert-factors", termKey],
     queryFn: fetchAllGuidanceAlertFactors,
+    placeholderData: keepPreviousData,
     staleTime: 300_000,
   });
 

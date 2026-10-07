@@ -1,8 +1,4 @@
-.dialog {
-  max-width: 28rem;
-  max-height: calc(100dvh - 4rem);
-  overflow-y: auto;
-}
+/* Width/scroll are owned by CardModal (body is the scroll container). */
 
 .titleRow {
   display: flex;

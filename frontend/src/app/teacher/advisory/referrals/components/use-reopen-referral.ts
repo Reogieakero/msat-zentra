@@ -1,16 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { sileo } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
+import { useTeacherInvalidate } from "../../../components/use-teacher-invalidate";
 
 /* Re-submit a cancelled referral: the SAME row flips back to pending (never
    a duplicate), so submitted → cancelled → submitted reads pending. Shared
    by the table row menu and the rail card. */
 export function useReopenReferral() {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
   const [isPending, setIsPending] = React.useState(false);
   const pendingRef = React.useRef(false);
 
@@ -33,8 +33,7 @@ export function useReopenReferral() {
         // Suppress the channel echo toast for our own re-submit (the success
         // toast below already fired) — the bell row still lands for badge.
         if (data?.id) markSelfNotified(data.id);
-        await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
-        await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+        invalidateTeacher.referrals();
         sileo.success({ title: "Referral re-submitted", description: "The case is pending again." });
       } catch (err) {
         const message =
@@ -46,7 +45,7 @@ export function useReopenReferral() {
         setIsPending(false);
       }
     },
-    [queryClient],
+    [invalidateTeacher],
   );
 
   return { reopen, isPending };

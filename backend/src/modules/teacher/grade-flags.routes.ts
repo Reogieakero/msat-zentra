@@ -5,6 +5,7 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
+import { invalidateTags } from "../../lib/cache.js";
 import { runEscalation } from "../../services/gradeFlags.js";
 
 const router = Router();
@@ -36,6 +37,9 @@ const listQuerySchema = z.object({
   scope: z.enum(["mine", "against-me", "advisees"]).default("mine"),
   status: z.enum(["open", "resolved", "escalated"]).optional(),
   q: z.string().max(120).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 interface FlagRow {
@@ -105,10 +109,67 @@ router.get(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const { scope, status, q } = req.query as unknown as z.infer<typeof listQuerySchema>;
+      const { scope, status, q, page, pageSize, limit } = req.query as unknown as z.infer<typeof listQuerySchema>;
       // Flag queues are scoped to the session's active term.
       const scopeTermId = req.termScope?.termId ?? null;
       const termFilter = scopeTermId ? { termId: scopeTermId } : {};
+      // Server-paginated (?page=&pageSize=, legacy ?limit=). Callers with
+      // no pagination params keep the bare-array shape.
+      const rawSize = pageSize ?? limit;
+      const effPageSize = rawSize && rawSize > 0 ? Math.min(Math.floor(rawSize), 100) : 15;
+      const effPage = Math.max(1, page ?? 1);
+      const hasPaginationParams = page !== undefined || pageSize !== undefined || limit !== undefined;
+      // Case-insensitive queue search across the joined student name,
+      // LRN, and subject — evaluated in the database so paging reads only
+      // the visible slice (was: fetch-all then slice in memory).
+      const needle = q?.trim() ? q.trim() : null;
+      const queryFilter = needle
+        ? {
+            OR: [
+              { student: { user: { fullName: { contains: needle, mode: "insensitive" as const } } } },
+              { student: { lrn: { contains: needle, mode: "insensitive" as const } } },
+              { subject: { name: { contains: needle, mode: "insensitive" as const } } },
+            ],
+          }
+        : {};
+      // Real DB pagination: skip/take + count in one round-trip. Shape is
+      // unchanged (bare array without params, pager object with params).
+      const pagedFlags = async (
+        where: Record<string, unknown>,
+      ): Promise<unknown> => {
+        if (!hasPaginationParams) {
+          const rows = await prisma.gradeFlag.findMany({
+            where,
+            include: flagInclude(),
+            orderBy: { createdAt: "desc" },
+          });
+          return rows.map(serializeFlag);
+        }
+        const [total, rows] = await Promise.all([
+          prisma.gradeFlag.count({ where }),
+          prisma.gradeFlag.findMany({
+            where,
+            include: flagInclude(),
+            orderBy: { createdAt: "desc" },
+            skip: (effPage - 1) * effPageSize,
+            take: effPageSize,
+          }),
+        ]);
+        const totalPages = Math.max(1, Math.ceil(total / effPageSize));
+        const safePage = Math.min(effPage, totalPages);
+        const data = rows.map(serializeFlag);
+        return {
+          data,
+          rows: data,
+          total,
+          unfilteredTotal: total,
+          summary: { total, filtered: total },
+          page: safePage,
+          totalPages,
+          limit: effPageSize,
+          pageSize: effPageSize,
+        };
+      };
 
       await runEscalation();
 
@@ -126,28 +187,28 @@ router.get(
             select: { userId: true },
           })
         ).map((s) => s.userId);
-        const flags = await prisma.gradeFlag.findMany({
-          where: {
+        return res.json(
+          await pagedFlags({
             studentId: { in: adviseeIds },
             ...(status ? { status } : {}),
             ...termFilter,
-          },
-          include: flagInclude(),
-          orderBy: { createdAt: "desc" },
-        });
-        return res.json(filterByQuery(flags, q).map(serializeFlag));
+            ...queryFilter,
+          }),
+        );
       }
 
       const where =
         scope === "mine"
           ? { raisedBy: teacherId }
           : { ownerId: teacherId };
-      const flags = await prisma.gradeFlag.findMany({
-        where: { ...where, ...(status ? { status } : {}), ...termFilter },
-        include: flagInclude(),
-        orderBy: { createdAt: "desc" },
-      });
-      res.json(filterByQuery(flags, q).map(serializeFlag));
+      res.json(
+        await pagedFlags({
+          ...where,
+          ...(status ? { status } : {}),
+          ...termFilter,
+          ...queryFilter,
+        }),
+      );
     } catch (e) {
       next(e);
     }
@@ -164,18 +225,6 @@ function flagInclude() {
     owner: { select: { id: true, fullName: true } },
     resolvedByUser: { select: { id: true, fullName: true } },
   } as const;
-}
-
-function filterByQuery<T extends FlagRow>(flags: T[], q?: string): T[] {
-  if (!q) return flags;
-  const needle = q.trim().toLowerCase();
-  if (!needle) return flags;
-  return flags.filter(
-    (f) =>
-      f.student.user.fullName.toLowerCase().includes(needle) ||
-      f.student.lrn.toLowerCase().includes(needle) ||
-      f.subject.name.toLowerCase().includes(needle)
-  );
 }
 
 // GET /api/teacher/grade-flags/options — scoped pickers for the raise dialog.
@@ -331,6 +380,7 @@ router.post(
         sourceId: flag.id,
         reason: `${body.reason} — ${subject.name} / ${section.name}`,
       });
+      await invalidateTags(["teacher", "overview", "academics", "principal", "risk", "guidance"]);
 
       res.status(201).json(serializeFlag(flag));
     } catch (e) {
@@ -380,6 +430,7 @@ router.post(
         sourceId: flag.id,
         reason: body.resolutionNote,
       });
+      await invalidateTags(["teacher", "overview", "academics", "principal", "risk", "guidance"]);
 
       res.json(serializeFlag(updated));
     } catch (e) {

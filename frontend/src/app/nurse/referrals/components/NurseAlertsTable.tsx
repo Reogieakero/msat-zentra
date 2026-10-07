@@ -32,7 +32,7 @@ import {
 } from "./nurse-referrals-format";
 import styles from "./NurseAlertsTable.module.css";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 15;
 
 /* Live clock for the countdowns — ticks every second while any scheduled
    session is on screen so the seconds stay exact. */
@@ -112,6 +112,11 @@ export function NurseAlertsTable({
   highlightId = null,
   autoViewFormId = null,
   paginate = true,
+  serverPage,
+  serverTotalPages,
+  serverTotal,
+  serverUnfilteredTotal,
+  onServerPageChange,
 }: {
   alerts: NurseAlertItem[];
   onChanged: () => void;
@@ -121,7 +126,18 @@ export function NurseAlertsTable({
   highlightId?: string | null;
   autoViewFormId?: string | null;
   paginate?: boolean;
+  /** Server-driven pager (?track=&page=&pageSize=15). When present the
+      backend owns pagination + highlight landing; the sidebar action menu
+      stays a client facet on the served page rows. */
+  serverPage?: number;
+  serverTotalPages?: number;
+  /** Filtered pager count (server total). */
+  serverTotal?: number;
+  /** UNFILTERED desk total — menu counts never shrink the pager. */
+  serverUnfilteredTotal?: number;
+  onServerPageChange?: (p: number) => void;
 }) {
+  const serverDriven = serverTotalPages !== undefined;
   const [typeFilter, setTypeFilter] = React.useState<TypeFilter>(initialType);
   const [actionFilter, setActionFilter] = React.useState<ActionFilter>("");
   const [page, setPage] = React.useState(1);
@@ -164,7 +180,13 @@ export function NurseAlertsTable({
     const idx = sorted.findIndex((a) => a.row.id === highlightId);
     return idx >= 0 ? Math.floor(idx / PAGE_SIZE) + 1 : null;
   }, [alerts, highlightId]);
-  const effPage = !paged && highlightPage !== null ? highlightPage : page;
+  // Server-driven pages land the highlight's page server-side (?highlight=),
+  // so the client jump only applies to full-list mode.
+  const effPage = serverDriven
+    ? (serverPage ?? 1)
+    : !paged && highlightPage !== null
+      ? highlightPage
+      : page;
 
   // Scroll the highlighted case into view once its page renders.
   React.useEffect(() => {
@@ -209,9 +231,10 @@ export function NurseAlertsTable({
     return rows;
   }, [alerts, typeFilter, actionFilter]);
 
-  // Action-menu counts — computed from the full desk so the numbers stay
-  // stable while searching or paging. ADM and Clinic menus count only
-  // their own type.
+  // Action-menu counts — computed from the served rows (full desk in
+  // full-list mode, current server page when server-driven) so the numbers
+  // stay stable while paging. ADM and Clinic menus count only their own
+  // type.
   const actionCounts = React.useMemo(() => {
     const counts: Record<ActionValue, number> = {
       adm_needs: 0,
@@ -245,12 +268,16 @@ export function NurseAlertsTable({
     return counts;
   }, [alerts]);
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Filtered pager count comes from the server when server-driven
+  // (UNFILTERED menu counts live beside it, never shrinking the pager).
+  const total = serverDriven ? (serverTotal ?? filtered.length) : filtered.length;
+  const totalPages = serverDriven
+    ? Math.max(1, serverTotalPages ?? 1)
+    : Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(effPage, totalPages);
-  const visibleRows = paginate
-    ? filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-    : filtered;
+  const visibleRows = serverDriven || !paginate
+    ? filtered
+    : filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   // One live clock for every countdown on screen — ticks each second
   // only while a scheduled session is visible, so seconds stay exact.
   const hasScheduledOnPage = visibleRows.some((a) =>
@@ -267,8 +294,13 @@ export function NurseAlertsTable({
     // action state within the page's own type.
     if (!lockType) setTypeFilter(type);
     setActionFilter((prev) => (prev === value ? "" : value));
-    setPage(1);
-    setPaged(true);
+    if (serverDriven) {
+      // Facet restarts on the first server page (event-driven, no effects).
+      onServerPageChange?.(1);
+    } else {
+      setPage(1);
+      setPaged(true);
+    }
   }
 
   return (
@@ -312,6 +344,11 @@ export function NurseAlertsTable({
           <nav className={styles.pager} aria-label="Cases pages">
             <p className={styles.range}>
               Showing {start}–{end} of {total}
+              {serverDriven &&
+              serverUnfilteredTotal !== undefined &&
+              serverUnfilteredTotal !== total
+                ? ` (of ${serverUnfilteredTotal} on your desk)`
+                : ""}
             </p>
             <div className={styles.pagerButtons}>
               <Button
@@ -319,8 +356,12 @@ export function NurseAlertsTable({
                 variant="outline"
                 disabled={safePage <= 1}
                 onClick={() => {
-                  setPaged(true);
-                  setPage(Math.max(1, safePage - 1));
+                  if (serverDriven) {
+                    onServerPageChange?.(Math.max(1, safePage - 1));
+                  } else {
+                    setPaged(true);
+                    setPage(Math.max(1, safePage - 1));
+                  }
                 }}
               >
                 Previous
@@ -333,8 +374,12 @@ export function NurseAlertsTable({
                 variant="outline"
                 disabled={safePage >= totalPages}
                 onClick={() => {
-                  setPaged(true);
-                  setPage(safePage + 1);
+                  if (serverDriven) {
+                    onServerPageChange?.(safePage + 1);
+                  } else {
+                    setPaged(true);
+                    setPage(safePage + 1);
+                  }
                 }}
               >
                 Next

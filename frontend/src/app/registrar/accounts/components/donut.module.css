@@ -16,4 +16,12 @@
   font-weight: 700;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.tooltipSwatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
 }

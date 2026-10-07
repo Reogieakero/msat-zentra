@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { invalidateTags } from "../../lib/cache.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
 import { sf10Upload } from "../../lib/upload.js";
@@ -247,7 +248,7 @@ router.post(
         }),
       ]);
 
-      await invalidateTags(["registrar", "overview", "principal"]);
+      await invalidateTags(["registrar", "registrar-sf10", "registrar-overview", "overview", "principal"]);
       res.status(201).json({ id: record.id, source: record.source, uploadedFileUrl: fileUrl });
     } catch (e) { next(e); }
   }
@@ -296,7 +297,43 @@ router.post(
       const record = await prisma.sf10Record.findUnique({ where: { id: String(req.params.id) } });
       if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
       const updated = await prisma.sf10Record.update({ where: { id: record.id }, data: { verifiedBy: req.user!.id, verifiedAt: new Date() } });
+      await invalidateTags(["registrar-sf10", "registrar-overview"]);
       res.json(updated);
+
+      // Registrar desk handoff (best-effort): a verified record needs band
+      // validation. Names the learner + section so the toast reads specific.
+      void (async () => {
+        try {
+          const full = await prisma.sf10Record.findUnique({
+            where: { id: record.id },
+            select: {
+              student: {
+                select: {
+                  gradeLevel: true,
+                  user: { select: { fullName: true } },
+                  section: { select: { name: true } },
+                },
+              },
+            },
+          });
+          const gradeLevel = full?.student.gradeLevel ?? null;
+          const bandRole =
+            gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10"
+              ? "record_keeper"
+              : "registrar";
+          const name = full?.student.user.fullName ?? "A student";
+          const section = full?.student.section?.name ?? "—";
+          await fanoutToRole(bandRole, {
+            sourceTable: "sf10_records",
+            action: "verified",
+            message: `SF10 verified: ${name} (${section}) — needs validation.`,
+            sourceId: record.id,
+            excludeUserId: req.user!.id,
+          });
+        } catch {
+          // Best-effort only — verification already succeeded.
+        }
+      })();
     } catch (e) { next(e); }
   }
 );
@@ -335,7 +372,16 @@ router.post(
         prisma.sf10RecordVersion.create({ data: { sf10RecordId: record.id, versionNumber: record.currentVersion + 1, dataSnapshot: (record.ocrExtractedData as object) ?? {}, changedBy: req.user!.id, changeReason: "Validation" } }),
         prisma.auditLog.create({ data: { userId: req.user!.id, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 validated" } }),
       ]);
-      await invalidateTags(["registrar", "overview", "principal"]);
+      await invalidateTags(["registrar", "registrar-sf10", "registrar-overview", "overview", "principal"]);
+      // Own-bell receipt so the actor's badge bumps live (echo toast
+      // suppressed client-side).
+      await fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "sf10_records",
+        action: "validate_self",
+        message: `You validated an SF10 record — now available.`,
+        sourceId: record.id,
+      });
       res.json(updated[0]);
     } catch (e) { next(e); }
   }
@@ -357,7 +403,16 @@ router.post(
         }),
         prisma.auditLog.create({ data: { userId: req.user!.id, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 released and archived" } }),
       ]);
-      await invalidateTags(["registrar", "overview", "principal"]);
+      await invalidateTags(["registrar", "registrar-sf10", "registrar-overview", "overview", "principal"]);
+      // Own-bell receipt so the actor's badge bumps live (echo toast
+      // suppressed client-side).
+      await fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "sf10_records",
+        action: "release_self",
+        message: `You released an SF10 record — archived.`,
+        sourceId: record.id,
+      });
       res.json(updated[0]);
     } catch (e) { next(e); }
   }

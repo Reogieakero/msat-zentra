@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,8 @@ import { RefreshBadge } from "@/components/ui/refresh-badge";
 import {
   fetchAllGuidanceReferrals,
   fetchGuidanceRiskLevels,
+  type GuidanceReferralItem,
+  type GuidanceRiskLevel,
 } from "../referrals/components/guidance-referrals-data";
 import {
   buildGuidanceAdmInsights,
@@ -27,16 +30,23 @@ import styles from "./components/guidance-adm.module.css";
  * and Counseling Cases timelines, linked from the recommendations below.
  */
 export default function GuidanceAdmPage() {
-  const { data: referrals, isPending, isError, refetch, isFetching } = useQuery({
-    queryKey: ["guidance-adm-report"],
-    queryFn: () => fetchAllGuidanceReferrals(),
-    staleTime: 60_000,
-  });
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  // Aggregate insights view: bounded desk walks feed the client-side
+  // insights (nested under ["guidance-adm"] so desk invalidation reaches it).
+  const { data: referrals, isPending, isError, refetch, isFetching } =
+    useQuery<GuidanceReferralItem[]>({
+      queryKey: ["guidance-adm", "report", termKey],
+      queryFn: () => fetchAllGuidanceReferrals(),
+      placeholderData: keepPreviousData,
+      staleTime: 60_000,
+    });
 
   // All-status case list (pending through dismissed) — insights, reports,
   // and queue always reflect the current referrals whatever their status.
   const data = React.useMemo(
-    () => (referrals ? buildGuidanceAdmReferrals(referrals) : null),
+    () =>
+      Array.isArray(referrals) ? buildGuidanceAdmReferrals(referrals) : null,
     [referrals]
   );
 
@@ -44,13 +54,14 @@ export default function GuidanceAdmPage() {
   // id or roster id — the endpoint serves both). Desk-wide so the
   // high-risk recommendation sees counseling cases too.
   const studentIds = React.useMemo(
-    () => [
-      ...new Set(
-        (data?.desk ?? [])
-          .map((a) => a.studentId)
-          .filter((id): id is string => id !== null)
-      ),
-    ],
+    () =>
+      [
+        ...new Set(
+          (data?.desk ?? [])
+            .map((a) => a.studentId)
+            .filter((id): id is string => id !== null)
+        ),
+      ].sort(),
     [data]
   );
   const {
@@ -58,9 +69,10 @@ export default function GuidanceAdmPage() {
     isFetching: riskFetching,
     isError: riskError,
     refetch: refetchRisk,
-  } = useQuery({
-    queryKey: ["guidance-risk-levels", studentIds],
+  } = useQuery<Record<string, GuidanceRiskLevel>>({
+    queryKey: ["guidance-risk-levels", studentIds, termKey],
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
+    placeholderData: keepPreviousData,
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });

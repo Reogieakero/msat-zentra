@@ -10,11 +10,16 @@ import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSi
 import { TopReferredCard } from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
 import type { TypeFilter } from "./components/guidance-anecdotal-filters";
-import { fetchGuidanceAnecdotal } from "./components/guidance-anecdotal-data";
+import {
+  fetchGuidanceAnecdotal,
+  type GuidanceAnecdotalData,
+} from "./components/guidance-anecdotal-data";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/guidance-anecdotal.module.css";
 
-const PAGE_SIZE = 50;
+const GUIDANCE_ANECDOTAL_PAGE_SIZE = 15;
 
 /**
  * Guidance anecdotal repository — same layout as the teacher records page:
@@ -23,30 +28,34 @@ const PAGE_SIZE = 50;
  * stay in the panel header.
  */
 export default function GuidanceAnecdotalPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
-  const [query, setQuery] = React.useState("");
   const [type, setType] = React.useState<TypeFilter>("");
   const [page, setPage] = React.useState(1);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setQuery(queryInput.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [queryInput]);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const query = useDebouncedValue(queryInput.trim(), 300);
 
   const handleQueryInputChange = (value: string) => {
     setQueryInput(value);
     setPage(1);
   };
 
-  const { data, isPending, isError, isFetching, refetch, isRefetching } = useQuery({
-    queryKey: ["guidance-anecdotal", query, type, page],
-    queryFn: ({ signal }) =>
-      fetchGuidanceAnecdotal({ q: query, type, page, pageSize: PAGE_SIZE }, { signal }),
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
-  });
+  const { data, isPending, isError, isFetching, refetch, isRefetching } =
+    useQuery<GuidanceAnecdotalData>({
+      queryKey: ["guidance-anecdotal", page, query, type, termKey],
+      queryFn: ({ signal }) =>
+        fetchGuidanceAnecdotal(
+          { q: query || undefined, type, page, pageSize: GUIDANCE_ANECDOTAL_PAGE_SIZE },
+          { signal }
+        ),
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
+    });
+
+  // Derived, never setState-in-effect.
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(data?.page ?? page, totalPages);
 
   if (isPending) {
     return (
@@ -172,11 +181,11 @@ export default function GuidanceAnecdotalPage() {
       <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceAnecdotalFolders
-            records={data.records}
-            page={data.page}
+            records={Array.isArray(data.records) ? data.records : []}
+            page={safePage}
             pageSize={data.pageSize}
             total={data.total}
-            totalPages={data.totalPages}
+            totalPages={totalPages}
             isNavigating={isFetching && !isPending}
             onPageChange={setPage}
             query={queryInput}

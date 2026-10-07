@@ -1,5 +1,10 @@
-.dialogContent {
-  max-width: 560px;
+/* Actions sit on the right in every modal state (CardModal has no
+   footer slot — the X owns closing). */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .process {
@@ -128,7 +133,8 @@
 }
 
 .compareCol {
-  text-align: center;
+  /* Left-aligned to line up with the row content below. */
+  text-align: left;
 }
 
 .compareRow {

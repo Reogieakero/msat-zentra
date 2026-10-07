@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Clock, MapPin, GraduationCap, CalendarDays, ListChecks, ClipboardList } from "lucide-react";
 import {
   ACTIVITY_AGENDA,
@@ -29,32 +23,34 @@ export function ClassDetailDialog({ block, onClose }: ClassDetailDialogProps) {
   const agenda = block ? ACTIVITY_AGENDA[block.activity] ?? [] : [];
 
   return (
-    <Dialog
+    <CardModal
       open={block !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      size="md"
+      title={
+        block ? (
+          <span className={styles.header}>
+            <span
+              className={styles.dot}
+              style={{ "--detail": block.color } as React.CSSProperties}
+              aria-hidden
+            />
+            <span className={styles.titleWrap}>
+              <span className={styles.title}>{block.subject}</span>
+            </span>
+          </span>
+        ) : (
+          "Class detail"
+        )
+      }
+      description={block ? `${dayLabel} · ${dateLabel}` : undefined}
+      watchKey={block?.subject}
     >
-      <DialogContent className={styles.dialog}>
-        {block ? (
-          <>
-            <DialogHeader className={styles.header}>
-              <span
-                className={styles.dot}
-                style={{ "--detail": block.color } as React.CSSProperties}
-                aria-hidden
-              />
-              <div className={styles.titleWrap}>
-                <DialogTitle className={styles.title}>{block.subject}</DialogTitle>
-                <DialogDescription className={styles.subtitle}>
-                  {dayLabel} · {dateLabel}
-                </DialogDescription>
-              </div>
-            </DialogHeader>
+      {block ? (
+        <>
+          <p className={styles.topic}>{block.topic}</p>
 
-            <p className={styles.topic}>{block.topic}</p>
-
-            <dl className={styles.meta}>
+          <dl className={styles.meta}>
               <div className={styles.metaRow}>
                 <dt className={styles.metaLabel}>
                   <Clock className={styles.metaIcon} aria-hidden />
@@ -109,9 +105,8 @@ export function ClassDetailDialog({ block, onClose }: ClassDetailDialogProps) {
                 </ol>
               </div>
             ) : null}
-          </>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+        </>
+      ) : null}
+    </CardModal>
   );
 }

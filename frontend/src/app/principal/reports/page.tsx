@@ -1,40 +1,49 @@
 "use client";
 
 import * as React from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PANEL_ROWS, type ReportsPayload, type ReportScope } from "./reports-data";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
+import { toast } from "@/components/ui/sonner";
 import { ReportsToolbar } from "./components/ReportsToolbar";
 import { ReportsKpis } from "./components/ReportsKpis";
 import { ReportPanel } from "./components/ReportsPanels";
+import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import styles from "./page.module.css";
 
 export default function PrincipalReportsPage() {
   const scope: ReportScope = "school";
-  const [data, setData] = React.useState<ReportsPayload | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
 
-  const load = React.useCallback(() => {
-    apiClient
-      .get<ReportsPayload>("/api/reports", { params: { scope } })
-      .then((res) => setData(res.data))
-      .catch((err: unknown) => {
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        setError(status ? `Failed to load reports (HTTP ${status})` : "Failed to load reports");
-        console.error("[/api/reports] fetch failed:", err);
-      })
-      .finally(() => setLoading(false));
-  }, [scope]);
+  // Cached (was manual useState+useEffect with zero cache). Term-scoped,
+  // 5-min stale — Refresh explicitly invalidates instead of full reload.
+  const { data, isPending, isFetching, isError, error, refetch } = useQuery({
+    queryKey: ["principal-reports", termId, scope],
+    queryFn: async () =>
+      (await apiClient.get<ReportsPayload>("/api/reports", { params: { scope } })).data,
+    staleTime: 300_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+  });
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  const loading = isPending || isFetching;
+  const errorMsg = isError
+    ? (() => {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        return status ? `Failed to load reports (HTTP ${status})` : "Failed to load reports";
+      })()
+    : null;
 
   const handleRefresh = () => {
-    setLoading(true);
-    setError(null);
-    load();
+    void queryClient
+      .invalidateQueries({ queryKey: ["principal-reports", termId, scope] })
+      .then(() => refetch())
+      .then(() => toast.success({ title: "Reports refreshed" }))
+      .catch(() => toast.error({ title: "Refresh failed", description: "Could not reload reports." }));
   };
 
   const handleExport = () => {
@@ -86,18 +95,16 @@ export default function PrincipalReportsPage() {
 
   return (
     <section className={styles.page}>
-      <div className={styles.head}>
-        <div>
-          <h1 className={styles.title}>Reports &amp; Analytics Command Center</h1>
-          <p className={styles.subtitle}>
-            Every transaction and data stream across the school, visualized.
-          </p>
-        </div>
-        <ReportsToolbar onRefresh={handleRefresh} onExport={handleExport} loading={loading} />
-      </div>
+      <PrincipalPageHeader
+        title="Reports & Analytics"
+        description="Every transaction and data stream across the school, visualized."
+        actions={
+          <ReportsToolbar onRefresh={handleRefresh} onExport={handleExport} loading={loading} />
+        }
+      />
 
-      {error ? (
-        <div className={styles.error}>{error}</div>
+      {errorMsg ? (
+        <div className={styles.error}>{errorMsg}</div>
       ) : (
         <>
           <ReportsKpis loading={loading} data={data?.kpis ?? null} />

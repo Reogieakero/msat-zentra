@@ -7,21 +7,13 @@ import {
   ShieldCheck,
   ShieldAlert,
   ShieldX,
-  RefreshCw,
   CircleCheck,
   CircleX,
-  Check,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { formatGrade, formatSection } from "@/lib/utils";
 import type { LrnMatchResult, PendingStudent } from "./types";
 import styles from "./lrn-verification.module.css";
@@ -36,7 +28,7 @@ const PROCESS_STEPS = [
 
 type Props = {
   student: PendingStudent;
-  onApprove: () => void;
+  onApprove: () => Promise<void>;
   approving?: boolean;
 };
 
@@ -80,7 +72,7 @@ export function LrnVerifyButton({ student, onApprove, approving }: Props) {
       <Button
         variant="outline"
         size="sm"
-        className="h-7 gap-1.5 text-xs"
+        className="gap-1.5"
         onClick={openModal}
         aria-label={`Verify LRN for ${student.name}`}
       >
@@ -88,41 +80,50 @@ export function LrnVerifyButton({ student, onApprove, approving }: Props) {
         Verify LRN
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className={styles.dialogContent}>
-          <DialogHeader>
-            <DialogTitle>LRN Verification</DialogTitle>
-            <DialogDescription>
-              Cross-check {student.name}&apos;s submitted details against the
-              official student records before approving.
-            </DialogDescription>
-          </DialogHeader>
-
-          {state.status === "idle" ? (
-            <IdleState onRun={run} disabled={!trimmed || trimmed === "—"} />
-          ) : state.status === "loading" ? (
-            <div className={styles.loading}>
-              <Loader2 className={styles.spinner} aria-hidden />
-              <span className={styles.loadingText}>
-                Looking up {trimmed} against student records…
-              </span>
-            </div>
-          ) : state.status === "error" ? (
+      <CardModal
+        open={open}
+        onClose={() => setOpen(false)}
+        dismissable={!approving}
+        title="LRN Verification"
+        description={
+          <>
+            Cross-check {student.name}&apos;s submitted details against the
+            official student records before approving.
+          </>
+        }
+        size="md"
+        watchKey={state.status}
+      >
+        {state.status === "idle" ? (
+          <IdleState onRun={run} disabled={!trimmed || trimmed === "—"} />
+        ) : state.status === "loading" ? (
+          <div className={styles.loading}>
+            <Loader2 className={styles.spinner} aria-hidden />
+            <span className={styles.loadingText}>
+              Looking up {trimmed} against student records…
+            </span>
+          </div>
+        ) : state.status === "error" ? (
+          <>
             <p className={styles.hint} style={{ borderColor: "#171717", color: "#171717" }}>
               {state.message}
             </p>
-          ) : (
-            <Result
-              data={state.data}
-              onRecheck={run}
-              onApprove={onApprove}
-              approving={approving}
-              onDone={() => setOpen(false)}
-            />
-          )}
-
-        </DialogContent>
-      </Dialog>
+            <div className={styles.actions}>
+              <Button variant="outline" size="sm" onClick={run}>
+                Run again
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Result
+            data={state.data}
+            onRecheck={run}
+            onApprove={onApprove}
+            approving={approving}
+            onDone={() => setOpen(false)}
+          />
+        )}
+      </CardModal>
     </>
   );
 }
@@ -153,8 +154,7 @@ function IdleState({
           <p className="text-sm font-medium text-foreground">{disabled ? "No LRN on record" : "Ready to verify"}</p>
           <p className="truncate text-xs text-muted-foreground">Claimed LRN: {disabled ? "—" : "•".repeat(5)}</p>
         </div>
-        <Button size="sm" className="gap-1.5" disabled={disabled} onClick={onRun}>
-          <Fingerprint className="size-4" aria-hidden />
+        <Button size="sm" disabled={disabled} onClick={onRun}>
           Run verification
         </Button>
       </div>
@@ -171,14 +171,13 @@ function Result({
 }: {
   data: LrnMatchResult;
   onRecheck: () => void;
-  onApprove: () => void;
+  onApprove: () => Promise<void>;
   approving?: boolean;
   onDone: () => void;
 }) {
   const verdict = data.verdict;
   const match = verdict === "match";
   const mismatch = verdict === "mismatch";
-  const notFound = verdict === "not_found";
 
   const verdictClass = match
     ? styles.verdictMatch
@@ -246,33 +245,36 @@ function Result({
       ) : null}
 
       {match ? (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+        <div className={styles.actions}>
           <Button
             size="sm"
-            className="gap-1.5"
             disabled={approving}
+            aria-busy={approving || undefined}
             onClick={() => {
-              onApprove();
-              onDone();
+              // Await the server confirm before closing: the dialog must
+              // never vanish while the approval is still processing. On
+              // failure the promise rejects and we stay open.
+              void (async () => {
+                await onApprove();
+                onDone();
+              })();
             }}
           >
             {approving ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Check className="size-4" aria-hidden />
-            )}
-            Approve account
+            ) : null}
+            {approving ? "Approving…" : "Approve account"}
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onRecheck} disabled={approving}>
-            <RefreshCw className="size-3.5" aria-hidden />
+          <Button variant="outline" size="sm" onClick={onRecheck} disabled={approving}>
             Re-check
           </Button>
         </div>
       ) : (
-        <Button variant="outline" size="sm" className="self-start gap-1.5" onClick={onRecheck}>
-          <RefreshCw className="size-3.5" aria-hidden />
-          Re-check
-        </Button>
+        <div className={styles.actions}>
+          <Button variant="outline" size="sm" onClick={onRecheck}>
+            Re-check
+          </Button>
+        </div>
       )}
     </div>
   );

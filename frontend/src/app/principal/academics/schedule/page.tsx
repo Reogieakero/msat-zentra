@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api/client";
 // teacher/schedule and principal/academics/schedule render the identical
 // design from `SectionScheduleCard`.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
 import { AuroraBanner } from "../../overview/components/AuroraBanner";
 import {
   sectionCardStatus,
@@ -106,12 +107,10 @@ export default function PrincipalSchedulePage() {
 
   return (
     <section className="flex w-full flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Schedule Approval</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Timetables sent by the master teacher appear here for review.
-        </p>
-      </div>
+      <PrincipalPageHeader
+        title="Schedule Approval"
+        description="Timetables sent by the master teacher appear here for review."
+      />
 
       {sectionsQuery.isPending ? (
         <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading sections">

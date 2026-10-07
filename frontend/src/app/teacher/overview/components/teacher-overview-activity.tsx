@@ -32,7 +32,7 @@ import {
 import type { TeacherActivityRow } from "./teacher-overview-data";
 import styles from "./teacher-overview-activity.module.css";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 interface TeacherOverviewActivityProps {
   activity: TeacherActivityRow[];

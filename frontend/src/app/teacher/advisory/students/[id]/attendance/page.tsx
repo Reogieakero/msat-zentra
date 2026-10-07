@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { AttendanceCalendar } from "./components/AttendanceCalendar";
-import { fetchStudentAttendance } from "./components/attendance-data";
+import { fetchStudentAttendance, type StudentAttendance } from "./components/attendance-data";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/attendance.module.css";
 
 export default function StudentAttendancePage() {
   const params = useParams<{ id: string }>();
   const studentId = decodeURIComponent(params.id);
-  const attendanceQuery = useQuery({
-    queryKey: ["advisee-attendance", studentId],
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const attendanceQuery = useQuery<StudentAttendance>({
+    queryKey: ["advisee-attendance", studentId, termKey],
     queryFn: () => fetchStudentAttendance(studentId),
+    placeholderData: keepPreviousData,
     retry: false,
   });
   const student = attendanceQuery.data?.student ?? null;

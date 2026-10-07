@@ -32,7 +32,9 @@ const router = Router();
 const createSchema = z.object({
   studentId: z.string().min(1),
   sectionId: z.string().min(1),
-  termId: z.string().min(1),
+  // Prefer the session's active term; explicit body termId is a legacy
+  // fallback for callers without a stored selection.
+  termId: z.string().min(1).optional(),
   observationDatetime: z.string().datetime(),
   descriptionOfIncident: z.string().min(1),
   descriptionOfLocation: z.string().optional(),
@@ -74,9 +76,16 @@ router.post(
           throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found in this section");
         }
       }
+      // Session scope wins — a stale stored selection degrades to the
+      // explicit body termId rather than failing the filing.
+      const filingTermId = req.termScope?.termId ?? String(req.body.termId ?? "");
+      if (!filingTermId) {
+        throw new AppError(400, "NO_ACTIVE_TERM", "No active term to file under");
+      }
       const record = await prisma.anecdotalRecord.create({
         data: {
           ...req.body,
+          termId: filingTermId,
           studentId: isRoster ? null : rawStudentId,
           rosterId,
           observationDatetime: new Date(req.body.observationDatetime),
@@ -91,8 +100,16 @@ router.post(
       } else {
         await recomputeRisk(rawStudentId, record.termId);
       }
-      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance"]);
+      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance", "guidance-anecdotal", "guidance-risk", "nurse", "nurse-risk", "alerts", "referrals", "adm"]);
       res.status(201).json({ id: record.id, folderId: record.folderId ?? null });
+      // Filer receipt: the bell keeps the filing even before any referral.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "anecdotal_records",
+        action: "create_self",
+        message: "You filed an anecdotal record.",
+        sourceId: record.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -110,6 +127,7 @@ router.post(
       const followup = await prisma.anecdotalRecordFollowup.create({
         data: { anecdotalRecordId: record.id, followupBy: req.user!.id, followupDate: new Date(), notes: req.body.notes },
       });
+      await invalidateTags(["risk", "principal", "teacher", "overview", "guidance", "guidance-risk", "nurse", "nurse-risk"]);
       await fanoutNotification({
         userId: record.observerId, sourceTable: "anecdotal_record_followups", action: "create",
         message: "New follow-up added to an anecdotal record.", sourceId: followup.id,
@@ -183,7 +201,7 @@ router.post(
       // A new referral must surface on the ADM board + teacher cases +
       // guidance overview at once (otherwise the guidance page serves a stale
       // cached empty response right after an adviser refers).
-      await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals"]);
+      await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals", "alerts", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Referred to ${req.body.referredToRole}${req.body.consultReviewer ? ` (consult reviewer: ${req.body.consultReviewer})` : ""}` });
       // Detailed cards name the student + section (record.studentId is a
       // User id for registered students, or a roster enlistment).
@@ -872,7 +890,13 @@ router.get(
       let where: {
         observerId?: string;
         OR?: any[];
+        termId?: string;
       } = {};
+
+      // Term-scoped: only filings from the session's active term are
+      // referable — prior-term records stay history.
+      const scopeTermId = req.termScope?.termId ?? null;
+      if (scopeTermId) where.termId = scopeTermId;
 
       if (isAdviser && sectionIds.length > 0) {
         // Advisers see records for students in their advisory sections.

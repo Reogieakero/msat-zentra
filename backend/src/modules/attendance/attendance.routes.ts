@@ -54,7 +54,8 @@ const bulkSchema = z.object({
   assignmentId: z.string().min(1).optional(),
   slot: z.coerce.number().int().min(1).max(10).optional().default(1),
   session: z.enum(["AM", "PM"]).optional(),
-  records: z.array(recordSchema).min(1),
+  // Bound: one class sheet per request — caps payload and write fan-out.
+  records: z.array(recordSchema).min(1).max(300),
 });
 
 // Philippines calendar day (school operates on local time).
@@ -232,18 +233,27 @@ router.post(
 
       // Day-scoped write (not raw timestamp upsert): legacy rows may carry
       // non-midnight timestamps, so match by calendar day to avoid stacking
-      // two rows for one student/day/session.
-      const written: { id: string; studentId: string }[] = [];
+      // two rows for one student/day/session. One $transaction round-trip
+      // for the whole sheet (was: await inside for loop).
+      const updateKeys: string[] = [];
+      const createKeys: string[] = [];
+      const writeOps: Array<Promise<unknown>> = [];
       for (const r of records) {
         const existing = prevByStudent.get(r.studentId);
         const isRoster = r.studentId.startsWith("roster:");
         const rosterId = isRoster ? r.studentId.slice("roster:".length) : null;
-        const row = existing
-          ? await prisma.attendanceRecord.update({
+        if (existing) {
+          updateKeys.push(r.studentId);
+          writeOps.push(
+            prisma.attendanceRecord.update({
               where: { id: existing.id },
               data: { status: r.status, sectionId, recordedBy: teacherId, date: normalizedDate },
-            })
-          : await prisma.attendanceRecord.create({
+            }),
+          );
+        } else {
+          createKeys.push(r.studentId);
+          writeOps.push(
+            prisma.attendanceRecord.create({
               data: {
                 studentId: isRoster ? null : r.studentId,
                 rosterId,
@@ -254,48 +264,83 @@ router.post(
                 status: r.status,
                 recordedBy: teacherId,
               },
-            });
-        written.push({ id: row.id, studentId: r.studentId });
+              select: { id: true },
+            }),
+          );
+        }
+      }
+      const writeRows = (await prisma.$transaction(writeOps as never[])) as Array<{
+        id: string;
+      }>;
+      const written: { id: string; studentId: string }[] = [
+        ...updateKeys.map((studentId, i) => ({
+          id: (writeRows[i] as { id: string }).id,
+          studentId,
+        })),
+        ...createKeys.map((studentId, i) => ({
+          id: (writeRows[updateKeys.length + i] as { id: string }).id,
+          studentId,
+        })),
+      ];
+      const statusByStudent = new Map(records.map((r) => [r.studentId, r.status]));
+      for (const w of written) {
+        const isRoster = w.studentId.startsWith("roster:");
         // Later duplicates in the same payload see the fresh write.
-        prevByStudent.set(r.studentId, {
-          id: row.id,
-          studentId: isRoster ? null : r.studentId,
-          rosterId,
-          status: r.status,
+        prevByStudent.set(w.studentId, {
+          id: w.id,
+          studentId: isRoster ? null : w.studentId,
+          rosterId: isRoster ? w.studentId.slice("roster:".length) : null,
+          status: statusByStudent.get(w.studentId) ?? "present",
         });
       }
       const byStudent = new Map(written.map((w) => [`${w.studentId}|${legacySession}`, w]));
+      // Parent pings queue here and flush void-after-res below so the
+      // confirmed response never waits on per-parent fan-outs.
+      const pendingParentPings: Array<{
+        userId: string;
+        studentId: string;
+        recordId: string;
+        status: string;
+      }> = [];
 
-      for (const r of records) {
-        // Risk + parent notifications only apply to registered profiles.
-        // Roster enlistments get the roster risk path (snapshot +
-        // auto-intervention, no parent links).
-        if (!r.studentId.startsWith("roster:")) {
-          await recomputeRisk(r.studentId, termId);
-        } else {
-          await recomputeRosterRisk(r.studentId.slice("roster:".length), termId);
-        }
-        const prev = prevStatus.get(r.studentId);
-        const newlyFlagged =
-          (r.status === "absent" || r.status === "late") &&
+      // Risk recompute in parallel; parent links in ONE batched query
+      // (was: sequential awaits + one findMany per flagged student).
+      const uniqueIds = Array.from(new Set(records.map((r) => r.studentId)));
+      await Promise.all(
+        uniqueIds.map((id) =>
+          // Risk + parent notifications only apply to registered profiles.
+          // Roster enlistments get the roster risk path (snapshot +
+          // auto-intervention, no parent links).
+          id.startsWith("roster:")
+            ? recomputeRosterRisk(id.slice("roster:".length), termId)
+            : recomputeRisk(id, termId),
+        ),
+      );
+      const flaggedProfiles = uniqueIds.filter((id) => {
+        if (id.startsWith("roster:")) return false;
+        const prev = prevStatus.get(id);
+        const rec = statusByStudent.get(id);
+        return (
+          (rec === "absent" || rec === "late") &&
           prev !== "absent" &&
-          prev !== "late";
-        if (newlyFlagged) {
-          const parents = await prisma.parentStudentLink.findMany({
-            where: { studentId: r.studentId },
-            select: { parentId: true },
-          });
-          const record = byStudent.get(`${r.studentId}|${legacySession}`);
-          for (const p of parents) {
-            await fanoutNotification({
-              userId: p.parentId,
-              sourceTable: "attendance_records",
-              action: "create",
-              sourceId: record?.id ?? r.studentId,
-              message: `${names.get(r.studentId) ?? "Your child"} was marked ${r.status} for the ${legacySession} session on ${recordDay}.`,
-            });
-          }
-        }
+          prev !== "late"
+        );
+      });
+      const parentLinks =
+        flaggedProfiles.length > 0
+          ? await prisma.parentStudentLink.findMany({
+              where: { studentId: { in: flaggedProfiles } },
+              select: { parentId: true, studentId: true },
+            })
+          : [];
+      for (const p of parentLinks) {
+        const record = byStudent.get(`${p.studentId}|${legacySession}`);
+        pendingParentPings.push({
+          userId: p.parentId,
+          studentId: p.studentId,
+          recordId: record?.id ?? p.studentId,
+          status: statusByStudent.get(p.studentId) ?? "absent",
+        });
       }
 
       await writeAudit({
@@ -307,9 +352,18 @@ router.post(
       });
       // Attendance stats feed cached overview/teacher pages; recomputes
       // above can open guidance interventions + risk levels.
-      await invalidateTags(["overview", "principal", "teacher", "risk", "guidance"]);
+      await invalidateTags(["overview", "principal", "teacher", "risk", "guidance", "reports"]);
 
       res.status(201).json({ count: written.length });
+      for (const ping of pendingParentPings) {
+        void fanoutNotification({
+          userId: ping.userId,
+          sourceTable: "attendance_records",
+          action: "create",
+          sourceId: ping.recordId,
+          message: `${names.get(ping.studentId) ?? "Your child"} was marked ${ping.status} for the ${legacySession} session on ${recordDay}.`,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -479,13 +533,21 @@ async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
     ).map((u) => [u.id, u.fullName])
   );
 
-  const written: { id: string; studentId: string }[] = [];
+  // Batched write: one $transaction round-trip for the whole sheet instead
+  // of N sequential update/create round-trips (was: await inside for loop).
+  // Updates keep their order first, creates after — the flat result array
+  // follows the same order, so ids map back positionally.
+  const updateKeys: string[] = [];
+  const createKeys: string[] = [];
+  const writeOps: Array<Promise<unknown>> = [];
   for (const r of records) {
     const existing = prevByStudent.get(r.studentId);
     const isRoster = r.studentId.startsWith("roster:");
     const rosterId = isRoster ? r.studentId.slice("roster:".length) : null;
-    const row = existing
-      ? await prisma.attendanceRecord.update({
+    if (existing) {
+      updateKeys.push(r.studentId);
+      writeOps.push(
+        prisma.attendanceRecord.update({
           where: { id: existing.id },
           data: {
             status: r.status,
@@ -496,8 +558,12 @@ async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
             assignmentId: effectiveAssignmentId,
             slot,
           },
-        })
-      : await prisma.attendanceRecord.create({
+        }),
+      );
+    } else {
+      createKeys.push(r.studentId);
+      writeOps.push(
+        prisma.attendanceRecord.create({
           data: {
             studentId: isRoster ? null : r.studentId,
             rosterId,
@@ -511,42 +577,83 @@ async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
             assignmentId: effectiveAssignmentId,
             slot,
           },
-        });
-    written.push({ id: row.id, studentId: r.studentId });
-    prevByStudent.set(r.studentId, {
-      id: row.id,
-      studentId: isRoster ? null : r.studentId,
-      rosterId,
-      status: r.status,
+          select: { id: true },
+        }),
+      );
+    }
+  }
+  const writtenRows = (await prisma.$transaction(
+    writeOps as never[],
+  )) as Array<{ id: string }>;
+  const written: { id: string; studentId: string }[] = [
+    ...updateKeys.map((studentId, i) => ({
+      id: (writtenRows[i] as { id: string }).id,
+      studentId,
+    })),
+    ...createKeys.map((studentId, i) => ({
+      id: (writtenRows[updateKeys.length + i] as { id: string }).id,
+      studentId,
+    })),
+  ];
+  const statusByStudent = new Map(records.map((r) => [r.studentId, r.status]));
+  for (const w of written) {
+    const isRoster = w.studentId.startsWith("roster:");
+    prevByStudent.set(w.studentId, {
+      id: w.id,
+      studentId: isRoster ? null : w.studentId,
+      rosterId: isRoster ? w.studentId.slice("roster:".length) : null,
+      status: statusByStudent.get(w.studentId) ?? "present",
     });
   }
   const byStudent = new Map(written.map((w) => [w.studentId, w]));
+  // Parent pings queue here and flush void-after-res below so the
+  // confirmed response never waits on per-parent fan-outs.
+  const pendingParentPings: Array<{
+    userId: string;
+    studentId: string;
+    recordId: string;
+    status: string;
+  }> = [];
 
-  for (const r of records) {
-    if (!r.studentId.startsWith("roster:")) {
-      await recomputeRisk(r.studentId, termId);
-    } else {
-      await recomputeRosterRisk(r.studentId.slice("roster:".length), termId);
-    }
-    const prev = prevStatus.get(r.studentId);
-    const newlyFlagged =
-      (r.status === "absent" || r.status === "late") && prev !== "absent" && prev !== "late";
-    if (newlyFlagged) {
-      const parents = await prisma.parentStudentLink.findMany({
-        where: { studentId: r.studentId },
-        select: { parentId: true },
-      });
-      const record = byStudent.get(r.studentId);
-      for (const p of parents) {
-        await fanoutNotification({
-          userId: p.parentId,
-          sourceTable: "attendance_records",
-          action: "subject_create",
-          sourceId: record?.id ?? r.studentId,
-          message: `${names.get(r.studentId) ?? "Your child"} was marked ${r.status} in ${subjectLabel} on ${recordDay}.`,
-        });
-      }
-    }
+  // Risk recompute runs in parallel (one promise per student, was: sequential
+  // await in loop). Parent links resolve with ONE batched query for all
+  // newly-flagged profiles (was: one findMany per flagged student).
+  const uniqueIds = Array.from(new Set(records.map((r) => r.studentId)));
+  await Promise.all(
+    uniqueIds.map((id) =>
+      id.startsWith("roster:")
+        ? recomputeRosterRisk(id.slice("roster:".length), termId)
+        : recomputeRisk(id, termId),
+    ),
+  );
+  const flaggedProfiles = uniqueIds.filter((id) => {
+    if (id.startsWith("roster:")) return false;
+    const rec = records.find((r) => r.studentId === id);
+    const prev = prevStatus.get(id);
+    return (
+      !!rec &&
+      (rec.status === "absent" || rec.status === "late") &&
+      prev !== "absent" &&
+      prev !== "late"
+    );
+  });
+  const parentLinks =
+    flaggedProfiles.length > 0
+      ? await prisma.parentStudentLink.findMany({
+          where: { studentId: { in: flaggedProfiles } },
+          select: { parentId: true, studentId: true },
+        })
+      : [];
+  const recordByStudent = new Map(records.map((r) => [r.studentId, r]));
+  for (const link of parentLinks) {
+    const rec = recordByStudent.get(link.studentId);
+    const record = byStudent.get(link.studentId);
+    pendingParentPings.push({
+      userId: link.parentId,
+      studentId: link.studentId,
+      recordId: record?.id ?? link.studentId,
+      status: rec?.status ?? "absent",
+    });
   }
 
   await writeAudit({
@@ -559,6 +666,15 @@ async function handleSubjectBulk(input: SubjectBulkInput): Promise<void> {
   await invalidateTags(["overview", "principal", "teacher", "risk", "reports", "guidance"]);
 
   res.status(201).json({ count: written.length, subjectId, slot });
+  for (const ping of pendingParentPings) {
+    void fanoutNotification({
+      userId: ping.userId,
+      sourceTable: "attendance_records",
+      action: "subject_create",
+      sourceId: ping.recordId,
+      message: `${names.get(ping.studentId) ?? "Your child"} was marked ${ping.status} in ${subjectLabel} on ${recordDay}.`,
+    });
+  }
   // The section adviser learns in realtime (toast + bell) that per-subject
   // attendance landed — best-effort, never delays this response.
   void (async () => {
@@ -628,7 +744,9 @@ router.get(
 
       const records = await prisma.attendanceRecord.findMany({
         where,
-        include: {
+        select: {
+          date: true,
+          status: true,
           student: { select: { gradeLevel: true } },
           roster: { select: { gradeLevel: true } },
         },
@@ -2019,7 +2137,11 @@ router.get(
       if (!termId) {
         throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       }
-      const allowed = await teachableSectionIds(teacherId, termId);
+      const allowed = await teachableSectionIds(
+        teacherId,
+        termId,
+        req.termScope?.schoolYearId ?? null
+      );
       if (!allowed.includes(sectionId)) {
         throw new AppError(403, "FORBIDDEN", "Section is not in your teaching load");
       }
@@ -2118,7 +2240,11 @@ router.get(
       if (!termId) {
         throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       }
-      const allowed = await teachableSectionIds(teacherId, termId);
+      const allowed = await teachableSectionIds(
+        teacherId,
+        termId,
+        req.termScope?.schoolYearId ?? null
+      );
       if (!allowed.includes(sectionId)) {
         throw new AppError(403, "FORBIDDEN", "Section is not in your teaching load");
       }
@@ -2174,7 +2300,11 @@ router.get(
       if (!termId) {
         throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       }
-      const allowed = await teachableSectionIds(teacherId, termId);
+      const allowed = await teachableSectionIds(
+        teacherId,
+        termId,
+        req.termScope?.schoolYearId ?? null
+      );
       if (!allowed.includes(sectionId)) {
         throw new AppError(403, "FORBIDDEN", "Section is not in your teaching load");
       }
@@ -2271,7 +2401,11 @@ router.get(
       if (!termId) {
         throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       }
-      const allowed = await teachableSectionIds(teacherId, termId);
+      const allowed = await teachableSectionIds(
+        teacherId,
+        termId,
+        req.termScope?.schoolYearId ?? null
+      );
       if (!allowed.includes(sectionId)) {
         throw new AppError(403, "FORBIDDEN", "Section is not in your teaching load");
       }

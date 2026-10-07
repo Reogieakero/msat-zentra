@@ -44,7 +44,8 @@
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: white;
+  /* Text color comes inline per stage (foreground on tints,
+     primary-foreground on full primary). */
   flex-shrink: 0;
 }
 

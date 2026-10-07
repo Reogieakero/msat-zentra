@@ -18,6 +18,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "./overview-data";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewRisk.module.css";
@@ -143,9 +144,12 @@ function interpretGradeRisk(rows: { grade: string; count: number }[]): string {
 }
 
 function useOverview() {
+  const { activeTerm } = useTerm();
   return useQuery({
-    queryKey: ["overview"],
+    queryKey: ["overview", activeTerm?.termId ?? null],
     queryFn: fetchOverview,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 

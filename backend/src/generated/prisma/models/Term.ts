@@ -222,6 +222,7 @@ export type TermWhereInput = {
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
   referrals?: Prisma.ReferralListRelationFilter
+  interventions?: Prisma.InterventionListRelationFilter
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
   admProfiles?: Prisma.AdmLearnerProfileListRelationFilter
@@ -246,6 +247,7 @@ export type TermOrderByWithRelationInput = {
   attendanceRecords?: Prisma.AttendanceRecordOrderByRelationAggregateInput
   anecdotalRecords?: Prisma.AnecdotalRecordOrderByRelationAggregateInput
   referrals?: Prisma.ReferralOrderByRelationAggregateInput
+  interventions?: Prisma.InterventionOrderByRelationAggregateInput
   healthRecords?: Prisma.HealthRecordOrderByRelationAggregateInput
   homeVisitations?: Prisma.HomeVisitationRecordOrderByRelationAggregateInput
   admProfiles?: Prisma.AdmLearnerProfileOrderByRelationAggregateInput
@@ -274,6 +276,7 @@ export type TermWhereUniqueInput = Prisma.AtLeast<{
   attendanceRecords?: Prisma.AttendanceRecordListRelationFilter
   anecdotalRecords?: Prisma.AnecdotalRecordListRelationFilter
   referrals?: Prisma.ReferralListRelationFilter
+  interventions?: Prisma.InterventionListRelationFilter
   healthRecords?: Prisma.HealthRecordListRelationFilter
   homeVisitations?: Prisma.HomeVisitationRecordListRelationFilter
   admProfiles?: Prisma.AdmLearnerProfileListRelationFilter
@@ -321,6 +324,7 @@ export type TermCreateInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -344,6 +348,7 @@ export type TermUncheckedCreateInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -367,6 +372,7 @@ export type TermUpdateInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -390,6 +396,7 @@ export type TermUncheckedUpdateInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -659,6 +666,20 @@ export type TermUpdateOneRequiredWithoutReferralsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TermUpdateToOneWithWhereWithoutReferralsInput, Prisma.TermUpdateWithoutReferralsInput>, Prisma.TermUncheckedUpdateWithoutReferralsInput>
 }
 
+export type TermCreateNestedOneWithoutInterventionsInput = {
+  create?: Prisma.XOR<Prisma.TermCreateWithoutInterventionsInput, Prisma.TermUncheckedCreateWithoutInterventionsInput>
+  connectOrCreate?: Prisma.TermCreateOrConnectWithoutInterventionsInput
+  connect?: Prisma.TermWhereUniqueInput
+}
+
+export type TermUpdateOneRequiredWithoutInterventionsNestedInput = {
+  create?: Prisma.XOR<Prisma.TermCreateWithoutInterventionsInput, Prisma.TermUncheckedCreateWithoutInterventionsInput>
+  connectOrCreate?: Prisma.TermCreateOrConnectWithoutInterventionsInput
+  upsert?: Prisma.TermUpsertWithoutInterventionsInput
+  connect?: Prisma.TermWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TermUpdateToOneWithWhereWithoutInterventionsInput, Prisma.TermUpdateWithoutInterventionsInput>, Prisma.TermUncheckedUpdateWithoutInterventionsInput>
+}
+
 export type TermCreateNestedOneWithoutHealthRecordsInput = {
   create?: Prisma.XOR<Prisma.TermCreateWithoutHealthRecordsInput, Prisma.TermUncheckedCreateWithoutHealthRecordsInput>
   connectOrCreate?: Prisma.TermCreateOrConnectWithoutHealthRecordsInput
@@ -739,6 +760,7 @@ export type TermCreateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -761,6 +783,7 @@ export type TermUncheckedCreateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -821,6 +844,7 @@ export type TermCreateWithoutTeacherAssignmentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -843,6 +867,7 @@ export type TermUncheckedCreateWithoutTeacherAssignmentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -881,6 +906,7 @@ export type TermUpdateWithoutTeacherAssignmentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -903,6 +929,7 @@ export type TermUncheckedUpdateWithoutTeacherAssignmentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -925,6 +952,7 @@ export type TermCreateWithoutScheduleConfigsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -947,6 +975,7 @@ export type TermUncheckedCreateWithoutScheduleConfigsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -985,6 +1014,7 @@ export type TermUpdateWithoutScheduleConfigsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1007,6 +1037,7 @@ export type TermUncheckedUpdateWithoutScheduleConfigsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1029,6 +1060,7 @@ export type TermCreateWithoutTimetableEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1051,6 +1083,7 @@ export type TermUncheckedCreateWithoutTimetableEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1089,6 +1122,7 @@ export type TermUpdateWithoutTimetableEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1111,6 +1145,7 @@ export type TermUncheckedUpdateWithoutTimetableEntriesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1133,6 +1168,7 @@ export type TermCreateWithoutTermGrantsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1155,6 +1191,7 @@ export type TermUncheckedCreateWithoutTermGrantsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1193,6 +1230,7 @@ export type TermUpdateWithoutTermGrantsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1215,6 +1253,7 @@ export type TermUncheckedUpdateWithoutTermGrantsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1236,6 +1275,7 @@ export type TermCreateWithoutGradeComponentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1258,6 +1298,7 @@ export type TermUncheckedCreateWithoutGradeComponentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1296,6 +1337,7 @@ export type TermUpdateWithoutGradeComponentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1318,6 +1360,7 @@ export type TermUncheckedUpdateWithoutGradeComponentsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1340,6 +1383,7 @@ export type TermCreateWithoutFinalGradesInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1362,6 +1406,7 @@ export type TermUncheckedCreateWithoutFinalGradesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1400,6 +1445,7 @@ export type TermUpdateWithoutFinalGradesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1422,6 +1468,7 @@ export type TermUncheckedUpdateWithoutFinalGradesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1445,6 +1492,7 @@ export type TermCreateWithoutGradeFlagsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1467,6 +1515,7 @@ export type TermUncheckedCreateWithoutGradeFlagsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1505,6 +1554,7 @@ export type TermUpdateWithoutGradeFlagsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1527,6 +1577,7 @@ export type TermUncheckedUpdateWithoutGradeFlagsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1548,6 +1599,7 @@ export type TermCreateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1570,6 +1622,7 @@ export type TermUncheckedCreateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1608,6 +1661,7 @@ export type TermUpdateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1630,6 +1684,7 @@ export type TermUncheckedUpdateWithoutAttendanceRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1652,6 +1707,7 @@ export type TermCreateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutTermInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1674,6 +1730,7 @@ export type TermUncheckedCreateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutTermInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1712,6 +1769,7 @@ export type TermUpdateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutTermNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1734,6 +1792,7 @@ export type TermUncheckedUpdateWithoutAnecdotalRecordsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutTermNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1756,6 +1815,7 @@ export type TermCreateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutTermInput
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -1778,6 +1838,7 @@ export type TermUncheckedCreateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutTermInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -1816,6 +1877,7 @@ export type TermUpdateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUpdateManyWithoutTermNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -1838,6 +1900,115 @@ export type TermUncheckedUpdateWithoutReferralsInput = {
   finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutTermNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
+  healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutTermNestedInput
+  reportSnapshots?: Prisma.ReportSnapshotUncheckedUpdateManyWithoutTermNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedUpdateManyWithoutTermNestedInput
+  gradeFlags?: Prisma.GradeFlagUncheckedUpdateManyWithoutTermNestedInput
+  scheduleConfigs?: Prisma.ScheduleConfigUncheckedUpdateManyWithoutTermNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedUpdateManyWithoutTermNestedInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedUpdateManyWithoutTermNestedInput
+}
+
+export type TermCreateWithoutInterventionsInput = {
+  id?: string
+  termNumber: number
+  startDate?: Date | string | null
+  endDate?: Date | string | null
+  schoolYear: Prisma.SchoolYearCreateNestedOneWithoutTermsInput
+  gradeComponents?: Prisma.GradeComponentCreateNestedManyWithoutTermInput
+  finalGrades?: Prisma.FinalGradeCreateNestedManyWithoutTermInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
+  anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
+  referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
+  homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
+  admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
+  riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutTermInput
+  reportSnapshots?: Prisma.ReportSnapshotCreateNestedManyWithoutTermInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentCreateNestedManyWithoutTermInput
+  gradeFlags?: Prisma.GradeFlagCreateNestedManyWithoutTermInput
+  scheduleConfigs?: Prisma.ScheduleConfigCreateNestedManyWithoutTermInput
+  timetableEntries?: Prisma.SectionTimetableEntryCreateNestedManyWithoutTermInput
+  termGrants?: Prisma.TeacherTermGrantCreateNestedManyWithoutTermInput
+}
+
+export type TermUncheckedCreateWithoutInterventionsInput = {
+  id?: string
+  schoolYearId: string
+  termNumber: number
+  startDate?: Date | string | null
+  endDate?: Date | string | null
+  gradeComponents?: Prisma.GradeComponentUncheckedCreateNestedManyWithoutTermInput
+  finalGrades?: Prisma.FinalGradeUncheckedCreateNestedManyWithoutTermInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
+  referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
+  homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
+  admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
+  riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutTermInput
+  reportSnapshots?: Prisma.ReportSnapshotUncheckedCreateNestedManyWithoutTermInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUncheckedCreateNestedManyWithoutTermInput
+  gradeFlags?: Prisma.GradeFlagUncheckedCreateNestedManyWithoutTermInput
+  scheduleConfigs?: Prisma.ScheduleConfigUncheckedCreateNestedManyWithoutTermInput
+  timetableEntries?: Prisma.SectionTimetableEntryUncheckedCreateNestedManyWithoutTermInput
+  termGrants?: Prisma.TeacherTermGrantUncheckedCreateNestedManyWithoutTermInput
+}
+
+export type TermCreateOrConnectWithoutInterventionsInput = {
+  where: Prisma.TermWhereUniqueInput
+  create: Prisma.XOR<Prisma.TermCreateWithoutInterventionsInput, Prisma.TermUncheckedCreateWithoutInterventionsInput>
+}
+
+export type TermUpsertWithoutInterventionsInput = {
+  update: Prisma.XOR<Prisma.TermUpdateWithoutInterventionsInput, Prisma.TermUncheckedUpdateWithoutInterventionsInput>
+  create: Prisma.XOR<Prisma.TermCreateWithoutInterventionsInput, Prisma.TermUncheckedCreateWithoutInterventionsInput>
+  where?: Prisma.TermWhereInput
+}
+
+export type TermUpdateToOneWithWhereWithoutInterventionsInput = {
+  where?: Prisma.TermWhereInput
+  data: Prisma.XOR<Prisma.TermUpdateWithoutInterventionsInput, Prisma.TermUncheckedUpdateWithoutInterventionsInput>
+}
+
+export type TermUpdateWithoutInterventionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  termNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  schoolYear?: Prisma.SchoolYearUpdateOneRequiredWithoutTermsNestedInput
+  gradeComponents?: Prisma.GradeComponentUpdateManyWithoutTermNestedInput
+  finalGrades?: Prisma.FinalGradeUpdateManyWithoutTermNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
+  referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
+  homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
+  admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
+  riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutTermNestedInput
+  reportSnapshots?: Prisma.ReportSnapshotUpdateManyWithoutTermNestedInput
+  teacherAssignments?: Prisma.TeacherSubjectAssignmentUpdateManyWithoutTermNestedInput
+  gradeFlags?: Prisma.GradeFlagUpdateManyWithoutTermNestedInput
+  scheduleConfigs?: Prisma.ScheduleConfigUpdateManyWithoutTermNestedInput
+  timetableEntries?: Prisma.SectionTimetableEntryUpdateManyWithoutTermNestedInput
+  termGrants?: Prisma.TeacherTermGrantUpdateManyWithoutTermNestedInput
+}
+
+export type TermUncheckedUpdateWithoutInterventionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  schoolYearId?: Prisma.StringFieldUpdateOperationsInput | string
+  termNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  gradeComponents?: Prisma.GradeComponentUncheckedUpdateManyWithoutTermNestedInput
+  finalGrades?: Prisma.FinalGradeUncheckedUpdateManyWithoutTermNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
+  anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
+  referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -1861,6 +2032,7 @@ export type TermCreateWithoutHealthRecordsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutTermInput
@@ -1883,6 +2055,7 @@ export type TermUncheckedCreateWithoutHealthRecordsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutTermInput
@@ -1921,6 +2094,7 @@ export type TermUpdateWithoutHealthRecordsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutTermNestedInput
@@ -1943,6 +2117,7 @@ export type TermUncheckedUpdateWithoutHealthRecordsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutTermNestedInput
@@ -1965,6 +2140,7 @@ export type TermCreateWithoutHomeVisitationsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutTermInput
@@ -1987,6 +2163,7 @@ export type TermUncheckedCreateWithoutHomeVisitationsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutTermInput
@@ -2025,6 +2202,7 @@ export type TermUpdateWithoutHomeVisitationsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutTermNestedInput
@@ -2047,6 +2225,7 @@ export type TermUncheckedUpdateWithoutHomeVisitationsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutTermNestedInput
@@ -2069,6 +2248,7 @@ export type TermCreateWithoutAdmProfilesInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   riskSnapshots?: Prisma.RiskSnapshotCreateNestedManyWithoutTermInput
@@ -2091,6 +2271,7 @@ export type TermUncheckedCreateWithoutAdmProfilesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedCreateNestedManyWithoutTermInput
@@ -2129,6 +2310,7 @@ export type TermUpdateWithoutAdmProfilesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUpdateManyWithoutTermNestedInput
@@ -2151,6 +2333,7 @@ export type TermUncheckedUpdateWithoutAdmProfilesInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   riskSnapshots?: Prisma.RiskSnapshotUncheckedUpdateManyWithoutTermNestedInput
@@ -2173,6 +2356,7 @@ export type TermCreateWithoutRiskSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -2195,6 +2379,7 @@ export type TermUncheckedCreateWithoutRiskSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -2233,6 +2418,7 @@ export type TermUpdateWithoutRiskSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -2255,6 +2441,7 @@ export type TermUncheckedUpdateWithoutRiskSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -2277,6 +2464,7 @@ export type TermCreateWithoutReportSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileCreateNestedManyWithoutTermInput
@@ -2299,6 +2487,7 @@ export type TermUncheckedCreateWithoutReportSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTermInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedCreateNestedManyWithoutTermInput
   referrals?: Prisma.ReferralUncheckedCreateNestedManyWithoutTermInput
+  interventions?: Prisma.InterventionUncheckedCreateNestedManyWithoutTermInput
   healthRecords?: Prisma.HealthRecordUncheckedCreateNestedManyWithoutTermInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedCreateNestedManyWithoutTermInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedCreateNestedManyWithoutTermInput
@@ -2337,6 +2526,7 @@ export type TermUpdateWithoutReportSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -2359,6 +2549,7 @@ export type TermUncheckedUpdateWithoutReportSnapshotsInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -2387,6 +2578,7 @@ export type TermUpdateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUpdateManyWithoutTermNestedInput
@@ -2409,6 +2601,7 @@ export type TermUncheckedUpdateWithoutSchoolYearInput = {
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTermNestedInput
   anecdotalRecords?: Prisma.AnecdotalRecordUncheckedUpdateManyWithoutTermNestedInput
   referrals?: Prisma.ReferralUncheckedUpdateManyWithoutTermNestedInput
+  interventions?: Prisma.InterventionUncheckedUpdateManyWithoutTermNestedInput
   healthRecords?: Prisma.HealthRecordUncheckedUpdateManyWithoutTermNestedInput
   homeVisitations?: Prisma.HomeVisitationRecordUncheckedUpdateManyWithoutTermNestedInput
   admProfiles?: Prisma.AdmLearnerProfileUncheckedUpdateManyWithoutTermNestedInput
@@ -2439,6 +2632,7 @@ export type TermCountOutputType = {
   attendanceRecords: number
   anecdotalRecords: number
   referrals: number
+  interventions: number
   healthRecords: number
   homeVisitations: number
   admProfiles: number
@@ -2457,6 +2651,7 @@ export type TermCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   attendanceRecords?: boolean | TermCountOutputTypeCountAttendanceRecordsArgs
   anecdotalRecords?: boolean | TermCountOutputTypeCountAnecdotalRecordsArgs
   referrals?: boolean | TermCountOutputTypeCountReferralsArgs
+  interventions?: boolean | TermCountOutputTypeCountInterventionsArgs
   healthRecords?: boolean | TermCountOutputTypeCountHealthRecordsArgs
   homeVisitations?: boolean | TermCountOutputTypeCountHomeVisitationsArgs
   admProfiles?: boolean | TermCountOutputTypeCountAdmProfilesArgs
@@ -2512,6 +2707,13 @@ export type TermCountOutputTypeCountAnecdotalRecordsArgs<ExtArgs extends runtime
  */
 export type TermCountOutputTypeCountReferralsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ReferralWhereInput
+}
+
+/**
+ * TermCountOutputType without action
+ */
+export type TermCountOutputTypeCountInterventionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InterventionWhereInput
 }
 
 /**
@@ -2597,6 +2799,7 @@ export type TermSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   attendanceRecords?: boolean | Prisma.Term$attendanceRecordsArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.Term$anecdotalRecordsArgs<ExtArgs>
   referrals?: boolean | Prisma.Term$referralsArgs<ExtArgs>
+  interventions?: boolean | Prisma.Term$interventionsArgs<ExtArgs>
   healthRecords?: boolean | Prisma.Term$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.Term$homeVisitationsArgs<ExtArgs>
   admProfiles?: boolean | Prisma.Term$admProfilesArgs<ExtArgs>
@@ -2644,6 +2847,7 @@ export type TermInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   attendanceRecords?: boolean | Prisma.Term$attendanceRecordsArgs<ExtArgs>
   anecdotalRecords?: boolean | Prisma.Term$anecdotalRecordsArgs<ExtArgs>
   referrals?: boolean | Prisma.Term$referralsArgs<ExtArgs>
+  interventions?: boolean | Prisma.Term$interventionsArgs<ExtArgs>
   healthRecords?: boolean | Prisma.Term$healthRecordsArgs<ExtArgs>
   homeVisitations?: boolean | Prisma.Term$homeVisitationsArgs<ExtArgs>
   admProfiles?: boolean | Prisma.Term$admProfilesArgs<ExtArgs>
@@ -2672,6 +2876,7 @@ export type $TermPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     attendanceRecords: Prisma.$AttendanceRecordPayload<ExtArgs>[]
     anecdotalRecords: Prisma.$AnecdotalRecordPayload<ExtArgs>[]
     referrals: Prisma.$ReferralPayload<ExtArgs>[]
+    interventions: Prisma.$InterventionPayload<ExtArgs>[]
     healthRecords: Prisma.$HealthRecordPayload<ExtArgs>[]
     homeVisitations: Prisma.$HomeVisitationRecordPayload<ExtArgs>[]
     admProfiles: Prisma.$AdmLearnerProfilePayload<ExtArgs>[]
@@ -3089,6 +3294,7 @@ export interface Prisma__TermClient<T, Null = never, ExtArgs extends runtime.Typ
   attendanceRecords<T extends Prisma.Term$attendanceRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$attendanceRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttendanceRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   anecdotalRecords<T extends Prisma.Term$anecdotalRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$anecdotalRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnecdotalRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referrals<T extends Prisma.Term$referralsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$referralsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  interventions<T extends Prisma.Term$interventionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$interventionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterventionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   healthRecords<T extends Prisma.Term$healthRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$healthRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HealthRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   homeVisitations<T extends Prisma.Term$homeVisitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$homeVisitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HomeVisitationRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   admProfiles<T extends Prisma.Term$admProfilesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Term$admProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdmLearnerProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3651,6 +3857,30 @@ export type Term$referralsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.ReferralScalarFieldEnum | Prisma.ReferralScalarFieldEnum[]
+}
+
+/**
+ * Term.interventions
+ */
+export type Term$interventionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Intervention
+   */
+  select?: Prisma.InterventionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Intervention
+   */
+  omit?: Prisma.InterventionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InterventionInclude<ExtArgs> | null
+  where?: Prisma.InterventionWhereInput
+  orderBy?: Prisma.InterventionOrderByWithRelationInput | Prisma.InterventionOrderByWithRelationInput[]
+  cursor?: Prisma.InterventionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InterventionScalarFieldEnum | Prisma.InterventionScalarFieldEnum[]
 }
 
 /**

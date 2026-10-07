@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +12,8 @@ import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import {
   fetchNurseRiskFactors,
   fetchNurseRiskLevels,
+  type NurseRiskFactors,
+  type NurseRiskLevel,
 } from "../alerts/components/nurse-alerts-data";
 import { fetchNurseRisk } from "./components/nurse-risk-data";
 import {
@@ -40,9 +43,13 @@ export default function NurseRiskPage() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+
   const riskQuery = useQuery({
-    queryKey: ["nurse-risk"],
-    queryFn: fetchNurseRisk,
+    queryKey: ["nurse-risk", termKey],
+    queryFn: ({ signal }) => fetchNurseRisk(signal),
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
 
@@ -52,12 +59,14 @@ export default function NurseRiskPage() {
   const primary = profile.data?.primaryColor ?? null;
 
   const studentIds = React.useMemo(
-    () => [...new Set(Object.values(riskQuery.data?.referralToStudent ?? {}))],
+    () =>
+      [...new Set(Object.values(riskQuery.data?.referralToStudent ?? {}))].sort(),
     [riskQuery.data]
   );
-  const levelsQuery = useQuery({
-    queryKey: ["nurse-risk-levels", studentIds],
+  const levelsQuery = useQuery<Record<string, NurseRiskLevel>>({
+    queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
+    placeholderData: keepPreviousData,
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });
@@ -77,9 +86,10 @@ export default function NurseRiskPage() {
 
   // Factor flags behind the watch card — same students, same gate, so
   // drivers repaint with levels and the desk.
-  const factorsQuery = useQuery({
-    queryKey: ["nurse-risk-factors", studentIds],
+  const factorsQuery = useQuery<Record<string, NurseRiskFactors>>({
+    queryKey: ["nurse-risk-factors", studentIds, termKey],
     queryFn: () => fetchNurseRiskFactors(studentIds),
+    placeholderData: keepPreviousData,
     staleTime: 300_000,
     enabled: studentIds.length > 0,
   });

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, TrendingUp, TriangleAlert, Users } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PrincipalPageHeader } from "../../../../components/PrincipalPageHeader";
 import styles from "./attendance.module.css";
 
 interface SectionStat {
@@ -47,8 +48,8 @@ export function AttendanceSummary() {
       return res.data;
     },
     staleTime: 30_000,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
   const attentionQuery = useQuery({
     queryKey: ["attendance-needs-attention"],
@@ -59,8 +60,8 @@ export function AttendanceSummary() {
       return res.data;
     },
     staleTime: 30_000,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const loading = statsQuery.isPending || attentionQuery.isPending;
@@ -85,16 +86,10 @@ export function AttendanceSummary() {
 
   return (
     <>
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h1 className={styles.title}>Attendance Heatmap</h1>
-          <p className={styles.subtitle}>
-            School-wide daily attendance — a student counts present for a day
-            only when present in every subject offered that day. Sections and
-            students under 80% need attention.
-          </p>
-        </div>
-      </div>
+      <PrincipalPageHeader
+        title="Attendance Heatmap"
+        description="School-wide daily attendance — a student counts present for a day only when present in every subject offered that day. Sections and students under 80% need attention."
+      />
       {loading ? (
         <div className={styles.kpiGrid} aria-hidden>
           {Array.from({ length: 4 }).map((_, i) => (

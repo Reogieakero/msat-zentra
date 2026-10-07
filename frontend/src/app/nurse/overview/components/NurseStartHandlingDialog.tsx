@@ -56,6 +56,7 @@ export function NurseStartHandlingDialog({
         : `${row.student} is now in progress.`;
     },
     errorFallback: "Could not accept this case. Try again.",
+    sourceId: row.id,
     onSuccessExtra: () => {
       onClose();
       setStartNote("");
@@ -109,14 +110,16 @@ export function NurseStartHandlingDialog({
     <Dialog
       open
       onOpenChange={(isOpen) => {
-        if (!isOpen) {
+        // Locked while the accept is in flight — the dialog only closes on
+        // server confirmation (onSuccessExtra), never early.
+        if (!isOpen && !acting) {
           onClose();
           setDialogError(null);
           acceptMutation.reset();
         }
       }}
     >
-      <DialogContent>
+      <DialogContent aria-busy={acting || undefined}>
         <DialogHeader>
           <DialogTitle>Start handling this case</DialogTitle>
           <DialogDescription>
@@ -215,12 +218,16 @@ export function NurseStartHandlingDialog({
           </p>
         ) : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={acting}>
             Cancel
           </Button>
-          <Button onClick={() => void handleStart()} disabled={acting}>
+          <Button
+            onClick={() => void handleStart()}
+            disabled={acting}
+            aria-busy={acting || undefined}
+          >
             {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Accept & start handling
+            {acting ? "Accepting…" : "Accept & start handling"}
           </Button>
         </DialogFooter>
       </DialogContent>

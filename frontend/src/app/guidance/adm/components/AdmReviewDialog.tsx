@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
+import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import {
   AdmReviewDialog as SharedAdmReviewDialog,
   type AdmReviewDraft,
@@ -13,7 +13,7 @@ import {
   reviewAdmConsultation,
 } from "./guidance-adm-data";
 import { dismissReferral } from "../../referrals/components/guidance-referrals-data";
-import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
+import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 
 /* Case identity for the intake summary (Name / LRN / Section / Observed /
    Referred) — passed by both callers from their row data. */
@@ -57,7 +57,7 @@ export function AdmReviewDialog({
   onCreateReferral: (draft: AdmReviewDraft) => void;
   mode?: "queue" | "desk";
 }) {
-  const queryClient = useQueryClient();
+  const invalidateGuidance = useGuidanceInvalidate();
   // Sessions already booked on the case — fetched silently, only to guard
   // the one-active-session rule (they render on the page list).
   const [bookedScheduled, setBookedScheduled] = React.useState(false);
@@ -89,9 +89,10 @@ export function AdmReviewDialog({
   }, [open, referralId]);
 
   function refreshAll() {
-    for (const key of GUIDANCE_QUERY_KEYS) {
-      void queryClient.invalidateQueries({ queryKey: [...key] });
-    }
+    // Confirmed server-side: suppress the realtime echo, bump every
+    // guidance query (notifications included) via the shared invalidator.
+    markSelfNotified(referralId);
+    invalidateGuidance();
     onChanged();
   }
 

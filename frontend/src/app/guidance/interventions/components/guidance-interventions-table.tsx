@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,8 +38,10 @@ import {
 import { Busy } from "./busy";
 import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
-import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
-import { apiErrorMessage } from "../../referrals/components/guidance-referrals-data";
+import {
+  useGuidanceInvalidate,
+  useGuidanceMutation,
+} from "../../overview/components/use-guidance-mutation";
 import styles from "./guidance-interventions.module.css";
 
 function interventionSuccessMessage(action: string): { title: string; description: string } {
@@ -103,6 +105,7 @@ export function GuidanceInterventionsTable({
   pageSize,
   total,
   totalPages,
+  unfilteredTotal,
   onPageChange,
   query,
   onQueryChange,
@@ -110,7 +113,6 @@ export function GuidanceInterventionsTable({
   isRetrying,
   isNavigating,
 }: GuidanceInterventionsTableProps) {
-  const queryClient = useQueryClient();
   const [dialogs, setDialogs] = useState<Record<InterventionDialogKey, boolean>>({
     start: false,
     change: false,
@@ -199,7 +201,23 @@ export function GuidanceInterventionsTable({
     setDialogs((p) => ({ ...p, [dialog]: true }));
   };
 
-  const actionMutation = useMutation({
+  const invalidateGuidance = useGuidanceInvalidate();
+  const actionMutation = useGuidanceMutation<
+    unknown,
+    { key: string; action: string; payload: unknown }
+  >({
+    sourceId: (variables) =>
+      (variables.payload as { followUpId?: string } | undefined)?.followUpId ?? "",
+    silentSuccess: true,
+    successTitle: "Saved",
+    errorFallback: "The change did not go through. Check your connection and try again.",
+    onSuccessExtra: (_data, variables) => {
+      // Confirmed success only — toast fires after the server confirms.
+      toast.success(interventionSuccessMessage(variables.action));
+      // Instant reminder: re-evaluate the inbox now (booking-filtered
+      // inside) instead of waiting for the next poll tick.
+      refreshBookingReminders();
+    },
     mutationFn: async ({
       key,
       action,
@@ -295,25 +313,6 @@ export function GuidanceInterventionsTable({
         default:
           throw new Error(`Unknown action: ${action}`);
       }
-    },
-    onSuccess: (_data, variables) => {
-      for (const key of GUIDANCE_QUERY_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-      // Confirmed success only — toast fires after the server confirms.
-      toast.success(interventionSuccessMessage(variables.action));
-      // Instant reminder: re-evaluate the inbox now (booking-filtered
-      // inside) instead of waiting for the next poll tick.
-      refreshBookingReminders();
-    },
-    onError: (err) => {
-      toast.error({
-        title: "Could not save",
-        description: apiErrorMessage(
-          err,
-          "The change did not go through. Check your connection and try again."
-        ),
-      });
     },
   });
 
@@ -468,9 +467,7 @@ export function GuidanceInterventionsTable({
                       })
                     }
                     onDocsChanged={() => {
-                      void queryClient.invalidateQueries({
-                        queryKey: ["guidance-interventions"],
-                      });
+                      invalidateGuidance();
                     }}
                   />
                 ))}
@@ -481,6 +478,9 @@ export function GuidanceInterventionsTable({
         <div className={styles.pager}>
           <p className={styles.range}>
             Showing {start}–{end} of {total}
+            {unfilteredTotal !== undefined && unfilteredTotal !== total
+              ? ` (of ${unfilteredTotal} in cohort)`
+              : ""}
           </p>
           <div className={styles.pagerButtons}>
             <Button
@@ -656,6 +656,8 @@ interface GuidanceInterventionsTableProps {
   pageSize: number;
   total: number;
   totalPages: number;
+  /** UNFILTERED cohort total — shown beside the filtered pager count. */
+  unfilteredTotal?: number;
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;

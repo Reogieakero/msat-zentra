@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
+import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { useSession } from "@/lib/auth/useSession";
@@ -11,14 +13,7 @@ import {
 } from "../overview/components/teacher-overview-data";
 import { Inbox, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 // Section cards share one component with the principal schedule grid.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { SectionScheduleCard } from "@/components/schedule/SectionScheduleCard";
@@ -103,7 +98,9 @@ function ScheduleSkeleton() {
 }
 
 export default function TeacherSchedulePage() {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const session = useSession();
   const overview = useTeacherOverview();
   // First-frame value from the per-teacher cache — on a hard refresh the gate
@@ -117,7 +114,7 @@ export default function TeacherSchedulePage() {
     isLoading: schedIsLoading,
     isError: schedIsError,
   } = useQuery<ScheduleData>({
-    queryKey: ["teacher-schedule"],
+    queryKey: ["teacher-schedule", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<ScheduleData>("/api/teacher/schedule");
       return data;
@@ -132,7 +129,7 @@ export default function TeacherSchedulePage() {
     },
     onSuccess: (data) => {
       setConfirmClearOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      invalidateTeacher.schedule();
       const skipped = data.skippedApproved ?? 0;
       toast.success({
         title: "Timetables cleared",
@@ -211,20 +208,6 @@ export default function TeacherSchedulePage() {
 
   return (
     <section className="flex w-full flex-col gap-5">
-      {totalSlots > 0 ? (
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setConfirmClearOpen(true)}
-            disabled={clearAll.isPending}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 size={16} aria-hidden />
-            Clear all timetables
-          </Button>
-        </div>
-      ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="min-w-0">
           {orderedSections.length === 0 ? (
@@ -269,49 +252,94 @@ export default function TeacherSchedulePage() {
             </div>
           )}
         </div>
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className={`flex min-w-0 flex-col gap-4 ${styles.railSticky}`}>
           <CatalogCards layout="rail" />
           <WorkspaceCards />
+          {totalSlots > 0 ? (
+            <div
+              className={assign.card}
+              aria-label="Danger zone"
+              style={{
+                borderColor: "color-mix(in oklch, #ef4444 45%, transparent)",
+                background:
+                  "linear-gradient(135deg, color-mix(in oklch, #ef4444 26%, var(--card)), color-mix(in oklch, #b91c1c 18%, var(--card)))",
+              }}
+            >
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex items-center gap-3">
+                <span
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-destructive/10"
+                  aria-hidden="true"
+                >
+                  <Trash2 size={20} className="text-destructive" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="font-semibold">Clear all timetables</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Removes {totalSlots} slot{totalSlots === 1 ? "" : "s"} workspace-wide.
+                    Approved slots are kept.
+                  </p>
+                </div>
+              </div>
+              <div className="relative mt-auto flex gap-2 pt-1">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmClearOpen(true)}
+                  disabled={clearAll.isPending}
+                >
+                  Clear all timetables
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
       {confirmClearOpen ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setConfirmClearOpen(false);
+          onClose={() => {
+            if (!clearAll.isPending) setConfirmClearOpen(false);
           }}
+          dismissable={!clearAll.isPending}
+          size="sm"
+          title="Clear all timetables?"
+          description={
+            <>
+              This removes all {totalSlots} scheduled slot{totalSlots === 1 ? "" : "s"}{" "}
+              workspace-wide. Approved slots are kept — unlock their sections to remove
+              them. Subjects and teacher names stay in their lists.
+            </>
+          }
+          watchKey={clearAll.isPending}
         >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Clear all timetables?</DialogTitle>
-              <DialogDescription>
-                This removes all {totalSlots} scheduled slot{totalSlots === 1 ? "" : "s"}{" "}
-                workspace-wide. Approved slots are kept — unlock their sections to remove
-                them. Subjects and teacher names stay in their lists.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="destructive" onClick={() => setConfirmClearOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => clearAll.mutate()}
-                disabled={clearAll.isPending}
-                aria-busy={clearAll.isPending || undefined}
-              >
-                {clearAll.isPending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Removing…</span>
-                  </>
-                ) : (
-                  "Remove all"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmClearOpen(false)}
+              disabled={clearAll.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => clearAll.mutate()}
+              disabled={clearAll.isPending}
+              aria-busy={clearAll.isPending || undefined}
+            >
+              {clearAll.isPending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Removing…</span>
+                </>
+              ) : (
+                "Remove all"
+              )}
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
     </section>
   );

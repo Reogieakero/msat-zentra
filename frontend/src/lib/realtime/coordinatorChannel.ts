@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { coordinatorNotificationTitle } from "@/lib/notifications/label";
 
 const COORDINATOR_KEYS = [
   ["coordinator-dashboard"],
@@ -16,39 +17,6 @@ const COORDINATOR_KEYS = [
   ["coordinator-notifications"],
 ] as const;
 
-type CoordinatorKey = readonly [string];
-
-/* Table-scoped invalidation — a device write refreshes only the ledger +
-   dashboard instead of refetching every queue on the desk. Payloads stay
-   invalidate-only (no row data in realtime traffic). */
-const TABLE_KEYS: Record<string, readonly CoordinatorKey[]> = {
-  AdmLearnerProfile: [
-    ["coordinator-dashboard"],
-    ["coordinator-referrals"],
-    ["coordinator-enrolled"],
-    ["coordinator-certifications"],
-    ["coordinator-approvals"],
-  ],
-  Referral: [
-    ["coordinator-dashboard"],
-    ["coordinator-referrals"],
-    ["coordinator-enrolled"],
-    ["coordinator-certifications"],
-  ],
-  AdmDevice: [["coordinator-dashboard"], ["coordinator-devices"]],
-  AdmForm: [
-    ["coordinator-referrals"],
-    ["coordinator-certifications"],
-    ["coordinator-dashboard"],
-  ],
-  AdmModule: [["coordinator-dashboard"], ["coordinator-referrals"]],
-  AdmParentMeeting: [
-    ["coordinator-referrals"],
-    ["coordinator-certifications"],
-    ["coordinator-dashboard"],
-  ],
-};
-
 interface CoordinatorNotification {
   id: string;
   userId: string;
@@ -59,12 +27,24 @@ interface CoordinatorNotification {
   createdAt?: string;
 }
 
-// Inbox poll cadence — the working transport alongside the realtime
-// wake-up (Supabase delivery is best-effort on this network). Cheap indexed
-// query; rows already toasted are skipped through `seenIds`. Kept short so
-// referred cases toast within seconds. Mirrors useTeacherRealtime.
+// Poll cadence — this is the actual delivery transport, not just a safety
+// net: the browser Supabase client authenticates as anon (the app's sessions
+// are backend-signed JWTs, not Supabase Auth), so row-scoped Realtime events
+// never reach it even with the table published. Cheap indexed query, and
+// rows already toasted are skipped through `seenIds`. Kept short so
+// referrals, bookings, and principal verdicts surface within seconds.
 const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
+
+/** Self-save suppression: writes this session already confirmed with a
+ *  direct toast skip the realtime duplicate (data still invalidates, the
+ *  bell row still lands). Keyed by notification sourceId. */
+const selfSaved = new Map<string, number>();
+const SELF_SUPPRESS_MS = 30_000;
+
+export function markSelfNotified(sourceId: string) {
+  selfSaved.set(sourceId, Date.now());
+}
 
 /** Current user id from the stored access JWT (backend signs `sub`). */
 function currentUserId(): string | null {
@@ -82,244 +62,140 @@ function currentUserId(): string | null {
   }
 }
 
-/* Own-write receipts already showed a local success toast at mutation time
-   (book/reschedule confirmations) — the bell row still lands for the badge,
-   but a second sileo must never pop. Matched by message phrasing, mirroring
-   the nurse/teacher echo guards: self rows always start with "You …". */
-function isSelfReceipt(n: CoordinatorNotification): boolean {
-  return /^you (booked|moved|rescheduled)\b/i.test(n.message ?? "");
-}
-
-function toastTitleFor(n: CoordinatorNotification): string {
-  if (n.sourceTable === "adm_devices") {
-    return "Device update";
-  }
-  if (n.sourceTable === "adm_parent_meetings") {
-    return "Parent meeting update";
-  }
-  if (/new .*referral submitted/i.test(n.message)) {
-    return "New ADM referral submitted";
-  }
-  if (/returned .*revision/i.test(n.message)) {
-    return "Case returned for revision";
-  }
-  if (/adm consultation endorsed/i.test(n.message)) {
-    return "ADM consultation endorsed";
-  }
-  if (/escalated to ADM/i.test(n.message)) {
-    return "Case escalated to ADM";
-  }
-  if (/reassigned to ADM/i.test(n.message)) {
-    return "Case reassigned to ADM";
-  }
-  if (/referred to ADM/i.test(n.message)) {
-    return "New ADM referral";
-  }
-  if (/re-submitted/i.test(n.message)) {
-    return "Referral re-submitted";
-  }
-  if (/was withdrawn/i.test(n.message)) {
-    return "Referral withdrawn";
-  }
-  if (n.type === "referral_status_change") return "Referral update";
-  return "New notification";
-}
-
 /**
  * Coordinator desk realtime sync — one shared Supabase channel per mount.
- * Two layers on the same channel:
+ * Listens for INSERTs on the Notification table scoped to the signed-in
+ * coordinator and pops a sileo toast on whatever page they are on (e.g. the
+ * moment a referral lands or the principal signs), plus invalidates the
+ * coordinator query keys so lists refresh with no manual reload.
  *
- * 1. Table events (AdmLearnerProfile, Referral, AdmForm, AdmDevice,
- *    AdmModule, AdmParentMeeting) → throttled invalidation of the
- *    Coordinator query prefixes. No toast — the lists just refresh.
- * 2. Notification INSERTs (unfiltered — a per-user filter can never match
- *    because row payloads arrive empty, see syncInbox) → an auth-gated inbox
- *    sync that writes the bell query directly and toasts precisely the rows
- *    new for this coordinator. Rows are deduped by id across Realtime and
- *    the polling safety net, so a healthy connection never double-toasts.
- *
- * No polling of case data, no whole-app refetch. Silently degrades to
- * staleTime + mutation invalidation when Supabase env is missing.
+ * Delivery is two-layer: a 5s backend poll (the working transport — the
+ * anon Supabase client never receives row-scoped Realtime events for
+ * backend-signed sessions) plus the Supabase Realtime subscription as a
+ * bonus path where policies allow. Rows are deduped by id across both
+ * layers, so a healthy connection never double-toasts. Titles come from the
+ * shared coordinatorNotificationTitle mapper so bell and sileo match.
  */
 export function useCoordinatorRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const lastInvalidated = React.useRef(0);
   const seenIds = React.useRef<Set<string>>(new Set());
-  const seeded = React.useRef(false);
-  const lastSync = React.useRef(0);
-  const trailingTimer = React.useRef<number | null>(null);
+  const realtimeOk = React.useRef(false);
 
   React.useEffect(() => {
     if (!enabled) return;
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const userId = currentUserId();
+    if (!userId) return;
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
 
-    function invalidate(keys: readonly CoordinatorKey[] = COORDINATOR_KEYS) {
-      // Throttle bursts (e.g. multi-row writes) to one invalidate per 2s.
-      const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
-      lastInvalidated.current = now;
-      for (const key of keys) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-    }
-
-    function notify(rows: CoordinatorNotification[]) {
-      if (rows.length === 0) return;
-      // Own receipts merge silently into bell + badge — never re-toasted.
-      const ordered = [...rows]
-        .filter((r) => !isSelfReceipt(r))
-        .reverse()
-        .slice(0, MAX_TOASTS_PER_POLL);
-      for (const row of ordered) {
+    function notify(row: CoordinatorNotification) {
+      if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
+      seenIds.current.add(row.id);
+      // Writes this session already confirmed with a direct toast (decide,
+      // endorse, book, reschedule, outcome, certify, issue, return) skip the
+      // realtime echo toast — the bell row still lands and lists still
+      // invalidate.
+      const selfConfirmed =
+        !!row.sourceId && Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
+      if (!selfConfirmed) {
         toast.info({
-          title: toastTitleFor(row),
+          title: coordinatorNotificationTitle({
+            type: row.type,
+            sourceTable: row.sourceTable,
+            message: row.message,
+          }),
           description: row.message,
         });
       }
+      void invalidate();
     }
 
-    // Auth-gated inbox sync — the recipient-safe realtime path. Notification
-    // row payloads arrive EMPTY over realtime (401 on row data: the anon key
-    // deliberately holds no grant, so a per-user postgres_changes filter can
-    // never match — verified live), so the INSERT event is only a wake-up
-    // call. This fetch resolves recipients through the auth-gated API, writes
-    // the inbox straight into the bell query (badge updates without a second
-    // refetch), and toasts precisely the rows new for this coordinator.
-    async function syncInbox(reason: "event" | "poll" | "seed") {
-      if (cancelled || !userId || document.hidden) return;
+    try {
+      const supabase = createClient();
+      const ch = supabase
+        .channel(`coordinator-desk-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "Notification",
+            filter: `userId=eq.${userId}`,
+          },
+          (payload) => {
+            notify((payload as unknown as { new?: CoordinatorNotification }).new as CoordinatorNotification);
+          },
+        )
+        .subscribe((status) => {
+          realtimeOk.current = status === "SUBSCRIBED";
+          if (!cancelled && status !== "SUBSCRIBED") {
+            console.warn(`[coordinator-realtime] channel status: ${status}`);
+          }
+        });
+      if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
+    } catch {
+      // Realtime unavailable — the polling transport below still delivers.
+    }
+
+    // Working transport: pick up anything Realtime missed. First poll only
+    // seeds the seen set (no toast storm for old inbox rows); later polls
+    // toast rows that arrived since, capped per poll.
+    let seeded = false;
+    async function poll() {
+      if (cancelled || document.hidden) return;
       try {
         const { data } = await apiClient.get<CoordinatorNotification[]>(
           "/api/notifications/",
         );
         if (cancelled || !Array.isArray(data)) return;
         const mine = data.filter((n) => n.userId === userId);
-        queryClient.setQueryData(["coordinator-notifications"], data);
-        if (!seeded.current) {
+        if (!seeded) {
           for (const n of mine) seenIds.current.add(n.id);
-          seeded.current = true;
+          seeded = true;
           return;
         }
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
-        for (const n of mine) seenIds.current.add(n.id);
         if (fresh.length === 0) return;
-        if (reason !== "seed") {
-          notify(fresh);
-          // Personal notifications refresh the dashboard too; table events
-          // keep their own scoped keys so one toast never refetches everything.
-          void invalidate([
-            ["coordinator-dashboard"],
-            ["coordinator-notifications"],
-          ]);
-        }
+        // Oldest first so the newest toast stays on top.
+        const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
+        for (const n of ordered) notify(n);
+        // Mark the rest seen (lists still refresh below) to avoid backlog.
+        for (const n of fresh) seenIds.current.add(n.id);
+        if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate();
       } catch {
         // Offline / unauthorized — try again on the next tick.
       }
     }
+    const timer = window.setInterval(poll, FALLBACK_POLL_MS);
+    // Seed soon after mount so the missed-toast window is tiny (seed itself
+    // never toasts).
+    const seedTimer = window.setTimeout(poll, 1_000);
+    // Poll the moment the tab regains focus — events that landed while
+    // away surface immediately with no manual refresh.
+    const onFocus = () => {
+      void poll();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
 
-    function scheduleSync(reason: "event" | "poll") {
-      // Throttle bursts to one sync per 2s, with a trailing run so the last
-      // event in a burst is never dropped.
+    function invalidate() {
+      // Throttle bursts to one invalidate per 2s (toasts still fire per row).
       const now = Date.now();
-      if (now - lastSync.current < 2000) {
-        if (trailingTimer.current === null) {
-          trailingTimer.current = window.setTimeout(() => {
-            trailingTimer.current = null;
-            lastSync.current = Date.now();
-            void syncInbox(reason);
-          }, 2200);
-        }
-        return;
+      if (now - lastInvalidated.current < 2000) return;
+      lastInvalidated.current = now;
+      for (const key of COORDINATOR_KEYS) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
       }
-      lastSync.current = now;
-      void syncInbox(reason);
     }
-
-    try {
-      const supabase = createClient();
-      const builder = supabase
-        .channel("coordinator-desk")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "AdmLearnerProfile" },
-          () => void invalidate(TABLE_KEYS.AdmLearnerProfile)
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "Referral" },
-          () => void invalidate(TABLE_KEYS.Referral)
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "AdmForm" },
-          () => void invalidate(TABLE_KEYS.AdmForm)
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "AdmDevice" },
-          () => void invalidate(TABLE_KEYS.AdmDevice)
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "AdmModule" },
-          () => void invalidate(TABLE_KEYS.AdmModule)
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "AdmParentMeeting" },
-          () => void invalidate(TABLE_KEYS.AdmParentMeeting)
-        );
-      // Personal notifications: UNFILTERED by design — a per-user filter can
-      // never match because Notification row payloads arrive empty (see
-      // syncInbox). The INSERT event is a wake-up call; syncInbox resolves
-      // recipients through the auth-gated API.
-      const withNotifs = builder.on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "Notification" },
-        () => void scheduleSync("event"),
-      );
-      // Reconnect reconcile: the database stays the source of truth —
-      // a fresh SUBSCRIBED after a drop re-syncs every prefix once so
-      // missed events can't leave the desk stale.
-      let wasSubscribed = false;
-      const ch = withNotifs.subscribe((status) => {
-        if (cancelled) return;
-        if (status === "SUBSCRIBED") {
-          if (wasSubscribed) {
-            lastInvalidated.current = 0;
-            void invalidate();
-          }
-          wasSubscribed = true;
-          return;
-        }
-        console.warn(`[coordinator-realtime] channel status: ${status}`);
-      });
-      if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
-    } catch {
-      // Realtime unavailable — freshness falls back to staleTime +
-      // invalidation, and the polling safety net below still delivers toasts.
-    }
-
-    // Safety net: pick up anything Realtime missed. First run only seeds
-    // the seen set (no toast storm for old inbox rows).
-    const timer = window.setInterval(() => scheduleSync("poll"), FALLBACK_POLL_MS);
-    // Seed soon after mount so the unseen window is small even when
-    // Realtime connects fine (seed itself never toasts).
-    const seedTimer = window.setTimeout(() => {
-      lastSync.current = Date.now();
-      void syncInbox("seed");
-    }, 5_000);
 
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       window.clearTimeout(seedTimer);
-      if (trailingTimer.current !== null) {
-        window.clearTimeout(trailingTimer.current);
-        trailingTimer.current = null;
-      }
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       try {
         channel?.unsubscribe();
       } catch {

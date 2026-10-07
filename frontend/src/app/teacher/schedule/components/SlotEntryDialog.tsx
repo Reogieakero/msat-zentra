@@ -1,16 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { DropdownSelect } from "@/app/principal/academics/assign/components/DropdownSelect";
 
 export type SlotValue = {
@@ -88,13 +81,11 @@ export function SlotEntryDialog({
     .join(", ");
 
   // When the subject changes to one that already has an owner in this
-  // section, pin the teacher picker to that owner.
-  useEffect(() => {
-    if (lockedTeacherId && lockedTeacherId !== teacherNameId) {
-      setTeacherNameId(lockedTeacherId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subjectId, lockedTeacherId]);
+  // section, pin the teacher picker to that owner — synced during render,
+  // never in an effect.
+  if (lockedTeacherId && lockedTeacherId !== teacherNameId) {
+    setTeacherNameId(lockedTeacherId);
+  }
 
   const canSave =
     subjectId !== "" &&
@@ -104,20 +95,21 @@ export function SlotEntryDialog({
     !isSplit &&
     (!lockedTeacherId || teacherNameId === lockedTeacherId);
 
+  const busy = saving || removing || listsPending;
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!busy}
+      size="md"
+      title="Schedule slot"
+      description={
+        <>
+          {sectionName} · {slotLabel} · Grade {gradeLevel.replace("G", "")}
+        </>
+      }
+      watchKey={listsPending}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Schedule slot</DialogTitle>
-          <DialogDescription>
-            {sectionName} · {slotLabel} · Grade {gradeLevel.replace("G", "")}
-          </DialogDescription>
-        </DialogHeader>
 
         {listsPending ? (
           <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading options">
@@ -214,7 +206,7 @@ export function SlotEntryDialog({
           </p>
         ) : null}
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           {initial ? (
             <Button
               variant="destructive"
@@ -232,7 +224,7 @@ export function SlotEntryDialog({
               )}
             </Button>
           ) : null}
-          <Button variant="destructive" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
           <Button
@@ -251,8 +243,7 @@ export function SlotEntryDialog({
               "Save"
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

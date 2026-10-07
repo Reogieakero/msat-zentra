@@ -1,6 +1,5 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ChevronDown, Loader2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,8 +57,11 @@ import {
 } from "./guidance-referrals-format";
 import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
-import { GUIDANCE_QUERY_KEYS } from "../../overview/components/use-guidance-mutation";
-import { apiErrorMessage } from "./guidance-referrals-data";
+import {
+  useGuidanceInvalidate,
+  useGuidanceMutation,
+} from "../../overview/components/use-guidance-mutation";
+
 import styles from "./guidance-referrals-table.module.css";
 
 function referralActionMessage(action: string): { title: string; description: string } | null {
@@ -227,14 +229,14 @@ export function GuidanceReferralsTable({
   onRetry,
   isRetrying,
   isNavigating = false,
-  // Full-list mode (locked track pages): every row renders, the pager is
-  // replaced by the scroll hint. Server-paged mode keeps the pager.
+  // Legacy full-list mode: every row renders, the pager is replaced by
+  // the scroll hint. All guidance queues are server-paged now.
   paginate = true,
   lockType = false,
   title = "Referrals to me",
   highlightId = null,
+  unfilteredTotal,
 }: GuidanceReferralsTableProps) {
-  const queryClient = useQueryClient();
   const [dialogs, setDialogs] = useState<ActionDialogs>({
     escalate: false,
     reassign: false,
@@ -299,7 +301,8 @@ export function GuidanceReferralsTable({
     if (Object.values(dialogs).every((v) => !v)) setActiveId(null);
   };
 
-  const mutation = useMutation({
+  const invalidateGuidance = useGuidanceInvalidate();
+  const mutation = useGuidanceMutation({
     mutationFn: ({
       id,
       next,
@@ -309,27 +312,28 @@ export function GuidanceReferralsTable({
       next: GuidanceReferralStatus;
       summary?: string;
     }) => updateReferralStatus(id, next, summary),
-    onSuccess: () => {
-      for (const key of GUIDANCE_QUERY_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-      toast.success({
-        title: "Case closed",
-        description: "The closing summary was saved and the case left your active list.",
-      });
-    },
-    onError: (err) => {
-      toast.error({
-        title: "Could not close the case",
-        description: apiErrorMessage(
-          err,
-          "The change did not go through. Check your connection and try again."
-        ),
-      });
-    },
+    sourceId: (variables) => variables.id,
+    successTitle: "Case closed",
+    successDescription: () =>
+      "The closing summary was saved and the case left your active list.",
+    errorTitle: "Could not close the case",
+    errorFallback: "The change did not go through. Check your connection and try again.",
   });
-
-  const actionMutation = useMutation({
+  const actionMutation = useGuidanceMutation<
+    unknown,
+    { id: string; action: string; payload: unknown }
+  >({
+    sourceId: (variables) => variables.id,
+    silentSuccess: true,
+    successTitle: "Saved",
+    errorFallback: "The action did not go through. Check your connection and try again.",
+    onSuccessExtra: (_data, variables) => {
+      const message = referralActionMessage(variables.action);
+      if (message) toast.success(message);
+      // Instant reminder: re-evaluate the inbox now (booking-filtered
+      // inside) instead of waiting for the next poll tick.
+      refreshBookingReminders();
+    },
     mutationFn: async ({
       id,
       action,
@@ -425,25 +429,6 @@ export function GuidanceReferralsTable({
           throw new Error(`Unknown action: ${action}`);
       }
     },
-    onSuccess: (_data, variables) => {
-      for (const key of GUIDANCE_QUERY_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-      const message = referralActionMessage(variables.action);
-      if (message) toast.success(message);
-      // Instant reminder: re-evaluate the inbox now (booking-filtered
-      // inside) instead of waiting for the next poll tick.
-      refreshBookingReminders();
-    },
-    onError: (err) => {
-      toast.error({
-        title: "Could not save",
-        description: apiErrorMessage(
-          err,
-          "The action did not go through. Check your connection and try again."
-        ),
-      });
-    },
   });
 
   const handleAction = (action: string, payload: unknown) => {
@@ -483,6 +468,11 @@ export function GuidanceReferralsTable({
   const end = Math.min(page * pageSize, total);
   const goToPage = (next: number) => onPageChange?.(next);
   const isActionPending = actionMutation.isPending;
+  // Per-row busy: only the acting row locks + spins; every other row stays
+  // interactive while the server confirms.
+  const busyRowId = actionMutation.isPending
+    ? ((actionMutation.variables as { id?: string } | undefined)?.id ?? null)
+    : null;
 
   const hasActiveFilters =
     query.trim() !== "" || action !== "" || (!lockType && typeFilter !== "");
@@ -506,8 +496,9 @@ export function GuidanceReferralsTable({
     onTypeChange(lockType ? typeFilter : "");
   }
 
-  // Scroll the highlighted case into view once its page renders. In
-  // full-list mode the row is always mounted, so no page math is needed.
+  // Scroll the highlighted case into view once its page renders. The
+  // backend serves the highlight's own page (?highlight=), so the row is
+  // mounted on arrival; later page turns simply no-op when it is absent.
   useEffect(() => {
     if (!highlightId) return;
     const t = window.setTimeout(() => {
@@ -522,10 +513,9 @@ export function GuidanceReferralsTable({
     <div className={styles.layout}>
       <div className={`${styles.feed} ${styles.layoutFeed}`}>
         <h1 className={styles.srOnly}>Cases sent to guidance</h1>
-        {/* Locked track pages match the nurse timelines: entries start
-            immediately, all filtering lives in the action sidebar. The
-            toolbar (title, search, track picker) renders on unlocked
-            views only. */}
+        {/* Locked track pages hide the toolbar (title, search, track
+            picker) — filtering lives in the action sidebar. Every queue
+            is server-paginated, locked or not. */}
         {!lockType && (
         <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
           <div>
@@ -629,7 +619,7 @@ export function GuidanceReferralsTable({
               row={row}
               now={now}
               highlighted={highlightId !== null && highlightId === row.id}
-              actionPending={isActionPending}
+              actionPending={busyRowId !== null && busyRowId === row.id}
               onOpenDialog={(referralId, dialog) => openDialog(referralId, dialog)}
               onOpenSession={(referralId, session, dialog) =>
                 openSessionDialog(referralId, session, dialog)
@@ -639,7 +629,7 @@ export function GuidanceReferralsTable({
               onEndorsedNotice={setEndorsedFor}
               onReviewAdm={setReviewAdmFor}
               onChanged={() => {
-                void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
+                invalidateGuidance();
               }}
             />
           ))}
@@ -651,6 +641,9 @@ export function GuidanceReferralsTable({
         <nav className={styles.pager} aria-label="Cases pages">
           <p className={styles.range}>
             Showing cases {start}–{end} of {total}
+            {unfilteredTotal !== undefined && unfilteredTotal !== total
+              ? ` (of ${unfilteredTotal} on your desk)`
+              : ""}
           </p>
           <div className={styles.pagerButtons}>
             <Button
@@ -758,7 +751,7 @@ export function GuidanceReferralsTable({
           open
           onClose={() => setReviewAdmFor(null)}
           onChanged={() => {
-            void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
+            invalidateGuidance();
           }}
           onCreateReferral={(draft) => setFormSheet({ row: reviewAdmFor, draft })}
           mode="desk"
@@ -796,7 +789,7 @@ export function GuidanceReferralsTable({
           lrn={formSheet.row.lrn}
           initialDraft={formSheet.draft}
           onChanged={() => {
-            void queryClient.invalidateQueries({ queryKey: ["guidance-referrals"] });
+            invalidateGuidance();
           }}
         />
       )}
@@ -829,4 +822,6 @@ interface GuidanceReferralsTableProps {
   // Deep-link arrival from the alerts table: scrolls to and highlights
   // the case once its page renders.
   highlightId?: string | null;
+  /** UNFILTERED desk total — shown beside the filtered pager count. */
+  unfilteredTotal?: number;
 }

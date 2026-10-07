@@ -18,7 +18,8 @@ export function countFor(
   breakdown: { stage: string; count: number }[] | undefined,
   ...stages: string[]
 ): number {
-  if (!breakdown) return 0;
+  // Non-array payloads (cached/error shapes) must never crash the KPIs.
+  if (!Array.isArray(breakdown)) return 0;
   return breakdown
     .filter((s) => stages.includes(s.stage))
     .reduce((sum, s) => sum + s.count, 0);

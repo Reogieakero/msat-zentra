@@ -1,36 +1,52 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1rem 0.25rem 0.25rem;
+  gap: 1rem;
+  /* 0 padding: the shell already provides exactly 16px gutters on all
+     sides, so the page adds nothing. */
+  padding: 0;
+  min-width: 0;
+  min-height: 100%;
+}
+
+/* Stacked layout: pipeline strip, KPI tiles, then the full-width table. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   min-width: 0;
 }
 
-/* Stats row */
-.statsRow {
+/* KPI tiles inside the summary glow card. */
+.tiles {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  overflow: hidden;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
 }
 
-.stat {
+.tile {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem 1rem;
-  text-align: center;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--card);
+  min-width: 0;
 }
 
-.stat:not(:last-child) {
-  border-right: 1px solid var(--border);
+.tileSkel {
+  height: 5.5rem;
+  width: 100%;
+  border-radius: var(--radius-md);
 }
 
-.statValue {
-  font-size: 2rem;
+.tileValue {
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -38,62 +54,30 @@
   font-variant-numeric: tabular-nums;
 }
 
-.statLabel {
+.tileLabel {
+  font-weight: 600;
   font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
+  letter-spacing: -0.005em;
+  color: var(--foreground);
 }
 
-.statHint {
-  margin: -0.125rem 0 0;
+.tileHint {
   font-size: 0.6875rem;
   color: var(--muted-foreground);
-  opacity: 0.75;
 }
 
-.statSkel {
-  height: 4.75rem;
-  border-radius: var(--radius-md);
-}
-
-.divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid var(--border, #e5e5e5);
-}
-
-/* List card */
-.listCard {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--card);
-}
-
+/* Table card header. */
 .listHead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1rem 1rem 0.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .listHeadText {
   min-width: 0;
-}
-
-.listTitle {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--foreground);
-}
-
-.listDesc {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
+  flex: 1;
 }
 
 .headerActions {
@@ -119,49 +103,34 @@
 }
 
 .search {
-  width: 200px;
+  width: 240px;
   height: 2rem;
   padding-left: 2rem;
 }
 
 .clearBtn {
   height: 2rem;
-  color: var(--muted-foreground);
 }
 
-/* Footer */
-.footer {
+.content {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 0.75rem 1rem;
-  border-top: 1px solid var(--border);
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.footerInfo {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-  margin-right: auto;
+.tableWrap {
+  min-width: 0;
+  overflow-x: auto;
 }
 
-.footerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Table */
-.table {
-  width: 100%;
+/* Flush table — no gutters */
+.content :global(table) {
   font-size: 0.8125rem;
   border-collapse: collapse;
 }
 
-.table :global(th) {
+.content :global(thead th) {
   height: 2.75rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.6875rem;
@@ -170,38 +139,28 @@
   letter-spacing: 0.04em;
   color: var(--muted-foreground);
   text-align: left;
-  vertical-align: middle;
   border-bottom: 1px solid var(--border);
   background-color: color-mix(in oklch, var(--foreground), transparent 97%);
 }
 
-.table :global(td) {
+.content :global(tbody td) {
   padding: 0.625rem 0.75rem;
   border-bottom: 1px solid color-mix(in oklch, var(--foreground), transparent 94%);
   vertical-align: middle;
 }
 
-.table :global(tbody tr:last-child td) {
+.content :global(tbody tr:last-child td) {
   border-bottom: none;
 }
 
-.table :global(th:first-child),
-.table :global(td:first-child) {
+.content :global(thead th:first-child),
+.content :global(tbody td:first-child) {
   padding-left: 1rem;
 }
 
-.table :global(th:last-child),
-.table :global(td:last-child) {
+.content :global(thead th:last-child),
+.content :global(tbody td:last-child) {
   padding-right: 1rem;
-}
-
-.tableRow {
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-
-.tableRow:hover {
-  background-color: color-mix(in oklch, var(--primary), transparent 94%);
 }
 
 .studentCell {
@@ -216,35 +175,58 @@
   font-size: 0.8125rem;
   color: var(--foreground);
   letter-spacing: -0.005em;
-  white-space: nowrap;
 }
 
 .studentLrn {
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   color: var(--muted-foreground);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  white-space: nowrap;
 }
 
-.cell {
-  color: var(--muted-foreground);
-  white-space: nowrap;
+.skelName {
+  height: 0.875rem;
+  width: 8rem;
+  border-radius: var(--radius-sm);
 }
 
-.mono {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-variant-numeric: tabular-nums;
+.skelLrn {
+  height: 0.6875rem;
+  width: 5rem;
+  border-radius: var(--radius-sm);
+}
+
+.skelCell {
+  height: 0.875rem;
+  border-radius: var(--radius-sm);
+}
+
+.sectionText {
   color: var(--foreground);
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
-.centerCell {
-  text-align: center;
+.cellMuted {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
-.leftCell {
-  text-align: left;
+.gradeTag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--foreground), transparent 90%);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .statusBadge {
@@ -252,13 +234,8 @@
   font-weight: 600;
 }
 
-.thAction {
-  width: 3rem;
-}
-
-.actionCell {
+.menuCell {
   text-align: right;
-  padding-right: 1rem;
 }
 
 .empty {
@@ -268,29 +245,95 @@
   font-size: 0.8125rem;
 }
 
-.skelName {
-  width: 55%;
-  height: 0.875rem;
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 2.5rem 1rem;
+  text-align: center;
 }
 
-.skelLrn {
-  width: 35%;
-  height: 0.625rem;
-  margin-top: 0.125rem;
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  margin-bottom: 0.375rem;
 }
 
-.skelCell {
-  height: 0.75rem;
+.emptyIcon svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
-/* Mobile */
-@media (max-width: 480px) {
-  .statsRow {
+.emptyTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.emptyHint {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footerInfo {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .tiles {
     grid-template-columns: 1fr;
   }
 
-  .stat:not(:last-child) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
+  .search {
+    width: 100%;
+  }
+
+  .searchWrap {
+    flex: 1;
+    min-width: 12rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
   }
 }

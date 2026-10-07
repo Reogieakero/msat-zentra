@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 
 export type AdviseeRiskLevel = "Low" | "Moderate" | "High";
 export type AdviseeRiskFlag = "academic" | "attendance" | "behavioral";
@@ -21,6 +22,14 @@ export interface AdviseeSubjectGrade {
   transmutedGrade: number | null;
 }
 
+export interface AdviseeLiveGrade {
+  subject: string;
+  code: string;
+  /** Live unweighted mean of recorded percentage scores — realtime,
+   *  regardless of lock / finalization status. */
+  average: number;
+}
+
 export interface AdviseeRow {
   studentId: string;
   name: string;
@@ -37,6 +46,7 @@ export interface AdviseeRow {
   openFlagCount: number;
   hasAccount: boolean;
   grades: AdviseeSubjectGrade[];
+  liveGrades: AdviseeLiveGrade[];
 }
 
 export interface AdvisoryRosterSubject {
@@ -49,7 +59,6 @@ export interface AdvisoryRoster {
   termId: string | null;
   students: AdviseeRow[];
   subjects: AdvisoryRosterSubject[];
-  archivedCount?: number;
 }
 
 export interface AdviseeGrade {
@@ -122,32 +131,28 @@ export async function fetchAdvisoryRoster(): Promise<AdvisoryRoster> {
 const ROSTER_STALE_MS = 30_000;
 const ROSTER_GC_MS = 5 * 60_000;
 
-/** Teacher-scoped key — one teacher's advisees must never leak to another. */
-export function advisoryRosterKey(teacherId: string | null | undefined) {
-  return ["advisory-students", teacherId ?? "anon"] as const;
-}
-
-export async function fetchArchivedRoster(): Promise<AdvisoryRoster> {
-  const { data } = await apiClient.get<AdvisoryRoster>(
-    "/api/teacher/advisory/students?archived=true",
-  );
-  return data;
-}
-
-/** Teacher-scoped key for soft-deleted (archived) advisees. */
-export function archivedRosterKey(teacherId: string | null | undefined) {
-  return ["advisory-students-archived", teacherId ?? "anon"] as const;
+/** Teacher + term scoped key — one teacher's advisees must never leak to
+    another, and term switches refetch instead of serving stale rosters. */
+export function advisoryRosterKey(
+  teacherId: string | null | undefined,
+  termKey = ""
+) {
+  return ["advisory-students", teacherId ?? "anon", termKey] as const;
 }
 
 /** Advisee roster shared by the students page and the attendance sheet, so
- *  visiting both fires the roster endpoint once per teacher. */
+ *  visiting both fires the roster endpoint once per teacher. Waits for term
+ *  hydration (termReady) so the heavy request fires once with the real key
+ *  instead of twice (empty key, then refetch). */
 export function useAdvisoryRoster() {
   const session = useSession();
+  const { activeTerm, termReady } = useTerm();
   const teacherId = session?.sub ?? null;
-  return useQuery({
-    queryKey: advisoryRosterKey(teacherId),
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  return useQuery<AdvisoryRoster>({
+    queryKey: advisoryRosterKey(teacherId, termKey),
     queryFn: fetchAdvisoryRoster,
-    enabled: !!teacherId,
+    enabled: !!teacherId && termReady,
     retry: false,
     staleTime: ROSTER_STALE_MS,
     gcTime: ROSTER_GC_MS,

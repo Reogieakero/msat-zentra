@@ -3,10 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/components/providers";
 import { RecordKeeperSidebar } from "@/components/record-keeper-sidebar";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Command,
   CommandInput,
@@ -19,15 +19,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, UserRound, LogOut, Menu, X } from "lucide-react";
+import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
+import {
+  RecordKeeperPaletteGate,
+  useRecordKeeperProfileSettings,
+} from "./settings/components/profile-settings-data";
+import { RecordKeeperNotificationsBell } from "./components/RecordKeeperNotificationsBell";
+import { useRecordKeeperRealtime } from "@/lib/realtime/recordKeeperChannel";
 import styles from "./record-keeper.module.css";
 
 function RecordKeeperShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { openMobile, setOpenMobile } = useSidebar();
+  const queryClient = useQueryClient();
   const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = React.useState("");
+  const profile = useRecordKeeperProfileSettings();
+  // Live record-keeper alerts: a specific sileo toast pops on the current
+  // page the moment another desk acts (new sign-up, access request, finals
+  // ready, SF10 verified), plus the record-keeper lists refresh. Single
+  // channel per mount.
+  useRecordKeeperRealtime();
 
   const isDark = resolvedTheme === "dark";
 
@@ -35,26 +47,16 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));
+    // Drop all cached record-keeper data so the next login can never briefly
+    // render the previous keeper's overview from the query cache.
+    queryClient.clear();
     router.push("/login");
   };
 
   return (
     <div className={styles.wrapper}>
+      <RecordKeeperPaletteGate />
       <header className={styles.topbar}>
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-label={openMobile ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={openMobile}
-          onClick={() => setOpenMobile(!openMobile)}
-        >
-          {openMobile ? (
-            <X className={styles.menuIcon} />
-          ) : (
-            <Menu className={styles.menuIcon} />
-          )}
-        </button>
-
         <Link href="/record-keeper/overview" className={styles.brand}>
           <span className={styles.brandText}>Zentra</span>
         </Link>
@@ -73,6 +75,8 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
           </Command>
         </div>
 
+        <RecordKeeperNotificationsBell />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -81,6 +85,9 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
               aria-label="Account menu"
             >
               <Avatar size="sm">
+                {profile.data?.photoUrl ? (
+                  <AvatarImage src={profile.data.photoUrl} alt="Profile photo" />
+                ) : null}
                 <AvatarFallback>
                   <UserRound className={styles.avatarIcon} />
                 </AvatarFallback>
@@ -90,7 +97,13 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
           <DropdownMenuContent align="end" className={styles.accountMenu}>
             <DropdownMenuLabel>Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={styles.accountItem}>
+            <DropdownMenuItem
+              className={styles.accountItem}
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/record-keeper/settings");
+              }}
+            >
               <Settings className={styles.accountIcon} />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -140,7 +153,7 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
         </DropdownMenu>
       </header>
       <RecordKeeperSidebar />
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
     </div>
@@ -152,9 +165,5 @@ export default function RecordKeeperLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <RecordKeeperShell>{children}</RecordKeeperShell>
-    </SidebarProvider>
-  );
+  return <RecordKeeperShell>{children}</RecordKeeperShell>;
 }

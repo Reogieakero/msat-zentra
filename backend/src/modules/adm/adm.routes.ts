@@ -127,7 +127,7 @@ router.get(
   "/dashboard",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-overview", "overview"] }),
   async (_req, res, next) => {
     try {
       const ACTIVE_STAGES: AdmStage[] = [
@@ -196,9 +196,15 @@ router.get(
         prisma.admLearnerProfile.findMany({
           where: { stage: { in: ACTIVE_STAGES } },
           include: {
-            student: { include: { user: true } },
-            preparedByUser: true,
-            forms: { orderBy: { uploadedAt: "desc" } },
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                user: { select: { fullName: true } },
+              },
+            },
+            preparedByUser: { select: { fullName: true } },
+            forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
           },
           orderBy: { id: "desc" },
           take: 5,
@@ -272,7 +278,20 @@ const ELIGIBILITY_LABEL: Record<string, string> = {
   ineligible: "Ineligible",
 };
 
-const PAGE_SIZE = 20;
+/* Desk-level pagination standard: full list pages = 15, overview previews
+   page at the same list size (or 10). Backend accepts both `pageSize` (new)
+   and `limit` (legacy) and clamps lists to 15 by default; wide summary reads
+   may request up to 200. */
+const PAGE_SIZE = 15;
+const MAX_PAGE_SIZE = 200;
+
+function resolvePageSize(req: { query: unknown }): number {
+  const q = req.query as Record<string, unknown>;
+  const raw =
+    typeof q.pageSize !== "undefined" ? Number(q.pageSize) : Number(q.limit);
+  if (!Number.isFinite(raw) || (raw as number) <= 0) return PAGE_SIZE;
+  return Math.min(Math.floor(raw as number), MAX_PAGE_SIZE);
+}
 
 // Evidence-chain bookkeeping: AdmForm rows are the trackable face of case
 // records (referral filed, anecdotal filed, minutes logged, home visit
@@ -345,17 +364,13 @@ router.get(
   "/referrals/all",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-referrals", "adm-overview"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      // Allow wide reads (certification summaries) up to 200 rows; the
-      // coordinator queues page with the default 20.
-      const rawLimit = Number(req.query.limit);
-      const limit =
-        Number.isFinite(rawLimit) && rawLimit > 0
-          ? Math.min(Math.floor(rawLimit), 200)
-          : PAGE_SIZE;
+      // Strict 15-row list pages; wide summary reads may request up to 200.
+      // Accepts ?pageSize= (new) and ?limit= (legacy).
+      const limit = resolvePageSize(req);
       const skip = (page - 1) * limit;
       const q =
         typeof req.query.q === "string" && req.query.q.trim()
@@ -760,14 +775,19 @@ router.get(
         }));
       })();
 
+      // `total` = filtered pager count; tile stats stay UNFILTERED
+      // (stageCounts/totalReferred) so backend filtering never shrinks tiles.
       res.json({
         rows: withAction,
         total,
+        unfilteredTotal: totalReferred,
+        complete: totalReferred,
         totalReferred,
         stageCounts: countsByStage,
         page: clampedPage,
         totalPages,
         limit,
+        pageSize: limit,
       });
     } catch (e) { next(e); }
   }
@@ -777,15 +797,11 @@ router.get(
   "/approvals",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-approvals", "adm-certifications"] }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const rawLimit = Number(req.query.limit);
-      const limit =
-        Number.isFinite(rawLimit) && rawLimit > 0
-          ? Math.min(Math.floor(rawLimit), 200)
-          : PAGE_SIZE;
+      const limit = resolvePageSize(req);
       const skip = (page - 1) * limit;
       const q =
         typeof req.query.q === "string" && req.query.q.trim()
@@ -814,10 +830,18 @@ router.get(
         prisma.admLearnerProfile.findMany({
           where,
           include: {
-            student: { include: { user: true, section: { select: { name: true } } } },
-            approvedByUser: true,
-            preparedByUser: true,
-            forms: { orderBy: { uploadedAt: "desc" } },
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                sectionId: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            },
+            approvedByUser: { select: { fullName: true } },
+            preparedByUser: { select: { fullName: true } },
+            forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
             modules: { select: { submitted: true } },
             devices: { select: { id: true } },
           },
@@ -892,9 +916,11 @@ router.get(
       res.json({
         rows: out,
         total,
+        unfilteredTotal: total,
         page,
         totalPages: Math.max(1, Math.ceil(total / limit)),
         limit,
+        pageSize: limit,
       });
     } catch (e) {
       next(e);
@@ -906,7 +932,7 @@ router.get(
   "/referrals",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-referrals"] }),
   async (req, res, next) => {
     try {
       const profiles = await prisma.admLearnerProfile.findMany({
@@ -944,8 +970,36 @@ router.get(
   "/my-cases",
   requireAuth,
   requireRole("adviser", "subject_teacher"),
+  cache({
+    tags: [
+      "adm",
+      "adm-case",
+      "adm-referrals",
+      "teacher",
+      "teacher-adm-cases",
+      "overview",
+    ],
+  }),
   async (req, res, next) => {
     try {
+      // Server-paginated + server-searched: ?q=&page=&pageSize= (legacy
+      // ?limit=). Legacy callers with no params keep the bare-array shape.
+      const qRaw = req.query as Record<string, unknown>;
+      const hasPaginationParams =
+        typeof qRaw.q !== "undefined" ||
+        typeof qRaw.page !== "undefined" ||
+        typeof qRaw.pageSize !== "undefined" ||
+        typeof qRaw.limit !== "undefined" ||
+        typeof qRaw.highlight !== "undefined";
+      const page = Math.max(1, Number(qRaw.page) || 1);
+      const limitRaw =
+        typeof qRaw.pageSize !== "undefined" ? Number(qRaw.pageSize) : Number(qRaw.limit);
+      const pageSize =
+        !Number.isFinite(limitRaw) || limitRaw <= 0
+          ? 15
+          : Math.min(Math.floor(limitRaw), 100);
+      const q =
+        typeof qRaw.q === "string" ? qRaw.q.trim().toLowerCase() : "";
       const teacherId = req.user!.id;
       const sections = await prisma.section.findMany({
         where: { adviserId: teacherId },
@@ -1119,7 +1173,7 @@ router.get(
         timeline: timelines.get(r.id) ?? [],
       }));
 
-      res.json([
+      const merged = [
         ...profiles.map((p) => {
           const meetings = p.parentMeetings ?? [];
           const timeline = timelines.get(p.referralId) ?? [];
@@ -1193,7 +1247,56 @@ router.get(
           };
         }),
         ...earlyCases,
-      ]);
+      ];
+
+      // Legacy shape: no pagination params → bare array.
+      if (!hasPaginationParams) {
+        res.json(merged);
+      } else {
+        // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+        const unfilteredTotal = merged.length;
+        const filtered = q
+          ? merged.filter((c) => {
+              const hay = [c.studentName, c.lrn, c.section, c.stageLabel, c.referralStatus]
+                .filter((v) => typeof v === "string")
+                .join(" ")
+                .toLowerCase();
+              return hay.includes(q);
+            })
+          : merged;
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        // Deep-link landing (?highlight=<id>): serve the page containing
+        // the case (matched by case id or referral id) so bell links land
+        // with highlight, no extra round-trip.
+        const highlightRaw = qRaw.highlight;
+        const highlight =
+          typeof highlightRaw === "string" && highlightRaw.trim()
+            ? highlightRaw.trim()
+            : "";
+        let safePage = Math.min(page, totalPages);
+        if (highlight) {
+          const idx = filtered.findIndex((c) => {
+            const row = c as unknown as { id?: unknown; referralId?: unknown };
+            return row.id === highlight || row.referralId === highlight;
+          });
+          if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
+        }
+        const start = (safePage - 1) * pageSize;
+        const rows = filtered.slice(start, start + pageSize);
+        res.json({
+          data: rows,
+          rows,
+          cases: rows,
+          total,
+          unfilteredTotal,
+          summary: { total: unfilteredTotal, filtered: total },
+          page: safePage,
+          totalPages,
+          limit: pageSize,
+          pageSize,
+        });
+      }
     } catch (e) {
       next(e);
     }
@@ -1341,7 +1444,7 @@ router.post(
       await writeAudit({ userId: me, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: provisioned ? "ADM learner profile created (student auto-provisioned from roster)" : "ADM learner profile created" });
       res.status(201).json(provisioned ? { ...profile, provisioned: true } : profile);
       // Cache purges are non-critical — never delay the confirmed response.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       if (provisioned) {
         void invalidateTags(["registrar", "record-keeper"]);
       }
@@ -1406,7 +1509,7 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_learner_profiles", sourceId: profile.id, reason: "Principal final signature", oldValue: { approvedBy: null }, newValue: { approvedBy: req.user!.id } });
       res.json(updated);
       // Cache purge is non-critical — never delay the confirmed response.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       // The referring adviser learns the case was signed without refreshing —
       // naming the signing principal.
       const studentName = profile.student?.user?.fullName ?? "your student";
@@ -1478,7 +1581,7 @@ router.post(
       });
       res.json(updated);
       // Cache purge is non-critical — never delay the confirmed response.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       // Returned cases go back to the coordinator who prepared them — notify
       // them (previously this notified the principal themselves). Background,
       // off the critical path — naming the returning principal.
@@ -1599,7 +1702,7 @@ router.patch(
       });
       res.json(updated);
       // Cache purge is non-critical — never delay the confirmed response.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       // Realtime handoff (background, off the critical path): the referring
       // adviser learns the case moved without refreshing — naming the actor.
       // Best-effort — never delays the response.
@@ -1636,6 +1739,18 @@ router.patch(
               : `${actor} moved the ADM case for ${studentName} to ${stageWords} — sent to you, ${r.fullName}.`,
         });
       }
+      // Self-receipt to the actor — "You …" form; echo toast suppressed
+      // client-side via markSelfNotified, bell row still lands.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "adm_learner_profiles",
+        action: target === "principal_approval" ? "endorse_self" : "decide_self",
+        message:
+          target === "principal_approval"
+            ? `You endorsed ${studentName} to the Principal — principal_approval.`
+            : `You moved ${studentName} to ${stageWords} — ${target}.`,
+        sourceId: profile.id,
+      });
     } catch (e) {
       next(e);
     }
@@ -1749,7 +1864,7 @@ router.post(
       });
       res.json(updated);
       // Cache purge is non-critical — never delay the confirmed response.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       // Realtime handoff (background, off the critical path): the referring
       // adviser learns the case was certified without refreshing — naming
       // the certifying coordinator.
@@ -1772,6 +1887,13 @@ router.post(
         excludeUserId: req.user!.id,
         messageFor: (r) =>
           `${actor} certified the ADM case for ${studentName} and endorsed it to the Principal — sent to you, ${r.fullName}.`,
+      });
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "adm_learner_profiles",
+        action: "certify_self",
+        message: `You certified ${studentName} and endorsed the case to the Principal — principal_approval.`,
+        sourceId: profile.id,
       });
     } catch (e) {
       next(e);
@@ -1812,7 +1934,7 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_devices", sourceId: device.id, reason: "ADM device issued" });
       res.status(201).json(device);
       // Non-critical work stays off the response path.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       // Realtime handoff: the referring adviser learns the device moved
       // without refreshing — naming the issuing coordinator. Best-effort —
       // never delays the response.
@@ -1846,6 +1968,13 @@ router.post(
         messageFor: (r) =>
           `${actor} issued learning device ${serial} to ${studentName} — sent to you, ${r.fullName}.`,
       });
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "adm_devices",
+        action: "issue_self",
+        message: `You issued learning device ${serial} to ${studentName} — devices.`,
+        sourceId: device.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1875,7 +2004,7 @@ router.post(
       await writeAudit({ userId: req.user!.id, actionType: "adm_edit", sourceTable: "adm_devices", sourceId: device.id, reason: "ADM device returned" });
       res.json(updated);
       // Non-critical work stays off the response path.
-      void invalidateTags(["adm", "overview", "principal"]);
+      void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       // Realtime handoff: the referring adviser learns of the return
       // without refreshing — naming the coordinator. Best-effort — never
       // delays the response.
@@ -1900,6 +2029,13 @@ router.post(
         messageFor: (r) =>
           `${actor} marked learning device ${device.deviceSerial} returned for ${studentName} — sent to you, ${r.fullName}.`,
       });
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "adm_devices",
+        action: "return_self",
+        message: `You marked learning device ${device.deviceSerial} returned for ${studentName} — devices.`,
+        sourceId: device.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -1911,7 +2047,7 @@ router.get(
   "/devices",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-devices", "adm-overview"] }),
   async (req, res, next) => {
     try {
       const q =
@@ -1922,14 +2058,14 @@ router.get(
         typeof req.query.status === "string" && req.query.status.trim()
           ? req.query.status.trim()
           : "";
-      // Overview summary only needs the N longest-out issued tablets.
-      // `?status=issued&order=oldest&limit=5` serves that without shipping
-      // the whole ledger. The Devices page sends `page + limit=20`.
-      const limitParam = Number(req.query.limit);
-      const limit =
-        Number.isFinite(limitParam) && limitParam > 0
-          ? Math.min(Math.floor(limitParam), 100)
-          : 0;
+      // Overview preview pages at the same list size; the Devices page sends
+      // `?page=&pageSize=` (legacy `?limit=` still accepted). `limit=0`
+      // preserves the legacy unbounded read.
+      const hasPaging =
+        typeof req.query.page !== "undefined" ||
+        typeof req.query.pageSize !== "undefined" ||
+        typeof req.query.limit !== "undefined";
+      const limit = hasPaging ? resolvePageSize(req) : 0;
       const page = Math.max(1, Number(req.query.page) || 1);
       const skip = limit > 0 ? (page - 1) * limit : 0;
       const orderOldest = req.query.order === "oldest";
@@ -1997,13 +2133,23 @@ router.get(
         conditionNotes: d.conditionNotes,
         status: d.returnedDate ? ("returned" as const) : ("issued" as const),
       }));
+      // `total` = filtered pager count; issued/returned stay GLOBAL
+      // (unfiltered) so tiles never shrink under search.
+      const unfiltered = await prisma.admDevice.count();
       res.json({
         rows,
         total,
+        unfilteredTotal: unfiltered,
+        complete: unfiltered,
         issued,
         returned,
         ...(limit > 0
-          ? { page, totalPages: Math.max(1, Math.ceil(total / limit)), limit }
+          ? {
+              page,
+              totalPages: Math.max(1, Math.ceil(total / limit)),
+              limit,
+              pageSize: limit,
+            }
           : {}),
       });
     } catch (e) { next(e); }
@@ -2174,7 +2320,7 @@ router.post(
         sourceId: meeting.id,
         reason: `Parent meeting booked (${req.body.venue === "home" ? "home visitation" : "in school"})${invitees.length > 0 ? ` · invited: ${inviteeNames(invitees)}` : ""}`,
       });
-      await invalidateTags(["adm", "overview", "principal"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.status(201).json(meeting);
       // Realtime handoff (background, off the coordinator critical path):
       // the referring adviser sees a sileo toast on their current page the
@@ -2199,8 +2345,8 @@ router.post(
         void fanoutNotification({
           userId: req.user!.id,
           sourceTable: "adm_parent_meetings",
-          action: "book",
-          message: `You booked a parent meeting for ${studentName} on ${when} (${venueLabel}).`,
+          action: "book_self",
+          message: `You booked a parent meeting for ${studentName} on ${when} (${venueLabel}) — referrals.`,
           sourceId: meeting.id,
         });
       }
@@ -2310,7 +2456,7 @@ router.post(
         sourceId: meeting.id,
         reason: `Parent meeting booked (${req.body.venue === "home" ? "home visitation" : "in school"})${invitees.length > 0 ? ` · invited: ${inviteeNames(invitees)}` : ""}`,
       });
-      await invalidateTags(["adm", "overview", "principal"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.status(201).json(meeting);
       // Realtime handoff (background, off the coordinator critical path):
       // the referring adviser sees a sileo toast on their current page the
@@ -2502,7 +2648,7 @@ router.patch(
         oldValue: { meetingDatetime: meeting.meetingDatetime, venue: meeting.venue },
         newValue: { meetingDatetime: nextAt, venue: req.body.venue },
       });
-      await invalidateTags(["adm", "overview", "principal"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.json(updated);
       // The referring adviser learns the new schedule without refreshing —
       // naming the rescheduling coordinator.
@@ -2536,8 +2682,8 @@ router.patch(
       void fanoutNotification({
         userId: actorId,
         sourceTable: "adm_parent_meetings",
-        action: "reschedule",
-        message: `You moved the parent meeting for ${studentName} to ${when}.`,
+        action: "reschedule_self",
+        message: `You moved the parent meeting for ${studentName} to ${when} — referrals.`,
         sourceId: meeting.id,
       });
       // Invitees follow the meeting: newly added staff get the invitation,
@@ -2681,7 +2827,7 @@ router.post(
         oldValue: null,
         newValue: { count: created.length },
       });
-      await invalidateTags(["adm", "overview"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview"]);
       res.status(201).json(created.map(formatMeetingAttachment));
     } catch (e) {
       next(e);
@@ -2712,7 +2858,7 @@ router.delete(
         oldValue: { fileName: row.fileName },
         newValue: null,
       });
-      await invalidateTags(["adm", "overview"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview"]);
       res.json({ ok: true });
     } catch (e) {
       next(e);
@@ -2730,7 +2876,7 @@ router.get(
   "/case/:id",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-case", "adm-referrals"] }),
   async (req, res, next) => {
     try {
       const raw = String(req.params.id);
@@ -2997,6 +3143,7 @@ router.get(
   "/:id/meetings",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
+  cache({ tags: ["adm", "adm-meetings", "adm-case"] }),
   async (req, res, next) => {
     try {
       const profile = await prisma.admLearnerProfile.findUnique({
@@ -3140,7 +3287,7 @@ router.patch(
         oldValue: { attended: meeting.attended },
         newValue: { attended },
       });
-      await invalidateTags(["adm", "overview", "principal"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       res.json(updated);
       // Realtime handoff (background, off the coordinator critical path):
       // the referring adviser learns the meeting outcome without refreshing.
@@ -3182,6 +3329,15 @@ router.patch(
             ? `${actor} recorded that parents attended the meeting for ${studentName} — sent to you, ${r.fullName}.`
             : `${actor} recorded that parents did not attend the meeting for ${studentName} — home visitation path applies — sent to you, ${r.fullName}.`,
       });
+      void fanoutNotification({
+        userId: actorId,
+        sourceTable: "adm_parent_meetings",
+        action: "outcome_self",
+        message: attended
+          ? `You recorded that parents attended the meeting for ${studentName} — referrals.`
+          : `You recorded that parents did not attend the meeting for ${studentName} — referrals.`,
+        sourceId: meeting.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -3195,7 +3351,7 @@ router.get(
   "/history",
   requireAuth,
   requireRole("adm_coordinator", "principal"),
-  cache({ tags: ["adm"] }),
+  cache({ tags: ["adm", "adm-case"] }),
   async (req, res, next) => {
     try {
       const profileId =
@@ -3346,7 +3502,7 @@ router.patch(
         sourceId: coordinatorId,
         reason: "ADM coordinator updated profile settings",
       });
-      await invalidateTags(["adm", "overview"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview"]);
       res.json(await readCoordinatorProfileSettings(coordinatorId));
     } catch (e) {
       next(e);
@@ -3389,7 +3545,7 @@ router.post(
         sourceId: coordinatorId,
         reason: "ADM coordinator updated profile photo",
       });
-      await invalidateTags(["adm", "overview"]);
+      await invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview"]);
       res.json({ photoUrl });
     } catch (e) {
       next(e);

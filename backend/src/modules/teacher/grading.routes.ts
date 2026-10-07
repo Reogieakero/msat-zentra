@@ -486,7 +486,7 @@ router.post(
         sourceId: assessment.id,
         reason: `Added ${body.componentType} assessment "${assessment.title}" to ${a.subject.name}`,
       });
-      await invalidateTags(["teacher"]);
+      await invalidateGradingCaches();
 
       res.status(201).json({
         id: assessment.id,
@@ -540,18 +540,19 @@ router.patch(
 
       // Rescaling the max rewrites every recorded percentage (raw scores are
       // kept), then every affected final is recomputed so nothing goes stale.
+      // One $transaction round-trip (was: N concurrent updates).
       if (maxChanged) {
         const rows = await prisma.studentGrade.findMany({
           where: { assessmentId: assessment.id },
           select: { id: true, rawScore: true, studentId: true, rosterId: true },
         });
-        await Promise.all(
+        await prisma.$transaction(
           rows.map((g) =>
             prisma.studentGrade.update({
               where: { id: g.id },
               data: { percentageScore: (g.rawScore / updated.maxScore) * 100 },
             }),
-          ),
+          ) as never[],
         );
         const keys = rows.map((g) =>
           g.studentId ? { studentId: g.studentId } : { rosterId: g.rosterId as string },

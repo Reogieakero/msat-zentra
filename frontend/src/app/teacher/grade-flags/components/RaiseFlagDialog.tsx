@@ -2,14 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -99,20 +92,21 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
   }
 
   return (
-    <Dialog
+    <CardModal
       open={open}
-      onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
+      onClose={() => {
+        // Locked while the raise is in flight — closes only on server
+        // confirmation, never early.
+        if (submitting) return;
+        reset();
+        onOpenChange(false);
       }}
+      dismissable={!submitting}
+      size="md"
+      title="Raise a grade flag"
+      description="Flag a student's grade for review by the gradebook owner."
+      watchKey={submitting}
     >
-      <DialogContent className={styles.dialog}>
-        <DialogHeader>
-          <DialogTitle>Raise a grade flag</DialogTitle>
-          <DialogDescription>
-            Flag a student&apos;s grade for review by the gradebook owner.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className={styles.fields}>
           <div className={styles.field}>
@@ -187,8 +181,13 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
           {error ? <p className={styles.error}>{error}</p> : null}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>
@@ -201,8 +200,7 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
               "Raise flag"
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { GradeLevel } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
 import { schoolYearWhere, scopedYearId } from "../../lib/termScope.js";
 import { cache } from "../../lib/cache.js";
 import { writeAudit } from "../../lib/audit.js";
@@ -44,7 +46,7 @@ router.get(
   "/overview",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "overview"] }),
+  cache({ tags: ["registrar", "registrar-overview", "overview"] }),
   async (req, res, next) => {
     try {
       const GRADE_BAND = roleGradeBand(req.user?.role);
@@ -132,7 +134,7 @@ router.get(
       const latestAttachRows = await prisma.sf10Record.findMany({
         where: { status: "attach", student: { gradeLevel: { in: GRADE_BAND } } },
         orderBy: { validatedAt: "desc" },
-        take: 100,
+        take: 15,
         select: {
           validatedAt: true,
           student: {
@@ -148,9 +150,11 @@ router.get(
         when: (r.validatedAt ?? new Date(0)).toISOString(),
       }));
 
-      // missingSf10: G11–12 students with NO sf10Record at all.
+      // missingSf10: G11–12 students with NO sf10Record at all (preview capped
+      // at 15 — the full list lives on the SF10 page).
       const missingRows = await prisma.studentProfile.findMany({
         where: { gradeLevel: { in: GRADE_BAND }, sf10Records: { none: {} } },
+        take: 15,
         select: {
           lrn: true,
           gradeLevel: true,
@@ -170,9 +174,12 @@ router.get(
       // self-sign-ups with no profile yet (their claimed LRN resolves them into
       // the band from the official StudentRoster), reconciling with /api/auth/pending.
       // Include first linked parent fullName.
+      // pendingStudents: preview capped at 15 per source (the full queue with
+      // server pagination lives on the Accounts page + /api/auth/pending).
       const [profiledPending, barePending] = await Promise.all([
         prisma.studentProfile.findMany({
           where: { gradeLevel: { in: GRADE_BAND }, user: { status: "pending" } },
+          take: 15,
           select: {
             lrn: true,
             gradeLevel: true,
@@ -185,6 +192,7 @@ router.get(
         }),
         prisma.user.findMany({
           where: { status: "pending", role: "student", studentProfile: null },
+          take: 15,
           select: { fullName: true, lrn: true },
         }),
       ]);
@@ -296,13 +304,13 @@ router.get(
   "/final-grades",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "academics", "overview"] }),
+  cache({ tags: ["registrar", "registrar-finals", "registrar-overview", "academics", "overview"] }),
   async (req, res, next) => {
     try {
       const GRADE_BAND = roleGradeBand(req.user?.role);
 
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
+      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 15, 1), 100);
 
       // Every final-grade row for the registrar band, with the info needed to
       // decide which students have a fully adviser-approved term. Roster rows
@@ -400,16 +408,36 @@ router.get(
       // ordered by term + name + subject).
       viewableGroups.sort((a, b) => nameOf(a[0]).localeCompare(nameOf(b[0])));
 
-      const totalStudents = viewableGroups.length;
+      // Server search (strict-15 standard): ?q= filters complete sets by
+      // student name / LRN / section / subject before paging. Stats below
+      // stay global (unfiltered) for the tiles; `total` is the filtered
+      // count that drives the pager.
+      const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const matchedGroups = q
+        ? viewableGroups.filter((group) => {
+            const r0 = group[0];
+            const sectionName =
+              r0.student?.section?.name ?? r0.roster?.section?.name ?? "";
+            return (
+              nameOf(r0).toLowerCase().includes(q) ||
+              lrnOf(r0).toLowerCase().includes(q) ||
+              sectionName.toLowerCase().includes(q) ||
+              group.some((r) => r.subject.name.toLowerCase().includes(q))
+            );
+          })
+        : viewableGroups;
+
+      const totalStudents = matchedGroups.length;
       const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize));
       const clampedPage = Math.min(page, totalPages);
-      const slice = viewableGroups.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
+      const slice = matchedGroups.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
 
       // Stats: "ready" = fully adviser-approved (viewable) rows; "complete" =
-      // distinct viewable student-terms. Both are informational for the registrar.
+      // distinct viewable student-terms. Both stay GLOBAL (unfiltered) for
+      // the tiles; `total` above is the filtered pager count.
       // "locked" / "adviserApproved" feed the grade pipeline stages on the page.
       const readyCount = viewableGroups.reduce((sum, g) => sum + g.length, 0);
-      const completeCount = totalStudents;
+      const completeCount = viewableGroups.length;
       const lockedCount = rows.filter((r) => r.lockStatus === "locked").length;
       const adviserApprovedCount = rows.filter((r) => r.lockStatus === "adviser_approved").length;
 
@@ -469,7 +497,7 @@ router.get(
   "/account-breakdown",
   requireAuth,
   requireRole("registrar", "record_keeper"),
-  cache({ tags: ["registrar", "accounts"] }),
+  cache({ tags: ["registrar", "registrar-accounts", "accounts"] }),
   async (req, res, next) => {
     try {
       const GRADE_BAND = roleGradeBand(req.user?.role);
@@ -554,7 +582,7 @@ router.get(
   "/adviser-access-requests",
   requireAuth,
   requireRole("registrar"),
-  cache({ tags: ["registrar", "adviser-access"] }),
+  cache({ tags: ["registrar", "registrar-access", "adviser-access"] }),
   async (req, res, next) => {
     try {
       const statusFilter = req.query.status
@@ -749,7 +777,19 @@ async function decideAccessRequest(
       sourceId: updated.id,
     });
 
-    await invalidateTags(["registrar", "adviser-access", "overview"]);
+    // Own-bell receipt: the acting registrar's badge bumps live (their echo
+    // toast is suppressed client-side — the mutation toast already confirmed it).
+    await fanoutNotification({
+      userId: req.user!.id,
+      sourceTable: "adviser_sf10_access_requests",
+      action: "decide_self",
+      message: approved
+        ? `You granted ${request.adviser?.fullName ?? "the adviser"} (${updated.section.name}) SF10 read access.`
+        : `You denied ${request.adviser?.fullName ?? "the adviser"} (${updated.section.name}) SF10 read access.`,
+      sourceId: updated.id,
+    });
+
+    await invalidateTags(["registrar", "registrar-access", "registrar-overview", "adviser-access", "overview"]);
 
     res.json({
       id: updated.id,
@@ -827,7 +867,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
-      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "10"), 10) || 10, 1), 50);
+      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "15"), 10) || 15, 1), 50);
       const skip = (page - 1) * pageSize;
 
       // Affected users that belong to the registrar band.
@@ -890,6 +930,144 @@ router.get(
       });
 
       res.json({ entries, total, page, pageSize });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+const HEX_COLOR = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");
+
+async function readRegistrarProfileSettings(registrarId: string) {
+  const [user, profile] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: registrarId },
+      select: { fullName: true },
+    }),
+    prisma.staffProfile.findUnique({
+      where: { userId: registrarId },
+      select: { photoUrl: true, primaryColor: true, secondaryColor: true },
+    }),
+  ]);
+  return {
+    fullName: user?.fullName ?? "",
+    photoUrl: profile?.photoUrl ?? null,
+    primaryColor: profile?.primaryColor ?? null,
+    secondaryColor: profile?.secondaryColor ?? null,
+  };
+}
+
+// GET /api/registrar/settings/profile — own display name, photo, palette.
+router.get(
+  "/settings/profile",
+  requireAuth,
+  requireRole("registrar"),
+  async (req, res, next) => {
+    try {
+      res.json(await readRegistrarProfileSettings(req.user!.id));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// PATCH /api/registrar/settings/profile — display name + workspace palette.
+router.patch(
+  "/settings/profile",
+  requireAuth,
+  requireRole("registrar"),
+  validate(
+    "body",
+    z.object({
+      fullName: z.string().trim().min(1).max(100).optional(),
+      primaryColor: HEX_COLOR.nullable().optional(),
+      secondaryColor: HEX_COLOR.nullable().optional(),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const registrarId = req.user!.id;
+      const { fullName, primaryColor, secondaryColor } = req.body as {
+        fullName?: string;
+        primaryColor?: string | null;
+        secondaryColor?: string | null;
+      };
+      await prisma.$transaction(async (tx) => {
+        if (fullName !== undefined) {
+          await tx.user.update({
+            where: { id: registrarId },
+            data: { fullName },
+          });
+        }
+        const palette: { primaryColor?: string | null; secondaryColor?: string | null } = {};
+        if (primaryColor !== undefined) palette.primaryColor = primaryColor;
+        if (secondaryColor !== undefined) palette.secondaryColor = secondaryColor;
+        if (Object.keys(palette).length > 0) {
+          await tx.staffProfile.upsert({
+            where: { userId: registrarId },
+            update: palette,
+            create: {
+              userId: registrarId,
+              employeeId: `R-${registrarId.slice(0, 8)}`,
+              ...palette,
+            },
+          });
+        }
+      });
+      await writeAudit({
+        userId: registrarId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: registrarId,
+        reason: "Registrar updated profile settings",
+      });
+      await invalidateTags(["registrar", "registrar-overview", "overview"]);
+      res.json(await readRegistrarProfileSettings(registrarId));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// POST /api/registrar/settings/photo — profile photo upload (JSON data URL).
+// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
+router.post(
+  "/settings/photo",
+  requireAuth,
+  requireRole("registrar"),
+  validate(
+    "body",
+    z.object({
+      photoUrl: z
+        .string()
+        .regex(/^data:image\/(png|jpeg|gif|webp);base64,/, "Photo must be a PNG, JPEG, GIF, or WebP data URL")
+        .max(2_800_000),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const registrarId = req.user!.id;
+      const { photoUrl } = req.body as { photoUrl: string };
+      await prisma.staffProfile.upsert({
+        where: { userId: registrarId },
+        update: { photoUrl },
+        create: {
+          userId: registrarId,
+          employeeId: `R-${registrarId.slice(0, 8)}`,
+          photoUrl,
+        },
+      });
+      await writeAudit({
+        userId: registrarId,
+        actionType: "update",
+        sourceTable: "staff_profiles",
+        sourceId: registrarId,
+        reason: "Registrar updated profile photo",
+      });
+      await invalidateTags(["registrar", "registrar-overview", "overview"]);
+      res.json({ photoUrl });
     } catch (e) {
       next(e);
     }

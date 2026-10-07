@@ -9,11 +9,12 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, CheckCircle2, Archive } from "lucide-react";
+import { ExternalLink, CheckCircle2, Archive, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { StatusBadge, formatRelativeTime } from "./shared";
 import { GRADE_LABEL, SF10_SOURCE_LABEL, type Sf10Record } from "../types";
 import { validateSf10, releaseSf10 } from "../api";
+import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import styles from "../sf10.module.css";
 
 export function Sf10DetailSheet({
@@ -31,15 +32,20 @@ export function Sf10DetailSheet({
 
   if (!record) return null;
 
+  // Pessimistic: the list behind the sheet repaints only via onChanged's
+  // refetch after the server confirms. No optimistic flip: the UI must never
+  // outrun the processing. markSelfNotified suppresses the self-receipt echo
+  // toast (the toasts below already confirmed the action).
   const handleValidate = async () => {
     setActing("validate");
     try {
       await validateSf10(record.id);
+      markSelfNotified(record.id);
       toast.success({ title: "Validated", description: `${record.fullName} marked available.` });
       onChanged?.();
       onOpenChange(false);
     } catch {
-      toast.error({ title: "Validation failed" });
+      toast.error({ title: "Validation failed", description: "Nothing was changed." });
     } finally {
       setActing(null);
     }
@@ -49,11 +55,12 @@ export function Sf10DetailSheet({
     setActing("release");
     try {
       await releaseSf10(record.id);
+      markSelfNotified(record.id);
       toast.success({ title: "Released", description: `${record.fullName} released & archived.` });
       onChanged?.();
       onOpenChange(false);
     } catch {
-      toast.error({ title: "Release failed" });
+      toast.error({ title: "Release failed", description: "Nothing was changed." });
     } finally {
       setActing(null);
     }
@@ -136,7 +143,11 @@ export function Sf10DetailSheet({
             disabled={record.status !== "attach" || acting !== null}
             onClick={handleValidate}
           >
-            <CheckCircle2 />
+            {acting === "validate" ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <CheckCircle2 aria-hidden />
+            )}
             {acting === "validate" ? "Validating…" : "Validate"}
           </Button>
           <Button
@@ -146,7 +157,11 @@ export function Sf10DetailSheet({
             disabled={record.status !== "available" || acting !== null}
             onClick={handleRelease}
           >
-            <Archive />
+            {acting === "release" ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Archive aria-hidden />
+            )}
             {acting === "release" ? "Releasing…" : "Release & archive"}
           </Button>
         </div>

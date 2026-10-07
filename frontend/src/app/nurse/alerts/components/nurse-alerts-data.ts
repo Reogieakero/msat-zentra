@@ -290,16 +290,82 @@ export function buildNurseAlerts(
   };
 }
 
-export async function fetchNurseAlerts(): Promise<NurseAlertsData> {
+export interface NurseAlertsPageParams {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  track?: "clinic" | "adm";
+  highlight?: string;
+  signal?: AbortSignal;
+}
+
+export interface NurseAlertsPage extends NurseAlertsData {
+  /** Filtered pager count (shrinks on search). */
+  total: number;
+  /** UNFILTERED desk total — tile stats never shrink on search. */
+  unfilteredTotal: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+}
+
+interface PaginatedReferrals {
+  data?: RawReferral[];
+  rows?: RawReferral[];
+  referrals?: RawReferral[];
+  total?: number;
+  unfilteredTotal?: number;
+  summary?: { total?: number; filtered?: number };
+  page?: number;
+  totalPages?: number;
+  pageSize?: number;
+  limit?: number;
+}
+
+export async function fetchNurseAlerts(
+  params?: NurseAlertsPageParams
+): Promise<NurseAlertsPage> {
+  const query = new URLSearchParams();
+  if (params?.q?.trim()) query.set("q", params.q.trim());
+  query.set("page", String(Math.max(1, params?.page ?? 1)));
+  query.set("pageSize", String(params?.pageSize ?? 15));
+  if (params?.track) query.set("track", params.track);
+  if (params?.highlight) query.set("highlight", params.highlight);
   const [referralsRes, notificationsRes] = await Promise.all([
-    apiClient.get<RawReferral[] | { referrals: RawReferral[] }>("/api/referrals/"),
+    apiClient.get<RawReferral[] | { referrals: RawReferral[] } | PaginatedReferrals>(
+      `/api/referrals/?${query.toString()}`,
+      { signal: params?.signal }
+    ),
     apiClient.get<RawNotification[]>("/api/notifications/"),
   ]);
-  const referrals = Array.isArray(referralsRes.data)
-    ? referralsRes.data
-    : (referralsRes.data?.referrals ?? []);
+  // Defensive: the endpoint has returned array, {referrals}, and paginated
+  // {data/total/unfilteredTotal} shapes — never let rows.reduce crash us.
+  const raw = referralsRes.data;
+  const referrals: RawReferral[] = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as PaginatedReferrals)?.data)
+      ? (raw as PaginatedReferrals).data!
+      : Array.isArray((raw as PaginatedReferrals)?.rows)
+        ? (raw as PaginatedReferrals).rows!
+        : Array.isArray((raw as PaginatedReferrals)?.referrals)
+          ? (raw as PaginatedReferrals).referrals!
+          : [];
+  const pager = (Array.isArray(raw) ? null : (raw as PaginatedReferrals)) ?? null;
   const notifications = Array.isArray(notificationsRes.data) ? notificationsRes.data : [];
-  return buildNurseAlerts(referrals, notifications);
+  const built = buildNurseAlerts(referrals, notifications);
+  const total = pager?.total ?? referrals.length;
+  const unfilteredTotal =
+    pager?.unfilteredTotal ?? pager?.summary?.total ?? referrals.length;
+  const pageSize = pager?.pageSize ?? pager?.limit ?? (params?.pageSize ?? 15);
+  const totalPages = pager?.totalPages ?? Math.max(1, Math.ceil(Math.max(1, total) / Math.max(1, pageSize)));
+  return {
+    ...built,
+    total,
+    unfilteredTotal,
+    page: pager?.page ?? Math.max(1, params?.page ?? 1),
+    totalPages,
+    pageSize,
+  };
 }
 
 export async function markNurseNotificationRead(id: string): Promise<void> {

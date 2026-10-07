@@ -123,8 +123,8 @@ export function InterventionDialogs({
 
   return (
     <>
-      <Dialog open={open.start} onOpenChange={(n) => !n && onClose("start")}>
-        <DialogContent>
+      <Dialog open={open.start} onOpenChange={(n) => { if (!n && !isActionPending) onClose("start") }}>
+        <DialogContent aria-busy={isActionPending || undefined}>
           <DialogHeader>
             <DialogTitle>
               Start a follow-up{activeRow ? ` — ${activeRow.student}` : ""}
@@ -217,8 +217,8 @@ export function InterventionDialogs({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open.change} onOpenChange={(n) => !n && onClose("change")}>
-        <DialogContent>
+      <Dialog open={open.change} onOpenChange={(n) => { if (!n && !isActionPending) onClose("change") }}>
+        <DialogContent aria-busy={isActionPending || undefined}>
           <DialogHeader>
             <DialogTitle>Change the follow-up plan</DialogTitle>
             <DialogDescription>
@@ -255,9 +255,9 @@ export function InterventionDialogs({
 
       <Dialog
         open={open.outcome}
-        onOpenChange={(n) => !n && onClose("outcome")}
+        onOpenChange={(n) => { if (!n && !isActionPending) onClose("outcome") }}
       >
-        <DialogContent>
+        <DialogContent aria-busy={isActionPending || undefined}>
           <DialogHeader>
             <DialogTitle>Record the outcome</DialogTitle>
             <DialogDescription>

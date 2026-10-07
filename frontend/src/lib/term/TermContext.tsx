@@ -101,6 +101,10 @@ interface TermContextValue {
   isLoading: boolean;
   isError: boolean;
   activeTerm: ActiveTerm | null;
+  /** True once the persisted term has been read from storage (mount effect
+   *  ran). Gate term-scoped queries on this to avoid firing once with an
+   *  empty key and refetching after hydration. */
+  termReady: boolean;
   setActiveTerm: (term: ActiveTerm) => void;
   /** True when the post-login picker must be shown (set on every login). */
   promptRequired: boolean;
@@ -158,10 +162,15 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
   const setActiveTerm = React.useCallback(
     (term: ActiveTerm) => {
       setActiveTermState((prev) => {
-        // Switching scope must refetch everything — every query is implicitly
-        // scoped to the active term via request headers.
+        // Switching scope refetches term-scoped data — but NOT the
+        // term-picker itself (it lists all years/terms, scope-independent).
+        // Term-scoped keys carry the termId, so stale-term rows are never
+        // reused; invalidation just hurries the refetch.
         if (prev?.termId !== term.termId || prev?.schoolYearId !== term.schoolYearId) {
-          queryClient.invalidateQueries();
+          void queryClient.invalidateQueries({
+            predicate: (query) =>
+              query.queryKey[0] !== "term-picker" && query.queryKey[0] !== "school-years",
+          });
         }
         return term;
       });
@@ -182,11 +191,12 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
       isLoading: query.isLoading,
       isError: query.isError,
       activeTerm,
+      termReady: ready,
       setActiveTerm,
       promptRequired,
       setPromptRequired,
     }),
-    [query.data, query.isLoading, query.isError, activeTerm, setActiveTerm, promptRequired, setPromptRequired],
+    [query.data, query.isLoading, query.isError, activeTerm, ready, setActiveTerm, promptRequired, setPromptRequired],
   );
 
   return <TermContext.Provider value={value}>{children}</TermContext.Provider>;

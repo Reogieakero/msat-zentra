@@ -1,6 +1,7 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { markSelfNotified } from "@/lib/realtime/nurseChannel";
+import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
 import {
   AdmReferralFormSheet,
   type AdmReferralFormDraft,
@@ -59,7 +60,7 @@ export function NurseAdmReferralFormSheet({
   initialDraft: AdmReferralFormDraft;
   onChanged: () => void;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateNurse = useNurseInvalidate();
   const reviewable = row.type === "ADM" && row.status === "pending";
 
   async function onConfirm({
@@ -77,11 +78,10 @@ export function NurseAdmReferralFormSheet({
   }
 
   function onConfirmed() {
-    queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
-    queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
-    queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
-    queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
-    queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
+    // Confirmed server-side: suppress the realtime echo, bump every nurse
+    // query (notifications included) via the shared invalidator.
+    markSelfNotified(row.id);
+    invalidateNurse();
     onChanged();
     onClose();
   }

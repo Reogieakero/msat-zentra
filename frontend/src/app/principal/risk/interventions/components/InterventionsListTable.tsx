@@ -30,19 +30,14 @@ import {
   X,
 } from "lucide-react";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
+import { useTerm } from "@/lib/term/TermContext";
 import { useGradeMode } from "../../../grade-mode-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
+import formStyles from "@/app/principal/academics/assign/components/form.module.css";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -75,7 +70,7 @@ const gradeNum = (name: string) => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 // Factor badges: academic amber, attendance green, behavioral blue — same
 // mapping as the teacher overview At-Risk Advisees table.
@@ -229,9 +224,14 @@ export function InterventionsListTable() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
   const { data, isPending } = useQuery({
-    queryKey: ["interventions-list", gradeMode],
-    queryFn: () => fetchInterventionStudents({ gradeMode }, 1, 1000),
+    // Term-scoped: switching term refetches; stale 60s avoids remount storms.
+    queryKey: ["interventions-list", termId, gradeMode],
+    queryFn: () => fetchInterventionStudents({ gradeMode }, 1, 50),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const students = React.useMemo(() => data?.students ?? [], [data]);
@@ -671,45 +671,43 @@ export function InterventionsListTable() {
         )}
       </div>
 
-      <Dialog
+      <CardModal
         open={alertTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) closeAlert();
-        }}
+        onClose={closeAlert}
+        size="sm"
+        title="Alert guidance"
+        description={
+          alertTarget
+            ? `${alertTarget.studentName} (${alertTarget.lrn}) has no intervention action yet. This notifies every active guidance counselor.`
+            : "Notify every active guidance counselor."
+        }
+        dismissable={!alertMutation.isPending}
+        watchKey={alertTarget?.studentId}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alert guidance</DialogTitle>
-            <DialogDescription>
-              {alertTarget
-                ? `${alertTarget.studentName} (${alertTarget.lrn}) has no intervention action yet. This notifies every active guidance counselor.`
-                : "Notify every active guidance counselor."}
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Optional note for guidance…"
-            rows={3}
-            maxLength={500}
-            aria-label="Optional note for guidance"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={closeAlert}>
-              Cancel
-            </Button>
-            <Button
-              disabled={alertMutation.isPending || !alertTarget}
-              onClick={() => {
-                if (!alertTarget) return;
-                alertMutation.mutate({ id: alertTarget.studentId, note });
-              }}
-            >
-              {alertMutation.isPending ? "Alerting…" : "Alert guidance"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional note for guidance…"
+          rows={3}
+          maxLength={500}
+          aria-label="Optional note for guidance"
+        />
+        <div className={formStyles.dialogFooter}>
+          <Button variant="outline" onClick={closeAlert} disabled={alertMutation.isPending}>
+            Cancel
+          </Button>
+          <Button
+            disabled={alertMutation.isPending || !alertTarget}
+            aria-busy={alertMutation.isPending || undefined}
+            onClick={() => {
+              if (!alertTarget) return;
+              alertMutation.mutate({ id: alertTarget.studentId, note });
+            }}
+          >
+            {alertMutation.isPending ? "Alerting…" : "Alert guidance"}
+          </Button>
+        </div>
+      </CardModal>
     </section>
   );
 }

@@ -17,7 +17,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchGuidanceAnecdotal,
+  type GuidanceAnecdotalData,
 } from "../../anecdotal/components/guidance-anecdotal-data";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   GuidanceBehavioralFilters,
   type BehavioralCategoryFilter,
@@ -29,7 +32,7 @@ import donutStyles from "./components/guidance-category-donut.module.css";
 import cardsStyles from "./components/guidance-behavioral-cards.module.css";
 import styles from "../../pages.module.css";
 
-const PAGE_SIZE = 50;
+const GUIDANCE_BEHAVIORAL_PAGE_SIZE = 15;
 
 /**
  * Guidance behavioral records — fully live. Lists only filings an adviser
@@ -39,33 +42,34 @@ const PAGE_SIZE = 50;
  * write-up — and that write-up never leaves the case file here either.
  */
 export default function GuidanceBehavioralPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
-  const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState<BehavioralCategoryFilter>("all");
   const [page, setPage] = React.useState(1);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const query = useDebouncedValue(queryInput.trim(), 300);
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setQuery(queryInput.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [queryInput]);
+  const { data, isPending, isError, refetch, isFetching } =
+    useQuery<GuidanceAnecdotalData>({
+      queryKey: ["guidance-risk-behavioral", page, query, category, termKey],
+      queryFn: ({ signal }) =>
+        fetchGuidanceAnecdotal(
+          {
+            q: query || undefined,
+            category: category === "all" ? "" : category,
+            page,
+            pageSize: GUIDANCE_BEHAVIORAL_PAGE_SIZE,
+          },
+          { signal }
+        ),
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
+    });
 
-  const { data, isPending, isError, refetch, isFetching } = useQuery({
-    queryKey: ["guidance-risk-behavioral", query, category, page],
-    queryFn: ({ signal }) =>
-      fetchGuidanceAnecdotal(
-        {
-          q: query,
-          category: category === "all" ? "" : category,
-          page,
-          pageSize: PAGE_SIZE,
-        },
-        { signal }
-      ),
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
-  });
+  // Derived, never setState-in-effect.
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(data?.page ?? page, totalPages);
 
   if (isPending) {
     return (
@@ -198,8 +202,8 @@ export default function GuidanceBehavioralPage() {
     );
   }
 
-  const from = data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1;
-  const to = Math.min(data.page * data.pageSize, data.total);
+  const from = data.total === 0 ? 0 : (safePage - 1) * data.pageSize + 1;
+  const to = Math.min(safePage * data.pageSize, data.total);
 
   return (
     <section className={styles.page}>
@@ -212,7 +216,12 @@ export default function GuidanceBehavioralPage() {
             the signal behind the behavioral risk flag (≥ 1 report).
           </p>
         </div>
-        <Badge variant="outline">Live · {data.total} referred</Badge>
+        <Badge variant="outline">
+          Live · {data.total} referred
+          {data.unfilteredTotal !== undefined && data.unfilteredTotal !== data.total
+            ? ` (of ${data.unfilteredTotal})`
+            : ""}
+        </Badge>
       </div>
 
       <Card className={styles.card}>
@@ -268,7 +277,7 @@ export default function GuidanceBehavioralPage() {
             <Button
               size="sm"
               variant="outline"
-              disabled={data.page <= 1 || (isFetching && !isPending)}
+              disabled={safePage <= 1 || (isFetching && !isPending)}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               Previous
@@ -280,15 +289,15 @@ export default function GuidanceBehavioralPage() {
                   Loading…
                 </span>
               ) : (
-                `Page ${data.page} of ${data.totalPages}`
+                `Page ${safePage} of ${totalPages}`
               )}
             </span>
             <Button
               size="sm"
               variant="outline"
-              disabled={data.page >= data.totalPages || (isFetching && !isPending)}
+              disabled={safePage >= totalPages || (isFetching && !isPending)}
               onClick={() =>
-                setPage((p) => Math.min(data.totalPages, p + 1))
+                setPage((p) => Math.min(totalPages, p + 1))
               }
             >
               Next

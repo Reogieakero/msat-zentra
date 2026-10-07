@@ -1,13 +1,3 @@
-.alertSign {
-  background: var(--primary, #171717);
-  color: var(--primary-foreground, #ffffff);
-}
-
-.alertReturn {
-  background: var(--destructive, #171717);
-  color: var(--destructive-foreground, #ffffff);
-}
-
 .dialogDocs {
   display: flex;
   flex-direction: column;
@@ -26,11 +16,6 @@
 
 .dialogPipe {
   padding-top: 0.25rem;
-}
-
-.dialogWide {
-  max-width: min(92vw, 560px) !important;
-  width: 100%;
 }
 
 .dialogDocsRow {

@@ -1,21 +1,17 @@
 "use client";
 
-import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useTeacherOverview,
-  useTeacherOverviewSecondary,
-} from "../overview/components/teacher-overview-data";
+import { useTeacherOverviewGradebook } from "../overview/components/teacher-overview-data";
 import { GradebookCards } from "./components/GradebookCards";
 import styles from "./components/gradebook.module.css";
 
 export default function TeacherGradebookPage() {
-  // Critical and secondary are independent endpoints, so both fire together;
-  // the UI still paints progressively (cards first, assessments streaming in).
-  const critical = useTeacherOverview();
-  const secondary = useTeacherOverviewSecondary(true);
+  // Lean gradebook scope: classes + assessments + standings in one request
+  // (no risk scans, no advisory engine), so the cards paint from a single
+  // round trip instead of waiting on critical + secondary.
+  const gradebook = useTeacherOverviewGradebook();
 
-  if (critical.isPending) {
+  if (gradebook.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading gradebook">
         <div className={styles.skelGrid} aria-hidden="true">
@@ -43,7 +39,7 @@ export default function TeacherGradebookPage() {
     );
   }
 
-  if (critical.isError || !critical.data) {
+  if (gradebook.isError || !gradebook.data) {
     return (
       <section className={styles.page}>
         <p className={styles.error}>Could not load your gradebook. Check your connection and try again.</p>
@@ -56,27 +52,22 @@ export default function TeacherGradebookPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Gradebook</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {critical.data.classes.length === 1
+          {gradebook.data.classes.length === 1
             ? "1 subject"
-            : `${critical.data.classes.length} subjects`}{" "}
+            : `${gradebook.data.classes.length} subjects`}{" "}
           for this term — open a workspace to encode scores.
         </p>
       </div>
-      {secondary.isPending ? (
-        <p className={styles.syncNote} role="status">
-          Loading assessments…
-        </p>
-      ) : null}
-      <GradebookCards
-        classes={critical.data.classes}
-        assessments={secondary.data?.assessments ?? []}
-        standings={secondary.data?.standings ?? []}
-      />
-      {secondary.isFetching && !secondary.isPending ? (
+      {gradebook.isFetching ? (
         <p className={styles.syncNote} role="status" aria-live="polite">
           Updating assessments…
         </p>
       ) : null}
+      <GradebookCards
+        classes={gradebook.data.classes}
+        assessments={gradebook.data.assessments}
+        standings={gradebook.data.standings}
+      />
     </section>
   );
 }

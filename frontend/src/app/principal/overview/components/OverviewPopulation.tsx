@@ -16,6 +16,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview, type OverviewSectionRow } from "./overview-data";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { AuroraBanner } from "./AuroraBanner";
@@ -64,9 +65,12 @@ function interpretPopulation(rows: OverviewSectionRow[]): string {
 }
 
 export function OverviewPopulation() {
+  const { activeTerm } = useTerm();
   const { data, isPending, isError } = useQuery({
-    queryKey: ["overview"],
+    queryKey: ["overview", activeTerm?.termId ?? null],
     queryFn: fetchOverview,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const groups: GradeGroup[] = React.useMemo(() => {

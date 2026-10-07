@@ -18,6 +18,10 @@ interface CardModalProps {
   /* Identity for the scroll hint to re-check overflow when async content
      swaps (e.g. loading skeleton → loaded preview). */
   watchKey?: unknown;
+  /* When false, X / overlay-click / Escape are all disabled so a
+     processing action (e.g. approving) cannot be dismissed mid-flight.
+     Defaults to true. */
+  dismissable?: boolean;
 }
 
 /* Card modal — a dedicated modal card (overlay + glowing card), separate
@@ -32,6 +36,7 @@ export function CardModal({
   size = "md",
   children,
   watchKey,
+  dismissable = true,
 }: CardModalProps) {
   const cardRef = React.useRef<HTMLDivElement | null>(null);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
@@ -39,13 +44,13 @@ export function CardModal({
   /* Fire particles across the overlay background, rising bottom → top
      behind the card (shared FireParticles, 48 for fullscreen scale). */
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || !dismissable) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, dismissable]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -63,7 +68,7 @@ export function CardModal({
     <div
       className={styles.overlay}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (dismissable && e.target === e.currentTarget) onClose();
       }}
     >
       <FireParticles count={48} className={styles.particles} />
@@ -89,6 +94,7 @@ export function CardModal({
             type="button"
             className={styles.close}
             onClick={onClose}
+            disabled={!dismissable}
             aria-label="Close dialog"
           >
             <X size={16} aria-hidden="true" />

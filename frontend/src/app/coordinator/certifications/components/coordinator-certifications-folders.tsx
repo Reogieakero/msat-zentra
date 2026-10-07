@@ -25,6 +25,7 @@ import {
 import { HelpCircle, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "../../components/coordinator-data";
 import {
   CERT_STATUS_META,
@@ -57,8 +58,8 @@ interface CoordinatorCertificationsFoldersProps {
   onStatusChange: (value: CertStatusFilter) => void;
 }
 
-/* No pagination — the grid shows the first 18 matches only. */
-const DISPLAY_LIMIT = 18;
+/* Desk-level pagination standard: the folder grid pages at the list size. */
+const DISPLAY_LIMIT = 15;
 
 /**
  * Certification files — one folder per certification the ADM Coordinator
@@ -88,28 +89,18 @@ export function CoordinatorCertificationsFolders({
       return data;
     },
     onSuccess: (_data, id) => {
-      // The endorsed folder locks immediately — patch the cached stage
-      // rows instead of waiting for the refetch.
-      queryClient.setQueriesData<unknown>(
-        { queryKey: ["coordinator-certifications"] },
-        (cached: unknown) => {
-          if (!Array.isArray(cached)) return cached;
-          let changed = false;
-          const next = (cached as { id?: string; stage?: string }[]).map(
-            (r) => {
-              if (r?.id !== id) return r;
-              changed = true;
-              return { ...r, stage: "principal_approval" };
-            },
-          );
-          return changed ? (next as unknown) : cached;
-        },
-      );
+      // Pessimistic: the folder locks only via the refetch below after the
+      // server confirms. No cache patch: the UI must never outrun the
+      // processing. The acting folder shows Endorsing… until settle.
+      markSelfNotified(id);
       void queryClient.invalidateQueries({
         queryKey: ["coordinator-certifications"],
       });
       void queryClient.invalidateQueries({
         queryKey: ["coordinator-dashboard"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["coordinator-notifications"],
       });
       setForwardTarget(null);
       toast.success({

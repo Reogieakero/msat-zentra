@@ -2,16 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import {
@@ -68,15 +59,18 @@ export function BamaChat() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const replyTimer = useRef<number | null>(null);
 
-  // Load persisted chats once (client only).
+  // Load persisted chats once (client only). Post-mount storage hydration
+  // is the documented exception — reading localStorage during render would
+  // hydrate different HTML than the server sent.
+  /* eslint-disable react-hooks/set-state-in-effect -- client-only store hydration */
   useEffect(() => {
     const store = loadBamaStore();
     setConversations(store.conversations);
     setActiveId(store.activeId);
     syncMessageId(maxMessageId(store.conversations) + 1);
     setHydrated(true);
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persist chats on change (after hydration).
   useEffect(() => {
@@ -171,6 +165,8 @@ export function BamaChat() {
   // (grade flag or anecdotal) from the welcome cards first — nothing is
   // auto-created and no greeting is auto-sent.
   const newParamHandled = useRef(false);
+  // One-shot deep-link reset after hydration (param-driven, runs once).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep-link reset */
   useEffect(() => {
     if (!hydrated || newParamHandled.current) return;
     const t = searchParams.get("new");
@@ -182,6 +178,7 @@ export function BamaChat() {
     router.replace("/teacher/chat");
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [hydrated, searchParams, router]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // New chat goes back to a fresh start: no active thread, so the user
   // picks grade flag or anecdotal from the welcome cards first.
@@ -280,33 +277,39 @@ export function BamaChat() {
 
       <BamaFlowDialogs flow={flow} active={active} />
 
-      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget ? (
-                <>
-                  “{deleteTarget.title}” will be permanently removed. This cannot be undone.
-                </>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="destructive">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              className={styles.btnRed}
-              onClick={(e) => {
-                e.preventDefault();
-                confirmDelete();
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CardModal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        size="sm"
+        title="Delete this chat?"
+        description={
+          deleteTarget ? (
+            <>
+              “{deleteTarget.title}” will be permanently removed. This cannot be undone.
+            </>
+          ) : undefined
+        }
+      >
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setDeleteTarget(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            className={styles.btnRed}
+            onClick={() => {
+              confirmDelete();
+            }}
+          >
+            Delete
+          </Button>
+        </div>
+      </CardModal>
 
       <OcForm01PreviewDialog recordId={previewRecordId} onClose={() => setPreviewRecordId(null)} />
     </section>

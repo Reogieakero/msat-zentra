@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,31 +41,36 @@ export function AnecdotalDetail({ record, onClose, onFollowup }: AnecdotalDetail
   }
 
   return (
-    <Dialog
+    <CardModal
       open={record !== null}
-      onOpenChange={(next) => {
-        if (!next) close();
-      }}
+      onClose={close}
+      size="md"
+      title={
+        record ? (
+          <span className={styles.titleRow}>
+            <span className={styles.title}>{record.studentName}</span>
+            <Badge
+              variant="outline"
+              className={styles.categoryBadge}
+              style={{ "--record": CATEGORY_COLORS[record.category] } as React.CSSProperties}
+            >
+              {humanize(record.category)}
+            </Badge>
+          </span>
+        ) : (
+          "Record detail"
+        )
+      }
+      description={
+        record
+          ? `${record.observationDate} · ${record.location} · ${record.tier}${record.referred ? ` · Referred to ${record.referralTarget ?? "—"}` : ""}`
+          : undefined
+      }
+      watchKey={record?.id}
     >
-      <DialogContent className={styles.dialog}>
-        {record ? (
-          <>
-            <DialogHeader>
-              <div className={styles.titleRow}>
-                <DialogTitle className={styles.title}>{record.studentName}</DialogTitle>
-                <Badge
-                  variant="outline"
-                  className={styles.categoryBadge}
-                  style={{ "--record": CATEGORY_COLORS[record.category] } as React.CSSProperties}
-                >
-                  {humanize(record.category)}
-                </Badge>
-              </div>
-              <DialogDescription className={styles.subtitle}>
-                {record.observationDate} · {record.location} · {record.tier}
-                {record.referred ? ` · Referred to ${record.referralTarget ?? "—"}` : ""}
-              </DialogDescription>
-            </DialogHeader>
+      {record ? (
+        <>
+          <p className={styles.incident}>{record.incident}</p>
 
             <p className={styles.incident}>{record.incident}</p>
             {record.notes ? <p className={styles.notes}>{record.notes}</p> : null}
@@ -112,7 +111,6 @@ export function AnecdotalDetail({ record, onClose, onFollowup }: AnecdotalDetail
             </div>
           </>
         ) : null}
-      </DialogContent>
-    </Dialog>
+    </CardModal>
   );
 }

@@ -1,7 +1,10 @@
-.dialogContent {
-  max-width: 34rem;
-  max-height: min(88vh, 42rem);
-  overflow-y: auto;
+/* Actions sit on the right in every modal state (CardModal has no
+   footer slot — the X owns closing). */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .process {
@@ -88,6 +91,8 @@
 
 .compareCol {
   min-width: 0;
+  /* Left-aligned to line up with the row content below. */
+  text-align: left;
 }
 
 .pill {

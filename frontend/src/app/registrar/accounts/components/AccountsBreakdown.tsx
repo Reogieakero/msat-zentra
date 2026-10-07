@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Donut } from "./Donut";
 import { Skeleton } from "@/components/ui/skeleton";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts-breakdown.module.css";
 
 export type AccountBreakdown = {
@@ -21,14 +22,17 @@ export function AccountsBreakdown({
 }) {
   if (loading) {
     return (
-      <section className={styles.section}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>Accounts Breakdown</h2>
-          <p className={styles.subtitle}>
+      <section className={assign.card} aria-label="Accounts breakdown loading">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <header className={`${styles.header} relative`}>
+          <h2 className="text-base font-semibold">Accounts Breakdown</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Student accounts by grade level and section
           </p>
         </header>
-        <div className={styles.grid}>
+        <div className={`${styles.grid} relative`}>
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className={styles.card}>
               <Skeleton className={styles.skelHead} />
@@ -44,15 +48,18 @@ export function AccountsBreakdown({
   }
 
   return (
-    <section className={styles.section}>
-      <header className={styles.header}>
-        <h2 className={styles.title}>Accounts Breakdown</h2>
-        <p className={styles.subtitle}>
+    <section className={assign.card} aria-labelledby="accounts-breakdown">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <header className={`${styles.header} relative`}>
+        <h2 id="accounts-breakdown" className="text-base font-semibold">Accounts Breakdown</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Section roster totals with account status — with account, pending, and no account yet
         </p>
       </header>
 
-      <div className={styles.grid}>
+      <div className={`${styles.grid} relative`}>
         {data.map((d) => {
           const noAccount = d.noAccount ?? 0;
           return (
@@ -74,12 +81,12 @@ export function AccountsBreakdown({
                     value={d.withAccount}
                   />
                   <LegendItem
-                    color="var(--warn, #d97706)"
+                    color="color-mix(in oklch, var(--primary) 65%, var(--card))"
                     label="Pending"
                     value={d.pending}
                   />
                   <LegendItem
-                    color="var(--muted-foreground)"
+                    color="color-mix(in oklch, var(--primary) 35%, var(--card))"
                     label="No account"
                     value={noAccount}
                   />

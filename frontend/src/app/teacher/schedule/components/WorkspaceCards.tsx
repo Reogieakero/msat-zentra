@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { Loader2, Send, SlidersHorizontal } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
+import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -22,11 +25,13 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function SendToPrincipalCard() {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   // Shared query key with the list + setup views — zero extra network.
   const sectionsQuery = useQuery<{ sections: ScheduleSection[] }>({
-    queryKey: ["teacher-schedule"],
+    queryKey: ["teacher-schedule", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSection[] }>(
         "/api/teacher/schedule",
@@ -41,7 +46,8 @@ function SendToPrincipalCard() {
       return data as { submitted: number };
     },
     onSuccess: (data) => {
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      if (activeTerm?.termId) markSelfNotified(activeTerm.termId);
+      invalidateTeacher.schedule();
       toast.success({
         title: "Sent to principal",
         description: `${data.submitted} draft slot${data.submitted === 1 ? "" : "s"} workspace-wide awaiting approval.`,
@@ -111,11 +117,13 @@ function SendToPrincipalCard() {
 }
 
 function ConfigureCard() {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [configOpen, setConfigOpen] = useState(false);
 
   const configQuery = useQuery<{ config: DayConfig }>({
-    queryKey: ["teacher-schedule-config"],
+    queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");
       return data;
@@ -132,7 +140,7 @@ function ConfigureCard() {
     },
     onSuccess: () => {
       setConfigOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-config"] });
+      invalidateTeacher.schedule();
       toast.success({ title: "School day saved", description: "Timetables reshaped themselves." });
     },
     onError: (err: unknown) => {

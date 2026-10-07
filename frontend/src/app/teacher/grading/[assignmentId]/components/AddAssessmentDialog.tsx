@@ -3,14 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -43,6 +36,7 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
   const [error, setError] = React.useState<string | null>(null);
 
   const handleSave = async () => {
+    if (saving) return;
     const maxScore = Number(max);
     if (!title.trim()) {
       setError("Assessment title is required.");
@@ -72,19 +66,14 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
   };
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!saving}
+      size="md"
+      title="Add assessment"
+      description="Pick the category, then set the title, max score, and date given."
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add assessment</DialogTitle>
-          <DialogDescription>
-            Pick the category, then set the title, max score, and date given.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className={styles.form}>
           <div className={styles.field}>
@@ -137,8 +126,8 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
 
         {error ? <p className={styles.errorText}>{error}</p> : null}
 
-        <DialogFooter>
-          <Button variant="destructive" onClick={onClose}>
+        <div className="flex justify-end gap-2">
+          <Button variant="destructive" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={() => void handleSave()} disabled={saving} aria-busy={saving || undefined}>
@@ -151,8 +140,7 @@ export function AddAssessmentDialog({ assignmentId, defaultType, components, onC
               "Add assessment"
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

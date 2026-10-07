@@ -512,6 +512,7 @@ async function main() {
       data: {
         id: id("int"),
         studentId: st.userId,
+        termId: term.id,
         riskLevelAtFlag: result.riskLevel,
         recommendedAction: "Counseling session and behavior contract.",
         assignedTo: guidance.id,

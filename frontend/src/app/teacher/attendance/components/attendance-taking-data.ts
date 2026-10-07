@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   advisoryRosterKey,
   fetchAdvisoryRoster,
@@ -65,18 +66,19 @@ function toSheetContext(roster: AdvisoryRoster): SheetContext {
 const SHEET_STALE_MS = 30_000;
 const SHEET_GC_MS = 5 * 60_000;
 
-/** Teacher-scoped marks key. The endpoint already scopes server-side to the
- *  caller's sections, so teacher + date + section + subject + slot fully
- *  determines the payload — no section can leak across teachers, days,
- *  sections, or subjects. */
+/** Teacher + term scoped marks key. The endpoint already scopes server-side
+ *  to the caller's sections, so teacher + term + date + section + subject +
+ *  slot fully determines the payload — no section can leak across teachers,
+ *  terms, days, sections, or subjects. */
 export function sheetMarksKey(
   teacherId: string | null | undefined,
   date: string,
   subjectId: string,
   slot: number,
   sectionId?: string | null,
+  termKey = "",
 ) {
-  return ["attendance-sheet-marks", teacherId ?? "anon", date, sectionId ?? "all", subjectId, slot] as const;
+  return ["attendance-sheet-marks", teacherId ?? "anon", termKey, date, sectionId ?? "all", subjectId, slot] as const;
 }
 
 export function offeredSubjectsKey(sectionId: string | undefined, termId: string | undefined) {
@@ -117,9 +119,11 @@ export function useOfferedSubjects(sectionId: string | undefined, termId: string
  *  section's enlisted students per subject, not the advisory list. */
 export function useSheetContext() {
   const session = useSession();
+  const { activeTerm } = useTerm();
   const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   return useQuery({
-    queryKey: advisoryRosterKey(teacherId),
+    queryKey: advisoryRosterKey(teacherId, termKey),
     queryFn: fetchAdvisoryRoster,
     enabled: !!teacherId,
     retry: false,
@@ -139,9 +143,11 @@ export function useSheetMarks(
   sectionId?: string | null,
 ) {
   const auth = useSession();
+  const { activeTerm } = useTerm();
   const teacherId = auth?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   return useQuery({
-    queryKey: sheetMarksKey(teacherId, date, subjectId ?? "none", slot, sectionId ?? null),
+    queryKey: sheetMarksKey(teacherId, date, subjectId ?? "none", slot, sectionId ?? null, termKey),
     queryFn: () =>
       fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
     enabled: !!teacherId && !!subjectId && !!sectionId,
@@ -171,12 +177,14 @@ export function subjectDaysKey(
   sectionId: string | undefined,
   subjectId: string | undefined,
   mine = false,
+  termKey = "",
 ) {
   return [
     "attendance-subject-days",
     sectionId ?? "none",
     subjectId ?? "none",
     mine ? "mine" : "all",
+    termKey,
   ] as const;
 }
 
@@ -185,8 +193,10 @@ export function useSubjectDays(
   subjectId: string | undefined,
   mine = false,
 ) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   return useQuery({
-    queryKey: subjectDaysKey(sectionId, subjectId, mine),
+    queryKey: subjectDaysKey(sectionId, subjectId, mine, termKey),
     queryFn: async (): Promise<SubjectDays> => {
       const params = new URLSearchParams({
         sectionId: sectionId as string,
@@ -267,13 +277,15 @@ export interface SectionRoster {
   students: SheetStudent[];
 }
 
-export function sectionRosterKey(sectionId: string | undefined) {
-  return ["attendance-section-roster", sectionId ?? "none"] as const;
+export function sectionRosterKey(sectionId: string | undefined, termKey = "") {
+  return ["attendance-section-roster", sectionId ?? "none", termKey] as const;
 }
 
 export function useSectionRoster(sectionId: string | undefined) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   return useQuery({
-    queryKey: sectionRosterKey(sectionId),
+    queryKey: sectionRosterKey(sectionId, termKey),
     queryFn: async (): Promise<SectionRoster> => {
       const params = new URLSearchParams({ sectionId: sectionId as string });
       const { data } = await apiClient.get<SectionRoster>(

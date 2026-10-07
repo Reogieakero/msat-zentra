@@ -11,6 +11,12 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:topup50": "tsx prisma/seed-topup-50.ts",
+    "prisma:count": "tsx prisma/count-transactions.ts",
+    "prisma:section20": "tsx prisma/seed-section-20.ts",
+    "prisma:gradebook": "tsx prisma/seed-gradebook-full.ts",
+    "prisma:gradebook-gaps": "tsx prisma/seed-gradebook-fill-gaps.ts",
+    "prisma:gradebook-audit": "tsx prisma/audit-gradebook-coverage.ts",
     "test": "vitest run --testTimeout=15000",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"

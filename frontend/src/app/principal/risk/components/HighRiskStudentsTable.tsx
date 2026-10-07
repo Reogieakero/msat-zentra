@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../grade-mode-context";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ const gradeNum = (name: string) => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 15;
 
 export function HighRiskStudentsTable() {
   const { gradeMode } = useGradeMode();
@@ -77,17 +78,21 @@ export function HighRiskStudentsTable() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pageIndex, setPageIndex] = React.useState(0);
 
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
   const { data, isPending } = useQuery({
-    queryKey: ["risk-students", gradeMode],
+    queryKey: ["risk-students", termId, gradeMode],
     queryFn: async () => {
       const res = await apiClient.get<{
         students: BackendStudent[];
         total: number;
       }>("/api/risk/students", {
-        params: { pageSize: 1000, gradeMode },
+        params: { pageSize: 50, gradeMode },
       });
       return res.data;
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const highRisk = React.useMemo(

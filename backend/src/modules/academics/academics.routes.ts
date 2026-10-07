@@ -11,6 +11,7 @@ import { AppError } from "../../lib/errors.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { ensureSubjectAssignment, findSubjectTeacherSplits } from "../teacher/teacher.routes.js";
 import { getAcademicsSummary } from "./academics.service.js";
+import { getLiveHonorRoll } from "./honor-roll-live.service.js";
 import { MAX_ADVISER_BATCH, normalizeAdviserBatch, type AdviserBatchInputRow } from "./adviserBatch.js";
 import { mintAdviserCode } from "./adviserCode.js";
 
@@ -79,6 +80,30 @@ router.get(
         termId: scope?.termId ?? null,
       });
       res.json(summary);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Principal Honor Roll & Awards — live general-average basis. Mean of each
+// student's graded live subject averages (lock-agnostic), DO 15 rule on the
+// live scale (average >= 90, no subject below 80), High-risk excluded.
+// Short TTL: teacher score encoding lands here within minutes (registrar
+// writes still purge via the shared tags).
+router.get(
+  "/honor-roll-live",
+  requireAuth,
+  requireRole("principal"),
+  cache({ tags: ["academics", "principal"], ttl: 120 }),
+  async (req, res, next) => {
+    try {
+      const scope = req.termScope;
+      const result = await getLiveHonorRoll({
+        schoolYearId: scope?.schoolYearId ?? null,
+        termId: scope?.termId ?? null,
+      });
+      res.json(result);
     } catch (e) {
       next(e);
     }

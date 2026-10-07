@@ -40,7 +40,7 @@ export function PendingStudentsTable({ students, selectedId, onSelect, loading }
           </span>
           <h2 className={styles.title}>Pending Students</h2>
         </div>
-        <Badge variant="warning" className={styles.count}>
+        <Badge variant="amber" className={styles.count}>
           {students.length}
         </Badge>
       </header>
@@ -119,7 +119,7 @@ export function PendingStudentsTable({ students, selectedId, onSelect, loading }
                     </TableCell>
                     <TableCell className={styles.sectionText}>{s.section}</TableCell>
                     <TableCell>
-                      <Badge variant="warning">Pending</Badge>
+                      <Badge variant="amber">Pending</Badge>
                     </TableCell>
                   </TableRow>
                 );

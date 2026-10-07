@@ -1,8 +1,10 @@
 ﻿"use client";
 
-import { useQuery } from "@tanstack/react-query";
+import * as React from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarClock, ClipboardCheck, Flag, Send } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useSession } from "@/lib/auth/useSession";
 import type { DayConfig } from "@/app/teacher/schedule/components/schedule-time";
 import {
   TeacherOverviewHeader,
@@ -15,7 +17,12 @@ import { TeacherOverviewAttendanceTable } from "./components/teacher-overview-at
 import { TeacherOverviewClassStudents } from "./components/teacher-overview-class-students";
 import { TeacherOverviewRiskTable } from "./components/teacher-overview-risk-table";
 import { TeacherOverviewSkeleton } from "./components/teacher-overview-skeleton";
-import { useTeacherOverview } from "./components/teacher-overview-data";
+import {
+  fetchTeacherOverviewGradebook,
+  teacherOverviewGradebookKey,
+  useTeacherOverview,
+} from "./components/teacher-overview-data";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/teacher-overview.module.css";
 
 interface LinkedSlot {
@@ -29,7 +36,6 @@ interface LinkedSlot {
 const ADVISER_QUICK_ACTIONS = [
   { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
   { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
-  { title: "Flag Student", description: "Raise a concern for an advisee", href: "/teacher/grade-flags", icon: Flag },
   { title: "New Referral", description: "Refer from an anecdotal record", href: "/teacher/advisory/referrals", icon: Send },
 ];
 
@@ -48,9 +54,36 @@ export default function TeacherOverviewPage() {
   // Stale data (>30s) refetches silently in the background — the loaded UI
   // stays visible, so isPending below is only true on a genuine first load.
   const { data, isPending, isError } = useTeacherOverview();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  // Warm the gradebook payload while idle so the grading landing usually
+  // paints from cache instead of the network.
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const prefetchTeacherId = session?.sub ?? null;
+  React.useEffect(() => {
+    if (!prefetchTeacherId) return;
+    const run = () => {
+      void queryClient.prefetchQuery({
+        queryKey: teacherOverviewGradebookKey(prefetchTeacherId, termKey),
+        queryFn: fetchTeacherOverviewGradebook,
+        staleTime: 30_000,
+      });
+    };
+    if (typeof window !== "undefined") {
+      const idleWindow = window as unknown as {
+        requestIdleCallback?: (cb: () => void) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
+      if (typeof idleWindow.requestIdleCallback === "function") {
+        const id = idleWindow.requestIdleCallback(run);
+        return () => idleWindow.cancelIdleCallback?.(id);
+      }
+    }
+  }, [queryClient, prefetchTeacherId, termKey]);
   // Sidebar-only: rail pins 16px below the lone topbar (4rem).
   const mySlotsQuery = useQuery({
-    queryKey: ["teacher-my-slots"],
+    queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ slots: LinkedSlot[] }>(
         "/api/teacher/schedule/my-slots",
@@ -59,7 +92,7 @@ export default function TeacherOverviewPage() {
     },
   });
   const configQuery = useQuery({
-    queryKey: ["teacher-schedule-config"],
+    queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>(
         "/api/teacher/schedule/config",

@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,13 +69,19 @@ function groupByStudent(records: MyAnecdotalRecord[]): StudentGroup[] {
  * filed GCForm-01 records. Opening a folder shows that student's repository.
  */
 export default function AnecdotalFoldersPage() {
-  const recordsQuery = useQuery({
-    queryKey: ["anecdotal-mine"],
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+    queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
+    placeholderData: keepPreviousData,
   });
 
   const students = useMemo(
-    () => groupByStudent(recordsQuery.data ?? []),
+    () =>
+      groupByStudent(
+        Array.isArray(recordsQuery.data) ? recordsQuery.data : []
+      ),
     [recordsQuery.data]
   );
 

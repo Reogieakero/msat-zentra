@@ -54,7 +54,7 @@ interface SectionStudent {
   rate: number;
 }
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 15;
 
 const gradeNum = (name: string) => {
   const m = String(name).match(/(\d+)/);

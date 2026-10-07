@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Check, Clock } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 
@@ -23,8 +24,10 @@ interface ReportSlot {
 /* Teaching-load report for the active term, resolved from the teacher's
    linked timetable slots: totals by status plus a per-section breakdown. */
 export default function TeacherReportsPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const meQuery = useQuery<{ teacherName: LinkedName | null }>({
-    queryKey: ["teacher-schedule-me"],
+    queryKey: ["teacher-schedule-me", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teacherName: LinkedName | null }>(
         "/api/teacher/schedule/teachers/me",
@@ -35,7 +38,7 @@ export default function TeacherReportsPage() {
   const linked = meQuery.data?.teacherName ?? null;
 
   const slotsQuery = useQuery<{ slots: ReportSlot[] }>({
-    queryKey: ["teacher-my-slots"],
+    queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ slots: ReportSlot[] }>(
         "/api/teacher/schedule/my-slots",

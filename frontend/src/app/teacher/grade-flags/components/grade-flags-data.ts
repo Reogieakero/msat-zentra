@@ -65,17 +65,34 @@ export interface FlagOptions {
   sectionClasses: FlagClassOption[];
 }
 
+export interface FlagsPage {
+  rows: GradeFlagRow[];
+  total: number;
+  unfilteredTotal: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+}
+
 export async function fetchFlags(
   scope: FlagScope,
-  opts?: { status?: FlagStatus; q?: string }
+  opts?: { status?: FlagStatus; q?: string; page?: number; pageSize?: number; signal?: AbortSignal }
 ): Promise<GradeFlagRow[]> {
   const params = new URLSearchParams({ scope });
   if (opts?.status) params.set("status", opts.status);
   if (opts?.q?.trim()) params.set("q", opts.q.trim());
-  const { data } = await apiClient.get<GradeFlagRow[]>(
-    `/api/teacher/grade-flags?${params.toString()}`
-  );
-  return data;
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.pageSize) params.set("pageSize", String(opts.pageSize));
+  const { data } = await apiClient.get<
+    GradeFlagRow[] | { data: GradeFlagRow[]; rows: GradeFlagRow[] }
+  >(`/api/teacher/grade-flags?${params.toString()}`, { signal: opts?.signal });
+  // Defensive: the endpoint serves bare arrays today and a paginated object
+  // tomorrow — never let a shape change crash the board.
+  if (Array.isArray(data)) return data;
+  const rows = (data as { rows?: unknown }).rows;
+  if (Array.isArray(rows)) return rows as GradeFlagRow[];
+  const legacy = (data as { data?: unknown }).data;
+  return Array.isArray(legacy) ? (legacy as GradeFlagRow[]) : [];
 }
 
 export async function fetchFlagOptions(): Promise<FlagOptions> {

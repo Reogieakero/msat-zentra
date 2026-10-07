@@ -13,10 +13,9 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Info, SearchIcon, X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
   TableBody,
@@ -29,23 +28,14 @@ import type {
   AdviseeRow,
   AdvisorySectionInfo,
 } from "./advisory-students-data";
+import tableScroll from "./advisory-grades-table.module.css";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
-export type GradeComputation = "computed" | "transmuted";
-
-const COMPUTATION_LABELS: Record<GradeComputation, string> = {
-  computed: "Raw computation",
-  transmuted: "Final transmuted",
-};
-
-function gradeOf(
-  student: AdviseeRow,
-  subject: string,
-  computation: GradeComputation,
-): number | null {
-  const g = student.grades.find((x) => x.subject === subject);
-  if (!g) return null;
-  return computation === "computed" ? g.computedAverage : g.transmutedGrade;
+/** Live realtime grade for a subject: unweighted mean of recorded scores,
+ *  regardless of lock / finalization status. */
+function gradeOf(student: AdviseeRow, subject: string): number | null {
+  const g = (student.liveGrades ?? []).find((x) => x.subject === subject);
+  return g ? g.average : null;
 }
 
 function riskBadge(level: AdviseeRow["riskLevel"]): {
@@ -57,23 +47,38 @@ function riskBadge(level: AdviseeRow["riskLevel"]): {
 }
 
 /** Academic risk straight from the engine rule (risk.ts academicFlag): the
- *  total average of the student's CONNECTED subject grades in the active
- *  computation, compared at 75. One tripped factor reads Moderate, a clear
- *  average reads Low — and with no connected grades yet there is no academic
- *  risk status at all (null → "—"), never a default Low. */
+ *  total average of the student's live subject grades, compared at 75. One
+ *  tripped factor reads Moderate, a clear average reads Low — and with no
+ *  live grades yet there is no academic risk status at all (null → "—"),
+ *  never a default Low. */
 function academicRiskOf(
   student: AdviseeRow,
   subjects: { name: string }[],
-  computation: GradeComputation,
 ): "Low" | "Moderate" | null {
   const values: number[] = [];
   for (const s of subjects) {
-    const v = gradeOf(student, s.name, computation);
+    const v = gradeOf(student, s.name);
     if (v !== null) values.push(v);
   }
   if (values.length === 0) return null;
   const average = values.reduce((a, b) => a + b, 0) / values.length;
   return average < 75 ? "Moderate" : "Low";
+}
+
+/** General average: mean of the student's graded live subject averages.
+ *  Ungraded subjects are excluded (never divide by the offered total).
+ *  Null when nothing is graded yet (renders "—", like Risk). */
+function generalAverageOf(
+  student: AdviseeRow,
+  subjects: { name: string }[],
+): number | null {
+  const values: number[] = [];
+  for (const s of subjects) {
+    const v = gradeOf(student, s.name);
+    if (v !== null) values.push(v);
+  }
+  if (values.length === 0) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 interface AdvisoryGradesTableProps {
@@ -83,11 +88,10 @@ interface AdvisoryGradesTableProps {
 }
 
 // Roster-wide per-subject grades as a data-table5-style table: one row per
-// advisee, one grade column per offered subject code. The dropdown switches
-// every grade cell between raw computation and final transmuted.
+// advisee, one live grade column per offered subject code. Cells always show
+// the realtime mean of recorded scores (lock-agnostic) — no computation
+// switch.
 export function AdvisoryGradesTable({ students, sections, offeredSubjects }: AdvisoryGradesTableProps) {
-  const [computation, setComputation] = React.useState<GradeComputation>("transmuted");
-  const [filter, setFilter] = React.useState("");
   const [sectionId, setSectionId] = React.useState<string>("all");
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -103,27 +107,25 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
   );
 
   const filteredStudents = React.useMemo(() => {
-    const q = filter.trim().toLowerCase();
     return students.filter((s) => {
       if (sectionId !== "all") {
         const sec = sections.find((x) => x.id === sectionId);
         if (sec && s.section !== sec.name) return false;
       }
-      if (q === "") return true;
-      return s.name.toLowerCase().includes(q) || s.lrn.toLowerCase().includes(q);
+      return true;
     });
-  }, [students, sections, sectionId, filter]);
+  }, [students, sections, sectionId]);
 
   const columns = React.useMemo<ColumnDef<AdviseeRow>[]>(() => {
     const subjectColumns: ColumnDef<AdviseeRow>[] = subjects.map((s) => ({
       id: `subject:${s.name}`,
-      accessorFn: (row) => gradeOf(row, s.name, computation) ?? -1,
+      accessorFn: (row) => gradeOf(row, s.name) ?? -1,
       header: s.code,
       size: 96,
       minSize: 96,
       maxSize: 96,
       cell: ({ row }) => {
-        const value = gradeOf(row.original, s.name, computation);
+        const value = gradeOf(row.original, s.name);
         if (value === null) {
           return (
             <Badge
@@ -137,8 +139,8 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
           );
         }
         return (
-          <span className="font-medium tabular-nums" title={s.name}>
-            {computation === "computed" ? value.toFixed(1) : value.toFixed(0)}
+          <span className="font-medium tabular-nums" title={`${s.name}: live average of recorded scores`}>
+            {value.toFixed(1)}
           </span>
         );
       },
@@ -168,7 +170,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         // carry no status. Ranks null < Low < Moderate for sorting.
         id: "risk",
         accessorFn: (row) => {
-          const r = academicRiskOf(row, subjects, computation);
+          const r = academicRiskOf(row, subjects);
           return r === null ? -1 : r === "Moderate" ? 1 : 0;
         },
         header: "Risk",
@@ -176,7 +178,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         minSize: 120,
         maxSize: 120,
         cell: ({ row }) => {
-          const r = academicRiskOf(row.original, subjects, computation);
+          const r = academicRiskOf(row.original, subjects);
           if (r === null) {
             return (
               <span className="text-muted-foreground" title="No academic risk yet — no grade data shared">
@@ -188,10 +190,35 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
           return <Badge variant={badge.variant}>{r}</Badge>;
         },
       },
+      {
+        // General average (mean of graded live subject averages).
+        // Ungraded students carry no average. Ranks null lowest for sorting.
+        id: "general-average",
+        accessorFn: (row) => generalAverageOf(row, subjects) ?? -1,
+        header: "General Average",
+        size: 130,
+        minSize: 130,
+        maxSize: 130,
+        cell: ({ row }) => {
+          const value = generalAverageOf(row.original, subjects);
+          if (value === null) {
+            return (
+              <span className="text-muted-foreground" title="No general average yet — no grade data shared">
+                —
+              </span>
+            );
+          }
+          return (
+            <span className="font-medium tabular-nums" title="Mean of the student's graded live subject averages">
+              {value.toFixed(1)}
+            </span>
+          );
+        },
+      },
       ...subjectColumns,
     ];
     return result;
-  }, [subjects, computation]);
+  }, [subjects]);
 
   const table = useReactTable({
     data: filteredStudents,
@@ -203,7 +230,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
@@ -222,30 +249,6 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <InputGroup className="max-w-40">
-            <InputGroupInput
-              placeholder="Filter students..."
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              aria-label="Filter students"
-            />
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-          </InputGroup>
-          <div className="flex items-center gap-1" role="group" aria-label="Grade computation">
-            {(Object.keys(COMPUTATION_LABELS) as GradeComputation[]).map((c) => (
-              <Button
-                key={c}
-                type="button"
-                size="sm"
-                variant={computation === c ? "default" : "ghost"}
-                onClick={() => setComputation(c)}
-              >
-                {COMPUTATION_LABELS[c]}
-              </Button>
-            ))}
-          </div>
           {sections.length > 1 ? (
             <div className="flex items-center gap-1" role="group" aria-label="Filter by section">
               <Button
@@ -272,7 +275,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         </div>
       </div>
 
-      <div className="relative overflow-x-auto rounded-md border">
+      <div className={`relative rounded-md border ${tableScroll.tableScroll}`}>
           <Table className="w-full table-fixed">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -286,7 +289,9 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
                         header.column.id.startsWith("subject:")
                           ? (subjects.find((s) => `subject:${s.name}` === header.column.id)?.name ??
                             header.column.id)
-                          : undefined
+                          : header.column.id === "general-average"
+                            ? "Mean of the student's graded live subject averages"
+                            : undefined
                       }
                       className="h-10 cursor-pointer truncate whitespace-nowrap select-none"
                     >
@@ -326,11 +331,11 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
           </Table>
       </div>
       <div className="relative flex items-center justify-end gap-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} student
-          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"} ·{" "}
-          {COMPUTATION_LABELS[computation]}
-        </div>
+          <div className="flex-1 text-sm text-muted-foreground">
+            {table.getFilteredRowModel().rows.length} student
+            {table.getFilteredRowModel().rows.length === 1 ? "" : "s"} ·{" "}
+            Live grades
+          </div>
         <Button
           variant="outline"
           size="sm"
@@ -390,7 +395,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
               <span className="font-semibold tabular-nums" aria-hidden="true">
                 95
               </span>
-              Connected — grade in the selected computation
+              Connected — live average of recorded scores
             </span>
           </div>
         </div>

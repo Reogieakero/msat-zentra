@@ -195,7 +195,7 @@ export function deriveAdmCaseStatus(
 
 export function admCaseStatusVariant(
   key: string,
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" | "red" {
+): "amber" | "default" | "secondary" | "outline" | "destructive" | "success" | "red" {
   switch (key) {
     case "cancelled":
       return "red";
@@ -203,7 +203,7 @@ export function admCaseStatusVariant(
       return "success";
     case "need_review":
     case "for_certification":
-      return "warning";
+      return "amber";
     case "ready_to_endorse":
     case "endorsed":
       return "default";
@@ -234,11 +234,15 @@ export interface AdmDashboard {
 export interface AdmReferralsPage {
   rows: AdmCaseRow[];
   total: number;
+  /** Filtered pager count is `total`; tile stats stay UNFILTERED. */
+  unfilteredTotal?: number;
+  complete?: number;
   totalReferred: number;
   stageCounts: Record<string, number>;
   page: number;
   totalPages: number;
   limit: number;
+  pageSize?: number;
 }
 
 export interface AdmApprovalRow extends AdmCaseRow {
@@ -255,9 +259,11 @@ export interface AdmApprovalRow extends AdmCaseRow {
 export interface AdmApprovalsPage {
   rows: AdmApprovalRow[];
   total: number;
+  unfilteredTotal?: number;
   page: number;
   totalPages: number;
   limit: number;
+  pageSize?: number;
 }
 
 export interface AdmDeviceRow {
@@ -279,12 +285,15 @@ export interface AdmDeviceRow {
 export interface AdmDevicesPage {
   rows: AdmDeviceRow[];
   total: number;
+  unfilteredTotal?: number;
+  complete?: number;
   issued: number;
   returned: number;
-  /** Present when the ledger was read with `page + limit` pagination. */
+  /** Present when the ledger was read with `page + pageSize` pagination. */
   page?: number;
   totalPages?: number;
   limit?: number;
+  pageSize?: number;
 }
 
 export const STAGE_LABELS: Record<string, string> = {
@@ -324,7 +333,11 @@ export async function fetchCoordinatorReferrals(
   const res = await apiClient.get<AdmReferralsPage>("/api/adm/referrals/all", {
     params: {
       page,
-      ...(opts?.limit && opts.limit > 0 ? { limit: opts.limit } : {}),
+      // Send both `pageSize` (new standard) and `limit` (legacy) so the
+      // backend clamps identically either way.
+      ...(opts?.limit && opts.limit > 0
+        ? { pageSize: opts.limit, limit: opts.limit }
+        : {}),
       ...(opts?.q?.trim() ? { q: opts.q.trim() } : {}),
       ...(opts?.stage && opts.stage !== "all" ? { stage: opts.stage } : {}),
       ...(opts?.eligibility && opts.eligibility !== "all"
@@ -333,7 +346,10 @@ export async function fetchCoordinatorReferrals(
     },
     signal: opts?.signal,
   });
-  return res.data;
+  const data = res.data as AdmReferralsPage & { rows?: unknown };
+  // Defensive: non-array payloads (cached/error shapes) never crash callers.
+  if (!Array.isArray(data?.rows)) return { ...data, rows: [] };
+  return data;
 }
 
 export async function fetchCoordinatorApprovals(
@@ -343,12 +359,16 @@ export async function fetchCoordinatorApprovals(
   const res = await apiClient.get<AdmApprovalsPage>("/api/adm/approvals", {
     params: {
       page,
-      ...(opts?.limit && opts.limit > 0 ? { limit: opts.limit } : {}),
+      ...(opts?.limit && opts.limit > 0
+        ? { pageSize: opts.limit, limit: opts.limit }
+        : {}),
       ...(opts?.q?.trim() ? { q: opts.q.trim() } : {}),
     },
     signal: opts?.signal,
   });
-  return res.data;
+  const data = res.data as AdmApprovalsPage & { rows?: unknown };
+  if (!Array.isArray(data?.rows)) return { ...data, rows: [] };
+  return data;
 }
 
 export async function fetchCoordinatorDevices(opts?: {
@@ -364,12 +384,16 @@ export async function fetchCoordinatorDevices(opts?: {
       ...(opts?.q?.trim() ? { q: opts.q.trim() } : {}),
       ...(opts?.status && opts.status !== "all" ? { status: opts.status } : {}),
       ...(opts?.page && opts.page > 1 ? { page: opts.page } : {}),
-      ...(opts?.limit && opts.limit > 0 ? { limit: opts.limit } : {}),
+      ...(opts?.limit && opts.limit > 0
+        ? { pageSize: opts.limit, limit: opts.limit }
+        : {}),
       ...(opts?.order === "oldest" ? { order: "oldest" } : {}),
     },
     signal: opts?.signal,
   });
-  return res.data;
+  const data = res.data as AdmDevicesPage & { rows?: unknown };
+  if (!Array.isArray(data?.rows)) return { ...data, rows: [] };
+  return data;
 }
 
 export function apiErrorMessage(err: unknown): string {
@@ -469,10 +493,10 @@ export function latestActionFallback(
    alerts queues so every surface agrees. */
 export function referralStatusVariant(
   status: string | undefined,
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
+): "amber" | "default" | "secondary" | "outline" | "destructive" | "success" {
   switch (status) {
     case "pending":
-      return "warning";
+      return "amber";
     case "in_progress":
       return "default";
     case "follow_up":

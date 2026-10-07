@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import {
   apiErrorMessage,
   type AdmApprovalRow,
@@ -86,8 +87,13 @@ export function CoordinatorDevicesIssueDialog({
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       const serial = deviceSerial.trim();
+      const newId =
+        typeof (data as { id?: unknown })?.id === "string"
+          ? (data as { id: string }).id
+          : null;
+      if (newId) markSelfNotified(newId);
       close();
       onIssued();
       toast.success({
@@ -103,9 +109,10 @@ export function CoordinatorDevicesIssueDialog({
   });
 
   return (
-    <CardModal
-      open={open}
-      onClose={close}
+      <CardModal
+        open={open}
+        onClose={close}
+        dismissable={!issueMutation.isPending}
       title="Issue device"
       description="Records a learning device as issued to a principal-approved ADM learner with no device yet."
       size="sm"
@@ -237,10 +244,11 @@ export function CoordinatorDevicesIssueDialog({
           </p>
         ) : null}
         <div className={styles.formFooter}>
-          <Button variant="destructive" onClick={close}>
+          <Button variant="destructive" onClick={close} disabled={issueMutation.isPending}>
             Cancel
           </Button>
           <Button
+            aria-busy={issueMutation.isPending || undefined}
             disabled={
               issueMutation.isPending ||
               !profileId ||

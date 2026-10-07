@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import styles from "./teacher-overview-advisory.module.css";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { cn } from "@/lib/utils";
 
@@ -51,17 +52,25 @@ interface AverageRow {
   risk: "Low" | "Moderate" | "High";
 }
 
-// Average present across all subjects with takes. A done meetup with no
-// take counts as absent, so every subject carries a percentage.
+// General average across all subjects (mean of per-subject present /
+// elapsed rates). A done meetup with no take counts as absent, so every
+// subject carries a percentage. Mirrors the risk engine's
+// subjectAverageAttendance() — same numerator/denominator, same 0.8 line.
 function overallAverage(rates: Record<string, number | null>): number {
   const rated = Object.values(rates).filter((r): r is number => r !== null);
   if (rated.length === 0) return 0;
   return rated.reduce((sum, r) => sum + r, 0) / rated.length;
 }
 
+// At-risk cutoff shared with the engine (backend ATTENDANCE_RISK_CUTOFF).
+// < 0.8 High = engine attendanceFlag trips. 0.8–0.9 Moderate is watch-only
+// (NOT engine at-risk); >= 0.9 Low. NOTE: this Moderate is a display band,
+// unrelated to the engine's Moderate (single risk factor).
+const ATTENDANCE_AT_RISK_CUTOFF = 0.8;
+
 function riskOf(average: number): "Low" | "Moderate" | "High" {
   if (average >= 0.9) return "Low";
-  if (average >= 0.75) return "Moderate";
+  if (average >= ATTENDANCE_AT_RISK_CUTOFF) return "Moderate";
   return "High";
 }
 
@@ -75,7 +84,7 @@ function riskBadge(risk: "Low" | "Moderate" | "High"): {
 
 function rateClass(rate: number): string {
   if (rate >= 0.9) return "text-green-600 dark:text-green-500";
-  if (rate >= 0.75) return "text-amber-600 dark:text-amber-500";
+  if (rate >= ATTENDANCE_AT_RISK_CUTOFF) return "text-amber-600 dark:text-amber-500";
   return "text-red-600 dark:text-red-500";
 }
 
@@ -83,8 +92,10 @@ function rateClass(rate: number): string {
    percentage across all subjects plus a risk badge. Plain icon-free
    headers with fixed widths; the filter sits on the right. */
 export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: string }) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const matrixQuery = useQuery({
-    queryKey: ["attendance-section-matrix", sectionId],
+    queryKey: ["attendance-section-matrix", sectionId, termKey],
     queryFn: async () => {
       const params = new URLSearchParams({ sectionId });
       const { data } = await apiClient.get<{
@@ -176,7 +187,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 5 } },
+    initialState: { pagination: { pageSize: 10 } },
     state: { sorting, columnFilters },
   });
 
@@ -202,7 +213,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
               Advisory Attendance{matrixQuery.data ? ` · ${matrixQuery.data.sectionName}` : ""}
             </h2>
             <p className={styles.sectionDesc}>
-              Average present across all subjects this term.
+              General average present across all subjects this term — below 80% is at-risk (same as the engine).
             </p>
           </div>
           <p className={`${styles.empty} relative`}>No students in this section yet.</p>
@@ -218,7 +229,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
                 Advisory Attendance{matrixQuery.data ? ` · ${matrixQuery.data.sectionName}` : ""}
               </h2>
               <p className={styles.sectionDesc}>
-                Average present across all subjects this term.
+                General average present across all subjects this term — below 80% is at-risk (same as the engine).
               </p>
             </div>
             <InputGroup className="max-w-40 shrink-0">

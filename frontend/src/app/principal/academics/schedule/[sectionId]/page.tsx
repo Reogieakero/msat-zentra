@@ -8,15 +8,9 @@ import { ArrowLeft, Check, ClipboardCheck, Clock, Coffee, Inbox, Info, Loader2, 
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Textarea } from "@/components/ui/textarea";
+import formStyles from "@/app/principal/academics/assign/components/form.module.css";
 import { WEEK_LABELS_SHORT } from "@/app/teacher/classes/components/classes-data";
 // Per-section review URL: /principal/academics/schedule/[sectionId]. Same
 // shared ["principal-schedule-sections"] cache as the grid, so opening a
@@ -24,6 +18,7 @@ import { WEEK_LABELS_SHORT } from "@/app/teacher/classes/components/classes-data
 // mirrors the master-teacher setup view (ScheduleWeekSetup): plain header +
 // weekly grid on the left, status + review + legend cards in the right rail.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalPageHeader } from "../../../components/PrincipalPageHeader";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import {
   buildTimetable,
@@ -112,7 +107,9 @@ export default function PrincipalSectionSchedulePage() {
     });
   };
 
-  const sectionsQuery = useQuery<{ sections: Submission[] }>({
+  // Shared cache with the grid (instant from cache, no second network).
+  // select narrows to this section so unrelated section updates don't rerender.
+  const sectionsQuery = useQuery<{ sections: Submission[] }, unknown, Submission | null>({
     queryKey: ["principal-schedule-sections"],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: Submission[] }>(
@@ -120,6 +117,8 @@ export default function PrincipalSectionSchedulePage() {
       );
       return data;
     },
+    select: (d) => d.sections.find((s) => s.id === sectionId) ?? null,
+    staleTime: 30_000,
   });
   const configQuery = useQuery<{ config: DayConfig }>({
     queryKey: ["principal-schedule-config"],
@@ -129,7 +128,7 @@ export default function PrincipalSectionSchedulePage() {
     },
   });
 
-  const submission = sectionsQuery.data?.sections.find((s) => s.id === sectionId) ?? null;
+  const submission = sectionsQuery.data ?? null;
 
   const review = useMutation({
     mutationFn: async (vars: { decision: "approve" | "reject"; note?: string }) => {
@@ -179,12 +178,10 @@ export default function PrincipalSectionSchedulePage() {
   if (!submission) {
     return (
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Section not found</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            This section does not exist or is outside grades 7–10.
-          </p>
-        </div>
+        <PrincipalPageHeader
+          title="Section not found"
+          description="This section does not exist or is outside grades 7–10."
+        />
         <div>
           <Link
             href="/principal/academics/schedule"
@@ -286,13 +283,18 @@ export default function PrincipalSectionSchedulePage() {
                 Sections
               </Link>
             </Button>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Schedule for {submission.name}
-                </h1>
-              </div>
-              <div className="flex shrink-0 items-center">
+            <PrincipalPageHeader
+              title={`Schedule for ${submission.name}`}
+              description={
+                <>
+                  {submission.gradeLevel}
+                  {submission.adviser?.fullName
+                    ? ` · Adviser: ${submission.adviser.fullName}`
+                    : ""}
+                  {` · ${submission.timetableEntries.length} slot${submission.timetableEntries.length === 1 ? "" : "s"}.`}
+                </>
+              }
+              actions={
                 <Button
                   type="button"
                   variant="ghost"
@@ -308,8 +310,8 @@ export default function PrincipalSectionSchedulePage() {
                     <PanelRightOpen size={16} aria-hidden />
                   )}
                 </Button>
-              </div>
-            </div>
+              }
+            />
           </div>
 
           {/* Weekly grid — identical framing to the master-teacher setup view
@@ -595,66 +597,59 @@ export default function PrincipalSectionSchedulePage() {
           </div>
         </div>
       </div>
-      {reviewOpen ? (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            setReviewOpen(open);
-            if (!open) setFormError(null);
+      <CardModal
+        open={reviewOpen}
+        onClose={() => {
+          if (review.isPending) return;
+          setReviewOpen(false);
+          setFormError(null);
+        }}
+        size="sm"
+        title={`Review schedule for ${submission?.name ?? "section"}`}
+        description="Approve the timetable or send it back to the master teacher with a revision note."
+        dismissable={!review.isPending}
+        watchKey={sectionId}
+      >
+        <Textarea
+          autoFocus
+          rows={4}
+          placeholder="Revision note (required to send back)…"
+          value={note}
+          onChange={(e) => {
+            setNote(e.target.value);
+            setFormError(null);
           }}
-        >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Review schedule for {submission.name}</DialogTitle>
-              <DialogDescription>
-                Approve the timetable or send it back to the master teacher with a
-                revision note.
-              </DialogDescription>
-            </DialogHeader>
-            <Textarea
-              autoFocus
-              rows={4}
-              placeholder="Revision note (required to send back)…"
-              value={note}
-              onChange={(e) => {
-                setNote(e.target.value);
-                setFormError(null);
-              }}
-              aria-label={`Revision note for ${submission.name}`}
-            />
-            {formError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {formError}
-              </p>
+          aria-label={`Revision note for ${submission?.name ?? "section"}`}
+        />
+        {formError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {formError}
+          </p>
+        ) : null}
+        <div className={formStyles.dialogFooter}>
+          <Button
+            variant="destructive"
+            onClick={() => handleReview("reject")}
+            disabled={review.isPending}
+            aria-busy={rejecting || undefined}
+          >
+            {rejecting ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden />
             ) : null}
-            <DialogFooter>
-              <Button
-                variant="destructive"
-                onClick={() => handleReview("reject")}
-                disabled={review.isPending}
-                aria-busy={rejecting || undefined}
-                className="w-full shrink-0 sm:w-40"
-              >
-                {rejecting ? (
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                ) : null}
-                <span aria-live="polite">Reject</span>
-              </Button>
-              <Button
-                onClick={() => handleReview("approve")}
-                disabled={review.isPending}
-                aria-busy={approving || undefined}
-                className="w-full shrink-0 sm:w-40"
-              >
-                {approving ? (
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                ) : null}
-                <span aria-live="polite">Approve</span>
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
+            <span aria-live="polite">Reject</span>
+          </Button>
+          <Button
+            onClick={() => handleReview("approve")}
+            disabled={review.isPending}
+            aria-busy={approving || undefined}
+          >
+            {approving ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+            ) : null}
+            <span aria-live="polite">Approve</span>
+          </Button>
+        </div>
+      </CardModal>
     </section>
   );
 }

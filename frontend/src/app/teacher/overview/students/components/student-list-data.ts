@@ -35,6 +35,8 @@ export interface StudentListClass {
 export interface StudentListClassItem {
   id: string;
   subject: string;
+  /** Subject code (e.g. AP, ESP) — shown as the rail label. */
+  code: string;
   gradeLevel: string;
   section: string;
   studentCount: number;

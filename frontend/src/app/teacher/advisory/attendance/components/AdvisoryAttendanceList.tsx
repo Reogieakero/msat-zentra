@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/attachment";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { cn } from "@/lib/utils";
+import { useTerm } from "@/lib/term/TermContext";
 
 interface MatrixSubject {
   id: string;
@@ -95,8 +96,10 @@ export function AdvisoryAttendanceList({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const matrixQuery = useQuery({
-    queryKey: ["attendance-section-matrix", sectionId],
+    queryKey: ["attendance-section-matrix", sectionId, termKey],
     queryFn: async () => {
       const params = new URLSearchParams({ sectionId });
       const { data } = await apiClient.get<{

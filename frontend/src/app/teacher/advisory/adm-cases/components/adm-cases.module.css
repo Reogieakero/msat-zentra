@@ -93,26 +93,6 @@
   color: var(--muted-foreground);
 }
 
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.footerInfo {
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.footerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 /* ---- Loading skeletons mirroring the profile cards ---- */
 .skelCard {
   display: flex;

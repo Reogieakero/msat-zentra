@@ -2,19 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Check, Clock, Coffee, Copy, Info, Loader2, PanelRightClose, PanelRightOpen, Pencil, Trash2, Undo2, Utensils } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CardModal } from "@/components/ui/CardModal";
 import { WEEK_LABELS_SHORT } from "../../classes/components/classes-data";
 import { buildTimetable, formatRange, type DayConfig } from "./schedule-time";
 import { SlotEntryDialog, type SlotValue } from "./SlotEntryDialog";
@@ -51,7 +47,9 @@ function cellKey(day: number, period: number): string {
 // the cell immediately, and clearing an entry drops its assignment once the
 // subject's last cell is gone.
 export function ScheduleWeekSetup({ section }: Props) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   // Mount-time snapshot of the saved grid; session edits layer on top.
   const [cells, setCells] = useState<Record<string, SlotValue | null>>(() => {
     const init: Record<string, SlotValue> = {};
@@ -103,7 +101,7 @@ export function ScheduleWeekSetup({ section }: Props) {
   const [createSubjectOpen, setCreateSubjectOpen] = useState(false);
 
   const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
-    queryKey: ["teacher-schedule-subjects"],
+    queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
         "/api/teacher/schedule/subjects",
@@ -113,7 +111,7 @@ export function ScheduleWeekSetup({ section }: Props) {
   });
 
   const teachersQuery = useQuery<{ teachers: { id: string; name: string; code: string | null; linked: boolean }[] }>({
-    queryKey: ["teacher-schedule-teachers"],
+    queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: { id: string; name: string; code: string | null; linked: boolean }[] }>(
         "/api/teacher/schedule/teachers",
@@ -123,7 +121,7 @@ export function ScheduleWeekSetup({ section }: Props) {
   });
 
   const configQuery = useQuery<{ config: DayConfig }>({
-    queryKey: ["teacher-schedule-config"],
+    queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");
       return data;
@@ -148,7 +146,7 @@ export function ScheduleWeekSetup({ section }: Props) {
       return vars;
     },
     onSuccess: (vars) => {
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      invalidateTeacher.schedule();
       const sub = subjectById.get(vars.subjectId)?.name ?? "Subject";
       const teacher = teacherById.get(vars.teacherNameId)?.name ?? "Teacher";
       toast.success({
@@ -175,7 +173,7 @@ export function ScheduleWeekSetup({ section }: Props) {
     },
     onSuccess: (vars) => {
       setCells((prev) => ({ ...prev, [vars.key]: null }));
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      invalidateTeacher.schedule();
       toast.success({ title: "Slot cleared", description: "Timetable entry removed." });
       setSlotModal(null);
     },
@@ -205,7 +203,7 @@ export function ScheduleWeekSetup({ section }: Props) {
       setCells({});
       setSlotModal(null);
       setConfirmClearOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      invalidateTeacher.schedule();
       const skipped = data.skippedApproved ?? 0;
       toast.success({
         title: "Timetable cleared",
@@ -231,7 +229,7 @@ export function ScheduleWeekSetup({ section }: Props) {
     },
     onSuccess: (data) => {
       setConfirmUnlockOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      invalidateTeacher.schedule();
       toast.success({
         title: "Schedule unlocked",
         description: `${data.drafted} slot${data.drafted === 1 ? "" : "s"} back to draft — edit, then send for review again.`,
@@ -275,15 +273,40 @@ export function ScheduleWeekSetup({ section }: Props) {
     }));
 
   const activeConfig = configQuery.data?.config ?? null;
+  // Geometry-matched skeleton: same bordered table frame (time gutter
+  // w-28 + 5 day columns, 8 min-h-14 rows) as the loaded Mon–Fri grid.
   if (!activeConfig) {
     return (
-      <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading timetable">
-        <div className="h-8 w-56 rounded bg-muted" />
-        <div className="h-72 rounded-lg border bg-muted/40" />
-        <div className="flex flex-wrap gap-1.5">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-7 w-24 rounded-full bg-muted" />
-          ))}
+      <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading timetable" aria-hidden>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full min-w-[40rem] border-collapse text-sm">
+            <thead>
+              <tr>
+                <th scope="col" className="w-28 p-2">
+                  <Skeleton className="h-4 w-16" />
+                </th>
+                {[0, 1, 2, 3, 4].map((d) => (
+                  <th key={d} scope="col" className="p-2">
+                    <Skeleton className="mx-auto h-4 w-10" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((r) => (
+                <tr key={r}>
+                  <th scope="row" className="border-t p-2">
+                    <Skeleton className="h-3 w-20" />
+                  </th>
+                  {[0, 1, 2, 3, 4].map((d) => (
+                    <td key={d} className="border-t p-1">
+                      <Skeleton className="min-h-14 w-full rounded-md" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -800,106 +823,101 @@ export function ScheduleWeekSetup({ section }: Props) {
       </div>
       </div>
       {noteOpen && reviewNote ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setNoteOpen(false);
-          }}
+          onClose={() => setNoteOpen(false)}
+          size="md"
+          title="Principal requested changes"
+          description={
+            <>Sent back for revision — full message for {section.name}.</>
+          }
         >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Principal requested changes</DialogTitle>
-              <DialogDescription>
-                Sent back for revision — full message for {section.name}.
-              </DialogDescription>
-            </DialogHeader>
-            <p className="max-h-64 overflow-y-auto text-sm break-words whitespace-pre-wrap">
-              {reviewNote}
-            </p>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setNoteOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <p className="max-h-64 overflow-y-auto text-sm break-words whitespace-pre-wrap">
+            {reviewNote}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setNoteOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
       {confirmUnlockOpen ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setConfirmUnlockOpen(false);
+          onClose={() => {
+            if (!unlock.isPending) setConfirmUnlockOpen(false);
           }}
+          dismissable={!unlock.isPending}
+          size="sm"
+          title="Unlock schedule for editing?"
+          description={
+            <>
+              All {section.timetableEntries.length} approved slot
+              {section.timetableEntries.length === 1 ? "" : "s"} for {section.name} return
+              to draft. The timetable stays visible but stops being official until the
+              principal approves it again.
+            </>
+          }
         >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Unlock schedule for editing?</DialogTitle>
-              <DialogDescription>
-                All {section.timetableEntries.length} approved slot
-                {section.timetableEntries.length === 1 ? "" : "s"} for {section.name} return
-                to draft. The timetable stays visible but stops being official until the
-                principal approves it again.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="destructive" onClick={() => setConfirmUnlockOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => unlock.mutate()}
-                disabled={unlock.isPending}
-                aria-busy={unlock.isPending || undefined}
-              >
-                {unlock.isPending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Unlocking…</span>
-                  </>
-                ) : (
-                  "Unlock schedule"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <div className="flex justify-end gap-2">
+            <Button variant="destructive" onClick={() => setConfirmUnlockOpen(false)} disabled={unlock.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => unlock.mutate()}
+              disabled={unlock.isPending}
+              aria-busy={unlock.isPending || undefined}
+            >
+              {unlock.isPending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Unlocking…</span>
+                </>
+              ) : (
+                "Unlock schedule"
+              )}
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
       {confirmClearOpen ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setConfirmClearOpen(false);
+          onClose={() => {
+            if (!removeAll.isPending) setConfirmClearOpen(false);
           }}
+          dismissable={!removeAll.isPending}
+          size="sm"
+          title="Remove all entries?"
+          description={
+            <>
+              This clears all {filledCount} scheduled slot{filledCount === 1 ? "" : "s"} for{" "}
+              {section.name}. Subjects and teacher names stay in their lists.
+            </>
+          }
         >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Remove all entries?</DialogTitle>
-              <DialogDescription>
-                This clears all {filledCount} scheduled slot{filledCount === 1 ? "" : "s"} for{" "}
-                {section.name}. Subjects and teacher names stay in their lists.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="destructive" onClick={() => setConfirmClearOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => removeAll.mutate()}
-                disabled={removeAll.isPending}
-                aria-busy={removeAll.isPending || undefined}
-              >
-                {removeAll.isPending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Removing…</span>
-                  </>
-                ) : (
-                  "Remove all"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <div className="flex justify-end gap-2">
+            <Button variant="destructive" onClick={() => setConfirmClearOpen(false)} disabled={removeAll.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => removeAll.mutate()}
+              disabled={removeAll.isPending}
+              aria-busy={removeAll.isPending || undefined}
+            >
+              {removeAll.isPending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Removing…</span>
+                </>
+              ) : (
+                "Remove all"
+              )}
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
       {slotModal ? (
         <SlotEntryDialog

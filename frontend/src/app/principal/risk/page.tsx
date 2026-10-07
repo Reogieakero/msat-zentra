@@ -7,11 +7,16 @@ import { RiskLevelDistribution } from "./components/RiskLevelDistribution";
 import { RiskTrend } from "./components/RiskTrend";
 import { HighRiskStudentsTable } from "./components/HighRiskStudentsTable";
 import { InterventionTrackingTable } from "./components/InterventionTrackingTable";
+import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import styles from "./risk.module.css";
 
 export default function PrincipalRiskBoardPage() {
   return (
     <section className={styles.page}>
+      <PrincipalPageHeader
+        title="Risk Overview"
+        description="Students by risk level, trends, and interventions being tracked school-wide."
+      />
       <div className={styles.topSummary}>
         <RiskLevelDonutCard />
         <RiskLevelBreakdown />

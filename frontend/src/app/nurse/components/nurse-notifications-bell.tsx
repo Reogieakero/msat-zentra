@@ -13,7 +13,14 @@ export function NurseNotificationsBell() {
   return (
     <NotificationsBell
       queryKey={["nurse-notifications"]}
-      refreshKeys={[["nurse-notifications"], ["nurse-alerts"], ["nurse-overview"]]}
+      refreshKeys={[
+        ["nurse-notifications"],
+        ["nurse-alerts"],
+        ["nurse-overview"],
+        ["nurse-risk"],
+        ["nurse-risk-levels"],
+        ["nurse-risk-factors"],
+      ]}
       resolveTarget={nurseNotificationTarget}
       titleFor={nurseNotificationTitle}
     />

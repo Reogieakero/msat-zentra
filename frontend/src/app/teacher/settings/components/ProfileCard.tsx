@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Camera, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,15 +11,9 @@ import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import {
-  teacherOverviewKey,
-  useTeacherOverview,
-  type TeacherOverviewCritical,
-} from "../../overview/components/teacher-overview-data";
-import {
-  teacherProfileSettingsKey,
-  useTeacherProfileSettings,
-} from "./profile-settings-data";
+import { useTeacherOverview } from "../../overview/components/teacher-overview-data";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useTeacherProfileSettings } from "./profile-settings-data";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -50,7 +43,7 @@ const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
    Everything persists to the teacher's own User + StaffProfile rows. */
 export function ProfileCard() {
   const session = useSession();
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
   const overview = useTeacherOverview();
   const profile = useTeacherProfileSettings();
   const fileRef = React.useRef<HTMLInputElement | null>(null);
@@ -62,17 +55,20 @@ export function ProfileCard() {
   const [photoSaving, setPhotoSaving] = React.useState(false);
 
   const savedName = profile.data?.fullName ?? "";
-  React.useEffect(() => {
+  // Sync the input from the saved profile during render, never in an
+  // effect — user edits win until the server value itself changes.
+  const [prevSavedName, setPrevSavedName] = React.useState<string | null>(null);
+  if (prevSavedName !== savedName) {
+    setPrevSavedName(savedName);
     setName(savedName);
-  }, [savedName]);
+  }
 
   const photoUrl = profile.data?.photoUrl ?? null;
   const displayName = savedName || overview.data?.teacherName || "";
   const nameDirty = name.trim() !== "" && name.trim() !== savedName;
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: teacherProfileSettingsKey(session?.sub) });
-    void queryClient.invalidateQueries({ queryKey: teacherOverviewKey(session?.sub) });
+    void invalidateTeacher.settings();
   };
 
   async function handleNameSave(e: React.FormEvent) {
@@ -86,12 +82,7 @@ export function ProfileCard() {
     setNameSaving(true);
     try {
       await apiClient.patch("/api/teacher/settings/profile", { fullName: name.trim() });
-      // Keep the cached overview name in sync instantly (header reads it).
-      queryClient.setQueryData(
-        teacherOverviewKey(session?.sub),
-        (old: TeacherOverviewCritical | undefined) =>
-          old ? { ...old, teacherName: name.trim() } : old,
-      );
+      // Pessimistic: the header repaints only after the server confirms.
       refresh();
       toast.success({ title: "Name updated", description: "Your display name was saved." });
     } catch (err) {

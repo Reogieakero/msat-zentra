@@ -269,3 +269,26 @@
   min-height: 100vh;
   width: 100%;
 }
+
+/* Right rail pins 16px below the 3rem navbar (top: 4rem) like every other
+   teacher rail, with its own hidden-scrollbar scroll. */
+.railSticky {
+  position: sticky;
+  top: 4rem;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.railSticky::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .railSticky {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}

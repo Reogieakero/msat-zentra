@@ -5,10 +5,10 @@
   height: 1.75rem;
   padding: 0 0.625rem;
   font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--foreground);
-  background: var(--muted);
-  border: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
   border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
@@ -16,14 +16,14 @@
 }
 
 .badge:hover {
-  background: color-mix(in oklch, var(--muted), var(--foreground) 6%);
+  background: color-mix(in oklch, var(--primary) 20%, transparent);
 }
 
 .icon {
   width: 0.875rem;
   height: 0.875rem;
   flex-shrink: 0;
-  color: var(--muted-foreground);
+  color: inherit;
 }
 
 .label {
@@ -36,5 +36,5 @@
   width: 0.75rem;
   height: 0.75rem;
   flex-shrink: 0;
-  color: var(--muted-foreground);
+  color: inherit;
 }

@@ -45,7 +45,7 @@ import { SortTh } from "./heatmap-table";
 import common from "./heatmap-table.module.css";
 import styles from "./SectionAverages.module.css";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 15;
 
 const TREND_RANK = { up: 2, flat: 1, down: 0 } as const;
 
@@ -76,8 +76,8 @@ export function SectionAverages({
       return res.data;
     },
     staleTime: 30_000,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
   });
   // Worst first — sections furthest below the 80% mark float to the top.
   const sections = React.useMemo(

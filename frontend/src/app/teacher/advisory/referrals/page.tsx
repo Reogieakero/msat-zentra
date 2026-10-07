@@ -1,20 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   flexRender,
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +23,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { sileo } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
@@ -110,16 +110,96 @@ function isCancellable(status: ReferralRow["status"]): boolean {
   return status !== "resolved" && status !== "dismissed";
 }
 
-export default function TeacherAdvisoryReferralsPage() {
-  const queryClient = useQueryClient();
-  const referralsQuery = useQuery<ReferralRow[]>({
-    queryKey: ["myReferrals"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/api/referrals/mine");
-      return data;
+interface MyReferralsPage {
+  referrals: ReferralRow[];
+  total: number;
+  unfilteredTotal: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+}
+
+const TEACHER_REFERRALS_PAGE_SIZE = 15;
+
+function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | null }) {
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const [query, setQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [takeover, setTakeover] = React.useState(false);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const debounced = useDebouncedValue(query.trim(), 300);
+  // Bell deep-links (?highlight=<id>) serve the case's own page; the first
+  // pager/filter touch takes over with plain params. Derived, no effects.
+  const landing = !takeover && highlightId !== null;
+  const referralsQuery = useQuery<MyReferralsPage>({
+    queryKey: ["myReferrals", takeover || !landing ? page : 1, debounced, termKey, landing ? (highlightId ?? "") : ""],
+    queryFn: async ({ signal }) => {
+      const search = new URLSearchParams();
+      if (debounced) search.set("q", debounced);
+      search.set("page", String(takeover || !landing ? page : 1));
+      search.set("pageSize", String(TEACHER_REFERRALS_PAGE_SIZE));
+      if (landing && highlightId) search.set("highlight", highlightId);
+      const { data } = await apiClient.get<
+        MyReferralsPage | ReferralRow[] | { referrals: ReferralRow[] }
+      >(`/api/referrals/mine${search.toString() ? `?${search.toString()}` : ""}`, {
+        signal,
+      });
+      // Defensive: the endpoint has served bare arrays and {referrals}
+      // shapes — never let a shape change crash the table.
+      if (Array.isArray(data)) {
+        return {
+          referrals: data,
+          total: data.length,
+          unfilteredTotal: data.length,
+          page,
+          totalPages: 1,
+          pageSize: TEACHER_REFERRALS_PAGE_SIZE,
+        };
+      }
+      const referrals = Array.isArray(
+        (data as { referrals?: unknown }).referrals
+      )
+        ? (data as { referrals: ReferralRow[] }).referrals
+        : [];
+      const fallback = data as Partial<MyReferralsPage>;
+      const total = fallback.total ?? referrals.length;
+      const unfilteredTotal = fallback.unfilteredTotal ?? referrals.length;
+      const totalPages =
+        fallback.totalPages ?? Math.max(1, Math.ceil(total / TEACHER_REFERRALS_PAGE_SIZE));
+      return {
+        referrals,
+        total,
+        unfilteredTotal,
+        page: fallback.page ?? page,
+        totalPages,
+        pageSize: fallback.pageSize ?? TEACHER_REFERRALS_PAGE_SIZE,
+      };
     },
+    // Page turns reuse the previous page so they never flash skeletons.
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
+  // Derived, never setState-in-effect.
+  const totalPages = Math.max(1, referralsQuery.data?.totalPages ?? 1);
+  const safePage = Math.min(referralsQuery.data?.page ?? page, totalPages);
+  const goToPage = (next: number) => {
+    setTakeover(true);
+    setPage(next);
+  };
+
+  // Scroll the highlighted case into view once its page renders. The
+  // backend serves the highlight's own page, so the row is mounted here.
+  React.useEffect(() => {
+    if (!highlightId) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`teacher-referral-${highlightId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [highlightId, referralsQuery.data]);
 
   const [trackTarget, setTrackTarget] = React.useState<TrackableReferral | null>(null);
    const { reopen: reopenReferral, isPending: reopenPending } = useReopenReferral();
@@ -154,8 +234,7 @@ export default function TeacherAdvisoryReferralsPage() {
       // Suppress the channel echo toast for our own cancel (the success
       // toast below already fired) — the bell row still lands for badge.
       if (data?.id) markSelfNotified(data.id);
-      await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
-      await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+      invalidateTeacher.referrals();
       setCancelTarget(null);
       setCancelReason("");
       sileo.success({ title: "Referral cancelled", description: "The case was withdrawn." });
@@ -170,13 +249,20 @@ export default function TeacherAdvisoryReferralsPage() {
     }
   }
 
+  // Stable reference so the table memo doesn't recompute every render.
   const referrals = React.useMemo(
-    () => referralsQuery.data ?? [],
+    () =>
+      Array.isArray(referralsQuery.data?.referrals)
+        ? referralsQuery.data.referrals
+        : [],
     [referralsQuery.data],
   );
+  const total = referralsQuery.data?.total ?? referrals.length;
+  const unfilteredTotal = referralsQuery.data?.unfilteredTotal ?? referrals.length;
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  // Per-row reopen spinner: only the acting row locks + spins.
+  const [reopenRowId, setReopenRowId] = React.useState<string | null>(null);
 
   const columns = React.useMemo<ColumnDef<ReferralRow>[]>(
     () => [
@@ -294,12 +380,19 @@ export default function TeacherAdvisoryReferralsPage() {
                         if (r.track === "adm") {
                           handleAdmReferAgain();
                         } else {
-                          void reopenReferral(r);
+                          setReopenRowId(r.id);
+                          void reopenReferral(r).finally(() => {
+                            setReopenRowId((prev) => (prev === r.id ? null : prev));
+                          });
                         }
                       }}
                     >
-                      <RotateCcw size={16} strokeWidth={1.8} aria-hidden />
-                      {reopenPending ? "Re-submitting…" : "Refer again"}
+                      {reopenRowId === r.id ? (
+                        <Loader2 size={16} strokeWidth={1.8} aria-hidden className="animate-spin" />
+                      ) : (
+                        <RotateCcw size={16} strokeWidth={1.8} aria-hidden />
+                      )}
+                      {reopenRowId === r.id ? "Re-submitting…" : "Refer again"}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem
@@ -318,7 +411,7 @@ export default function TeacherAdvisoryReferralsPage() {
         },
       },
     ],
-    [requestCancel, handleAdmReferAgain, reopenReferral, reopenPending],
+    [requestCancel, handleAdmReferAgain, reopenReferral, reopenPending, reopenRowId],
   );
 
   const table = useReactTable({
@@ -326,13 +419,9 @@ export default function TeacherAdvisoryReferralsPage() {
     columns,
     getRowId: (row) => row.id,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 15 } },
-    state: { sorting, columnFilters },
+    state: { sorting },
   });
 
   /* Main panel: referrals table (overview layout). Right rail: quick-refer
@@ -395,17 +484,20 @@ export default function TeacherAdvisoryReferralsPage() {
         <div className="min-w-0">
           <h2 className={styles.sectionTitle}>Referrals</h2>
           <p className={styles.sectionDesc}>
-            Your submitted referrals — {referrals.length} referral
-            {referrals.length === 1 ? "" : "s"}.
+            Your submitted referrals — {total} referral
+            {total === 1 ? "" : "s"}
+            {unfilteredTotal !== total ? ` (of ${unfilteredTotal} total)` : ""}.
           </p>
         </div>
         <InputGroup className="max-w-40 shrink-0">
           <InputGroupInput
             placeholder="Filter referrals..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setTakeover(true);
+              setPage(1);
+            }}
             aria-label="Filter referrals"
           />
           <InputGroupAddon>
@@ -435,19 +527,28 @@ export default function TeacherAdvisoryReferralsPage() {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className="truncate"
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+                table.getRowModel().rows.map((row) => {
+                  const highlighted =
+                    highlightId !== null && highlightId === row.original.id;
+                  return (
+                  <TableRow
+                    key={row.id}
+                    id={highlighted ? `teacher-referral-${row.original.id}` : undefined}
+                    data-highlighted={highlighted || undefined}
+                    className={highlighted ? "bg-amber-500/10" : undefined}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        className="truncate"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  );
+                })
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
@@ -460,23 +561,23 @@ export default function TeacherAdvisoryReferralsPage() {
       </div>
       <div className="relative flex items-center justify-end space-x-2">
         <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredRowModel().rows.length} referral
-          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+          Page {safePage} of {totalPages} — {total} referral
+          {total === 1 ? "" : "s"}
         </div>
         <div className="space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => goToPage(Math.max(1, safePage - 1))}
+            disabled={safePage <= 1}
           >
             Previous
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
+            disabled={safePage >= totalPages}
           >
             Next
           </Button>
@@ -515,5 +616,19 @@ export default function TeacherAdvisoryReferralsPage() {
         onConfirm={confirmCancel}
       />
     </section>
+  );
+}
+
+function TeacherAdvisoryReferralsPageWithHighlight() {
+  // useSearchParams needs a Suspense boundary under the app router.
+  const params = useSearchParams();
+  return <TeacherAdvisoryReferralsView highlightId={params.get("highlight")} />;
+}
+
+export default function TeacherAdvisoryReferralsPage() {
+  return (
+    <React.Suspense fallback={<section className={refStyles.page} aria-busy="true" />}>
+      <TeacherAdvisoryReferralsPageWithHighlight />
+    </React.Suspense>
   );
 }

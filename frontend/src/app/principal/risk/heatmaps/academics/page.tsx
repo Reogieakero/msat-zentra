@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { AcademicsHeader } from "./components/AcademicsHeader";
 import { KpiStrip } from "./components/KpiStrip";
@@ -31,20 +32,20 @@ export default function PrincipalAcademicHeatmapsPage() {
     ALL_GRADES
   );
 
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
   const { data, isPending, dataUpdatedAt } = useQuery({
-    queryKey: ["academic-insights", "live"],
+    // Term-scoped live (raw) snapshot. No polling — the principal realtime
+    // channel invalidates this exact key on grade saves.
+    queryKey: ["academic-insights", "live", termId],
     queryFn: async () => {
       const res = await apiClient.get<BackendAcademicSummary>("/api/academics", {
         params: { mode: "raw" },
       });
       return res.data;
     },
-    // Realtime: teacher grade saves land via the principal realtime channel
-    // (invalidates ["academic-insights"]); polling covers anything missed and
-    // keeps the trend line moving with no manual refresh.
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const sections = React.useMemo(() => {

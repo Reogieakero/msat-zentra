@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,15 +10,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { apiClient } from "@/lib/api/client";
-import { useSession } from "@/lib/auth/useSession";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
   applyPalette,
-  teacherProfileSettingsKey,
   useTeacherProfileSettings,
 } from "./profile-settings-data";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 
 const PRIMARY_PRESETS = [
   "#7c3aed",
@@ -135,8 +133,7 @@ function SwatchRow({
    across the site; Save persists them to the teacher's StaffProfile row and
    Reset returns to the theme default. */
 export function PaletteCard() {
-  const session = useSession();
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
   const profile = useTeacherProfileSettings();
 
   const savedPrimary = profile.data?.primaryColor ?? null;
@@ -146,10 +143,22 @@ export function PaletteCard() {
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => {
+  // Sync picked colors from the saved profile during render, never in an
+  // effect — same behavior (server values win on load + after save) with no
+  // cascading renders.
+  const [prevSaved, setPrevSaved] = React.useState<{
+    primary: string | null;
+    secondary: string | null;
+  } | null>(null);
+  if (
+    prevSaved === null ||
+    prevSaved.primary !== savedPrimary ||
+    prevSaved.secondary !== savedSecondary
+  ) {
+    setPrevSaved({ primary: savedPrimary, secondary: savedSecondary });
     setPrimary(savedPrimary);
     setSecondary(savedSecondary);
-  }, [savedPrimary, savedSecondary]);
+  }
 
   // Live preview across the site as colors are picked.
   React.useEffect(() => {
@@ -168,7 +177,7 @@ export function PaletteCard() {
         primaryColor: nextPrimary,
         secondaryColor: nextSecondary,
       });
-      void queryClient.invalidateQueries({ queryKey: teacherProfileSettingsKey(session?.sub) });
+      invalidateTeacher.settings();
       toast.success({ title: `Palette ${verb}`, description: "Your workspace colors were saved." });
     } catch (err) {
       const message = getErrorMessage(err, "Could not save your palette.");

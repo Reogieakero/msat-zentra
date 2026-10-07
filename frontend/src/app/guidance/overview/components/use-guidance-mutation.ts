@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
+import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import { apiErrorMessage } from "../../referrals/components/guidance-referrals-data";
 
 /**
@@ -23,11 +24,15 @@ export const GUIDANCE_QUERY_KEYS = [
   // Prefix — covers ["guidance-alerts", "referrals"|"interventions"].
   ["guidance-alerts"],
   ["guidance-adm"],
+  ["guidance-adm-report"],
   ["guidance-anecdotal"],
   ["guidance-risk"],
   ["guidance-risk-levels"],
   ["guidance-risk-heatmap"],
   ["guidance-risk-behavioral"],
+  ["guidance-risk-alert-factors"],
+  ["guidance-session-documents"],
+  ["guidance-notifications"],
   ["adm-consultation-sessions"],
 ] as const;
 
@@ -48,7 +53,13 @@ interface GuidanceMutationOptions<TData, TVariables> {
   errorFallback: string;
   /** When true, suppress the error toast (caller shows inline error only). */
   silentError?: boolean;
+  /** When true, skip the success toast (caller toasts its own message). */
+  silentSuccess?: boolean;
   onSuccessExtra?: (data: TData, variables: TVariables) => void;
+  /** Referral/intervention id this write acts on — confirmed writes suppress
+      their own realtime echo toast for 30s (bell row still lands). Falls
+      back to `data.id` when the mutation resolves one. */
+  sourceId?: string | ((variables: TVariables) => string);
 }
 
 /**
@@ -61,19 +72,46 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
   options: GuidanceMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
+  const invalidate = () => {
+    for (const key of GUIDANCE_QUERY_KEYS) {
+      void queryClient.invalidateQueries({ queryKey: [...key] });
+    }
+  };
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onSuccess: (data, variables) => {
-      for (const key of GUIDANCE_QUERY_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
+      // Per-sourceId self-suppression: the confirmed id skips its realtime
+      // echo toast for 30s (bell row still lands, lists still invalidate).
+      const fromData =
+        typeof data === "string"
+          ? data
+          : (data as { id?: unknown } | null)?.id;
+      const fromOption =
+        typeof options.sourceId === "function"
+          ? options.sourceId(variables)
+          : options.sourceId;
+      const sourceId =
+        typeof fromOption === "string" && fromOption
+          ? fromOption
+          : typeof fromData === "string"
+            ? fromData
+            : null;
+      if (sourceId) markSelfNotified(sourceId);
+      invalidate();
+      if (!options.silentSuccess) {
+        toast.success({
+          title: options.successTitle,
+          ...(options.successDescription
+            ? { description: options.successDescription(variables, data) }
+            : {}),
+        });
       }
-      toast.success({
-        title: options.successTitle,
-        ...(options.successDescription
-          ? { description: options.successDescription(variables, data) }
-          : {}),
-      });
       options.onSuccessExtra?.(data, variables);
+    },
+    // Pessimistic: rows stay put with their spinner until the server
+    // confirms — only this settled refetch moves/removes them.
+    onSettled: () => {
+      invalidate();
     },
     onError: (err) => {
       if (!options.silentError) {

@@ -10,29 +10,25 @@ interface Props {
   candidateCount: number;
 }
 
+/* Demoted content strip — the page header lives above in
+   PrincipalPageHeader. No h1 here (single h1 per page). */
 export function HonorRollHero({ data, candidateCount }: Props) {
   return (
-    <div className={styles.bannerRow}>
-      <Card className={`${styles.bannerCardBox} ${styles.bannerCardMain}`}>
-        <div className={styles.bannerImage} aria-hidden />
-        <div className={styles.bannerCard}>
-          <span className={styles.bannerBadge}>{data.schoolYear}</span>
-          <h1 className={styles.title}>Honor Roll &amp; Awards</h1>
-          <p className={styles.subtitle}>
-            DO 15, s. 2026 Academic Excellence — average ≥ 90, no grade below 80
+    <Card className={styles.bannerCardBox}>
+      <div className={styles.bannerImage} aria-hidden />
+      <div className={styles.bannerCard}>
+        <span className={styles.bannerBadge}>{data.schoolYear}</span>
+        <div className={styles.bannerRow}>
+          <p className={styles.criteria}>
+            DO 15, s. 2026 Academic Excellence — live general average ≥ 90, no subject below 80
           </p>
+          <span className={styles.countWrap}>
+            <Trophy className={styles.squareIcon} aria-hidden />
+            <span className={styles.squareValue}>{candidateCount}</span>
+            <span className={styles.squareHint}>meet award criteria</span>
+          </span>
         </div>
-      </Card>
-
-      <Card className={`${styles.bannerCardBox} ${styles.bannerCardSquare}`}>
-        <div className={styles.bannerCard}>
-          <Trophy className={styles.squareIcon} aria-hidden />
-          <span className={styles.squareLabel}>Awardees</span>
-          <span className={styles.squareValue}>{candidateCount}</span>
-          <span className={styles.squareHint}>meet award criteria</span>
-        </div>
-      </Card>
-
-    </div>
+      </div>
+    </Card>
   );
 }

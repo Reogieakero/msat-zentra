@@ -12,8 +12,8 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { useQueryClient } from "@tanstack/react-query";
 import { Inbox, SearchIcon } from "lucide-react";
+import { useNurseInvalidate } from "./use-nurse-mutation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -107,14 +107,10 @@ export function NurseNeedsReviewPanel({
     row: NurseQueueRow;
     draft: AdmReviewDraft;
   } | null>(null);
-  const queryClient = useQueryClient();
+  const invalidateNurse = useNurseInvalidate();
   const refresh = React.useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
-  }, [queryClient]);
+    invalidateNurse();
+  }, [invalidateNurse]);
   const nowMs = useNowMs();
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -248,7 +244,7 @@ export function NurseNeedsReviewPanel({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 8 } },
+    initialState: { pagination: { pageSize: 10 } },
     state: { sorting, columnFilters },
   });
 
@@ -391,6 +387,9 @@ export function NurseNeedsReviewPanel({
               disabled={!table.getCanNextPage()}
             >
               Next
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/nurse/alerts">View all</a>
             </Button>
           </div>
         </div>

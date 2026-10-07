@@ -61,7 +61,7 @@ import {
 } from "./nurse-alerts-data";
 import styles from "./nurse-alerts.module.css";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 type RiskFilter = "" | NurseRiskLevel | "none";
 
@@ -222,19 +222,44 @@ export function NurseReferralsTable({
   riskByStudent,
   riskLoading = false,
   onChanged,
+  query: controlledQuery,
+  onQueryChange,
+  page,
+  totalPages,
+  total: totalProp,
+  unfilteredTotal,
+  onPageChange,
+  serverPaged = false,
 }: {
   alerts: NurseAlertItem[];
   riskByStudent: Record<string, NurseRiskLevel>;
   riskLoading?: boolean;
   onChanged: () => void;
+  /** Controlled server search (debounced by the page). Uncontrolled legacy
+      fallback keeps the internal input when the page passes nothing. */
+  query?: string;
+  onQueryChange?: (v: string) => void;
+  /** Server pager (page turns reuse previous data, never flash skeletons). */
+  page?: number;
+  totalPages?: number;
+  /** Filtered pager count. */
+  total?: number;
+  /** UNFILTERED desk total — tiles never shrink on search. */
+  unfilteredTotal?: number;
+  onPageChange?: (p: number) => void;
+  serverPaged?: boolean;
 }) {
-  const [query, setQuery] = React.useState("");
+  const [internalQuery, setInternalQuery] = React.useState("");
   const [risk, setRisk] = React.useState<RiskFilter>("");
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const now = useNowTick();
+  const query = controlledQuery ?? internalQuery;
+  const setQuery = onQueryChange ?? setInternalQuery;
 
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // Server-searched when the page owns the query (?q=) — the table only
+    // applies the client risk facet on the served page rows.
+    const q = serverPaged ? "" : query.trim().toLowerCase();
     const rows = alerts.filter((a) => {
       if (risk !== "") {
         const level = a.studentId ? riskByStudent[a.studentId] : undefined;
@@ -264,12 +289,12 @@ export function NurseReferralsTable({
       return bt - at;
     });
     return rows;
-  }, [alerts, query, risk, riskByStudent]);
+  }, [alerts, query, risk, riskByStudent, serverPaged]);
 
   const clearFilters = React.useCallback(() => {
     setQuery("");
     setRisk("");
-  }, []);
+  }, [setQuery]);
 
   const columns = React.useMemo<ColumnDef<NurseAlertItem>[]>(
     () => [
@@ -469,7 +494,9 @@ export function NurseReferralsTable({
     state: { sorting },
   });
 
-  const total = filtered.length;
+  // Filtered pager count (server total when server-paged) alongside the
+  // UNFILTERED desk total so tiles never shrink on search.
+  const total = serverPaged ? (totalProp ?? filtered.length) : filtered.length;
   const riskLabel =
     RISK_OPTIONS.find((o) => o.value === risk)?.label ?? "All risks";
   const hasActiveFilters = query.trim() !== "" || risk !== "";
@@ -486,7 +513,13 @@ export function NurseReferralsTable({
           </h2>
           <p className={styles.sectionDesc}>
             Every ADM and clinic matter on your desk — {total} case
-            {total === 1 ? "" : "s"}.
+            {total === 1 ? "" : "s"}
+            {serverPaged &&
+            unfilteredTotal !== undefined &&
+            unfilteredTotal !== total
+              ? ` (of ${unfilteredTotal} on your desk)`
+              : ""}
+            .
           </p>
         </div>
         {alerts.length > 0 && (
@@ -624,23 +657,47 @@ export function NurseReferralsTable({
       )}
       <div className="relative mt-auto flex items-center justify-end space-x-2 pt-2">
         <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredRowModel().rows.length} case
-          {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+          {serverPaged && page !== undefined && totalPages !== undefined ? (
+            <>
+              Page {page} of {totalPages} — {total} case{total === 1 ? "" : "s"}
+            </>
+          ) : (
+            <>
+              {table.getFilteredRowModel().rows.length} case
+              {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
+            </>
+          )}
         </div>
         <div className="space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() =>
+              serverPaged && onPageChange && page !== undefined
+                ? onPageChange(Math.max(1, page - 1))
+                : table.previousPage()
+            }
+            disabled={
+              serverPaged && page !== undefined
+                ? page <= 1
+                : !table.getCanPreviousPage()
+            }
           >
             Previous
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() =>
+              serverPaged && onPageChange && page !== undefined
+                ? onPageChange(page + 1)
+                : table.nextPage()
+            }
+            disabled={
+              serverPaged && page !== undefined && totalPages !== undefined
+                ? page >= totalPages
+                : !table.getCanNextPage()
+            }
           >
             Next
           </Button>

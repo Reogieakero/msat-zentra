@@ -58,13 +58,17 @@ export function DeleteSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        if (!next) {
+        // Locked while the delete is in flight.
+        if (!next && !busy) {
           onClose();
           setError(null);
         }
       }}
     >
-      <DialogContent className={styles.dialogScrollHidden}>
+      <DialogContent
+        className={styles.dialogScrollHidden}
+        aria-busy={busy || undefined}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -83,6 +87,7 @@ export function DeleteSessionDialog({
             className={styles.btnRed}
             onClick={onConfirm}
             disabled={busy}
+            aria-busy={busy || undefined}
           >
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
             {busy ? "Deleting…" : submitLabel}

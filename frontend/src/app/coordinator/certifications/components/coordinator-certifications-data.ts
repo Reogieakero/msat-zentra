@@ -173,7 +173,8 @@ export async function fetchCertStageRows(
     limit: CERT_SUMMARY_LIMIT,
     signal,
   });
-  return page.rows;
+  // Non-array payloads (cached/error shapes) must never crash the merge.
+  return Array.isArray(page?.rows) ? page.rows : [];
 }
 
 export async function fetchCertApprovalRows(
@@ -185,5 +186,5 @@ export async function fetchCertApprovalRows(
     limit: CERT_SUMMARY_LIMIT,
     signal,
   });
-  return page.rows;
+  return Array.isArray(page?.rows) ? page.rows : [];
 }

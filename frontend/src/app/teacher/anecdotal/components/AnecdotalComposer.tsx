@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,20 +94,16 @@ export function AnecdotalComposer({ open, onOpenChange, onSave }: AnecdotalCompo
   }
 
   return (
-    <Dialog
+    <CardModal
       open={open}
-      onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
+      onClose={() => {
+        reset();
+        onOpenChange(false);
       }}
+      size="md"
+      title="New anecdotal record"
+      description="Write up what happened. Mock only — nothing is saved to the backend."
     >
-      <DialogContent className={styles.dialog}>
-        <DialogHeader>
-          <DialogTitle>New anecdotal record</DialogTitle>
-          <DialogDescription>
-            Write up what happened. Mock only — nothing is saved to the backend.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className={styles.fields}>
           <div className={styles.fieldRow}>
@@ -215,15 +204,14 @@ export function AnecdotalComposer({ open, onOpenChange, onSave }: AnecdotalCompo
           {error ? <p className={styles.error}>{error}</p> : null}
         </div>
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSave}>
             File record
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

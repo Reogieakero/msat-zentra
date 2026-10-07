@@ -127,8 +127,11 @@ export interface GuidanceReferralsData {
   referrals: GuidanceReferralItem[];
   page: number;
   pageSize: number;
+  /** Filtered pager count (shrinks on search/filter). */
   total: number;
   totalPages: number;
+  /** UNFILTERED desk total — tile stats never shrink on search. */
+  unfilteredTotal?: number;
 }
 
 export interface GuidanceReferralsParams {
@@ -140,6 +143,8 @@ export interface GuidanceReferralsParams {
   open?: boolean;
   page?: number;
   pageSize?: number;
+  /** Deep-link landing: the backend serves the page containing this case. */
+  highlight?: string;
 }
 
 export async function fetchGuidanceReferrals(
@@ -155,12 +160,33 @@ export async function fetchGuidanceReferrals(
   if (params.open) search.set("open", "1");
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
+  if (params.highlight) search.set("highlight", params.highlight);
   const query = search.toString();
-  const { data } = await apiClient.get<GuidanceReferralsData>(
+  const { data } = await apiClient.get<
+    GuidanceReferralsData | GuidanceReferralItem[] | { referrals: GuidanceReferralItem[] }
+  >(
     `/api/guidance/referrals${query ? `?${query}` : ""}`,
     { signal: opts.signal }
   );
-  return data;
+  // Defensive: the endpoint has served bare arrays and {referrals} shapes —
+  // never let a shape change crash the table.
+  if (Array.isArray(data)) {
+    return {
+      summary: { total: data.length, pending: 0, inProgress: 0, resolved: 0 },
+      referrals: data,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? data.length,
+      total: data.length,
+      totalPages: 1,
+      unfilteredTotal: data.length,
+    };
+  }
+  const referrals = Array.isArray(
+    (data as { referrals?: unknown }).referrals
+  )
+    ? (data as { referrals: GuidanceReferralItem[] }).referrals
+    : [];
+  return { ...(data as GuidanceReferralsData), referrals };
 }
 
 // Every referral on the desk (newest pages first) for client-side tables.

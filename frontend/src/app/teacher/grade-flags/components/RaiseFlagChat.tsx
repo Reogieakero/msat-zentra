@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
+import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,7 +70,9 @@ function loadMessages(): ChatMessage[] {
 const CATEGORIES = Object.entries(REASON_LABELS) as [FlagReason, string][];
 
 export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [reason, setReason] = useState("");
@@ -106,7 +110,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
   }, [messages]);
 
   const optionsQuery = useQuery({
-    queryKey: ["grade-flags", "options"],
+    queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchFlagOptions,
   });
   // Grade flags attach to registered profiles only — roster enlistments
@@ -200,7 +204,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
       setCategory(null);
       setStudentId("");
       setClassKey("");
-      queryClient.invalidateQueries({ queryKey: ["grade-flags"] });
+      invalidateTeacher.flags();
       sileo.success({ title: "Flag filed", description: `${detail.studentName} — ${reasonLabel}.` });
     } catch {
       setMessages((prev) => [
@@ -228,7 +232,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
                     <div className={styles.detailCard}>
                       <div className={styles.detailHead}>
                         <p className={styles.detailTitle}>{m.detail.studentName}</p>
-                        <Badge variant="warning">Open</Badge>
+                        <Badge variant="amber">Open</Badge>
                       </div>
                       <p className={styles.detailSub}>
                         {m.detail.lrn} · {m.detail.subject} · {m.detail.section} · Term{" "}

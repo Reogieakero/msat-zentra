@@ -36,9 +36,10 @@ export function requireAdvisorySections<T extends { id: string }>(sections: T[])
   return sections;
 }
 
-export async function adviserSectionsOr404(teacherId: string) {
+export async function adviserSectionsOr404(teacherId: string, schoolYearId?: string | null) {
   const sections = await prisma.section.findMany({
-    where: { adviserId: teacherId },
+    // Year-scoped: last year's advisership never authorizes this year's desk.
+    where: { adviserId: teacherId, ...(schoolYearId ? { schoolYearId } : {}) },
     select: { id: true, name: true, gradeLevel: true },
   });
   return requireAdvisorySections(sections);
@@ -49,9 +50,9 @@ export async function adviserSectionsOr404(teacherId: string) {
 // slots attached to their linked teacher-list code (committed slots only).
 // Union — never throws, so code-claimed subject teachers without advisory
 // load or assignment rows still resolve their own classes.
-export async function teachableSectionIds(teacherId: string, termId?: string | null): Promise<string[]> {
+export async function teachableSectionIds(teacherId: string, termId?: string | null, schoolYearId?: string | null): Promise<string[]> {
   const [advisory, assigned, linked] = await Promise.all([
-    adviserSectionsOr404(teacherId).catch(() => [] as { id: string }[]),
+    adviserSectionsOr404(teacherId, schoolYearId).catch(() => [] as { id: string }[]),
     prisma.teacherSubjectAssignment.findMany({
       where: { teacherId, ...(termId ? { termId } : {}) },
       select: { sectionId: true },
@@ -85,74 +86,81 @@ router.get(
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
-      const sections = await adviserSectionsOr404(teacherId);
+      const sections = await adviserSectionsOr404(
+        teacherId,
+        req.termScope?.schoolYearId ?? (await scopedYearId(req))
+      );
       const termId = await resolveActiveTermId(req);
       if (!termId) {
         return res.json({ advisorySections: sections, termId: null, students: [] });
       }
 
       const sectionIds = sections.map((s) => s.id);
-      const [counts, advisees, rosterEntries] = await Promise.all([
-        prisma.studentProfile.groupBy({
-          by: ["sectionId"],
-          where: { sectionId: { in: sectionIds } },
-          _count: { _all: true },
-        }),
-        prisma.studentProfile.findMany({
-          where: { sectionId: { in: sectionIds } },
-          include: {
-            user: { select: { fullName: true } },
-            section: { select: { id: true, name: true } },
-            finalGrades: {
-              where: { termId },
-              select: {
-                computedAverage: true,
-                transmutedGrade: true,
-                subject: { select: { name: true, code: true } },
+      // One parallel fan-out: everything that needs only (sectionIds, termId)
+      // fires together — roster rows, offered subjects for the headers, and
+      // the subject-average attendance feed. Nothing here waits on anything
+      // else in this batch.
+      const [counts, advisees, rosterEntries, assignSubjects, entrySubjects, subjectAvgs] =
+        await Promise.all([
+          prisma.studentProfile.groupBy({
+            by: ["sectionId"],
+            where: { sectionId: { in: sectionIds } },
+            _count: { _all: true },
+          }),
+          prisma.studentProfile.findMany({
+            where: { sectionId: { in: sectionIds } },
+            include: {
+              user: { select: { fullName: true } },
+              section: { select: { id: true, name: true } },
+              finalGrades: {
+                where: { termId },
+                select: {
+                  computedAverage: true,
+                  transmutedGrade: true,
+                  subject: { select: { name: true, code: true } },
+                },
               },
+              attendanceRecords: { where: { termId }, select: { status: true } },
+              anecdotalRecords: {
+                where: { termId },
+                select: { confidentialityLevel: true, category: true },
+              },
+              gradeFlags: { where: { termId }, select: { status: true } },
             },
-            attendanceRecords: { where: { termId }, select: { status: true } },
-            anecdotalRecords: {
-              where: { termId },
-              select: { confidentialityLevel: true, category: true },
+            orderBy: { user: { fullName: "asc" } },
+          }),
+          // Enlisted but not yet registered: roster rows with no login account.
+          prisma.studentRoster.findMany({
+            where: { sectionId: { in: sectionIds } },
+            select: {
+              id: true,
+              lrn: true,
+              fullName: true,
+              sectionId: true,
+              section: { select: { name: true } },
             },
-            gradeFlags: { select: { status: true } },
-          },
-          orderBy: { user: { fullName: "asc" } },
-        }),
-        // Enlisted but not yet registered: roster rows with no login account.
-        prisma.studentRoster.findMany({
-          where: { sectionId: { in: sectionIds } },
-          select: {
-            id: true,
-            lrn: true,
-            fullName: true,
-            sectionId: true,
-            section: { select: { name: true } },
-          },
-          orderBy: { fullName: "asc" },
-        }),
-      ]);
-      const enrolledBySection = new Map(counts.map((c) => [c.sectionId, c._count._all]));
-      // Offered subjects for these sections + term (assignments and
-      // timetable rows): table headers come from here so subject-code
-      // columns render even before any grade is encoded.
-      const [assignSubjects, entrySubjects] = await Promise.all([
-        prisma.teacherSubjectAssignment.findMany({
-          where: { sectionId: { in: sectionIds }, termId },
-          select: { subject: { select: { name: true, code: true } } },
-          distinct: ["subjectId"],
-        }),
-        prisma.sectionTimetableEntry.findMany({
-          where: { sectionId: { in: sectionIds }, termId },
-          select: { subject: { select: { name: true, code: true } } },
-          distinct: ["subjectId"],
-        }),
-      ]);
+            orderBy: { fullName: "asc" },
+          }),
+          // Offered subjects for these sections + term (assignments and
+          // timetable rows): table headers come from here so subject-code
+          // columns render even before any grade is encoded.
+          prisma.teacherSubjectAssignment.findMany({
+            where: { sectionId: { in: sectionIds }, termId },
+            select: { subject: { select: { name: true, code: true } } },
+            distinct: ["subjectId"],
+          }),
+          prisma.sectionTimetableEntry.findMany({
+            where: { sectionId: { in: sectionIds }, termId },
+            select: { subject: { select: { name: true, code: true } } },
+            distinct: ["subjectId"],
+          }),
+          // Attendance at-risk feed — needs only (sectionIds, termId), so it
+          // runs with the roster batch instead of blocking the response build.
+          subjectAverageAttendance(sectionIds, termId),
+        ]);
       // Roster-aware attendance denominators: enlisted students without
-      // accounts count toward the section headcount too.
-      const headcounts = await sectionHeadcounts(sectionIds);
-      for (const [id, n] of headcounts) enrolledBySection.set(id, n);
+      // accounts count toward the section headcount too. The profile groupBy
+      // above is reused (no second scan).
       const registeredLrns = new Set(advisees.map((s) => s.lrn));
       const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
       const rosterIds = rosterOnly.map((r) => r.id);
@@ -160,8 +168,10 @@ router.get(
 
       // Live inputs for roster rows: finals, attendance, anecdotal tiers, and
       // raw assessment means — the same engine inputs profiles get, so risk
-      // levels respect the engine for every advisee.
-      const [rosterFinals, rosterAttendance, rosterAnecdotal, rawRows] = await Promise.all([
+      // levels respect the engine for every advisee. The roster-aware
+      // headcount rides along (profile groupBy reused, no second scan).
+      const [rosterFinals, rosterAttendance, rosterAnecdotal, rawRows, enrolledBySection] =
+        await Promise.all([
         rosterIds.length > 0
           ? prisma.finalGrade.findMany({
               where: { rosterId: { in: rosterIds }, termId },
@@ -202,6 +212,9 @@ router.get(
               },
             })
           : Promise.resolve([]),
+        // Roster-aware headcount (profile groupBy from the first batch is
+        // reused — no second scan for the same sections).
+        sectionHeadcounts(sectionIds, counts),
       ]);
 
       const finalsByRoster = new Map<string, typeof rosterFinals>();
@@ -239,6 +252,51 @@ router.get(
           (cell) => cell.sum / cell.count,
         );
 
+      // Live per-subject raw means (realtime academic feed): unweighted mean
+      // of recorded percentage scores per student per subject — the same
+      // basis as the risk engine's raw check. Reported regardless of lock /
+      // finalization status, so the advisory table updates as scores land.
+      const liveGradesByKey = new Map<string, { subjectId: string; average: number }[]>();
+      for (const [key, perSubject] of rawBySubject) {
+        const arr: { subjectId: string; average: number }[] = [];
+        for (const [subjectId, cell] of perSubject) {
+          if (cell.count > 0) {
+            arr.push({
+              subjectId,
+              average: Math.round((cell.sum / cell.count) * 10) / 10,
+            });
+          }
+        }
+        if (arr.length > 0) liveGradesByKey.set(key, arr);
+      }
+      const liveSubjectIds = [
+        ...new Set([...liveGradesByKey.values()].flatMap((a) => a.map((g) => g.subjectId))),
+      ];
+      const liveSubjectById = new Map(
+        (
+          liveSubjectIds.length > 0
+            ? await prisma.subject.findMany({
+                where: { id: { in: liveSubjectIds } },
+                select: { id: true, name: true, code: true },
+              })
+            : []
+        ).map((s) => [s.id, s]),
+      );
+      const liveGradesFor = (
+        key: string,
+      ): { subject: string; code: string; average: number }[] =>
+        (liveGradesByKey.get(key) ?? [])
+          .map((g) => {
+            const meta = liveSubjectById.get(g.subjectId);
+            if (!meta) return null;
+            return { subject: meta.name, code: meta.code, average: g.average };
+          })
+          .filter(
+            (g): g is { subject: string; code: string; average: number } =>
+              g !== null,
+          )
+          .sort((a, b) => a.subject.localeCompare(b.subject));
+
       const toActiveFlags = (flags: { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean }) => {
         const active: ("academic" | "attendance" | "behavioral")[] = [];
         if (flags.academicFlag) active.push("academic");
@@ -247,17 +305,19 @@ router.get(
         return active;
       };
 
-      // Attendance at-risk follows the per-subject present average (same
-      // definition as the advisory attendance display), never AM/PM
-      // sessions. Students with no subject-linked takes keep the engine
-      // result.
-      const subjectAvgs = await subjectAverageAttendance(sectionIds, termId);
+      // Attendance at-risk follows the general average across all subjects
+      // (mean of per-subject present / elapsed rates — same definition as
+      // the advisory attendance display), never AM/PM sessions. An entry
+      // exists whenever elapsed meetups exist, so a student with no takes
+      // scores 0% and flags — matching the display. Only when nothing
+      // elapsed (no entry) is the legacy engine result kept. subjectAvgs
+      // was fetched with the first parallel batch above.
       const withSubjectAverage = <T extends { attendanceFlag: boolean }>(
         key: string,
         flags: T,
       ): T => {
         const subjAvg = subjectAvgs.get(key);
-        if (subjAvg?.hasSubjectData) {
+        if (subjAvg) {
           flags.attendanceFlag = subjAvg.average < ATTENDANCE_RISK_CUTOFF;
         }
         return flags;
@@ -303,6 +363,7 @@ router.get(
               computedAverage: f.computedAverage,
               transmutedGrade: f.transmutedGrade,
             })),
+            liveGrades: liveGradesFor(s.userId),
           };
         }),
         // Roster-only enlistments (no login account yet) — never duplicated
@@ -346,34 +407,16 @@ router.get(
               computedAverage: f.computedAverage,
               transmutedGrade: f.transmutedGrade,
             })),
+            liveGrades: liveGradesFor(key),
           };
         }),
       ];
 
-      // Soft-delete scoping: ?archived=true lists only this adviser's
-      // archived rows, default lists only active rows. Nothing is ever
-      // deleted — restore brings the full record history back.
-      const archivedRows = await prisma.adviserArchivedStudent.findMany({
-        where: { teacherId },
-        select: { studentId: true, rosterId: true },
-      });
-      const archivedProfiles = new Set(
-        archivedRows.map((r) => r.studentId).filter((s): s is string => !!s),
-      );
-      const archivedRosters = new Set(
-        archivedRows.map((r) => r.rosterId).filter((s): s is string => !!s),
-      );
-      const isArchived = (studentId: string) =>
-        studentId.startsWith("roster:")
-          ? archivedRosters.has(studentId.slice("roster:".length))
-          : archivedProfiles.has(studentId);
-      const wantArchived = String(req.query.archived ?? "") === "true";
-
+      // No archive scoping: every advisee in the section always lists.
       res.json({
         advisorySections: sections,
         termId,
-        students: students.filter((s) => isArchived(s.studentId) === wantArchived),
-        archivedCount: archivedRows.length,
+        students,
         subjects: [...new Map(
           [...assignSubjects, ...entrySubjects].map((s) => [s.subject.name, s.subject]),
         ).values()].sort((a, b) => a.name.localeCompare(b.name)),
@@ -403,18 +446,18 @@ router.post(
     try {
       const teacherId = req.user!.id;
       const body = req.body as z.infer<typeof rosterSchema>;
-      const sections = await adviserSectionsOr404(teacherId);
+      // Enlistments are saved under the session's active School Year — and
+      // the advisership gate is scoped to that same year.
+      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      if (!yearId) {
+        throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
+      }
+      const sections = await adviserSectionsOr404(teacherId, yearId);
       const section = body.sectionId
         ? sections.find((s) => s.id === body.sectionId)
         : sections[0];
       if (!section) {
         throw new AppError(404, "SECTION_NOT_FOUND", "Section is not in your advisory");
-      }
-
-      // Enlistments are saved under the session's active School Year.
-      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
-      if (!yearId) {
-        throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
       }
       const activeYear = { id: yearId };
 
@@ -486,7 +529,7 @@ router.post(
           await fanoutNotification({
             userId: teacherId,
             sourceTable: "student_roster",
-            action: "create",
+            action: "create_self",
             message: `You enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}.`,
             sourceId: entry.id,
           });
@@ -494,140 +537,6 @@ router.post(
           // Logged inside fanoutNotification/audit; never throws outward.
         }
       })();
-    } catch (e) {
-      next(e);
-    }
-  }
-);
-
-// POST /api/teacher/advisory/students/archive — soft-delete one advisee
-// from the caller's advisory list (profile or `roster:<id>` enlistment).
-// Adviser-only. Grades, attendance, anecdotal records, and referrals are
-// never touched — restore brings the full history back.
-router.post(
-  "/students/archive",
-  requireAuth,
-  requireRole(...TEACHER_ROLES),
-  validate("body", z.object({ studentId: z.string().min(1) })),
-  async (req, res, next) => {
-    try {
-      const teacherId = req.user!.id;
-      const sections = await adviserSectionsOr404(teacherId);
-      const sectionIds = new Set(sections.map((s) => s.id));
-      const studentId = String((req.body as { studentId?: string }).studentId ?? "");
-      let displayName = "";
-      let archiveData: { teacherId: string; studentId?: string; rosterId?: string };
-      if (studentId.startsWith("roster:")) {
-        const row = await prisma.studentRoster.findUnique({
-          where: { id: studentId.slice("roster:".length) },
-          select: { id: true, sectionId: true, fullName: true, lrn: true },
-        });
-        if (!row || !sectionIds.has(row.sectionId)) {
-          throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
-        }
-        displayName = `${row.fullName} (${row.lrn})`;
-        archiveData = { teacherId, rosterId: row.id };
-      } else {
-        const student = await prisma.studentProfile.findUnique({
-          where: { userId: studentId },
-          select: {
-            userId: true,
-            lrn: true,
-            user: { select: { fullName: true } },
-            section: { select: { id: true } },
-          },
-        });
-        if (!student || !student.section || !sectionIds.has(student.section.id)) {
-          throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
-        }
-        displayName = `${student.user.fullName} (${student.lrn})`;
-        archiveData = { teacherId, studentId };
-      }
-      const archived = await prisma.adviserArchivedStudent.upsert({
-        where: studentId.startsWith("roster:")
-          ? { teacherId_rosterId: { teacherId, rosterId: studentId.slice("roster:".length) } }
-          : { teacherId_studentId: { teacherId, studentId } },
-        update: {},
-        create: archiveData,
-        select: { id: true },
-      });
-      await writeAudit({
-        userId: teacherId,
-        actionType: "update",
-        sourceTable: "adviser_archived_students",
-        sourceId: archived.id,
-        reason: `Archived ${displayName} from advisory list (records kept)`,
-      });
-      await invalidateTags(["academics", "overview", "principal", "teacher"]);
-      res.status(201).json({ archived: true, id: archived.id, studentId });
-      // Realtime bell row for the filing adviser (toast suppressed
-      // client-side — the success toast already fired there).
-      void fanoutNotification({
-        userId: teacherId,
-        sourceTable: "adviser_archived_students",
-        action: "create",
-        message: `You archived ${displayName} from your advisory list. Records are kept.`,
-        sourceId: archived.id,
-      });
-    } catch (e) {
-      next(e);
-    }
-  }
-);
-
-// POST /api/teacher/advisory/students/restore — bring a soft-deleted advisee
-// back with their full record history intact. Adviser-only, own rows only.
-router.post(
-  "/students/restore",
-  requireAuth,
-  requireRole(...TEACHER_ROLES),
-  validate("body", z.object({ studentId: z.string().min(1) })),
-  async (req, res, next) => {
-    try {
-      const teacherId = req.user!.id;
-      await adviserSectionsOr404(teacherId);
-      const studentId = String((req.body as { studentId?: string }).studentId ?? "");
-      const where = studentId.startsWith("roster:")
-        ? { teacherId, rosterId: studentId.slice("roster:".length) }
-        : { teacherId, studentId };
-      const existing = await prisma.adviserArchivedStudent.findFirst({
-        where,
-        select: { id: true },
-      });
-      if (!existing) {
-        throw new AppError(404, "NOT_ARCHIVED", "Student is not archived");
-      }
-      let displayName = studentId;
-      if (studentId.startsWith("roster:")) {
-        const row = await prisma.studentRoster.findUnique({
-          where: { id: studentId.slice("roster:".length) },
-          select: { fullName: true, lrn: true },
-        });
-        if (row) displayName = `${row.fullName} (${row.lrn})`;
-      } else {
-        const profile = await prisma.studentProfile.findUnique({
-          where: { userId: studentId },
-          select: { lrn: true, user: { select: { fullName: true } } },
-        });
-        if (profile) displayName = `${profile.user.fullName} (${profile.lrn})`;
-      }
-      await prisma.adviserArchivedStudent.delete({ where: { id: existing.id } });
-      await writeAudit({
-        userId: teacherId,
-        actionType: "update",
-        sourceTable: "adviser_archived_students",
-        sourceId: existing.id,
-        reason: `Restored ${displayName} to advisory list with record history`,
-      });
-      await invalidateTags(["academics", "overview", "principal", "teacher"]);
-      res.json({ restored: true, studentId });
-      void fanoutNotification({
-        userId: teacherId,
-        sourceTable: "adviser_archived_students",
-        action: "delete",
-        message: `You restored ${displayName} to your advisory list with full history.`,
-        sourceId: studentId,
-      });
     } catch (e) {
       next(e);
     }
@@ -1074,7 +983,11 @@ router.get(
       const teacherId = req.user!.id;
       // Advisory UNION assignments UNION code-linked timetable sections, so
       // claimed subject teachers prefill their own classes too.
-      const teachable = await teachableSectionIds(teacherId);
+      const teachable = await teachableSectionIds(
+        teacherId,
+        null,
+        req.termScope?.schoolYearId ?? (await scopedYearId(req))
+      );
       if (teachable.length === 0) {
         throw new AppError(404, "NOT_ADVISER", "No advisory or teaching sections assigned");
       }
@@ -1462,31 +1375,35 @@ router.delete(
       const queryId = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
       const { sectionId } = { sectionId: bodyId ?? queryId };
       const trimmed = sectionId?.trim() || null;
+      // Year-scoped: releasing answers "Are you an adviser?" for the session
+      // year only — other years' adviserships are never touched.
+      const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
+      const yearFilter = yearId ? { schoolYearId: yearId } : {};
 
       let released: { id: string; name: string }[] = [];
       if (trimmed) {
         const owned = await prisma.section.findFirst({
-          where: { id: trimmed, adviserId: teacherId },
+          where: { id: trimmed, adviserId: teacherId, ...yearFilter },
           select: { id: true, name: true },
         });
         if (!owned) {
           throw new AppError(404, "NOT_ADVISER", "You are not the adviser of this section");
         }
         await prisma.section.updateMany({
-          where: { id: owned.id, adviserId: teacherId },
+          where: { id: owned.id, adviserId: teacherId, ...yearFilter },
           data: { adviserId: null, adviserCode: null },
         });
         released = [{ id: owned.id, name: owned.name }];
       } else {
         const owned = await prisma.section.findMany({
-          where: { adviserId: teacherId },
+          where: { adviserId: teacherId, ...yearFilter },
           select: { id: true, name: true },
         });
         if (owned.length === 0) {
           return res.json({ released: [], isAdviser: false });
         }
         await prisma.section.updateMany({
-          where: { adviserId: teacherId },
+          where: { adviserId: teacherId, ...yearFilter },
           data: { adviserId: null, adviserCode: null },
         });
         released = owned.map((s) => ({ id: s.id, name: s.name }));

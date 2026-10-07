@@ -478,9 +478,23 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
   return { kpis, needsReview, statusBreakdown, clinicStatusBreakdown, admStatusBreakdown, dailyTrend };
 }
 
-export async function fetchNurseOverview(): Promise<NurseOverviewData> {
-  const { data } = await apiClient.get<RawReferral[] | { referrals: RawReferral[] }>("/api/referrals/");
-  const list = Array.isArray(data) ? data : (data?.referrals ?? []);
+export async function fetchNurseOverview(signal?: AbortSignal): Promise<NurseOverviewData> {
+  // Dashboard aggregate view: tiles + breakdowns + trends need the full
+  // desk list, so this stays a bounded full fetch (previews slice 10
+  // client-side). Full *lists* (alerts/adm/clinic/health-records) are the
+  // server-paginated surfaces via fetchNurseAlerts with ?q=&page=&pageSize=.
+  const { data } = await apiClient.get<
+    RawReferral[] | { referrals: RawReferral[] } | { data: RawReferral[]; rows: RawReferral[] }
+  >("/api/referrals/?page=1&pageSize=100", { signal });
+  const list: RawReferral[] = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { data?: unknown })?.data)
+      ? (data as { data: RawReferral[] }).data
+      : Array.isArray((data as { rows?: unknown })?.rows)
+        ? (data as { rows: RawReferral[] }).rows
+        : Array.isArray((data as { referrals?: unknown })?.referrals)
+          ? (data as { referrals: RawReferral[] }).referrals
+          : [];
   return buildNurseOverview(list);
 }
 

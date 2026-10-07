@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "../../components/coordinator-data";
 import styles from "./case-page.module.css";
 
@@ -43,7 +44,8 @@ export function CertificationSheet({
   const [recommendation, setRecommendation] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh form every time the sheet opens for a case.
+  // Fresh form every time the sheet opens for a case (derived state during
+  // render — guarded so it only fires on open/case change, never loops).
   const openKey = open && context ? context.profileId : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -61,7 +63,9 @@ export function CertificationSheet({
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      void data;
+      if (context) markSelfNotified(context.profileId);
       void queryClient.invalidateQueries({
         queryKey: ["coordinator-certifications"],
       });
@@ -70,6 +74,9 @@ export function CertificationSheet({
       });
       void queryClient.invalidateQueries({
         queryKey: ["coordinator-referrals"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["coordinator-notifications"],
       });
       onClose();
       onCertified();
@@ -109,6 +116,7 @@ export function CertificationSheet({
     <CardModal
       open={open}
       onClose={onClose}
+      dismissable={!certifyMutation.isPending}
       title="ADM certification"
       description={
         context ? (

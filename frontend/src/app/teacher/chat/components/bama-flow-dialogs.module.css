@@ -191,10 +191,6 @@
 }
 
 /* Pre-file confirmation: the folder as it will be filed. */
-.confirmDialog {
-  max-width: 22rem;
-}
-
 .confirmFolder {
   display: flex;
   justify-content: center;

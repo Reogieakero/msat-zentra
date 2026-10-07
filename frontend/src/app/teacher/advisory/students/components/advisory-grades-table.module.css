@@ -1,0 +1,60 @@
+/* Custom thin rectangular horizontal scrollbar for the advisory grades
+   table. NOTE: the shadcn Table renders its own inner scroll container
+   ([data-slot="table-container"] with overflow-x-auto) — THAT element owns
+   the scrollbar, so every rule below targets it, not the outer wrapper.
+   Chromium renders purely from ::-webkit-scrollbar (no arrows, 5px flat
+   bar); Firefox gets the thin tinted native bar via @-moz-document. */
+.tableScroll {
+  overflow-x: hidden;
+}
+
+.tableScroll [data-slot="table-container"] {
+  scrollbar-width: auto;
+}
+
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
+}
+
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button:single-button,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button:double-button,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button:start,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button:end,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button:horizontal,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-button:vertical {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-track,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-track-piece,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-track-piece:start,
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-track-piece:end {
+  background: transparent;
+}
+
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--primary) 55%, transparent);
+  border-radius: 2px;
+  border: none;
+}
+
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--primary) 80%, transparent);
+}
+
+.tableScroll [data-slot="table-container"]::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox-only fallback: thin tinted native bar (no ::-webkit support). */
+@-moz-document url-prefix() {
+  .tableScroll [data-slot="table-container"] {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--primary) 55%, transparent) transparent;
+  }
+}

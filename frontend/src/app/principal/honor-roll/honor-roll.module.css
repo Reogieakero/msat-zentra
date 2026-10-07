@@ -17,14 +17,6 @@
   }
 }
 
-.toolbarRight {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-  flex-wrap: nowrap;
-}
-
 .rankFloat {
   position: fixed;
   right: calc(1rem + env(safe-area-inset-right, 0px));
@@ -122,7 +114,7 @@
 }
 
 .skeletonHero {
-  height: 9.5rem;
+  height: 5rem;
 }
 
 .skeletonBar {

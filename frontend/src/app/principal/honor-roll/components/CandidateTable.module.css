@@ -51,6 +51,15 @@
   white-space: nowrap;
 }
 
+.cellSub {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
 .fail {
   color: var(--destructive);
   font-weight: 700;

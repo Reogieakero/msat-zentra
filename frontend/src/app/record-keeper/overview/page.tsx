@@ -1,36 +1,38 @@
 "use client";
 
-import { OverviewHeader } from "./components/OverviewHeader";
+import { OverviewShortcuts } from "./components/OverviewShortcuts";
 import { OverviewApprovals } from "./components/OverviewApprovals";
 import { Sf10AttachFeed } from "./components/Sf10AttachFeed";
 import { FinalGradeApprovals } from "./components/FinalGradeApprovals";
-import { Sf10Coverage } from "./components/Sf10Coverage";
+import { OverviewGradeChart } from "./components/OverviewGradeChart";
 import { AccountBreakdown } from "./components/AccountBreakdown";
+import { MissingSf10Table } from "./components/MissingSf10Table";
+import { AdviserAccessCard } from "./components/AdviserAccessCard";
 import styles from "./components/overview.module.css";
 
 export default function RecordKeeperOverviewPage() {
   return (
     <section className={styles.page}>
-      <OverviewHeader />
+      <div className={styles.stack}>
+        <OverviewShortcuts />
 
-      <hr className={styles.divider} />
+        <OverviewApprovals />
 
-      <OverviewApprovals />
+        <div className={styles.duo}>
+          <Sf10AttachFeed />
+          <FinalGradeApprovals />
+        </div>
 
-      <hr className={styles.divider} />
+        <div className={styles.duo}>
+          <OverviewGradeChart />
+          <AccountBreakdown />
+        </div>
 
-      <div className={styles.row}>
-        <Sf10AttachFeed />
-        <FinalGradeApprovals />
+        <div className={styles.duo}>
+          <MissingSf10Table />
+          <AdviserAccessCard />
+        </div>
       </div>
-
-      <hr className={styles.divider} />
-
-      <Sf10Coverage />
-
-      <hr className={styles.divider} />
-
-      <AccountBreakdown />
     </section>
   );
 }

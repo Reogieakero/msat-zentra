@@ -114,7 +114,7 @@ export function TeacherOverviewRiskTable({ students }: TeacherOverviewRiskTableP
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 5 } },
+    initialState: { pagination: { pageSize: 10 } },
     state: { sorting, columnFilters },
   });
 

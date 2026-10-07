@@ -1,19 +1,12 @@
-// Backend-derived honor roll for the Principal Honor Roll & Awards page.
-// No mock data — candidates are sourced from the Principal Academics summary
-// (GET /api/academics), which computes the DepEd honor bands server-side.
+// Live-general-average honor roll for the Principal Honor Roll & Awards page.
 //
-// The backend returns the confirmed honor-roll pool (honorRollPreview) as the
-// authoritative list of students who qualify (all grades finalized, not High
-// risk, meets a DepEd tier). We join it against sections[].students[] to pull
-// the per-student detail the table needs (lrn, section, grade, subject grid).
+// Candidates come from GET /api/academics/honor-roll-live: students whose
+// LIVE general average (mean of graded live subject averages, lock-agnostic)
+// is >= 90 with no subject below 80, excluding High risk. No lock
+// requirement — work counts the moment scores are recorded.
 
-import type {
-  AcademicsMock,
-  AwardStatus,
-  DescriptorBand,
-  StudentRow,
-  SectionSummary,
-} from "../academics/academics-data";
+import { apiClient } from "@/lib/api/client";
+import type { AwardStatus, DescriptorBand } from "../academics/academics-data";
 import { descriptorBand } from "../academics/academics-data";
 
 export type { AwardStatus, DescriptorBand };
@@ -21,7 +14,8 @@ export type { AwardStatus, DescriptorBand };
 export interface CandidateSubjectGrade {
   subject: string;
   code: string;
-  transmutedGrade: number;
+  /** Live subject average (1dp) — the basis of the general average. */
+  average: number;
 }
 
 export interface HonorRollCandidate {
@@ -30,17 +24,44 @@ export interface HonorRollCandidate {
   lrn: string;
   section: string;
   gradeLevel: number;
+  /** Live general average (mean of graded live subject averages). */
   overallAverage: number;
   /** DO 15, s. 2026 descriptor band derived from the live average. */
   band: DescriptorBand;
-  /** Awarded = all subjects locked; potential = raw grades qualify. */
+  /** Awarded = meets the live rule with no High risk. */
   status: AwardStatus;
   /** Present only for potential candidates. */
   unlockedSubjects?: number;
   subjects: CandidateSubjectGrade[];
 }
 
+export interface LiveHonorSubjectDTO {
+  subject: string;
+  code: string;
+  average: number;
+}
 
+export interface LiveHonorCandidateDTO {
+  studentId: string;
+  name: string;
+  lrn: string;
+  section: string;
+  gradeLevel: number;
+  generalAverage: number;
+  lowestSubject: number;
+  subjects: LiveHonorSubjectDTO[];
+}
+
+export interface LiveHonorPayload {
+  schoolYear: string;
+  termLabel: string;
+  candidates: LiveHonorCandidateDTO[];
+}
+
+export async function fetchLiveHonorRoll(): Promise<LiveHonorPayload> {
+  const { data } = await apiClient.get<LiveHonorPayload>("/api/academics/honor-roll-live");
+  return data;
+}
 
 const SUBJECT_CODES: Record<string, string> = {
   English: "ENG",
@@ -58,77 +79,40 @@ function codeFor(subject: string): string {
   return SUBJECT_CODES[subject] ?? subject.slice(0, 4).toUpperCase();
 }
 
-function gradeLevelFromLabel(grade: string): number {
-  const match = grade.match(/\d+/);
-  return match ? Number(match[0]) : 0;
-}
-
-function toCandidate(
-  student: StudentRow,
-  section: SectionSummary,
-  status: AwardStatus,
-  unlockedSubjects?: number
-): HonorRollCandidate {
-  return {
-    studentId: student.studentId,
-    name: student.name,
-    lrn: student.lrn,
-    section: section.section,
-    gradeLevel: gradeLevelFromLabel(section.grade),
-    overallAverage: student.overallAverage,
-    band: descriptorBand(student.overallAverage),
-    status,
-    unlockedSubjects,
-    subjects: student.subjects
-      .filter((s) => s.transmutedGrade != null)
-      .map((s) => ({
-        subject: s.subject,
-        code: codeFor(s.subject),
-        transmutedGrade: s.transmutedGrade,
-      })),
-  };
-}
-
 /**
- * Build the award list from the academics summary: confirmed qualifiers only
- * (honorRollPreview → awarded, all subjects locked/finalized).
+ * Build the award list from the live honor-roll payload: qualifiers only
+ * (live general average >= 90, no subject below 80, not High risk).
+ * Sorted by general average, highest first.
  */
-export function deriveHonorRoll(summary: AcademicsMock): {
+export function deriveHonorRoll(payload: LiveHonorPayload): {
   candidates: HonorRollCandidate[];
   termLabel: string;
   schoolYear: string;
 } {
-  const byId = new Map<
-    string,
-    { student: StudentRow; section: SectionSummary }
-  >();
-
-  for (const section of summary.sections) {
-    for (const student of section.students) {
-      const confirmed = summary.honorRollPreview.find((h) => h.studentId === student.studentId);
-      if (confirmed) {
-        byId.set(student.studentId, { student, section });
-      }
-    }
-  }
-
-  const candidates = Array.from(byId.values())
-    .map(({ student, section }) => toCandidate(student, section, "awarded"))
+  const candidates = [...payload.candidates]
+    .map((c) => ({
+      studentId: c.studentId,
+      name: c.name,
+      lrn: c.lrn,
+      section: c.section,
+      gradeLevel: c.gradeLevel,
+      overallAverage: c.generalAverage,
+      band: descriptorBand(c.generalAverage),
+      status: "awarded" as AwardStatus,
+      subjects: [...c.subjects]
+        .map((s) => ({
+          subject: s.subject,
+          code: codeFor(s.subject),
+          average: s.average,
+        }))
+        .sort((a, b) => a.subject.localeCompare(b.subject)),
+    }))
     .sort((a, b) => b.overallAverage - a.overallAverage);
-
-  // Reconciliation: the backend pool is authoritative. If a pooled student
-  // isn't present in the section payload (e.g. filtered server-side), they
-  // are dropped — surface the mismatch instead of silently undercounting.
-  if (summary.honorRollPreview.length !== candidates.length) {
-    console.warn(
-      `[honor-roll] ${summary.honorRollPreview.length} pooled candidates but only ${candidates.length} joined to section data.`
-    );
-  }
 
   return {
     candidates,
-    termLabel: summary.termLabel,
-    schoolYear: summary.schoolYear,
+    termLabel: payload.termLabel,
+    schoolYear: payload.schoolYear,
   };
 }
 

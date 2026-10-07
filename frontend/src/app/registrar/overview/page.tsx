@@ -1,27 +1,36 @@
 "use client";
 
 import { OverviewShortcuts } from "./components/OverviewShortcuts";
+import { OverviewApprovals } from "./components/OverviewApprovals";
 import { Sf10AttachFeed } from "./components/Sf10AttachFeed";
-import { OverviewGradeChart } from "./components/OverviewGradeChart";
 import { FinalGradeApprovals } from "./components/FinalGradeApprovals";
-import { OverviewSectionsSubjects } from "./components/OverviewSectionsSubjects";
+import { OverviewGradeChart } from "./components/OverviewGradeChart";
+import { AccountBreakdown } from "./components/AccountBreakdown";
+import { MissingSf10Table } from "./components/MissingSf10Table";
+import { AdviserAccessCard } from "./components/AdviserAccessCard";
 import styles from "./components/overview.module.css";
 
 export default function RegistrarOverviewPage() {
   return (
     <section className={styles.page}>
-      <div className={styles.body}>
-        <aside className={styles.sidebar} aria-label="Overview sidebar">
-          <OverviewShortcuts />
-          <OverviewGradeChart />
-        </aside>
+      <div className={styles.stack}>
+        <OverviewShortcuts />
 
-        <div className={styles.main}>
+        <OverviewApprovals />
+
+        <div className={styles.duo}>
           <Sf10AttachFeed />
-          <div className={styles.duo}>
-            <FinalGradeApprovals />
-            <OverviewSectionsSubjects />
-          </div>
+          <FinalGradeApprovals />
+        </div>
+
+        <div className={styles.duo}>
+          <OverviewGradeChart />
+          <AccountBreakdown />
+        </div>
+
+        <div className={styles.duo}>
+          <MissingSf10Table />
+          <AdviserAccessCard />
         </div>
       </div>
     </section>

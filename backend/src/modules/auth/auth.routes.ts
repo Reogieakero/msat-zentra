@@ -7,7 +7,7 @@ import { signAccess, signRefresh } from "../../lib/jwt.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
-import { fanoutNotification } from "../../lib/notify.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
@@ -39,6 +39,40 @@ router.post("/register/:kind", validate("body", registerSchema), async (req, res
       data: { email, passwordHash, fullName, role, contactNumber, lrn: role === "student" ? lrn ?? null : null, status: "pending" },
     });
     res.status(201).json({ id: user.id, email: user.email, role: user.role, status: user.status });
+
+    // Registrar desk handoff (best-effort, never delays the 201): a new
+    // student sign-up notifies the grade-band owner so the Pending queue pops
+    // live. Band resolves from the official roster via claimed LRN; unknown
+    // LRNs still notify the registrar (they appear as "unknown grade" in the
+    // overview until reconciled).
+    if (role === "student") {
+      void (async () => {
+        try {
+          let gradeLevel: string | null = null;
+          if (lrn) {
+            const roster = await prisma.studentRoster.findFirst({
+              where: { lrn },
+              select: { gradeLevel: true },
+              orderBy: { schoolYearId: "desc" },
+            });
+            gradeLevel = roster?.gradeLevel ?? null;
+          }
+          const bandRole =
+            gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10"
+              ? "record_keeper"
+              : "registrar";
+          const gradeLabel = gradeLevel === "G11" ? "G11" : gradeLevel === "G12" ? "G12" : gradeLevel ?? "unknown grade";
+          await fanoutToRole(bandRole, {
+            sourceTable: "users",
+            action: "pending_signup",
+            message: `New ${gradeLabel} sign-up: ${fullName} (LRN ${lrn ?? "—"}) — awaiting approval.`,
+            sourceId: user.id,
+          });
+        } catch {
+          // Best-effort only — sign-up already succeeded.
+        }
+      })();
+    }
   } catch (e) { next(e); }
 });
 
@@ -268,6 +302,8 @@ router.post(
       // Approvals change enrollment composition — refresh cached headcounts.
       await invalidateTags([
         "registrar",
+        "registrar-accounts",
+        "registrar-overview",
         "record-keeper",
         "academics",
         "overview",
@@ -278,6 +314,27 @@ router.post(
         userId: updated.id, sourceTable: "users", action: "approve",
         message: "Your account has been approved.",
       });
+      // Own-bell receipt: the acting registrar/record keeper also gets an
+      // inbox row so their badge bumps live (their echo toast is suppressed
+      // client-side — the mutation toast already confirmed it).
+      void (async () => {
+        try {
+          const profile = target.lrn
+            ? await prisma.studentProfile.findUnique({
+                where: { lrn: target.lrn },
+                select: { gradeLevel: true },
+              })
+            : null;
+          const grade = profile?.gradeLevel ?? "unknown grade";
+          await fanoutNotification({
+            userId: req.user!.id, sourceTable: "users", action: "approve_self",
+            message: `You approved ${target.fullName} (LRN ${target.lrn ?? "—"}) — ${grade}.`,
+            sourceId: updated.id,
+          });
+        } catch {
+          // Best-effort only.
+        }
+      })();
       res.json({ id: updated.id, status: updated.status });
     } catch (e) { next(e); }
   }
@@ -382,6 +439,37 @@ router.get(
         });
       }
 
+      // Server search + pagination (strict-15 standard): ?q= filters the merged
+      // list by name/LRN/section/email, then ?page=&pageSize= slice it.
+      // Absent params return the full list (legacy clients).
+      const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const unfilteredTotal = students.length;
+      const matched = q
+        ? students.filter(
+            (s) =>
+              s.name.toLowerCase().includes(q) ||
+              s.lrn.toLowerCase().includes(q) ||
+              s.section.toLowerCase().includes(q) ||
+              (s.email ?? "").toLowerCase().includes(q),
+          )
+        : students;
+      const rawPage = req.query.page !== undefined ? Number(req.query.page) : NaN;
+      const rawSize = req.query.pageSize !== undefined ? Number(req.query.pageSize) : NaN;
+      if (q || Number.isFinite(rawPage) || Number.isFinite(rawSize)) {
+        const page = Math.max(1, Number.isFinite(rawPage) ? Math.floor(rawPage) : 1);
+        const pageSize = Math.min(Math.max(1, Number.isFinite(rawSize) ? Math.floor(rawSize) : 15), 15);
+        const total = matched.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const clamped = Math.min(page, totalPages);
+        return res.json({
+          students: matched.slice((clamped - 1) * pageSize, clamped * pageSize),
+          total,
+          unfilteredTotal,
+          page: clamped,
+          pageSize,
+        });
+      }
+
       res.json({ students });
     } catch (e) {
       next(e);
@@ -423,6 +511,29 @@ router.post(
         action: "reject",
         message: "Your account request was not approved.",
       });
+      // Own-bell receipt + cache refresh (this endpoint previously skipped
+      // invalidation): the actor's badge bumps live with no refresh.
+      await invalidateTags([
+        "registrar",
+        "registrar-accounts",
+        "registrar-overview",
+        "record-keeper",
+        "academics",
+        "overview",
+        "principal",
+        "teacher",
+      ]);
+      void (async () => {
+        try {
+          await fanoutNotification({
+            userId: req.user!.id, sourceTable: "users", action: "reject_self",
+            message: `You rejected ${target.fullName} (LRN ${target.lrn ?? "—"}).`,
+            sourceId: updated.id,
+          });
+        } catch {
+          // Best-effort only.
+        }
+      })();
       res.json({ id: updated.id, status: updated.status });
     } catch (e) {
       next(e);

@@ -7,6 +7,7 @@ import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../grade-mode-context";
 import { StudentHeatmap } from "./components/StudentHeatmap";
 import { StudentsListTable } from "./components/StudentsListTable";
+import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
 import styles from "./students.module.css";
 
 const ACTIVE_SECTION_KEY = "zentra.risk.students.activeSection";
@@ -39,6 +40,10 @@ export default function RiskBoardStudentsPage() {
 
   return (
     <section className={styles.page}>
+      <PrincipalPageHeader
+        title="At-Risk Students"
+        description="All at-risk learners across the school — intensity per section, then the full list."
+      />
       <StudentHeatmap
         heat={heat ?? null}
         loading={heatLoading}

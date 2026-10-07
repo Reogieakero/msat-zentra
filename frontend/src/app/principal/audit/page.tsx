@@ -8,6 +8,8 @@ import { AuditSkeleton } from "./components/AuditSkeleton";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth/useSession";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { toast } from "@/components/ui/sonner";
 import {
   fetchAuditEntries,
   exportAuditCsv,
@@ -16,7 +18,7 @@ import {
 } from "./audit-data";
 import type { AuditEntry } from "./audit-data";
 import styles from "./page.module.css";
-import header from "../adm/components/AdmHeader.module.css";
+import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import assign from "../academics/assign/components/section-assignments.module.css";
 
 const PAGE_SIZE = 25;
@@ -35,6 +37,9 @@ export default function PrincipalAuditPage() {
   const [actorScope, setActorScope] = React.useState<ActorScope>("all");
   const [sourceTable, setSourceTable] = React.useState<string | "all">("all");
   const [query, setQuery] = React.useState("");
+  // Debounced 300ms (matches ADM referrals) so typing doesn't fan out requests.
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const [exporting, setExporting] = React.useState(false);
   const [page, setPage] = React.useState(1);
   // Union of every source table seen across all fetched pages (trimmed,
   // exact-value deduped). The dropdown options stay stable while paging
@@ -52,7 +57,7 @@ export default function PrincipalAuditPage() {
           actorRole,
           sourceTable,
           userId: actorScope === "me" ? currentUserId : undefined,
-          q: query || undefined,
+          q: debouncedQuery || undefined,
           page,
           pageSize: PAGE_SIZE,
         },
@@ -85,7 +90,7 @@ export default function PrincipalAuditPage() {
         })
         .finally(() => setLoading(false));
     },
-    [actionType, actorRole, sourceTable, actorScope, currentUserId, query, page],
+    [actionType, actorRole, sourceTable, actorScope, currentUserId, debouncedQuery, page],
   );
 
   React.useEffect(() => {
@@ -99,13 +104,21 @@ export default function PrincipalAuditPage() {
 
   const handleRetry = () => load();
   const handleExport = () => {
+    if (exporting) return;
+    setExporting(true);
     exportAuditCsv({
       actionType,
       actorRole,
       sourceTable,
       userId: actorScope === "me" ? currentUserId : undefined,
-      q: query || undefined,
-    }).catch((err) => console.error("[/api/audit/export] failed:", err));
+      q: debouncedQuery || undefined,
+    })
+      .then(() => toast.success({ title: "Audit log exported" }))
+      .catch((err) => {
+        console.error("[/api/audit/export] failed:", err);
+        toast.error({ title: "Export failed", description: "Could not export the audit log." });
+      })
+      .finally(() => setExporting(false));
   };
 
   const hasActiveFilters =
@@ -123,13 +136,10 @@ export default function PrincipalAuditPage() {
 
   return (
     <section className={styles.page}>
-      <div className={header.hero}>
-        <h1 className={header.heroTitle}>Audit Log</h1>
-        <p className={header.heroSubtitle}>
-          School-wide record of sensitive actions. Immutable — entries cannot be
-          edited or deleted.
-        </p>
-      </div>
+      <PrincipalPageHeader
+        title="Audit Log"
+        description="School-wide record of sensitive actions. Immutable — entries cannot be edited or deleted."
+      />
 
       <section aria-label="Audit entries" className="flex min-w-0 flex-col gap-3">
         <div className={assign.card}>
@@ -173,6 +183,7 @@ export default function PrincipalAuditPage() {
                 setPage(1);
               }}
               onExport={handleExport}
+              exporting={exporting}
             />
           </div>
 

@@ -9,6 +9,7 @@ import {
 } from "@/app/teacher/schedule/components/schedule-time";
 import { MyWeekGrid, type MyWeekSlot } from "@/app/teacher/classes/components/MyWeekGrid";
 import { useTeacherOverview } from "./teacher-overview-data";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./teacher-overview-advisory.module.css";
 
@@ -30,6 +31,8 @@ interface ScheduleSectionRow {
    current-time line highlighting the ongoing class. Read-only. */
 export function AdvisorySectionSchedule() {
   const overview = useTeacherOverview();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const section = overview.data?.advisorySection ?? null;
   // Live clock (Manila) — re-evaluates the current class every 30s.
   const [nowTick, setNowTick] = React.useState(() => Date.now());
@@ -39,7 +42,7 @@ export function AdvisorySectionSchedule() {
   }, []);
 
   const schedQuery = useQuery<{ sections: ScheduleSectionRow[] }>({
-    queryKey: ["teacher-schedule"],
+    queryKey: ["teacher-schedule", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSectionRow[] }>(
         "/api/teacher/schedule",
@@ -50,7 +53,7 @@ export function AdvisorySectionSchedule() {
     retry: false,
   });
   const configQuery = useQuery<{ config: DayConfig }>({
-    queryKey: ["teacher-schedule-config"],
+    queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>(
         "/api/teacher/schedule/config",

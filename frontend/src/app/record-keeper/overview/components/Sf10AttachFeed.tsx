@@ -3,20 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { fetchRecordKeeperOverview } from "./overview-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./Sf10AttachFeed.module.css";
 
 const GRID_MIN_COLUMN = 140;
@@ -78,21 +70,21 @@ export function Sf10AttachFeed() {
   }, [router]);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section className={assign.card} aria-labelledby="overview-sf10-feed">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${styles.header} relative`}>
         <div className={styles.headerText}>
-          <CardTitle>Latest SF10 Files Attached</CardTitle>
-          <CardDescription>
-            Most recent SF10 records pulled into G7–10 student files this term.
-          </CardDescription>
+          <h2 id="overview-sf10-feed" className="text-base font-semibold">
+            Latest SF10 Files Attached
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Most recent SF10 records pulled into G11–12 student files this term.
+          </p>
         </div>
-        <CardAction>
-          <Badge variant="warning" className={styles.attachBadge}>
-            {isPending ? "…" : data?.sf10.attach ?? 0}
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className={styles.content}>
+      </div>
+      <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.skelWrap}>
             {Array.from({ length: 6 }).map((_, i) => (
@@ -102,7 +94,15 @@ export function Sf10AttachFeed() {
         ) : isError ? (
           <p className={styles.empty}>Could not load the attach feed.</p>
         ) : feed.length === 0 ? (
-          <p className={styles.empty}>No SF10 files attached yet.</p>
+          <div className={styles.emptyBlock}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <FolderOpen />
+            </span>
+            <p className={styles.emptyTitle}>No files attached yet</p>
+            <p className={styles.emptyHint}>
+              SF10 records appear here once they are pulled into student files.
+            </p>
+          </div>
         ) : (
           <div className={styles.folderGrid} ref={gridRef}>
             {visible.map((f) => (
@@ -123,12 +123,14 @@ export function Sf10AttachFeed() {
             ))}
           </div>
         )}
-      </CardContent>
-      <CardFooter className={styles.footer}>
-        <Button className={styles.footerBtn} onClick={goSf10}>
-          View all attachments
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+      {feed.length > 0 && (
+        <div className={`${styles.footer} relative`}>
+          <Button className={styles.footerBtn} onClick={goSf10}>
+            View all attachments
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

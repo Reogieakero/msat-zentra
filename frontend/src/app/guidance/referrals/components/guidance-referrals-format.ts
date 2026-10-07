@@ -498,9 +498,9 @@ export function statusVariant(
   status: string,
   type?: string,
   row?: GuidanceReferralItem
-): "warning" | "destructive" | "secondary" | "outline" | "success" {
+): "amber" | "destructive" | "secondary" | "outline" | "success" {
   if (type !== undefined && isEndorsed(type, status)) return "success";
-  if (status === "pending") return "warning";
+  if (status === "pending") return "amber";
   if (status === "escalated") return "destructive";
   // Rejected reads red everywhere, same as the nurse desk. Withdrawals
   // read neutral — red is reserved for desk rejections.

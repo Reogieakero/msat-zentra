@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
 import { useTheme } from "@/components/providers";
 import { toast } from "@/components/ui/sonner";
+import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -151,12 +152,10 @@ export default function PrincipalSettingsPage() {
 
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your profile, appearance, and account security.
-        </p>
-      </div>
+      <PrincipalPageHeader
+        title="Settings"
+        description="Your profile, appearance, and account security."
+      />
 
       <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-24">

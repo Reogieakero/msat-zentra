@@ -6,9 +6,11 @@ type Props = {
   pending: number;
 };
 
+// Primary-tinted ramp that follows the saved workspace palette
+// (RecordKeeperPaletteGate paints var(--primary) desk-wide).
 const COLORS = {
   withAccount: "var(--primary)",
-  pending: "var(--muted-foreground)",
+  pending: "color-mix(in oklch, var(--primary) 65%, var(--card))",
 };
 
 export function Donut({ withAccount, pending }: Props) {

@@ -111,6 +111,7 @@ export function AuditToolbar({
   query,
   onQueryChange,
   onExport,
+  exporting = false,
 }: {
   actionType: AuditActionType | "all";
   onActionTypeChange: (v: AuditActionType | "all") => void;
@@ -124,6 +125,7 @@ export function AuditToolbar({
   query: string;
   onQueryChange: (v: string) => void;
   onExport: () => void;
+  exporting?: boolean;
 }) {
   const scopeItems = [
     { value: "all", label: "Everyone" },
@@ -210,9 +212,9 @@ export function AuditToolbar({
         </Button>
       ) : null}
 
-      <Button size="sm" variant="outline" onClick={onExport}>
+      <Button size="sm" variant="outline" onClick={onExport} disabled={exporting} aria-busy={exporting}>
         <Download aria-hidden />
-        Export CSV
+        {exporting ? "Exporting…" : "Export CSV"}
       </Button>
     </div>
   );

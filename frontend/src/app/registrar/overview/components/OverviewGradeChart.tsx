@@ -10,15 +10,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { BarChart3 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewGradeChart.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -51,10 +46,13 @@ interface GradeRow {
   total: number;
 }
 
-function fetchBreakdown() {
+function fetchBreakdown(): Promise<{ data: BreakdownGroup[] }> {
   return apiClient
     .get<{ data: BreakdownGroup[] }>("/api/registrar/account-breakdown")
-    .then((res) => res.data.data);
+    // The breakdown endpoint has returned non-array payloads in the wild
+    // (cached/error shapes) — normalize to { data: [] } and never crash.
+    // Object shape matches AccountBreakdown: both share this query key.
+    .then((res) => ({ data: Array.isArray(res.data?.data) ? res.data.data : [] }));
 }
 
 function formatGrade(grade: string) {
@@ -68,10 +66,12 @@ export function OverviewGradeChart() {
   });
 
   const rows: GradeRow[] = React.useMemo(() => {
+    const raw = data?.data;
+    const list = Array.isArray(raw) ? raw : [];
     const map = new Map<string, GradeRow>();
     const groupTotal = (g: BreakdownGroup) =>
       g.total ?? g.withAccount + g.pending + (g.noAccount ?? 0);
-    for (const g of data ?? []) {
+    for (const g of list) {
       const noAccount = g.noAccount ?? 0;
       const total = groupTotal(g);
       const existing = map.get(g.grade);
@@ -97,23 +97,34 @@ export function OverviewGradeChart() {
   const population = rows.reduce((s, r) => s + r.total, 0);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section className={assign.card} aria-labelledby="overview-students-grade">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${styles.header} relative`}>
         <div className={styles.headerText}>
-          <CardTitle className={styles.title}>Students per Grade Level</CardTitle>
-          <CardDescription className={styles.subtitle}>
+          <h2 id="overview-students-grade" className="text-base font-semibold">Students per Grade Level</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Current advisory population per grade — class lists accumulated, not
             account status.
-          </CardDescription>
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className={styles.content}>
+      </div>
+      <div className={`${styles.content} relative`}>
         {isPending ? (
           <Skeleton className={styles.skel} />
         ) : isError ? (
           <p className={styles.empty}>Could not load grade counts.</p>
         ) : rows.length === 0 ? (
-          <p className={styles.empty}>No enrollments on record.</p>
+          <div className={styles.emptyBlock}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <BarChart3 />
+            </span>
+            <p className={styles.emptyTitle}>No enrollments yet</p>
+            <p className={styles.emptyHint}>
+              Grade-level counts appear once students are enrolled.
+            </p>
+          </div>
         ) : (
           <>
             <div className={styles.chartWrap}>
@@ -166,7 +177,7 @@ export function OverviewGradeChart() {
             </ul>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

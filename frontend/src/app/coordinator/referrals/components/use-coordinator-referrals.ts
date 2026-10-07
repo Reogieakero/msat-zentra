@@ -1,10 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import {
   fetchCoordinatorReferrals,
   fetchCaseMeetings,
@@ -146,13 +153,24 @@ function isEarlyRow(row: AdmCaseRow): boolean {
   return row.id.startsWith("referral:");
 }
 
+/* Desk-level pagination standard: full list pages = 15. */
+export const COORDINATOR_PAGE_SIZE = 15;
+
 export function useCoordinatorReferrals(): CoordinatorReferralsModel {
   const queryClient = useQueryClient();
   const now = useNowTick();
-  const [query, setQuery] = React.useState("");
-  const [debounced, setDebounced] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState("");
+  // Debounced 300ms server search (registrar precedent).
+  const debounced = useDebouncedValue(queryInput.trim(), 300);
   const [elig, setElig] = React.useState<"all" | AdmEligibility>("all");
   const [page, setPage] = React.useState(1);
+  const setQuery = React.useCallback(
+    (v: string) => {
+      setQueryInput(v);
+      setPage(1);
+    },
+    [],
+  );
   const [selected, setSelected] = React.useState<AdmCaseRow | null>(null);
   const [historyTarget, setHistoryTarget] =
     React.useState<HistoryTarget | null>(null);
@@ -236,37 +254,35 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     bookMutation.reset();
   }
 
-  React.useEffect(() => {
-    const t = setTimeout(() => {
-      setDebounced(query.trim());
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
   const referralsQuery = useQuery({
     // Eligibility is server-side (backend `eligibility` param) so total /
     // pagination stay truthful when filtering — never filter locally.
-    // Fixed 10 rows per page.
-    queryKey: ["coordinator-referrals", page, debounced, elig, 10],
+    // Strict 15 rows per page (desk standard); page turns keep previous data
+    // so they never flash skeletons.
+    queryKey: ["coordinator-referrals", page, debounced, elig, COORDINATOR_PAGE_SIZE],
     queryFn: ({ signal }) =>
       fetchCoordinatorReferrals(page, {
         q: debounced || undefined,
         eligibility: elig,
-        limit: 10,
+        limit: COORDINATOR_PAGE_SIZE,
         signal,
       }),
-    placeholderData: (prev) => prev,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
-  const rows = referralsQuery.data?.rows ?? [];
+  // Defensive: the endpoint has returned non-array payloads (cached/error
+  // shapes) in the wild — never let rows.reduce crash consumers.
+  const rows = Array.isArray(referralsQuery.data?.rows)
+    ? referralsQuery.data.rows
+    : [];
 
   // Scoped invalidations: booking / outcome touch no dashboard aggregates
   // (stages, KPIs, forms), so they refresh the list + meetings only instead
   // of refetching the heavy dashboard too.
   const invalidateReferrals = () => {
     void queryClient.invalidateQueries({ queryKey: ["coordinator-referrals"] });
+    void queryClient.invalidateQueries({ queryKey: ["coordinator-notifications"] });
   };
   const invalidateAll = () => {
     invalidateReferrals();
@@ -282,7 +298,11 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, id) => {
+      void data;
+      // Kill the echo toast; bell row still lands. Badge bumps via the
+      // ["coordinator-notifications"] invalidate below.
+      markSelfNotified(id);
       invalidateAll();
       setForwardTarget(null);
       setAdvanceTarget(null);
@@ -305,7 +325,9 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, id) => {
+      void data;
+      markSelfNotified(id);
       invalidateAll();
       setForwardTarget(null);
       setAdvanceTarget(null);
@@ -368,7 +390,12 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const newId =
+        typeof (data as { id?: unknown })?.id === "string"
+          ? (data as { id: string }).id
+          : null;
+      if (newId) markSelfNotified(newId);
       invalidateAll();
       setCreateTarget(null);
       toast.success({
@@ -496,7 +523,12 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       });
       return { meeting: data, venue: fields.venue, rescheduled: false as const };
     },
-    onSuccess: ({ venue: bookedVenue, rescheduled }) => {
+    onSuccess: ({ meeting, venue: bookedVenue, rescheduled }) => {
+      const meetingId =
+        typeof (meeting as { id?: unknown })?.id === "string"
+          ? (meeting as { id: string }).id
+          : null;
+      if (meetingId) markSelfNotified(meetingId);
       void queryClient.invalidateQueries({ queryKey: ["coordinator-meetings"] });
       invalidateReferrals();
       // A newly booked (or moved) meeting enters reminder evaluation now
@@ -550,7 +582,9 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      void data;
+      if (outcomeTarget) markSelfNotified(outcomeTarget.id);
       void queryClient.invalidateQueries({ queryKey: ["coordinator-meetings"] });
       invalidateReferrals();
       // Re-evaluate now so any other due meeting drops its card without
@@ -594,16 +628,20 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     setPage(1);
   }
 
+  // `total` = filtered pager count; tiles read the UNFILTERED globals so
+  // backend filtering never shrinks them.
   const total = referralsQuery.data?.total ?? 0;
   const totalPages = referralsQuery.data?.totalPages ?? 1;
+  // Derived clamp — never setState in an effect (lint forbids it).
   const safePage = Math.min(page, totalPages);
-  const limit = referralsQuery.data?.limit ?? 20;
+  const limit = referralsQuery.data?.limit ?? COORDINATOR_PAGE_SIZE;
   const start = total === 0 ? 0 : (safePage - 1) * limit + 1;
   const end = Math.min(safePage * limit, total);
   // Default to zeros (not undefined) so the snapshot card renders
   // deterministically on first paint instead of flashing blanks.
   const stageCounts = referralsQuery.data?.stageCounts ?? {};
-  const totalReferred = referralsQuery.data?.totalReferred ?? 0;
+  const totalReferred =
+    referralsQuery.data?.unfilteredTotal ?? referralsQuery.data?.totalReferred ?? 0;
 
   return {
     now,
@@ -623,7 +661,7 @@ export function useCoordinatorReferrals(): CoordinatorReferralsModel {
     refetchReferrals: () => {
       void referralsQuery.refetch();
     },
-    query,
+    query: queryInput,
     setQuery,
     debounced,
     elig,

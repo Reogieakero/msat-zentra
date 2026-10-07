@@ -279,9 +279,7 @@ button.roleDisabled:disabled:hover {
   color: var(--destructive);
 }
 
-.choiceDialog {
-  max-width: 26rem;
-}
+/* Width is owned by CardModal size="md" — no overlay class needed. */
 
 .choiceSummary {
   display: flex;

@@ -9,7 +9,7 @@ import { validate } from "../../middleware/validate.js";
 import { recomputeSubjectFinal } from "../../services/grading.js";
 import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import { writeAudit } from "../../lib/audit.js";
-import { fanoutNotification } from "../../lib/notify.js";
+import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 
 const router = Router();
 
@@ -117,15 +117,15 @@ router.post(
           : gc.componentType === "PERFORMANCE_TASK"
             ? "Performance Task"
             : "Exam";
+
+      res.json({ computedAverage, transmutedGrade, remarks });
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "student_grades",
-        action: "score",
+        action: "score_self",
         sourceId: assessment.id,
-        message: `Scores saved for ${assessment.title} (${categoryName}) in ${sectionName}.`,
+        message: `You saved scores for ${assessment.title} (${categoryName}) in ${sectionName}.`,
       });
-
-      res.json({ computedAverage, transmutedGrade, remarks });
     } catch (e) { next(e); }
   }
 );
@@ -155,13 +155,16 @@ router.post(
     try {
       const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
       if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
+      if (req.termScope?.termId && fg.termId !== req.termScope.termId) {
+        throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found in the active term");
+      }
       if (fg.lockStatus !== "unlocked") throw new AppError(409, "ALREADY_LOCKED", "Final already locked");
       const updated = await prisma.finalGrade.update({
         where: { id: fg.id },
         data: { lockStatus: "locked", lockedBy: req.user!.id, lockedAt: new Date() },
       });
       await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Subject teacher submitted final grade for adviser approval" });
-      await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
+      await invalidateTags(["registrar", "registrar-finals", "registrar-overview", "academics", "overview", "principal", "risk", "teacher"]);
       res.json(updated);
     } catch (e) { next(e); }
   }
@@ -182,14 +185,71 @@ router.post(
     try {
       const fg = await prisma.finalGrade.findUnique({ where: { id: String(String(req.params.id)) } });
       if (!fg) throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found");
+      if (req.termScope?.termId && fg.termId !== req.termScope.termId) {
+        throw new AppError(404, "FINAL_NOT_FOUND", "Final grade not found in the active term");
+      }
       if (fg.lockStatus !== "locked") throw new AppError(409, "NOT_LOCKED", "Final must be locked by the subject teacher before adviser approval");
       const updated = await prisma.finalGrade.update({
         where: { id: fg.id },
         data: { lockStatus: "adviser_approved", adviserApprovedBy: req.user!.id, adviserApprovedAt: new Date() },
       });
       await writeAudit({ userId: req.user!.id, actionType: "grade_lock", sourceTable: "final_grades", sourceId: fg.id, reason: "Adviser approved final grade" });
-      await invalidateTags(["registrar", "academics", "overview", "principal", "risk"]);
+      await invalidateTags(["registrar", "registrar-finals", "registrar-overview", "academics", "overview", "principal", "risk", "teacher"]);
       res.json(updated);
+
+      // Registrar desk handoff (best-effort): when this approval completes the
+      // student's term set (every final in the term is adviser_approved), the
+      // grade-band owner learns the set is viewable. Partial approvals stay
+      // silent. The 60s message-aware dedup in fanoutNotification absorbs
+      // double-fires from rapid successive approvals.
+      void (async () => {
+        try {
+          const full = await prisma.finalGrade.findUnique({
+            where: { id: fg.id },
+            select: {
+              termId: true,
+              studentId: true,
+              rosterId: true,
+              term: { select: { termNumber: true, schoolYear: { select: { name: true } } } },
+              student: {
+                select: {
+                  gradeLevel: true,
+                  lrn: true,
+                  section: { select: { name: true } },
+                  user: { select: { fullName: true } },
+                },
+              },
+              roster: { select: { gradeLevel: true, lrn: true, fullName: true, section: { select: { name: true } } } },
+            },
+          });
+          if (!full) return;
+          const gradeLevel = full.student?.gradeLevel ?? full.roster?.gradeLevel ?? null;
+          const name = full.student?.user.fullName ?? full.roster?.fullName ?? "A student";
+          const section = full.student?.section?.name ?? full.roster?.section?.name ?? "—";
+          const remaining = await prisma.finalGrade.count({
+            where: {
+              termId: full.termId,
+              ...(full.studentId ? { studentId: full.studentId } : { rosterId: full.rosterId }),
+              NOT: { lockStatus: "adviser_approved" },
+            },
+          });
+          if (remaining > 0) return;
+          const bandRole =
+            gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10"
+              ? "record_keeper"
+              : "registrar";
+          const termLabel = `${full.term.schoolYear.name.split(" ")[0]} T${full.term.termNumber}`;
+          await fanoutToRole(bandRole, {
+            sourceTable: "final_grades",
+            action: "adviser_approved",
+            message: `Finals ready: ${name} (${section}) — ${termLabel}, all subjects adviser-approved.`,
+            sourceId: fg.id,
+            excludeUserId: req.user!.id,
+          });
+        } catch {
+          // Best-effort only — approval already succeeded.
+        }
+      })();
     } catch (e) { next(e); }
   }
 );

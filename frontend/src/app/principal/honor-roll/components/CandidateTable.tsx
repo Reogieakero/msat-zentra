@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/table";
 import type { HonorRollCandidate } from "../honor-roll-data";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import shared from "../honor-roll.module.css";
 import styles from "./CandidateTable.module.css";
 
 interface Props {
@@ -38,6 +37,16 @@ interface Props {
 }
 
 const PAGE_SIZE = 10;
+
+// Descriptor band → badge color (same hue ramp as the risk tables:
+// top band green, mid bands blue/amber, lowest red).
+const BAND_VARIANT: Record<string, "green" | "blue" | "amber" | "red"> = {
+  Advancing: "green",
+  Benchmarking: "blue",
+  Connecting: "amber",
+  Developing: "red",
+  Emerging: "red",
+};
 
 /* Honor awardees as a data table in the At-Risk Advisees pattern: glow-card
    shell, title + count, search on the right, fixed-width sortable columns,
@@ -52,17 +61,8 @@ export function CandidateTable({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
-  // Stable subject column set from the union of subject codes present.
-  const subjectCols = React.useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const c of candidates) {
-      for (const s of c.subjects) {
-        if (!seen.has(s.code)) seen.set(s.code, s.subject);
-      }
-    }
-    return Array.from(seen, ([code, subject]) => ({ code, subject }));
-  }, [candidates]);
-
+  // Fixed columns only: Student, Section, General Avg, Band. No per-subject
+  // columns — the general average is the single basis of this table.
   const columns = React.useMemo<ColumnDef<HonorRollCandidate>[]>(
     () => [
       {
@@ -75,7 +75,7 @@ export function CandidateTable({
         cell: ({ row }) => (
           <div className="min-w-0">
             <p className={styles.cellMain}>{row.original.name}</p>
-            <p className={shared.mono}>{row.original.lrn}</p>
+            <p className={styles.cellSub}>{row.original.lrn}</p>
           </div>
         ),
       },
@@ -90,38 +90,14 @@ export function CandidateTable({
       {
         id: "average",
         accessorFn: (row) => row.overallAverage,
-        header: "Term Avg",
+        header: "General Avg",
         size: 110,
         minSize: 110,
         maxSize: 110,
         cell: ({ row }) => (
-          <span className={shared.mono}>{row.original.overallAverage.toFixed(1)}</span>
+          <span className={styles.cellSub}>{row.original.overallAverage.toFixed(1)}</span>
         ),
       },
-      ...subjectCols.map(
-        ({ code, subject }): ColumnDef<HonorRollCandidate> => ({
-          id: `subj-${code}`,
-          accessorFn: (row) =>
-            row.subjects.find((s) => s.code === code)?.transmutedGrade ?? null,
-          header: code,
-          size: 64,
-          minSize: 64,
-          maxSize: 64,
-          cell: ({ row }) => {
-            const g = row.original.subjects.find((s) => s.code === code);
-            if (!g) return <span title={subject}>—</span>;
-            const failing = g.transmutedGrade < 75;
-            return (
-              <span
-                title={`${subject}: ${g.transmutedGrade}`}
-                className={failing ? styles.fail : undefined}
-              >
-                {g.transmutedGrade}
-              </span>
-            );
-          },
-        })
-      ),
       {
         id: "band",
         accessorFn: (row) => row.band,
@@ -130,13 +106,13 @@ export function CandidateTable({
         minSize: 140,
         maxSize: 140,
         cell: ({ row }) => (
-          <Badge variant="secondary" className={styles.tierBadge}>
+          <Badge variant={BAND_VARIANT[row.original.band] ?? "secondary"} className={styles.tierBadge}>
             {row.original.band}
           </Badge>
         ),
       },
     ],
-    [subjectCols]
+    []
   );
 
   const table = useReactTable({
@@ -167,7 +143,7 @@ export function CandidateTable({
             <p className={styles.sectionDesc} aria-live="polite">
               {candidates.length === 0
                 ? "No awardees this term."
-                : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — average ≥ 90, no grade below 80.`}
+                : `${candidates.length} awardee${candidates.length === 1 ? "" : "s"} — general average ≥ 90, no subject below 80.`}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -210,7 +186,7 @@ export function CandidateTable({
             <Table className="w-full table-fixed" aria-label="Loading honor roll">
               <TableHeader>
                 <TableRow className="bg-muted/50 [&>th]:border-t-0">
-                  {["Student", "Section", "Term Avg", "Band"].map((h) => (
+                  {["Student", "Section", "General Avg", "Band"].map((h) => (
                     <TableHead key={h} className="h-10 whitespace-nowrap">
                       {h}
                     </TableHead>
@@ -247,8 +223,8 @@ export function CandidateTable({
             </span>
             <p className="font-medium">No awardees this term</p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Students averaging 90+ with no grade below 80 will appear here
-              once grades are finalized.
+              Students with a live general average of 90+ and no subject below 80
+              will appear here as scores are recorded.
             </p>
           </div>
         ) : (

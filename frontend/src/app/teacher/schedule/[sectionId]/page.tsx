@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   useCachedMasterTeacher,
   useTeacherOverview,
@@ -29,6 +30,8 @@ export default function TeacherSectionSchedulePage() {
   const sectionId = params.sectionId;
   const session = useSession();
   const overview = useTeacherOverview();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const cachedMaster = useCachedMasterTeacher(session?.sub);
   const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
 
@@ -37,7 +40,7 @@ export default function TeacherSectionSchedulePage() {
     isLoading: schedIsLoading,
     isError: schedIsError,
   } = useQuery<{ sections: ScheduleSection[] }>({
-    queryKey: ["teacher-schedule"],
+    queryKey: ["teacher-schedule", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSection[] }>(
         "/api/teacher/schedule",

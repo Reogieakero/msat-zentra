@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchRegistrarOverview } from "./overview-data";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewShortcuts.module.css";
 
 interface ShortcutItem {
@@ -21,6 +22,7 @@ interface ShortcutItem {
   title: string;
   count: number;
   href: string;
+  hint: string;
 }
 
 export function OverviewShortcuts() {
@@ -32,7 +34,10 @@ export function OverviewShortcuts() {
 
   if (isPending) {
     return (
-      <section className={styles.sidebar} aria-label="Approval shortcuts loading">
+      <section className={assign.card} aria-label="Approval shortcuts loading">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
         <ul className={styles.grid}>
           {Array.from({ length: 4 }).map((_, i) => (
             <li key={i}>
@@ -46,8 +51,11 @@ export function OverviewShortcuts() {
 
   if (isError) {
     return (
-      <section className={styles.sidebar} aria-label="Approval shortcuts">
-        <p className={styles.empty}>Could not load shortcuts.</p>
+      <section className={assign.card} aria-label="Approval shortcuts">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <p className={`${styles.empty} relative`}>Could not load shortcuts.</p>
       </section>
     );
   }
@@ -59,6 +67,7 @@ export function OverviewShortcuts() {
       title: "Final Grade Approvals",
       count: data?.lockedFinalsAwaiting ?? 0,
       href: "/registrar/final-grades",
+      hint: "Ready to view",
     },
     {
       key: "students",
@@ -66,6 +75,7 @@ export function OverviewShortcuts() {
       title: "Pending Students",
       count: data?.pendingStudents.length ?? 0,
       href: "/registrar/accounts",
+      hint: "Awaiting decision",
     },
     {
       key: "adviser",
@@ -73,6 +83,7 @@ export function OverviewShortcuts() {
       title: "Adviser Access",
       count: data?.pendingAdviserAccess ?? 0,
       href: "/registrar/adviser-access",
+      hint: "Requests to review",
     },
     {
       key: "sf10",
@@ -80,12 +91,16 @@ export function OverviewShortcuts() {
       title: "SF10 Records to Attach",
       count: data?.latestAttachments.length ?? 0,
       href: "/registrar/sf10",
+      hint: "Files in flight",
     },
   ];
 
   return (
-    <section className={styles.sidebar} aria-label="Approval shortcuts">
-      <nav aria-label="Approval shortcuts">
+    <section className={assign.card} aria-label="Approval shortcuts">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <nav aria-label="Approval shortcuts" className="relative w-full">
         <ul className={styles.grid}>
           {items.map((a) => {
             const Icon = a.icon;
@@ -95,7 +110,7 @@ export function OverviewShortcuts() {
               <li key={a.key}>
                 <Link
                   href={a.href}
-                  className={`${styles.item} ${active ? styles.itemActive : ""}`}
+                  className={`${styles.tile} ${active ? styles.tileActive : ""}`}
                   aria-current={active ? "page" : undefined}
                   aria-label={
                     a.count === 0
@@ -103,16 +118,19 @@ export function OverviewShortcuts() {
                       : `${a.title}: ${a.count} pending`
                   }
                 >
-                  <Icon className={styles.icon} aria-hidden="true" />
+                  <span className={styles.tileTop}>
+                    <Icon className={styles.icon} aria-hidden="true" />
+                    <span className={styles.count}>{a.count}</span>
+                  </span>
                   <span className={styles.label}>{a.title}</span>
-                  <span className={styles.badge}>{a.count}</span>
+                  <span className={styles.hint}>{a.hint}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
       </nav>
-      <p className={styles.footnote}>
+      <p className={`${styles.footnote} relative`}>
         <UserCog className={styles.footnoteIcon} aria-hidden />
         {data?.pendingAccounts ?? 0} pending account request
         {(data?.pendingAccounts ?? 0) !== 1 ? "s" : ""} across the grade band.

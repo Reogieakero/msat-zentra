@@ -239,13 +239,18 @@ export function BookSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        if (!next) {
+        // Locked while the booking is in flight — closes only on server
+        // confirmation, never early.
+        if (!next && !busy) {
           onClose();
           setError(null);
         }
       }}
     >
-      <DialogContent className={styles.dialogScrollHidden}>
+      <DialogContent
+        className={styles.dialogScrollHidden}
+        aria-busy={busy || undefined}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -396,14 +401,23 @@ export function BookSessionDialog({
               Back
             </Button>
           ) : (
-            <Button variant="destructive" className={styles.btnRed} onClick={onClose}>
+            <Button
+              variant="destructive"
+              className={styles.btnRed}
+              onClick={onClose}
+              disabled={busy}
+            >
               Cancel
             </Button>
           )}
           {isStepped && step === 1 ? (
             <Button onClick={goToInvites}>Continue</Button>
           ) : (
-            <Button onClick={save} disabled={busy}>
+            <Button
+              onClick={save}
+              disabled={busy}
+              aria-busy={busy || undefined}
+            >
               {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
               {busy ? (busyLabel ?? "Booking…") : submitLabel}
             </Button>

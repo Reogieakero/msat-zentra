@@ -37,6 +37,7 @@ export type InterventionMinAggregateOutputType = {
   outcomeNotes: string | null
   priority: string | null
   intakeNotes: string | null
+  termId: string | null
 }
 
 export type InterventionMaxAggregateOutputType = {
@@ -52,6 +53,7 @@ export type InterventionMaxAggregateOutputType = {
   outcomeNotes: string | null
   priority: string | null
   intakeNotes: string | null
+  termId: string | null
 }
 
 export type InterventionCountAggregateOutputType = {
@@ -67,6 +69,7 @@ export type InterventionCountAggregateOutputType = {
   outcomeNotes: number
   priority: number
   intakeNotes: number
+  termId: number
   _all: number
 }
 
@@ -84,6 +87,7 @@ export type InterventionMinAggregateInputType = {
   outcomeNotes?: true
   priority?: true
   intakeNotes?: true
+  termId?: true
 }
 
 export type InterventionMaxAggregateInputType = {
@@ -99,6 +103,7 @@ export type InterventionMaxAggregateInputType = {
   outcomeNotes?: true
   priority?: true
   intakeNotes?: true
+  termId?: true
 }
 
 export type InterventionCountAggregateInputType = {
@@ -114,6 +119,7 @@ export type InterventionCountAggregateInputType = {
   outcomeNotes?: true
   priority?: true
   intakeNotes?: true
+  termId?: true
   _all?: true
 }
 
@@ -202,6 +208,7 @@ export type InterventionGroupByOutputType = {
   outcomeNotes: string | null
   priority: string | null
   intakeNotes: string | null
+  termId: string
   _count: InterventionCountAggregateOutputType | null
   _min: InterventionMinAggregateOutputType | null
   _max: InterventionMaxAggregateOutputType | null
@@ -238,6 +245,8 @@ export type InterventionWhereInput = {
   outcomeNotes?: Prisma.StringNullableFilter<"Intervention"> | string | null
   priority?: Prisma.StringNullableFilter<"Intervention"> | string | null
   intakeNotes?: Prisma.StringNullableFilter<"Intervention"> | string | null
+  termId?: Prisma.StringFilter<"Intervention"> | string
+  term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
   student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
   roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   assignee?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
@@ -257,6 +266,8 @@ export type InterventionOrderByWithRelationInput = {
   outcomeNotes?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrderInput | Prisma.SortOrder
   intakeNotes?: Prisma.SortOrderInput | Prisma.SortOrder
+  termId?: Prisma.SortOrder
+  term?: Prisma.TermOrderByWithRelationInput
   student?: Prisma.StudentProfileOrderByWithRelationInput
   roster?: Prisma.StudentRosterOrderByWithRelationInput
   assignee?: Prisma.UserOrderByWithRelationInput
@@ -279,6 +290,8 @@ export type InterventionWhereUniqueInput = Prisma.AtLeast<{
   outcomeNotes?: Prisma.StringNullableFilter<"Intervention"> | string | null
   priority?: Prisma.StringNullableFilter<"Intervention"> | string | null
   intakeNotes?: Prisma.StringNullableFilter<"Intervention"> | string | null
+  termId?: Prisma.StringFilter<"Intervention"> | string
+  term?: Prisma.XOR<Prisma.TermScalarRelationFilter, Prisma.TermWhereInput>
   student?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
   roster?: Prisma.XOR<Prisma.StudentRosterNullableScalarRelationFilter, Prisma.StudentRosterWhereInput> | null
   assignee?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
@@ -298,6 +311,7 @@ export type InterventionOrderByWithAggregationInput = {
   outcomeNotes?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrderInput | Prisma.SortOrder
   intakeNotes?: Prisma.SortOrderInput | Prisma.SortOrder
+  termId?: Prisma.SortOrder
   _count?: Prisma.InterventionCountOrderByAggregateInput
   _max?: Prisma.InterventionMaxOrderByAggregateInput
   _min?: Prisma.InterventionMinOrderByAggregateInput
@@ -319,6 +333,7 @@ export type InterventionScalarWhereWithAggregatesInput = {
   outcomeNotes?: Prisma.StringNullableWithAggregatesFilter<"Intervention"> | string | null
   priority?: Prisma.StringNullableWithAggregatesFilter<"Intervention"> | string | null
   intakeNotes?: Prisma.StringNullableWithAggregatesFilter<"Intervention"> | string | null
+  termId?: Prisma.StringWithAggregatesFilter<"Intervention"> | string
 }
 
 export type InterventionCreateInput = {
@@ -331,6 +346,7 @@ export type InterventionCreateInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  term: Prisma.TermCreateNestedOneWithoutInterventionsInput
   student?: Prisma.StudentProfileCreateNestedOneWithoutInterventionsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutInterventionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedInterventionsInput
@@ -350,6 +366,7 @@ export type InterventionUncheckedCreateInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutInterventionInput
 }
 
@@ -363,6 +380,7 @@ export type InterventionUpdateInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  term?: Prisma.TermUpdateOneRequiredWithoutInterventionsNestedInput
   student?: Prisma.StudentProfileUpdateOneWithoutInterventionsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutInterventionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedInterventionsNestedInput
@@ -382,6 +400,7 @@ export type InterventionUncheckedUpdateInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutInterventionNestedInput
 }
 
@@ -398,6 +417,7 @@ export type InterventionCreateManyInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
 }
 
 export type InterventionUpdateManyMutationInput = {
@@ -425,6 +445,7 @@ export type InterventionUncheckedUpdateManyInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InterventionListRelationFilter = {
@@ -455,6 +476,7 @@ export type InterventionCountOrderByAggregateInput = {
   outcomeNotes?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   intakeNotes?: Prisma.SortOrder
+  termId?: Prisma.SortOrder
 }
 
 export type InterventionMaxOrderByAggregateInput = {
@@ -470,6 +492,7 @@ export type InterventionMaxOrderByAggregateInput = {
   outcomeNotes?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   intakeNotes?: Prisma.SortOrder
+  termId?: Prisma.SortOrder
 }
 
 export type InterventionMinOrderByAggregateInput = {
@@ -485,6 +508,7 @@ export type InterventionMinOrderByAggregateInput = {
   outcomeNotes?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   intakeNotes?: Prisma.SortOrder
+  termId?: Prisma.SortOrder
 }
 
 export type InterventionCreateNestedManyWithoutAssigneeInput = {
@@ -571,6 +595,48 @@ export type InterventionUncheckedUpdateManyWithoutStudentNestedInput = {
   deleteMany?: Prisma.InterventionScalarWhereInput | Prisma.InterventionScalarWhereInput[]
 }
 
+export type InterventionCreateNestedManyWithoutTermInput = {
+  create?: Prisma.XOR<Prisma.InterventionCreateWithoutTermInput, Prisma.InterventionUncheckedCreateWithoutTermInput> | Prisma.InterventionCreateWithoutTermInput[] | Prisma.InterventionUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.InterventionCreateOrConnectWithoutTermInput | Prisma.InterventionCreateOrConnectWithoutTermInput[]
+  createMany?: Prisma.InterventionCreateManyTermInputEnvelope
+  connect?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+}
+
+export type InterventionUncheckedCreateNestedManyWithoutTermInput = {
+  create?: Prisma.XOR<Prisma.InterventionCreateWithoutTermInput, Prisma.InterventionUncheckedCreateWithoutTermInput> | Prisma.InterventionCreateWithoutTermInput[] | Prisma.InterventionUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.InterventionCreateOrConnectWithoutTermInput | Prisma.InterventionCreateOrConnectWithoutTermInput[]
+  createMany?: Prisma.InterventionCreateManyTermInputEnvelope
+  connect?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+}
+
+export type InterventionUpdateManyWithoutTermNestedInput = {
+  create?: Prisma.XOR<Prisma.InterventionCreateWithoutTermInput, Prisma.InterventionUncheckedCreateWithoutTermInput> | Prisma.InterventionCreateWithoutTermInput[] | Prisma.InterventionUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.InterventionCreateOrConnectWithoutTermInput | Prisma.InterventionCreateOrConnectWithoutTermInput[]
+  upsert?: Prisma.InterventionUpsertWithWhereUniqueWithoutTermInput | Prisma.InterventionUpsertWithWhereUniqueWithoutTermInput[]
+  createMany?: Prisma.InterventionCreateManyTermInputEnvelope
+  set?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  disconnect?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  delete?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  connect?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  update?: Prisma.InterventionUpdateWithWhereUniqueWithoutTermInput | Prisma.InterventionUpdateWithWhereUniqueWithoutTermInput[]
+  updateMany?: Prisma.InterventionUpdateManyWithWhereWithoutTermInput | Prisma.InterventionUpdateManyWithWhereWithoutTermInput[]
+  deleteMany?: Prisma.InterventionScalarWhereInput | Prisma.InterventionScalarWhereInput[]
+}
+
+export type InterventionUncheckedUpdateManyWithoutTermNestedInput = {
+  create?: Prisma.XOR<Prisma.InterventionCreateWithoutTermInput, Prisma.InterventionUncheckedCreateWithoutTermInput> | Prisma.InterventionCreateWithoutTermInput[] | Prisma.InterventionUncheckedCreateWithoutTermInput[]
+  connectOrCreate?: Prisma.InterventionCreateOrConnectWithoutTermInput | Prisma.InterventionCreateOrConnectWithoutTermInput[]
+  upsert?: Prisma.InterventionUpsertWithWhereUniqueWithoutTermInput | Prisma.InterventionUpsertWithWhereUniqueWithoutTermInput[]
+  createMany?: Prisma.InterventionCreateManyTermInputEnvelope
+  set?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  disconnect?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  delete?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  connect?: Prisma.InterventionWhereUniqueInput | Prisma.InterventionWhereUniqueInput[]
+  update?: Prisma.InterventionUpdateWithWhereUniqueWithoutTermInput | Prisma.InterventionUpdateWithWhereUniqueWithoutTermInput[]
+  updateMany?: Prisma.InterventionUpdateManyWithWhereWithoutTermInput | Prisma.InterventionUpdateManyWithWhereWithoutTermInput[]
+  deleteMany?: Prisma.InterventionScalarWhereInput | Prisma.InterventionScalarWhereInput[]
+}
+
 export type InterventionCreateNestedManyWithoutRosterInput = {
   create?: Prisma.XOR<Prisma.InterventionCreateWithoutRosterInput, Prisma.InterventionUncheckedCreateWithoutRosterInput> | Prisma.InterventionCreateWithoutRosterInput[] | Prisma.InterventionUncheckedCreateWithoutRosterInput[]
   connectOrCreate?: Prisma.InterventionCreateOrConnectWithoutRosterInput | Prisma.InterventionCreateOrConnectWithoutRosterInput[]
@@ -647,6 +713,7 @@ export type InterventionCreateWithoutAssigneeInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  term: Prisma.TermCreateNestedOneWithoutInterventionsInput
   student?: Prisma.StudentProfileCreateNestedOneWithoutInterventionsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutInterventionsInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutInterventionInput
@@ -664,6 +731,7 @@ export type InterventionUncheckedCreateWithoutAssigneeInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutInterventionInput
 }
 
@@ -709,6 +777,7 @@ export type InterventionScalarWhereInput = {
   outcomeNotes?: Prisma.StringNullableFilter<"Intervention"> | string | null
   priority?: Prisma.StringNullableFilter<"Intervention"> | string | null
   intakeNotes?: Prisma.StringNullableFilter<"Intervention"> | string | null
+  termId?: Prisma.StringFilter<"Intervention"> | string
 }
 
 export type InterventionCreateWithoutStudentInput = {
@@ -721,6 +790,7 @@ export type InterventionCreateWithoutStudentInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  term: Prisma.TermCreateNestedOneWithoutInterventionsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutInterventionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedInterventionsInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutInterventionInput
@@ -738,6 +808,7 @@ export type InterventionUncheckedCreateWithoutStudentInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutInterventionInput
 }
 
@@ -767,6 +838,64 @@ export type InterventionUpdateManyWithWhereWithoutStudentInput = {
   data: Prisma.XOR<Prisma.InterventionUpdateManyMutationInput, Prisma.InterventionUncheckedUpdateManyWithoutStudentInput>
 }
 
+export type InterventionCreateWithoutTermInput = {
+  id?: string
+  riskLevelAtFlag: $Enums.RiskLevel
+  recommendedAction: string
+  assignedAt?: Date | string | null
+  approvalStatus?: $Enums.ApprovalStatus
+  outcomeStatus?: $Enums.OutcomeStatus
+  outcomeNotes?: string | null
+  priority?: string | null
+  intakeNotes?: string | null
+  student?: Prisma.StudentProfileCreateNestedOneWithoutInterventionsInput
+  roster?: Prisma.StudentRosterCreateNestedOneWithoutInterventionsInput
+  assignee?: Prisma.UserCreateNestedOneWithoutAssignedInterventionsInput
+  counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutInterventionInput
+}
+
+export type InterventionUncheckedCreateWithoutTermInput = {
+  id?: string
+  studentId?: string | null
+  rosterId?: string | null
+  riskLevelAtFlag: $Enums.RiskLevel
+  recommendedAction: string
+  assignedTo?: string | null
+  assignedAt?: Date | string | null
+  approvalStatus?: $Enums.ApprovalStatus
+  outcomeStatus?: $Enums.OutcomeStatus
+  outcomeNotes?: string | null
+  priority?: string | null
+  intakeNotes?: string | null
+  counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutInterventionInput
+}
+
+export type InterventionCreateOrConnectWithoutTermInput = {
+  where: Prisma.InterventionWhereUniqueInput
+  create: Prisma.XOR<Prisma.InterventionCreateWithoutTermInput, Prisma.InterventionUncheckedCreateWithoutTermInput>
+}
+
+export type InterventionCreateManyTermInputEnvelope = {
+  data: Prisma.InterventionCreateManyTermInput | Prisma.InterventionCreateManyTermInput[]
+  skipDuplicates?: boolean
+}
+
+export type InterventionUpsertWithWhereUniqueWithoutTermInput = {
+  where: Prisma.InterventionWhereUniqueInput
+  update: Prisma.XOR<Prisma.InterventionUpdateWithoutTermInput, Prisma.InterventionUncheckedUpdateWithoutTermInput>
+  create: Prisma.XOR<Prisma.InterventionCreateWithoutTermInput, Prisma.InterventionUncheckedCreateWithoutTermInput>
+}
+
+export type InterventionUpdateWithWhereUniqueWithoutTermInput = {
+  where: Prisma.InterventionWhereUniqueInput
+  data: Prisma.XOR<Prisma.InterventionUpdateWithoutTermInput, Prisma.InterventionUncheckedUpdateWithoutTermInput>
+}
+
+export type InterventionUpdateManyWithWhereWithoutTermInput = {
+  where: Prisma.InterventionScalarWhereInput
+  data: Prisma.XOR<Prisma.InterventionUpdateManyMutationInput, Prisma.InterventionUncheckedUpdateManyWithoutTermInput>
+}
+
 export type InterventionCreateWithoutRosterInput = {
   id?: string
   riskLevelAtFlag: $Enums.RiskLevel
@@ -777,6 +906,7 @@ export type InterventionCreateWithoutRosterInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  term: Prisma.TermCreateNestedOneWithoutInterventionsInput
   student?: Prisma.StudentProfileCreateNestedOneWithoutInterventionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedInterventionsInput
   counselingSessions?: Prisma.CounselingSessionCreateNestedManyWithoutInterventionInput
@@ -794,6 +924,7 @@ export type InterventionUncheckedCreateWithoutRosterInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
   counselingSessions?: Prisma.CounselingSessionUncheckedCreateNestedManyWithoutInterventionInput
 }
 
@@ -833,6 +964,7 @@ export type InterventionCreateWithoutCounselingSessionsInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  term: Prisma.TermCreateNestedOneWithoutInterventionsInput
   student?: Prisma.StudentProfileCreateNestedOneWithoutInterventionsInput
   roster?: Prisma.StudentRosterCreateNestedOneWithoutInterventionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedInterventionsInput
@@ -851,6 +983,7 @@ export type InterventionUncheckedCreateWithoutCounselingSessionsInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
 }
 
 export type InterventionCreateOrConnectWithoutCounselingSessionsInput = {
@@ -879,6 +1012,7 @@ export type InterventionUpdateWithoutCounselingSessionsInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  term?: Prisma.TermUpdateOneRequiredWithoutInterventionsNestedInput
   student?: Prisma.StudentProfileUpdateOneWithoutInterventionsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutInterventionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedInterventionsNestedInput
@@ -897,6 +1031,7 @@ export type InterventionUncheckedUpdateWithoutCounselingSessionsInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InterventionCreateManyAssigneeInput = {
@@ -911,6 +1046,7 @@ export type InterventionCreateManyAssigneeInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
 }
 
 export type InterventionUpdateWithoutAssigneeInput = {
@@ -923,6 +1059,7 @@ export type InterventionUpdateWithoutAssigneeInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  term?: Prisma.TermUpdateOneRequiredWithoutInterventionsNestedInput
   student?: Prisma.StudentProfileUpdateOneWithoutInterventionsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutInterventionsNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutInterventionNestedInput
@@ -940,6 +1077,7 @@ export type InterventionUncheckedUpdateWithoutAssigneeInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutInterventionNestedInput
 }
 
@@ -955,6 +1093,7 @@ export type InterventionUncheckedUpdateManyWithoutAssigneeInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type InterventionCreateManyStudentInput = {
@@ -969,6 +1108,7 @@ export type InterventionCreateManyStudentInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
 }
 
 export type InterventionUpdateWithoutStudentInput = {
@@ -981,6 +1121,7 @@ export type InterventionUpdateWithoutStudentInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  term?: Prisma.TermUpdateOneRequiredWithoutInterventionsNestedInput
   roster?: Prisma.StudentRosterUpdateOneWithoutInterventionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedInterventionsNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutInterventionNestedInput
@@ -998,11 +1139,75 @@ export type InterventionUncheckedUpdateWithoutStudentInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutInterventionNestedInput
 }
 
 export type InterventionUncheckedUpdateManyWithoutStudentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevelAtFlag?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  recommendedAction?: Prisma.StringFieldUpdateOperationsInput | string
+  assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvalStatus?: Prisma.EnumApprovalStatusFieldUpdateOperationsInput | $Enums.ApprovalStatus
+  outcomeStatus?: Prisma.EnumOutcomeStatusFieldUpdateOperationsInput | $Enums.OutcomeStatus
+  outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type InterventionCreateManyTermInput = {
+  id?: string
+  studentId?: string | null
+  rosterId?: string | null
+  riskLevelAtFlag: $Enums.RiskLevel
+  recommendedAction: string
+  assignedTo?: string | null
+  assignedAt?: Date | string | null
+  approvalStatus?: $Enums.ApprovalStatus
+  outcomeStatus?: $Enums.OutcomeStatus
+  outcomeNotes?: string | null
+  priority?: string | null
+  intakeNotes?: string | null
+}
+
+export type InterventionUpdateWithoutTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  riskLevelAtFlag?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  recommendedAction?: Prisma.StringFieldUpdateOperationsInput | string
+  assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvalStatus?: Prisma.EnumApprovalStatusFieldUpdateOperationsInput | $Enums.ApprovalStatus
+  outcomeStatus?: Prisma.EnumOutcomeStatusFieldUpdateOperationsInput | $Enums.OutcomeStatus
+  outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  student?: Prisma.StudentProfileUpdateOneWithoutInterventionsNestedInput
+  roster?: Prisma.StudentRosterUpdateOneWithoutInterventionsNestedInput
+  assignee?: Prisma.UserUpdateOneWithoutAssignedInterventionsNestedInput
+  counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutInterventionNestedInput
+}
+
+export type InterventionUncheckedUpdateWithoutTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riskLevelAtFlag?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
+  recommendedAction?: Prisma.StringFieldUpdateOperationsInput | string
+  assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvalStatus?: Prisma.EnumApprovalStatusFieldUpdateOperationsInput | $Enums.ApprovalStatus
+  outcomeStatus?: Prisma.EnumOutcomeStatusFieldUpdateOperationsInput | $Enums.OutcomeStatus
+  outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutInterventionNestedInput
+}
+
+export type InterventionUncheckedUpdateManyWithoutTermInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  studentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rosterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riskLevelAtFlag?: Prisma.EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
   recommendedAction?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1027,6 +1232,7 @@ export type InterventionCreateManyRosterInput = {
   outcomeNotes?: string | null
   priority?: string | null
   intakeNotes?: string | null
+  termId: string
 }
 
 export type InterventionUpdateWithoutRosterInput = {
@@ -1039,6 +1245,7 @@ export type InterventionUpdateWithoutRosterInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  term?: Prisma.TermUpdateOneRequiredWithoutInterventionsNestedInput
   student?: Prisma.StudentProfileUpdateOneWithoutInterventionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedInterventionsNestedInput
   counselingSessions?: Prisma.CounselingSessionUpdateManyWithoutInterventionNestedInput
@@ -1056,6 +1263,7 @@ export type InterventionUncheckedUpdateWithoutRosterInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
   counselingSessions?: Prisma.CounselingSessionUncheckedUpdateManyWithoutInterventionNestedInput
 }
 
@@ -1071,6 +1279,7 @@ export type InterventionUncheckedUpdateManyWithoutRosterInput = {
   outcomeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   intakeNotes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -1117,6 +1326,8 @@ export type InterventionSelect<ExtArgs extends runtime.Types.Extensions.Internal
   outcomeNotes?: boolean
   priority?: boolean
   intakeNotes?: boolean
+  termId?: boolean
+  term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   student?: boolean | Prisma.Intervention$studentArgs<ExtArgs>
   roster?: boolean | Prisma.Intervention$rosterArgs<ExtArgs>
   assignee?: boolean | Prisma.Intervention$assigneeArgs<ExtArgs>
@@ -1137,6 +1348,8 @@ export type InterventionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   outcomeNotes?: boolean
   priority?: boolean
   intakeNotes?: boolean
+  termId?: boolean
+  term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   student?: boolean | Prisma.Intervention$studentArgs<ExtArgs>
   roster?: boolean | Prisma.Intervention$rosterArgs<ExtArgs>
   assignee?: boolean | Prisma.Intervention$assigneeArgs<ExtArgs>
@@ -1155,6 +1368,8 @@ export type InterventionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   outcomeNotes?: boolean
   priority?: boolean
   intakeNotes?: boolean
+  termId?: boolean
+  term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   student?: boolean | Prisma.Intervention$studentArgs<ExtArgs>
   roster?: boolean | Prisma.Intervention$rosterArgs<ExtArgs>
   assignee?: boolean | Prisma.Intervention$assigneeArgs<ExtArgs>
@@ -1173,10 +1388,12 @@ export type InterventionSelectScalar = {
   outcomeNotes?: boolean
   priority?: boolean
   intakeNotes?: boolean
+  termId?: boolean
 }
 
-export type InterventionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "riskLevelAtFlag" | "recommendedAction" | "assignedTo" | "assignedAt" | "approvalStatus" | "outcomeStatus" | "outcomeNotes" | "priority" | "intakeNotes", ExtArgs["result"]["intervention"]>
+export type InterventionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studentId" | "rosterId" | "riskLevelAtFlag" | "recommendedAction" | "assignedTo" | "assignedAt" | "approvalStatus" | "outcomeStatus" | "outcomeNotes" | "priority" | "intakeNotes" | "termId", ExtArgs["result"]["intervention"]>
 export type InterventionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   student?: boolean | Prisma.Intervention$studentArgs<ExtArgs>
   roster?: boolean | Prisma.Intervention$rosterArgs<ExtArgs>
   assignee?: boolean | Prisma.Intervention$assigneeArgs<ExtArgs>
@@ -1184,11 +1401,13 @@ export type InterventionInclude<ExtArgs extends runtime.Types.Extensions.Interna
   _count?: boolean | Prisma.InterventionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type InterventionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   student?: boolean | Prisma.Intervention$studentArgs<ExtArgs>
   roster?: boolean | Prisma.Intervention$rosterArgs<ExtArgs>
   assignee?: boolean | Prisma.Intervention$assigneeArgs<ExtArgs>
 }
 export type InterventionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  term?: boolean | Prisma.TermDefaultArgs<ExtArgs>
   student?: boolean | Prisma.Intervention$studentArgs<ExtArgs>
   roster?: boolean | Prisma.Intervention$rosterArgs<ExtArgs>
   assignee?: boolean | Prisma.Intervention$assigneeArgs<ExtArgs>
@@ -1197,6 +1416,7 @@ export type InterventionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types
 export type $InterventionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Intervention"
   objects: {
+    term: Prisma.$TermPayload<ExtArgs>
     student: Prisma.$StudentProfilePayload<ExtArgs> | null
     roster: Prisma.$StudentRosterPayload<ExtArgs> | null
     assignee: Prisma.$UserPayload<ExtArgs> | null
@@ -1215,6 +1435,7 @@ export type $InterventionPayload<ExtArgs extends runtime.Types.Extensions.Intern
     outcomeNotes: string | null
     priority: string | null
     intakeNotes: string | null
+    termId: string
   }, ExtArgs["result"]["intervention"]>
   composites: {}
 }
@@ -1609,6 +1830,7 @@ readonly fields: InterventionFieldRefs;
  */
 export interface Prisma__InterventionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  term<T extends Prisma.TermDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TermDefaultArgs<ExtArgs>>): Prisma.Prisma__TermClient<runtime.Types.Result.GetResult<Prisma.$TermPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   student<T extends Prisma.Intervention$studentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Intervention$studentArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   roster<T extends Prisma.Intervention$rosterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Intervention$rosterArgs<ExtArgs>>): Prisma.Prisma__StudentRosterClient<runtime.Types.Result.GetResult<Prisma.$StudentRosterPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   assignee<T extends Prisma.Intervention$assigneeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Intervention$assigneeArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -1654,6 +1876,7 @@ export interface InterventionFieldRefs {
   readonly outcomeNotes: Prisma.FieldRef<"Intervention", 'String'>
   readonly priority: Prisma.FieldRef<"Intervention", 'String'>
   readonly intakeNotes: Prisma.FieldRef<"Intervention", 'String'>
+  readonly termId: Prisma.FieldRef<"Intervention", 'String'>
 }
     
 

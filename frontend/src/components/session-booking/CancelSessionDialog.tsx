@@ -68,13 +68,17 @@ export function CancelSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        if (!next) {
+        // Locked while the cancel is in flight.
+        if (!next && !busy) {
           onClose();
           setError(null);
         }
       }}
     >
-      <DialogContent className={styles.dialogScrollHidden}>
+      <DialogContent
+        className={styles.dialogScrollHidden}
+        aria-busy={busy || undefined}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -108,6 +112,7 @@ export function CancelSessionDialog({
               onSubmit(reason.trim() ? reason.trim() : undefined);
             }}
             disabled={busy}
+            aria-busy={busy || undefined}
           >
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
             {busy ? "Cancelling…" : submitLabel}

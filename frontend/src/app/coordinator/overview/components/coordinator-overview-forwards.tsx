@@ -45,7 +45,8 @@ interface CoordinatorOverviewForwardsProps {
   onHistory: (target: HistoryTarget) => void;
 }
 
-const PAGE_SIZE = 5;
+/* Overview preview pager — matches the referrals list size (15). */
+const PAGE_SIZE = 15;
 
 function buildInterpretation(rows: AdmCaseRow[], now: number): string {
   if (rows.length === 0) {
@@ -79,8 +80,9 @@ export function CoordinatorOverviewForwards({
   onRetry,
   onHistory,
 }: CoordinatorOverviewForwardsProps) {
-  // Client-side pagination, 5 rows per page. The query fetches the full
-  // consultation queue (wide limit) so paging never needs a round-trip.
+  // Client-side preview pagination at the list size. The query fetches the
+  // consultation queue preview (same fetcher + backend order as the list)
+  // so paging never needs a round-trip.
   const [page, setPage] = React.useState(1);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);

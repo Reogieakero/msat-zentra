@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 import {
   advisoryRosterKey,
   fetchAdvisoryRoster,
@@ -141,6 +142,9 @@ export function useAnecdotalFlow({
   const progressTimer = useRef<number | null>(null);
   const progressValue = useRef(0);
 
+  // Post-mount store hydration — reading localStorage during render would
+  // hydrate different HTML than the server sent.
+  /* eslint-disable react-hooks/set-state-in-effect -- client-only store hydration */
   useEffect(() => {
     setFlows(loadFlowStore());
     return () => {
@@ -183,7 +187,10 @@ export function useAnecdotalFlow({
     });
   }
 
-  // Restore filing progress when the active chat changes.
+  // Restore filing progress when the active chat changes. The snapshot
+  // restore is inherently effect-driven (it reacts to chat switches, not
+  // render inputs).
+  /* eslint-disable react-hooks/set-state-in-effect -- chat-switch snapshot restore + progress persistence */
   useEffect(() => {
     if (!hydrated) return;
     const snap = activeId ? flows[activeId] : undefined;
@@ -207,11 +214,10 @@ export function useAnecdotalFlow({
     setAskedTier(snap.askedTier);
     setAskedDatetime(snap.askedDatetime);
     setPreviewShown(snap.previewShown);
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, hydrated]);
 
-  // Persist filing progress.
+  // Persist filing progress (covered by the block disable above).
   useEffect(() => {
     if (!hydrated || !activeId || active?.type !== "anecdotal") return;
     const snap = {
@@ -224,11 +230,13 @@ export function useAnecdotalFlow({
       saveFlowStore(next);
       return next;
     });
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
   }, [hydrated, activeId, active?.type, studentId, classKey, category, tier, observationDate, observationTime, incident, location, notes, classPerf, attendance, textQuestion, askedCategory, askedTier, askedDatetime, previewShown]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const optionsQuery = useQuery({
-    queryKey: ["grade-flags", "options"],
+    queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchAnecdotalOptions,
   });
   // Advisory-only picker: when the login teacher advises sections, the
@@ -237,7 +245,7 @@ export function useAnecdotalFlow({
   // so the flow still works for subject teachers.
   const session = useSession();
   const advisoryQuery = useQuery({
-    queryKey: advisoryRosterKey(session?.sub ?? null),
+    queryKey: advisoryRosterKey(session?.sub ?? null, termKey),
     queryFn: fetchAdvisoryRoster,
     enabled: !!session?.sub,
     retry: false,
@@ -439,7 +447,6 @@ export function useAnecdotalFlow({
     // The incident answer must live in this conversation's messages —
     // never leak the next step into a freshly switched thread.
     if (incident === "" || !active.messages.some((m) => m.from === "user" && m.text === incident)) return;
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     pushToActive([
       { id: nextMessageId(), from: "assistant", text: TEXT_QUESTION_LABELS[textQuestion], at: Date.now() },
     ]);

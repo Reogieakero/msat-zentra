@@ -281,10 +281,11 @@ export function AdmReviewDialog({
 
   return (
     <>
-      <Dialog open onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <Dialog open onOpenChange={(isOpen) => { if (!isOpen && !acting && !booking) onClose(); }}>
         <DialogContent
           className={styles.dialogScrollHidden}
           style={{ maxWidth: "36rem", maxHeight: "90vh", overflowY: "auto" }}
+          aria-busy={acting || booking || undefined}
         >
           <DialogHeader>
             <DialogTitle>Review ADM case</DialogTitle>
@@ -381,13 +382,19 @@ export function AdmReviewDialog({
               className={styles.btnRed}
               onClick={askReject}
               disabled={acting || booking}
+              aria-busy={acting || undefined}
             >
               {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              Reject
+              {acting ? "Rejecting…" : "Reject"}
             </Button>
-            <Button variant="outline" onClick={askBook} disabled={acting || booking}>
+            <Button
+              variant="outline"
+              onClick={askBook}
+              disabled={acting || booking}
+              aria-busy={booking || undefined}
+            >
               {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              Book session
+              {booking ? "Booking…" : "Book session"}
             </Button>
             <Button onClick={askCreate} disabled={acting || booking}>
               Create referral
@@ -400,10 +407,13 @@ export function AdmReviewDialog({
         <Dialog
           open
           onOpenChange={(isOpen) => {
-            if (!isOpen) setConfirmFor(null);
+            if (!isOpen && !acting && !booking) setConfirmFor(null);
           }}
         >
-          <DialogContent className={styles.dialogScrollHidden}>
+          <DialogContent
+            className={styles.dialogScrollHidden}
+            aria-busy={acting || booking || undefined}
+          >
             <DialogHeader>
               <DialogTitle>
                 {confirmFor === "book"
@@ -432,9 +442,13 @@ export function AdmReviewDialog({
                 Cancel
               </Button>
               {confirmFor === "book" ? (
-                <Button onClick={() => void bookSessionOnly()} disabled={booking}>
+                <Button
+                  onClick={() => void bookSessionOnly()}
+                  disabled={booking}
+                  aria-busy={booking || undefined}
+                >
                   {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  Yes, book
+                  {booking ? "Booking…" : "Yes, book"}
                 </Button>
               ) : confirmFor === "reject" ? (
                 <Button
@@ -442,9 +456,10 @@ export function AdmReviewDialog({
                   className={styles.btnRed}
                   onClick={() => void decideReject()}
                   disabled={acting}
+                  aria-busy={acting || undefined}
                 >
                   {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  Yes, reject
+                  {acting ? "Rejecting…" : "Yes, reject"}
                 </Button>
               ) : (
                 <Button onClick={goToReferralForm}>

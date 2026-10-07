@@ -2,44 +2,75 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { NurseAlertsTable } from "../components/NurseAlertsTable";
 import { NurseReferralsSkeleton } from "../components/NurseReferralsSkeleton";
 import { NurseRefreshBadge } from "../../components/nurse-refresh-badge";
-import { fetchNurseAlerts } from "../../alerts/components/nurse-alerts-data";
+import {
+  fetchNurseAlerts,
+  type NurseAlertsPage,
+} from "../../alerts/components/nurse-alerts-data";
+import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "../nurse-referrals-page.module.css";
+
+const NURSE_CLINIC_PAGE_SIZE = 15;
 
 /**
  * Clinic Matters — every clinic matter sent to the school nurse, newest
  * first. Locked to the Clinic type so no case-type filter is needed.
+ * Server track-filtered (?track=clinic) + server-paginated (15/page,
+ * previous page kept so turns never flash skeletons).
  *
- * Deep-links from the alerts table (?highlight=<id>) scroll to and
- * highlight the case on arrival.
+ * Deep-links from the bell (?highlight=<id>) serve the case's own page
+ * (?highlight=) and scroll to it; the first pager touch takes over with
+ * plain ?track=&page=. Derived — no setState in effects.
  */
 function NurseClinicReferralsView() {
   const params = useSearchParams();
   const highlightId = params.get("highlight");
-  const queryClient = useQueryClient();
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
-    queryKey: ["nurse-alerts"],
-    queryFn: fetchNurseAlerts,
-    staleTime: 60_000,
-  });
+  const invalidateNurse = useNurseInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const [page, setPage] = React.useState(1);
+  const [takeover, setTakeover] = React.useState(false);
+  const landing = !takeover && highlightId !== null;
+
+  const { data, isPending, isError, refetch, isRefetching } =
+    useQuery<NurseAlertsPage>({
+      queryKey: [
+        "nurse-alerts",
+        "clinic",
+        takeover ? page : 1,
+        termKey,
+        landing ? (highlightId ?? "") : "",
+      ],
+      queryFn: ({ signal }) =>
+        fetchNurseAlerts({
+          track: "clinic",
+          page: takeover ? page : 1,
+          pageSize: NURSE_CLINIC_PAGE_SIZE,
+          ...(landing && highlightId ? { highlight: highlightId } : {}),
+          signal,
+        }),
+      placeholderData: keepPreviousData,
+      staleTime: 60_000,
+    });
+
+  // Derived, never setState-in-effect.
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(data?.page ?? page, totalPages);
 
   function refresh() {
-    void queryClient.invalidateQueries({ queryKey: ["nurse-alerts"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-overview"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-levels"] });
-    void queryClient.invalidateQueries({ queryKey: ["nurse-risk-factors"] });
+    invalidateNurse();
   }
 
   if (isPending) {
     return (
       <section className={styles.page}>
-        <NurseReferralsSkeleton sideRows={5} paginate={false} />
+        <NurseReferralsSkeleton sideRows={5} />
       </section>
     );
   }
@@ -74,13 +105,20 @@ function NurseClinicReferralsView() {
     <section className={styles.page} aria-busy={refreshing}>
       {refreshing ? <NurseRefreshBadge label="Refreshing clinic matters…" /> : null}
       <NurseAlertsTable
-        alerts={data.alerts}
+        alerts={Array.isArray(data.alerts) ? data.alerts : []}
         onChanged={refresh}
         initialType="Clinic"
         lockType
         title="Clinic Matters"
         highlightId={highlightId}
-        paginate={false}
+        serverPage={safePage}
+        serverTotalPages={totalPages}
+        serverTotal={data.total}
+        serverUnfilteredTotal={data.unfilteredTotal}
+        onServerPageChange={(p) => {
+          setTakeover(true);
+          setPage(p);
+        }}
       />
     </section>
   );
@@ -91,7 +129,7 @@ export default function NurseClinicReferralsPage() {
     <React.Suspense
       fallback={
         <section className={styles.page}>
-          <NurseReferralsSkeleton sideRows={5} paginate={false} />
+          <NurseReferralsSkeleton sideRows={5} />
         </section>
       }
     >

@@ -154,13 +154,11 @@
   border-radius: 1rem;
   background: var(--card);
   transition:
-    transform 180ms ease-out,
     box-shadow 180ms ease-out,
     border-color 180ms ease-out;
 }
 
 .card:hover {
-  transform: translateY(-2px);
   border-color: color-mix(in oklch, var(--primary), transparent 55%);
   box-shadow: 0 12px 32px -12px color-mix(in oklch, var(--primary), transparent 55%);
 }

@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,57 +54,66 @@ export function ResolveFlagDialog({ flag, onClose, onResolved }: ResolveFlagDial
   }
 
   return (
-    <Dialog
+    <CardModal
       open={flag !== null}
-      onOpenChange={(next) => {
-        if (!next) close();
+      onClose={() => {
+        // Locked while resolving — closes only on server confirmation.
+        if (submitting) return;
+        close();
       }}
-    >
-      <DialogContent className={styles.dialog}>
-        {flag ? (
+      dismissable={!submitting}
+      size="md"
+      title="Resolve flag"
+      description={
+        flag ? (
           <>
-            <DialogHeader>
-              <DialogTitle>Resolve flag</DialogTitle>
-              <DialogDescription>
-                {REASON_LABELS[flag.reason]} · {flag.student.name} · {flag.subject.name} ·{" "}
-                {flag.section.name}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className={styles.fields}>
-              {flag.note ? <p className={styles.note}>&ldquo;{flag.note}&rdquo;</p> : null}
-              <div className={styles.field}>
-                <Label htmlFor="resolve-note">Resolution note</Label>
-                <Textarea
-                  id="resolve-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="What was corrected?"
-                  rows={3}
-                  maxLength={2000}
-                />
-              </div>
-              {error ? <p className={styles.error}>{error}</p> : null}
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="destructive" onClick={close}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="animate-spin" aria-hidden />
-                    Resolving…
-                  </>
-                ) : (
-                  "Resolve flag"
-                )}
-              </Button>
-            </DialogFooter>
+            {REASON_LABELS[flag.reason]} · {flag.student.name} · {flag.subject.name} ·{" "}
+            {flag.section.name}
           </>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+        ) : undefined
+      }
+      watchKey={flag?.id}
+    >
+      {flag ? (
+        <>
+          <div className={styles.fields}>
+            {flag.note ? <p className={styles.note}>&ldquo;{flag.note}&rdquo;</p> : null}
+            <div className={styles.field}>
+              <Label htmlFor="resolve-note">Resolution note</Label>
+              <Textarea
+                id="resolve-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="What was corrected?"
+                rows={3}
+                maxLength={2000}
+              />
+            </div>
+            {error ? <p className={styles.error}>{error}</p> : null}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={close}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting || undefined}>
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin" aria-hidden />
+                  Resolving…
+                </>
+              ) : (
+                "Resolve flag"
+              )}
+            </Button>
+          </div>
+        </>
+      ) : null}
+    </CardModal>
   );
 }

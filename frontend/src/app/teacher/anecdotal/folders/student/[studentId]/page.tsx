@@ -2,11 +2,12 @@
 
 import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchMyRecords } from "@/components/ocform01/folders";
+import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
+import { useTerm } from "@/lib/term/TermContext";
 import { RecordFolderGrid } from "../../components/RecordFolderGrid";
 import styles from "../../components/folders.module.css";
 
@@ -15,13 +16,19 @@ export default function StudentRecordFolderPage() {
   const studentId = decodeURIComponent(params.studentId);
   const router = useRouter();
 
-  const recordsQuery = useQuery({
-    queryKey: ["anecdotal-mine"],
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+    queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
+    placeholderData: keepPreviousData,
   });
 
   const records = useMemo(
-    () => (recordsQuery.data ?? []).filter((r) => r.studentId === studentId),
+    () =>
+      (Array.isArray(recordsQuery.data) ? recordsQuery.data : []).filter(
+        (r) => r.studentId === studentId
+      ),
     [recordsQuery.data, studentId]
   );
   const head = records[0] ?? null;

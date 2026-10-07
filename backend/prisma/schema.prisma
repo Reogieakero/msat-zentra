@@ -384,6 +384,7 @@ model Term {
   attendanceRecords AttendanceRecord[]
   anecdotalRecords AnecdotalRecord[]
   referrals     Referral[]
+  interventions Intervention[]
   healthRecords HealthRecord[]
   homeVisitations HomeVisitationRecord[]
   admProfiles   AdmLearnerProfile[]
@@ -967,12 +968,16 @@ model Intervention {
   // Guidance triage when the follow-up starts (same intake as referrals).
   priority          String?
   intakeNotes       String?
+  // Filing term — desks never leak follow-ups across terms.
+  termId            String
+  term              Term            @relation(fields: [termId], references: [id])
   student           StudentProfile? @relation(fields: [studentId], references: [userId], onDelete: Cascade)
   roster            StudentRoster?  @relation(fields: [rosterId], references: [id], onDelete: Cascade)
   assignee          User?           @relation("InterventionAssignee", fields: [assignedTo], references: [id])
   counselingSessions CounselingSession[]
   @@index([rosterId])
   @@index([studentId])
+  @@index([termId])
   @@index([outcomeStatus])
   @@index([approvalStatus])
   @@index([assignedTo, outcomeStatus])

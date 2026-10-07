@@ -4,16 +4,8 @@ import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { ChevronDown, Loader2, SearchIcon, Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { CardModal } from "@/components/ui/CardModal";
+import { Button } from "@/components/ui/button";
 import {
   COMPONENT_NAMES,
   deleteAssessment,
@@ -221,32 +213,34 @@ export function AssessmentList({ students, components, onSelect, onDeleted }: Pr
     </div>
     </div>
 
-      <AlertDialog
+      <CardModal
         open={pendingDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingDelete(null);
-        }}
+        onClose={() => setPendingDelete(null)}
+        size="sm"
+        title="Delete assessment?"
+        description={
+          pendingDelete
+            ? `"${pendingDelete.title}" and all of its encoded scores will be permanently removed. This cannot be undone.`
+            : "This assessment and all of its encoded scores will be permanently removed."
+        }
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete assessment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingDelete
-                ? `"${pendingDelete.title}" and all of its encoded scores will be permanently removed. This cannot be undone.`
-                : "This assessment and all of its encoded scores will be permanently removed."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="destructive">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void handleDelete()}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setPendingDelete(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-red-500 text-white hover:bg-red-600"
+            onClick={() => void handleDelete()}
+          >
+            Delete
+          </Button>
+        </div>
+      </CardModal>
     </>
   );
 }

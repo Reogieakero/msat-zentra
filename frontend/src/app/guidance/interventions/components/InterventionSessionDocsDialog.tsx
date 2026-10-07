@@ -20,6 +20,7 @@ import {
   uploadInterventionSessionDocs,
   type InterventionSessionDoc,
 } from "./guidance-interventions-data";
+import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import { sessionTypeLabel } from "../../referrals/components/guidance-referrals-table";
 import styles from "./guidance-interventions.module.css";
 
@@ -52,9 +53,43 @@ export function InterventionSessionDocsDialog({
   const [docs, setDocs] = React.useState<InterventionSessionDoc[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [pending, setPending] = React.useState<File[]>([]);
-  const [uploading, setUploading] = React.useState(false);
-  const [removingId, setRemovingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const uploadMutation = useGuidanceMutation({
+    mutationFn: (files: File[]) =>
+      uploadInterventionSessionDocs(followUpId, session.id, files),
+    sourceId: followUpId,
+    successTitle: "Photos filed",
+    successDescription: (_vars, added) =>
+      `${added.length} photo${added.length === 1 ? "" : "s"} attached to this session.`,
+    errorFallback: "Could not attach the photos. Try again.",
+    silentError: true,
+    onSuccessExtra: (added) => {
+      setDocs((prev) => [...prev, ...added]);
+      setPending([]);
+      setError(null);
+      onChanged?.();
+    },
+  });
+  const removeMutation = useGuidanceMutation({
+    mutationFn: (id: string) =>
+      deleteInterventionSessionDoc(followUpId, session.id, id),
+    sourceId: followUpId,
+    successTitle: "Photo removed",
+    successDescription: () => "The photo was removed from this session.",
+    errorFallback: "Could not remove the photo. Try again.",
+    silentError: true,
+    onSuccessExtra: (_data, id) => {
+      setDocs((prev) => prev.filter((d) => d.id !== id));
+      setError(null);
+      onChanged?.();
+    },
+  });
+  const uploading = uploadMutation.isPending;
+  const removingId = removeMutation.isPending
+    ? ((removeMutation.variables as string | undefined) ?? null)
+    : null;
+  const mutationError = uploadMutation.error ?? removeMutation.error;
+  const displayError = error ?? (mutationError ? mutationError.message : null);
 
   // Fresh list state every time the dialog opens or retargets — synced
   // during render, never in an effect. The fetch below only reads.
@@ -98,47 +133,29 @@ export function InterventionSessionDocsDialog({
     setPending(picked);
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (pending.length === 0 || uploading) return;
     setError(null);
-    setUploading(true);
-    try {
-      const added = await uploadInterventionSessionDocs(followUpId, session.id, pending);
-      setDocs((prev) => [...prev, ...added]);
-      setPending([]);
-      onChanged?.();
-    } catch (err) {
-      setError(apiMessage(err, "Could not attach the photos. Try again."));
-    } finally {
-      setUploading(false);
-    }
+    uploadMutation.mutate(pending);
   }
 
-  async function handleRemove(id: string) {
-    if (removingId !== null) return;
-    setRemovingId(id);
-    try {
-      await deleteInterventionSessionDoc(followUpId, session.id, id);
-      setDocs((prev) => prev.filter((d) => d.id !== id));
-      onChanged?.();
-    } catch (err) {
-      setError(apiMessage(err, "Could not remove the photo. Try again."));
-    } finally {
-      setRemovingId(null);
-    }
+  function handleRemove(id: string) {
+    if (removeMutation.isPending) return;
+    setError(null);
+    removeMutation.mutate(id);
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) {
+        if (!next && !uploading && !removeMutation.isPending) {
           onClose();
           setError(null);
         }
       }}
     >
-      <DialogContent>
+      <DialogContent aria-busy={(uploading || removeMutation.isPending) || undefined}>
         <DialogHeader>
           <DialogTitle>Session documents</DialogTitle>
           <DialogDescription>
@@ -209,9 +226,9 @@ export function InterventionSessionDocsDialog({
             </Button>
           </div>
         </div>
-        {error ? (
+        {displayError ? (
           <p className={styles.dialogError} role="alert">
-            {error}
+            {displayError}
           </p>
         ) : null}
       </DialogContent>

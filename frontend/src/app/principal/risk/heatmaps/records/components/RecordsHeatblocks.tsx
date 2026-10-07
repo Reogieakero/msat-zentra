@@ -61,13 +61,6 @@ export function RecordsHeatblocks() {
     <>
     <section className={styles.panel} aria-label="Anecdotal records heatblocks">
       <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h2 className={styles.title}>Anecdotal Records Heatblocks</h2>
-          <p className={styles.subtitle}>
-            One folder per filed anecdotal report. Full reports are kept
-            private on this desk.
-          </p>
-        </div>
         <div className={styles.headerActions}>
           <div className={styles.search}>
             <Search className={styles.searchIcon} aria-hidden />

@@ -4424,7 +4424,8 @@ export const InterventionScalarFieldEnum = {
   outcomeStatus: 'outcomeStatus',
   outcomeNotes: 'outcomeNotes',
   priority: 'priority',
-  intakeNotes: 'intakeNotes'
+  intakeNotes: 'intakeNotes',
+  termId: 'termId'
 } as const
 
 export type InterventionScalarFieldEnum = (typeof InterventionScalarFieldEnum)[keyof typeof InterventionScalarFieldEnum]

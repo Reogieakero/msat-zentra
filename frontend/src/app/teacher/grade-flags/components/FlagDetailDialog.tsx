@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
@@ -41,34 +35,37 @@ interface FlagDetailDialogProps {
 
 export function FlagDetailDialog({ flag, onClose, onResolve }: FlagDetailDialogProps) {
   return (
-    <Dialog
+    <CardModal
       open={flag !== null}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
+      onClose={onClose}
+      size="md"
+      title={
+        flag ? (
+          <span className={styles.titleRow}>
+            <span className={styles.title}>{flag.student.name}</span>
+            <Badge variant={STATUS_VARIANTS[flag.status]}>
+              {STATUS_LABELS[flag.status]}
+            </Badge>
+          </span>
+        ) : (
+          "Flag detail"
+        )
+      }
+      description={
+        flag
+          ? `${flag.student.lrn} · ${flag.subject.name} · ${flag.section.name} · Term ${flag.term.termNumber}`
+          : undefined
+      }
+      watchKey={flag?.id}
     >
-      <DialogContent className={styles.dialog}>
-        {flag ? (
-          <>
-            <DialogHeader>
-              <div className={styles.titleRow}>
-                <DialogTitle className={styles.title}>{flag.student.name}</DialogTitle>
-                <Badge variant={STATUS_VARIANTS[flag.status]}>
-                  {STATUS_LABELS[flag.status]}
-                </Badge>
-              </div>
-              <DialogDescription className={styles.subtitle}>
-                {flag.student.lrn} · {flag.subject.name} · {flag.section.name} · Term{" "}
-                {flag.term.termNumber}
-              </DialogDescription>
-            </DialogHeader>
+      {flag ? (
+        <>
+          <div className={styles.reasonRow}>
+            <Badge variant="outline">{REASON_LABELS[flag.reason]}</Badge>
+            <span className={styles.raisedOn}>Raised {formatDate(flag.createdAt)}</span>
+          </div>
 
-            <div className={styles.reasonRow}>
-              <Badge variant="outline">{REASON_LABELS[flag.reason]}</Badge>
-              <span className={styles.raisedOn}>Raised {formatDate(flag.createdAt)}</span>
-            </div>
-
-            {flag.note ? <p className={styles.note}>&ldquo;{flag.note}&rdquo;</p> : null}
+          {flag.note ? <p className={styles.note}>&ldquo;{flag.note}&rdquo;</p> : null}
 
             <dl className={styles.meta}>
               <div className={styles.metaRow}>
@@ -140,9 +137,8 @@ export function FlagDetailDialog({ flag, onClose, onResolve }: FlagDetailDialogP
                 Resolve flag
               </Button>
             ) : null}
-          </>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+        </>
+      ) : null}
+    </CardModal>
   );
 }

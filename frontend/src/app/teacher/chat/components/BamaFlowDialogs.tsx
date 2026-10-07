@@ -1,15 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { CATEGORY_COLORS } from "../../anecdotal/components/AnecdotalSideRail";
 import type { BamaConversation } from "./bama-conversations";
 import { CATEGORY_TONES } from "./bama-flow";
 import type { AnecdotalFlow } from "./useAnecdotalFlow";
@@ -27,49 +21,48 @@ export function BamaFlowDialogs({ flow, active }: BamaFlowDialogsProps) {
   // (no overlay modals) — only the filing confirmation stays a dialog.
   return (
     <>
-      <Dialog
+      <CardModal
         open={flow.confirmFiling}
-        onOpenChange={flow.setConfirmFiling}
+        onClose={() => flow.setConfirmFiling(false)}
+        title="File this record?"
+        description="This creates the anecdotal record and autofills GCForm-01. This is how it will be filed:"
+        size="sm"
+        dismissable={!flow.filing}
+        watchKey={reviewPreview?.studentName}
       >
-        <DialogContent className={styles.confirmDialog}>
-          <DialogHeader>
-            <DialogTitle>File this record?</DialogTitle>
-            <DialogDescription>
-              This creates the anecdotal record and autofills GCForm-01. This is how it will be filed:
-            </DialogDescription>
-          </DialogHeader>
-          {reviewPreview ? (
-            <div className={styles.confirmFolder}>
-              <FolderCard
-                label={reviewPreview.studentName}
-                sublabel={`${reviewPreview.category} · ${reviewPreview.observationDateTime}`}
-                files={[
-                  {
-                    name: "GCForm-01",
-                    tag: reviewPreview.category,
-                    tone: CATEGORY_TONES[reviewPreview.category.toLowerCase()] ?? 1,
-                    icon: "doc",
-                  },
-                ]}
-              />
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => flow.setConfirmFiling(false)}>
-              Keep editing
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                flow.setConfirmFiling(false);
-                void flow.fileRecord();
-              }}
-            >
-              File record
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {reviewPreview ? (
+          <div className={styles.confirmFolder}>
+            <FolderCard
+              label={reviewPreview.studentName}
+              sublabel={`${reviewPreview.category} · ${reviewPreview.observationDateTime}`}
+              folderColor={CATEGORY_COLORS[reviewPreview.category.toLowerCase()]}
+              files={[
+                {
+                  name: "GCForm-01",
+                  tag: reviewPreview.category,
+                  tone: CATEGORY_TONES[reviewPreview.category.toLowerCase()] ?? 1,
+                  icon: "doc",
+                },
+              ]}
+            />
+          </div>
+        ) : null}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => flow.setConfirmFiling(false)}>
+            Keep editing
+          </Button>
+          <Button
+            type="button"
+            disabled={flow.filing}
+            onClick={() => {
+              flow.setConfirmFiling(false);
+              void flow.fileRecord();
+            }}
+          >
+            File record
+          </Button>
+        </div>
+      </CardModal>
 
       {flow.filing ? (
         <div className={styles.filingOverlay} role="alertdialog" aria-modal="true" aria-label="Filing record">

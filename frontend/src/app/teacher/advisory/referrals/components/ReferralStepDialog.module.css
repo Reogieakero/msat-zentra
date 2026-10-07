@@ -1,6 +1,4 @@
-.dialog {
-  max-width: 28rem;
-}
+/* Width is owned by CardModal size="md" — no overlay class needed. */
 
 .headRow {
   display: flex;

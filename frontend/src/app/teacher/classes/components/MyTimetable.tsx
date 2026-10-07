@@ -10,14 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useTerm } from "@/lib/term/TermContext";
 import { useSheetContext } from "@/app/teacher/attendance/components/attendance-taking-data";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   buildTimetable,
   formatClock,
@@ -78,6 +71,7 @@ export function MyTimetable() {
   const termLabel = activeTerm
     ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
     : "this term";
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   // NOTE (Rules of Hooks): all state lives up here — nothing may hook
   // below the early returns further down.
   const [attCode, setAttCode] = useState("");
@@ -92,7 +86,7 @@ export function MyTimetable() {
   }, []);
 
   const meQuery = useQuery<{ teacherName: LinkedName | null; termGrant: TermGrant | null; isMasterTeacher?: boolean }>({
-    queryKey: ["teacher-schedule-me"],
+    queryKey: ["teacher-schedule-me", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
         teacherName: LinkedName | null;
@@ -120,7 +114,7 @@ export function MyTimetable() {
   const isAdviser = !!sheetContext.data;
 
   const slotsQuery = useQuery<{ slots: MySlot[] }>({
-    queryKey: ["teacher-my-slots"],
+    queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ slots: MySlot[] }>(
         "/api/teacher/schedule/my-slots",
@@ -131,7 +125,7 @@ export function MyTimetable() {
   });
 
   const configQuery = useQuery<{ config: DayConfig }>({
-    queryKey: ["teacher-schedule-config"],
+    queryKey: ["teacher-schedule-config", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ config: DayConfig }>("/api/teacher/schedule/config");
       return data;
@@ -590,43 +584,41 @@ export function MyTimetable() {
       )}
 
       {confirmReleaseOpen && linked ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setConfirmReleaseOpen(false);
-          }}
+          onClose={() => setConfirmReleaseOpen(false)}
+          dismissable={!release.isPending}
+          size="sm"
+          title={<>Leave {termLabel}?</>}
+          description={
+            <>
+              This clears only this term&apos;s entry for {linked.name}
+              {linked.code ? ` (${linked.code})` : ""} — your link and other
+              terms stay attached. Re-enter your code any time to come back.
+            </>
+          }
         >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Leave {termLabel}?</DialogTitle>
-              <DialogDescription>
-                This clears only this term&apos;s entry for {linked.name}
-                {linked.code ? ` (${linked.code})` : ""} — your link and other
-                terms stay attached. Re-enter your code any time to come back.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="destructive" onClick={() => setConfirmReleaseOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => release.mutate()}
-                disabled={release.isPending}
-                aria-busy={release.isPending || undefined}
-              >
-                {release.isPending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Leaving…</span>
-                  </>
-                ) : (
-                  "Leave term"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <div className="flex justify-end gap-2">
+            <Button variant="destructive" onClick={() => setConfirmReleaseOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => release.mutate()}
+              disabled={release.isPending}
+              aria-busy={release.isPending || undefined}
+            >
+              {release.isPending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Leaving…</span>
+                </>
+              ) : (
+                "Leave term"
+              )}
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
     </div>
   );

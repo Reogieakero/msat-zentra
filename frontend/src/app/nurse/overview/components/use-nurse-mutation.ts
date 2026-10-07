@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
-import { markNurseLocalMutation } from "@/lib/realtime/nurseRealtimeMeta";
+import { markSelfNotified } from "@/lib/realtime/nurseChannel";
 import { apiErrorMessage } from "./nurse-overview-data";
 
 /**
@@ -42,6 +42,10 @@ interface NurseMutationOptions<TData, TVariables> {
   /** When true, suppress the error toast (caller shows inline error only). */
   silentError?: boolean;
   onSuccessExtra?: (data: TData, variables: TVariables) => void;
+  /** Referral id this write acts on — confirmed writes suppress their own
+      realtime echo toast for 30s (bell row still lands). Falls back to
+      `data.id` when the mutation resolves one. */
+  sourceId?: string | ((variables: TVariables) => string);
 }
 
 /**
@@ -54,15 +58,32 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
   options: NurseMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
+  const invalidate = () => {
+    for (const key of NURSE_QUERY_KEYS) {
+      void queryClient.invalidateQueries({ queryKey: [...key] });
+    }
+  };
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onSuccess: (data, variables) => {
-      // Mark the write so inbound realtime echoes within a few seconds are
-      // treated as our own change (no duplicate toast for the initiator).
-      markNurseLocalMutation();
-      for (const key of NURSE_QUERY_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
+      // Per-sourceId self-suppression: the confirmed id skips its realtime
+      // echo toast for 30s (bell row still lands, lists still invalidate).
+      const fromData =
+        typeof data === "string"
+          ? data
+          : (data as { id?: unknown } | null)?.id;
+      const fromOption =
+        typeof options.sourceId === "function"
+          ? options.sourceId(variables)
+          : options.sourceId;
+      const sourceId =
+        typeof fromOption === "string" && fromOption
+          ? fromOption
+          : typeof fromData === "string"
+            ? fromData
+            : null;
+      if (sourceId) markSelfNotified(sourceId);
+      invalidate();
       toast.success({
         title: options.successTitle,
         ...(options.successDescription
@@ -70,6 +91,11 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
           : {}),
       });
       options.onSuccessExtra?.(data, variables);
+    },
+    // Pessimistic: rows stay put with their spinner until the server
+    // confirms — only this settled refetch moves/removes them.
+    onSettled: () => {
+      invalidate();
     },
     onError: (err) => {
       if (!options.silentError) {

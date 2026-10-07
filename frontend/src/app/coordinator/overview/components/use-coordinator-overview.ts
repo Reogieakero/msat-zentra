@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import {
   fetchCoordinatorDashboard,
@@ -59,25 +59,30 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
   const dashboardQuery = useQuery({
     queryKey: ["coordinator-dashboard"],
     queryFn: ({ signal }) => fetchCoordinatorDashboard(signal),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
-  // Device summary + the 5 longest-out issued tablets. Dedicated params mean
-  // a dedicated cache entry — the Devices page list (unbounded) is untouched.
+  // Device preview — same fetcher + backend order as the Devices ledger
+  // (status=issued, oldest first), paging at the list size so preview and
+  // list stay comparable. Dedicated preview key suffix so it never poisons
+  // the paged list cache.
   const devicesQuery = useQuery({
-    queryKey: ["coordinator-devices", "issued", "oldest", 5],
+    queryKey: ["coordinator-devices", "preview", "issued", "oldest", 15],
     queryFn: ({ signal }) =>
-      fetchCoordinatorDevices({ status: "issued", order: "oldest", limit: 5, signal }),
+      fetchCoordinatorDevices({ status: "issued", order: "oldest", limit: 15, signal }),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
   // Fresh forwards still at consultation — the nurse/guidance hand-off queue.
-  // Fetched with a wide limit so the overview table can paginate client-side
-  // (5 per page) without extra round-trips.
+  // Same fetcher + columns + backend order as the referrals list; preview
+  // pager matches the list size (15) so counts stay comparable.
   const forwardsQuery = useQuery({
-    queryKey: ["coordinator-referrals", 1, "", "consultation", 100],
+    queryKey: ["coordinator-referrals", "preview", 1, "", "consultation", 15],
     queryFn: ({ signal }) =>
-      fetchCoordinatorReferrals(1, { stage: "consultation", limit: 100, signal }),
+      fetchCoordinatorReferrals(1, { stage: "consultation", limit: 15, signal }),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
@@ -111,7 +116,7 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
       ),
     [data],
   );
-  const awaitingPrincipal = data?.kpis.pendingSignature ?? 0;
+  const awaitingPrincipal = data?.kpis?.pendingSignature ?? 0;
   const activeEnrolled = React.useMemo(
     () => countFor(data?.stageBreakdown, "enrollment_monitoring"),
     [data],
@@ -119,7 +124,7 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
 
   const stageDonut: StageDonutEntry[] = React.useMemo(
     () =>
-      (data?.stageBreakdown ?? []).map((s, i) => ({
+      (Array.isArray(data?.stageBreakdown) ? data.stageBreakdown : []).map((s, i) => ({
         name: SHORT_STAGE[s.stage] ?? s.stage,
         full: stageLabel(s.stage),
         value: s.count,
@@ -129,8 +134,9 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
   );
 
   // Full consultation queue — the table paginates client-side (5 per page).
+  // Array-guarded: non-array payloads (cached/error shapes) never crash it.
   const recentRows = React.useMemo(
-    () => forwardsQuery.data?.rows ?? [],
+    () => (Array.isArray(forwardsQuery.data?.rows) ? forwardsQuery.data.rows : []),
     [forwardsQuery.data],
   );
   const newReferrals = React.useMemo(
@@ -182,11 +188,13 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
 
   // Server already returns the oldest-issued first; keep a client-side guard
   // so the order holds even for a stale pre-change cached payload.
+  // Preview pages at the list size (15).
   const oldestOut = React.useMemo(() => {
-    const rows = devicesQuery.data?.rows ?? [];
+    const raw = devicesQuery.data?.rows;
+    const rows = Array.isArray(raw) ? raw : [];
     const issuedOnly = rows.filter((d) => d.status === "issued");
-    if (issuedOnly.length !== rows.length) return issuedOnly.slice(0, 5);
-    return rows.slice(0, 5);
+    if (issuedOnly.length !== rows.length) return issuedOnly.slice(0, 15);
+    return rows.slice(0, 15);
   }, [devicesQuery.data]);
 
   return {

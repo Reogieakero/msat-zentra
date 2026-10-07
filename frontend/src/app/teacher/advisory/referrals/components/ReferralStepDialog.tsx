@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { ChevronDown, ChevronUp, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { ReadMore } from "./ReadMore";
 import styles from "./ReferralStepDialog.module.css";
 
@@ -86,22 +79,29 @@ function friendlyActivityLabel(label: string): string {
 function ActivityItem({ label, date }: { label: string; date: string }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
-  const labelRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
+  // Reset + overflow measure without effects: the reset syncs during
+  // render, and the overflow check runs in the label's callback ref.
+  const [prevLabel, setPrevLabel] = useState(label);
+  if (prevLabel !== label) {
+    setPrevLabel(label);
     setExpanded(false);
-  }, [label]);
-
-  useEffect(() => {
-    const el = labelRef.current;
-    if (!el || expanded) return;
-    setOverflows(el.scrollWidth > el.clientWidth + 1);
-  }, [label, expanded]);
+  }
+  // `label` re-fires the ref (React reattaches on identity change), so
+  // content changes re-measure even though the body never reads it.
+  /* eslint-disable react-hooks/exhaustive-deps -- ref identity drives re-measurement */
+  const measureRef = useCallback(
+    (el: HTMLSpanElement | null) => {
+      if (!el || expanded) return;
+      setOverflows(el.scrollWidth > el.clientWidth + 1);
+    },
+    [expanded, label]
+  );
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return (
     <li className={`${styles.activityItem} ${expanded ? styles.activityExpanded : ""}`}>
       <span className={styles.activityDot} aria-hidden />
-      <span ref={labelRef} className={styles.activityLabel} title={overflows && !expanded ? label : undefined}>
+      <span ref={measureRef} className={styles.activityLabel} title={overflows && !expanded ? label : undefined}>
         {label}
       </span>
       <span className={styles.activityDate}>{formatDate(date)}</span>
@@ -130,68 +130,77 @@ export function ReferralStepDialog({ step, timeline, onClose }: ReferralStepDial
     step?.state === "done" ? "success" : step?.state === "current" ? "default" : "secondary";
 
   return (
-    <Dialog open={step !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={styles.dialog}>
-        {step && Icon ? (
+    <CardModal
+      open={step !== null}
+      onClose={onClose}
+      size="md"
+      title={
+        step && Icon ? (
+          <span className={styles.headRow}>
+            <span className={styles.tile} aria-hidden>
+              <Icon />
+            </span>
+            <span className={styles.headText}>{step.label}</span>
+            <Badge variant={stateVariant}>{stateLabel}</Badge>
+          </span>
+        ) : (
+          "Step detail"
+        )
+      }
+      description={
+        step ? (
           <>
-            <DialogHeader>
-              <div className={styles.headRow}>
-                <span className={styles.tile} aria-hidden>
-                  <Icon />
-                </span>
-                <div className={styles.headText}>
-                  <DialogTitle>{step.label}</DialogTitle>
-                  <DialogDescription>
-                    Step {step.index + 1} of {step.total}
-                    {step.optional ? " · Optional" : ""}
-                    {step.principalAction ? " · Principal action" : ""}
-                  </DialogDescription>
-                </div>
-                <Badge variant={stateVariant}>{stateLabel}</Badge>
-              </div>
-            </DialogHeader>
-            <dl className={styles.rows}>
-              <div className={styles.row}>
-                <dt className={styles.rowLabel}>Status</dt>
-                <dd className={styles.rowValue}>{step.sub}</dd>
-              </div>
-              <div className={styles.row}>
-                <dt className={styles.rowLabel}>Owner</dt>
-                <dd className={styles.rowValue}>{step.owner ?? "—"}</dd>
-              </div>
-              {step.description ? (
-                <div className={styles.row}>
-                  <dt className={styles.rowLabel}>About this step</dt>
-                  <dd className={styles.rowValue}>
-                    <ReadMore text={step.description} maxLines={4} />
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-            <div className={styles.activity}>
-              <p className={styles.activityHead}>Activity — time, date & actions executed</p>
-              {timeline.length === 0 ? (
-                <p className={styles.empty}>No activity recorded yet.</p>
-              ) : (
-                <ul className={styles.activityList}>
-                  {timeline.map((t, i) => (
-                    <ActivityItem
-                      key={`${t.label}-${t.date}-${i}`}
-                      label={friendlyActivityLabel(t.label)}
-                      date={t.date}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Close
-              </Button>
-            </DialogFooter>
+            Step {step.index + 1} of {step.total}
+            {step.optional ? " · Optional" : ""}
+            {step.principalAction ? " · Principal action" : ""}
           </>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+        ) : undefined
+      }
+      watchKey={step?.key}
+    >
+      {step && Icon ? (
+        <>
+          <dl className={styles.rows}>
+            <div className={styles.row}>
+              <dt className={styles.rowLabel}>Status</dt>
+              <dd className={styles.rowValue}>{step.sub}</dd>
+            </div>
+            <div className={styles.row}>
+              <dt className={styles.rowLabel}>Owner</dt>
+              <dd className={styles.rowValue}>{step.owner ?? "—"}</dd>
+            </div>
+            {step.description ? (
+              <div className={styles.row}>
+                <dt className={styles.rowLabel}>About this step</dt>
+                <dd className={styles.rowValue}>
+                  <ReadMore text={step.description} maxLines={4} />
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <div className={styles.activity}>
+            <p className={styles.activityHead}>Activity — time, date & actions executed</p>
+            {timeline.length === 0 ? (
+              <p className={styles.empty}>No activity recorded yet.</p>
+            ) : (
+              <ul className={styles.activityList}>
+                {timeline.map((t, i) => (
+                  <ActivityItem
+                    key={`${t.label}-${t.date}-${i}`}
+                    label={friendlyActivityLabel(t.label)}
+                    date={t.date}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </>
+      ) : null}
+    </CardModal>
   );
 }

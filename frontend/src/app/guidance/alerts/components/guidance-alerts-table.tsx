@@ -51,7 +51,7 @@ import {
 } from "./GuidanceAlertsRowActions";
 import styles from "./guidance-alerts-table.module.css";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 15;
 
 /* One table, two pipelines (never mixed upstream): adviser-referred cases
    plus the engine's intervention follow-ups, each row keeping its own
@@ -198,11 +198,11 @@ function msSince(time: string, now: number): number | null {
 function referralStatusVariant(
   type: string,
   status: string
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
+): "amber" | "default" | "secondary" | "outline" | "destructive" | "success" {
   if (isEndorsed(type, status)) return "success";
   switch (status) {
     case "pending":
-      return "warning";
+      return "amber";
     case "in_progress":
       return "default";
     case "follow_up":

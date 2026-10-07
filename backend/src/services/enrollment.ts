@@ -51,16 +51,22 @@ export async function rosterCountsBySection(
   return counts;
 }
 
-// Profile + roster headcount per section id.
-export async function sectionHeadcounts(sectionIds: string[]): Promise<Map<string, number>> {
+// Profile + roster headcount per section id. Accepts pre-fetched profile
+// groups so callers that already ran the groupBy (e.g. the advisory roster)
+// don't pay for the same scan twice — roster counts are still fetched.
+export async function sectionHeadcounts(
+  sectionIds: string[],
+  preloadedProfileGroups?: { sectionId: string | null; _count: { _all: number } }[],
+): Promise<Map<string, number>> {
   const counts = new Map<string, number>(sectionIds.map((id) => [id, 0]));
   if (sectionIds.length === 0) return counts;
   const [profileGroups, rosterCounts] = await Promise.all([
-    prisma.studentProfile.groupBy({
-      by: ["sectionId"],
-      where: { sectionId: { in: sectionIds } },
-      _count: { _all: true },
-    }),
+    preloadedProfileGroups ??
+      prisma.studentProfile.groupBy({
+        by: ["sectionId"],
+        where: { sectionId: { in: sectionIds } },
+        _count: { _all: true },
+      }),
     rosterCountsBySection(sectionIds),
   ]);
   for (const g of profileGroups) {

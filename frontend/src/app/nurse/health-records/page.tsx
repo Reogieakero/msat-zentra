@@ -1,10 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchNurseAlerts } from "../alerts/components/nurse-alerts-data";
+import {
+  fetchNurseAlerts,
+  type NurseAlertsPage,
+} from "../alerts/components/nurse-alerts-data";
+import { useTerm } from "@/lib/term/TermContext";
 import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./health-records-page.module.css";
@@ -16,11 +20,19 @@ import styles from "./health-records-page.module.css";
  * nurse's desk. Read-only; handling stays on the case pages.
  */
 export default function NurseHealthRecordsPage() {
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
-    queryKey: ["nurse-alerts"],
-    queryFn: fetchNurseAlerts,
-    staleTime: 60_000,
-  });
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  // Archive view over finished transactions: bounded desk fetch, entries
+  // derived client-side (completed/resolved/endorse-ready), folders unpaged,
+  // in-folder tables paginate at the strict 15 with safePage.
+  const { data, isPending, isError, refetch, isRefetching } =
+    useQuery<NurseAlertsPage>({
+      queryKey: ["nurse-alerts", "preview", termKey],
+      queryFn: ({ signal }) =>
+        fetchNurseAlerts({ page: 1, pageSize: 100, signal }),
+      placeholderData: keepPreviousData,
+      staleTime: 60_000,
+    });
 
   if (isPending) {
     return (
@@ -86,7 +98,9 @@ export default function NurseHealthRecordsPage() {
   return (
     <section className={styles.page} aria-busy={refreshing}>
       {refreshing ? <NurseRefreshBadge label="Refreshing records…" /> : null}
-      <NurseDocumentariesList alerts={data.alerts} />
+      <NurseDocumentariesList
+        alerts={Array.isArray(data.alerts) ? data.alerts : []}
+      />
     </section>
   );
 }

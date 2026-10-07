@@ -8,14 +8,7 @@ import {
   DropdownSelect,
   type DropdownOption,
 } from "@/app/principal/academics/assign/components/DropdownSelect";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   buildTimetable,
   DEFAULT_DAY_CONFIG,
@@ -217,19 +210,14 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
   };
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!saving}
+      size="md"
+      title="Configure school day"
+      description="Breaks, lunch, start time and period length. The timetable below updates on Apply."
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Configure school day</DialogTitle>
-          <DialogDescription>
-            Breaks, lunch, start time and period length. The timetable below updates on Apply.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -293,11 +281,11 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
           </p>
         </div>
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setDraft(DEFAULT_DAY_CONFIG)}>
             Reset
           </Button>
-          <Button variant="destructive" onClick={onClose}>
+          <Button variant="destructive" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={handleApply} disabled={saving} aria-busy={saving || undefined}>
@@ -310,8 +298,7 @@ export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props
               "Apply"
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

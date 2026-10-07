@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Loader2 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import BranchedMenu from "@/components/nav/BranchedMenu";
 import { scrollToSection, settingsSections } from "./components/SettingsNav";
@@ -17,13 +17,10 @@ import { useTheme } from "@/components/providers";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
-  teacherOverviewKey,
   useCachedMasterTeacher,
   useTeacherOverview,
-  type TeacherOverviewCritical,
-  writeCachedAdviser,
-  writeCachedMasterTeacher,
 } from "../overview/components/teacher-overview-data";
+import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 
 function getErrorMessage(err: unknown, fallback: string): string {
   // The backend envelopes errors as { error: { code, message } } — read that
@@ -163,9 +160,7 @@ type AdviserSectionOption = {
 };
 
 function AdviserCard() {
-  const session = useSession();
   const overview = useTeacherOverview();
-  const queryClient = useQueryClient();
   const isAdviser = overview.data?.isAdviser ?? false;
   const advisorySection = overview.data?.advisorySection ?? null;
   const [picking, setPicking] = React.useState(false);
@@ -201,17 +196,9 @@ function AdviserCard() {
     ? selectedId
     : null;
 
+  const invalidateTeacher = useTeacherInvalidate();
   const refreshAdvisory = async () => {
-    await queryClient.invalidateQueries({ queryKey: teacherOverviewKey(session?.sub) });
-    await queryClient.invalidateQueries({ queryKey: ["teacher-settings-adviser-sections"] });
-    for (const key of [
-      ["teacher", "advisory", "claim-status"],
-      ["advisory-students"],
-      ["advisee-attendance"],
-      ["advisee-academic"],
-    ]) {
-      void queryClient.invalidateQueries({ queryKey: key });
-    }
+    invalidateTeacher.settings();
   };
 
   const selectedTarget = ordered.find((s) => s.id === effectiveSelected) ?? null;
@@ -239,20 +226,17 @@ function AdviserCard() {
       });
       // Single-section model: release any previous section after the new
       // claim lands, so a failed claim never leaves the teacher seatless.
-      for (const oldId of previousMine.filter((id) => id !== target.id)) {
-        try {
-          await apiClient.delete(`/api/teacher/advisory/claim?sectionId=${encodeURIComponent(oldId)}`, {
-            data: { sectionId: oldId },
-          });
-        } catch {
-          // Old seat kept — surfaces refresh below will show the truth.
-        }
-      }
-      writeCachedAdviser(session?.sub, true);
-      queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
-        if (!old) return old;
-        return { ...old, isAdviser: true };
-      });
+      // Released in parallel — typically 1 seat, but never sequential.
+      await Promise.allSettled(
+        previousMine
+          .filter((id) => id !== target.id)
+          .map((oldId) =>
+            apiClient.delete(
+              `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(oldId)}`,
+              { data: { sectionId: oldId } },
+            ),
+          ),
+      );
       await refreshAdvisory();
       setPicking(false);
       setAnsweredNo(false);
@@ -278,11 +262,6 @@ function AdviserCard() {
         ? `/api/teacher/advisory/claim?sectionId=${encodeURIComponent(sectionId)}`
         : "/api/teacher/advisory/claim";
       await apiClient.delete(url, sectionId ? { data: { sectionId } } : undefined);
-      writeCachedAdviser(session?.sub, false);
-      queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
-        if (!old) return old;
-        return { ...old, isAdviser: false, advisorySection: null };
-      });
       await refreshAdvisory();
       setPicking(false);
       setSelectedId(null);
@@ -567,7 +546,7 @@ export default function TeacherSettingsPage() {
   const session = useSession();
   const { theme, setTheme } = useTheme();
   const overview = useTeacherOverview();
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
 
   const isDark = theme === "dark";
   // Hydration-safe first-frame value — a direct localStorage read here would
@@ -604,16 +583,11 @@ export default function TeacherSettingsPage() {
       return;
     }
     setMtLoading(true);
-    queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
-      if (!old) return old;
-      return { ...old, isMasterTeacher: next };
-    });
     try {
       await apiClient.patch("/api/teacher/settings/master-teacher", { isMasterTeacher: next });
-      // Mirror to the refresh-proof cache so the nav tab and schedule gate
-      // survive a hard refresh without a flash. Authoritative refetch last.
-      writeCachedMasterTeacher(session?.sub, next);
-      await queryClient.invalidateQueries({ queryKey: teacherOverviewKey(session?.sub) });
+      // Pessimistic: the toggle flips only after the server confirms; the
+      // settled refetch below repaints nav, schedule gates, and holder info.
+      invalidateTeacher.settings();
       toast.success({
         title: next ? "Master Teacher enabled" : "Master Teacher disabled",
         description: next
@@ -621,16 +595,11 @@ export default function TeacherSettingsPage() {
           : "You no longer have the Master Teacher designation.",
       });
     } catch (err) {
-      queryClient.setQueryData(teacherOverviewKey(session?.sub), (old: TeacherOverviewCritical | undefined) => {
-        if (!old) return old;
-        return { ...old, isMasterTeacher: isMasterTeacher };
-      });
-      writeCachedMasterTeacher(session?.sub, isMasterTeacher);
       const message = getErrorMessage(err, "Failed to update Master Teacher status.");
       toast.error({ title: "Could not update status", description: message });
       // A 409 means the seat was just taken elsewhere — refresh holder info
       // so the toggle hides instead of staying actionable.
-      await queryClient.invalidateQueries({ queryKey: teacherOverviewKey(session?.sub) });
+      invalidateTeacher.settings();
     } finally {
       setMtLoading(false);
     }

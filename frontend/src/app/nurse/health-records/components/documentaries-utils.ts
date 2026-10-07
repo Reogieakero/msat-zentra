@@ -27,7 +27,7 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "Clinic", label: "Clinic" },
 ];
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 export function buildEntries(alerts: NurseAlertItem[]): DocEntry[] {
   const entries: DocEntry[] = [];
@@ -97,9 +97,9 @@ export function formatBytes(bytes: number): string {
 
 export function statusVariant(
   status: string
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
+): "amber" | "default" | "secondary" | "outline" | "destructive" | "success" {
   switch (status) {
-    case "pending": return "warning";
+    case "pending": return "amber";
     case "in_progress": return "default";
     case "follow_up": return "secondary";
     case "info_requested": return "outline";
@@ -117,7 +117,7 @@ export function entryStatusLabel(entry: DocEntry): string {
 
 export function entryStatusVariant(
   entry: DocEntry
-): "warning" | "default" | "secondary" | "outline" | "destructive" | "success" {
+): "amber" | "default" | "secondary" | "outline" | "destructive" | "success" {
   if (entry.session) return "success";
   return statusVariant(entry.row.status);
 }

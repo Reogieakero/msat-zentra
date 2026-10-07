@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +25,7 @@ type Mode = "raised-by-me" | "against-me" | "advisees";
 type StatusFilter = "all" | FlagStatus;
 
 const STATUS_VARIANTS = {
-  open: "warning",
+  open: "amber",
   escalated: "destructive",
   resolved: "success",
 } as const;
@@ -54,41 +57,78 @@ function groupFlags(rows: GradeFlagRow[], by: "owner" | "raiser") {
 }
 
 export function FlagHistory({ onBack }: FlagHistoryProps) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [mode, setMode] = useState<Mode>("raised-by-me");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<GradeFlagRow | null>(null);
   const [resolving, setResolving] = useState<GradeFlagRow | null>(null);
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["grade-flags"] });
+    invalidateTeacher.flags();
   };
 
-  const mineQuery = useQuery({
-    queryKey: ["grade-flags", "mine"],
-    queryFn: () => fetchFlags("mine"),
+  // Grouped board view: bounded full-scope fetches feed the client-side
+  // grouping (a grouped board cannot page server-side meaningfully).
+  // Tab-gated: only the visible tab fetches — mounting no longer fires
+  // three 100-row reads (notably `advisees` for non-advisers).
+  const mineQuery = useQuery<GradeFlagRow[]>({
+    queryKey: ["grade-flags", "mine", termKey],
+    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: 100, signal }),
+    placeholderData: keepPreviousData,
+    enabled: mode === "raised-by-me",
   });
-  const againstQuery = useQuery({
-    queryKey: ["grade-flags", "against-me"],
-    queryFn: () => fetchFlags("against-me"),
+  const againstQuery = useQuery<GradeFlagRow[]>({
+    queryKey: ["grade-flags", "against-me", termKey],
+    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: 100, signal }),
+    placeholderData: keepPreviousData,
+    enabled: mode === "against-me",
   });
-  const adviseeQuery = useQuery({
-    queryKey: ["grade-flags", "advisees"],
-    queryFn: () => fetchFlags("advisees"),
+  // Advisership for the tab comes from the small shared sections query
+  // (cached with Settings) — not from the heavy advisees flags fetch, which
+  // runs only when its tab is visible.
+  const sectionsQuery = useQuery<{ sections: { advisedByMe: boolean }[] }>({
+    queryKey: ["teacher-settings-adviser-sections"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        sections: { advisedByMe: boolean }[];
+      }>("/api/teacher/settings/adviser-sections");
+      return data;
+    },
+    staleTime: 30_000,
     retry: false,
   });
+  const adviseeQuery = useQuery<GradeFlagRow[]>({
+    queryKey: ["grade-flags", "advisees", termKey],
+    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: 100, signal }),
+    placeholderData: keepPreviousData,
+    retry: false,
+    enabled: mode === "advisees",
+  });
 
-  const isAdviser = adviseeQuery.isSuccess;
-  const loading = mineQuery.isPending || againstQuery.isPending;
-  const loadError = mineQuery.isError || againstQuery.isError;
+  // Mode-aware: inactive tabs are disabled (idle-pending), so only the
+  // visible tab drives loading/error. Cached tab data stays instant via
+  // placeholderData on revisit.
+  const activeQuery =
+    mode === "raised-by-me"
+      ? mineQuery
+      : mode === "against-me"
+        ? againstQuery
+        : adviseeQuery;
+  const isAdviser =
+    (sectionsQuery.data?.sections ?? []).some((s) => s.advisedByMe) ||
+    adviseeQuery.isSuccess;
+  const loading = activeQuery.isPending;
+  const loadError = activeQuery.isError;
 
   const rows = useMemo(() => {
     const source =
       mode === "raised-by-me"
-        ? mineQuery.data ?? []
+        ? (Array.isArray(mineQuery.data) ? mineQuery.data : [])
         : mode === "against-me"
-          ? againstQuery.data ?? []
-          : adviseeQuery.data ?? [];
+          ? (Array.isArray(againstQuery.data) ? againstQuery.data : [])
+          : Array.isArray(adviseeQuery.data) ? adviseeQuery.data : [];
     const groupBy = mode === "against-me" ? "raiser" : "owner";
     return groupFlags(
       source.filter((f) => statusFilter === "all" || f.status === statusFilter),
@@ -98,10 +138,10 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
 
   const total =
     mode === "raised-by-me"
-      ? mineQuery.data?.length ?? 0
+      ? (Array.isArray(mineQuery.data) ? mineQuery.data.length : 0)
       : mode === "against-me"
-        ? againstQuery.data?.length ?? 0
-        : adviseeQuery.data?.length ?? 0;
+        ? (Array.isArray(againstQuery.data) ? againstQuery.data.length : 0)
+        : Array.isArray(adviseeQuery.data) ? adviseeQuery.data.length : 0;
   const shown = rows.reduce((n, c) => n + c.flags.length, 0);
 
   return (

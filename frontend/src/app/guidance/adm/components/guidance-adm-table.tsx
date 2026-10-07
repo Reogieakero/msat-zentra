@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Loader2, MoreHorizontal, Send } from "lucide-react";
-import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
+import { useGuidanceInvalidate, useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import { Button } from "@/components/ui/button";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import {
@@ -135,8 +134,8 @@ function nextStep(row: GuidanceAdmCase): string {
   }
 }
 
-function stageVariant(stage: string): "warning" | "destructive" | "secondary" | "outline" | "default" {
-  if (stage === "consultation" || stage === "meeting_parents") return "warning";
+function stageVariant(stage: string): "amber" | "destructive" | "secondary" | "outline" | "default" {
+  if (stage === "consultation" || stage === "meeting_parents") return "amber";
   if (stage === "home_visitation") return "destructive";
   if (stage === "completion") return "secondary";
   if (stage === "principal_approval") return "default";
@@ -153,7 +152,7 @@ export function GuidanceAdmTable({
   summary,
   reviewQueue,
 }: GuidanceAdmTableProps) {
-  const queryClient = useQueryClient();
+  const invalidateGuidance = useGuidanceInvalidate();
   const [endorsedFor, setEndorsedFor] = React.useState<string | null>(null);
   const [reviewId, setReviewId] = React.useState<string | null>(null);
   const [formSheet, setFormSheet] = React.useState<{
@@ -214,6 +213,7 @@ export function GuidanceAdmTable({
       () => "The case was closed with your reason kept on record. No further ADM action is needed.",
     errorTitle: "Could not reject the case",
     errorFallback: "The rejection did not go through. Check your connection and try again.",
+    sourceId: (variables) => variables.referralId,
   });
 
   const closeReject = () => {
@@ -367,7 +367,7 @@ export function GuidanceAdmTable({
           open={reviewId !== null}
           onClose={() => setReviewId(null)}
           onChanged={() => {
-            void queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+            invalidateGuidance();
           }}
           onCreateReferral={(draft) => setFormSheet({ row: activeReview, draft })}
         />
@@ -381,7 +381,7 @@ export function GuidanceAdmTable({
           lrn={formSheet.row.lrn}
           initialDraft={formSheet.draft}
           onChanged={() => {
-            void queryClient.invalidateQueries({ queryKey: ["guidance-adm"] });
+            invalidateGuidance();
           }}
         />
       )}
@@ -437,8 +437,8 @@ export function GuidanceAdmTable({
 
       {/* Quick reject straight from the Action column — no need to open the
            full report when the case clearly doesn't warrant ADM. */}
-      <Dialog open={rejectId !== null} onOpenChange={(open) => { if (!open) closeReject(); }}>
-        <DialogContent>
+      <Dialog open={rejectId !== null} onOpenChange={(open) => { if (!open && !reviewMutation.isPending) closeReject(); }}>
+        <DialogContent aria-busy={reviewMutation.isPending || undefined}>
           <DialogHeader>
             <DialogTitle>
               Reject from ADM{activeReject ? ` — ${activeReject.student}` : ""}
@@ -463,6 +463,7 @@ export function GuidanceAdmTable({
               variant="destructive"
               className={styles.btnRed}
               onClick={closeReject}
+              disabled={reviewMutation.isPending}
             >
               Cancel
             </Button>
@@ -470,6 +471,7 @@ export function GuidanceAdmTable({
               variant="destructive"
               className={styles.btnRed}
               disabled={reviewMutation.isPending || !rejectReason.trim()}
+              aria-busy={reviewMutation.isPending || undefined}
               onClick={submitQuickReject}
             >
               {reviewMutation.isPending ? (

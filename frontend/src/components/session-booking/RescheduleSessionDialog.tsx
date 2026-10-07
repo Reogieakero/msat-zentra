@@ -87,13 +87,17 @@ export function RescheduleSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        if (!next) {
+        // Locked while the move is in flight.
+        if (!next && !busy) {
           onClose();
           setError(null);
         }
       }}
     >
-      <DialogContent className={styles.dialogScrollHidden}>
+      <DialogContent
+        className={styles.dialogScrollHidden}
+        aria-busy={busy || undefined}
+      >
         <DialogHeader>
           <DialogTitle>Move session</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -122,7 +126,7 @@ export function RescheduleSessionDialog({
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {keepLabel}
           </Button>
-          <Button onClick={save} disabled={busy}>
+          <Button onClick={save} disabled={busy} aria-busy={busy || undefined}>
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
             {busy ? "Moving…" : submitLabel}
           </Button>

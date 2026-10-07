@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchNurseAlerts,
   fetchNurseRiskLevels,
-  type NurseAlertsData,
+  type NurseAlertsPage,
+  type NurseRiskLevel,
 } from "../alerts/components/nurse-alerts-data";
 import {
   buildNurseAdmInsights,
@@ -26,10 +28,15 @@ import styles from "./components/nurse-adm.module.css";
  * and Clinic Matters timelines, linked from the recommendations below.
  */
 export default function NurseAdmPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  // Aggregate insights view: bounded desk fetch (previews slice downstream).
   const { data: alertsData, isPending, isError, refetch, isFetching } =
-    useQuery<NurseAlertsData>({
-      queryKey: ["nurse-alerts"],
-      queryFn: fetchNurseAlerts,
+    useQuery<NurseAlertsPage>({
+      queryKey: ["nurse-alerts", "preview", termKey],
+      queryFn: ({ signal }) =>
+        fetchNurseAlerts({ page: 1, pageSize: 100, signal }),
+      placeholderData: keepPreviousData,
       staleTime: 60_000,
     });
 
@@ -44,13 +51,14 @@ export default function NurseAdmPage() {
   // id or roster id — the endpoint serves both). Desk-wide so the
   // high-risk recommendation sees clinic cases too.
   const studentIds = React.useMemo(
-    () => [
-      ...new Set(
-        (data?.desk ?? [])
-          .map((a) => a.studentId)
-          .filter((id): id is string => id !== null)
-      ),
-    ],
+    () =>
+      [
+        ...new Set(
+          (data?.desk ?? [])
+            .map((a) => a.studentId)
+            .filter((id): id is string => id !== null)
+        ),
+      ].sort(),
     [data]
   );
   const {
@@ -58,8 +66,8 @@ export default function NurseAdmPage() {
     isFetching: riskFetching,
     isError: riskError,
     refetch: refetchRisk,
-  } = useQuery({
-    queryKey: ["nurse-risk-levels", studentIds],
+  } = useQuery<Record<string, NurseRiskLevel>>({
+    queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
     enabled: studentIds.length > 0,

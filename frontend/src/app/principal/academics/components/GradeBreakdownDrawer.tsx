@@ -1,13 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { CardModal } from "@/components/ui/CardModal";
 import { RiskBadge } from "./RiskBadge";
 import type { StudentRow } from "../academics-data";
 import type { GradeMode } from "../../grade-mode-context";
@@ -29,16 +23,20 @@ export function GradeBreakdownDrawer({
 }: Props) {
   const showTransmuted = gradeMode === "final";
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={`${styles.sheet} sm:max-w-lg`}>
-        {student && (
+    <CardModal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      size="lg"
+      title={student?.name ?? "Grade breakdown"}
+      description={
+        student
+          ? `LRN ${student.lrn} · ${showTransmuted ? "Final grade breakdown" : "Raw partial grades"} (view-only, not yet finalized)`
+          : undefined
+      }
+      watchKey={student?.studentId}
+    >
+      {student && (
           <>
-            <SheetHeader>
-              <SheetTitle>{student.name}</SheetTitle>
-              <SheetDescription>
-                LRN {student.lrn} · {showTransmuted ? "Final grade breakdown" : "Raw partial grades"} (view-only, not yet finalized)
-              </SheetDescription>
-            </SheetHeader>
             <div className={styles.drawerSection}>
               <div className={styles.metaRow}>
                 <RiskBadge level={student.riskLevel} />
@@ -153,7 +151,6 @@ export function GradeBreakdownDrawer({
             </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+    </CardModal>
   );
 }

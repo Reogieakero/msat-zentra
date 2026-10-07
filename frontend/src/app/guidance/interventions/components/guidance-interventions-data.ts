@@ -100,8 +100,11 @@ export interface GuidanceInterventionsData {
   students: AtRiskStudentItem[];
   page: number;
   pageSize: number;
+  /** Filtered pager count (shrinks on search/filter). */
   total: number;
   totalPages: number;
+  /** UNFILTERED cohort total — tile stats never shrink on search. */
+  unfilteredTotal?: number;
 }
 
 export interface GuidanceInterventionsParams {
@@ -127,11 +130,18 @@ export async function fetchGuidanceInterventions(
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
-  const { data } = await apiClient.get<GuidanceInterventionsData>(
+  const { data } = await apiClient.get<
+    GuidanceInterventionsData | { students: AtRiskStudentItem[] }
+  >(
     `/api/interventions${query ? `?${query}` : ""}`,
     { signal: opts.signal }
   );
-  return data;
+  // Defensive: the endpoint has served bare {students} shapes — never let
+  // a shape change crash the table.
+  const students = Array.isArray((data as { students?: unknown }).students)
+    ? (data as { students: AtRiskStudentItem[] }).students
+    : [];
+  return { ...(data as GuidanceInterventionsData), students };
 }
 
 // Every live at-risk student (High + Moderate, all outcomes) for

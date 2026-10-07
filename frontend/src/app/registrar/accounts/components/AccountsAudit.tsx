@@ -2,17 +2,18 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, History } from "lucide-react";import { apiClient } from "@/lib/api/client";
-import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { formatSection, formatGrade } from "@/lib/utils";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts-audit.module.css";
 import pageStyles from "../accounts.module.css";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 export type AccountsAuditEntry = {
   id: string;
@@ -63,6 +64,7 @@ export function AccountsAudit() {
         })
         .then((res) => res.data),
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
   const entries = data?.entries ?? [];
@@ -73,32 +75,39 @@ export function AccountsAudit() {
   const end = Math.min(safePage * PAGE_SIZE, total);
 
   return (
-    <Card className={pageStyles.card}>
-      <CardHeader className={pageStyles.header}>
+    <section className={assign.card} aria-labelledby="accounts-audit">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${pageStyles.header} relative`}>
         <div className={pageStyles.headerText}>
-          <CardTitle className="flex items-center gap-2">
+          <h2 id="accounts-audit" className="flex items-center gap-2 text-base font-semibold">
             <History className="size-4 text-muted-foreground" aria-hidden />
             Accounts Audit Trail
-          </CardTitle>
-          <CardDescription className="mt-1">
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {total === 0
               ? "No account approval actions on record."
               : `${total} ${total === 1 ? "action" : "actions"} — approvals & rejections processed in this session.`}
-          </CardDescription>
+          </p>
         </div>
-        <CardAction className={pageStyles.headerActions}>
+        <div className={pageStyles.headerActions}>
           <Badge variant="secondary" className={pageStyles.countBadge}>
             {total} recorded
           </Badge>
-        </CardAction>
-      </CardHeader>
+        </div>
+      </div>
 
-      <CardContent className={pageStyles.content}>
+      <div className={`${pageStyles.content} relative`}>
         {isPending ? (
           <AuditSkeleton />
         ) : entries.length === 0 ? (
-          <div className={pageStyles.empty}>
-            <p>
+          <div className={pageStyles.emptyBlock}>
+            <span className={pageStyles.emptyIcon} aria-hidden>
+              <History />
+            </span>
+            <p className={pageStyles.emptyTitle}>No audit entries yet</p>
+            <p className={pageStyles.emptyHint}>
               Approve or reject a pending account above and the action will
               appear here as an immutable audit entry.
             </p>
@@ -185,10 +194,10 @@ export function AccountsAudit() {
             </Table>
           </div>
         )}
-      </CardContent>
+      </div>
 
       {!isPending && total > 0 ? (
-        <CardFooter className={pageStyles.footer}>
+        <div className={`${pageStyles.footer} relative`}>
           <span className={pageStyles.footerInfo}>
             {`${start}–${end} of ${total}`}
           </span>
@@ -212,9 +221,9 @@ export function AccountsAudit() {
               <ChevronRight aria-hidden />
             </Button>
           </div>
-        </CardFooter>
+        </div>
       ) : null}
-    </Card>
+    </section>
   );
 }
 

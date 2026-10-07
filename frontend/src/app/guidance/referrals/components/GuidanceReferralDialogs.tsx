@@ -138,9 +138,12 @@ export function GuidanceReferralDialogs({
       {/* Escalate Dialog */}
       <Dialog
         open={dialogs.escalate}
-        onOpenChange={() => closeDialog("escalate")}
+        onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("escalate") }}
       >
-        <DialogContent className={styles.dialogScrollHidden}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Send to a higher office</DialogTitle>
             <DialogDescription>
@@ -184,7 +187,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={
                 isActionPending ||
                 !form.escalatedTo ||
@@ -207,9 +210,12 @@ export function GuidanceReferralDialogs({
       {/* Reassign Dialog */}
       <Dialog
         open={dialogs.reassign}
-        onOpenChange={() => closeDialog("reassign")}
+        onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("reassign") }}
       >
-        <DialogContent className={styles.dialogScrollHidden}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Pass to someone else</DialogTitle>
             <DialogDescription>
@@ -240,7 +246,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={isActionPending || !form.specialistRole}
               onClick={() =>
                 handleAction("reassign", {
@@ -256,8 +262,11 @@ export function GuidanceReferralDialogs({
       </Dialog>
 
       {/* Note Dialog */}
-      <Dialog open={dialogs.note} onOpenChange={() => closeDialog("note")}>
-        <DialogContent className={styles.dialogScrollHidden}>
+      <Dialog open={dialogs.note} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("note") }}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Add a private note</DialogTitle>
             <DialogDescription>
@@ -285,7 +294,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={isActionPending || !form.noteText}
               onClick={() => handleAction("note", { notes: form.noteText })}
             >
@@ -299,9 +308,12 @@ export function GuidanceReferralDialogs({
       {/* Follow-up Dialog */}
       <Dialog
         open={dialogs.followUp}
-        onOpenChange={() => closeDialog("followUp")}
+        onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("followUp") }}
       >
-        <DialogContent className={styles.dialogScrollHidden}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Set a check-back reminder</DialogTitle>
             <DialogDescription>
@@ -325,7 +337,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={isActionPending || !form.followUpDate}
               onClick={() =>
                 handleAction("followUp", { followUpDate: form.followUpDate })
@@ -341,9 +353,12 @@ export function GuidanceReferralDialogs({
       {/* Dismiss Dialog */}
       <Dialog
         open={dialogs.dismiss}
-        onOpenChange={() => closeDialog("dismiss")}
+        onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("dismiss") }}
       >
-        <DialogContent className={styles.dialogScrollHidden}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Close without action</DialogTitle>
             <DialogDescription>
@@ -371,7 +386,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={isActionPending || !form.dismissReason}
               onClick={() =>
                 handleAction("dismiss", { reason: form.dismissReason })
@@ -387,9 +402,12 @@ export function GuidanceReferralDialogs({
       {/* Specialist Dialog */}
       <Dialog
         open={dialogs.specialist}
-        onOpenChange={() => closeDialog("specialist")}
+        onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("specialist") }}
       >
-        <DialogContent className={styles.dialogScrollHidden}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Ask a specialist for help</DialogTitle>
             <DialogDescription>
@@ -435,7 +453,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={
                 isActionPending ||
                 !form.specialistRole ||
@@ -456,8 +474,11 @@ export function GuidanceReferralDialogs({
       </Dialog>
 
       {/* ADM Dialog */}
-      <Dialog open={dialogs.adm} onOpenChange={() => closeDialog("adm")}>
-        <DialogContent className={styles.dialogScrollHidden}>
+      <Dialog open={dialogs.adm} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("adm") }}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Start ADM process</DialogTitle>
             <DialogDescription>
@@ -486,7 +507,7 @@ export function GuidanceReferralDialogs({
             >
               Cancel
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={isActionPending || !form.admReason}
               onClick={() => handleAction("adm", { reason: form.admReason })}
             >
@@ -498,8 +519,11 @@ export function GuidanceReferralDialogs({
       </Dialog>
 
       {/* Accept with intake */}
-      <Dialog open={dialogs.accept} onOpenChange={() => closeDialog("accept")}>
-        <DialogContent className={styles.dialogScrollHidden}>
+      <Dialog open={dialogs.accept} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("accept") }}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Accept this case{activeRow ? ` — ${activeRow.student}` : ""}</DialogTitle>
             <DialogDescription>
@@ -576,7 +600,7 @@ export function GuidanceReferralDialogs({
             >
               Not yet
             </Button>
-            <Button
+            <Button aria-busy={isActionPending || undefined}
               disabled={isActionPending}
               onClick={() => {
                 const when =
@@ -732,8 +756,11 @@ export function GuidanceReferralDialogs({
       )}
 
       {/* Finish & close with strict requirements */}
-      <Dialog open={dialogs.resolve} onOpenChange={() => closeDialog("resolve")}>
-        <DialogContent className={styles.dialogScrollHidden}>
+      <Dialog open={dialogs.resolve} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("resolve") }}>
+        <DialogContent
+          className={styles.dialogScrollHidden}
+          aria-busy={isActionPending || undefined}
+        >
           <DialogHeader>
             <DialogTitle>Finish and close case</DialogTitle>
             <DialogDescription>

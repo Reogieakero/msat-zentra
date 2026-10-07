@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoordinatorCertificationsCharts } from "./components/coordinator-certifications-charts";
@@ -29,17 +30,11 @@ function tabToStatus(tab: string | null): CertStatusFilter {
 function CertificationsBody() {
   const params = useSearchParams();
   const [queryInput, setQueryInput] = React.useState("");
-  const [query, setQuery] = React.useState("");
+  // Debounced 300ms server search (registrar precedent).
+  const query = useDebouncedValue(queryInput.trim(), 300);
   const [status, setStatus] = React.useState<CertStatusFilter>(() =>
     tabToStatus(params.get("tab")),
   );
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setQuery(queryInput.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [queryInput]);
 
   const handleQueryInputChange = (value: string) => {
     setQueryInput(value);
@@ -48,25 +43,32 @@ function CertificationsBody() {
   const certQuery = useQuery({
     queryKey: ["coordinator-certifications", "certification", query],
     queryFn: ({ signal }) => fetchCertStageRows("certification", query, signal),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
   const approvalQuery = useQuery({
     queryKey: ["coordinator-certifications", "principal_approval", query],
     queryFn: ({ signal }) =>
       fetchCertStageRows("principal_approval", query, signal),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
   const approvedQuery = useQuery({
     queryKey: ["coordinator-certifications", "approved", query],
     queryFn: ({ signal }) => fetchCertApprovalRows(query, signal),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
+  // Defensive: non-array payloads (cached/error shapes) never crash the merge.
   const records = React.useMemo(
     () =>
       mergeCertRecords(
-        [...(certQuery.data ?? []), ...(approvalQuery.data ?? [])],
-        approvedQuery.data ?? [],
+        [
+          ...(Array.isArray(certQuery.data) ? certQuery.data : []),
+          ...(Array.isArray(approvalQuery.data) ? approvalQuery.data : []),
+        ],
+        Array.isArray(approvedQuery.data) ? approvedQuery.data : [],
       ),
     [certQuery.data, approvalQuery.data, approvedQuery.data],
   );

@@ -530,10 +530,11 @@ export function studentDayOutcomes(
 
 // ---------------------------------------------------------------------------
 // Subject-average attendance for at-risk flagging (replaces AM/PM sessions).
-// Same definition as the advisory attendance average: per subject,
-// present in-window sessions ÷ elapsed timetable meetups, averaged across
-// the student's section offerings. A done meetup with no take counts as
-// absent. Keys are profile userIds or `roster:<id>`.
+// General average across all subjects — same definition as the advisory
+// attendance display: per subject, present in-window sessions ÷ elapsed
+// timetable meetups, averaged across the student's section offerings.
+// A done meetup with no take counts as absent. Keys are profile userIds or
+// `roster:<id>`.
 // ---------------------------------------------------------------------------
 
 export interface SubjectAverageEntry {

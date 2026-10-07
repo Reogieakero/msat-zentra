@@ -92,18 +92,27 @@ router.get(
   "/overview",
   requireAuth,
   requireRole("subject_teacher", "adviser"),
-  cache({ tags: ["teacher", "overview"] }),
+  // Longer-lived than the default 60s: repeated desk reads re-hit the
+  // cache for minutes. Writes still purge via tags, so saves stay live.
+  cache({ ttl: 300, tags: ["teacher", "overview"] }),
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
       // Scope narrows the payload so first paint stays light:
       // - `critical` skips assessments/standings/activity (heavy aggregations).
       // - `secondary` skips the advisory risk engine (heavy per-student scans).
+      // - `gradebook` serves the grading landing in one round trip: classes +
+      //   assessments + standings only (no risk scans, no advisory engine,
+      //   no activity log).
       // - absent scope returns the full legacy shape (backward compatible).
       const scopeParam = req.query.scope;
-      const scope = scopeParam === "critical" || scopeParam === "secondary" ? scopeParam : "full";
+      const scope =
+        scopeParam === "critical" || scopeParam === "secondary" || scopeParam === "gradebook"
+          ? scopeParam
+          : "full";
       const isCriticalOnly = scope === "critical";
       const isSecondaryOnly = scope === "secondary";
+      const isGradebookOnly = scope === "gradebook";
       const termId = await resolveActiveTermId(req);
       if (!termId) {
         return res.json(EMPTY_RESPONSE);
@@ -330,7 +339,9 @@ router.get(
       // only. enrolled: 0 forces the subject-era present/records rule so a
       // student with no takes in these subjects is not falsely flagged.
       const classRiskByKey = new Map<string, { riskLevel: "Low" | "Moderate" | "High"; flags: ("academic" | "attendance")[] }>();
-      if (classStudentBases.length > 0 && handledSubjectIds.length > 0) {
+      // Gradebook scope never reads classStudents — skip its three heavy
+      // scans (finals + raw scores + attendance takes) entirely.
+      if (!isGradebookOnly && classStudentBases.length > 0 && handledSubjectIds.length > 0) {
         const profileIds = sectionStudents.map((p) => p.userId);
         const rosterIds = classRoster.map((r) => r.id);
         const orClauses = [
@@ -563,9 +574,9 @@ router.get(
         flag: "academic" | "attendance" | "behavioral" | "none";
         flags: ("academic" | "attendance" | "behavioral")[];
       }[] = [];
-      // Secondary scope skips the advisory risk engine (per-student scans) —
-      // it only needs the secondary aggregations computed above.
-      if (!isSecondaryOnly && advisorySection) {
+      // Secondary + gradebook scopes skip the advisory risk engine
+      // (per-student scans) — they only need the aggregations above.
+      if (!isSecondaryOnly && !isGradebookOnly && advisorySection) {
         const [advisees, rosterEntries] = await Promise.all([
           prisma.studentProfile.findMany({
             where: { sectionId: advisorySection.id },
@@ -684,12 +695,15 @@ router.get(
             anecdotalCount,
             enrolled,
           });
-          // Attendance at-risk follows the per-subject present average
-          // (same definition as the advisory attendance display), never
-          // AM/PM sessions. Students with no subject-linked takes keep the
-          // engine result.
+          // Attendance at-risk follows the general average across all
+          // subjects (mean of per-subject present / elapsed rates — same
+          // definition as the advisory attendance display), never AM/PM
+          // sessions. An entry exists whenever elapsed meetups exist, so a
+          // student with no takes scores 0% and flags — matching the
+          // display. Only when nothing elapsed (no entry) is the legacy
+          // engine result kept.
           const subjAvg = subjectAvgs.get(key);
-          if (subjAvg?.hasSubjectData) {
+          if (subjAvg) {
             flags.attendanceFlag = subjAvg.average < ATTENDANCE_RISK_CUTOFF;
           }
           const activeFlags: ("academic" | "attendance" | "behavioral")[] = [];
@@ -699,7 +713,19 @@ router.get(
           return { flags, activeFlags, flag: activeFlags[0] ?? ("none" as const) };
         };
 
-        const enrolled = countBySection.get(advisorySection.id) ?? 0;
+        // Advisory-section headcount for the legacy fallback (used only
+        // when nothing elapsed and subjectAvgs has no entry). The handled-
+        // sections map above may not contain the advisory section when the
+        // adviser teaches elsewhere, so fall back to a direct headcount
+        // instead of 0 — 0 would clear the flag for zero-record students.
+        let enrolled = countBySection.get(advisorySection.id) ?? 0;
+        if (!countBySection.has(advisorySection.id)) {
+          enrolled =
+            (await sectionHeadcounts([advisorySection.id])).get(
+              advisorySection.id,
+            ) ?? 0;
+          countBySection.set(advisorySection.id, enrolled);
+        }
         const subjectAvgs = await subjectAverageAttendance([advisorySection.id], termId);
         advisoryStudents = [
           ...advisees.map((s) => {
@@ -754,6 +780,16 @@ router.get(
       // can exceed this (one student may trip several factors) and must never
       // be summed into a percentage.
       const atRiskStudents = advisoryStudents.filter((s) => s.flag !== "none").length;
+
+      // Gradebook scope serves the grading landing in one round trip:
+      // classes + assessments + standings, nothing else.
+      if (isGradebookOnly) {
+        return res.json({
+          classes,
+          assessments: assessmentsPayload,
+          standings,
+        });
+      }
 
       // Secondary scope serves the lazy widgets only (grading cards need
       // assessments/standings; nothing renders kpi counters yet, but they are
@@ -819,8 +855,10 @@ router.get(
 // (LRN-deduped) — in the SAME row shape as subject mode. Attendance % is the
 // per-subject average over elapsed meetups (the advisory attendance
 // definition: 0% once meetups elapsed with no takes, blank only when nothing
-// elapsed); the academic grade is the general average (mean transmuted
-// grade) across the section's offered subjects this term.
+// elapsed); present/total use the section-wide elapsed total (summed across
+// all offered subjects — ONE shared denominator for every student, never
+// each student's own takes count); the academic grade is the general average
+// (mean transmuted grade) across the section's offered subjects this term.
 async function advisoryRoster(termId: string, sectionId: string) {
   const [profiles, rosterEntries, assignSubs, entrySubs] = await Promise.all([
     prisma.studentProfile.findMany({
@@ -840,8 +878,7 @@ async function advisoryRoster(termId: string, sectionId: string) {
     }),
     prisma.sectionTimetableEntry.findMany({
       where: { sectionId, termId, status: { in: ["APPROVED", "SUBMITTED"] } },
-      select: { subjectId: true },
-      distinct: ["subjectId"],
+      select: { subjectId: true, day: true },
     }),
   ]);
   const offeredIds = [
@@ -854,7 +891,7 @@ async function advisoryRoster(termId: string, sectionId: string) {
   const keyOf = (studentId: string | null, rosterId: string | null): string | null =>
     studentId ?? (rosterId ? `roster:${rosterId}` : null);
 
-  const [profileFinals, rosterFinals, takes, avgs] = await Promise.all([
+  const [profileFinals, rosterFinals, takes, avgs, term] = await Promise.all([
     profileIds.length > 0 && offeredIds.length > 0
       ? prisma.finalGrade.findMany({
           where: { termId, subjectId: { in: offeredIds }, studentId: { in: profileIds } },
@@ -870,10 +907,14 @@ async function advisoryRoster(termId: string, sectionId: string) {
     offeredIds.length > 0
       ? prisma.attendanceRecord.findMany({
           where: { termId, sectionId, subjectId: { in: offeredIds } },
-          select: { studentId: true, rosterId: true, status: true },
+          select: { studentId: true, rosterId: true, subjectId: true, status: true, date: true },
         })
-      : Promise.resolve([] as { studentId: string | null; rosterId: string | null; status: string }[]),
+      : Promise.resolve([] as { studentId: string | null; rosterId: string | null; subjectId: string | null; status: string; date: Date }[]),
     subjectAverageAttendance([sectionId], termId),
+    prisma.term.findUnique({
+      where: { id: termId },
+      select: { startDate: true, endDate: true },
+    }),
   ]);
 
   const finalsByKey = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
@@ -891,14 +932,55 @@ async function advisoryRoster(termId: string, sectionId: string) {
     arr.push({ computedAverage: f.computedAverage, transmutedGrade: f.transmutedGrade });
     finalsByKey.set(key, arr);
   }
-  const takesByKey = new Map<string, { present: number; total: number }>();
+  // Section-wide elapsed meetups: meetup weekdays per offered subject from
+  // committed slots × term start → today (same window as the advisory
+  // attendance matrix). The summed total is ONE shared denominator for
+  // every student — never each student's own takes count. Presents are
+  // distinct present dates per subject inside the window (matrix unit).
+  const meetupDays = new Map<string, Set<number>>();
+  for (const e of entrySubs) {
+    const set = meetupDays.get(e.subjectId) ?? new Set<number>();
+    set.add(e.day);
+    meetupDays.set(e.subjectId, set);
+  }
+  const startStr = term?.startDate?.toISOString().slice(0, 10) ?? null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const termEndStr = term?.endDate?.toISOString().slice(0, 10) ?? null;
+  const endStr = termEndStr && termEndStr < todayStr ? termEndStr : todayStr;
+  const elapsedBySubject = new Map<string, Set<string>>();
+  if (startStr && startStr <= endStr && offeredIds.length > 0) {
+    for (const sid of offeredIds) {
+      const days = meetupDays.get(sid) ?? new Set([1, 2, 3, 4, 5]);
+      const set = new Set<string>();
+      for (
+        let d = new Date(`${startStr}T00:00:00Z`);
+        d.toISOString().slice(0, 10) <= endStr;
+        d = new Date(d.getTime() + 86_400_000)
+      ) {
+        const dow = d.getUTCDay();
+        const day = dow === 0 ? 7 : dow;
+        if (days.has(day)) set.add(d.toISOString().slice(0, 10));
+      }
+      if (set.size > 0) elapsedBySubject.set(sid, set);
+    }
+  }
+  const sectionMeetups = [...elapsedBySubject.values()].reduce((n, s) => n + s.size, 0);
+  const presentDays = new Map<string, Set<string>>();
   for (const t of takes) {
+    if (t.status !== "present") continue;
     const key = keyOf(t.studentId, t.rosterId);
-    if (!key) continue;
-    const cell = takesByKey.get(key) ?? { present: 0, total: 0 };
-    cell.total += 1;
-    if (t.status === "present") cell.present += 1;
-    takesByKey.set(key, cell);
+    if (!key || !t.subjectId) continue;
+    const dayKey = t.date.toISOString().slice(0, 10);
+    if (!elapsedBySubject.get(t.subjectId)?.has(dayKey)) continue;
+    const cellKey = `${key}|${t.subjectId}`;
+    const set = presentDays.get(cellKey) ?? new Set<string>();
+    set.add(dayKey);
+    presentDays.set(cellKey, set);
+  }
+  const presentByKey = new Map<string, number>();
+  for (const [cellKey, dates] of presentDays) {
+    const key = cellKey.slice(0, cellKey.lastIndexOf("|"));
+    presentByKey.set(key, (presentByKey.get(key) ?? 0) + dates.size);
   }
 
   const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -923,12 +1005,11 @@ async function advisoryRoster(termId: string, sectionId: string) {
   ]
     .map((s) => {
       const avg = avgs.get(s.studentId)?.average ?? null;
-      const cell = takesByKey.get(s.studentId) ?? { present: 0, total: 0 };
       const finals = finalsByKey.get(s.studentId) ?? [];
       return {
         ...s,
-        attendancePresent: cell.present,
-        attendanceTotal: cell.total,
+        attendancePresent: presentByKey.get(s.studentId) ?? 0,
+        attendanceTotal: sectionMeetups,
         attendancePercentage: avg === null ? null : Math.round(avg * 1000) / 10,
         computedAverage: mean(finals.map((f) => f.computedAverage)),
         academicGrade: mean(finals.map((f) => f.transmutedGrade)),
@@ -958,7 +1039,10 @@ router.get(
   "/overview/student-list",
   requireAuth,
   requireRole("subject_teacher", "adviser"),
-  cache({ tags: ["teacher", "overview"] }),
+  // Longer-lived than the default 60s: rail switches re-hit the cache for
+  // minutes at a time. Writes still purge via the teacher/overview tags, so
+  // attendance and grade saves stay live.
+  cache({ ttl: 300, tags: ["teacher", "overview"] }),
   async (req, res, next) => {
     try {
       const teacherId = req.user!.id;
@@ -1020,13 +1104,107 @@ router.get(
       const railSectionIds = Array.from(
         new Set([...handledSectionIds, ...advisedSections.map((s) => s.id)]),
       );
-      const headcounts = await sectionHeadcounts(railSectionIds);
+      // No rails at all (same condition as the classes/advisorySections
+      // check below, but known before any roster work starts).
+      if (linkedPairs.length === 0 && assignments.length === 0 && advisedSections.length === 0) {
+        return res.json({
+          classes: [],
+          advisorySections: [],
+          class: null,
+          advisorySection: null,
+          students: [],
+        });
+      }
+      // Rail headcounts and the active roster are independent — start both
+      // together so a section switch pays one round-trip chain instead of
+      // two. Pick validation below is sync (assignments + links + advised
+      // sections are already in hand); validation failures reject the same
+      // way through next(e).
+      const headcountsPromise = sectionHeadcounts(railSectionIds);
+      const advisedIds = new Set(advisedSections.map((s) => s.id));
+      const advisoryId =
+        advisorySectionParam ||
+        (!classIdParam && advisedSections.length > 0 ? advisedSections[0].id : "");
+      const rosterPromise = (async () => {
+        if (advisoryId) {
+          if (!advisedIds.has(advisoryId)) {
+            throw new AppError(404, "SECTION_NOT_FOUND", "Advisory section not found");
+          }
+          return {
+            kind: "advisory" as const,
+            students: await advisoryRoster(termId, advisoryId),
+          };
+        }
+        const resolvePair = (classId: string): { subjectId: string; sectionId: string } | null => {
+          const sep = classId.indexOf("|");
+          if (sep >= 0) {
+            return { subjectId: classId.slice(0, sep), sectionId: classId.slice(sep + 1) };
+          }
+          const match = assignments.find((a) => a.id === classId);
+          return match ? { subjectId: match.subjectId, sectionId: match.sectionId } : null;
+        };
+        // Default pick mirrors rail order: first linked pair, else first
+        // assignment (same ordering the rail rows use below).
+        const activeId =
+          classIdParam ||
+          (linkedPairs.length > 0
+            ? `${linkedPairs[0].subjectId}|${linkedPairs[0].sectionId}`
+            : (assignments[0]?.id ?? ""));
+        const pair = resolvePair(activeId);
+        const owns =
+          !!pair &&
+          (assignments.some(
+            (a) => a.subjectId === pair.subjectId && a.sectionId === pair.sectionId,
+          ) ||
+            linkedPairs.some(
+              (s) => s.subjectId === pair.subjectId && s.sectionId === pair.sectionId,
+            ));
+        if (!pair || !owns) {
+          throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
+        }
+        const [subject, section, profiles, rosterEntries] = await Promise.all([
+          prisma.subject.findUnique({
+            where: { id: pair.subjectId },
+            select: { id: true, name: true, code: true },
+          }),
+          prisma.section.findUnique({
+            where: { id: pair.sectionId },
+            select: { id: true, name: true, gradeLevel: true },
+          }),
+          prisma.studentProfile.findMany({
+            where: { sectionId: pair.sectionId },
+            select: {
+              userId: true,
+              lrn: true,
+              user: { select: { fullName: true } },
+            },
+            orderBy: { user: { fullName: "asc" } },
+          }),
+          prisma.studentRoster.findMany({
+            where: { sectionId: pair.sectionId },
+            select: { id: true, lrn: true, fullName: true },
+            orderBy: { fullName: "asc" },
+          }),
+        ]);
+        return {
+          kind: "subject" as const,
+          subjectId: pair.subjectId,
+          sectionId: pair.sectionId,
+          classId: activeId,
+          subject,
+          section,
+          profiles,
+          rosterEntries,
+        };
+      })();
+      const [headcounts, roster] = await Promise.all([headcountsPromise, rosterPromise]);
       // Rail rows — same shape as the overview `classes` so the picker is
       // consistent everywhere.
       const classes = (linkedPairs.length > 0
         ? linkedPairs.map((s) => ({
             id: `${s.subjectId}|${s.sectionId}`,
             subject: s.subject.name,
+            code: s.subject.code,
             gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
             section: s.section.name,
             studentCount: headcounts.get(s.sectionId) ?? 0,
@@ -1034,6 +1212,7 @@ router.get(
         : assignments.map((a) => ({
             id: a.id,
             subject: a.subject.name,
+            code: a.subject.code,
             gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
             section: a.section.name,
             studentCount: headcounts.get(a.sectionId) ?? 0,
@@ -1055,66 +1234,22 @@ router.get(
       }
 
       // Advisory mode: the teacher's advisees. Subject mode below stays
-      // untouched for regular teachers.
-      const advisedIds = new Set(advisedSections.map((s) => s.id));
-      const advisoryId = advisorySectionParam || (!classIdParam && advisorySections.length > 0 ? advisorySections[0].id : "");
-      if (advisoryId) {
-        if (!advisedIds.has(advisoryId)) {
-          throw new AppError(404, "SECTION_NOT_FOUND", "Advisory section not found");
-        }
+      // untouched for regular teachers. Roster data arrived with headcounts
+      // above; this just branches on it.
+      if (roster.kind === "advisory") {
         return res.json({
           classes,
           advisorySections,
           class: null,
           advisorySection: advisorySections.find((s) => s.id === advisoryId) ?? null,
-          students: await advisoryRoster(termId, advisoryId),
+          students: roster.students,
         });
       }
 
-      const resolvePair = (classId: string): { subjectId: string; sectionId: string } | null => {
-        const sep = classId.indexOf("|");
-        if (sep >= 0) {
-          return { subjectId: classId.slice(0, sep), sectionId: classId.slice(sep + 1) };
-        }
-        const match = assignments.find((a) => a.id === classId);
-        return match ? { subjectId: match.subjectId, sectionId: match.sectionId } : null;
-      };
-      const activeId = classIdParam || classes[0].id;
-      const pair = resolvePair(activeId);
-      const owns = !!pair && (
-        assignments.some((a) => a.subjectId === pair.subjectId && a.sectionId === pair.sectionId) ||
-        linkedPairs.some((s) => s.subjectId === pair.subjectId && s.sectionId === pair.sectionId)
-      );
-      if (!pair || !owns) {
+      const { subject, section, profiles, rosterEntries, subjectId, sectionId, classId } = roster;
+      if (!subject || !section) {
         throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
       }
-      const { subjectId, sectionId } = pair;
-      const classId = activeId;
-
-      const [subject, section, profiles, rosterEntries] = await Promise.all([
-        prisma.subject.findUnique({
-          where: { id: subjectId },
-          select: { id: true, name: true, code: true },
-        }),
-        prisma.section.findUnique({
-          where: { id: sectionId },
-          select: { id: true, name: true, gradeLevel: true },
-        }),
-        prisma.studentProfile.findMany({
-          where: { sectionId },
-          select: {
-            userId: true,
-            lrn: true,
-            user: { select: { fullName: true } },
-          },
-          orderBy: { user: { fullName: "asc" } },
-        }),
-        prisma.studentRoster.findMany({
-          where: { sectionId },
-          select: { id: true, lrn: true, fullName: true },
-          orderBy: { fullName: "asc" },
-        }),
-      ]);
       if (!subject || !section) {
         throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
       }
@@ -1456,9 +1591,29 @@ router.patch(
           ? "Teacher declared Master Teacher status"
           : "Teacher removed Master Teacher status",
       });
-      await invalidateTags(["teacher", "overview"]);
+      await invalidateTags(["teacher", "overview", "schedule", "academics", "principal"]);
 
       res.json({ isMasterTeacher });
+      // Seat take/release is desk-visible: masters + principal learn live,
+      // and the actor keeps a self receipt. Best-effort, never delays.
+      if (isMasterTeacher) {
+        void fanoutToRole("principal", {
+          sourceTable: "staff_profiles",
+          action: "master_take",
+          sourceId: teacherId,
+          excludeUserId: teacherId,
+          message: "A teacher declared Master Teacher status.",
+        });
+      }
+      void fanoutNotification({
+        userId: teacherId,
+        sourceTable: "staff_profiles",
+        action: "master_take",
+        sourceId: teacherId,
+        message: isMasterTeacher
+          ? "You declared Master Teacher status."
+          : "You removed Master Teacher status.",
+      });
     } catch (e) {
       next(e);
     }
@@ -1609,8 +1764,12 @@ export default router;
 router.get("/schedule", requireAuth, requireRole("subject_teacher", "adviser"), async (req, res, next) => {
   try {
     const termId = await resolveActiveTermId(req);
+    const yearId = req.termScope?.schoolYearId ?? null;
     const sections = await prisma.section.findMany({
-      where: { gradeLevel: { in: ["G7", "G8", "G9", "G10"] } },
+      where: {
+        gradeLevel: { in: ["G7", "G8", "G9", "G10"] },
+        ...(yearId ? { schoolYearId: yearId } : {}),
+      },
       include: {
         adviser: { select: { fullName: true } },
         teacherAssignments: {
@@ -1729,8 +1888,9 @@ router.post(
         throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
       }
       // Only advisers may enter a term this way — everyone else answers
-      // with their teacher-list code.
-      await adviserSectionsOr404(teacherId);
+      // with their teacher-list code. Scoped to the session year so last
+      // year's advisership never opens this year's workspace.
+      await adviserSectionsOr404(teacherId, req.termScope?.schoolYearId ?? null);
       const mine = await prisma.teacherName.findUnique({
         where: { userId: teacherId },
         select: { id: true },
@@ -1819,6 +1979,14 @@ router.post(
       // that this teacher linked the code to their account — including a
       // master linking their own code, so the record exists in their bell.
       void notifyMastersTeacherLinkChanged(linked.id, linked.name, linked.code, "claim");
+      // Self receipt: the linking teacher's own bell keeps the row.
+      void fanoutNotification({
+        userId: teacherId,
+        sourceTable: "teacher_names",
+        action: "claim_self",
+        sourceId: linked.id,
+        message: `You linked code ${linked.code ?? "—"} (${linked.name}) to your login.`,
+      });
     } catch (e) {
       next(e);
     }
@@ -1828,6 +1996,28 @@ router.post(
 // Best-effort fanout to active Master Teachers (never delays responses).
 // Masters are flagged on StaffProfile, not a role, so role fanout can't
 // address them.
+async function notifyMastersScheduleChanged(reason: string, excludeUserId?: string) {
+  try {
+    const masters = await prisma.user.findMany({
+      where: { status: "active", staffProfile: { isMasterTeacher: true } },
+      select: { id: true },
+    });
+    await Promise.all(
+      masters
+        .filter((m) => m.id !== excludeUserId)
+        .map((m) =>
+          fanoutNotification({
+            userId: m.id,
+            sourceTable: "section_timetable_entries",
+            action: "schedule_update",
+            message: reason,
+          })
+        )
+    );
+  } catch {
+    // Logged inside fanoutNotification; never throws outward.
+  }
+}
 async function notifyMastersTeacherLinkChanged(
   teacherNameId: string,
   teacherName: string,
@@ -1912,6 +2102,7 @@ router.post(
           attendanceVerifiedAt: new Date(),
         },
       });
+      await invalidateTags(["teacher", "schedule"]);
       res.json({ verified: true, teacherName: { id: mine.id, name: mine.name, code: mine.code } });
       void (async () => {
         try {
@@ -2083,6 +2274,10 @@ router.post("/schedule", requireAuth, requireRole("subject_teacher", "adviser"),
     });
     await invalidateTags(["teacher", "overview", "schedule"]);
     res.status(201).json(assignment);
+    void notifyMastersScheduleChanged(
+      `${assignment.subject.name} was scheduled for ${assignment.section.name}.`,
+      teacherId
+    );
   } catch (e) {
     next(e);
   }
@@ -2341,6 +2536,10 @@ router.patch(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.json({ config: toScheduleConfig(row) });
+      void notifyMastersScheduleChanged(
+        "The school-day schedule shape was updated.",
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2389,6 +2588,10 @@ router.post(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.json({ drafted: unlocked.count });
+      void notifyMastersScheduleChanged(
+        `The approved timetable for ${section.name} was unlocked for editing (${unlocked.count} slots back to draft).`,
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2473,6 +2676,16 @@ router.post(
         message: sectionName
           ? `Master Teacher sent ${updated.count} timetable slots for ${sectionName} — review pending.`
           : `Master Teacher sent ${updated.count} timetable slots workspace-wide — review pending.`,
+      });
+      // Self receipt: the submitting master's own bell keeps the row.
+      void fanoutNotification({
+        userId: teacherId,
+        sourceTable: "section_timetable_entries",
+        action: "submit",
+        sourceId: sectionId ?? termId,
+        message: sectionName
+          ? `You sent ${updated.count} timetable slots for ${sectionName} for principal review.`
+          : `You sent ${updated.count} timetable slots workspace-wide for principal review.`,
       });
     } catch (e) {
       next(e);
@@ -2649,6 +2862,7 @@ router.post(
           period,
         },
       });
+      void notifyMastersScheduleChanged("A timetable slot was set.", teacherId);
     } catch (e) {
       next(e);
     }
@@ -2699,6 +2913,7 @@ router.delete(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.json({ deleted: true });
+      void notifyMastersScheduleChanged("A timetable slot was cleared.", teacherId);
     } catch (e) {
       next(e);
     }
@@ -2749,6 +2964,10 @@ router.delete(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.json({ deleted: removed.count, skippedApproved: lockedCount });
+      void notifyMastersScheduleChanged(
+        `A section timetable was cleared (${removed.count} slots).`,
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2795,6 +3014,10 @@ router.delete(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.json({ deleted: removed.count, skippedApproved: lockedCount });
+      void notifyMastersScheduleChanged(
+        `All timetables were cleared workspace-wide (${removed.count} slots).`,
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2857,6 +3080,10 @@ router.post(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.status(201).json(teacher);
+      void notifyMastersScheduleChanged(
+        `Teacher name ${teacher.name} (${teacher.code}) was added to the catalog.`,
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2903,6 +3130,10 @@ router.delete(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.json({ deleted: removed.count });
+      void notifyMastersScheduleChanged(
+        `The teacher-name catalog was cleared (${removed.count} names).`,
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2958,6 +3189,10 @@ router.post(
       });
       await invalidateTags(["teacher", "schedule", "academics", "principal"]);
       res.status(201).json(subject);
+      void notifyMastersScheduleChanged(
+        `Subject ${subject.name} (${subject.code}) was added to the catalog.`,
+        teacherId
+      );
     } catch (e) {
       next(e);
     }
@@ -2986,6 +3221,10 @@ router.delete("/schedule/:id", requireAuth, requireRole("subject_teacher", "advi
     if (!assignment || assignment.teacherId !== teacherId) {
       throw new AppError(404, "NOT_FOUND", "Assignment not found");
     }
+    // Term-scoped: a prior term's assignment is read-only history.
+    if (req.termScope?.termId && assignment.termId !== req.termScope.termId) {
+      throw new AppError(404, "NOT_FOUND", "Assignment not found in the active term");
+    }
     const profile = await prisma.staffProfile.findUnique({ where: { userId: teacherId } });
     if (!profile?.isMasterTeacher) {
       throw new AppError(403, "MASTER_TEACHER_REQUIRED", "Only Master Teachers can unschedule subjects");
@@ -3009,6 +3248,10 @@ router.delete("/schedule/:id", requireAuth, requireRole("subject_teacher", "advi
     });
     await invalidateTags(["teacher", "overview", "schedule"]);
     res.json({ deleted: true });
+    void notifyMastersScheduleChanged(
+      `${assignment.subject.name} was unscheduled from ${assignment.section.name}.`,
+      teacherId
+    );
   } catch (e) {
     next(e);
   }

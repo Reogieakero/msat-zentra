@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   COMPONENT_NAMES,
   COMPONENT_ORDER,
@@ -40,21 +33,17 @@ export function AllAssessmentsDialog({ components, onClose, onOpenAssessment }: 
   const total = components.reduce((s, c) => s + c.assessments.length, 0);
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      size="md"
+      title="All assessments"
+      description={
+        total === 0
+          ? "No assessments recorded for this subject yet."
+          : `${total} assessment${total === 1 ? "" : "s"} recorded for this subject.`
+      }
     >
-      <DialogContent className={styles.dialog}>
-        <DialogHeader>
-          <DialogTitle>All assessments</DialogTitle>
-          <DialogDescription>
-            {total === 0
-              ? "No assessments recorded for this subject yet."
-              : `${total} assessment${total === 1 ? "" : "s"} recorded for this subject.`}
-          </DialogDescription>
-        </DialogHeader>
 
         <div className={styles.groups}>
           {COMPONENT_ORDER.map((t) => {
@@ -98,12 +87,11 @@ export function AllAssessmentsDialog({ components, onClose, onOpenAssessment }: 
           })}
         </div>
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

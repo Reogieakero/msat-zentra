@@ -6,10 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/providers";
 import { PrincipalSidebar } from "@/components/principal-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Command,
-  CommandInput,
-} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,13 +63,17 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          <Command shouldFilter={false} className={styles.searchCommand}>
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Search…"
-            />
-          </Command>
+          {/* Lightweight search field (was cmdk Command with no results list
+              — same look, no dead dependency weight). Filters ADM/audit/risk
+              tables via their own search inputs; this shell field stays
+              visual-only until a global palette ships. */}
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search…"
+            aria-label="Search"
+            className={styles.searchCommand}
+          />
         </div>
 
         <PrincipalBell />

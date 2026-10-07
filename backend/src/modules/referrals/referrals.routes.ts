@@ -6,7 +6,7 @@ import { AppError } from "../../lib/errors.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAudit } from "../../lib/audit.js";
-import { invalidateTags } from "../../lib/cache.js";
+import { cache, invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { sessionCancelledByRole } from "../../lib/sessionActors.js";
 import { clinicSessionObjectPath, getReferralBucket, uploadFile } from "../../lib/storage.js";
@@ -32,6 +32,28 @@ const clinicUpload = multer({
 });
 
 const router = Router();
+
+/* Desk-level pagination standard: full list pages = 15, overview previews
+   page at same list size (or 10). Backend accepts both `pageSize` (new) and
+   `limit` (legacy). */
+const NURSE_QUEUE_PAGE_SIZE = 15;
+const NURSE_QUEUE_MAX_PAGE_SIZE = 100;
+const NURSE_CACHE_TAGS = [
+  "nurse",
+  "nurse-overview",
+  "nurse-alerts",
+  "nurse-referrals",
+  "nurse-clinic",
+  "nurse-adm",
+  "nurse-risk",
+] as const;
+function resolveQueuePageSize(req: { query: unknown }): number {
+  const q = req.query as Record<string, unknown>;
+  const raw =
+    typeof q.pageSize !== "undefined" ? Number(q.pageSize) : Number(q.limit);
+  if (!Number.isFinite(raw) || raw <= 0) return NURSE_QUEUE_PAGE_SIZE;
+  return Math.min(Math.floor(raw), NURSE_QUEUE_MAX_PAGE_SIZE);
+}
 
 // Detailed notification cards: every referral fanout names the student +
 // section (+ session when/venue or reason snippet where relevant) instead of
@@ -132,6 +154,7 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       // ADM consultation-stage cases move through the review endpoint, not
       // raw status edits — otherwise the pipeline (consult → parent meeting
       // → certification) is bypassed silently.
@@ -230,7 +253,7 @@ router.post(
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Status → ${req.body.status}`, oldValue: { status: referral.status }, newValue: { status: req.body.status } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       // Realtime handoff: the filing adviser learns the case moved — clinic
@@ -292,6 +315,8 @@ router.post(
           selfMessage = `You started handling a clinic referral for ${card.who}.`;
         } else if (nextStatus === "dismissed") {
           selfMessage = `You closed a clinic referral for ${card.who}.`;
+        } else if (nextStatus === "escalated") {
+          selfMessage = `You escalated a clinic referral for ${card.who}.`;
         } else if (nextStatus === "pending") {
           selfMessage = `You moved a clinic referral for ${card.who} back to pending.`;
         }
@@ -350,6 +375,7 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot escalate a resolved referral");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
@@ -360,7 +386,7 @@ router.post(
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_escalated", sourceTable: "referrals", sourceId: referral.id, reason: req.body.escalationReason, oldValue: { status: referral.status }, newValue: { status: "escalated", escalatedTo: req.body.escalatedTo } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.escalationReason, 120);
       const actor = await actorName(req.user!.id);
@@ -447,13 +473,14 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot reassign a resolved referral");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
-        data: { status: "dismissed", notes: req.body.reason },
+        data: { referredToRole: req.body.referredToRole, escalatedTo: null },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await writeAudit({ userId: req.user!.id, actionType: "referral_reassigned", sourceTable: "referrals", sourceId: referral.id, reason: `Reassigned to ${req.body.referredToRole}`, oldValue: { referredToRole: referral.referredToRole }, newValue: { referredToRole: req.body.referredToRole } });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const actor = await actorName(req.user!.id);
       res.json(updated);
@@ -543,12 +570,13 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       const updated = await prisma.referral.update({
         where: { id: referral.id },
-        data: { status: "dismissed", notes: req.body.reason },
+        data: { notes: req.body.notes },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await writeAudit({ userId: req.user!.id, actionType: "referral_note_added", sourceTable: "referrals", sourceId: referral.id, reason: "Guidance note added", oldValue: null, newValue: { notes: req.body.notes } });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
@@ -556,7 +584,7 @@ router.post(
           userId: referral.referredBy,
           sourceTable: "referrals",
           action: "status",
-          message: `Your referral for ${card.who} was dismissed.`,
+          message: `Guidance added a note on your referral for ${card.who}.`,
           sourceId: referral.id,
         });
       }
@@ -565,7 +593,7 @@ router.post(
         userId: req.user!.id,
         sourceTable: "referrals",
         action: "status",
-        message: `You dismissed a referral for ${card.who}.`,
+        message: `You added a note on a referral for ${card.who}.`,
         sourceId: referral.id,
       });
     } catch (e) { next(e); }
@@ -585,13 +613,15 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot flag a resolved referral for follow-up");
+      const followUpDate = new Date(`${req.body.followUpDate}T00:00:00`);
       const updated = await prisma.referral.update({
         where: { id: referral.id },
-        data: { status: "dismissed", notes: req.body.reason },
+        data: { status: "follow_up", followUpDate },
       });
-      await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await writeAudit({ userId: req.user!.id, actionType: "referral_follow_up", sourceTable: "referrals", sourceId: referral.id, reason: `Follow-up set for ${req.body.followUpDate}`, oldValue: { status: referral.status }, newValue: { status: "follow_up" } });
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
@@ -628,13 +658,14 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Referral already resolved");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
         data: { status: "dismissed", notes: req.body.reason },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_dismissed", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { status: referral.status }, newValue: { status: "dismissed" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.reason, 120);
       res.json(updated);
@@ -673,13 +704,14 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot refer a resolved referral");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
         data: { referredToRole: req.body.referredToRole as any, reason: req.body.reason, status: "pending" },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_referred_specialist", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { referredToRole: referral.referredToRole, status: referral.status }, newValue: { referredToRole: req.body.referredToRole, status: "pending" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.reason, 120);
       const actor = await actorName(req.user!.id);
@@ -753,13 +785,14 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.status === "resolved") throw new AppError(400, "INVALID_ACTION", "Cannot initiate ADM on a resolved referral");
       const updated = await prisma.referral.update({
         where: { id: referral.id },
         data: { referredToRole: "adm_coordinator", reason: req.body.reason, status: "pending" },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_adm_initiated", sourceTable: "referrals", sourceId: referral.id, reason: req.body.reason, oldValue: { referredToRole: referral.referredToRole, status: referral.status }, newValue: { referredToRole: "adm_coordinator", status: "pending" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const why = truncate(req.body.reason, 120);
       const actor = await actorName(req.user!.id);
@@ -801,12 +834,13 @@ function isSessionType(value: unknown): value is SessionType {
   return typeof value === "string" && (SESSION_TYPES as readonly string[]).includes(value);
 }
 
-async function getGuidanceReferral(id: string) {
+async function getGuidanceReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
   if (referral.referredToRole !== "guidance_counselor") {
     throw new AppError(403, "FORBIDDEN", "Not routed to guidance");
   }
+  assertActiveTerm(referral, scopeTermId ?? null);
   return referral;
 }
 
@@ -814,7 +848,14 @@ async function getGuidanceReferral(id: string) {
 // the nurse). Session management below accepts these exactly like guidance
 // cases, so the nurse referrals page runs the same accept → sessions →
 // close workflow.
-async function getNurseClinicReferral(id: string) {
+function assertActiveTerm(referral: { termId: string }, scopeTermId: string | null) {
+  // Prior-term cases are read-only history — session reads/writes stay in
+  // the active term so the desk never leaks cases across terms.
+  if (scopeTermId && referral.termId !== scopeTermId) {
+    throw new AppError(404, "NOT_FOUND", "Referral not found in the active term");
+  }
+}
+async function getNurseClinicReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
   const onNurseDesk =
@@ -823,19 +864,20 @@ async function getNurseClinicReferral(id: string) {
   if (!onNurseDesk) {
     throw new AppError(403, "FORBIDDEN", "Not routed to the clinic");
   }
+  assertActiveTerm(referral, scopeTermId ?? null);
   return referral;
 }
 
 // Role-aware referral getter for the shared session endpoints.
-async function getSessionReferral(id: string, role: string) {
+async function getSessionReferral(id: string, role: string, scopeTermId?: string | null) {
   if (role === "nurse") {
     // Clinic desk first; ADM consultations picked for the nurse may also
     // carry standalone clinic sessions (booked from the review dialog
     // without deciding the case), so they fall through to the ADM getter.
     try {
-      return await getNurseClinicReferral(id);
+      return await getNurseClinicReferral(id, scopeTermId);
     } catch {
-      return await getNurseAdmSessionsReferral(id);
+      return await getNurseAdmSessionsReferral(id, scopeTermId);
     }
   }
   if (role === "guidance_counselor") {
@@ -843,12 +885,12 @@ async function getSessionReferral(id: string, role: string) {
     // guidance may also carry sessions booked from the ADM review, so
     // they fall through to the ADM getter the same way the nurse desk does.
     try {
-      return await getGuidanceReferral(id);
+      return await getGuidanceReferral(id, scopeTermId);
     } catch {
-      return await getGuidanceAdmSessionsReferral(id);
+      return await getGuidanceAdmSessionsReferral(id, scopeTermId);
     }
   }
-  return getGuidanceReferral(id);
+  return getGuidanceReferral(id, scopeTermId);
 }
 
 // Session scope for nurse ADM consultations: the case must be ADM-track and
@@ -856,7 +898,7 @@ async function getSessionReferral(id: string, role: string) {
 // standalone sessions can be booked while pending (pre-confirm) and stay
 // visible afterwards; closing the case itself still blocks changes via
 // ensureOpen at each endpoint.
-async function getNurseAdmSessionsReferral(id: string) {
+async function getNurseAdmSessionsReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (
     !referral ||
@@ -865,6 +907,7 @@ async function getNurseAdmSessionsReferral(id: string) {
   ) {
     throw new AppError(404, "NOT_FOUND", "Session not found");
   }
+  assertActiveTerm(referral, scopeTermId ?? null);
   return referral;
 }
 
@@ -873,7 +916,7 @@ async function getNurseAdmSessionsReferral(id: string) {
 // consultation review endpoint. Standalone sessions can be booked while
 // pending (pre-decision) and stay visible afterwards; closing the case
 // itself still blocks changes via ensureOpen at each endpoint.
-async function getGuidanceAdmSessionsReferral(id: string) {
+async function getGuidanceAdmSessionsReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (
     !referral ||
@@ -884,6 +927,7 @@ async function getGuidanceAdmSessionsReferral(id: string) {
   ) {
     throw new AppError(404, "NOT_FOUND", "Session not found");
   }
+  assertActiveTerm(referral, scopeTermId ?? null);
   return referral;
 }
 
@@ -972,7 +1016,10 @@ router.post(
   validate("body", acceptSchema),
   async (req, res, next) => {
     try {
-      const referral = await getGuidanceReferral(String(req.params.id));
+      const referral = await getGuidanceReferral(
+        String(req.params.id),
+        req.termScope?.termId ?? null
+      );
       if (referral.status !== "pending") {
         throw new AppError(400, "INVALID_ACTION", "Only a new case can be accepted");
       }
@@ -1005,7 +1052,7 @@ router.post(
         await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: created.id, reason: `First session booked on accept`, oldValue: null, newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt } });
       }
       await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted with ${req.body.priority} priority`, oldValue: { status: referral.status }, newValue: { status: "in_progress", priority: req.body.priority } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       if (referral.referredBy && referral.referredBy !== req.user!.id) {
@@ -1054,6 +1101,7 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       // "Start handling" is for clinic matters only — ADM-track cases follow
       // the consultation review pipeline instead.
       if (referral.referredToRole === "adm_coordinator") {
@@ -1126,7 +1174,7 @@ router.post(
         await writeAudit({ userId: req.user!.id, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: `First clinic session booked on accept`, oldValue: null, newValue: { sessionType: session.sessionType, scheduledAt: session.scheduledAt } });
       }
       await writeAudit({ userId: req.user!.id, actionType: "referral_accepted", sourceTable: "referrals", sourceId: referral.id, reason: `Accepted by the clinic${session ? " with a clinic session booked" : ""}`, oldValue: { status: referral.status }, newValue: { status: "in_progress" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const sessionBit = session
         ? ` with a first session ${formatWhen(session.scheduledAt)} at ${session.venue || "School clinic"}`
@@ -1166,7 +1214,7 @@ router.post(
 // an ADM-track referral at the consultation stage picked for the nurse.
 // Receiver enforcement lives here so a case picked for guidance or LRPC
 // cannot be decided from the clinic queue, even if its id is known.
-async function getNurseAdmConsultation(id: string) {
+async function getNurseAdmConsultation(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (
     !referral ||
@@ -1186,6 +1234,7 @@ async function getNurseAdmConsultation(id: string) {
       "This case was routed to another consultation reviewer"
     );
   }
+  assertActiveTerm(referral, scopeTermId ?? null);
   return referral;
 }
 
@@ -1294,7 +1343,7 @@ router.post(
   validate("body", nurseAdmReviewSchema),
   async (req, res, next) => {
     try {
-      const referral = await getNurseAdmConsultation(String(req.params.id));
+      const referral = await getNurseAdmConsultation(String(req.params.id), req.termScope?.termId ?? null);
       if (referral.status !== "pending") {
         throw new AppError(400, "INVALID_ACTION", "Only a new case can be reviewed");
       }
@@ -1389,7 +1438,7 @@ router.post(
           newValue: { status: "dismissed" },
         });
       }
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const recNote = truncate(recommendation.trim(), 120);
       const actor = await actorName(req.user!.id);
@@ -1463,7 +1512,7 @@ router.post(
   validate("body", nurseReferralFormSchema),
   async (req, res, next) => {
     try {
-      const referral = await getNurseAdmConsultation(String(req.params.id));
+      const referral = await getNurseAdmConsultation(String(req.params.id), req.termScope?.termId ?? null);
       if (referral.status !== "pending") {
         throw new AppError(400, "INVALID_ACTION", "Only a new case can be reviewed");
       }
@@ -1529,7 +1578,7 @@ router.post(
         oldValue: null,
         newValue: { referralFormReady: true },
       });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       // Form-save handoff (background, off the critical path): the filing
@@ -1548,7 +1597,7 @@ router.post(
       void fanoutNotification({
         userId: req.user!.id,
         sourceTable: "referrals",
-        action: "form",
+        action: "form_self",
         message: `You completed the referral form for ${card.who} — ready to forward.`,
         sourceId: referral.id,
       });
@@ -1565,7 +1614,7 @@ router.post(
   requireRole("nurse"),
   async (req, res, next) => {
     try {
-      const referral = await getNurseAdmConsultation(String(req.params.id));
+      const referral = await getNurseAdmConsultation(String(req.params.id), req.termScope?.termId ?? null);
       if (referral.status !== "pending") {
         throw new AppError(400, "INVALID_ACTION", "Only a new case can be forwarded");
       }
@@ -1592,7 +1641,7 @@ router.post(
         oldValue: { status: referral.status },
         newValue: { status: "in_progress" },
       });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       // Explicit forward hands the case to the ADM coordinators (coordinator
@@ -1676,7 +1725,7 @@ router.get(
   requireRole("guidance_counselor", "principal", "nurse"),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       const sessions = await prisma.counselingSession.findMany({
         where: { referralId: referral.id },
         orderBy: { scheduledAt: "asc" },
@@ -1697,7 +1746,7 @@ router.post(
   validate("body", sessionSchema),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       ensureOpen(referral);
       if (!isSessionType(req.body.sessionType)) {
         throw new AppError(400, "INVALID_ACTION", "Unknown session type");
@@ -1747,7 +1796,7 @@ router.post(
       if (referral.status === "pending" && referral.referredToRole !== "adm_coordinator") {
         await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: "Session booked — case now in progress", oldValue: { status: "pending" }, newValue: { status: "in_progress" } });
       }
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const when = formatWhen(created.scheduledAt);
       const where = created.venue ? ` at ${created.venue}` : "";
@@ -1841,7 +1890,7 @@ router.post(
   validate("body", completeSessionSchema),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -1896,7 +1945,7 @@ router.post(
           await writeAudit({ userId: req.user!.id, actionType: "referral_follow_up", sourceTable: "referrals", sourceId: referral.id, reason: `Follow-up on ${next.scheduledAt.toISOString().slice(0, 10)}`, oldValue: { status: referral.status }, newValue: { status: "follow_up", followUpDate: next.scheduledAt.toISOString().slice(0, 10) } });
         }
       }
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const didWhen = formatWhen(session.scheduledAt);
       res.json(formatSession(updated));
@@ -1958,7 +2007,7 @@ router.post(
   validate("body", rescheduleSchema),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -1974,7 +2023,7 @@ router.post(
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_rescheduled", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session moved", oldValue: { scheduledAt: session.scheduledAt }, newValue: { scheduledAt: nextDate } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const was = formatWhen(session.scheduledAt);
       const now = formatWhen(nextDate);
@@ -2023,7 +2072,7 @@ router.post(
   validate("body", cancelSessionSchema),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "scheduled") {
@@ -2041,7 +2090,7 @@ router.post(
         },
       });
       await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: session.id, reason: req.body.cancelReason?.trim() || "Counseling session cancelled", oldValue: { status: session.status }, newValue: { status: "cancelled" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       const was = formatWhen(session.scheduledAt);
       const why = truncate(req.body.cancelReason, 120);
@@ -2090,7 +2139,7 @@ router.delete(
   requireRole("guidance_counselor", "nurse"),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       ensureOpen(referral);
       const session = await getSession(referral.id, String(req.params.sessionId));
       if (session.status !== "cancelled") {
@@ -2098,8 +2147,26 @@ router.delete(
       }
       await prisma.counselingSession.delete({ where: { id: session.id } });
       await writeAudit({ userId: req.user!.id, actionType: "delete", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Cancelled session deleted", oldValue: { status: session.status }, newValue: null });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
+      const card = await referralCard(referral);
       res.json({ ok: true });
+      // Previously silent: filer + actor both learn the session is gone.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "counseling_sessions",
+          action: "delete",
+          message: `A session for ${card.who} was deleted.`,
+          sourceId: referral.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "counseling_sessions",
+        action: "delete_self",
+        message: `You deleted a clinic session for ${card.who}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -2117,7 +2184,7 @@ router.get(
   requireRole("guidance_counselor", "nurse", "principal"),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       const session = await getSession(referral.id, String(req.params.sessionId));
       const rows = await prisma.clinicSessionAttachment.findMany({
         where: { sessionId: session.id },
@@ -2135,7 +2202,7 @@ router.post(
   clinicUpload.array("files", 5),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       if (referral.status === "resolved" || referral.status === "dismissed") {
         throw new AppError(400, "INVALID_ACTION", "Cannot add documentation to a closed case");
       }
@@ -2180,8 +2247,26 @@ router.post(
         oldValue: null,
         newValue: { count: created.length },
       });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
+      const card = await referralCard(referral);
       res.status(201).json(created.map(formatAttachment));
+      // Previously silent: filer + actor both learn documentation landed.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "session_attachments",
+          action: "create",
+          message: `Session documentation was added for ${card.who}.`,
+          sourceId: referral.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "session_attachments",
+        action: "create_self",
+        message: `You added session photos for ${card.who}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -2192,7 +2277,7 @@ router.delete(
   requireRole("guidance_counselor", "nurse"),
   async (req, res, next) => {
     try {
-      const referral = await getSessionReferral(String(req.params.id), req.user!.role);
+      const referral = await getSessionReferral(String(req.params.id), req.user!.role, req.termScope?.termId ?? null);
       if (referral.status === "resolved" || referral.status === "dismissed") {
         throw new AppError(400, "INVALID_ACTION", "Cannot remove documentation from a closed case");
       }
@@ -2213,8 +2298,26 @@ router.delete(
         oldValue: { fileName: row.fileName },
         newValue: null,
       });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
+      const card = await referralCard(referral);
       res.json({ ok: true });
+      // Previously silent: filer + actor both learn documentation was removed.
+      if (referral.referredBy && referral.referredBy !== req.user!.id) {
+        void fanoutNotification({
+          userId: referral.referredBy,
+          sourceTable: "session_attachments",
+          action: "delete",
+          message: `Session documentation was removed for ${card.who}.`,
+          sourceId: referral.id,
+        });
+      }
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "session_attachments",
+        action: "delete_self",
+        message: `You removed a session photo for ${card.who}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );
@@ -2223,6 +2326,17 @@ router.get(
   "/",
   requireAuth,
   requireRole("guidance_counselor", "nurse", "adm_coordinator", "principal"),
+  cache({
+    tags: [
+      "referrals",
+      "alerts",
+      "overview",
+      "guidance",
+      "adm",
+      "teacher",
+      ...NURSE_CACHE_TAGS,
+    ],
+  }),
   async (req, res, next) => {
     try {
       // Receiver scoping: never leak another role's referrals + full
@@ -2233,10 +2347,12 @@ router.get(
       // what keeps ADM anecdotal out of /nurse/alerts unless it is really
       // the nurse's consultation to review).
       const role = req.user!.role;
+      // Term-scoped: prior-term cases never leak into the active term queue.
+      const scopeTermId = req.termScope?.termId ?? null;
       // Typed as `any` — string literals here are Prisma ReferralTarget /
       // ReferralStatus enums; a strict WhereInput annotation would reject
       // the ternary union without adding safety.
-      const where: any =
+      const roleWhere: any =
         role === "nurse"
           ? {
               OR: [
@@ -2255,6 +2371,50 @@ router.get(
                   ],
                 }
               : undefined;
+      // Server-paginated + server-searched: ?q=&page=&pageSize= (legacy
+      // ?limit=) plus ?track=clinic|adm and ?status=. Legacy callers with
+      // no params keep the bare-array shape.
+      const qRaw = req.query as Record<string, unknown>;
+      const hasPaginationParams =
+        typeof qRaw.q !== "undefined" ||
+        typeof qRaw.page !== "undefined" ||
+        typeof qRaw.pageSize !== "undefined" ||
+        typeof qRaw.limit !== "undefined" ||
+        typeof qRaw.track !== "undefined" ||
+        typeof qRaw.status !== "undefined" ||
+        typeof qRaw.highlight !== "undefined";
+      const page = Math.max(1, Number(qRaw.page) || 1);
+      const pageSize = resolveQueuePageSize(req);
+      const q =
+        typeof qRaw.q === "string" ? qRaw.q.trim().toLowerCase() : "";
+      // Combine role scope with the active term — every queue row is saved
+      // under its filing term, so filtering here stops prior-term cases
+      // leaking into the current desk.
+      const scopeClauses: any[] = [];
+      if (roleWhere) scopeClauses.push(roleWhere);
+      if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
+      // Track filter: ADM consultations vs clinic matters. Clinic messages
+      // never name "ADM"; ADM-track rows are coordinator-routed.
+      const trackRaw = qRaw.track;
+      const track = typeof trackRaw === "string" ? trackRaw.trim().toLowerCase() : "";
+      if (track === "adm") scopeClauses.push({ referredToRole: "adm_coordinator" });
+      else if (track === "clinic")
+        scopeClauses.push({ referredToRole: { not: "adm_coordinator" } });
+      // Status filter: comma-separated referral statuses.
+      const statusRaw = qRaw.status;
+      if (typeof statusRaw === "string" && statusRaw.trim()) {
+        const statuses = statusRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (statuses.length > 0) scopeClauses.push({ status: { in: statuses } });
+      }
+      const where: any =
+        scopeClauses.length === 0
+          ? undefined
+          : scopeClauses.length === 1
+            ? scopeClauses[0]
+            : { AND: scopeClauses };
       const referrals = await prisma.referral.findMany({
         where,
         include: {
@@ -2367,32 +2527,92 @@ router.get(
           });
         }
       }
-      res.json(
-        referrals
-          .map((r) => ({
-            ...r,
-            counselingSessions: r.counselingSessions.map((s) => ({
-              ...s,
-              cancelledByRole: cancelledByRole.get(s.id) ?? null,
-            })),
-            referredAt:
-              referredAtById.get(r.id) ??
-              r.anecdotalRecord?.observationDatetime?.toISOString() ??
-              null,
-            lastActionAt: lastActionById.get(r.id)?.at ?? null,
-            lastActionType: lastActionById.get(r.id)?.type ?? null,
-            dismissedByRole: dismissedByRole.get(r.id) ?? null,
-          }))
-          // Latest referred on top — the nurse referrals queue is a
-          // newest-first timeline. (Referral ids are uuids, so the DB
-          // orderBy above carries no chronology; referredAt does.)
-      .sort((a, b) => {
-        const at = a.referredAt ?? "";
-        const bt = b.referredAt ?? "";
-        if (at === bt) return 0;
-        return bt < at ? -1 : 1;
-      }),
-  );
+      const enriched = referrals
+        .map((r) => ({
+          ...r,
+          counselingSessions: r.counselingSessions.map((s) => ({
+            ...s,
+            cancelledByRole: cancelledByRole.get(s.id) ?? null,
+          })),
+          referredAt:
+            referredAtById.get(r.id) ??
+            r.anecdotalRecord?.observationDatetime?.toISOString() ??
+            null,
+          lastActionAt: lastActionById.get(r.id)?.at ?? null,
+          lastActionType: lastActionById.get(r.id)?.type ?? null,
+          dismissedByRole: dismissedByRole.get(r.id) ?? null,
+        }))
+        // Latest referred on top — the nurse referrals queue is a
+        // newest-first timeline. (Referral ids are uuids, so the DB
+        // orderBy above carries no chronology; referredAt does.)
+        .sort((a, b) => {
+          const at = (a as { referredAt?: string | null }).referredAt ?? "";
+          const bt = (b as { referredAt?: string | null }).referredAt ?? "";
+          if (at === bt) return 0;
+          return bt < at ? -1 : 1;
+        });
+      // Legacy shape: no pagination params → bare array (other desks).
+      if (!hasPaginationParams) {
+        res.json(enriched);
+      } else {
+        // Tile stats stay UNFILTERED so searching never shrinks the tiles;
+        // `total` is the filtered pager count.
+        const unfilteredTotal = enriched.length;
+        const filtered = q
+          ? enriched.filter((r) => {
+              const hay = [
+                (r as { reason?: unknown }).reason,
+                (r as { status?: unknown }).status,
+                (r as { notes?: unknown }).notes,
+                (r as { student?: { user?: { fullName?: unknown } } }).student
+                  ?.user?.fullName,
+                (r as { roster?: { fullName?: unknown } }).roster?.fullName,
+                (r as {
+                  student?: { section?: { name?: unknown } };
+                }).student?.section?.name,
+                (r as { roster?: { section?: { name?: unknown } } }).roster
+                  ?.section?.name,
+                (r as { anecdotalRecord?: { descriptionOfIncident?: unknown } })
+                  .anecdotalRecord?.descriptionOfIncident,
+              ]
+                .filter((v) => typeof v === "string")
+                .join(" ")
+                .toLowerCase();
+              return hay.includes(q);
+            })
+          : enriched;
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        // Deep-link landing (?highlight=<id>): serve the page containing
+        // the case so the bell deep-link lands with highlight, no extra
+        // round-trip. Unknown ids fall back to the requested page.
+        const highlightRaw = qRaw.highlight;
+        const highlight =
+          typeof highlightRaw === "string" && highlightRaw.trim()
+            ? highlightRaw.trim()
+            : "";
+        let safePage = Math.min(page, totalPages);
+        if (highlight) {
+          const idx = filtered.findIndex(
+            (r) => (r as { id?: unknown }).id === highlight
+          );
+          if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
+        }
+        const start = (safePage - 1) * pageSize;
+        const rows = filtered.slice(start, start + pageSize);
+        res.json({
+          data: rows,
+          rows,
+          referrals: rows,
+          total,
+          unfilteredTotal,
+          summary: { total: unfilteredTotal, filtered: total },
+          page: safePage,
+          totalPages,
+          limit: pageSize,
+          pageSize,
+        });
+      }
 } catch (e) { next(e); }
   }
 );
@@ -2409,8 +2629,37 @@ router.get(
   "/mine",
   requireAuth,
   requireRole("adviser", "subject_teacher"),
+  cache({
+    tags: [
+      "referrals",
+      "alerts",
+      "overview",
+      "guidance",
+      "adm",
+      "teacher",
+      "teacher-referrals",
+    ],
+  }),
   async (req, res, next) => {
     try {
+      // Server-paginated + server-searched: ?q=&page=&pageSize= (legacy
+      // ?limit=) plus ?highlight=<id> for bell deep-link landings. Legacy
+      // callers with no params keep the bare-array shape.
+      const qRaw = req.query as Record<string, unknown>;
+      const hasPaginationParams =
+        typeof qRaw.q !== "undefined" ||
+        typeof qRaw.page !== "undefined" ||
+        typeof qRaw.pageSize !== "undefined" ||
+        typeof qRaw.limit !== "undefined" ||
+        typeof qRaw.highlight !== "undefined";
+      const page = Math.max(1, Number(qRaw.page) || 1);
+      const pageSize = resolveQueuePageSize(req);
+      const q =
+        typeof qRaw.q === "string" ? qRaw.q.trim().toLowerCase() : "";
+      const highlight =
+        typeof qRaw.highlight === "string" && qRaw.highlight.trim()
+          ? qRaw.highlight.trim()
+          : "";
       const teacherId = req.user!.id;
       const sections = await prisma.section.findMany({
         where: { adviserId: teacherId },
@@ -2620,7 +2869,56 @@ router.get(
         };
       });
 
-      res.json(formatted);
+      // Legacy shape: no pagination params → bare array.
+      if (!hasPaginationParams) {
+        res.json(formatted);
+      } else {
+        // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+        // Server search (?q=) filters here so clients never filter locally.
+        const unfilteredTotal = formatted.length;
+        const filtered = q
+          ? formatted.filter((r) => {
+              const hay = [
+                r.studentName,
+                r.lrn,
+                r.section,
+                r.reason,
+                r.category,
+                r.status,
+                r.anecdotalExcerpt,
+              ]
+                .filter((v) => typeof v === "string")
+                .join(" ")
+                .toLowerCase();
+              return hay.includes(q);
+            })
+          : formatted;
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        // Deep-link landing (?highlight=<id>): serve the page containing
+        // the case so bell links land with highlight, no extra round-trip.
+        let safePage = Math.min(page, totalPages);
+        if (highlight) {
+          const idx = filtered.findIndex(
+            (r) => (r as { id?: unknown }).id === highlight
+          );
+          if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
+        }
+        const start = (safePage - 1) * pageSize;
+        const rows = filtered.slice(start, start + pageSize);
+        res.json({
+          data: rows,
+          rows,
+          referrals: rows,
+          total,
+          unfilteredTotal,
+          summary: { total: unfilteredTotal, filtered: total },
+          page: safePage,
+          totalPages,
+          limit: pageSize,
+          pageSize,
+        });
+      }
     } catch (e) { next(e); }
   }
 );
@@ -2642,6 +2940,7 @@ router.post(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.referredBy !== req.user!.id) {
         throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can cancel it");
       }
@@ -2674,7 +2973,7 @@ router.post(
           await writeAudit({ userId: req.user!.id, actionType: "session_cancelled", sourceTable: "counseling_sessions", sourceId: s.id, reason: AUTO_CANCEL_REASON, oldValue: { status: s.status }, newValue: { status: "cancelled" } });
         }
       }
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       // Realtime handoff (background, off the critical path): the receiving
@@ -2743,6 +3042,7 @@ router.post(
     try {
        const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
        if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+       assertActiveTerm(referral, req.termScope?.termId ?? null);
        if (referral.referredToRole === "adm_coordinator") {
          throw new AppError(400, "INVALID_ACTION", "Cancelled ADM cases cannot be re-submitted — start a new referral from the beginning.");
        }
@@ -2779,7 +3079,7 @@ router.post(
         data: { status: "pending", notes: null, referredToRole: nextRole, consultReviewer: nextReviewer },
       });
       await writeAudit({ userId: req.user!.id, actionType: "referral_status_change", sourceTable: "referrals", sourceId: referral.id, reason: `Cancelled referral re-submitted by the filing teacher${nextRole !== referral.referredToRole ? ` (new desk: ${nextRole})` : ""}`, oldValue: { status: referral.status }, newValue: { status: "pending" } });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       const card = await referralCard(referral);
       res.json(updated);
       // Realtime handoff (background, off the critical path): the receiving
@@ -2850,6 +3150,7 @@ router.delete(
     try {
       const referral = await prisma.referral.findUnique({ where: { id: String(req.params.id) } });
       if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
+      assertActiveTerm(referral, req.termScope?.termId ?? null);
       if (referral.referredBy !== req.user!.id) {
         throw new AppError(403, "FORBIDDEN", "Only the teacher who filed this referral can delete it");
       }
@@ -2868,8 +3169,17 @@ router.delete(
       }
       await prisma.referral.delete({ where: { id: referral.id } });
       await writeAudit({ userId: req.user!.id, actionType: "delete", sourceTable: "referrals", sourceId: referral.id, reason: "Cancelled referral deleted by the filing teacher", oldValue: { status: referral.status }, newValue: null });
-      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher"]);
+      await invalidateTags(["guidance", "overview", "alerts", "referrals", "adm", "teacher", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
+      const card = await referralCard(referral);
       res.status(204).end();
+      // Filer receipt: the bell keeps the row even though the case is gone.
+      void fanoutNotification({
+        userId: req.user!.id,
+        sourceTable: "referrals",
+        action: "delete_self",
+        message: `You deleted a cancelled referral for ${card.who}.`,
+        sourceId: referral.id,
+      });
     } catch (e) { next(e); }
   }
 );

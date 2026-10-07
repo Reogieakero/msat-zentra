@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import {
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   flexRender,
@@ -21,14 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   Table,
   TableBody,
@@ -38,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
@@ -320,7 +313,7 @@ export function AttendanceRosterTable({
   live,
   stretchClassName,
 }: AttendanceRosterTableProps) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
   // Strictly per-section: no advisory fallback. Without a resolved section
   // roster the sheet has no students — it must never show advisees here.
   const effectiveCtx = roster?.ctx ?? null;
@@ -468,10 +461,8 @@ export function AttendanceRosterTable({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 5 } },
     state: {
       sorting,
       columnFilters,
@@ -506,7 +497,7 @@ export function AttendanceRosterTable({
       });
       setMarks({});
       setSaveOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["attendance-sheet-marks"] });
+      invalidateTeacher.marks();
       toast.success({
         title: "Attendance saved",
         description: `${result.count} record${result.count === 1 ? "" : "s"} submitted.`,
@@ -518,13 +509,61 @@ export function AttendanceRosterTable({
     }
   }
 
+  // Geometry-matched skeleton: same card + header/filter row, four table
+  // columns (Student 220 two-line / Attendance 100 / Status 180 boxes /
+  // Meetups 360 dot strip), 8 rows, and pager footer as the loaded table.
   if (loading) {
     return (
-      <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading roster">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 rounded-md bg-muted" />
-        ))}
-      </div>
+      <section aria-label="Class attendance" className="flex min-w-0 flex-col gap-3">
+        <div className={assign.card} aria-busy="true" aria-label="Loading roster" aria-hidden>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-1 h-4 w-64" />
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-9 w-40" />
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-16" />
+            </div>
+          </div>
+          <div className="relative overflow-x-auto rounded-md border">
+            <div className="flex bg-muted/50" aria-hidden>
+              <Skeleton className="m-2 h-4 rounded" style={{ width: 220 }} />
+              <Skeleton className="m-2 h-4 rounded" style={{ width: 100 }} />
+              <Skeleton className="m-2 h-4 rounded" style={{ width: 180 }} />
+              <Skeleton className="m-2 h-4 flex-1 rounded" />
+            </div>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
+                <div className="flex min-w-0 flex-col gap-1.5" style={{ width: 220 }}>
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <Skeleton className="h-5 w-12 rounded" style={{ width: 100 }} />
+                <div className="flex gap-1" style={{ width: 180 }}>
+                  <Skeleton className="h-7 flex-1 rounded" />
+                  <Skeleton className="h-7 flex-1 rounded" />
+                  <Skeleton className="h-7 flex-1 rounded" />
+                  <Skeleton className="h-7 flex-1 rounded" />
+                </div>
+                <div className="flex min-w-0 flex-1 items-center gap-1" aria-hidden>
+                  {Array.from({ length: 12 }).map((_, d) => (
+                    <Skeleton key={d} className="h-3 w-3 shrink-0 rounded-full" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="relative flex items-center justify-end space-x-2">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </div>
+      </section>
     );
   }
 
@@ -538,9 +577,9 @@ export function AttendanceRosterTable({
 
   /* Same data-table pattern as the overview At-Risk Advisees table:
      section wrapper, assign.card, title + desc header with the filter on
-     the right, fixed table, h-24 filtered-empty, count + pager footer.
-     Only the columns differ (marking needs Status / Attendance / Meetups);
-     the Student cell, chrome, page size, and empty states match. */
+     the right, fixed table, h-24 filtered-empty, count footer. The sheet
+     lists every enrolled student (no pagination); only the columns differ
+     (marking needs Status / Attendance / Meetups). */
   return (
     <section aria-label="Class attendance" className="flex min-w-0 flex-col gap-3">
     {data.length === 0 ? (
@@ -659,24 +698,6 @@ export function AttendanceRosterTable({
           {table.getFilteredRowModel().rows.length} student
           {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
       </div>
     </div>
     )}
@@ -717,42 +738,42 @@ export function AttendanceRosterTable({
         </div>
       ) : null}
       {saveOpen ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open && !saving) setSaveOpen(false);
+          onClose={() => {
+            if (!saving) setSaveOpen(false);
           }}
+          dismissable={!saving}
+          size="sm"
+          title="Save attendances?"
+          description={
+            <>
+              Submits {data.length} student{data.length === 1 ? "" : "s"}
+              {saveBreakdown ? ` — ${saveBreakdown}` : ""} for this sheet.
+            </>
+          }
         >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Save attendances?</DialogTitle>
-              <DialogDescription>
-                Submits {data.length} student{data.length === 1 ? "" : "s"}
-                {saveBreakdown ? ` — ${saveBreakdown}` : ""} for this sheet.
-              </DialogDescription>
-            </DialogHeader>
-            {saveError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {saveError}
-              </p>
-            ) : null}
-            <DialogFooter>
-              <Button variant="destructive" onClick={() => setSaveOpen(false)} disabled={saving}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveConfirm} disabled={saving} aria-busy={saving || undefined}>
-                {saving ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" aria-hidden />
-                    <span aria-live="polite">Saving…</span>
-                  </>
-                ) : (
-                  "Save attendances"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          {saveError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {saveError}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="destructive" onClick={() => setSaveOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveConfirm} disabled={saving} aria-busy={saving || undefined}>
+              {saving ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Saving…</span>
+                </>
+              ) : (
+                "Save attendances"
+              )}
+            </Button>
+          </div>
+        </CardModal>
       ) : null}
     </section>
   );

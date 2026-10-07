@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Copy, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { ScheduleSubject } from "../page";
 
@@ -20,8 +21,10 @@ type Props = {
 // hover, radius) with an amber alert identity — amber-tinted border via
 // inline style so it survives the card hover state, amber icon circle.
 export function CopiedSlotCard({ copied, onClear }: Props) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
-    queryKey: ["teacher-schedule-subjects"],
+    queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
         "/api/teacher/schedule/subjects",
@@ -30,7 +33,7 @@ export function CopiedSlotCard({ copied, onClear }: Props) {
     },
   });
   const teachersQuery = useQuery<{ teachers: { id: string; name: string }[] }>({
-    queryKey: ["teacher-schedule-teachers"],
+    queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: { id: string; name: string }[] }>(
         "/api/teacher/schedule/teachers",

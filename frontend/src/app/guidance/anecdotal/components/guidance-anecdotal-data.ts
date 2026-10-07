@@ -74,8 +74,11 @@ export interface GuidanceAnecdotalData {
   records: GuidanceAnecdotalRecord[];
   page: number;
   pageSize: number;
+  /** Filtered pager count (shrinks on search/filter). */
   total: number;
   totalPages: number;
+  /** UNFILTERED desk total — tile stats never shrink on search. */
+  unfilteredTotal?: number;
 }
 
 export type GuidanceAnecdotalTypeFilter = "" | "ADM" | "Counseling";
@@ -84,6 +87,8 @@ export interface GuidanceAnecdotalParams {
   q?: string;
   category?: "" | GuidanceAnecdotalCategory;
   type?: GuidanceAnecdotalTypeFilter;
+  /** Session-documents view: only filings with filed session images. */
+  docsOnly?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -96,12 +101,20 @@ export async function fetchGuidanceAnecdotal(
   if (params.q) search.set("q", params.q);
   if (params.category) search.set("category", params.category);
   if (params.type) search.set("type", params.type.toLowerCase());
+  if (params.docsOnly) search.set("docs", "1");
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   const query = search.toString();
-  const { data } = await apiClient.get<GuidanceAnecdotalData>(
+  const { data } = await apiClient.get<
+    GuidanceAnecdotalData | { records: GuidanceAnecdotalRecord[] }
+  >(
     `/api/guidance/anecdotal${query ? `?${query}` : ""}`,
     { signal: opts.signal }
   );
-  return data;
+  // Defensive: the endpoint has served bare {records} shapes — never let
+  // a shape change crash the folders.
+  const records = Array.isArray((data as { records?: unknown }).records)
+    ? (data as { records: GuidanceAnecdotalRecord[] }).records
+    : [];
+  return { ...(data as GuidanceAnecdotalData), records };
 }

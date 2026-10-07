@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/useSession";
 import {
   getCoreRowModel,
@@ -11,7 +10,6 @@ import {
   useReactTable,
   flexRender,
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
 import { Loader2, SearchIcon } from "lucide-react";
@@ -23,14 +21,7 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   Table,
   TableBody,
@@ -41,15 +32,11 @@ import {
 } from "@/components/ui/table";
 import {
   COMPONENT_NAMES,
-  classDetailKey,
-  computeSubjectGrade,
-  subjectEvidence,
   submitScore,
   updateAssessment,
   useRefreshAcademic,
   type ClassAssessment,
   type ClassComponent,
-  type ClassDetail,
   type ClassStudent,
   type ComponentType,
 } from "../../components/grading-data";
@@ -113,7 +100,6 @@ type Props = {
 };
 
 export function ScoreGrid({
-  assignmentId,
   sectionName,
   students,
   components,
@@ -122,7 +108,6 @@ export function ScoreGrid({
   onChanged,
 }: Props) {
   const refreshAcademic = useRefreshAcademic();
-  const queryClient = useQueryClient();
   const session = useSession();
   const teacherId = session?.sub ?? "anon";
   const [editing, setEditing] = React.useState(false);
@@ -138,35 +123,50 @@ export function ScoreGrid({
 
   // Local persistence: unsaved entries survive refresh, navigation, or
   // brownouts. Scoped per teacher + assessment; cleared on save/cancel.
-  const storageKey = (assessmentId: string) =>
-    `zentra.score-drafts.${teacherId}.${assessmentId}`;
-  const readStored = (assessmentId: string): { scores: Record<string, string>; max: string | null } => {
-    try {
-      const raw = window.localStorage.getItem(storageKey(assessmentId));
-      if (!raw) return { scores: {}, max: null };
-      const parsed = JSON.parse(raw) as { scores?: Record<string, string>; max?: string | null };
-      if (parsed && typeof parsed === "object") {
-        return { scores: parsed.scores ?? {}, max: parsed.max ?? null };
+  // Stable callbacks (no per-render closures) so effects below never loop.
+  const storageKey = React.useCallback(
+    (assessmentId: string) => `zentra.score-drafts.${teacherId}.${assessmentId}`,
+    [teacherId],
+  );
+  const readStored = React.useCallback(
+    (assessmentId: string): { scores: Record<string, string>; max: string | null } => {
+      try {
+        if (typeof window === "undefined") return { scores: {}, max: null };
+        const raw = window.localStorage.getItem(storageKey(assessmentId));
+        if (!raw) return { scores: {}, max: null };
+        const parsed = JSON.parse(raw) as { scores?: Record<string, string>; max?: string | null };
+        if (parsed && typeof parsed === "object") {
+          return { scores: parsed.scores ?? {}, max: parsed.max ?? null };
+        }
+      } catch {
+        // Corrupt entry — treat as empty below.
       }
-    } catch {
-      // Corrupt entry — treat as empty below.
-    }
-    return { scores: {}, max: null };
-  };
-  const writeStored = (assessmentId: string, scores: Record<string, string>, max: string | null) => {
-    try {
-      window.localStorage.setItem(storageKey(assessmentId), JSON.stringify({ scores, max }));
-    } catch {
-      // Private mode etc. — session drafts still work for the visit.
-    }
-  };
-  const clearStored = (assessmentId: string) => {
-    try {
-      window.localStorage.removeItem(storageKey(assessmentId));
-    } catch {
-      // Ignore.
-    }
-  };
+      return { scores: {}, max: null };
+    },
+    [storageKey],
+  );
+  const writeStored = React.useCallback(
+    (assessmentId: string, scores: Record<string, string>, max: string | null) => {
+      try {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(storageKey(assessmentId), JSON.stringify({ scores, max }));
+      } catch {
+        // Private mode etc. — session drafts still work for the visit.
+      }
+    },
+    [storageKey],
+  );
+  const clearStored = React.useCallback(
+    (assessmentId: string) => {
+      try {
+        if (typeof window === "undefined") return;
+        window.localStorage.removeItem(storageKey(assessmentId));
+      } catch {
+        // Ignore.
+      }
+    },
+    [storageKey],
+  );
 
   const assessments = React.useMemo(
     () => components.find((c) => c.type === category)?.assessments ?? [],
@@ -176,11 +176,16 @@ export function ScoreGrid({
 
   // Reset any in-progress edit whenever the assessment changes — restoring
   // locally persisted entries so an interrupted session picks up where it
-  // left off. (Render-phase reset: allowed because it is conditional.)
+  // left off. Effect (not render-phase setState): render-phase updates with
+  // localStorage I/O + multiple setStates per render blocked the main thread
+  // ("Page unresponsive / Wait or Exit") on every click that re-rendered.
   const selectedKey = selected?.id ?? "";
-  const [resetKey, setResetKey] = React.useState("");
-  if (resetKey !== selectedKey) {
-    setResetKey(selectedKey);
+  // Syncs external persisted drafts (localStorage) when the assessment
+  // changes — the one legitimate setState-in-effect case here. Previously
+  // this ran as render-phase setState + sync localStorage I/O, freezing the
+  // main thread on every re-render.
+  /* eslint-disable react-hooks/set-state-in-effect -- external localStorage sync on assessment switch */
+  React.useEffect(() => {
     setEditing(false);
     setRecovered(false);
     setRestoredMax(null);
@@ -201,17 +206,26 @@ export function ScoreGrid({
     } else {
       setDrafts({});
     }
-  }
+  }, [selectedKey, readStored]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const onDraftChange = React.useCallback(
-    (assessmentId: string) => (studentId: string, value: string) =>
+    (assessmentId: string) => (studentId: string, value: string) => {
+      // Pure updater (no side effects inside): compute next from prev, then
+      // persist outside so StrictMode double-invoke can't double-write.
+      let next: Record<string, string> | null = null;
       setDrafts((prev) => {
-        const next = { ...(prev[assessmentId] ?? {}), [studentId]: value };
-        writeStored(assessmentId, next, maxRef.current?.value ?? null);
+        next = { ...(prev[assessmentId] ?? {}), [studentId]: value };
         return { ...prev, [assessmentId]: next };
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [teacherId],
+      });
+      // Deferred persist: runs after state queues, never blocks the keystroke.
+      // maxRef read here (not in updater) — uncontrolled max input.
+      const max = maxRef.current?.value ?? null;
+      queueMicrotask(() => {
+        if (next) writeStored(assessmentId, next, max === "" ? null : max);
+      });
+    },
+    [writeStored],
   );
 
   const startEdit = () => {
@@ -233,7 +247,7 @@ export function ScoreGrid({
   };
 
   const handleSaveAll = async () => {
-    if (!selected) return;
+    if (!selected || saving) return;
     // Resolve the edited max score first — scores validate against it.
     // Read straight from the DOM: the max input is uncontrolled so typing
     // there never re-renders either.
@@ -267,66 +281,11 @@ export function ScoreGrid({
       setEmptyOpen(true);
       return;
     }
-    // Optimistic mutation: paint the saved scores (and new max) into the
-    // cached class detail immediately, so the table updates in the same
-    // frame with no refresh. The network below only confirms; a failure
-    // rolls the cache back and reopens editing with values intact.
-    const detailKey = classDetailKey(teacherId, assignmentId);
-    const previous = queryClient.getQueryData<ClassDetail>(detailKey);
-    if (previous) {
-      const nextScores = { ...selected.scores };
-      for (const j of jobs) nextScores[j.studentId] = j.raw;
-      const nextComponents = previous.components.map((c) => ({
-        ...c,
-        assessments: c.assessments.map((a) =>
-          a.id === selected.id
-            ? { ...a, maxScore: effectiveMax, scores: nextScores }
-            : a,
-        ),
-      }));
-      queryClient.setQueryData<ClassDetail>(detailKey, {
-        ...previous,
-        components: nextComponents,
-        students: previous.students.map((s) => {
-          const job = jobs.find((j) => j.studentId === s.id);
-          if (!job || !s.final) return s;
-          // Assessment-driven twin (grading-data): normalized shares over
-          // evidenced categories, null when nothing to grade on.
-          const result = computeSubjectGrade(subjectEvidence(nextComponents, s.id));
-          if (result.computedAverage === null || result.transmutedGrade === null) {
-            return s;
-          }
-          return {
-            ...s,
-            final: {
-              ...s.final,
-              computedAverage: result.computedAverage,
-              transmutedGrade: result.transmutedGrade,
-              remarks: result.remarks ?? s.final.remarks,
-            },
-          };
-        }),
-      });
-    }
+    // Pessimistic mutation: the table keeps showing the saved values with
+    // a spinner until the server confirms; only the settled refetch below
+    // paints the new scores. Editing stays open on failure with every typed
+    // value intact so the teacher retries in place.
     setError(null);
-    setEditing(false);
-    setRecovered(false);
-    setRestoredMax(null);
-    typedCache.clear();
-    clearStored(selected.id);
-    setDrafts((prev) => ({ ...prev, [selected.id]: {} }));
-    // Instant confirmation with full context (section · category ·
-    // assessment); the matching realtime row is suppressed by markSelfNotified
-    // so one save still yields exactly one toast — the numbers were already
-    // painted optimistically (UI first).
-    markSelfNotified(selected.id);
-    sileo.success({
-      title: "Scores saved",
-      description:
-        jobs.length > 0
-          ? `${jobs.length} score${jobs.length === 1 ? "" : "s"} saved for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.`
-          : `Max score updated for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.`,
-    });
     setSaving(true);
     try {
       if (effectiveMax !== selected.maxScore) {
@@ -343,12 +302,25 @@ export function ScoreGrid({
       if (failed > 0) {
         throw new Error(`${failed} score${failed === 1 ? "" : "s"} failed to save`);
       }
+      // Confirmed: suppress the matching realtime row so one save yields
+      // exactly one toast, then repaint from the server.
+      markSelfNotified(selected.id);
+      sileo.success({
+        title: "Scores saved",
+        description:
+          jobs.length > 0
+            ? `${jobs.length} score${jobs.length === 1 ? "" : "s"} saved for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.`
+            : `Max score updated for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.`,
+      });
+      setEditing(false);
+      setRecovered(false);
+      setRestoredMax(null);
+      typedCache.clear();
+      clearStored(selected.id);
+      setDrafts((prev) => ({ ...prev, [selected.id]: {} }));
       onChanged();
       refreshAcademic();
     } catch (e) {
-      // Roll back the optimistic paint and reopen editing with every typed
-      // value restored — nothing is lost, and the teacher retries in place.
-      if (previous) queryClient.setQueryData(detailKey, previous);
       const message =
         e instanceof Error && e.message === "max"
           ? "Failed to update max score."
@@ -357,11 +329,6 @@ export function ScoreGrid({
             : "Could not save scores.";
       setError(message);
       sileo.warning({ title: "Scores not fully saved", description: `${message} Review and save again.` });
-      setDrafts({
-        [selected.id]: Object.fromEntries(jobs.map((j) => [j.studentId, String(j.raw)])),
-      });
-      for (const j of jobs) typedCache.set(`${selected.id}:${j.studentId}`, String(j.raw));
-      setEditing(true);
     } finally {
       setSaving(false);
     }
@@ -441,32 +408,28 @@ export function ScoreGrid({
           </CardAction>
         ) : null}
       </CardHeader>
-      <Dialog open={emptyOpen} onOpenChange={(open) => { if (!open) setEmptyOpen(false); }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>No scores to save</DialogTitle>
-            <DialogDescription>
-              Enter at least one score before saving.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setEmptyOpen(false)}>Got it</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={rangeError !== null} onOpenChange={(open) => { if (!open) setRangeError(null); }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Check scores</DialogTitle>
-            <DialogDescription>
-              {rangeError}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setRangeError(null)}>Got it</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CardModal
+        open={emptyOpen}
+        onClose={() => setEmptyOpen(false)}
+        size="sm"
+        title="No scores to save"
+        description="Enter at least one score before saving."
+      >
+        <div className="flex justify-end gap-2">
+          <Button onClick={() => setEmptyOpen(false)}>Got it</Button>
+        </div>
+      </CardModal>
+      <CardModal
+        open={rangeError !== null}
+        onClose={() => setRangeError(null)}
+        size="sm"
+        title="Check scores"
+        description={rangeError ?? undefined}
+      >
+        <div className="flex justify-end gap-2">
+          <Button onClick={() => setRangeError(null)}>Got it</Button>
+        </div>
+      </CardModal>
 
       <CardContent className={`${styles.content} relative`}>
         {error ? <p className={styles.errorText}>{error}</p> : null}
@@ -616,7 +579,7 @@ function ScoreDataTable({
   nameFilter: string;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+
 
   const columns = React.useMemo<ColumnDef<ClassStudent>[]>(
     () => [
@@ -683,27 +646,34 @@ function ScoreDataTable({
     [assessment, drafts],
   );
 
+  // Memoized filter state: a fresh `[{...}]` literal every render forced
+  // getFilteredRowModel (+ sorted + paginated) to recompute synchronously
+  // on every keystroke/click, which stacked with the render-phase resets
+  // above into the "Page unresponsive" freeze.
+  const columnFilters = React.useMemo(
+    () => (nameFilter ? [{ id: "student", value: nameFilter }] : []),
+    [nameFilter],
+  );
+
   const table = useReactTable({
     data: students,
     columns,
     getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+  onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     initialState: {
       pagination: { pageSize: 10 },
-      columnFilters: nameFilter ? [{ id: "student", value: nameFilter }] : [],
     },
-    state: { sorting, columnFilters },
+    // Header search drives the student column filter — derived during
+    // render, never synced in an effect.
+    state: {
+      sorting,
+      columnFilters,
+    },
   });
-
-  // Header search drives the student column filter.
-  React.useEffect(() => {
-    table.getColumn("student")?.setFilterValue(nameFilter || undefined);
-  }, [table, nameFilter]);
 
   if (students.length === 0) {
     return <p className={styles.empty}>No students in this section yet.</p>;

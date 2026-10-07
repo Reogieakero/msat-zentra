@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { CaseHistoryDialog, historyTargetFor } from "../components/CaseHistoryDialog";
 import { useCoordinatorEnrolled } from "./components/use-coordinator-enrolled";
 import { CoordinatorEnrolledFilters } from "./components/coordinator-enrolled-filters";
@@ -50,6 +51,42 @@ function CoordinatorEnrolledPageInner() {
         onRetry={r.refetchEnrolled}
         onHistory={r.setHistoryTarget}
       />
+      {/* Server pager (strict 15-row list pages). Tiles read unfiltered
+          totals; this pager reads the filtered count. */}
+      {!r.enrolledPending && !r.enrolledError && r.total > 0 ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: "1rem",
+          }}
+          aria-label="Enrolled pagination"
+        >
+          <p style={{ fontSize: "0.875rem", opacity: 0.75 }}>
+            Showing {r.start}–{r.end} of {r.total} · Page {r.safePage} of{" "}
+            {r.totalPages}
+          </p>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={r.safePage <= 1}
+              onClick={() => r.setPage(r.safePage - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={r.safePage >= r.totalPages}
+              onClick={() => r.setPage(r.safePage + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Case history */}
       <CaseHistoryDialog

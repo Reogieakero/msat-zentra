@@ -4,18 +4,16 @@
   gap: 1.25rem;
   padding: 0 0 0.25rem;
   min-width: 0;
-  /* Shell scroll lock: the page itself never scrolls — it fills the
-     viewport content area exactly (6rem shell + 1rem main top pad + 1rem
-     bottom gutter), so only the table and rail scroll inside. No native
-     scrollbars anywhere — scroll-down hints cover those regions. */
-  height: calc(100dvh - 8rem);
-  min-height: 0;
-  overflow: hidden;
+  /* Extended table mode: the page takes its natural height and the data
+     table renders at full height with no inner scroll, so the pager sits
+     directly below the rows. Only the section rail scrolls inside (with
+     its slim scroll-down hint). */
+  min-height: calc(100dvh - 8rem);
 }
 
 /* Branched-rail mode has 3rem less top chrome (no tab bar). */
 .pageRail {
-  height: calc(100dvh - 5rem);
+  min-height: calc(100dvh - 5rem);
 }
 
 .heading h1 {
@@ -60,14 +58,15 @@
 }
 
 /* Two-column layout: student data table in the main column, section cards
-   in the right rail. Both columns fill the locked page height; inner
-   ScrollAreas scroll instead of the page. Collapses to one column on
-   narrow screens (page scroll returns there). */
+   in the right rail. The table extends at natural height (no inner scroll)
+   with the pager directly below; the rail sticks to the viewport and
+   scrolls inside with its hint pill. Collapses to one column on narrow
+   screens. */
 .body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(15rem, 19rem);
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: start;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -79,52 +78,38 @@
   gap: 1.25rem;
   min-width: 0;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
 }
 
-/* The table panel grows to fill the column; only its rows scroll. The
-   header, filter, count, and pager stay pinned. */
+/* The table panel wraps its full content — rows never scroll inside, so
+   the header, filter, count, and pager are all reachable with no table
+   scroll. */
 .tableCard {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
-/* Native scroll containers with hidden scrollbars — no scrollbar chrome at
-   all. The floating ScrollDownHint pill (absolute, bottom of each wrap)
-   signals "more below" instead. */
+/* No scroll container on the table anymore: it extends to its full
+   height. Only the section rail keeps a scrollable region with its slim
+   floating ScrollDownHint. */
 .tableScrollWrap {
-  position: relative;
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-width: 0;
-  min-height: 0;
 }
 
 .tableScroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: 1.25rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.tableScroll::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .sideCol {
   min-width: 0;
   min-height: 0;
-  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   overflow: hidden;
+  position: sticky;
+  top: 4rem;
+  max-height: calc(100dvh - 6rem);
 }
 
 .railScrollWrap {
@@ -142,7 +127,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   /* Top room so the first card's straddling grade badge isn't clipped;
-     bottom clearance so the last card never hides under the hint pill. */
+     bottom clearance so the last card never hides under the floating
+     hint pill (same pattern as the sidebar rail). */
   padding: 0.75rem 0.125rem 1.5rem;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -168,15 +154,12 @@
     overflow: visible;
   }
 
-  /* Narrow screens keep inner scrolling with viewport caps instead of an
-     unbounded column. Small screens always show the tab bar, rail or not. */
+  /* Narrow screens: the table stays fully extended (no inner scroll);
+     only the rail keeps a capped inner scroll with its hint pill.
+     Small screens always show the tab bar, rail or not. */
   .tableScrollWrap,
   .railScrollWrap {
     flex: none;
-  }
-
-  .tableScroll {
-    max-height: 65dvh;
   }
 
   .railScroll {
@@ -185,6 +168,8 @@
 
   .sideCol {
     height: auto;
+    max-height: none;
+    position: static;
     order: -1;
     overflow: visible;
   }

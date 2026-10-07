@@ -3,20 +3,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./FinalGradeApprovals.module.css";
 
 const FETCH_PAGE_SIZE = 8;
@@ -68,21 +60,21 @@ export function FinalGradeApprovals() {
   }, [router]);
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section className={assign.card} aria-labelledby="overview-finals-ready">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${styles.header} relative`}>
         <div className={styles.headerText}>
-          <CardTitle>Final Grade Approvals</CardTitle>
-          <CardDescription>
+          <h2 id="overview-finals-ready" className="text-base font-semibold">
+            Final Grade Approvals
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Students whose grades are fully adviser-approved and ready for you to view.
-          </CardDescription>
+          </p>
         </div>
-        <CardAction>
-          <Badge variant="default" className={styles.pendingBadge}>
-            {isPending ? "…" : data?.complete ?? 0}
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className={styles.content}>
+      </div>
+      <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.skelWrap}>
             {Array.from({ length: 5 }).map((_, i) => (
@@ -92,9 +84,15 @@ export function FinalGradeApprovals() {
         ) : isError ? (
           <p className={styles.empty}>Could not load viewable finals.</p>
         ) : viewable.length === 0 ? (
-          <p className={styles.empty}>
-            No complete grade sets yet. Students appear once all their subjects are adviser-approved.
-          </p>
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <GraduationCap />
+            </span>
+            <p className={styles.emptyTitle}>No complete grade sets yet</p>
+            <p className={styles.emptyHint}>
+              Students appear once every subject is adviser-approved.
+            </p>
+          </div>
         ) : (
           <ul className={styles.list}>
             {viewable.map((g) => (
@@ -110,12 +108,14 @@ export function FinalGradeApprovals() {
             ))}
           </ul>
         )}
-      </CardContent>
-      <CardFooter className={styles.footer}>
-        <Button variant="outline" className={styles.footerBtn} onClick={goFinals}>
-          View all finals
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+      {viewable.length > 0 && (
+        <div className={`${styles.footer} relative`}>
+          <Button className={styles.footerBtn} onClick={goFinals}>
+            View all finals
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

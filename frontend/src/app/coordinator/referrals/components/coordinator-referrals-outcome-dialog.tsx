@@ -59,7 +59,13 @@ export function CoordinatorReferralsOutcomeDialog({
     );
   }
   return (
-    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={target !== null}
+      onOpenChange={(open) => {
+        // Locked while saving — X/backdrop/Escape can't drop the flight.
+        if (!open && !pending) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Record meeting outcome</DialogTitle>

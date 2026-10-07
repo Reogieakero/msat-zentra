@@ -5,41 +5,36 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Download, Trophy, X } from "lucide-react";
 import { HonorRollHero } from "./components/HonorRollHero";
+import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import { TierLeaderboard } from "./components/TierLeaderboard";
 import { CandidateTable } from "./components/CandidateTable";
 import {
   deriveHonorRoll,
+  fetchLiveHonorRoll,
   HONOR_ROLL_GRADES,
   type HonorRollCandidate,
 } from "./honor-roll-data";
-import { apiClient } from "@/lib/api/client";
-import type { AcademicsMock } from "../academics/academics-data";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./honor-roll.module.css";
 
 export default function PrincipalHonorRollPage() {
   const [grade, setGrade] = React.useState<string>("7");
   const [rankOpen, setRankOpen] = React.useState(false);
 
-  // Live finalized snapshot (locked grades only): only confirmed Academic
-  // Excellence awardees are listed. Moves without refresh via polling + the
-  // principal realtime channel (the ["academic-insights"] prefix already
-  // covers this key).
+  // Live general-average snapshot (lock-agnostic realtime means). Term-scoped.
+  // No polling — realtime invalidates this exact key on grade saves.
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
   const {
     data: summary,
     isPending,
     isError,
     error,
   } = useQuery({
-    queryKey: ["academic-insights", "honor-roll"],
-    queryFn: async () => {
-      const res = await apiClient.get<AcademicsMock>("/api/academics", {
-        params: { mode: "final" },
-      });
-      return res.data;
-    },
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
+    queryKey: ["academic-insights", "honor-roll-live", termId],
+    queryFn: fetchLiveHonorRoll,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const loading = isPending;
@@ -59,7 +54,7 @@ export default function PrincipalHonorRollPage() {
 
   const handleExport = () => {
     if (filtered.length === 0) return;
-    const header = ["Rank", "Name", "LRN", "Section", "Term Avg", "Band"];
+    const header = ["Rank", "Name", "LRN", "Section", "General Avg", "Band"];
     const rows = filtered
       .slice()
       .sort((a, b) => b.overallAverage - a.overallAverage)
@@ -110,6 +105,15 @@ export default function PrincipalHonorRollPage() {
 
   return (
     <section className={styles.page}>
+      <PrincipalPageHeader
+        title="Honor Roll & Awards"
+        description="DO 15, s. 2026 Academic Excellence — live general average ≥ 90, no subject below 80."
+        actions={
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="size-3.5" /> Export
+          </Button>
+        }
+      />
       <HonorRollHero
         data={{
           schoolYear: derived?.schoolYear ?? "",
@@ -126,12 +130,6 @@ export default function PrincipalHonorRollPage() {
         >
           <Trophy className="size-3.5" /> See top students rank
         </Button>
-
-        <div className={styles.toolbarRight}>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="size-3.5" /> Export
-          </Button>
-        </div>
       </div>
 
       <CandidateTable

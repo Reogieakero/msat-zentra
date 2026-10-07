@@ -16,6 +16,17 @@
    min-width: 0;
    margin-left: 0;
    margin-top: 6rem;
+   transition: none;
+}
+
+/* Sidebar layout: no top tab bar (3rem topbar only) and room for the 16rem
+   branched rail. Desktop only — small screens keep the tab bar layout
+   untouched (same as the principal desk). */
+@media (min-width: 1024px) {
+  .shellWithRail {
+    margin-top: 3rem;
+    margin-left: 16rem;
+  }
 }
 
 .main {
@@ -182,6 +193,12 @@
   margin-left: auto;
   font-size: 0.75rem;
   color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell {
+    transition: none;
+  }
 }
 
 /* Mobile: keep 16px gutters on all sides, same as desktop */

@@ -2,31 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
-  FileSignature,
-  FileStack,
-  GraduationCap,
-  MoreHorizontal,
-  Search,
-  ShieldQuestion,
-  UserCog,
+  UserCheck,
 } from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -35,84 +18,74 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRecordKeeperOverview } from "./overview-data";
+import { apiClient } from "@/lib/api/client";
+import { toast } from "@/components/ui/sonner";
+import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
+import { formatGrade, formatSection } from "@/lib/utils";
+import { LrnVerifyButton } from "../../accounts/components/LrnVerifyButton";
+import type { PendingStudentsResponse } from "../../accounts/components/types";
+import { formatRelativeTime } from "../../accounts/components/types";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";
 
-const PAGE_SIZE = 5;
+// Same pending-students table as the Accounts page: identical query key +
+// fetcher (one shared cache entry — both views can never disagree), identical
+// column set and backend order (no client re-sort), same verify-and-approve
+// action. Preview pager matches the Accounts page size.
+const PAGE_SIZE = 8;
 
-interface ActionItem {
-  key: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  count: number;
-  href: string;
-  cta: string;
+async function fetchPendingStudents() {
+  return apiClient
+    .get<PendingStudentsResponse>("/api/auth/pending", { params: { role: "student" } })
+    .then((res) => res.data);
 }
 
 export function OverviewApprovals() {
   const router = useRouter();
-  const [query, setQuery] = React.useState("");
+  const qc = useQueryClient();
   const [page, setPage] = React.useState(1);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-overview"],
-    queryFn: fetchRecordKeeperOverview,
+    queryKey: ["record-keeper-pending-students"],
+    queryFn: fetchPendingStudents,
   });
-
-  const actions: ActionItem[] = [
-    {
-      key: "finals",
-      icon: FileSignature,
-      title: "Final Grade Approvals",
-      count: data?.lockedFinalsAwaiting ?? 0,
-      href: "/record-keeper/final-grades",
-      cta: "View finals",
-    },
-    {
-      key: "students",
-      icon: GraduationCap,
-      title: "Pending Students",
-      count: data?.pendingStudents.length ?? 0,
-      href: "/record-keeper/accounts",
-      cta: "Approve enrollments",
-    },
-    {
-      key: "adviser",
-      icon: ShieldQuestion,
-      title: "Adviser Access",
-      count: data?.pendingAdviserAccess ?? 0,
-      href: "/record-keeper/adviser-access",
-      cta: "Grant access",
-    },
-    {
-      key: "sf10",
-      icon: FileStack,
-      title: "SF10 Records to Attach",
-      count: data?.latestAttachments.length ?? 0,
-      href: "/record-keeper/sf10",
-      cta: "Process records",
-    },
-  ];
 
   const goAccounts = React.useCallback(() => {
     router.push("/record-keeper/accounts");
   }, [router]);
 
-  const pendingStudents = React.useMemo(() => {
-    const all = [...(data?.pendingStudents ?? [])].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-    const q = query.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((s) => `${s.name} ${s.lrn}`.toLowerCase().includes(q));
-  }, [data, query]);
+  // Backend order (requested oldest-first) — exactly as the Accounts page
+  // renders it. No client re-sort so the two tables stay identical.
+  const pendingStudents = data?.students ?? [];
+
+  const act = useMutation({
+    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+      apiClient.post(
+        approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
+        approve ? {} : { reason: "Rejected by record keeper" }
+      ),
+    onSuccess: (_data, { id, approve }) => {
+      // Self-receipt lands in our own bell (badge bumps live); suppress its
+      // echo toast — the toast below already confirmed the action.
+      markSelfNotified(id);
+      toast.success({
+        title: approve ? "Approved" : "Rejected",
+        description: approve ? "The student account is now active." : "The account request was rejected.",
+      });
+    },
+    onError: () => {
+      toast.error({ title: "Action failed", description: "Could not process this account." });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["record-keeper-pending-students"] });
+      qc.invalidateQueries({ queryKey: ["record-keeper-accounts-audit"] });
+      qc.invalidateQueries({ queryKey: ["record-keeper-account-breakdown"] });
+      qc.invalidateQueries({ queryKey: ["record-keeper-overview"] });
+      qc.invalidateQueries({ queryKey: ["record-keeper-notifications"] });
+      setPage(1);
+    },
+  });
 
   const total = pendingStudents.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -120,173 +93,120 @@ export function OverviewApprovals() {
   const pageRows = pendingStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, total);
+  const hasRecords = pendingStudents.length > 0;
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.header}>
+    <section className={assign.card} aria-labelledby="overview-pending-approvals">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <div className={`${styles.header} relative`}>
         <div className={styles.headerText}>
-          <CardTitle>Pending Approvals</CardTitle>
-          <CardDescription>
+          <h2 id="overview-pending-approvals" className="text-base font-semibold">
+            Pending Approvals
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Approvals and follow-ups that need record keeper attention this term.
-          </CardDescription>
+          </p>
         </div>
-        <CardAction className={styles.headerActions}>
-          <div className={styles.searchWrap}>
-            <Search className={styles.searchIcon} aria-hidden />
-            <Input
-              className={styles.search}
-              placeholder="Search name or LRN…"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
-              aria-label="Search pending students"
-            />
-          </div>
-          <Button variant="outline" size="sm" onClick={goAccounts}>
+        <div className={styles.headerActions}>
+          <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
             View all
-            <ArrowRight aria-hidden />
           </Button>
-        </CardAction>
-      </CardHeader>
-      <CardContent className={styles.content}>
+        </div>
+      </div>
+      <div className={`${styles.content} relative`}>
         {isPending ? (
-          <div className={styles.sectionBlock}>
-            <div className={styles.actionGrid}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className={styles.actionSkel} />
-              ))}
-            </div>
+          <div className={styles.tableWrap}>
+            <Skeleton className={styles.tableSkel} />
           </div>
         ) : isError ? (
           <p className={styles.empty}>Could not load overview figures.</p>
+        ) : !hasRecords ? (
+          <div className={styles.emptyBlock}>
+            <span className={styles.emptyIcon} aria-hidden>
+              <UserCheck />
+            </span>
+            <p className={styles.emptyTitle}>All caught up</p>
+            <p className={styles.emptyHint}>
+              No pending student enrollments in the G7–10 band.
+            </p>
+          </div>
         ) : (
-          <>
-            <div className={styles.sectionBlock}>
-              <div className={styles.actionGrid}>
-                {actions.map((a) => {
-                  const Icon = a.icon;
-                  const empty = a.count === 0;
-                  return (
-                    <button
-                      type="button"
-                      key={a.key}
-                      className={styles.actionItem}
-                      onClick={() => router.push(a.href)}
-                      aria-label={
-                        empty ? `${a.title}: all caught up` : `${a.title}: ${a.count} pending`
-                      }
-                    >
-                      <span className={styles.actionHead}>
-                        <span className={styles.actionIcon}>
-                          <Icon className={styles.actionIconSvg} aria-hidden />
-                        </span>
-                        <span className={styles.actionCount}>{a.count}</span>
-                      </span>
-                      <span className={styles.actionTitle}>{a.title}</span>
-                      <span className={styles.actionCta}>
-                        {empty ? "View" : a.cta}
-                        <ArrowRight className={styles.actionCtaIcon} aria-hidden />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className={styles.footnote}>
-                <UserCog className={styles.footnoteIcon} aria-hidden />
-                {data?.pendingAccounts ?? 0} pending account request
-                {(data?.pendingAccounts ?? 0) !== 1 ? "s" : ""} across the grade band.
-              </p>
-            </div>
-
-            <Table>
+          <div className={styles.tableWrap}>
+            <Table aria-label="Pending student accounts">
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
+                  <TableHead>Section</TableHead>
                   <TableHead>Grade</TableHead>
-                  <TableHead>Parent / Guardian</TableHead>
+                  <TableHead>Requested</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead />
+                  <TableHead>Verification</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pageRows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className={styles.empty}>
-                      {query.trim()
-                        ? `No pending students match "${query}".`
-                        : "All caught up — no pending student enrollments in the G7–10 band."}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pageRows.map((s) => (
-                    <TableRow key={s.lrn} className={styles.clickableRow} onClick={goAccounts}>
+                {pageRows.map((s) => (
+                    <TableRow key={s.id} className={styles.clickableRow} onClick={goAccounts}>
                       <TableCell>
                         <div className={styles.studentCell}>
                           <span className={styles.studentName}>{s.name}</span>
                           <span className={styles.studentLrn}>{s.lrn}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className={styles.gradeTag}>{s.grade}</span>
+                      <TableCell className={styles.parentCell}>
+                        {formatSection(s.section)}
                       </TableCell>
-                      <TableCell className={styles.parentCell}>{s.parent}</TableCell>
+                      <TableCell className={styles.parentCell}>{formatGrade(s.gradeLevel)}</TableCell>
+                      <TableCell className={styles.parentCell}>
+                        {formatRelativeTime(s.requestedAt)}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant="warning" className={styles.statusBadge}>
+                        <Badge variant="amber" className={styles.statusBadge}>
                           Pending
                         </Badge>
                       </TableCell>
-                      <TableCell className={styles.menuCell}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              aria-label={`Actions for ${s.name}`}
-                            >
-                              <MoreHorizontal aria-hidden />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={goAccounts}>View details</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <LrnVerifyButton
+                          student={s}
+                          onApprove={() => act.mutateAsync({ id: s.id, approve: true }).then(() => undefined)}
+                          approving={act.isPending}
+                        />
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
-          </>
+          </div>
         )}
-      </CardContent>
-      <CardFooter className={styles.footer}>
-        <span className={styles.footerInfo}>
-          {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1 || total === 0}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages || total === 0}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
+      </div>
+      {hasRecords && (
+        <div className={`${styles.footer} relative`}>
+          <span className={styles.footerInfo}>
+            {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
+          </span>
+          <div className={styles.footerActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || total === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft aria-hidden />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || total === 0}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+              <ChevronRight aria-hidden />
+            </Button>
+          </div>
         </div>
-      </CardFooter>
-    </Card>
+      )}
+    </section>
   );
 }

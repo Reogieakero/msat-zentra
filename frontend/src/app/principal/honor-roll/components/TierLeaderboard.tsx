@@ -40,7 +40,7 @@ export function TierLeaderboard({ candidates }: Props) {
     <Card className={styles.wrap}>
       <div className={styles.head}>
         <h2 className={styles.title}>Top of the Term</h2>
-        <p className={styles.sub}>Ranked by term average across awardees</p>
+        <p className={styles.sub}>Ranked by general average across awardees</p>
       </div>
 
       <ol className={styles.list}>

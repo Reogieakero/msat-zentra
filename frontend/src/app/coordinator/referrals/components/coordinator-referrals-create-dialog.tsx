@@ -28,6 +28,7 @@ export function CoordinatorReferralsCreateDialog({
     <CardModal
       open={target !== null}
       onClose={onClose}
+      dismissable={!pending}
       title="Create learner profile"
       description={
         target ? (

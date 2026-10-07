@@ -133,6 +133,10 @@
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--muted-foreground);
+  /* Long names (e.g. "Cross-check Sofia Cruz's …") must wrap to a second
+     line instead of clipping at the card edge. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .close {

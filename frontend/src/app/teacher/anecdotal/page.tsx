@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import * as React from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Cat, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchMyRecords } from "@/components/ocform01/folders";
+import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
+import { useTerm } from "@/lib/term/TermContext";
 import { AnecdotalRepoFolders } from "./components/AnecdotalRepoFolders";
 import { FolderLegendCard, TopAttentionCard } from "./components/AnecdotalSideRail";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -17,22 +19,69 @@ import styles from "./components/anecdotal-repo.module.css";
  * in Chat with Bama (New record button).
  */
 export default function TeacherAnecdotalPage() {
-  const recordsQuery = useQuery({
-    queryKey: ["anecdotal-mine"],
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const recordsQuery = useQuery<MyAnecdotalRecord[]>({
+    queryKey: ["anecdotal-mine", termKey],
     queryFn: fetchMyRecords,
+    placeholderData: keepPreviousData,
     retry: false,
     staleTime: 60_000,
   });
-  const records = recordsQuery.data ?? [];
+  const records = React.useMemo(
+    () => (Array.isArray(recordsQuery.data) ? recordsQuery.data : []),
+    [recordsQuery.data]
+  );
 
+  // Geometry-matched skeleton: same grid (main + 17rem rail), panel
+  // header + search + folder grid, and rail summary cards as the loaded
+  // repo — no layout shift when records land.
   if (recordsQuery.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading filed records">
-        <div className={assign.card} aria-hidden>
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-3 w-64" />
+        <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+          <div className={`${styles.main} flex min-w-0 flex-col`}>
+            <div className={styles.skelPanel} aria-hidden>
+              <Skeleton className={styles.skelPanelTitle} />
+              <Skeleton className={styles.skelPanelDesc} />
+              <div className={styles.skelActions}>
+                <Skeleton className={styles.skelSearch} />
+                <Skeleton className={styles.skelBtn} />
+              </div>
+              <div className={styles.skelFolderGrid}>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex min-w-0 flex-col gap-2">
+                    <Skeleton className={styles.skelFolder} />
+                    <Skeleton className={styles.skelFolderLabel} />
+                    <Skeleton className={styles.skelFolderSub} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="hidden min-w-0 flex-col gap-4 lg:flex" aria-hidden>
+            <div className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelCardDesc} />
+              <div className={styles.skelLegend}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className={styles.skelLegendRow}>
+                    <Skeleton className={styles.skelLegendDot} />
+                    <Skeleton className={styles.skelLegendCount} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className={styles.skelCard}>
+              <Skeleton className={styles.skelCardTitle} />
+              <Skeleton className={styles.skelBar} />
+            </div>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4 lg:hidden" aria-hidden>
+          <div className={styles.skelCard}>
+            <Skeleton className={styles.skelCardTitle} />
+            <Skeleton className={styles.skelCardDesc} />
           </div>
         </div>
       </section>

@@ -1,20 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { BookPlus, Loader2, Plus, Trash2, UserPlus } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
+import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { DropdownSelect } from "@/app/principal/academics/assign/components/DropdownSelect";
 // Same grid-card shell as the principal's assign grid — glow, hover, radius.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -48,7 +43,8 @@ export function AddTeacherDialog({
 }: {
   onClose: () => void;
   teachers: { id: string; name: string; code: string | null; linked: boolean }[];
-}) {  const queryClient = useQueryClient();
+}) {
+  const invalidateTeacher = useTeacherInvalidate();
   const [rows, setRows] = useState<TeacherRow[]>([{ fullName: "" }]);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -72,7 +68,7 @@ export function AddTeacherDialog({
       );
       const failed = items.filter((_, i) => !okIndexes.has(i));
       if (okIndexes.size > 0) {
-        void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-teachers"] });
+        invalidateTeacher.schedule();
         toast.success({
           title: `${okIndexes.size} teacher${okIndexes.size === 1 ? "" : "s"} added`,
           description: "Names are now pickable in timetable slots.",
@@ -106,19 +102,15 @@ export function AddTeacherDialog({
   };
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!createMany.isPending}
+      size="md"
+      title="Add teachers"
+      description="Type each name once, then pick from the list. Just names — no accounts involved."
+      watchKey={createMany.isPending}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add teachers</DialogTitle>
-          <DialogDescription>
-            Type each name once, then pick from the list. Just names — no accounts involved.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className={`flex max-h-[32dvh] flex-col gap-2 overflow-y-auto pr-0.5 ${styles.noScrollbar}`}>
           {rows.map((row, i) => (
@@ -182,8 +174,12 @@ export function AddTeacherDialog({
           </p>
         ) : null}
 
-        <DialogFooter>
-          <Button variant="destructive" onClick={onClose}>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="destructive"
+            onClick={onClose}
+            disabled={createMany.isPending}
+          >
             Cancel
           </Button>
           <Button
@@ -200,9 +196,8 @@ export function AddTeacherDialog({
               `Create ${filled.length > 0 ? `${filled.length} ` : ""}teacher${filled.length === 1 ? "" : "s"}`
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }
 
@@ -219,7 +214,7 @@ export function AddSubjectDialog({
   subjects: ScheduleSubject[];
   teachers: { id: string; name: string; code: string | null; linked: boolean }[];
 }) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
   const [rows, setRows] = useState<SubjectRow[]>([{ name: "", code: "" }]);
   const [gradeLevel, setGradeLevel] = useState("G7");
   const [category, setCategory] = useState("CORE");
@@ -253,7 +248,7 @@ export function AddSubjectDialog({
       );
       const failed = items.filter((_, i) => !okIndexes.has(i));
       if (okIndexes.size > 0) {
-        void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-subjects"] });
+        invalidateTeacher.schedule();
         toast.success({
           title: `${okIndexes.size} subject${okIndexes.size === 1 ? "" : "s"} created`,
           description: "Usable in the timetable immediately.",
@@ -295,19 +290,15 @@ export function AddSubjectDialog({
   };
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!createMany.isPending}
+      size="md"
+      title="Add subjects"
+      description="Subjects are usable in the timetable immediately."
+      watchKey={createMany.isPending}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add subjects</DialogTitle>
-          <DialogDescription>
-            Subjects are usable in the timetable immediately.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -427,8 +418,12 @@ export function AddSubjectDialog({
           </p>
         ) : null}
 
-        <DialogFooter>
-          <Button variant="destructive" onClick={onClose}>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="destructive"
+            onClick={onClose}
+            disabled={createMany.isPending}
+          >
             Cancel
           </Button>
           <Button
@@ -445,9 +440,8 @@ export function AddSubjectDialog({
               `Create ${filled.length > 0 ? `${filled.length} ` : ""}subject${filled.length === 1 ? "" : "s"}`
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }
 
@@ -457,13 +451,15 @@ export function AddSubjectDialog({
 // stacks them in a narrow right column (setup view); otherwise they sit in
 // the two-column grid.
 export function CatalogCards({ layout = "grid" }: { layout?: "grid" | "rail" }) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [teacherOpen, setTeacherOpen] = useState(false);
   const [subjectOpen, setSubjectOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [teacherListOpen, setTeacherListOpen] = useState(false);
 
   const subjectsQuery = useQuery<{ subjects: ScheduleSubject[] }>({
-    queryKey: ["teacher-schedule-subjects"],
+    queryKey: ["teacher-schedule-subjects", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ subjects: ScheduleSubject[] }>(
         "/api/teacher/schedule/subjects",
@@ -474,7 +470,7 @@ export function CatalogCards({ layout = "grid" }: { layout?: "grid" | "rail" }) 
   const subjects = subjectsQuery.data?.subjects ?? [];
 
   const teachersQuery = useQuery<{ teachers: { id: string; name: string; code: string | null; linked: boolean }[] }>({
-    queryKey: ["teacher-schedule-teachers"],
+    queryKey: ["teacher-schedule-teachers", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ teachers: { id: string; name: string; code: string | null; linked: boolean }[] }>(
         "/api/teacher/schedule/teachers",
@@ -584,24 +580,26 @@ function SubjectListDialog({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const filtered = subjects.filter((s) =>
-    `${s.name} ${s.code}`.toLowerCase().includes(q.trim().toLowerCase()),
+  const needle = q.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      needle === ""
+        ? subjects
+        : subjects.filter((s) =>
+            `${s.name} ${s.code}`.toLowerCase().includes(needle),
+          ),
+    [subjects, needle],
   );
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      size="md"
+      title="Subjects"
+      description={<>Grades 7–10 · {subjects.length} total</>}
+      watchKey={pending}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Subjects</DialogTitle>
-          <DialogDescription>
-            Grades 7–10 · {subjects.length} total
-          </DialogDescription>
-        </DialogHeader>
 
         <Input
           placeholder="Search name or code…"
@@ -643,8 +641,7 @@ function SubjectListDialog({
             ))}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </CardModal>
   );
 }
 
@@ -661,9 +658,14 @@ function TeacherListDialog({
 }) {
   const [q, setQ] = useState("");
   const [confirming, setConfirming] = useState(false);
-  const queryClient = useQueryClient();
-  const filtered = teachers.filter((t) =>
-    t.name.toLowerCase().includes(q.trim().toLowerCase()),
+  const invalidateTeacher = useTeacherInvalidate();
+  const needle = q.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      needle === ""
+        ? teachers
+        : teachers.filter((t) => t.name.toLowerCase().includes(needle)),
+    [teachers, needle],
   );
 
   const deleteAll = useMutation({
@@ -673,8 +675,7 @@ function TeacherListDialog({
     },
     onSuccess: (data) => {
       setConfirming(false);
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule-teachers"] });
-      void queryClient.invalidateQueries({ queryKey: ["teacher-schedule"] });
+      invalidateTeacher.schedule();
       toast.success({
         title: "Teacher list cleared",
         description: `${data.deleted} name${data.deleted === 1 ? "" : "s"} removed.`,
@@ -687,19 +688,19 @@ function TeacherListDialog({
   });
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!deleteAll.isPending}
+      size="md"
+      title="Teachers"
+      description={
+        <>
+          {teachers.length} name{teachers.length === 1 ? "" : "s"} total
+        </>
+      }
+      watchKey={pending}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Teachers</DialogTitle>
-          <DialogDescription>
-            {teachers.length} name{teachers.length === 1 ? "" : "s"} total
-          </DialogDescription>
-        </DialogHeader>
 
         <Input
           placeholder="Search name…"
@@ -744,10 +745,14 @@ function TeacherListDialog({
             ))}
           </div>
         )}
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           {confirming ? (
             <>
-              <Button variant="destructive" onClick={() => setConfirming(false)}>
+              <Button
+                variant="destructive"
+                onClick={() => setConfirming(false)}
+                disabled={deleteAll.isPending}
+              >
                 Cancel
               </Button>
               <Button
@@ -775,8 +780,7 @@ function TeacherListDialog({
               Delete all
             </Button>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

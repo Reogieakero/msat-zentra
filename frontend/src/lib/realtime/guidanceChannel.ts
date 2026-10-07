@@ -5,26 +5,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
-import {
-  guidanceNotificationTitle,
-  prettifyNotificationType,
-} from "@/lib/notifications/label";
+import { guidanceNotificationTitle } from "@/lib/notifications/label";
 
 const GUIDANCE_KEYS = [
   ["guidance-notifications"],
   ["guidance-referrals"],
+  ["guidance-referrals-highlight"],
   ["guidance-interventions"],
   ["guidance-overview"],
   // ["guidance-alerts"] prefix covers the nested alerts queries
   // (["guidance-alerts", "referrals"] / ["guidance-alerts", "interventions"]).
   ["guidance-alerts"],
   ["guidance-adm"],
+  ["guidance-adm-report"],
   ["guidance-anecdotal"],
   ["guidance-risk"],
   ["guidance-risk-levels"],
   ["guidance-risk-heatmap"],
   ["guidance-risk-behavioral"],
-  ["guidance-referrals-highlight"],
+  ["guidance-risk-alert-factors"],
+  ["guidance-session-documents"],
   ["adm-consultation-sessions"],
 ] as const;
 
@@ -38,61 +38,24 @@ interface GuidanceInboxRow {
   createdAt: string;
 }
 
-// Inbox poll cadence — the working transport alongside the realtime
-// wake-up below (the anon Supabase client never receives row-scoped events
-// for backend-signed sessions). Cheap indexed query; rows already seen are
-// skipped. Kept short so referred cases toast within seconds.
-const INBOX_POLL_MS = 5_000;
-const MAX_TOASTS_PER_SYNC = 3;
+// Poll cadence — this is the actual delivery transport, not just a safety
+// net: the browser Supabase client authenticates as anon (the app's sessions
+// are backend-signed JWTs, not Supabase Auth), so row-scoped Realtime events
+// never reach it even with the table published. Cheap indexed query, and
+// rows already toasted are skipped through `seenIds`. Kept short so
+// referred cases surface within seconds.
+const FALLBACK_POLL_MS = 5_000;
+const MAX_TOASTS_PER_POLL = 3;
 
-/** Self-confirmation receipts the counselor wrote themselves — these land
- *  in the bell inbox but must never pop a second sileo (the mutation
- *  already showed a success toast). Matched by message since every referral
- *  fanout shares type `referral_status_change`. Strings mirror
- *  referrals.routes.ts + guidance.routes.ts counselor self fanouts. */
-function isSelfReceipt(n: GuidanceInboxRow): boolean {
-  return /^you (accepted|booked|completed|rescheduled|cancelled|marked|requested|set|started|closed|moved|endorsed|forwarded|did not endorse|escalated|reassigned|sent|dismissed|opened)\b/i.test(
-    n.message ?? "",
-  );
-}
+/** Self-save suppression: saves this session already confirmed with a
+ *  direct toast skip the realtime duplicate (data still invalidates, the
+ *  bell row still lands). Keyed by notification sourceId. */
+const selfSaved = new Map<string, number>();
+const SELF_SUPPRESS_MS = 30_000;
 
-function toastTitleFor(n: GuidanceInboxRow): string {
-  // Shared with the bell inbox titles — one mapper so sileo and inbox name
-  // the event identically. Falls back to "New notification" (never the raw
-  // type) when nothing matches. Self receipts resolve here too as fallback
-  // safety (they are filtered before toasting, never shown twice).
-  if (isSelfReceipt(n)) {
-    const msg = n.message ?? "";
-    if (/you accepted a guidance referral/i.test(msg)) return "Referral accepted";
-    if (/you booked a guidance session/i.test(msg)) return "Session booked";
-    if (/you completed a guidance session/i.test(msg)) return "Session completed";
-    if (/you completed a session and set a follow-up/i.test(msg)) return "Follow-up set";
-    if (/you rescheduled a guidance session/i.test(msg)) return "Session rescheduled";
-    if (/you cancelled a guidance session/i.test(msg)) return "Session cancelled";
-    if (/marked .* resolved/i.test(msg)) return "Referral resolved";
-    if (/you requested more info/i.test(msg)) return "Info requested";
-    if (/you set a follow-up/i.test(msg)) return "Follow-up set";
-    if (/you started handling/i.test(msg)) return "Handling started";
-    if (/you closed a guidance referral/i.test(msg)) return "Referral closed";
-    if (/you dismissed a referral/i.test(msg)) return "Referral dismissed";
-    if (/you moved .* pending/i.test(msg)) return "Moved to pending";
-    if (/you endorsed an ADM consultation/i.test(msg)) return "ADM endorsed";
-    if (/you forwarded an ADM referral/i.test(msg)) return "Sent to coordinator";
-    if (/you did not endorse/i.test(msg)) return "ADM referral closed";
-    if (/you escalated a referral/i.test(msg)) return "Referral escalated";
-    if (/you reassigned a referral/i.test(msg)) return "Referral reassigned";
-    if (/you sent a referral/i.test(msg)) return "Referral sent";
-    if (/you opened a .* follow-up/i.test(msg)) return "Follow-up opened";
-    if (/you booked an intervention session/i.test(msg)) return "Intervention session booked";
-    if (/you completed an intervention session/i.test(msg)) return "Intervention session completed";
-    if (/you rescheduled an intervention session/i.test(msg)) return "Intervention session rescheduled";
-    if (/you cancelled an intervention session/i.test(msg)) return "Intervention session cancelled";
-    return "Update saved";
-  }
-  const title = guidanceNotificationTitle(n);
-  if (title === "Guidance referral update") return "New guidance referral";
-  if (title === prettifyNotificationType(n.type)) return "New notification";
-  return title;
+export function markSelfNotified(sourceId: string) {
+  if (!sourceId) return;
+  selfSaved.set(sourceId, Date.now());
 }
 
 /** Current user id from the stored access JWT (backend signs `sub`). */
@@ -113,77 +76,72 @@ function currentUserId(): string | null {
 
 /**
  * Guidance desk realtime sync — one shared Supabase channel per mount.
- * Listens for postgres_changes on referral/intervention/session/ADM tables
- * and invalidates only the affected Guidance query prefixes, plus an
- * auth-gated inbox sync so a newly referred case pops a sileo toast the
- * moment it lands (e.g. a teacher refers a student to guidance) —
- * Notification row payloads arrive empty over realtime (anon key holds no
- * grant by design), so the INSERT event is only a wake-up call and the
- * recipient-safe REST fetch resolves what is actually new. No PHI ever
- * travels over the realtime socket.
+ * Clone of the teacher desk channel: a 5s auth-gated backend poll is the
+ * working transport plus the Supabase Realtime INSERT subscription as a
+ * bonus path where policies allow. Rows are deduped by id across both
+ * layers, so a healthy connection never double-toasts. Table bindings give
+ * instant invalidation between polls (no PHI travels over the socket —
+ * Notification payloads arrive empty, so INSERTs are wake-up calls only).
+ *
+ * Titles come from the shared `guidanceNotificationTitle` (MESSAGE regex,
+ * never type alone — every referral fanout shares type
+ * `referral_status_change`), so the bell and the sileo always agree.
  */
 export function useGuidanceRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const lastInvalidated = React.useRef(0);
   const seenIds = React.useRef<Set<string>>(new Set());
-  const seeded = React.useRef(false);
 
   React.useEffect(() => {
     if (!enabled) return;
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const userId = currentUserId();
     if (!userId) return;
+    // Fresh identity (or remount) → fresh seen set, so a previous
+    // counselor's inbox can never suppress this counselor's first toast.
+    seenIds.current = new Set();
     let channel: { unsubscribe: () => void } | null = null;
     let cancelled = false;
 
-    function invalidate() {
-      // Throttle bursts (e.g. multi-row writes) to one invalidate per 2s.
-      const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
-      lastInvalidated.current = now;
-      for (const key of GUIDANCE_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
+    function notify(row: GuidanceInboxRow) {
+      if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
+      seenIds.current.add(row.id);
+      // Saves this session already confirmed with a direct toast skip the
+      // realtime echo toast — the bell row still lands and lists still
+      // invalidate. Scoped to this session's own writes: the per-sourceId
+      // entry expires after 30s, so a later genuine update on the SAME
+      // referral id (different message) still toasts.
+      const selfConfirmed =
+        !!row.sourceId &&
+        /^you\b/i.test(row.message ?? "") &&
+        Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
+      if (!selfConfirmed) {
+        toast.info({
+          title: guidanceNotificationTitle({ type: row.type, message: row.message }),
+          description: row.message,
+        });
       }
-    }
-
-    // Auth-gated inbox sync — the recipient-safe realtime path. Writes the
-    // fetched inbox straight into the bell query (badge count updates
-    // without a second refetch) and toasts only rows never seen before
-    // (capped per sync); first run only seeds.
-    async function syncInbox() {
-      if (cancelled || document.hidden) return;
-      try {
-        const { data } = await apiClient.get<GuidanceInboxRow[]>("/api/notifications/");
-        if (cancelled || !Array.isArray(data)) return;
-        queryClient.setQueryData(["guidance-notifications"], data);
-        const mine = data.filter((n) => n.userId === userId);
-        if (!seeded.current) {
-          for (const n of mine) seenIds.current.add(n.id);
-          seeded.current = true;
-          return;
-        }
-        const fresh = mine.filter((n) => !seenIds.current.has(n.id));
-        for (const n of mine) seenIds.current.add(n.id);
-        if (fresh.length === 0) return;
-        // Own receipts already showed a success toast at mutation time —
-        // bell inbox keeps the row (badge still updates via setQueryData),
-        // but no second sileo.
-        const toToast = fresh.filter((n) => !isSelfReceipt(n));
-        // Oldest first so the newest toast stays on top.
-        const ordered = [...toToast].reverse().slice(0, MAX_TOASTS_PER_SYNC);
-        for (const n of ordered) {
-          toast.info({ title: toastTitleFor(n), description: n.message });
-        }
-        void invalidate();
-      } catch {
-        // Offline / unauthorized — the next tick covers it.
-      }
+      void invalidate();
     }
 
     try {
       const supabase = createClient();
       const ch = supabase
-        .channel("guidance-desk")
+        .channel(`guidance-desk-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "Notification",
+            filter: `userId=eq.${userId}`,
+          },
+          (payload) => {
+            notify((payload as unknown as { new?: GuidanceInboxRow }).new as GuidanceInboxRow);
+          },
+        )
+        // Table events are invalidate-only wake-ups (payloads carry no
+        // recipient-safe data): the poll below resolves what changed.
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "Referral" },
@@ -204,32 +162,73 @@ export function useGuidanceRealtime(enabled = true) {
           { event: "*", schema: "public", table: "AdmLearnerProfile" },
           () => void invalidate()
         )
-        // UNFILTERED by design: Notification row payloads arrive empty (the
-        // anon key deliberately holds no grant), so the INSERT event is a
-        // wake-up call; syncInbox resolves recipients via the auth-gated API.
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "Notification" },
-          () => void syncInbox()
-        )
         .subscribe((status) => {
-          // Reconcile on (re)subscribe — missed events backfill from the DB.
-          if (status === "SUBSCRIBED") void syncInbox();
+          if (!cancelled && status !== "SUBSCRIBED") {
+            console.warn(`[guidance-realtime] channel status: ${status}`);
+          }
         });
       if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
     } catch {
-      // Realtime unavailable — the poll safety net below still delivers.
+      // Realtime unavailable — the polling safety net below still delivers.
     }
 
-    // Safety net: anything realtime missed. First run only seeds the seen
-    // set (no toast storm for old inbox rows).
-    const timer = window.setInterval(() => void syncInbox(), INBOX_POLL_MS);
-    const seedTimer = window.setTimeout(() => void syncInbox(), 1_000);
+    // Safety net: pick up anything Realtime missed. First poll only seeds
+    // the seen set (no toast storm for old inbox rows); later polls toast
+    // rows that arrived since, capped per poll.
+    let seeded = false;
+    async function poll() {
+      if (cancelled || document.hidden) return;
+      try {
+        const { data } = await apiClient.get<GuidanceInboxRow[]>(
+          "/api/notifications/",
+        );
+        if (cancelled || !Array.isArray(data)) return;
+        const mine = data.filter((n) => n.userId === userId);
+        if (!seeded) {
+          for (const n of mine) seenIds.current.add(n.id);
+          seeded = true;
+          return;
+        }
+        const fresh = mine.filter((n) => !seenIds.current.has(n.id));
+        if (fresh.length === 0) return;
+        // Oldest first so the newest toast stays on top.
+        const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
+        for (const n of ordered) notify(n);
+        // Mark the rest seen (lists still refresh below) to avoid backlog.
+        for (const n of fresh) seenIds.current.add(n.id);
+        if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate();
+      } catch {
+        // Offline / unauthorized — try again on the next tick.
+      }
+    }
+    const timer = window.setInterval(poll, FALLBACK_POLL_MS);
+    // Seed soon after mount so the missed-toast window is tiny (seed itself
+    // never toasts).
+    const seedTimer = window.setTimeout(poll, 1_000);
+    // Poll the moment the tab regains focus — updates that landed while
+    // away surface immediately with no manual refresh.
+    const onFocus = () => {
+      void poll();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    function invalidate() {
+      // Throttle bursts to one invalidate per 2s (toasts still fire per row).
+      const now = Date.now();
+      if (now - lastInvalidated.current < 2000) return;
+      lastInvalidated.current = now;
+      for (const key of GUIDANCE_KEYS) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
+      }
+    }
 
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       window.clearTimeout(seedTimer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       try {
         channel?.unsubscribe();
       } catch {

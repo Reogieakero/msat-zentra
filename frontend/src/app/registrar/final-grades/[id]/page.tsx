@@ -8,26 +8,27 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
+  GraduationCap,
   Printer,
-  Share2,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Avatar,
   AvatarFallback,
 } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
 interface SubjectRow {
   id: string;
@@ -61,8 +62,10 @@ export default function FinalGradeDetailPage() {
   const router = useRouter();
   const id = React.useMemo(() => decodeURIComponent(params.id), [params.id]);
 
-  const { data, isPending } = useQuery({
-    queryKey: ["registrar-final-grades"],
+  const { data, isPending, isError } = useQuery({
+    // Detail key: namespaced so it never collides with the paged list key
+    // ["registrar-final-grades", page, q] (same endpoint, other params).
+    queryKey: ["registrar-final-grades", "detail"],
     queryFn: () =>
       apiClient
         .get<GradesResponse>("/api/registrar/final-grades", {
@@ -94,6 +97,10 @@ export default function FinalGradeDetailPage() {
     return "Low";
   }, [student, belowThresholdSubjects]);
 
+  const handlePrint = React.useCallback(() => {
+    window.print();
+  }, []);
+
   return (
     <section className="space-y-4 lg:space-y-6">
       {/* Title row */}
@@ -114,19 +121,35 @@ export default function FinalGradeDetailPage() {
 
       {isPending ? (
         <DetailSkeleton />
-      ) : !student ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground text-sm">
-            No complete grade set found for this student.
-          </CardContent>
-        </Card>
+      ) : isError || !student ? (
+        <section className={assign.card} aria-label="Grade set not found">
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center justify-center gap-1.5 py-12 text-center">
+            <span className="mb-1.5 inline-flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
+              <GraduationCap className="size-5" />
+            </span>
+            <p className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+              No complete grade set found
+            </p>
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              {isError
+                ? "Could not load grade details."
+                : "No complete grade set found for this student."}
+            </p>
+          </div>
+        </section>
       ) : (
-        <div className="grid gap-4 lg:gap-6 lg:grid-cols-3">
+        <div className="grid items-start gap-4 lg:gap-6 lg:grid-cols-3">
           {/* ── Left column ─────────────────────────────────── */}
           <div className="space-y-4 lg:space-y-6 lg:col-span-2">
-            {/* Hero banner (replaces course video) */}
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/5 to-muted flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-center">
+            {/* Hero banner */}
+            <section className={assign.card} aria-label="Overall average">
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex flex-col items-center gap-3 py-6 text-center">
                 <span className="text-4xl font-bold tracking-tight text-foreground">
                   {student.overall}
                 </span>
@@ -137,20 +160,23 @@ export default function FinalGradeDetailPage() {
                   Complete
                 </Badge>
               </div>
-            </div>
+            </section>
 
-            {/* Student info card (replaces mentor card) */}
-            <Card className="bg-muted/40 ring-1 ring-foreground/10 gap-4 lg:gap-6">
-              <CardContent className="flex items-center gap-4">
+            {/* Student info card */}
+            <section className={assign.card} aria-label="Student information">
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex items-center gap-4">
                 <Avatar size="lg">
                   <AvatarFallback>{initial}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold">{student.name}</h3>
-                  <p className="text-sm text-muted-foreground truncate">
+                  <h3 className="text-base font-semibold">{student.name}</h3>
+                  <p className="mt-1 truncate text-sm text-muted-foreground">
                     {student.gradeLevel} · {formatSection(student.section)} · {student.term}
                   </p>
-                  <p className="text-sm text-muted-foreground font-mono">
+                  <p className="font-mono text-sm text-muted-foreground">
                     {student.lrn}
                   </p>
                   <div className="mt-2 flex items-center gap-2">
@@ -158,20 +184,17 @@ export default function FinalGradeDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="size-8" aria-label="Print grades">
+                  <Button variant="ghost" size="icon" className="size-8" aria-label="Print grades" onClick={handlePrint}>
                     <Printer className="size-4" aria-hidden />
                   </Button>
-                  <Button variant="ghost" size="icon" className="size-8" aria-label="Share">
-                    <Share2 className="size-4" aria-hidden />
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </section>
 
             {/* About This Grade Set */}
             <section>
-              <h2 className="mb-3 text-lg font-semibold">About This Grade Set</h2>
-              <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
+              <h2 className="mb-3 text-base font-semibold">About This Grade Set</h2>
+              <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
                 {showFullAbout
                   ? `This is the complete final grade set for ${student.name} (${student.term}). All ${totalSubjects} subject(s) — ${student.subjects.map((s) => s.subject).join(", ")} — have been locked by the subject teacher and approved by the class adviser. The grades below are now visible to the registrar for review.\n\nThe registrar has a view-only role in the grade pipeline. No further approval is required — these grades are finalized by the adviser once every subject in the student's term is approved.`
                   : `This is the complete final grade set for ${student.name} (${student.term}). All ${totalSubjects} subject(s) have been locked by the subject teacher and approved by the class adviser.`}
@@ -189,10 +212,10 @@ export default function FinalGradeDetailPage() {
               </button>
             </section>
 
-            {/* What This Means (replaces "This Course Suit For") */}
+            {/* What This Means */}
             <section>
-              <h2 className="mb-3 text-lg font-semibold">What This Means</h2>
-              <ul className="text-muted-foreground space-y-2">
+              <h2 className="mb-3 text-base font-semibold">What This Means</h2>
+              <ul className="text-muted-foreground space-y-2 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-current" />
                   <span>All {totalSubjects} subject(s) are locked and adviser-approved for {student.term}.</span>
@@ -217,75 +240,71 @@ export default function FinalGradeDetailPage() {
             </section>
 
             {/* Subject Grades table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Subject Grades</CardTitle>
-                <CardDescription>Per-subject breakdown with computed and transmuted grades.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="h-10 text-left text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        Subject
-                      </th>
-                      <th className="h-10 text-right text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        Computed
-                      </th>
-                      <th className="h-10 text-right text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        Transmuted
-                      </th>
-                      <th className="h-10 text-left text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        Remarks
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+            <section className={assign.card} aria-labelledby="subject-grades">
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative">
+                <h2 id="subject-grades" className="text-base font-semibold">
+                  Subject Grades
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Per-subject breakdown with computed and transmuted grades.
+                </p>
+              </div>
+              <div className="relative -mx-1 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead className="text-right">Computed</TableHead>
+                      <TableHead className="text-right">Transmuted</TableHead>
+                      <TableHead>Remarks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {student.subjects.map((sub) => (
-                      <tr
-                        key={sub.id}
-                        className="border-b last:border-0 hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="py-3.5 pr-4">
+                      <TableRow key={sub.id}>
+                        <TableCell>
                           <span className="font-medium text-foreground">{sub.subject}</span>
-                          <span className="block text-xs text-muted-foreground mt-0.5">{sub.teacher}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-sm tabular-nums text-muted-foreground">
+                          <span className="mt-0.5 block text-xs text-muted-foreground">{sub.teacher}</span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm tabular-nums text-muted-foreground">
                           {sub.computedAverage}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-sm font-medium tabular-nums text-foreground">
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm font-medium tabular-nums text-foreground">
                           {sub.transmutedGrade}
-                        </td>
-                        <td className="py-3.5 pl-4">
+                        </TableCell>
+                        <TableCell>
                           <Badge
                             variant={sub.remarks === "Failed" ? "destructive" : "outline"}
                             className="text-[11px] font-semibold px-2 py-0.5"
                           >
                             {sub.remarks}
                           </Badge>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+                  </TableBody>
+                </Table>
+              </div>
+            </section>
           </div>
 
-          {/* ── Right sidebar (hidden on mobile) ──────────── */}
-          <div className="hidden space-y-4 lg:space-y-6 lg:block">
-            {/* Overall Average card (replaces Your Study Progress) */}
-            <Card className="bg-muted/40 ring-1 ring-foreground/10 gap-4 lg:gap-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
-                  Your Study Progress
-                  <Badge variant="outline" className="rounded-4xl border px-2 py-0.5 text-xs font-medium ms-1">
-                    {student.overall}%
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="m-4 lg:m-6 ring-1 ring-foreground/5 shadow-xs bg-card rounded-xl p-4 space-y-4">
+          {/* ── Right sidebar ──────────── */}
+          <div className="space-y-4 lg:space-y-6">
+            {/* Completion card */}
+            <section className={assign.card} aria-label="Completion">
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex items-center gap-2">
+                <h2 className="text-base font-semibold">Completion</h2>
+                <Badge variant="outline" className="rounded-4xl border px-2 py-0.5 text-xs font-medium ms-1">
+                  {student.overall}%
+                </Badge>
+              </div>
+              <div className="relative space-y-4 rounded-xl bg-card p-4 shadow-xs ring-1 ring-foreground/5">
                 {/* Progress bar */}
                 <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
                   <div
@@ -313,14 +332,14 @@ export default function FinalGradeDetailPage() {
                   })}
                 </div>
 
-                {/* Encouragement note */}
+                {/* Follow-up note */}
                 <div className="bg-muted/50 text-muted-foreground rounded-lg p-3 text-sm">
                   {failedCount === 0
                     ? `Great Job! ${student.name}'s final grades are complete and all subjects are passing. Ready for your review.`
                     : `${student.name} has ${failedCount} subject(s) below 75. Adviser follow-up may be needed.`}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           </div>
         </div>
       )}
@@ -340,9 +359,8 @@ function DetailSkeleton() {
         </div>
         <Skeleton className="h-48 rounded-xl" />
       </div>
-      <div className="hidden space-y-4 lg:space-y-6 lg:block">
+      <div className="space-y-4 lg:space-y-6">
         <Skeleton className="h-64 rounded-xl" />
-        <Skeleton className="h-56 rounded-xl" />
       </div>
     </div>
   );

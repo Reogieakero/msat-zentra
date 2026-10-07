@@ -36,6 +36,7 @@ import {
   type StoredConversation,
 } from "./anecdotal-conversations";
 import { AnecdotalHistoryMenu } from "./AnecdotalHistoryMenu";
+import { useTerm } from "@/lib/term/TermContext";
 import { downloadOcForm01 } from "@/components/ocform01/ocform01";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import styles from "./AnecdotalChat.module.css";
@@ -67,6 +68,8 @@ let messageId = Date.now();
 
 export function AnecdotalChat() {
   const queryClient = useQueryClient();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -256,7 +259,7 @@ export function AnecdotalChat() {
   }, [messages, studentId, gcformKnown, category, tier, textQuestion]);
 
   const optionsQuery = useQuery({
-    queryKey: ["grade-flags", "options"],
+    queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchAnecdotalOptions,
   });
 

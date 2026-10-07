@@ -4,8 +4,9 @@ import * as React from "react";
 import { AdvisoryGradesTable } from "./components/AdvisoryGradesTable";
 import { useAdvisoryRoster } from "./components/advisory-students-data";
 
-/* Advisory students — roster-wide per-subject grades table with a raw /
-   final computation dropdown. Student names link to their academic record. */
+/* Advisory students — roster-wide per-subject live grades table (realtime
+   mean of recorded scores, lock-agnostic). Student names link to their
+   academic record. */
 export default function TeacherAdvisoryStudentsPage() {
   const rosterQuery = useAdvisoryRoster();
   const students = React.useMemo(

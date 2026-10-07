@@ -5,14 +5,7 @@ import { History } from "lucide-react";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import refStyles from "./referrals.module.css";
 import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
 import type { TrackerCaseInput } from "@/components/adm-tracker/adm-stage-activity";
@@ -121,20 +114,20 @@ export function ReferralTrackDialog({
       : null;
 
   return (
-    <Dialog open={referral !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className={`max-h-[85dvh] overflow-y-auto sm:max-w-md ${refStyles.noScrollbar}`}
-      >
-        <DialogHeader>
-          <DialogTitle>Track referral</DialogTitle>
-          <DialogDescription>
-            {referral ? (
-              <>
-                {referral.studentName} · {referral.lrn}
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
+    <CardModal
+      open={referral !== null}
+      onClose={onClose}
+      size="md"
+      title="Track referral"
+      description={
+        referral ? (
+          <>
+            {referral.studentName} · {referral.lrn}
+          </>
+        ) : undefined
+      }
+      watchKey={referral?.id}
+    >
         {referral ? (
           <div className="flex min-w-0 flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -210,12 +203,11 @@ export function ReferralTrackDialog({
             </div>
           </div>
         ) : null}
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

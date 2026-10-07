@@ -201,13 +201,20 @@ export async function getReports(params: {
         },
       }),
       prisma.intervention.findMany({
+        where: termId ? { termId } : undefined,
         select: { outcomeStatus: true, student: { select: { gradeLevel: true, sectionId: true } } },
       }),
       prisma.admLearnerProfile.findMany({
         where: termId ? { termId } : undefined,
         select: { stage: true, eligibilityStatus: true },
       }),
-      prisma.auditLog.findMany({ select: { actionType: true } }),
+      // Bounded to recent rows instead of the entire audit table
+      // (audit has no term FK; activity panel only needs recent volume).
+      prisma.auditLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 2000,
+        select: { actionType: true },
+      }),
       prisma.anecdotalRecord.findMany({
         where: { ...(termId ? { termId } : {}), ...anecdotalScopeWhere(params, sectionWhere) },
         select: { category: true },
@@ -295,13 +302,18 @@ export async function getReports(params: {
   const interventionsTotal = interventions.length;
   const interventionRate = interventionsTotal > 0 ? Math.round((interventionsResolved / interventionsTotal) * 100) : 0;
 
-  // Sections at risk: a section counts when its live attendance rate < 80%.
-  const sectionsAtRisk = await countSectionsAtRisk(params.scope, {
+  // Sections at risk + attendance watch share ONE section-attendance fetch
+  // (was two identical findMany passes). Computed together below.
+  const attendanceScope = {
     gradeLevel: params.gradeLevel,
     sectionId: params.sectionId,
     termId,
     schoolYearId,
-  });
+  };
+  const { sectionsAtRisk, attendanceWatch } = await buildAttendanceSectionStats(
+    params.scope,
+    attendanceScope,
+  );
 
   const kpis: ReportKpis = {
     avgTransmuted,
@@ -339,14 +351,6 @@ export async function getReports(params: {
     { level: "Moderate", count: riskCounts.Moderate },
     { level: "Low", count: riskCounts.Low },
   ];
-
-  // ---- Attendance watch: sections below 80% ----
-  const attendanceWatch = await buildAttendanceWatch(params.scope, {
-    gradeLevel: params.gradeLevel,
-    sectionId: params.sectionId,
-    termId,
-    schoolYearId,
-  });
 
   // ---- Audit activity by action type ----
   const auditActivity = buildAuditActivity(auditLogs);
@@ -406,53 +410,58 @@ async function buildTrends(
   else if (scope === "grade" && opts.gradeLevel) sectionWhere.gradeLevel = opts.gradeLevel;
   else sectionWhere.schoolYearId = opts.schoolYearId;
 
-  const result: { term: string; avgTransmuted: number }[] = [];
-  for (const t of terms) {
-    const sections = await prisma.section.findMany({
-      where: sectionWhere,
-      select: {
-        id: true,
-        students: {
-          select: {
-            lrn: true,
-            finalGrades: {
-              where: { termId: t.id },
-              select: { transmutedGrade: true },
+  // Parallel per-term fetch (was serial await-in-loop). Terms are few (3),
+  // so Promise.all is bounded and safe.
+  const perTerm = await Promise.all(
+    terms.map(async (t) => {
+      const sections = await prisma.section.findMany({
+        where: sectionWhere,
+        select: {
+          id: true,
+          students: {
+            select: {
+              lrn: true,
+              finalGrades: {
+                where: { termId: t.id },
+                select: { transmutedGrade: true },
+              },
+            },
+          },
+          rosterEntries: {
+            select: {
+              lrn: true,
+              finalGrades: {
+                where: { termId: t.id },
+                select: { transmutedGrade: true },
+              },
             },
           },
         },
-        rosterEntries: {
-          select: {
-            lrn: true,
-            finalGrades: {
-              where: { termId: t.id },
-              select: { transmutedGrade: true },
-            },
-          },
-        },
-      },
-    });
-    let sum = 0;
-    let count = 0;
-    const tally = (grades: { transmutedGrade: number | null }[]) => {
-      for (const g of grades) {
-        if (g.transmutedGrade != null) {
-          sum += g.transmutedGrade as number;
-          count += 1;
+      });
+      let sum = 0;
+      let count = 0;
+      const tally = (grades: { transmutedGrade: number | null }[]) => {
+        for (const g of grades) {
+          if (g.transmutedGrade != null) {
+            sum += g.transmutedGrade as number;
+            count += 1;
+          }
+        }
+      };
+      for (const s of sections) {
+        const registeredLrns = new Set(s.students.map((st) => st.lrn));
+        for (const st of s.students) tally(st.finalGrades);
+        for (const r of s.rosterEntries) {
+          if (!registeredLrns.has(r.lrn)) tally(r.finalGrades);
         }
       }
-    };
-    for (const s of sections) {
-      const registeredLrns = new Set(s.students.map((st) => st.lrn));
-      for (const st of s.students) tally(st.finalGrades);
-      for (const r of s.rosterEntries) {
-        if (!registeredLrns.has(r.lrn)) tally(r.finalGrades);
-      }
-    }
-    const avg = count > 0 ? round1(sum / count) : 0;
-    result.push({ term: `T${t.termNumber}`, avgTransmuted: avg });
-  }
-  return result;
+      const avg = count > 0 ? round1(sum / count) : 0;
+      return { term: `T${t.termNumber}`, avgTransmuted: avg, order: t.termNumber };
+    }),
+  );
+  return perTerm
+    .sort((a, b) => a.order - b.order)
+    .map(({ term, avgTransmuted }) => ({ term, avgTransmuted }));
 }
 
 function buildInterventionSuccess(
@@ -487,35 +496,12 @@ function buildInterventionSuccess(
     );
 }
 
-async function countSectionsAtRisk(
+// Single section-attendance pass feeding BOTH the at-risk count and the
+// watch list (previously two identical findMany queries).
+async function buildAttendanceSectionStats(
   scope: ReportScope,
   opts: { gradeLevel?: string; sectionId?: string; termId: string | null; schoolYearId: string | null }
-): Promise<number> {
-  const where: Record<string, unknown> = {};
-  if (scope === "section" && opts.sectionId) where.id = opts.sectionId;
-  else if (scope === "grade" && opts.gradeLevel) where.gradeLevel = opts.gradeLevel;
-  else if (opts.schoolYearId) where.schoolYearId = opts.schoolYearId;
-
-  const sections = await prisma.section.findMany({
-    where,
-    select: {
-      attendanceRecords: {
-        where: opts.termId ? { termId: opts.termId } : undefined,
-        select: { status: true },
-      },
-    },
-  });
-  return sections.filter((sec) => {
-    const total = sec.attendanceRecords.length;
-    const present = sec.attendanceRecords.filter((a) => a.status === "present").length;
-    return total > 0 && present / total < 0.8;
-  }).length;
-}
-
-async function buildAttendanceWatch(
-  scope: ReportScope,
-  opts: { gradeLevel?: string; sectionId?: string; termId: string | null; schoolYearId: string | null }
-): Promise<{ section: string; rate: number }[]> {
+): Promise<{ sectionsAtRisk: number; attendanceWatch: { section: string; rate: number }[] }> {
   const where: Record<string, unknown> = {};
   if (scope === "section" && opts.sectionId) where.id = opts.sectionId;
   else if (scope === "grade" && opts.gradeLevel) where.gradeLevel = opts.gradeLevel;
@@ -533,18 +519,17 @@ async function buildAttendanceWatch(
     },
     orderBy: [{ gradeLevel: "asc" }, { name: "asc" } ],
   });
-  return sections
-    .map((s) => {
-      const total = s.attendanceRecords.length;
-      const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-      const rate = total > 0 ? Math.round((present / total) * 100) : 0;
-      return { section: `Grade ${s.name}`, rate };
-    })
-    .filter((s) => s.rate > 0 && s.rate < 80)
-    .sort(
-      (a, b) =>
-        gradeNum(a.section) - gradeNum(b.section) || a.rate - b.rate
-    );
+  let sectionsAtRisk = 0;
+  const watch: { section: string; rate: number }[] = [];
+  for (const s of sections) {
+    const total = s.attendanceRecords.length;
+    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
+    if (total > 0 && present / total < 0.8) sectionsAtRisk += 1;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+    if (rate > 0 && rate < 80) watch.push({ section: `Grade ${s.name}`, rate });
+  }
+  watch.sort((a, b) => gradeNum(a.section) - gradeNum(b.section) || a.rate - b.rate);
+  return { sectionsAtRisk, attendanceWatch: watch };
 }
 
 function buildAuditActivity(logs: { actionType: string }[]): { action: string; count: number }[] {

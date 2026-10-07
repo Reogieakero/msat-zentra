@@ -344,9 +344,9 @@ export function statusVariant(
   type: string,
   status: string,
   row?: NurseQueueRow
-): "warning" | "destructive" | "secondary" | "outline" | "success" {
+): "amber" | "destructive" | "secondary" | "outline" | "success" {
   if (isEndorsed(type, status)) return "success";
-  if (status === "pending") return "warning";
+  if (status === "pending") return "amber";
   if (status === "escalated") return "destructive";
   // Withdrawals read neutral — red is reserved for desk rejections.
   if (status === "dismissed") return row && isWithdrawn(row) ? "outline" : "destructive";

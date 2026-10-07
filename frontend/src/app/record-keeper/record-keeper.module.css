@@ -9,8 +9,19 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  margin-left: 13rem;
-  margin-top: 3rem;
+  margin-left: 0;
+  margin-top: 6rem;
+  transition: none;
+}
+
+/* Sidebar layout: no top tab bar (3rem topbar only) and room for the 16rem
+   branched rail. Desktop only — small screens keep the tab bar layout
+   untouched (same as the principal / registrar desks). */
+@media (min-width: 1024px) {
+  .shellWithRail {
+    margin-top: 3rem;
+    margin-left: 16rem;
+  }
 }
 
 .main {
@@ -34,35 +45,6 @@
   padding-inline: 0.75rem;
   border-bottom: 1px solid var(--border);
   background-color: var(--background);
-}
-
-.menuButton {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-  cursor: pointer;
-  outline: none;
-}
-
-.menuButton:focus-visible {
-  box-shadow: 0 0 0 2px var(--ring);
-}
-
-.menuIcon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-@media (max-width: 767px) {
-  .menuButton {
-    display: inline-flex;
-  }
 }
 
 .brand {
@@ -171,14 +153,20 @@
   color: var(--muted-foreground);
 }
 
-/* Mobile: 8px side gutters, 1rem gap below the navbar */
+@media (prefers-reduced-motion: reduce) {
+  .shell {
+    transition: none;
+  }
+}
+
+/* Mobile: keep 16px gutters on all sides, same as desktop */
 @media (max-width: 767px) {
   .shell {
     margin-left: 0;
-    margin-top: 3rem;
+    margin-top: 6rem;
   }
 
   .main {
-    padding: 1rem 0.5rem 0.5rem;
+    padding: 1rem;
   }
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,12 @@ import styles from "../../pages.module.css";
  * counts only — no confidential text is shown at this grain.
  */
 export default function GuidanceHeatmapPage() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } = useQuery({
-    queryKey: ["guidance-risk-heatmap"],
+    queryKey: ["guidance-risk-heatmap", termKey],
     queryFn: () => fetchGuidanceRiskHeatmap(),
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
 

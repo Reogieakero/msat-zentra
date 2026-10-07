@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { AcademicList } from "./components/AcademicList";
-import { fetchStudentAcademic } from "./components/academic-data";
+import { fetchStudentAcademic, type StudentAcademic } from "./components/academic-data";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/academic.module.css";
 
 export default function StudentAcademicPage() {
   const params = useParams<{ id: string }>();
   const studentId = decodeURIComponent(params.id);
-  const academicQuery = useQuery({
-    queryKey: ["advisee-academic", studentId],
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  const academicQuery = useQuery<StudentAcademic>({
+    queryKey: ["advisee-academic", studentId, termKey],
     queryFn: () => fetchStudentAcademic(studentId),
+    placeholderData: keepPreviousData,
     retry: false,
     // Academic data must read live on every visit — grades change constantly.
     staleTime: 0,

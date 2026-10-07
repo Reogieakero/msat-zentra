@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTerm } from "@/lib/term/TermContext";
+import { useTeacherInvalidate } from "../../../components/use-teacher-invalidate";
 import { AlertTriangle, Check, Loader2, RotateCcw, Send, X } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
@@ -158,18 +160,21 @@ function Picker({
 /* Referral form card: student dropdown, then that student's anecdotal
    records dropdown, receiving desk, reason, send. */
 function ReferFormCard({ onDone }: { onDone: () => void }) {
-  const queryClient = useQueryClient();
+  const invalidateTeacher = useTeacherInvalidate();
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const referablesQuery = useQuery<ReferableRecord[]>({
-    queryKey: ["referableAnecdotal"],
+    queryKey: ["referableAnecdotal", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get("/api/anecdotal/referable");
-      return data;
+      return Array.isArray(data) ? data : [];
     },
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 
   const students = React.useMemo(
-    () => groupReferable(referablesQuery.data ?? []),
+    () => groupReferable(Array.isArray(referablesQuery.data) ? referablesQuery.data : []),
     [referablesQuery.data],
   );
 
@@ -201,8 +206,7 @@ function ReferFormCard({ onDone }: { onDone: () => void }) {
       // Suppress the channel echo toast for our own submit (the success
       // toast below already fired) — the bell row still lands for badge.
       if (data?.id) markSelfNotified(data.id);
-      await queryClient.invalidateQueries({ queryKey: ["myReferrals"] });
-      await queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
+      invalidateTeacher.referrals();
       sileo.success({
         title: "Referral submitted",
         description: "The receiving desk has been notified.",
@@ -454,18 +458,32 @@ function DismissedRereferCard({
   onOpenChange: (open: boolean) => void;
   onAdmRerefer?: () => void;
 }) {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+  // Bounded re-submit lookup: dismissed cases across the desk (the main
+  // table pages server-side; this rail only needs the cancelled subset).
   const mineQuery = useQuery<DismissedMine[]>({
-    queryKey: ["myReferrals"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/api/referrals/mine");
-      return data;
+    queryKey: ["myReferrals", "dismissed", termKey],
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.get<
+        DismissedMine[] | { referrals: DismissedMine[] }
+      >("/api/referrals/mine?page=1&pageSize=100", { signal });
+      if (Array.isArray(data)) return data;
+      const rows = (data as { referrals?: unknown }).referrals;
+      return Array.isArray(rows) ? (rows as DismissedMine[]) : [];
     },
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
   const { reopen, isPending } = useReopenReferral();
+  // Per-row reopen spinner: only the acting row locks + spins.
+  const [reopenRowId, setReopenRowId] = React.useState<string | null>(null);
 
   const dismissed = React.useMemo(
-    () => (mineQuery.data ?? []).filter((r) => r.status === "dismissed"),
+    () =>
+      (Array.isArray(mineQuery.data) ? mineQuery.data : []).filter(
+        (r) => r.status === "dismissed"
+      ),
     [mineQuery.data],
   );
 
@@ -513,13 +531,16 @@ function DismissedRereferCard({
               <DismissedRow
                 key={r.id}
                 row={r}
-                busy={isPending}
-                onReopen={(id, desk, reviewer) =>
+                busy={reopenRowId !== null && reopenRowId === r.id}
+                onReopen={(id, desk, reviewer) => {
+                  setReopenRowId(id);
                   void reopen(
                     { id },
                     { referredToRole: desk, ...(reviewer ? { consultReviewer: reviewer } : {}) },
-                  )
-                }
+                  ).finally(() => {
+                    setReopenRowId((prev) => (prev === id ? null : prev));
+                  });
+                }}
               />
             )
           ))}
@@ -597,6 +618,7 @@ function DismissedRow({
           <Button
             variant="outline"
             disabled={busy}
+            aria-busy={busy || undefined}
             onClick={() => onReferAgain?.()}
             aria-label={`Start new referral for ${row.studentName}`}
             title={`Start new referral for ${row.studentName}`}
@@ -605,12 +627,13 @@ function DismissedRow({
             {busy ? (
               <Loader2 size={16} className="animate-spin" aria-hidden />
             ) : null}
-            Refer again
+            {busy ? "Re-submitting…" : "Refer again"}
           </Button>
         ) : (
           <Button
             variant="outline"
             disabled={busy || !staff}
+            aria-busy={busy || undefined}
             onClick={() => staff && onReopen?.(row.id, staff.desk, staff.reviewer)}
             aria-label={
               staff
@@ -623,7 +646,7 @@ function DismissedRow({
             {busy ? (
               <Loader2 size={16} className="animate-spin" aria-hidden />
             ) : null}
-            Refer again
+            {busy ? "Re-submitting…" : "Refer again"}
           </Button>
         )}
       </div>
@@ -646,10 +669,11 @@ export function ReferStudentCard({
 }) {
   const [mounted, setMounted] = React.useState(false);
   const [noticeVisible, setNoticeVisible] = React.useState(false);
-  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
-  React.useEffect(() => {
-    setPortalTarget(document.body);
-  }, []);
+  // document.body is client-only — resolve lazily during render (null on
+  // the server pass) instead of syncing it in an effect.
+  const [portalTarget] = React.useState<HTMLElement | null>(() =>
+    typeof document !== "undefined" ? document.body : null
+  );
   const noticeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSignal = React.useRef(resubmitHintSignal ?? 0);
   // Reminder only: shown when a dismissed ADM case is filed again via
@@ -663,13 +687,16 @@ export function ReferStudentCard({
       noticeTimer.current = null;
     }, 4000);
   }, []);
+  // Signal-driven one-shot reminder — param-driven like BamaChat's
+  // deep-link reset (runs once per signal bump, guarded by ref).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot signal reminder */
   React.useEffect(() => {
     const signal = resubmitHintSignal ?? 0;
-    if (signal !== lastSignal.current) {
-      lastSignal.current = signal;
-      if (signal > 0) showReminder();
-    }
+    if (signal === lastSignal.current) return;
+    lastSignal.current = signal;
+    if (signal > 0) showReminder();
   }, [resubmitHintSignal, showReminder]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   React.useEffect(
     () => () => {
       if (noticeTimer.current) clearTimeout(noticeTimer.current);

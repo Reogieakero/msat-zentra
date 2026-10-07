@@ -13,10 +13,13 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { BookOpen, SearchIcon, Users } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTopbarCrumb } from "@/app/teacher/layout";
+import { useSession } from "@/lib/auth/useSession";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
+import { Skeleton } from "@/components/ui/skeleton";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
@@ -27,9 +30,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
-import { sectionInitials } from "@/components/schedule/SectionScheduleCard";
-import { useStudentList, type ClassPick, type StudentListRow } from "./components/student-list-data";
+import BranchedMenu from "@/components/nav/BranchedMenu";
+import {
+  fetchStudentList,
+  studentListKey,
+  useStudentList,
+  type ClassPick,
+  type StudentListRow,
+} from "./components/student-list-data";
 import styles from "./components/student-list.module.css";
 
 function attendanceVariant(pct: number | null): "green" | "amber" | "red" | "outline" {
@@ -46,15 +54,10 @@ function gradeVariant(grade: number | null): "green" | "blue" | "red" | "outline
   return "red";
 }
 
-/** "Grade 7" (overview label) or "G7" (raw code) → "7" for the card badge. */
-function gradeNumber(gradeLevel: string): string {
-  const m = gradeLevel.match(/(\d+)/);
-  return m ? m[1] : gradeLevel.replace(/^G/i, "");
-}
-
-/* Student List: the handled subject × section picker is a card rail on the
-   right; the selected section's students render as a data table (name + LRN,
-   attendance %, academic grade) in the main column. */
+/* Student List: the section picker is a branched nav rail on the right
+   (same BranchedMenu design as the left sidebar links); the selected
+   section's students render as a data table (name + LRN, attendance %,
+   academic grade) in the main column. */
 export default function TeacherStudentListPage() {
   const crumb = React.useMemo(
     () => (
@@ -103,56 +106,91 @@ export default function TeacherStudentListPage() {
       ? (advisorySections.find((s) => s.id === activePick.id) ?? null)
       : null;
 
+  // Warm the roster cache for every other rail pick while the browser is
+  // idle, so section switches usually hit the local cache instead of the
+  // network. Skips the active pick (already loaded) and re-runs only when
+  // the rail membership changes.
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const teacherId = session?.sub ?? null;
+  const prefetchedKey = React.useRef("");
+  React.useEffect(() => {
+    if (!roster.data || !teacherId || rail.length === 0) return;
+    const key = rail.map((r) => `${r.kind}:${r.id}`).join(",");
+    if (prefetchedKey.current === key) return;
+    prefetchedKey.current = key;
+    const run = () => {
+      for (const r of rail) {
+        if (activePick && r.kind === activePick.kind && r.id === activePick.id) continue;
+        const pick = { kind: r.kind, id: r.id } as ClassPick;
+        void queryClient.prefetchQuery({
+          queryKey: studentListKey(teacherId, pick),
+          queryFn: () => fetchStudentList(pick),
+          staleTime: 30_000,
+        });
+      }
+    };
+    const idleWindow = window as unknown as {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      const id = idleWindow.requestIdleCallback(run);
+      return () => idleWindow.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(run, 600);
+    return () => window.clearTimeout(t);
+  }, [rail, roster.data, teacherId, queryClient, activePick]);
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [sectionQuery, setSectionQuery] = React.useState("");
   // Scroll containers for the table rows and the section rail: native
-  // scrolling with hidden scrollbars — a floating scroll-down hint (not a
-  // scrollbar) tells the user there is more below. Declared before any
+  // scrolling with hidden scrollbars. The rail keeps a slim floating
+  // scroll-down hint (not a scrollbar) to signal more below; the data
+  // table shows 15 rows per page with no hint pill. Declared before any
   // early return so the hooks stay unconditional.
-  const tableScrollRef = React.useRef<HTMLDivElement | null>(null);
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Unified rail cards: advised sections first, then handled subjects —
-  // one template renders both, so advisers get the same display.
-  const railCards = React.useMemo(
-    () => {
-      const items: {
-        pick: ClassPick;
-        titleLabel: string;
-        title: string;
-        middleName: string;
-        middleSub: string;
-        badgeGrade: string;
-        ariaLabel: string;
-        haystack: string;
-      }[] = [
-        ...advisorySections.map((s) => ({
-          pick: { kind: "advisory", id: s.id } as ClassPick,
-          titleLabel: "Advisory",
-          title: s.name,
-          middleName: s.gradeLevel,
-          middleSub: `${s.studentCount} advisee${s.studentCount === 1 ? "" : "s"}`,
-          badgeGrade: s.gradeLevel,
-          ariaLabel: `Show advisees of ${s.name}`,
-          haystack: `advisory ${s.name} ${s.gradeLevel}`.toLowerCase(),
-        })),
-        ...classes.map((c) => ({
-          pick: { kind: "class", id: c.id } as ClassPick,
-          titleLabel: "Subject",
-          title: c.subject,
-          middleName: `${c.section} (${c.gradeLevel})`,
-          middleSub: `${c.studentCount} student${c.studentCount === 1 ? "" : "s"}`,
-          badgeGrade: c.gradeLevel,
-          ariaLabel: `Show students for ${c.subject} in ${c.section}`,
-          haystack: `${c.subject} ${c.section} ${c.gradeLevel}`.toLowerCase(),
-        })),
-      ];
-      const q = sectionQuery.trim().toLowerCase();
-      return q ? items.filter((i) => i.haystack.includes(q)) : items;
-    },
-    [advisorySections, classes, sectionQuery],
-  );
+  // Section rail groups for the branched nav (same design as the left
+  // sidebar links): advised sections under "Advisory", handled subject ×
+  // sections under "Subjects". Values double as ClassPick keys.
+  const railGroups = React.useMemo(() => {
+    const q = sectionQuery.trim().toLowerCase();
+    const advisoryKids = advisorySections
+      .filter((s) =>
+        q ? `advisory ${s.name} ${s.gradeLevel}`.toLowerCase().includes(q) : true,
+      )
+      .map((s) => ({
+        value: `advisory:${s.id}`,
+        label: `${s.name} · ${s.studentCount}`,
+        icon: <Users size={16} strokeWidth={1.8} aria-hidden="true" />,
+      }));
+    // Rail shows the subject code only; the section is appended solely
+    // to disambiguate the same code taught in several sections.
+    const codeCounts = new Map<string, number>();
+    for (const c of classes) {
+      codeCounts.set(c.code, (codeCounts.get(c.code) ?? 0) + 1);
+    }
+    const subjectKids = classes
+      .filter((c) =>
+        q
+          ? `${c.code} ${c.subject} ${c.section} ${c.gradeLevel}`.toLowerCase().includes(q)
+          : true,
+      )
+      .map((c) => ({
+        value: `class:${c.id}`,
+        label:
+          (codeCounts.get(c.code) ?? 0) > 1 ? `${c.code} · ${c.section}` : c.code,
+        icon: <BookOpen size={16} strokeWidth={1.8} aria-hidden="true" />,
+      }));
+    const groups: { label: string; children: typeof advisoryKids }[] = [];
+    if (advisoryKids.length > 0) groups.push({ label: "Advisory", children: advisoryKids });
+    if (subjectKids.length > 0) groups.push({ label: "Subjects", children: subjectKids });
+    return groups;
+  }, [advisorySections, classes, sectionQuery]);
+  const railEmpty = railGroups.length === 0;
+  const activeRailValue = activePick ? `${activePick.kind}:${activePick.id}` : "";
 
   const rows = React.useMemo(() => roster.data?.students ?? [], [roster.data]);
 
@@ -231,7 +269,7 @@ export default function TeacherStudentListPage() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
@@ -246,15 +284,68 @@ export default function TeacherStudentListPage() {
     [table],
   );
 
+  // Geometry-matched skeleton: same heading + rail grid (table card
+  // with 3 columns — Student / Attendance / Academic Grade — plus the
+  // branched-section rail) as the loaded list.
   if (roster.isPending) {
     return (
-      <section className={styles.page} aria-busy="true" aria-label="Loading student list">
-        <div className={styles.heading}>
-          <h1>Student List</h1>
-          <p>Loading your handled subjects…</p>
+      <section className={`${styles.page} ${styles.pageRail}`} aria-busy="true" aria-label="Loading student list">
+        <div className={styles.body}>
+          <div className={styles.mainCol}>
+            <div className={styles.heading} aria-hidden>
+              <Skeleton className="h-7 w-36" />
+              <Skeleton className="mt-1 h-4 w-72" />
+            </div>
+            <div className={`${assign.card} ${styles.tableCard}`} aria-hidden>
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Skeleton className="h-6 w-44" />
+                  <Skeleton className="mt-1 h-4 w-64" />
+                </div>
+                <Skeleton className="h-9 w-40 shrink-0" />
+              </div>
+              <div className="relative overflow-x-auto rounded-md border">
+                <div className="flex bg-muted/50" aria-hidden>
+                  <Skeleton className="m-2 h-4 flex-1 rounded" />
+                  <Skeleton className="m-2 h-4 flex-1 rounded" />
+                  <Skeleton className="m-2 h-4 flex-1 rounded" />
+                </div>
+                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <div key={i} className="flex items-center gap-2 border-t px-3 py-2">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                    <div className="flex flex-1 gap-1.5">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-28 rounded-full" />
+                    </div>
+                    <div className="flex flex-1 gap-1.5">
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="relative flex items-center justify-end space-x-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            </div>
+          </div>
+          <aside className={styles.sideCol} aria-label="Sections" aria-hidden>
+            <Skeleton className="h-9 w-full shrink-0" />
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={assign.card}>
+                <Skeleton className="relative h-5 w-3/4" />
+                <Skeleton className="relative mt-1 h-3 w-1/2" />
+              </div>
+            ))}
+          </aside>
         </div>
-        <div className={styles.skeleton} />
-        <div className={styles.skeleton} />
       </section>
     );
   }
@@ -387,7 +478,7 @@ export default function TeacherStudentListPage() {
             ) : (
             <>
               <div className={styles.tableScrollWrap}>
-                <div ref={tableScrollRef} className={styles.tableScroll}>
+                <div className={styles.tableScroll}>
                   <div className="overflow-x-auto rounded-md border">
                   <Table className="w-full table-fixed">
                     <TableHeader>
@@ -432,14 +523,6 @@ export default function TeacherStudentListPage() {
                   </Table>
                   </div>
                 </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-background via-background/85 to-transparent pt-6 pb-1">
-                  <ScrollDownHint
-                    scrollRef={tableScrollRef}
-                    watchKey={`${activePick ? `${activePick.kind}:${activePick.id}` : ""}:${table.getFilteredRowModel().rows.length}`}
-                    label="Scroll for more students"
-                    className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
-                  />
-                </div>
               </div>
               <div className="relative flex items-center justify-end space-x-2">
                   <div className="text-muted-foreground flex-1 text-sm">
@@ -470,11 +553,8 @@ export default function TeacherStudentListPage() {
           </div>
         </div>
 
-        {/* Right rail: one separate section card per advised section and
-            handled subject × section — the same glow-card anatomy as
-            /teacher/attendance (grade badge, avatar + title, middle block,
-            hint, green selected ring). No schedule-status dot: this
-            surface has no slot status to report, so nothing is faked. */}
+        {/* Right rail: branched section nav mirroring the left sidebar
+            links (group labels + elbow tree + orange active link). */}
         <aside className={styles.sideCol} aria-label="Sections">
           <InputGroup className="w-full shrink-0">
             <InputGroupInput
@@ -489,68 +569,33 @@ export default function TeacherStudentListPage() {
           </InputGroup>
           <div className={styles.railScrollWrap}>
             <div ref={railScrollRef} className={styles.railScroll}>
-              <div className="flex flex-col gap-3 pb-1">
-              {railCards.length === 0 ? (
+              {railEmpty ? (
                 <p className="text-sm text-muted-foreground">
                   No sections match your search.
                 </p>
               ) : (
-                railCards.map((card) => {
-              const active =
-                !!activePick &&
-                activePick.kind === card.pick.kind &&
-                activePick.id === card.pick.id;
-              return (
-                <button
-                  key={`${card.pick.kind}:${card.pick.id}`}
-                  type="button"
-                  onClick={() => handleSelect(card.pick)}
-                  aria-pressed={active}
-                  aria-label={card.ariaLabel}
-                  className={`${assign.card} ${emptyStyles.pickOption} ${active ? emptyStyles.pickSelectedGreen : ""}`}
-                >
-                  <span className={assign.glowClip} aria-hidden="true">
-                    <span className={assign.cardGlow} />
-                  </span>
-                  <Badge
-                    variant="secondary"
-                    className={`${assign.gradeBadge} ${assign.gradeFloat}`}
-                    style={{
-                      backgroundColor: "var(--primary)",
-                      color: "var(--primary-foreground)",
-                      borderColor: "transparent",
-                    }}
-                  >
-                    Grade {gradeNumber(card.badgeGrade)}
-                  </Badge>
-                  <span className={assign.cardHead}>
-                    <span className={assign.avatar} aria-hidden="true">
-                      {sectionInitials(card.title)}
-                    </span>
-                    <span className={assign.cardTitleBlock}>
-                      <span className={assign.fieldLabel}>{card.titleLabel}</span>
-                      <span className={assign.itemName} title={card.title}>
-                        {card.title}
-                      </span>
-                    </span>
-                  </span>
-                  <span className={assign.teacherBlock}>
-                    <span className={assign.itemName} title={card.middleName}>
-                      {card.middleName}
-                    </span>
-                    <span className={assign.itemTerm}>{card.middleSub}</span>
-                  </span>
-                  <span className={assign.itemTerm}>Tap to view student list</span>
-                </button>
-              );
-              })
-            )}
-              </div>
+                <BranchedMenu
+                  items={railGroups}
+                  defaultOpen={[0, 1]}
+                  defaultActive={activeRailValue}
+                  activeValue={activeRailValue}
+                  onSelect={(value) => {
+                    const sep = value.indexOf(":");
+                    if (sep < 0) return;
+                    const kind = value.slice(0, sep);
+                    const id = value.slice(sep + 1);
+                    if (kind === "advisory" || kind === "class") {
+                      handleSelect({ kind, id } as ClassPick);
+                    }
+                  }}
+                  width={232}
+                />
+              )}
             </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-card via-card/85 to-transparent pt-6 pb-1">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-3 pb-1.5 pt-6">
               <ScrollDownHint
                 scrollRef={railScrollRef}
-                watchKey={`${railCards.length}:${sectionQuery}`}
+                watchKey={`${railGroups.length}:${sectionQuery}`}
                 label="Scroll for more sections"
                 className="pointer-events-auto rounded-full border border-border bg-card px-3 py-1 shadow-sm"
               />

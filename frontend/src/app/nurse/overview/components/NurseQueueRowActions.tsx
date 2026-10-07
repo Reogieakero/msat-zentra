@@ -79,6 +79,7 @@ export function NurseQueueRowActions({
     successTitle: "Case updated",
     successDescription: () => `${row.student} moved to the new status.`,
     errorFallback: "Could not update this case.",
+    sourceId: row.id,
     onSuccessExtra: () => onChanged(),
   });
   const noteMutation = useNurseMutation({
@@ -87,6 +88,7 @@ export function NurseQueueRowActions({
     successDescription: () => `Follow-up note saved for ${row.student}.`,
     errorFallback: "Could not save the note. Try again.",
     silentError: true,
+    sourceId: row.id,
     onSuccessExtra: () => {
       setNoteOpen(false);
       setNote("");
@@ -179,8 +181,14 @@ export function NurseQueueRowActions({
             variant="ghost"
             size="icon-sm"
             aria-label={`Actions for ${row.student}'s case`}
+            aria-busy={statusPending || notePending || undefined}
+            disabled={statusPending || notePending}
           >
-            <MoreHorizontal aria-hidden />
+            {statusPending || notePending ? (
+              <Loader2 className="animate-spin" aria-hidden />
+            ) : (
+              <MoreHorizontal aria-hidden />
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-56">
@@ -290,14 +298,14 @@ export function NurseQueueRowActions({
         <Dialog
           open
           onOpenChange={(open) => {
-            if (!open) {
+            if (!open && !statusPending) {
               setResolveOpen(false);
               setDialogError(null);
               statusMutation.reset();
             }
           }}
         >
-          <DialogContent>
+          <DialogContent aria-busy={statusPending || undefined}>
             <DialogHeader>
               <DialogTitle>Resolve case</DialogTitle>
               <DialogDescription>
@@ -332,6 +340,7 @@ export function NurseQueueRowActions({
               <Button
                 onClick={() => handleResolve()}
                 disabled={statusPending || (row.type !== "ADM" && row.completedSessions === 0)}
+                aria-busy={statusPending || undefined}
               >
                 {statusPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
                 {statusPending ? "Resolving…" : "Resolve case"}
@@ -345,14 +354,14 @@ export function NurseQueueRowActions({
         <Dialog
           open
           onOpenChange={(open) => {
-            if (!open) {
+            if (!open && !notePending) {
               setNoteOpen(false);
               setDialogError(null);
               noteMutation.reset();
             }
           }}
         >
-          <DialogContent>
+          <DialogContent aria-busy={notePending || undefined}>
             <DialogHeader>
               <DialogTitle>Add follow-up note</DialogTitle>
               <DialogDescription>
@@ -379,7 +388,11 @@ export function NurseQueueRowActions({
               <Button variant="destructive" className={styles.btnRed} onClick={() => setNoteOpen(false)} disabled={notePending}>
                 Cancel
               </Button>
-              <Button onClick={() => handleNote()} disabled={notePending}>
+              <Button
+                onClick={() => handleNote()}
+                disabled={notePending}
+                aria-busy={notePending || undefined}
+              >
                 {notePending ? <Loader2 className="animate-spin" aria-hidden /> : null}
                 {notePending ? "Saving…" : "Save note"}
               </Button>

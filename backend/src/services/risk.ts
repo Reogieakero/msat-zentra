@@ -231,7 +231,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
   if (atRisk) {
     const open = await prisma.intervention.findFirst({
-      where: { studentId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
+      where: { studentId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },
     });
     if (!open) {
@@ -243,6 +243,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
         const created = await prisma.intervention.create({
           data: {
             studentId,
+            termId,
             riskLevelAtFlag: result.riskLevel,
             recommendedAction: "Auto-flagged at-risk student — assigned to Guidance Counselor for follow-up.",
             assignedTo: guidance.id,
@@ -277,7 +278,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
   if (atRisk) {
     const open = await prisma.intervention.findFirst({
-      where: { rosterId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
+      where: { rosterId, termId, outcomeStatus: { not: "resolved" }, approvalStatus: { not: "rejected" } },
       select: { id: true },
     });
     if (!open) {
@@ -290,6 +291,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
           data: {
             studentId: null,
             rosterId,
+            termId,
             riskLevelAtFlag: result.riskLevel,
             recommendedAction: "Auto-flagged at-risk student — assigned to Guidance Counselor for follow-up.",
             assignedTo: guidance.id,

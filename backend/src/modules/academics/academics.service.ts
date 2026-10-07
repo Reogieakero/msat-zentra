@@ -132,12 +132,25 @@ export async function getAcademicsSummary(
   // (locked or not) so the principal can preview before grades are finalized.
   const lockedOnly = mode === "final";
 
+  // Scope sections to the active school year (was: all years, all sections).
+  // Falls back to the DB-active year when the session carries no scope.
+  let resolvedYearId = scope?.schoolYearId ?? null;
+  if (!resolvedYearId) {
+    const activeYear = await prisma.schoolYear.findFirst({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    resolvedYearId = activeYear?.id ?? null;
+  }
+
   const sections = await prisma.section.findMany({
+    where: resolvedYearId ? { schoolYearId: resolvedYearId } : undefined,
     include: {
       students: {
         include: {
           user: { select: { fullName: true } },
           finalGrades: {
+            where: termId ? { termId } : undefined,
             select: {
               termId: true,
               transmutedGrade: true,

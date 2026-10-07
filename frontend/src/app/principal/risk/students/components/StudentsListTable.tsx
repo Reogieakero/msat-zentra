@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../../grade-mode-context";
 import { Button } from "@/components/ui/button";
@@ -81,15 +82,19 @@ export function StudentsListTable({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pageIndex, setPageIndex] = React.useState(0);
 
+  const { activeTerm } = useTerm();
+  const termId = activeTerm?.termId ?? null;
   const { data, isPending } = useQuery({
-    queryKey: ["risk-students-list", gradeMode],
+    queryKey: ["risk-students-list", termId, gradeMode],
     queryFn: async () => {
       const res = await apiClient.get<{ students: BackendStudent[]; total: number }>(
         "/api/risk/students",
-        { params: { pageSize: 1000, gradeMode } }
+        { params: { pageSize: 50, gradeMode } }
       );
       return res.data;
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const students = React.useMemo(() => data?.students ?? [], [data]);

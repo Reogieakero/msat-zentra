@@ -6,11 +6,12 @@ import { Plus } from "lucide-react";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { CATEGORY_COLORS } from "./AnecdotalSideRail";
 import styles from "./anecdotal-repo-folders.module.css";
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 20;
 
 const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   behavioral: 1,
@@ -58,14 +59,22 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
   const router = useRouter();
   const [page, setPage] = React.useState(1);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
 
-  const visible = records;
+  const needle = query.trim().toLowerCase();
+  const visible = React.useMemo(() => {
+    if (!needle) return records;
+    return records.filter(
+      (c) =>
+        c.studentName.toLowerCase().includes(needle) ||
+        c.lrn.toLowerCase().includes(needle) ||
+        c.section.toLowerCase().includes(needle),
+    );
+  }, [records, needle]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = visible.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, visible.length);
 
   return (
     <>
@@ -76,6 +85,18 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
             <p className={styles.sectionDesc}>
               Every anecdotal record filed for your advisory - {records.length} in all. Open a folder to read its GCForm-01.
             </p>
+          </div>
+          <div className={styles.headerActions}>
+            <Input
+              className={styles.search}
+              placeholder="Search folders…"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Search folders"
+            />
           </div>
         </div>
         <div className={styles.content}>
@@ -92,9 +113,16 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
               </Button>
             </div>
           ) : pageRows.length === 0 ? (
-            <p className={styles.emptyInline}>
-              No filed records on this page.
-            </p>
+            <div className={styles.empty}>
+              <p className={styles.emptyTitle}>
+                {needle ? "No folders match" : "No filed records on this page"}
+              </p>
+              <p className={styles.emptyBody}>
+                {needle
+                  ? `Nothing matches "${query}". Try a different name, LRN, or section.`
+                  : "File your first anecdotal record with Bama and it will land here."}
+              </p>
+            </div>
           ) : (
             <div className={styles.folderGrid}>
               {pageRows.map((c) => (
@@ -123,26 +151,23 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
             </div>
           )}
           </div>
-          {visible.length > 0 ? (
-            <div className={`${styles.pager} mt-auto pt-2`}>
-              <p className={styles.range}>
-                Showing {start}-{end} of {visible.length}
-              </p>
-              <div className={styles.pagerButtons}>
+          {visible.length > PAGE_SIZE ? (
+            <div className="relative flex items-center justify-end space-x-2">
+              <div className="text-muted-foreground flex-1 text-sm">
+                {visible.length} record{visible.length === 1 ? "" : "s"}
+              </div>
+              <div className="space-x-2">
                 <Button
-                  size="sm"
                   variant="outline"
+                  size="sm"
                   disabled={safePage <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   Previous
                 </Button>
-                <span className={styles.pageLabel} aria-live="polite">
-                  Page {safePage} of {totalPages}
-                </span>
                 <Button
-                  size="sm"
                   variant="outline"
+                  size="sm"
                   disabled={safePage >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >

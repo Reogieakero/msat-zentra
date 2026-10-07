@@ -32,6 +32,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { CardModal } from "@/components/ui/CardModal";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import {
   fetchAdmReferrals,
@@ -50,6 +53,7 @@ import {
   type OcForm01Detail,
 } from "@/components/ocform01/ocform01";
 import { useMinLoading } from "../../../adm/useMinLoading";
+import { PrincipalPageHeader } from "../../../components/PrincipalPageHeader";
 import {
   stageLabel,
   isAwaitingSignature,
@@ -58,17 +62,8 @@ import {
 } from "../../../adm/adm";
 import dialog from "../../../adm/components/admDialog.module.css";
 import styles from "./all.module.css";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import assign from "../../../academics/assign/components/section-assignments.module.css";
+import formStyles from "../../../academics/assign/components/form.module.css";
 
 const PAGE_SIZE = 20;
 
@@ -137,6 +132,8 @@ function eligibilityBadge(status: AdmReferralRow["eligibilityStatus"]) {
    Signed cases are final — return for revision is only offered before
    signing. Form previews open in the shared CardModal UI. */
 export default function PrincipalAdmReferralsAllPage() {
+  const queryClient = useQueryClient();
+  const [actionId, setActionId] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<AdmReferralRow[]>([]);
   const [total, setTotal] = React.useState(0);
   const [search, setSearch] = React.useState("");
@@ -262,21 +259,46 @@ export default function PrincipalAdmReferralsAllPage() {
   const start = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, totalCount);
 
-  const handleSign = (id: string) =>
-    apiClient
+  // Action-level states: per-row spinner, disabled double-submit, toast
+  // only after server confirmation, targeted refresh (no full-page reload).
+  const handleSign = (id: string) => {
+    if (actionId) return;
+    setActionId(id);
+    return apiClient
       .post(`/api/adm/${id}/principal-approve`)
-      .then(() => load(page))
-      .catch((err: unknown) =>
-        console.error("[/api/adm principal-approve] failed:", err)
-      );
+      .then(() => {
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === id ? { ...r, approvedBy: "Principal", approvalDate: new Date().toISOString().slice(0, 10) } : r,
+          ),
+        );
+        void queryClient.invalidateQueries({ queryKey: ["adm-dashboard"] });
+        toast.success({ title: "Signed — moved to monitoring" });
+        return load(page);
+      })
+      .catch((err: unknown) => {
+        console.error("[/api/adm principal-approve] failed:", err);
+        toast.error({ title: "Sign failed", description: "Could not approve this case." });
+      })
+      .finally(() => setActionId(null));
+  };
 
-  const handleReturn = (id: string) =>
-    apiClient
+  const handleReturn = (id: string) => {
+    if (actionId) return;
+    setActionId(id);
+    return apiClient
       .post(`/api/adm/${id}/principal-return`)
-      .then(() => load(page))
-      .catch((err: unknown) =>
-        console.error("[/api/adm principal-return] failed:", err)
-      );
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["adm-dashboard"] });
+        toast.success({ title: "Returned to ADM Coordinator" });
+        return load(page);
+      })
+      .catch((err: unknown) => {
+        console.error("[/api/adm principal-return] failed:", err);
+        toast.error({ title: "Return failed", description: "Could not return this case." });
+      })
+      .finally(() => setActionId(null));
+  };
 
   const pendingRow =
     pendingAction && rows.find((r) => r.id === pendingAction.id);
@@ -357,15 +379,18 @@ export default function PrincipalAdmReferralsAllPage() {
                   size="icon-sm"
                   aria-label={`Sign and approve case for ${r.student}`}
                   title="Sign & approve"
+                  disabled={actionId !== null}
+                  aria-busy={actionId === r.id}
                   onClick={() => setPendingAction({ id: r.id, type: "sign" })}
                 >
-                  <Check aria-hidden />
+                  {actionId === r.id ? <Spinner aria-hidden /> : <Check aria-hidden />}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`Return case for ${r.student} for revision`}
                   title="Return for revision"
+                  disabled={actionId !== null}
                   onClick={() => setPendingAction({ id: r.id, type: "return" })}
                 >
                   <ArrowLeftRight aria-hidden />
@@ -438,7 +463,7 @@ export default function PrincipalAdmReferralsAllPage() {
         ),
       },
     ],
-    []
+    [actionId]
   );
 
   const table = useReactTable({
@@ -455,6 +480,10 @@ export default function PrincipalAdmReferralsAllPage() {
 
   return (
     <section aria-label="ADM cases" className="flex min-w-0 flex-col gap-3">
+      <PrincipalPageHeader
+        title="ADM Referrals"
+        description="Cases the ADM Coordinator endorsed upward — review, sign, or return for revision."
+      />
       <div className={assign.card}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
@@ -499,7 +528,7 @@ export default function PrincipalAdmReferralsAllPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.from({ length: 6 }).map((_, i) => (
+                {Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
                       <Skeleton className={styles.skelName} />
@@ -739,64 +768,78 @@ export default function PrincipalAdmReferralsAllPage() {
         viewOnly
       />
 
-      <AlertDialog
+      <CardModal
         open={pendingAction !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingAction(null);
+        onClose={() => {
+          if (actionId) return;
+          setPendingAction(null);
         }}
+        size="sm"
+        title={
+          pendingAction?.type === "sign"
+            ? "Sign & approve this case?"
+            : "Return this case for revision?"
+        }
+        description={
+          pendingAction?.type === "sign"
+            ? "You are final-signing this ADM profile. This authorizes module release and moves the case to monitoring."
+            : "The case will be sent back to the ADM Coordinator at the eligibility stage."
+        }
+        dismissable={actionId === null}
+        watchKey={pendingAction?.id}
       >
-        <AlertDialogContent size="default" className={dialog.dialogWide}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction?.type === "sign"
-                ? "Sign & approve this case?"
-                : "Return this case for revision?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingAction?.type === "sign"
-                ? "You are final-signing this ADM profile. This authorizes module release and moves the case to monitoring."
-                : "The case will be sent back to the ADM Coordinator at the eligibility stage."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {pendingRow ? (
-            <div className={dialog.dialogDocs}>
-              <span className={dialog.dialogDocsName}>
-                {pendingRow.student}{" "}
-                <span className={styles.mono}>({pendingRow.lrn})</span>
-              </span>
-              <div className={dialog.dialogDocsRow}>
-                {(pendingRow.forms ?? []).map((f, i) => (
-                  <FormIcon
-                    key={f.id}
-                    formType={f.formType}
-                    title={f.title}
-                    status={f.status}
-                    index={i}
-                  />
-                ))}
-              </div>
+        {pendingRow ? (
+          <div className={dialog.dialogDocs}>
+            <span className={dialog.dialogDocsName}>
+              {pendingRow.student}{" "}
+              <span className={styles.mono}>({pendingRow.lrn})</span>
+            </span>
+            <div className={dialog.dialogDocsRow}>
+              {(pendingRow.forms ?? []).map((f, i) => (
+                <FormIcon
+                  key={f.id}
+                  formType={f.formType}
+                  title={f.title}
+                  status={f.status}
+                  index={i}
+                />
+              ))}
             </div>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                pendingAction?.type === "sign"
-                  ? dialog.alertSign
-                  : dialog.alertReturn
-              }
-              onClick={() => {
-                if (!pendingAction) return;
-                if (pendingAction.type === "sign") handleSign(pendingAction.id);
-                else handleReturn(pendingAction.id);
-                setPendingAction(null);
-              }}
-            >
-              {pendingAction?.type === "sign" ? "Sign & Approve" : "Confirm Return"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </div>
+        ) : null}
+        <div className={formStyles.dialogFooter}>
+          <Button
+            variant="outline"
+            onClick={() => setPendingAction(null)}
+            disabled={actionId !== null}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant={pendingAction?.type === "sign" ? "default" : "destructive"}
+            disabled={actionId !== null}
+            aria-busy={actionId !== null}
+            onClick={() => {
+              if (!pendingAction || actionId) return;
+              const target = pendingAction;
+              setPendingAction(null);
+              if (target.type === "sign") void handleSign(target.id);
+              else void handleReturn(target.id);
+            }}
+          >
+            {actionId !== null ? (
+              <>
+                <Spinner className="size-4" aria-hidden />
+                {pendingAction?.type === "sign" ? "Signing…" : "Returning…"}
+              </>
+            ) : pendingAction?.type === "sign" ? (
+              "Sign & Approve"
+            ) : (
+              "Confirm Return"
+            )}
+          </Button>
+        </div>
+      </CardModal>
     </section>
   );
 }

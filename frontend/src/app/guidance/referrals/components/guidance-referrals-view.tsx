@@ -5,28 +5,32 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RefreshBadge } from "@/components/ui/refresh-badge";
-import { fetchGuidanceReferrals, fetchAllGuidanceReferrals } from "./guidance-referrals-data";
+import {
+  fetchGuidanceReferrals,
+  type GuidanceReferralsData,
+} from "./guidance-referrals-data";
 import { GuidanceReferralsTable } from "./guidance-referrals-table";
 import { GuidanceReferralsSkeleton } from "./GuidanceReferralsSkeleton";
 import {
-  buildGuidanceSummary,
-  matchesGuidanceFilters,
   resolveActionParams,
   type GuidanceAction,
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useTerm } from "@/lib/term/TermContext";
 import styles from "./guidance-referrals.module.css";
 
-const PAGE_SIZE = 10;
+const GUIDANCE_REFERRALS_PAGE_SIZE = 15;
 
 /**
  * Shared referrals view — the All page uses it unlocked (server-paged,
  * with the track dropdown), while ADM Cases / Counseling Cases lock it to
- * one track and scroll the full track list (same model as the nurse
- * timelines: one fetch, client-side filter, scroll hint, no pager).
+ * one track (server track-filtered + server-paginated, same model as the
+ * nurse timelines).
  *
- * Deep-links from the alerts table pass `highlightId` (the table scrolls
- * to and highlights the case on arrival).
+ * Deep-links pass `highlightId`: the backend serves the case's own page
+ * (?highlight=) and the table scrolls to it; the first pager/filter touch
+ * takes over with plain params. Derived — no setState in effects.
  */
 export function GuidanceReferralsView({
   lockedType = "",
@@ -38,25 +42,22 @@ export function GuidanceReferralsView({
   highlightId?: string | null;
 }) {
   const locked = lockedType !== "";
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [query, setQuery] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<GuidanceTypeFilter>(lockedType);
   // Sidebar action (track + status + gates, server-side) mirroring the
   // nurse desk menus. Empty = no action filter.
   const [action, setAction] = React.useState<GuidanceAction>("");
   const [page, setPage] = React.useState(1);
-  const [debouncedQuery, setDebouncedQuery] = React.useState("");
-
-  React.useEffect(() => {
-    const t = window.setTimeout(() => {
-      setDebouncedQuery(query);
-    }, 300);
-    return () => window.clearTimeout(t);
-  }, [query]);
+  const [takeover, setTakeover] = React.useState(false);
+  // Debounced 300ms so server queries fire after the user pauses typing.
+  const debounced = useDebouncedValue(query.trim(), 300);
+  const landing = !takeover && highlightId !== null;
 
   const handleQueryChange = (value: string) => {
-    // Reset to page 1 synchronously so a pager click during the debounce
-    // window isn't overwritten back when the timer fires.
     setQuery(value);
+    setTakeover(true);
     setPage(1);
   };
 
@@ -68,90 +69,82 @@ export function GuidanceReferralsView({
     // The sidebar menus are per-track — a stale action from the other
     // track would empty the list, so reset it.
     setAction("");
+    setTakeover(true);
     setPage(1);
   };
 
   const handleActionChange = (value: GuidanceAction) => {
     setAction(value);
+    setTakeover(true);
     setPage(1);
   };
 
+  const handlePageChange = (next: number) => {
+    setTakeover(true);
+    setPage(next);
+  };
+
   // One menu pick carries its own track; otherwise the type dropdown applies.
+  // Locked pages always use their own track.
   const actionParams = resolveActionParams(action);
   const effType =
-    action !== ""
-      ? actionParams.type
-      : typeFilter === "ADM"
-        ? "adm"
-        : typeFilter === "Counseling"
-          ? "counseling"
-          : "";
-  const trackParam = lockedType === "ADM" ? "adm" : lockedType === "Counseling" ? "counseling" : "";
+    lockedType === "ADM"
+      ? "adm"
+      : lockedType === "Counseling"
+        ? "counseling"
+        : action !== ""
+          ? actionParams.type
+          : typeFilter === "ADM"
+            ? "adm"
+            : typeFilter === "Counseling"
+              ? "counseling"
+              : "";
+  const statusParam = actionParams.status || undefined;
+  const bookedParam = actionParams.booked || undefined;
+  const completedParam = actionParams.completed || undefined;
+  const openParam = actionParams.open || undefined;
 
-  // Locked pages: one full track fetch under the invalidated
-  // ["guidance-referrals"] prefix, so realtime refetches the whole list.
-  const trackQuery = useQuery({
-    queryKey: ["guidance-referrals", "track", trackParam],
-    queryFn: () => fetchAllGuidanceReferrals(trackParam ? { type: trackParam } : undefined),
-    staleTime: 60_000,
-    enabled: locked,
-  });
+  const queryKey = [
+    "guidance-referrals",
+    takeover || !locked ? page : 1,
+    debounced,
+    statusParam ?? "",
+    effType,
+    bookedParam ?? false,
+    completedParam ?? false,
+    openParam ?? false,
+    termKey,
+    landing ? (highlightId ?? "") : "",
+  ];
 
-  const serverQuery = useQuery({
-    queryKey: [
-      "guidance-referrals",
-      {
-        q: debouncedQuery,
-        status: actionParams.status,
-        type: effType,
-        booked: actionParams.booked,
-        completed: actionParams.completed,
-        open: actionParams.open,
-        page,
-        pageSize: PAGE_SIZE,
-      },
-    ],
+  const referralsQuery = useQuery<GuidanceReferralsData>({
+    queryKey,
     queryFn: ({ signal }) =>
       fetchGuidanceReferrals(
         {
-          q: debouncedQuery || undefined,
-          status: actionParams.status || undefined,
+          q: debounced || undefined,
+          status: statusParam,
           type: effType || undefined,
-          booked: actionParams.booked || undefined,
-          completed: actionParams.completed || undefined,
-          open: actionParams.open || undefined,
-          page,
-          pageSize: PAGE_SIZE,
+          booked: bookedParam,
+          completed: completedParam,
+          open: openParam,
+          page: takeover || !locked ? page : 1,
+          pageSize: GUIDANCE_REFERRALS_PAGE_SIZE,
+          ...(landing && highlightId ? { highlight: highlightId } : {}),
         },
         { signal }
       ),
-    staleTime: 60_000,
+    // Page turns reuse the previous page so they never flash skeletons.
     placeholderData: keepPreviousData,
-    enabled: !locked,
+    staleTime: 60_000,
   });
 
-  // Locked mode: client filter + newest-first over the full track list.
-  const trackRows = React.useMemo(() => {
-    const all = trackQuery.data ?? [];
-    const kept = all.filter((r) => matchesGuidanceFilters(r, debouncedQuery, actionParams));
-    // Newest observed first — mirrors the endpoint's observationDatetime
-    // ordering so realtime arrivals land on top with no refresh.
-    kept.sort((a, b) => {
-      const cmp = b.date.localeCompare(a.date);
-      return cmp !== 0 ? cmp : b.id.localeCompare(a.id);
-    });
-    return kept;
-  }, [trackQuery.data, debouncedQuery, actionParams]);
+  const { data, isPending, isError, isRefetching, refetch } = referralsQuery;
 
-  const trackSummary = React.useMemo(
-    () => (locked ? buildGuidanceSummary(trackQuery.data ?? []) : null),
-    [trackQuery.data, locked],
-  );
-
-  const isPending = locked ? trackQuery.isPending : serverQuery.isPending;
-  const isError = locked ? trackQuery.isError : serverQuery.isError;
-  const isRefetching = locked ? trackQuery.isRefetching : serverQuery.isRefetching;
-  const refetch = locked ? trackQuery.refetch : serverQuery.refetch;
+  // Derived, never setState-in-effect: the server clamps too, this keeps
+  // the pager truthful while a filter shrinks the list under the cursor.
+  const totalPages = Math.max(1, data?.totalPages ?? 1);
+  const safePage = Math.min(data?.page ?? page, totalPages);
 
   if (isPending) {
     return (
@@ -164,7 +157,7 @@ export function GuidanceReferralsView({
     );
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <section className={styles.page}>
         <div className={styles.pageError} role="alert">
@@ -188,67 +181,21 @@ export function GuidanceReferralsView({
     );
   }
 
-  if (locked) {
-    const refreshing = trackQuery.isRefetching && !trackQuery.isPending;
-    return (
-      <section className={styles.page} aria-busy={refreshing}>
-        {refreshing ? <RefreshBadge label="Refreshing cases…" /> : null}
-        <GuidanceReferralsTable
-          referrals={trackRows}
-          summary={trackSummary}
-          total={trackRows.length}
-          query={query}
-          onQueryChange={handleQueryChange}
-          typeFilter={typeFilter}
-          onTypeChange={handleTypeChange}
-          action={action}
-          onActionChange={handleActionChange}
-          onRetry={() => refetch()}
-          isRetrying={isRefetching}
-          lockType
-          paginate={false}
-          title={title}
-          highlightId={highlightId}
-        />
-      </section>
-    );
-  }
-
-  const data = serverQuery.data;
-  if (!data) {
-    return (
-      <section className={styles.page}>
-        <div className={styles.pageError} role="alert">
-          <p className={styles.pageErrorTitle}>We couldn&apos;t load your cases</p>
-          <p className={styles.pageErrorHint}>
-            Please check your internet connection and try again.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isRefetching}
-            onClick={() => refetch()}
-          >
-            {isRefetching ? (
-              <Loader2 className={styles.spin} aria-hidden="true" />
-            ) : null}
-            {isRefetching ? "Loading…" : "Try again"}
-          </Button>
-        </div>
-      </section>
-    );
-  }
+  const refreshing = isRefetching && !isPending;
+  const referrals = Array.isArray(data.referrals) ? data.referrals : [];
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={refreshing}>
+      {refreshing ? <RefreshBadge label="Refreshing cases…" /> : null}
       <GuidanceReferralsTable
-        referrals={data.referrals}
+        referrals={referrals}
         summary={data.summary ?? null}
         total={data.total}
-        page={data.page}
+        unfilteredTotal={data.unfilteredTotal}
+        page={safePage}
         pageSize={data.pageSize}
-        totalPages={data.totalPages}
-        onPageChange={setPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
         query={query}
         onQueryChange={handleQueryChange}
         typeFilter={typeFilter}
@@ -257,8 +204,8 @@ export function GuidanceReferralsView({
         onActionChange={handleActionChange}
         onRetry={() => refetch()}
         isRetrying={isRefetching}
-        isNavigating={serverQuery.isFetching && !serverQuery.isPending}
-        lockType={false}
+        isNavigating={isRefetching && !isPending}
+        lockType={locked}
         title={title}
         highlightId={highlightId}
       />

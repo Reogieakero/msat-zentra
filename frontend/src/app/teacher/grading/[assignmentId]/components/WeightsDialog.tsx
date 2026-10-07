@@ -3,14 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -75,6 +68,7 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
   };
 
   const handleSave = async () => {
+    if (saving || presetSaving !== null) return;
     const parsed = COMPONENT_ORDER.map((t) => ({ type: t, value: Number(inputs[t]) }));
     if (parsed.some((p) => !Number.isInteger(p.value) || p.value < 0 || p.value > 100)) {
       setError("Each weight must be a whole number from 0 to 100.");
@@ -105,21 +99,16 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
     }
   };
 
+  const busy = saving || presetSaving !== null;
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onClose={onClose}
+      dismissable={!busy}
+      size="md"
+      title="Category weights — DepEd Order No. 8"
+      description="Weight is each category's share of the final grade: final = (WW avg × WW%) + (PT avg × PT%) + (E avg × E%). The three weights must total 100%."
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Category weights — DepEd Order No. 8</DialogTitle>
-          <DialogDescription>
-            Weight is each category&apos;s share of the final grade: final = (WW avg × WW%) +
-            (PT avg × PT%) + (E avg × E%). The three weights must total 100%.
-          </DialogDescription>
-        </DialogHeader>
 
         <div className={styles.form}>
           <WeightsVisual ww={ww} pt={pt} exam={exam} />
@@ -177,7 +166,7 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
 
         {error ? <p className={styles.errorText}>{error}</p> : null}
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             {editing ? "Cancel" : "Close"}
           </Button>
@@ -195,8 +184,7 @@ export function WeightsDialog({ detail, onClose, onSaved }: Props) {
           ) : (
             <Button onClick={() => setEditing(true)}>Edit</Button>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }
