@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -15,7 +14,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Bot, CalendarIcon, Check, ChevronDown, Clock, Download, Eraser, FileText, Folder, History, Plus } from "lucide-react";
+import { ArrowUp, Bot, CalendarIcon, Check, ChevronDown, Clock, Eraser, Folder, History, Plus } from "lucide-react";
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
@@ -38,6 +37,7 @@ import {
   type StoredConversation,
 } from "./anecdotal-conversations";
 import { AnecdotalHistoryMenu } from "./AnecdotalHistoryMenu";
+import { FiledDetailCard, PreviewDetailCard } from "./AnecdotalDetailCards";
 import { useTerm } from "@/lib/term/TermContext";
 import { downloadOcForm01 } from "@/components/ocform01/ocform01";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
@@ -876,146 +876,14 @@ export function AnecdotalChat() {
                   <Bot className={styles.botIcon} />
                 </span>
                  {m.detail ? (
-                   <div className={styles.detailWrap}>
-                     <div className={styles.detailCard}>
-                       <div className={styles.detailHead}>
-                         <p className={styles.detailTitle}>
-                           {m.detail.studentName}
-                         </p>
-                         <Badge variant="warning">GCForm-01</Badge>
-                       </div>
-                       <p className={styles.detailSub}>
-                         {m.detail.lrn} · {m.detail.category} · {m.detail.tier} ·{" "}
-                         {m.detail.location}
-                       </p>
-                       <div className={styles.detailReasonRow}>
-                         <Badge variant="outline">{m.detail.category}</Badge>
-                         <span className={styles.detailFiledOn}>
-                           Filed: {m.detail.filedOn}
-                         </span>
-                       </div>
-                       <p className={styles.detailNote}>
-                         &ldquo;{m.detail.incident}&rdquo;
-                       </p>
-                       <dl className={styles.detailMeta}>
-                         <div className={styles.detailMetaRow}>
-                           <dt>Section</dt>
-                           <dd>{m.detail.section}</dd>
-                         </div>
-                         <div className={styles.detailMetaRow}>
-                           <dt>Observation time</dt>
-                           <dd>{m.detail.observationDateTime}</dd>
-                         </div>
-                         <div className={styles.detailMetaRow}>
-                           <dt>Status</dt>
-                           <dd>
-                             {m.detail.tier === "Confidential"
-                               ? "Confidential"
-                               : "Restricted"}
-                           </dd>
-                         </div>
-                         {m.detail.notes ? (
-                           <div className={styles.detailMetaRow}>
-                             <dt>Notes</dt>
-                             <dd>{m.detail.notes}</dd>
-                           </div>
-                         ) : null}
-                         {m.detail.classPerformance ? (
-                           <div className={styles.detailMetaRow}>
-                             <dt>Class performance</dt>
-                             <dd>{m.detail.classPerformance}</dd>
-                           </div>
-                         ) : null}
-                          {m.detail.attendanceSummary ? (
-                            <div className={styles.detailMetaRow}>
-                              <dt>Attendance</dt>
-                              <dd>{m.detail.attendanceSummary}</dd>
-                            </div>
-                          ) : null}
-                        </dl>
-                        {m.detail.recordId ? (
-                          <div className={styles.cardActions}>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setPreviewRecordId(m.detail!.recordId)}
-                            >
-                              <FileText aria-hidden />
-                              Preview OCForm-01
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={downloadingId === m.detail.recordId}
-                              onClick={() => handleFormDownload(m.detail!.recordId)}
-                            >
-                              <Download aria-hidden />
-                              {downloadingId === m.detail.recordId ? "Preparing…" : ".xlsx"}
-                            </Button>
-                          </div>
-                        ) : null}
-                      </div>
-                      <hr className={styles.endMark} aria-hidden />
-                    </div>
+                   <FiledDetailCard
+                     detail={m.detail}
+                     downloadingId={downloadingId}
+                     onPreview={(recordId) => setPreviewRecordId(recordId)}
+                     onDownload={(recordId) => handleFormDownload(recordId)}
+                   />
                  ) : m.preview ? (
-                   <div className={styles.detailWrap}>
-                     <div className={styles.previewCard}>
-                       <div className={styles.detailHead}>
-                         <p className={styles.detailTitle}>
-                           {m.preview.studentName}
-                         </p>
-                         <Badge variant="warning">GCForm-01 preview</Badge>
-                       </div>
-                       <p className={styles.detailSub}>
-                         {m.preview.lrn} · {m.preview.category} · {m.preview.tier} ·{" "}
-                         {m.preview.location}
-                       </p>
-                       <div className={styles.detailReasonRow}>
-                         <Badge variant="outline">{m.preview.category}</Badge>
-                         <span className={styles.detailFiledOn}>
-                           Obs: {m.preview.observationDateTime}
-                         </span>
-                       </div>
-                       <p className={styles.detailNote}>
-                         &ldquo;{m.preview.incident}&rdquo;
-                       </p>
-                       <dl className={styles.detailMeta}>
-                         <div className={styles.detailMetaRow}>
-                           <dt>Section</dt>
-                           <dd>{m.preview.section}</dd>
-                         </div>
-                         <div className={styles.detailMetaRow}>
-                           <dt>Status</dt>
-                           <dd>
-                             {m.preview.tier === "Confidential"
-                               ? "Confidential"
-                               : "Restricted"}
-                           </dd>
-                         </div>
-                         {m.preview.notes ? (
-                           <div className={styles.detailMetaRow}>
-                             <dt>Notes / Recommendations</dt>
-                             <dd>{m.preview.notes}</dd>
-                           </div>
-                         ) : null}
-                         {m.preview.classPerformance ? (
-                           <div className={styles.detailMetaRow}>
-                             <dt>Class performance</dt>
-                             <dd>{m.preview.classPerformance}</dd>
-                           </div>
-                         ) : null}
-                         {m.preview.attendanceSummary ? (
-                           <div className={styles.detailMetaRow}>
-                             <dt>Attendance</dt>
-                             <dd>{m.preview.attendanceSummary}</dd>
-                           </div>
-                         ) : null}
-                       </dl>
-                     </div>
-                     <hr className={styles.endMark} aria-hidden />
-                   </div>
+                   <PreviewDetailCard preview={m.preview} />
                  ) : m.question ? (
                    <div className={styles.questionBubble}>
                      <p className={styles.questionText}>{m.text}</p>
