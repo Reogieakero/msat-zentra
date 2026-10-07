@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/components/providers";
 import { RegistrarSidebar } from "@/components/registrar-sidebar";
@@ -43,6 +44,9 @@ function RegistrarShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
+    // Terminate the server refresh session (clears the httpOnly cookie) —
+    // best-effort; the local wipe below runs regardless.
+    void logout();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));

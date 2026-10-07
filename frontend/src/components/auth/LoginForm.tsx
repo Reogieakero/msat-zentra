@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { setAccessToken, setRefreshToken } from "@/lib/api/client";
+import { setAccessToken } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";
 import styles from "./LoginForm.module.css";
@@ -52,10 +52,13 @@ export function LoginForm({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          // The refresh token arrives as an httpOnly cookie — it must be
+          // accepted (and later sent) cross-origin localhost:3000 → :4000.
+          credentials: "include",
           body: JSON.stringify({ email: identifier, password, role }),
         },
       );
-      let data: { message?: string; role?: string; accessToken?: string; refreshToken?: string } = {};
+      let data: { message?: string; role?: string; accessToken?: string } = {};
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("application/json")) {
         data = await res.json();
@@ -71,7 +74,6 @@ export function LoginForm({
         return;
       }
       if (data.accessToken) setAccessToken(data.accessToken);
-      if (data.refreshToken) setRefreshToken(data.refreshToken);
       // Drop any cached queries from a previous account on this device
       // before entering the new session (QueryClient outlives SPA login).
       queryClient.clear();

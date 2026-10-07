@@ -3,7 +3,9 @@ import axios, { type AxiosInstance } from "axios";
 export const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: false,
+  // Cookies carry the httpOnly refresh token — every auth-adjacent request
+  // (and the refresh call below) must include them.
+  withCredentials: true,
 });
 
 // Attach the access token (stored by the auth layer) to every request,
@@ -55,7 +57,6 @@ apiClient.interceptors.response.use(
 function redirectToUnauthorized() {
   if (typeof window === "undefined") return;
   setAccessToken(null);
-  window.localStorage.removeItem("zentra.refresh");
   if (window.location.pathname !== "/errors/403") {
     window.location.href = "/errors/403";
   }
@@ -98,26 +99,40 @@ export function setAccessToken(token: string | null) {
   else window.localStorage.removeItem(ACCESS_KEY);
 }
 
-export function setRefreshToken(token: string | null) {
-  if (typeof window === "undefined") return;
-  if (token) window.localStorage.setItem("zentra.refresh", token);
-  else window.localStorage.removeItem("zentra.refresh");
-}
-
+// The refresh token lives in an httpOnly cookie (set by the backend on
+// login/refresh) — page JavaScript never sees it. The short-lived access
+// token below stays in localStorage for the Bearer transport.
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = window.localStorage.getItem("zentra.refresh");
-  if (!refreshToken) return null;
   try {
     const { data } = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/refresh`,
-      { refreshToken },
+      {},
+      { withCredentials: true },
     );
     setAccessToken(data.accessToken);
-    window.localStorage.setItem("zentra.refresh", data.refreshToken);
     return data.accessToken as string;
   } catch {
     setAccessToken(null);
-    window.localStorage.removeItem("zentra.refresh");
     return null;
+  }
+}
+
+// Terminates the server refresh session (clears the httpOnly cookie) and
+// drops local auth state. Best-effort on the network call — local state is
+// always cleared so logout never strands the user.
+export async function logout(): Promise<void> {
+  try {
+    await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`,
+      {},
+      { withCredentials: true },
+    );
+  } catch {
+    // Best-effort — local state below is the source of truth for logout.
+  }
+  setAccessToken(null);
+  if (typeof window !== "undefined") {
+    // One-time hygiene: refresh tokens used to live in localStorage.
+    window.localStorage.removeItem("zentra.refresh");
   }
 }

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api/client";
 import { useTheme } from "@/components/providers";
 import { PrincipalSidebar } from "@/components/principal-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,6 +45,9 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   const isDark = mounted && resolvedTheme === "dark";
 
   const handleLogout = () => {
+    // Terminate the server refresh session (clears the httpOnly cookie) —
+    // best-effort; the local wipe below runs regardless.
+    void logout();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));

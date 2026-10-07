@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/components/providers";
 import { CoordinatorSidebar } from "@/components/coordinator-sidebar";
@@ -46,6 +47,9 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
+    // Terminate the server refresh session (clears the httpOnly cookie) —
+    // best-effort; the local wipe below runs regardless.
+    void logout();
     // Drop all cached queries so the next account on this device never sees
     // the previous coordinator's student data (QueryClient outlives SPA logout).
     queryClient.clear();

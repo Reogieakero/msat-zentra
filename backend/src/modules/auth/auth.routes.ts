@@ -4,12 +4,17 @@ import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
 import { AppError } from "../../lib/errors.js";
+import {
+  clearRefreshCookie,
+  getRefreshCookie,
+  isSecureContext,
+  setRefreshCookie,
+} from "../../lib/cookies.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
 import {
   approveSchema,
   changePasswordSchema,
   loginSchema,
-  refreshSchema,
   registerSchema,
   rejectSchema,
 } from "./auth.schemas.js";
@@ -67,7 +72,12 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
       password: string;
       role: "student" | "staff" | "parent";
     };
-    res.json(await login({ email, password, role }));
+    const { accessToken, refreshToken, role: userRole } = await login({ email, password, role });
+    // Long-lived refresh token leaves only as an httpOnly cookie — it is
+    // never exposed to page JavaScript. The short-lived access token stays
+    // in the JSON body for the Bearer transport.
+    setRefreshCookie(res, refreshToken, { secure: isSecureContext() });
+    res.json({ accessToken, role: userRole });
   } catch (e) {
     next(e);
   }
@@ -92,9 +102,25 @@ router.post(
   }
 );
 
-router.post("/refresh", validate("body", refreshSchema), async (req, res, next) => {
+router.post("/refresh", async (req, res, next) => {
   try {
-    res.json(await refreshTokens((req.body as { refreshToken: string }).refreshToken));
+    const token = getRefreshCookie(req);
+    if (!token) throw new AppError(401, "INVALID_REFRESH", "Invalid refresh token");
+    const { accessToken, refreshToken } = await refreshTokens(token);
+    // Rotate on every use: the fresh token replaces the cookie value.
+    setRefreshCookie(res, refreshToken, { secure: isSecureContext() });
+    res.json({ accessToken });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Terminates the refresh-token cookie. No auth gate: the access token may
+// already be expired — clearing the cookie is idempotent either way.
+router.post("/logout", async (_req, res, next) => {
+  try {
+    clearRefreshCookie(res, { secure: isSecureContext() });
+    res.json({ loggedOut: true });
   } catch (e) {
     next(e);
   }
