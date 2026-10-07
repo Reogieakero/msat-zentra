@@ -9,14 +9,18 @@ import { Label } from "@/components/ui/label";
 import {
   COMPONENT_NAMES,
   COMPONENT_ORDER,
+  isSHS,
+} from "@/services/teacher/grading.compute";
+import {
   WEIGHT_PRESETS,
   applyWeightPreset,
-  isSHS,
   saveComponentWeight,
-  type ClassDetail,
-  type ComponentType,
-  type WeightPreset,
-} from "../../components/grading-data";
+} from "@/services/teacher/grading.service";
+import type {
+  ClassDetail,
+  ComponentType,
+  WeightPreset,
+} from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import { WeightsVisual } from "./WeightsVisual";
 import styles from "./WeightsDialog.module.css";

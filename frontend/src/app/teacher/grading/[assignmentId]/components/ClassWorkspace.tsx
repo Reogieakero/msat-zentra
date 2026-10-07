@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useTopbarCrumb } from "@/app/teacher/layout";
 import { Button } from "@/components/ui/button";
-import { useRefreshAcademic, type ClassDetail, type ComponentType } from "../../components/grading-data";
+import { useRefreshAcademic } from "@/services/teacher/grading.service";
+import type {
+  ClassDetail,
+  ComponentType,
+} from "@/services/teacher/grading.types";
 import { WorkspaceRail, type WorkspaceView } from "./WorkspaceRail";
 import { AssessmentList } from "./AssessmentList";
 import { AddAssessmentDialog } from "./AddAssessmentDialog";

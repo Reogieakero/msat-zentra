@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { gradeLabel, type ClassAssignment } from "../../components/grading-data";
+import { gradeLabel } from "@/services/teacher/grading.compute";
+import type { ClassAssignment } from "@/services/teacher/grading.types";
 import styles from "./WorkspaceHeader.module.css";
 
 type Props = {

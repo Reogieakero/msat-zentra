@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  createAssessment,
-  type ClassComponent,
-  type ComponentType,
-} from "../../components/grading-data";
+import { createAssessment } from "@/services/teacher/grading.service";
+import type {
+  ClassComponent,
+  ComponentType,
+} from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import { CategoryTabs } from "./CategoryTabs";
 import styles from "./AddAssessmentDialog.module.css";

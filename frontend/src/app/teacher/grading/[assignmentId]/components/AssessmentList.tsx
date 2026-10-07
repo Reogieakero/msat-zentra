@@ -6,14 +6,14 @@ import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/in
 import { ChevronDown, Loader2, SearchIcon, Trash2 } from "lucide-react";
 import { CardModal } from "@/components/ui/CardModal";
 import { Button } from "@/components/ui/button";
-import {
-  COMPONENT_NAMES,
-  deleteAssessment,
-  type ClassAssessment,
-  type ClassComponent,
-  type ClassStudent,
-  type ComponentType,
-} from "../../components/grading-data";
+import { COMPONENT_NAMES } from "@/services/teacher/grading.compute";
+import { deleteAssessment } from "@/services/teacher/grading.service";
+import type {
+  ClassAssessment,
+  ClassComponent,
+  ClassStudent,
+  ComponentType,
+} from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import scrollStyles from "@/app/teacher/schedule/schedule-empty.module.css";

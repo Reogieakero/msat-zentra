@@ -3,7 +3,8 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { lockFinalGrade, useRefreshAcademic, type ClassStudent } from "../../components/grading-data";
+import { lockFinalGrade, useRefreshAcademic } from "@/services/teacher/grading.service";
+import type { ClassStudent } from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import styles from "./FinalsCard.module.css";
 

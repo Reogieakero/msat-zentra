@@ -10,10 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   COMPONENT_ORDER,
   computeSubjectGrade,
-  fetchClassDetail,
   gradeLabel,
   subjectEvidence,
-} from "@/app/teacher/grading/components/grading-data";
+} from "@/services/teacher/grading.compute";
+import { fetchClassDetail } from "@/services/teacher/grading.service";
 import styles from "./record-sheet.module.css";
 
 const SHORT: Record<string, string> = {

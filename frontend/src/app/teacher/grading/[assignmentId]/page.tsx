@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { classDetailKey, useClassDetail } from "../components/grading-data";
+import { classDetailKey, useClassDetail } from "@/services/teacher/grading.service";
 import { useSession } from "@/lib/auth/useSession";
 import { ClassWorkspace } from "./components/ClassWorkspace";
 import { ClassWorkspaceSkeleton } from "./components/ClassWorkspaceSkeleton";

@@ -30,16 +30,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { COMPONENT_NAMES } from "@/services/teacher/grading.compute";
 import {
-  COMPONENT_NAMES,
   submitScore,
   updateAssessment,
   useRefreshAcademic,
-  type ClassAssessment,
-  type ClassComponent,
-  type ClassStudent,
-  type ComponentType,
-} from "../../components/grading-data";
+} from "@/services/teacher/grading.service";
+import type {
+  ClassAssessment,
+  ClassComponent,
+  ClassStudent,
+  ComponentType,
+} from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import styles from "./ScoreGrid.module.css";

@@ -1,23 +1,16 @@
-"use client";
-
-import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
-import { useSession } from "@/lib/auth/useSession";
-
-/** Invalidate every academic read so scores/locks surface everywhere at once:
- *  advisee records, advisory lists, and teacher overviews. */
-export function useRefreshAcademic(): () => void {
-  const queryClient = useQueryClient();
-  return React.useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["advisee-academic"] });
-    queryClient.invalidateQueries({ queryKey: ["advisory-students"] });
-    queryClient.invalidateQueries({ queryKey: ["teacher-overview"] });
-    queryClient.invalidateQueries({ queryKey: ["teacher-overview-secondary"] });
-  }, [queryClient]);
-}
-
-export type ComponentType = "WRITTEN_WORK" | "PERFORMANCE_TASK" | "EXAM";
+// Pure grade math for the teacher gradebook: component vocabulary, grade
+// labels, DepEd transmutation, and the assessment-driven subject-grade
+// computation (client twin of backend services/grading.ts
+// computeSubjectGrade — the backend is the source of truth for stored
+// grades). No API calls, no hooks.
+import type {
+  CategoryEvidence,
+  CategoryResult,
+  ClassComponent,
+  ComponentType,
+  SubjectGradeComputation,
+  TransmutationBand,
+} from "./grading.types";
 
 export const COMPONENT_ORDER: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"];
 
@@ -32,154 +25,6 @@ export const COMPONENT_NAMES: Record<ComponentType, string> = {
   PERFORMANCE_TASK: "Performance Task",
   EXAM: "Exam",
 };
-
-export interface ClassAssignment {
-  id: string;
-  subjectId: string;
-  subjectCode: string;
-  subjectName: string;
-  subjectCategory: string;
-  sectionId: string;
-  sectionName: string;
-  gradeLevel: string;
-  termId: string;
-  termNumber: number;
-  schoolYear: string;
-}
-
-export interface ClassFinal {
-  id: string;
-  studentId: string;
-  computedAverage: number | null;
-  transmutedGrade: number | null;
-  remarks: string | null;
-  lockStatus: string | null;
-}
-
-export interface ClassStudent {
-  id: string;
-  name: string;
-  lrn: string;
-  hasAccount: boolean;
-  final: ClassFinal | null;
-}
-
-export interface ClassAssessment {
-  id: string;
-  title: string;
-  maxScore: number;
-  dateGiven: string;
-  createdAt: string;
-  scores: Record<string, number>;
-}
-
-export interface ClassComponent {
-  id: string;
-  type: ComponentType;
-  label: string;
-  weight: number;
-  assessments: ClassAssessment[];
-}
-
-export interface ClassDetail {
-  assignment: ClassAssignment;
-  students: ClassStudent[];
-  components: ClassComponent[];
-}
-
-export async function fetchClassDetail(assignmentId: string): Promise<ClassDetail> {
-  const { data } = await apiClient.get<ClassDetail>(`/api/teacher/grading/classes/${assignmentId}`);
-  return data;
-}
-
-/** Teacher-scoped class key — one teacher's class detail must never leak to
- *  another teacher's session. Prefix invalidations on
- *  ["teacher-grading-class"] still match. */
-export function classDetailKey(
-  teacherId: string | null | undefined,
-  assignmentId: string,
-) {
-  return ["teacher-grading-class", teacherId ?? "anon", assignmentId] as const;
-}
-
-/** Class workspace detail. Keeps the previous class on screen while the next
- *  one loads so switching classes never flashes a full-page skeleton. */
-export function useClassDetail(assignmentId: string) {
-  const session = useSession();
-  const teacherId = session?.sub ?? null;
-  return useQuery({
-    queryKey: classDetailKey(teacherId, assignmentId),
-    queryFn: () => fetchClassDetail(assignmentId),
-    enabled: !!teacherId && !!assignmentId,
-    // Fail fast like every other query — no backoff retries before the
-    // error state. Keeps previous data visible via placeholderData below.
-    retry: false,
-    // Keep the previous class on screen while the next one loads so
-    // switching classes never flashes a full-page skeleton.
-    placeholderData: (previous) => previous,
-    staleTime: 15_000,
-  });
-}
-
-export async function saveComponentWeight(
-  assignmentId: string,
-  input: { componentType: ComponentType; weightPercentage: number }
-): Promise<void> {
-  await apiClient.post(`/api/teacher/grading/classes/${assignmentId}/components`, input);
-}
-
-export type WeightPreset = "SHS" | "JHS_LANG" | "JHS_MATH_SCI" | "JHS_MAPEH_TLE";
-
-export const WEIGHT_PRESETS: { key: WeightPreset; label: string; hint: string }[] = [
-  { key: "SHS", label: "SHS standard", hint: "WW 25 / PT 45 / E 30" },
-  { key: "JHS_LANG", label: "Languages, AP, EsP", hint: "WW 30 / PT 50 / E 20" },
-  { key: "JHS_MATH_SCI", label: "Math & Science", hint: "WW 40 / PT 40 / E 20" },
-  { key: "JHS_MAPEH_TLE", label: "MAPEH & TLE", hint: "WW 20 / PT 60 / E 20" },
-];
-
-export async function applyWeightPreset(assignmentId: string, preset: WeightPreset): Promise<void> {
-  await apiClient.post(`/api/teacher/grading/classes/${assignmentId}/components/preset`, { preset });
-}
-
-export async function createAssessment(
-  assignmentId: string,
-  input: { componentType: ComponentType; title: string; maxScore: number; dateGiven?: string }
-): Promise<ClassAssessment> {
-  const { data } = await apiClient.post<ClassAssessment>(
-    `/api/teacher/grading/classes/${assignmentId}/assessments`,
-    input
-  );
-  return data;
-}
-
-export async function updateAssessment(
-  id: string,
-  input: { title?: string; maxScore?: number; dateGiven?: string }
-): Promise<void> {
-  await apiClient.patch(`/api/teacher/grading/assessments/${id}`, input);
-}
-
-export async function deleteAssessment(id: string): Promise<void> {
-  await apiClient.delete(`/api/teacher/grading/assessments/${id}`);
-}
-
-export interface ScoreResult {
-  computedAverage: number;
-  transmutedGrade: number;
-  remarks: string;
-}
-
-export async function submitScore(
-  assessmentId: string,
-  input: { studentId: string; rawScore: number }
-): Promise<ScoreResult> {
-  const { data } = await apiClient.post<ScoreResult>(`/api/grades/assessments/${assessmentId}/score`, input);
-  return data;
-}
-
-export async function lockFinalGrade(id: string): Promise<void> {
-  await apiClient.post(`/api/grades/final-grades/${id}/lock`, {});
-}
 
 /** "G11" -> "11", passthrough otherwise. */
 export function gradeLabel(gradeLevel: string): string {
@@ -240,12 +85,6 @@ export const TRANSMUTATION_BANDS: { min: number; grade: number }[] = [
   { min: 0, grade: 60 },
 ];
 
-export interface TransmutationBand {
-  grade: number;
-  low: number;
-  high: number;
-}
-
 /** Find the DepEd table band an initial grade falls in (for display). */
 export function bandForGrade(computed: number): TransmutationBand {
   const clamped = Math.min(100, Math.max(0, computed));
@@ -266,38 +105,6 @@ export function bandForGrade(computed: number): TransmutationBand {
 // normalized), earned/possible over recorded scores, N/A never zero, no
 // evidence → null instead of a fake 0% / Failed.
 // ---------------------------------------------------------------------------
-
-export type CategoryEvidence = {
-  componentType: string;
-  weightPercentage: number;
-  earned: number;
-  possible: number;
-  assessmentCount: number;
-  encodedCount: number;
-};
-
-export type CategoryResult = {
-  componentType: string;
-  assessmentCount: number;
-  encodedCount: number;
-  coverage: number | null;
-  percentage: number | null;
-  configuredWeight: number;
-  normalizedWeight: number;
-  effectiveWeight: number;
-};
-
-export type SubjectGradeComputation = {
-  availableCategories: string[];
-  categories: CategoryResult[];
-  existingAssessments: number;
-  encodedAssessments: number;
-  coverage: number | null;
-  rawGrade: number | null;
-  computedAverage: number | null;
-  transmutedGrade: number | null;
-  remarks: "Passed" | "Failed" | null;
-};
 
 const CANONICAL_ORDER = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"];
 
