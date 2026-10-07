@@ -26,18 +26,7 @@ import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import styles from "./NurseReferralDialogs.module.css";
 
-/* Live clock for session-gate checks below — ticks each second while the
-   dialog is open so "starts at" guards stay exact without calling Date
-   during render. */
-export function useNowTick(active: boolean): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return now;
-}
+import { useActiveNowTick } from "@/lib/clock";
 
 export interface DialogProps {
   open: boolean;
@@ -160,7 +149,7 @@ export function FinishSessionDialog({
   const serverError = finishMutation.error
     ? apiErrorMessage(finishMutation.error, "Could not finish the session. Try again.")
     : null;
-  const now = useNowTick(open);
+  const now = useActiveNowTick(open);
 
   if (!open) return null;
 

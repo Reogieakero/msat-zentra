@@ -202,17 +202,7 @@ function ScrollHint({ count }: { count: number }) {
   );
 }
 
-/* Live clock for the session countdowns — ticks each second while any
-   scheduled session is on screen so the seconds stay exact. */
-function useNowTick(active: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return now;
-}
+import { useActiveNowTick } from "@/lib/clock";
 
 export function GuidanceReferralsTable({
   referrals,
@@ -486,7 +476,7 @@ export function GuidanceReferralsTable({
   const hasScheduledOnPage = referrals.some((r) =>
     r.sessions.some((s) => s.status === "scheduled")
   );
-  const now = useNowTick(hasScheduledOnPage);
+  const now = useActiveNowTick(hasScheduledOnPage);
   const typeFilterLabel =
     GUIDANCE_TYPES.find((t) => t.value === typeFilter)?.label ?? "All types";
 

@@ -49,7 +49,7 @@ import {
   GuidanceAlertsRowActions,
   GuidanceInterventionRowActions,
 } from "./GuidanceAlertsRowActions";
-import { msSinceDate as msSince } from "@/lib/clock";
+import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
 import styles from "./guidance-alerts-table.module.css";
 
 const PAGE_SIZE = 15;
@@ -69,32 +69,6 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "Counseling", label: "Counseling" },
   { value: "Intervention", label: "Intervention" },
 ];
-
-/* Live clock — ticks every 30s; the elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. */
-function useNowTick(): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
-}
-
-/* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes only,
-   never seconds. */
-function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
-}
 
 /* Latest action with live session detection first: a booked / finished /
    cancelled session leads only when it is actually the freshest event —

@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import styles from "./adm-queue.module.css";
+import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
 
 /* Badge color language for queue statuses — color-coded (amber/blue/green/
    red) plus the legacy neutrals guidance still passes. */
@@ -54,42 +55,6 @@ export interface AdmQueueRowVM {
      renders "—"). */
   actionTime: string | null;
   dateReferred: string;
-}
-
-/* Live clock — ticks every 30s; elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. */
-function useNowTick(): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
-}
-
-/* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes
-   only, never seconds. */
-function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
-}
-
-/* ms from the given action time to now. Null when unparseable — the
-   cell then shows "—". */
-function msSince(time: string | null, now: number): number | null {
-  if (!time || time === "—") return null;
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, now - t);
 }
 
 function RiskBadge({ level, loading = false }: { level: AdmQueueRisk | undefined; loading?: boolean }) {

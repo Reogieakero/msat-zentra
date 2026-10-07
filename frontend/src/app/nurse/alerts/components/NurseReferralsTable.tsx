@@ -28,7 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatElapsedShort, useNowTick } from "@/lib/clock";
+import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -82,16 +82,6 @@ function actionTimeOf(alert: NurseAlertItem): number | null {
   const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
   const t = new Date(iso).getTime();
   return Number.isFinite(t) ? t : null;
-}
-
-/* ms from the given action time to now. Null when unparseable — the cell
-   then shows "—". Shared with the nurse ADM referrals queue. */
-export function msSince(time: string, now: number): number | null {
-  if (!time || time === "—") return null;
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, now - t);
 }
 
 /* Color-coded status badges — amber = needs action, blue = in motion,

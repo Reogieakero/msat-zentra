@@ -24,7 +24,7 @@ import type {
   NurseSessionItem,
 } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
-import { useNowTick } from "./NurseSessionDialogs";
+import { useActiveNowTick } from "@/lib/clock";
 import type { DialogProps } from "./NurseSessionDialogs";
 import styles from "./NurseReferralDialogs.module.css";
 /**
@@ -87,7 +87,7 @@ export function SessionDocsDialog({
   const serverError = mutationError
     ? apiErrorMessage(mutationError, "Could not update the photos. Try again.")
     : null;
-  const now = useNowTick(open);
+  const now = useActiveNowTick(open);
 
   if (!open) return null;
 

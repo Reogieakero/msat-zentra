@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useNowTick } from "@/lib/clock";
 
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -84,18 +85,6 @@ function interventionSuccessMessage(action: string): { title: string; descriptio
     default:
       return { title: "Saved", description: "Your change was recorded." };
   }
-}
-
-/* Live clock — ticks every 30s; the elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. Same as the
-   alerts table. */
-function useNowTick(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
 }
 
 export function GuidanceInterventionsTable({

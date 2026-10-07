@@ -5,11 +5,8 @@ import * as React from "react";
 // Single home for the live-clock + elapsed-time vocabulary shared by every
 // queue surface (coordinator / nurse / guidance / principal). Merged from
 // the identical copies that lived in the coordinator grab-bag, the nurse
-// referrals table, and the guidance intervention row.
-//
-// File-local `useNowTick(active)` variants still exist in a few tables —
-// those pause ticking when their dialog closes and are intentionally left
-// alone. Only the shared always-on 30s clock lives here.
+// referrals table, the guidance intervention row, and the gated-clock
+// copies in the guidance/nurse tables and session dialogs.
 /* Live clock — ticks every 30s; elapsed readouts render days / hours /
    minutes only, so per-second ticks would just burn renders. */
 export function useNowTick(): number {
@@ -18,6 +15,19 @@ export function useNowTick(): number {
     const id = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(id);
   }, []);
+  return now;
+}
+
+/* Gated live clock — ticks every second while `active` (open dialogs,
+   visible countdowns) so "starts at" guards stay exact, and stops
+   otherwise. Paused callers keep their last value. */
+export function useActiveNowTick(active: boolean): number {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [active]);
   return now;
 }
 

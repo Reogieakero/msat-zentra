@@ -25,17 +25,7 @@ import type {
 import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import styles from "./GuidanceReferralDialogs.module.css";
 
-/* Live clock for the docs lock — ticks every second while open so the
-   unlock flips exactly when the session time arrives. */
-function useNowTick(active: boolean): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return now;
-}
+import { useActiveNowTick } from "@/lib/clock";
 
 /**
  * Optional documentation on one counseling session: view filed photos,
@@ -59,7 +49,7 @@ export function SessionDocsDialog({
 }) {
   const [docs, setDocs] = React.useState<CounselingSessionAttachment[]>(session.attachments ?? []);
   const [error, setError] = React.useState<string | null>(null);
-  const now = useNowTick(open);
+  const now = useActiveNowTick(open);
   const uploadMutation = useGuidanceMutation({
     mutationFn: (picked: File[]) =>
       uploadSessionAttachments(referralId, session.id, picked),

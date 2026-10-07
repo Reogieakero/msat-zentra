@@ -34,17 +34,7 @@ import styles from "./NurseAlertsTable.module.css";
 
 const PAGE_SIZE = 15;
 
-/* Live clock for the countdowns — ticks every second while any scheduled
-   session is on screen so the seconds stay exact. */
-function useNowTick(active: boolean): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return now;
-}
+import { useActiveNowTick } from "@/lib/clock";
 
 /* Scroll hint — a floating "scroll for more" pill shown only while the
    page itself is scrollable and the reader hasn't reached the bottom.
@@ -283,7 +273,7 @@ export function NurseAlertsTable({
   const hasScheduledOnPage = visibleRows.some((a) =>
     a.row.sessions.some((s) => s.status === "scheduled")
   );
-  const now = useNowTick(hasScheduledOnPage);
+  const now = useActiveNowTick(hasScheduledOnPage);
   const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, total);
   const hasActiveFilters =
