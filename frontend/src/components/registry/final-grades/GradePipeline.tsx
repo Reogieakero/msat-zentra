@@ -4,9 +4,10 @@ import * as React from "react";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./GradePipeline.module.css";
 
-// Primary-tinted ramp that follows the saved workspace palette
-// (RegistrarPaletteGate paints var(--primary) desk-wide). Progression
-// intensifies toward full primary at the record keeper's stage.
+// Shared final-grade pipeline ramp (registrar + record-keeper desks).
+// The final stage owner label differs per desk; everything else is
+// identical.
+import type { RegistryDesk } from "@/services/registry/overview.service";
 const STAGES = [
   {
     key: "locked",
@@ -46,8 +47,16 @@ interface GradePipelineProps {
   orientation?: "horizontal" | "vertical";
 }
 
-export function GradePipeline({ counts, isLoading, orientation = "horizontal" }: GradePipelineProps) {
+export function GradePipeline({
+  counts,
+  isLoading,
+  orientation = "horizontal",
+  desk,
+}: GradePipelineProps & { desk: RegistryDesk }) {
   const vertical = orientation === "vertical";
+  const stages = STAGES.map((s) =>
+    s.key === "complete" ? { ...s, owner: desk === "registrar" ? "Registrar" : "Record Keeper" } : s
+  );
   return (
     <section className={assign.card} aria-labelledby="finals-pipeline">
       <span className={assign.glowClip} aria-hidden="true">
@@ -58,13 +67,13 @@ export function GradePipeline({ counts, isLoading, orientation = "horizontal" }:
           Final Grade Approval Pipeline
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Grades move from the subject teacher to the adviser; the record keeper is view-only
+          Grades move from the subject teacher to the adviser; the {desk === "registrar" ? "registrar" : "record keeper"} is view-only
           once a student&apos;s full term is adviser-approved.
         </p>
       </div>
       <div className={`${styles.track} ${vertical ? styles.trackVertical : ""} relative`}>
-        {STAGES.map((step, i) => {
-          const isLast = i === STAGES.length - 1;
+        {stages.map((step, i) => {
+          const isLast = i === stages.length - 1;
           const count = counts[step.key];
           return (
             <React.Fragment key={step.key}>

@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./final-grades.module.css";
-import { GradePipeline } from "./GradePipeline";
+import { GradePipeline } from "@/components/registry/final-grades/GradePipeline";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface SubjectRow {
@@ -109,6 +109,7 @@ export default function FinalGradeApprovalsPage() {
     <section className={styles.page}>
       <div className={styles.stack}>
         <GradePipeline
+          desk="registrar"
           counts={{
             locked: data?.locked,
             adviserApproved: data?.adviserApproved,
