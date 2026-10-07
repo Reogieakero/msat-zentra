@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { AttendanceCalendar } from "./components/AttendanceCalendar";
-import { fetchStudentAttendance, type StudentAttendance } from "./components/attendance-data";
+import { fetchStudentAttendance } from "@/services/teacher/adviseeAttendance.service";
+import type { StudentAttendance } from "@/services/teacher/adviseeAttendance.types";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/attendance.module.css";
 

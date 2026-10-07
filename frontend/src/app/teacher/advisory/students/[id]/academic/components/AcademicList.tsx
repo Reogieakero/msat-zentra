@@ -12,13 +12,13 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { humanize } from "@/services/teacher/adviseeAcademic.service";
 import {
   VERSION_LABELS,
-  humanize,
   type AcademicGrade,
   type AcademicSummary,
   type GradeVersion,
-} from "./academic-data";
+} from "@/services/teacher/adviseeAcademic.types";
 import { AcademicInsights } from "./AcademicInsights";
 import styles from "./AcademicList.module.css";
 

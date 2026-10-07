@@ -9,7 +9,7 @@ import type {
   AttendanceDay,
   AttendanceSummary,
   SubjectAttendanceSummary,
-} from "./attendance-data";
+} from "@/services/teacher/adviseeAttendance.types";
 import styles from "./AttendanceInsights.module.css";
 
 const SLICES = [

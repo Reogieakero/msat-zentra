@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageSquareText } from "lucide-react";
-import type { AcademicGrade, AcademicSummary, GradeVersion } from "./academic-data";
+import type { AcademicGrade, AcademicSummary, GradeVersion } from "@/services/teacher/adviseeAcademic.types";
 import styles from "./AcademicInsights.module.css";
 
 const PASS_MARK = 75;

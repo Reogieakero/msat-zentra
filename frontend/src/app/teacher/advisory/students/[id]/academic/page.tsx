@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { AcademicList } from "./components/AcademicList";
-import { fetchStudentAcademic, type StudentAcademic } from "./components/academic-data";
+import { fetchStudentAcademic } from "@/services/teacher/adviseeAcademic.service";
+import type { StudentAcademic } from "@/services/teacher/adviseeAcademic.types";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/academic.module.css";
 

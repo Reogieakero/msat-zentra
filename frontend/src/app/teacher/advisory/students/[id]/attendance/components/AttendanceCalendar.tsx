@@ -5,13 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  humanize,
-  type AttendanceDay,
-  type AttendanceSummary,
-  type SubjectAttendanceSummary,
-  type SubjectMark,
-} from "./attendance-data";
+import { humanize } from "@/services/teacher/adviseeAttendance.service";
+import type {
+  AttendanceDay,
+  AttendanceSummary,
+  SubjectAttendanceSummary,
+  SubjectMark,
+} from "@/services/teacher/adviseeAttendance.types";
 import { AttendanceInsights } from "./AttendanceInsights";
 import styles from "./AttendanceCalendar.module.css";
 
