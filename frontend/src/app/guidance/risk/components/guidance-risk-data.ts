@@ -2,10 +2,8 @@ import {
   fetchGuidanceAlerts,
   type GuidanceAlertItem,
 } from "../../alerts/components/guidance-alerts-data";
-import {
-  fetchGuidanceOverview,
-  type GuidanceOverviewData,
-} from "../../overview/components/guidance-overview-data";
+import { fetchGuidanceOverview } from "@/services/guidance/overview.service";
+import type { GuidanceOverviewData } from "@/services/guidance/overview.types";
 
 export type { GuidanceOverviewData };
 

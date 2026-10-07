@@ -9,10 +9,8 @@ import { GuidanceOverviewKpis } from "./components/guidance-overview-kpis";
 import { GuidanceOverviewRiskCharts } from "./components/guidance-overview-risk-charts";
 import { GuidanceOverviewCaseloadCharts } from "./components/guidance-overview-caseload-charts";
 import { GuidanceOverviewGradeTable } from "./components/guidance-overview-grade-table";
-import {
-  fetchGuidanceOverview,
-  type GuidanceOverviewData,
-} from "./components/guidance-overview-data";
+import { fetchGuidanceOverview } from "@/services/guidance/overview.service";
+import type { GuidanceOverviewData } from "@/services/guidance/overview.types";
 import { useGuidanceProfileSettings } from "@/services/settings/profile-settings";
 import styles from "./components/guidance-overview.module.css";
 

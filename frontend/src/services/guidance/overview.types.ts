@@ -1,5 +1,4 @@
-import { apiClient } from "@/lib/api/client";
-
+// Dashboard shapes for the guidance overview page. Pure types only.
 export interface GuidanceKpis {
   referredToMe: number;
   pendingAdm: number;
@@ -113,14 +112,4 @@ export interface GuidanceOverviewData {
   interventionsQueue: GuidanceInterventionRow[];
   latestAlerts: GuidanceAlertRow[];
   admQueue: GuidanceAdmRow[];
-}
-
-export async function fetchGuidanceOverview(
-  signal?: AbortSignal
-): Promise<GuidanceOverviewData> {
-  const { data } = await apiClient.get<GuidanceOverviewData>(
-    "/api/guidance/overview",
-    { signal }
-  );
-  return data;
 }

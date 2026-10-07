@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { GuidanceGradeAttentionRow } from "./guidance-overview-data";
+import type { GuidanceGradeAttentionRow } from "@/services/guidance/overview.types";
 import styles from "./guidance-overview-grade-table.module.css";
 
 interface GuidanceOverviewGradeTableProps {

@@ -17,7 +17,7 @@ import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import type {
   GuidanceReferralTypeRow,
   GuidanceSectionHeatRow,
-} from "./guidance-overview-data";
+} from "@/services/guidance/overview.types";
 import styles from "./guidance-overview-caseload-charts.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {

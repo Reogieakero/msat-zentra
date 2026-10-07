@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import type { GuidanceKpis } from "./guidance-overview-data";
+import type { GuidanceKpis } from "@/services/guidance/overview.types";
 import styles from "./guidance-overview-kpis.module.css";
 
 interface GuidanceOverviewKpisProps {
