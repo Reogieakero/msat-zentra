@@ -13,11 +13,13 @@ import { FlagDetailDialog } from "./FlagDetailDialog";
 import { ResolveFlagDialog } from "./ResolveFlagDialog";
 import {
   STATUS_LABELS,
-  fetchFlags,
-  formatAge,
   type FlagStatus,
   type GradeFlagRow,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.types";
+import {
+  fetchFlags,
+  formatAge,
+} from "@/services/teacher/gradeFlags.service";
 import { initialsOfTeacher } from "./history-helpers";
 import styles from "./FlagHistory.module.css";
 

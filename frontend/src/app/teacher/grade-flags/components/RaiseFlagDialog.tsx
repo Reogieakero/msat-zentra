@@ -15,10 +15,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   REASON_LABELS,
-  raiseFlag,
   type FlagOptions,
   type FlagReason,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.types";
+import { raiseFlag } from "@/services/teacher/gradeFlags.service";
 import { sileo } from "@/components/ui/sonner";
 import styles from "./RaiseFlagDialog.module.css";
 

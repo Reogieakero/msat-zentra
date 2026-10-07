@@ -17,10 +17,12 @@ import {
 import { ArrowUp, Bot, Check, ChevronDown, History, Loader2 } from "lucide-react";
 import {
   REASON_LABELS,
+  type FlagReason,
+} from "@/services/teacher/gradeFlags.types";
+import {
   fetchFlagOptions,
   raiseFlag,
-  type FlagReason,
-} from "./grade-flags-data";
+} from "@/services/teacher/gradeFlags.service";
 import { sileo } from "@/components/ui/sonner";
 import styles from "./RaiseFlagChat.module.css";
 
