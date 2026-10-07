@@ -15,7 +15,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { apiErrorMessage } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
 import {
   friendlyWords,
   formatManilaDate,

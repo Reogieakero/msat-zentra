@@ -10,7 +10,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { fetchCoordinatorReferrals } from "@/services/coordinator/overview.service";
-import { apiErrorMessage } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
 import type {
   AdmCaseRow,
   AdmEligibility,

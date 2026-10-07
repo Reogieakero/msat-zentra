@@ -60,7 +60,8 @@ import { toast } from "@/components/ui/sonner";
 import { StatusBadge } from "@/app/teacher/overview/components/teacher-overview-advisory";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
-import { alertGuidance, apiErrorMessage, fetchInterventionStudents } from "../api";
+import { apiErrorMessage } from "@/lib/api/errors";
+import { alertGuidance, fetchInterventionStudents } from "../api";
 import styles from "./InterventionsListTable.module.css";
 
 const gradeNum = (name: string) => {

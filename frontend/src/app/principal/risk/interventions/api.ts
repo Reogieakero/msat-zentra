@@ -34,16 +34,6 @@ export async function fetchInterventionStats(): Promise<InterventionStats> {
   return data;
 }
 
-// Backend errors arrive as { error: { code, message } } — surface the
-// server's message instead of a generic failure notice.
-export function apiErrorMessage(err: unknown, fallback: string): string {
-  if (typeof err === "object" && err !== null && "response" in err) {
-    const data = (err as { response?: { data?: { error?: { message?: string } } } }).response?.data;
-    if (data?.error?.message) return data.error.message;
-  }
-  return fallback;
-}
-
 // Principal-only: nudge every active guidance counselor about an at-risk
 // student with no intervention action yet.
 export async function alertGuidance(studentId: string, note?: string): Promise<void> {

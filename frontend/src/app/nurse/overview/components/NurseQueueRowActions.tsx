@@ -25,9 +25,9 @@ import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import { AdmTrackDialog } from "@/components/adm-tracker/AdmTrackDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { NurseStartHandlingDialog } from "./NurseStartHandlingDialog";
+import { apiErrorMessage } from "@/lib/api/errors";
 import {
   addNurseFollowUpNote,
-  apiErrorMessage,
   updateNurseReferralStatus,
   type NurseQueueRow,
   type NurseReferralStatus,

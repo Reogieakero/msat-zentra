@@ -19,7 +19,7 @@ import {
   fetchCoordinatorApprovals,
   fetchCoordinatorDevices,
 } from "@/services/coordinator/overview.service";
-import { apiErrorMessage } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
 import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import {
   CoordinatorDevicesTable,

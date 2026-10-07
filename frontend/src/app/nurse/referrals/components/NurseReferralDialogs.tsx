@@ -24,8 +24,8 @@ import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/s
 import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
 import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
 import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
+import { apiErrorMessage } from "@/lib/api/errors";
 import {
-  apiErrorMessage,
   cancelClinicSession,
   clinicAttachmentError,
   completeClinicSession,

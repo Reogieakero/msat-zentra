@@ -4,15 +4,6 @@
 // outside the old grab-bag.)
 import * as React from "react";
 
-export function apiErrorMessage(err: unknown): string {
-  if (typeof err === "object" && err !== null) {
-    const data = (err as { response?: { data?: { message?: string } } }).response?.data;
-    if (data?.message) return data.message;
-    if (err instanceof Error) return err.message;
-  }
-  return "Something went wrong. Please try again.";
-}
-
 /* Live clock — ticks every 30s; elapsed readouts render days / hours /
    minutes only, so per-second ticks would just burn renders. Mirrors the
    nurse alerts queue. */

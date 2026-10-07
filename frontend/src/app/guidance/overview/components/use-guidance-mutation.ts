@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
-import { apiErrorMessage } from "../../referrals/components/guidance-referrals-data";
+import { apiErrorMessage } from "@/lib/api/errors";
 
 /**
  * Shared guidance-desk mutation helper (mirrors the nurse desk).

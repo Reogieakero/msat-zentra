@@ -15,9 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { ClinicDatePicker, ClinicTimePicker } from "./ClinicDateTimePicker";
+import { apiErrorMessage } from "@/lib/api/errors";
 import {
   acceptNurseCase,
-  apiErrorMessage,
   type NurseQueueRow,
 } from "./nurse-overview-data";
 import { useNurseMutation } from "./use-nurse-mutation";

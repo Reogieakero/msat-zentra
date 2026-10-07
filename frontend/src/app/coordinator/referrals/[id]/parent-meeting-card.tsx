@@ -15,7 +15,7 @@ import {
 import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
-import { apiErrorMessage } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
 import {
   attendeeLabel,
   formatManilaDate,

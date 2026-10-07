@@ -17,7 +17,8 @@ import {
   fetchCaseMeetings,
   fetchCoordinatorCaseDetail,
 } from "@/services/coordinator/cases.service";
-import { apiErrorMessage, useNowTick } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
+import { useNowTick } from "@/services/coordinator/utils";
 import { inviteeToAttendee, stageLabel } from "@/services/coordinator/labels";
 import type {
   AdmCaseRow,

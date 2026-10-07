@@ -16,7 +16,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
-import { apiErrorMessage } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
 import type { AdmApprovalRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-devices-issue-dialog.module.css";
 

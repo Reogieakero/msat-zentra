@@ -389,16 +389,6 @@ export async function deleteSessionAttachment(
   );
 }
 
-// Backend errors arrive as { error: { code, message } } — surface the
-// server's message instead of a generic failure notice.
-export function apiErrorMessage(err: unknown, fallback: string): string {
-  if (typeof err === "object" && err !== null && "response" in err) {
-    const data = (err as { response?: { data?: { error?: { message?: string } } } }).response?.data;
-    if (data?.error?.message) return data.error.message;
-  }
-  return fallback;
-}
-
 export async function escalateReferral(
   id: string,
   escalationReason: string,

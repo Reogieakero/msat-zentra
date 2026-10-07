@@ -27,7 +27,8 @@ import {
   friendlyWords,
   stageLabel,
 } from "@/services/coordinator/labels";
-import { apiErrorMessage, useNowTick } from "@/services/coordinator/utils";
+import { apiErrorMessage } from "@/lib/api/errors";
+import { useNowTick } from "@/services/coordinator/utils";
 import { fetchCoordinatorCaseDetail } from "@/services/coordinator/cases.service";
 import type {
   AdmCaseRow,
