@@ -16,10 +16,10 @@ import {
   DeleteSessionDialog,
   FinishSessionDialog,
   MoveSessionDialog,
-  NurseReferralFormViewModal,
   ScheduleSessionDialog,
-  SessionDocsDialog,
-} from "./NurseReferralDialogs";
+} from "./NurseSessionDialogs";
+import { NurseReferralFormViewModal } from "./NurseCaseDialogs";
+import { SessionDocsDialog } from "./SessionDocsDialog";
 import { NurseReferralEntry, type SessionDialogKind } from "./NurseReferralEntry";
 import { NurseActionMenu } from "./NurseActionMenu";
 import {
