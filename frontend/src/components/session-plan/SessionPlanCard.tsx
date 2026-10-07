@@ -66,21 +66,6 @@ function formatCountdown(targetMs: number, nowMs: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-function nextScheduled(sessions: PlanSessionItem[]): PlanSessionItem | null {
-  const actives = sessions
-    .filter((s) => s.status === "scheduled")
-    .slice()
-    .sort((a, b) => {
-      const at = new Date(a.scheduledAt).getTime();
-      const bt = new Date(b.scheduledAt).getTime();
-      if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
-      if (Number.isNaN(at)) return 1;
-      if (Number.isNaN(bt)) return -1;
-      return at - bt;
-    });
-  return actives[0] ?? null;
-}
-
 /**
  * Shared sessions card — Clinic sessions on the nurse desk, Counseling
  * plan on the guidance desk. Nurse card design: header with the live

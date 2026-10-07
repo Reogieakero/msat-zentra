@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getEnv } from "../config/env.js";
 import { AppError } from "./errors.js";
+import { logger } from "./pino.js";
 
 let client: SupabaseClient | null = null;
 
@@ -42,7 +43,7 @@ async function ensureBucketExists(bucket: string): Promise<void> {
   // is still surfaced with the bucket name.
   const { error: createError } = await c.storage.createBucket(bucket, { public: true });
   if (createError && !/already exists|duplicate/i.test(createError.message)) {
-    console.error(`[storage] auto-create bucket "${bucket}" failed:`, createError.message);
+    logger.error({ bucket, message: createError.message }, '[storage] auto-create bucket failed');
   }
 }
 
@@ -70,7 +71,7 @@ export async function uploadFile(
     // First upload in a fresh Supabase project hits this when the bucket
     // was never created in Dashboard > Storage. Auto-create once and retry
     // so session documentation doesn't 500 with "Internal server error".
-    console.warn(`[storage] bucket "${targetBucket}" not found — creating it and retrying path "${path}"`);
+    logger.warn({ bucket: targetBucket, path }, '[storage] bucket not found — creating it and retrying');
     await ensureBucketExists(targetBucket);
     ({ error } = await c.storage
       .from(targetBucket)
@@ -78,7 +79,7 @@ export async function uploadFile(
   }
 
   if (error) {
-    console.error(`[storage] upload failed (bucket="${targetBucket}" path="${path}"):`, error.message);
+    logger.error({ bucket: targetBucket, path, message: error.message }, '[storage] upload failed');
     throw new AppError(
       502,
       "STORAGE_ERROR",

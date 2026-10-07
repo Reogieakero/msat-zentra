@@ -117,7 +117,8 @@ export function useAnecdotalFlow({
   const [category, setCategory] = useState<AnecdotalCategory | null>(null);
   const [tier, setTier] = useState<AnecdotalTier | null>(null);
   const [textQuestion, setTextQuestion] = useState<TextQuestion | null>(null);
-  const [textInput, setTextInput] = useState("");
+  // Value never read — the setter is used by resetFlow only.
+  const [, setTextInput] = useState("");
   const [incident, setIncident] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");

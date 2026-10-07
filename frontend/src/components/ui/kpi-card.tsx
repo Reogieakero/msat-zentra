@@ -27,7 +27,6 @@ export function KpiCard({
   label,
   description,
   href,
-  loading = false,
   background = "none",
   moltenProps,
   gradientWavesProps,

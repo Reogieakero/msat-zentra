@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
@@ -30,7 +29,6 @@ export type ActorScope = "all" | "me";
 function FilterDropdown({
   label,
   active,
-  activeLabel,
   items,
   allLabel,
   onSelect,

@@ -117,7 +117,6 @@ export function HowItWorks() {
   }, []);
 
   const current = steps[activeIdx];
-  const Icon = current.icon;
 
   // Clicking a tab smooth-scrolls the section to that step.
   const selectTab = (i: number) => {

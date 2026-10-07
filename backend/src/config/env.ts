@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "../lib/pino.js";
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
@@ -36,7 +37,7 @@ export function getEnv(): Env {
   if (cached) return cached;
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
-    console.error("Invalid environment variables:", parsed.error.flatten().fieldErrors);
+    logger.error({ fieldErrors: parsed.error.flatten().fieldErrors }, "Invalid environment variables");
     throw new Error("Environment validation failed");
   }
   cached = parsed.data;

@@ -31,7 +31,7 @@ function getInitialFont(): FontPref {
   return "inter";
 }
 
-function applyFont(_font: FontPref) {
+function applyFont() {
   const root = document.documentElement;
   root.style.setProperty("--font-sans", "var(--font-inter)");
 }
@@ -43,13 +43,13 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const initial = getInitialFont();
     setFontState(initial);
-    applyFont(initial);
+    applyFont();
     setMounted(true);
   }, []);
 
   const setFont = React.useCallback((next: FontPref) => {
     setFontState(next);
-    applyFont(next);
+    applyFont();
     try {
       window.localStorage.setItem(FONT_STORAGE_KEY, next);
     } catch {

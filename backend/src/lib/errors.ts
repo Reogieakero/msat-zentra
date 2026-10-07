@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { logger } from "./pino.js";
 
 export class AppError extends Error {
   status: number;
@@ -71,12 +72,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       connCode === "EHOSTUNREACH" ||
       connCode === "ECONNRESET"
     ) {
-      console.error(err);
+      logger.error(err);
       return res.status(503).json({
         error: { code: "DB_UNAVAILABLE", message: "Database temporarily unavailable. Please try again." },
       });
     }
   }
-  console.error(err);
+  logger.error(err);
   return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
 }

@@ -311,7 +311,6 @@ export function AttendanceRosterTable({
   roster,
   meetupDays = [1, 2, 3, 4, 5],
   live,
-  stretchClassName,
 }: AttendanceRosterTableProps) {
   const invalidateTeacher = useTeacherInvalidate();
   // Strictly per-section: no advisory fallback. Without a resolved section
@@ -418,7 +417,6 @@ export function AttendanceRosterTable({
   const baseColumns = React.useMemo(
     () => makeBaseColumns(pick, blocksInfo, live.locked),
     // openSave reads the current lock flag; columns rebuild with it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pick, blocksInfo, live.locked],
   );
 

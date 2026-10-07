@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 import styles from "./admFormIcon.module.css";
 
-type FormKind = "REFERRAL_FORM" | "ANECDOTAL_REPORT" | "CERTIFICATION" | "MINUTES_OF_MEETING" | "HV_FORM";
-
 const FORM_META: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
   REFERRAL_FORM: { label: "Referral", color: "#d4d4d4", Icon: FileText },
   ANECDOTAL_REPORT: { label: "Anecdotal", color: "#a3a3a3", Icon: ScrollText },

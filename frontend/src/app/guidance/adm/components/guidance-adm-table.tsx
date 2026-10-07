@@ -43,11 +43,6 @@ import {
 import { GcForm03PreviewDialog } from "./GcForm03PreviewDialog";
 import styles from "./guidance-adm.module.css";
 
-function formatStatus(value: string): string {
-  const words = value.replace(/_/g, " ").toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 function formatDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return value;
@@ -57,36 +52,6 @@ function formatDate(value: string): string {
   ];
   const month = months[Number(match[2]) - 1] ?? match[2];
   return `${month} ${Number(match[3])}, ${match[1]}`;
-}
-
-function referralLabel(status: string): string {
-  switch (status) {
-    case "pending":
-      return "Waiting on coordinator";
-    case "in_progress":
-      return "Being handled";
-    case "resolved":
-      return "Resolved";
-    case "escalated":
-      return "Sent higher up";
-    case "follow_up":
-      return "Follow-up";
-    case "dismissed":
-      return "Closed";
-    default:
-      return formatStatus(status);
-  }
-}
-
-function eligibilityLabel(value: string): string {
-  switch (value) {
-    case "eligible":
-      return "Eligible";
-    case "ineligible":
-      return "Incomplete file";
-    default:
-      return "For review";
-  }
 }
 
 /* Queue-row case status: referred (needs review), endorsed, or rejected. */
@@ -104,44 +69,6 @@ function queueLatest(row: GuidanceAdmCase): { label: string; icon: "eye" | "send
   return { label: "Endorsed to ADM coordinator", icon: "send" };
 }
 
-/* Plain next step so non-technical readers know who holds the case. */
-function nextStep(row: GuidanceAdmCase): string {
-  if (row.meetingAttended === false && !row.hasHomeVisit) {
-    return "Needs a home visit";
-  }
-  switch (row.stage) {
-    case "consultation":
-      // Early ADM referrals sit at the guidance-owned consultation stage:
-      // the counselor reviews the anecdotal first, the coordinator acts after.
-      if (row.reviewed !== true) return "Waiting on your review";
-      return row.referralStatus === "dismissed"
-        ? "Rejected from ADM"
-        : "Reviewed — with coordinator for parent meeting";
-    case "meeting_parents":
-      return row.meetingAttended ? "Meeting done — with coordinator" : "Waiting on parent meeting";
-    case "home_visitation":
-      return "Home visit in progress";
-    case "certification":
-      return "Coordinator building the file";
-    case "principal_approval":
-      return "Waiting on principal signature";
-    case "enrollment_monitoring":
-      return "Student on modules";
-    case "completion":
-      return "Done";
-    default:
-      return formatStatus(row.stage);
-  }
-}
-
-function stageVariant(stage: string): "amber" | "destructive" | "secondary" | "outline" | "default" {
-  if (stage === "consultation" || stage === "meeting_parents") return "amber";
-  if (stage === "home_visitation") return "destructive";
-  if (stage === "completion") return "secondary";
-  if (stage === "principal_approval") return "default";
-  return "outline";
-}
-
 interface GuidanceAdmTableProps {
   summary: GuidanceAdmSummary;
   /* Latest ADM cases referred to guidance — referred or endorsed. */
@@ -149,7 +76,6 @@ interface GuidanceAdmTableProps {
 }
 
 export function GuidanceAdmTable({
-  summary,
   reviewQueue,
 }: GuidanceAdmTableProps) {
   const invalidateGuidance = useGuidanceInvalidate();

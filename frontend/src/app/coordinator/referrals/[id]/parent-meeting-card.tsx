@@ -172,7 +172,6 @@ export function ParentMeetingCard({
     );
     return (m.invitees ?? []).map((u) => u.id).filter((id) => recorded.has(id));
   });
-  const [docPending, setDocPending] = React.useState(false);
   const [removingDocId, setRemovingDocId] = React.useState<string | null>(null);
   const [rebookDate, setRebookDate] = React.useState("");
   const [rebookTime, setRebookTime] = React.useState("");
@@ -289,12 +288,6 @@ export function ParentMeetingCard({
 
   function removeAttendee(index: number) {
     setAttendees((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function toggleCheckedInvitee(id: string) {
-    setCheckedInvitees((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
   }
 
   async function uploadPickedDocs(): Promise<{ uploaded: number; failed: boolean }> {

@@ -246,7 +246,7 @@ export default function TeacherAdvisoryAttendancePage() {
       entry.slots.push({ day: s.day, period: s.period, status: s.status });
     }
     return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- grouped purely from slots data
+    // grouped purely from slots data
   }, [mySlotsQuery.data]);
 
   const [pairKey, setPairKey] = useState<string | undefined>(undefined);

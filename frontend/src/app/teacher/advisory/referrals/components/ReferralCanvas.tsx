@@ -201,8 +201,6 @@ const ADM_PIPELINE_META: {
   },
 ];
 
-const ADM_META_BY_STAGE = new Map(ADM_PIPELINE_META.map((s) => [s.stage, s]));
-
 const ELIGIBILITY_LABELS: Record<string, string> = {
   pending: "For review",
   eligible: "Eligible",

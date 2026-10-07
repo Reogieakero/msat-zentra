@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, Loader2, Printer } from "lucide-react";
@@ -39,7 +38,6 @@ import {
   updateNurseReferralStatus,
   uploadClinicAttachments,
   type ClinicAttachment,
-  type NurseAdmReferralForm,
   type NurseQueueRow,
   type NurseSessionItem,
 } from "../../overview/components/nurse-overview-data";

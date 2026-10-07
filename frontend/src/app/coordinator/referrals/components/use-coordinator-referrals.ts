@@ -23,7 +23,6 @@ import {
   type AdmCaseRow,
   type AdmEligibility,
   type AdmMeeting,
-  type AdmMeetingAttachment,
   type AdmMeetingInvitee,
 } from "../../components/coordinator-data";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";

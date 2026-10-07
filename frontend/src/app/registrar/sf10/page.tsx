@@ -108,7 +108,7 @@ export default function RegistrarSf10Page() {
   // Manual uploads are paused until learner matching via OCR lands —
   // the backend requires a student profile the file picker can no longer
   // provide, so we acknowledge instead of misattributing the file.
-  const handleUpload = async (_file: File) => {
+  const handleUpload = async () => {
     toast.info({
       title: "Upload paused",
       description: "Learner matching via OCR lands in a future build.",
