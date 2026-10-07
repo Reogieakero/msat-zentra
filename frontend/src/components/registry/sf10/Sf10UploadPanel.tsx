@@ -5,7 +5,9 @@ import { UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "../sf10.module.css";
+// Shared SF10 upload panel (registrar + record-keeper desks — the two
+// copies were byte-identical). Styles come from the merged registry CSS.
+import styles from "./sf10.module.css";
 
 export function Sf10UploadPanel({
   onUpload,

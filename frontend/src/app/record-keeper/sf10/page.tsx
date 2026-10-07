@@ -23,9 +23,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { Sf10UploadPanel } from "./components/Sf10UploadPanel";
+import { Sf10UploadPanel } from "@/components/registry/sf10/Sf10UploadPanel";
 import { Sf10DetailSheet } from "./components/Sf10DetailSheet";
-import { StatusBadge, formatRelativeTime } from "./components/shared";
+import { StatusBadge, formatRelativeTime } from "@/components/registry/sf10/shared";
 import { toast } from "@/components/ui/sonner";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { fetchSf10Records } from "@/services/registry/sf10.service";
@@ -36,7 +36,7 @@ import {
   type Sf10Status,
 } from "@/services/registry/sf10.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "./sf10.module.css";
+import styles from "@/components/registry/sf10/sf10.module.css";
 
 const PAGE_SIZE = 10;
 const STATUS_FILTERS: { key: Sf10Status | "all"; label: string }[] = [
