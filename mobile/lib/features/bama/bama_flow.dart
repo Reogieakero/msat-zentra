@@ -155,3 +155,64 @@ void resetFlowTo(FlowSnapshot f, String step) {
   f.askedTier = at >= 3;
   f.askedDatetime = at >= 4;
 }
+
+/// Build the POST /api/anecdotal body (web-identical).
+/// [observationDate] is YYYY-MM-DD, [observationTime] HH:MM or empty.
+/// The datetime is normalized to UTC with a `Z` suffix — the backend's
+/// `z.string().datetime()` requires it, and Dart's local `toIso8601String`
+/// omits any zone designator (which fails validation for every filing).
+Map<String, dynamic> buildAnecdotalBody({
+  required String studentId,
+  required String sectionId,
+  required String termId,
+  required String observationDate,
+  required String observationTime,
+  required String incident,
+  required String location,
+  required String notes,
+  required String classPerformance,
+  required String attendanceSummary,
+  required String category,
+  required String tier,
+}) {
+  final note = incident.trim();
+  final localIso = observationTime.length >= 5
+      ? '$observationDate' 'T' '$observationTime:00'
+      : '${observationDate}T00:00:00';
+  final obsDateTime = DateTime.parse(localIso).toUtc().toIso8601String();
+  return <String, dynamic>{
+    'studentId': studentId,
+    'sectionId': sectionId,
+    'termId': termId,
+    'observationDatetime': obsDateTime,
+    'descriptionOfIncident': note,
+    'descriptionOfLocation': location.isEmpty ? 'Classroom' : location,
+    'category': category,
+    'confidentialityLevel': tier,
+    if (notes.trim().isNotEmpty || tier == 'confidential')
+      'notesRecommendationsActions': notes.trim().isEmpty ? note : notes.trim(),
+    if (classPerformance.trim().isNotEmpty) 'classPerformance': classPerformance.trim(),
+    if (attendanceSummary.trim().isNotEmpty) 'attendanceSummary': attendanceSummary.trim(),
+  };
+}
+
+/// Format a backend error envelope for display: code + message + per-field
+/// detail, so validation failures name their field.
+String formatApiFailure(Object? data, {required String fallback}) {
+  if (data is Map && data['error'] is Map) {
+    final err = Map<String, dynamic>.from(data['error'] as Map);
+    final code = err['code']?.toString();
+    final message = err['message']?.toString() ?? fallback;
+    final fields = err['fields'];
+    var detail = '';
+    if (fields is Map && fields.isNotEmpty) {
+      detail = fields.entries.map((e) {
+        final msgs = e.value is List ? (e.value as List).join(', ') : e.value.toString();
+        return '${e.key}: $msgs';
+      }).join('; ');
+    }
+    final head = code == null ? message : '[$code] $message';
+    return detail.isEmpty ? head : '$head ($detail)';
+  }
+  return fallback;
+}

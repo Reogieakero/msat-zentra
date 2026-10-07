@@ -55,4 +55,38 @@ void main() {
     expect(f.studentId, 's1');
     expect(f.category, 'academic');
   });
+
+  test('buildAnecdotalBody emits UTC Z-suffixed datetime', () {
+    final withTime = buildAnecdotalBody(
+      studentId: 's1', sectionId: 'sec', termId: 'term',
+      observationDate: '2026-10-07', observationTime: '08:00',
+      incident: 'note', location: '', notes: '', classPerformance: '',
+      attendanceSummary: '', category: 'behavioral', tier: 'restricted',
+    );
+    final dt = withTime['observationDatetime'] as String;
+    expect(dt.endsWith('Z'), isTrue);
+    expect(DateTime.parse(dt).toIso8601String(), dt);
+    expect(withTime['descriptionOfLocation'], 'Classroom');
+    expect(withTime.containsKey('notesRecommendationsActions'), isFalse);
+
+    final noTime = buildAnecdotalBody(
+      studentId: 's1', sectionId: 'sec', termId: 'term',
+      observationDate: '2026-10-07', observationTime: '',
+      incident: 'note', location: 'Gate', notes: '', classPerformance: '',
+      attendanceSummary: '', category: 'bullying', tier: 'confidential',
+    );
+    expect((noTime['observationDatetime'] as String).endsWith('Z'), isTrue);
+    // Confidential tier carries the incident as notes fallback (web parity).
+    expect(noTime['notesRecommendationsActions'], 'note');
+  });
+
+  test('formatApiFailure surfaces code and field detail', () {
+    expect(
+      formatApiFailure({'error': {'code': 'VALIDATION_ERROR', 'message': 'Invalid input', 'fields': {'observationDatetime': ['Invalid datetime']}}}, fallback: 'fb'),
+      '[VALIDATION_ERROR] Invalid input (observationDatetime: Invalid datetime)',
+    );
+    expect(formatApiFailure({'error': {'message': 'Nope'}}, fallback: 'fb'), 'Nope');
+    expect(formatApiFailure('garbage', fallback: 'fb'), 'fb');
+    expect(formatApiFailure(null, fallback: 'fb'), 'fb');
+  });
 }

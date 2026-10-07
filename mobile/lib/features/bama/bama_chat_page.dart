@@ -558,23 +558,21 @@ class _State extends ConsumerState<BamaChatPage> {
       setState(() => _flowError = 'Describe the incident first.');
       return;
     }
-    final obsDateTime = f.observationTime.length >= 5
-        ? DateTime.parse('${f.observationDate}T${f.observationTime}:00').toIso8601String()
-        : DateTime.parse('${f.observationDate}T00:00:00').toIso8601String();
     final note = f.incident.trim();
-    final body = <String, dynamic>{
-      'studentId': f.studentId,
-      'sectionId': cls['sectionId'],
-      'termId': cls['termId'],
-      'observationDatetime': obsDateTime,
-      'descriptionOfIncident': note,
-      'descriptionOfLocation': f.location.isEmpty ? 'Classroom' : f.location,
-      'category': f.category,
-      'confidentialityLevel': f.tier ?? 'restricted',
-      if (f.notes.trim().isNotEmpty || f.tier == 'confidential') 'notesRecommendationsActions': f.notes.trim().isEmpty ? note : f.notes.trim(),
-      if (f.classPerf.trim().isNotEmpty) 'classPerformance': f.classPerf.trim(),
-      if (f.attendance.trim().isNotEmpty) 'attendanceSummary': f.attendance.trim(),
-    };
+    final body = buildAnecdotalBody(
+      studentId: f.studentId,
+      sectionId: cls['sectionId']?.toString() ?? '',
+      termId: cls['termId']?.toString() ?? '',
+      observationDate: f.observationDate!,
+      observationTime: f.observationTime,
+      incident: note,
+      location: f.location,
+      notes: f.notes,
+      classPerformance: f.classPerf,
+      attendanceSummary: f.attendance,
+      category: f.category!,
+      tier: f.tier ?? 'restricted',
+    );
     final conn = await Connectivity().checkConnectivity();
     if (conn.contains(ConnectivityResult.none)) {
       await ref.read(outboxProvider).enqueue(method: 'POST', path: '/api/anecdotal', body: body);
@@ -599,7 +597,7 @@ class _State extends ConsumerState<BamaChatPage> {
       });
     });
     try {
-      await ref.read(apiClientProvider).dio.post('/api/anecdotal', data: body);
+      final res = await ref.read(apiClientProvider).dio.post('/api/anecdotal', data: body);
       _progressTimer?.cancel();
       if (!mounted) return;
       setState(() {
@@ -607,7 +605,10 @@ class _State extends ConsumerState<BamaChatPage> {
         _fileStage = 'Done — GCForm-01 ready.';
       });
       final categoryLabel = anecdotalCategoryLabels[f.category] ?? '';
-      final detail = _previewOf(f)..['recordFiled'] = true;
+      final recordId = res.data is Map ? (res.data as Map)['id']?.toString() : null;
+      final detail = _previewOf(f)
+        ..['recordFiled'] = true
+        ..['recordId'] = recordId;
       final name = student['name']?.toString() ?? '';
       active.messages.add(BamaMessage(id: _mid(), fromUser: true, text: '$categoryLabel — $note', at: DateTime.now().millisecondsSinceEpoch, detail: detail));
       active.messages.add(BamaMessage(id: _mid(), fromUser: false, text: 'Anecdotal record filed.', at: DateTime.now().millisecondsSinceEpoch, detail: detail));
@@ -623,8 +624,7 @@ class _State extends ConsumerState<BamaChatPage> {
       ref.invalidate(referableProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anecdotal record filed · $name · $categoryLabel.')));
     } on DioException catch (e) {
-      final d = e.response?.data;
-      final msg = d is Map && d['error'] is Map ? d['error']['message']?.toString() ?? 'Could not file this record.' : 'Could not file this record.';
+      final msg = formatApiFailure(e.response?.data, fallback: 'Could not file this record.');
       if (!mounted) return;
       setState(() {
         _flowError = msg;
