@@ -130,32 +130,30 @@ export async function completeSession(
   await writeAudit({ userId: ctx.userId, actionType: "session_completed", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session completed", oldValue: { status: session.status }, newValue: { status: "completed" } });
   if (next) {
     await writeAudit({ userId: ctx.userId, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: next.id, reason: "Follow-up session booked", oldValue: null, newValue: { sessionType: next.sessionType, scheduledAt: next.scheduledAt } });
-    // Auto-close: the final session is done, no next one was booked, and the
-    // plan was already reviewed — the session notes become the closing record.
-    // NOTE (existing behavior preserved): this branch sits inside
-    // `if (followUpSession)`, so `!followUpSession` below is always false
-    // and auto-close never fires — likely a latent bug (flagged in the
-    // refactor report; not changed here).
-    if (!input.followUpSession && row.approvalStatus !== "pending") {
-      const remaining = await prisma.counselingSession.count({
-        where: { interventionId: row.id, status: "scheduled" },
+  }
+  // Auto-close: the final session is done, no next one was booked, and the
+  // plan was already reviewed — the session notes become the closing record.
+  // `next` is set if and only if a follow-up was booked above, so reaching
+  // here with `next === null` means no follow-up exists.
+  if (!next && row.approvalStatus !== "pending") {
+    const remaining = await prisma.counselingSession.count({
+      where: { interventionId: row.id, status: "scheduled" },
+    });
+    if (remaining === 0) {
+      const closedOn = (updated.completedAt ?? new Date()).toISOString().slice(0, 10);
+      const record = [
+        `Automatically closed after the final session on ${closedOn}.`,
+        updated.outcome ? `Outcome: ${updated.outcome}` : "",
+        updated.sessionNotes ? `Last session notes: ${updated.sessionNotes}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .slice(0, 2000);
+      await prisma.intervention.update({
+        where: { id: row.id },
+        data: { outcomeStatus: "resolved", outcomeNotes: record },
       });
-      if (remaining === 0) {
-        const closedOn = (updated.completedAt ?? new Date()).toISOString().slice(0, 10);
-        const record = [
-          `Automatically closed after the final session on ${closedOn}.`,
-          updated.outcome ? `Outcome: ${updated.outcome}` : "",
-          updated.sessionNotes ? `Last session notes: ${updated.sessionNotes}` : "",
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .slice(0, 2000);
-        await prisma.intervention.update({
-          where: { id: row.id },
-          data: { outcomeStatus: "resolved", outcomeNotes: record },
-        });
-        await writeAudit({ userId: ctx.userId, actionType: "intervention_outcome", sourceTable: "interventions", sourceId: row.id, reason: "Auto-closed: final session done, no follow-up booked", oldValue: { outcomeStatus: row.outcomeStatus }, newValue: { outcomeStatus: "resolved" } });
-      }
+      await writeAudit({ userId: ctx.userId, actionType: "intervention_outcome", sourceTable: "interventions", sourceId: row.id, reason: "Auto-closed: final session done, no follow-up booked", oldValue: { outcomeStatus: row.outcomeStatus }, newValue: { outcomeStatus: "resolved" } });
     }
   }
   const doneWhen = formatWhen(updated.scheduledAt);
