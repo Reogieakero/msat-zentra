@@ -35,9 +35,11 @@ import {
   fetchStudentList,
   studentListKey,
   useStudentList,
-  type ClassPick,
-  type StudentListRow,
-} from "./components/student-list-data";
+} from "@/services/teacher/studentList.service";
+import type {
+  ClassPick,
+  StudentListRow,
+} from "@/services/teacher/studentList.types";
 import styles from "./components/student-list.module.css";
 
 function attendanceVariant(pct: number | null): "green" | "amber" | "red" | "outline" {
