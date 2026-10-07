@@ -32,11 +32,13 @@
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.3.0",
     "pg": "^8.23.0",
     "pino": "^9.6.0",
+    "pino-http": "^11.0.0",
     "pino-pretty": "^13.0.0",
     "zod": "^3.24.1"
   },

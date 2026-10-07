@@ -1,8 +1,12 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import { pinoHttp } from "pino-http";
 import { getEnv } from "./config/env.js";
 import { errorHandler, notFound } from "./lib/errors.js";
+import { logger } from "./lib/pino.js";
+import { prisma } from "./lib/prisma.js";
+import { authLimiter } from "./middleware/rateLimit.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import { attachTermScope } from "./middleware/termScope.js";
@@ -37,6 +41,15 @@ export function createApp() {
   const app = express();
   app.use(helmet());
   app.use(cors({ origin: [env.WEB_ORIGIN, env.MOBILE_ORIGIN], credentials: true }));
+  if (env.NODE_ENV !== "test") {
+    app.use(
+      pinoHttp({
+        logger,
+        // Health probes hit every few seconds — keep them out of the log.
+        autoLogging: { ignore: (req) => req.url === "/health" },
+      })
+    );
+  }
   // Authenticated API responses carry user-/role-scoped (often sensitive)
   // data. Never allow shared/public HTTP caching of them; freshness is
   // managed by the database + client query invalidation instead.
@@ -46,8 +59,18 @@ export function createApp() {
   });
   app.use(express.json({ limit: "1mb" }));
 
-  app.get("/health", (_req, res) => res.json({ status: "ok" }));
-  app.use("/api/auth", authRoutes);
+  // Liveness: process is up. Readiness: DB reachable — 503 when not, so
+  // orchestrators/monitors stop routing before queries start failing.
+  app.get("/health", async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: "ok" });
+    } catch {
+      res.status(503).json({ status: "degraded" });
+    }
+  });
+  // Brute-force guard for credential endpoints only.
+  app.use("/api/auth", authLimiter, authRoutes);
   // Global active School Year + Term (Login → select → session scope).
   // Resolves headers/query into req.termScope for every data route below.
   app.use("/api", attachTermScope);

@@ -64,3 +64,7 @@ function createClient(): ExtendedPrisma {
 export const prisma = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export function disconnectPrisma(): Promise<void> {
+  return (prisma as unknown as PrismaClient).$disconnect();
+}
