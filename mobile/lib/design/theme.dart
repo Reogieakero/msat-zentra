@@ -5,8 +5,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'tokens.dart';
+import 'theme_mode.dart';
 
-ThemeData zLightTheme() {
+ThemeData zLightTheme({Color? primaryOverride, Color? secondaryOverride}) {
   final base = ThemeData.light(useMaterial3: true);
   final text = GoogleFonts.interTextTheme(base.textTheme);
   final scheme = ColorScheme.light(
@@ -14,10 +15,10 @@ ThemeData zLightTheme() {
     onSurface: ZLight.foreground,
     surfaceContainerLow: ZLight.muted,
     onSurfaceVariant: ZLight.mutedFg,
-    primary: ZLight.primary,
-    onPrimary: ZLight.primaryFg,
-    secondary: ZLight.secondary,
-    onSecondary: ZLight.foreground,
+    primary: primaryOverride ?? ZLight.primary,
+    onPrimary: primaryOverride == null ? ZLight.primaryFg : contrastForeground(primaryOverride),
+    secondary: secondaryOverride ?? ZLight.secondary,
+    onSecondary: secondaryOverride == null ? ZLight.foreground : contrastForeground(secondaryOverride),
     outline: ZLight.border,
     outlineVariant: ZLight.border,
     error: ZTokens.destructiveRed,
@@ -76,7 +77,7 @@ ThemeData zLightTheme() {
   );
 }
 
-ThemeData zDarkTheme() {
+ThemeData zDarkTheme({Color? primaryOverride, Color? secondaryOverride}) {
   final base = ThemeData.dark(useMaterial3: true);
   final text = GoogleFonts.interTextTheme(base.textTheme);
   final scheme = ColorScheme.dark(
@@ -84,10 +85,10 @@ ThemeData zDarkTheme() {
     onSurface: ZDark.foreground,
     surfaceContainerLow: ZDark.muted,
     onSurfaceVariant: ZDark.mutedFg,
-    primary: ZDark.primary,
-    onPrimary: ZDark.primaryFg,
-    secondary: ZDark.secondary,
-    onSecondary: ZDark.foreground,
+    primary: primaryOverride ?? ZDark.primary,
+    onPrimary: primaryOverride == null ? ZDark.primaryFg : contrastForeground(primaryOverride),
+    secondary: secondaryOverride ?? ZDark.secondary,
+    onSecondary: secondaryOverride == null ? ZDark.foreground : contrastForeground(secondaryOverride),
     outline: ZDark.border,
     outlineVariant: ZDark.border,
     error: ZTokens.destructiveRed,

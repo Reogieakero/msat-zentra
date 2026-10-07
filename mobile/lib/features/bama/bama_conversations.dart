@@ -40,7 +40,7 @@ class BamaQuestion {
   Map<String, dynamic> toJson() => {'type': type, 'options': [for (final o in options) o.toJson()], 'locked': locked};
   factory BamaQuestion.fromJson(Map<String, dynamic> j) => BamaQuestion(
         type: j['type']?.toString() ?? '',
-        options: [for (final o in (j['options'] as List? ?? [])) BamaQuestionOption.fromJson(o as Map<String, dynamic>)],
+        options: [for (final o in (j['options'] as List? ?? [])) BamaQuestionOption.fromJson(Map<String, dynamic>.from(o as Map))],
         locked: (j['locked'] ?? false) as bool,
       );
 }
@@ -94,7 +94,7 @@ class BamaConversation {
         id: j['id']?.toString() ?? '',
         type: j['type']?.toString() ?? 'anecdotal',
         title: j['title']?.toString() ?? 'New chat',
-        messages: [for (final m in (j['messages'] as List? ?? [])) BamaMessage.fromJson(m as Map<String, dynamic>)],
+        messages: [for (final m in (j['messages'] as List? ?? [])) BamaMessage.fromJson(Map<String, dynamic>.from(m as Map))],
         updatedAt: (j['updatedAt'] ?? 0) as int,
         filed: (j['filed'] ?? false) as bool,
       );

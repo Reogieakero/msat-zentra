@@ -107,6 +107,21 @@ final schoolYearsProvider = FutureProvider<List<SchoolYear>>((ref) async {
   }
 });
 
+// Secondary overview: assessments + standings for the Gradebook dashboard.
+// GET /api/teacher/overview?scope=secondary — mirrors web
+// useTeacherOverviewSecondary (teacher/grading/page.tsx).
+final overviewSecondaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  final term = ref.watch(termProvider);
+  if (term == null) throw ApiException('NO_TERM', 'Select a school year and term first.');
+  try {
+    final res = await api.dio.get('/api/teacher/overview', queryParameters: {'scope': 'secondary'});
+    return Map<String, dynamic>.from(res.data as Map);
+  } on DioException catch (e) {
+    throw api.toApiException(e);
+  }
+});
+
 // Overview decides Adviser vs Subject Teacher home + first-time gates.
 // GET /api/teacher/overview?scope=critical (light) — see teacher.routes.ts.
 final overviewProvider = FutureProvider<Map<String, dynamic>>((ref) async {

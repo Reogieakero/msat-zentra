@@ -1,22 +1,29 @@
 // Zentra app shell — drawer-routed (no bottom nav).
-// Top: [≡] Zentra + term badge (left) | [🔔][avatar] (right).
-// ≡ opens left drawer (BranchedMenu port) with real go_router destinations.
-// Branding: left-aligned wordmark after ≡ (matches web topbar brand left).
+// Header: [≡] logo + Zentra (left) | [🔔][avatar] (right). No term text.
+// Drawer: brand → term switcher dropdown → Advisory → Workspace.
+// Avatar popup is the system menu: Settings / Appearance / Logout.
+// Branding: left-aligned logo + wordmark (matches web topbar brand left).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/notifications.dart';
 import '../core/session.dart';
+import '../core/sync_outbox.dart';
+import '../features/adviser/adm_cases_page.dart' show admCasesProvider;
+import '../features/adviser/advisory_list_page.dart' show advisoryProvider, archivedAdvisoryProvider;
 import '../features/home/role_home.dart' show AdviserRoute, WorkspaceRoute;
+import '../features/settings/settings_data.dart' show teacherProfileProvider;
+import '../shared/models.dart' show Term;
+import '../shared/widgets.dart';
+import 'brand.dart';
 
 class ZentraShell extends ConsumerWidget {
-  final String? termLabel;
   final Widget child;
   final String selectedPath;
   const ZentraShell({
     super.key,
-    this.termLabel,
     required this.child,
     required this.selectedPath,
   });
@@ -24,7 +31,7 @@ class ZentraShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: ZentraAppBar(termLabel: termLabel),
+      appBar: const ZentraAppBar(),
       drawer: ZentraDrawer(selectedPath: selectedPath),
       body: child,
     );
@@ -32,8 +39,7 @@ class ZentraShell extends ConsumerWidget {
 }
 
 class ZentraAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  final String? termLabel;
-  const ZentraAppBar({super.key, this.termLabel});
+  const ZentraAppBar({super.key});
 
   @override
   Size get preferredSize => const Size.fromHeight(56);
@@ -49,25 +55,27 @@ class ZentraAppBar extends ConsumerWidget implements PreferredSizeWidget {
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
       ),
-      // Left-aligned wordmark + term badge (never centered — keeps room for
-      // back chevrons on detail pages and matches web topbar brand left).
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // Left-aligned logo + wordmark only — scope lives in the drawer
+      // switcher (never centered, keeps room for back chevrons on detail).
+      title: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Zentra', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
-          if (termLabel != null)
-            Text(termLabel!, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+          ZLogo(size: 28),
+          SizedBox(width: 10),
+          Text('Zentra', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
         ],
       ),
       actions: [
-        IconButton(icon: const Badge(label: Text(''), child: Icon(Icons.notifications_outlined)), tooltip: 'Notifications', onPressed: () => showZNotifications(context)),
+        _BellButton(),
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: () => showZAccount(context, ref),
-            child: const CircleAvatar(radius: 16, child: Icon(Icons.person_outline, size: 18)),
+            child: TeacherAvatar(
+              photoUrl: ref.watch(teacherProfileProvider).maybeWhen(data: (p) => p.photoUrl, orElse: () => null),
+              radius: 16,
+            ),
           ),
         ),
       ],
@@ -93,8 +101,14 @@ class ZentraDrawer extends ConsumerWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(right: Radius.circular(6))),
       child: SafeArea(
         child: ListView(padding: const EdgeInsets.all(12), children: [
-          const ListTile(title: Text('Zentra', style: TextStyle(fontWeight: FontWeight.w700)), subtitle: Text('Staff workspace')),
-          const Divider(),
+          const ListTile(
+            leading: ZLogo(size: 40, radius: 8),
+            title: Text('Zentra', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('Staff workspace'),
+          ),
+          const SizedBox(height: 8),
+          const ZTermSwitcher(),
+          const SizedBox(height: 4),
           if (isAdviser) ...[
             const _DrawerHeader('Advisory'),
             _item(context, Icons.group_outlined, 'Advisory list', '/adviser/advisory', _selected('/adviser/advisory')),
@@ -106,20 +120,8 @@ class ZentraDrawer extends ConsumerWidget {
           ],
           const _DrawerHeader('Workspace'),
           _item(context, Icons.class_outlined, 'Class', '/workspace/classes', _selected('/workspace/classes')),
+          _item(context, Icons.grade_outlined, 'Gradebook', '/workspace/gradebook', _selected('/workspace/gradebook')),
           _item(context, Icons.fact_check_outlined, 'Attendance', '/workspace/attendance', _selected('/workspace/attendance')),
-          const _DrawerHeader('System'),
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.swap_horiz, size: 20),
-            title: const Text('Switch term', style: TextStyle(fontSize: 13)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-            onTap: () async {
-              Navigator.pop(context);
-              await ref.read(termProvider.notifier).clear();
-              if (context.mounted) context.go('/term');
-            },
-          ),
-          _item(context, Icons.settings_outlined, 'Settings', '/teacher/more', _selected('/teacher/more')),
         ]),
       ),
     );
@@ -142,6 +144,106 @@ class ZentraDrawer extends ConsumerWidget {
   }
 }
 
+/// Active School Year + Term dropdown (web ActiveTermBadge pattern).
+/// Displays scope, opens the picker sheet, and refetches on switch.
+class ZTermSwitcher extends ConsumerWidget {
+  const ZTermSwitcher({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final term = ref.watch(termProvider);
+    final pending = ref.watch(outboxProvider).pendingCount;
+    final label = term == null ? 'Select term' : '${term.schoolYearName} · Term ${term.termNumber}${pending > 0 ? ' · $pending queued' : ''}';
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => showZTermPicker(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(children: [
+            Icon(Icons.calendar_month_outlined, size: 20, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(label,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            Icon(Icons.keyboard_arrow_down, size: 20, color: theme.colorScheme.onSurfaceVariant),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+void showZTermPicker(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(6))),
+    builder: (ctx) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      builder: (_, scroll) {
+        final years = ref.watch(schoolYearsProvider);
+        final current = ref.watch(termProvider);
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Select term', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text('Choose which term your workspace will display.', style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: 12),
+            Expanded(
+              child: years.when(
+                loading: () => const Center(child: Text('Loading…')),
+                error: (e, _) => Center(child: Text(e.toString())),
+                data: (list) {
+                  if (list.isEmpty) return const Center(child: Text('No school years found. Ask the Principal to create one.'));
+                  return ListView.builder(
+                    controller: scroll,
+                    itemCount: list.expand((sy) => sy.terms.map((t) => (sy, t))).length,
+                    itemBuilder: (context, i) {
+                      final pairs = list.expand((sy) => sy.terms.map((t) => (sy, t))).toList();
+                      final (sy, t) = pairs[i];
+                      final isCurrent = current?.id == t.id;
+                      final isDefault = sy.isActive && t.termNumber == 1;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          dense: true,
+                          title: Text('${sy.name} — Term ${t.termNumber}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          subtitle: sy.isActive ? const Text('Active school year', style: TextStyle(fontSize: 12)) : null,
+                          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (isDefault) const Icon(Icons.star, size: 16),
+                            if (isCurrent) const Icon(Icons.check, size: 18),
+                          ]),
+                          onTap: () async {
+                            await ref.read(termProvider.notifier).select(
+                                  Term(id: t.id, schoolYearId: sy.id, schoolYearName: sy.name, termNumber: t.termNumber),
+                                );
+                            ref.invalidate(overviewProvider);
+                            ref.invalidate(advisoryProvider);
+                            ref.invalidate(archivedAdvisoryProvider);
+                            ref.invalidate(admCasesProvider);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ]),
+        );
+      },
+    ),
+  );
+}
+
 // Route-location helpers so shells/drawer highlight without prop drilling.
 extension AdviserRouteLocation on AdviserRoute {
   String get path => switch (this) {
@@ -157,6 +259,7 @@ extension AdviserRouteLocation on AdviserRoute {
 extension WorkspaceRouteLocation on WorkspaceRoute {
   String get path => switch (this) {
         WorkspaceRoute.classes => '/workspace/classes',
+        WorkspaceRoute.gradebook => '/workspace/gradebook',
         WorkspaceRoute.attendance => '/workspace/attendance',
         WorkspaceRoute.more => '/teacher/more',
       };
@@ -172,23 +275,115 @@ class _DrawerHeader extends StatelessWidget {
       );
 }
 
-void showZNotifications(BuildContext context) {
+void showZNotifications(BuildContext context, WidgetRef ref) {
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(6))),
-    builder: (_) => const Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-        SizedBox(height: 8),
-        Text('Referral updates, absent alerts, and meeting reminders appear here.', style: TextStyle(fontSize: 13)),
-        SizedBox(height: 16),
-      ]),
+    builder: (ctx) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      builder: (_, scroll) {
+        final inbox = ref.watch(notificationsProvider);
+        final overview = ref.watch(overviewProvider);
+        final isAdviser =
+            overview.maybeWhen(data: (d) => d['isAdviser'] == true, orElse: () => ref.read(authProvider).role == 'adviser');
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Expanded(child: Text('Notifications', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    await markAllNotificationsRead(ref);
+                  } catch (e) {
+                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                },
+                child: const Text('Mark all read', style: TextStyle(fontSize: 13)),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Expanded(
+              child: inbox.when(
+                loading: () => const ZSkeletonList(),
+                error: (e, _) => Center(child: Text(e.toString(), style: Theme.of(ctx).textTheme.bodySmall)),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return const ZEmpty(
+                      icon: Icons.notifications_outlined,
+                      title: 'No notifications yet',
+                      subtitle: 'Referral updates, absent alerts, and meeting reminders appear here.',
+                    );
+                  }
+                  return ListView.separated(
+                    controller: scroll,
+                    itemCount: items.length,
+                    separatorBuilder: (context, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
+                      final n = items[i];
+                      return ZCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        onTap: () async {
+                          if (!n.isRead) {
+                            try {
+                              await markNotificationRead(ref, n.id);
+                            } catch (_) {}
+                          }
+                          final target = teacherNotificationTarget(n, isAdviser: isAdviser);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (target != null) {
+                            if (context.mounted) context.go(target);
+                          } else if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No linked page — viewable on web.')));
+                          }
+                        },
+                        child: Row(children: [
+                          if (!n.isRead)
+                            Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 8), decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF1C1C1C))),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(teacherNotificationTitle(n), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 2),
+                              Text(n.message, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(ctx).textTheme.bodySmall),
+                              const SizedBox(height: 2),
+                              Text(formatBellDate(n.createdAt),
+                                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+                            ]),
+                          ),
+                        ]),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ]),
+        );
+      },
     ),
   );
 }
 
+/// Bell with live unread badge (99+ cap, hidden when empty).
+class _BellButton extends ConsumerWidget {
+  const _BellButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inbox = ref.watch(notificationsProvider);
+    final unread = inbox.maybeWhen(data: (items) => items.where((n) => !n.isRead).length, orElse: () => 0);
+    final icon = unread == 0
+        ? const Icon(Icons.notifications_outlined)
+        : Badge(label: Text(unread > 99 ? '99+' : '$unread'), child: const Icon(Icons.notifications_outlined));
+    return IconButton(icon: icon, tooltip: 'Notifications', onPressed: () => showZNotifications(context, ref));
+  }
+}
+
+/// System menu: Settings / Appearance / Logout. Scope switching lives in
+/// the drawer term dropdown, not here.
 void showZAccount(BuildContext context, WidgetRef ref) {
   showModalBottomSheet(
     context: context,
@@ -197,12 +392,32 @@ void showZAccount(BuildContext context, WidgetRef ref) {
     builder: (ctx) => Padding(
       padding: const EdgeInsets.all(16),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          TeacherAvatar(
+            photoUrl: ref.watch(teacherProfileProvider).maybeWhen(data: (p) => p.photoUrl, orElse: () => null),
+            radius: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                ref.watch(teacherProfileProvider).maybeWhen(data: (p) => p.fullName, orElse: () => 'Account'),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              Text(
+                ref.watch(authProvider).role == 'adviser' ? 'Adviser' : 'Subject Teacher',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 8),
         ListTile(
-          leading: const Icon(Icons.swap_horiz),
-          title: const Text('Switch term', style: TextStyle(fontSize: 13)),
-          onTap: () async {
-            await ref.read(termProvider.notifier).clear();
-            if (ctx.mounted) ctx.go('/term');
+          leading: const Icon(Icons.settings_outlined),
+          title: const Text('Settings', style: TextStyle(fontSize: 13)),
+          onTap: () {
+            Navigator.pop(ctx);
+            ctx.go('/teacher/more');
           },
         ),
         ListTile(

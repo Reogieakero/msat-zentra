@@ -2,7 +2,7 @@
 // Drawer taps use context.go (replace): back exits. Detail/gradebook use push.
 // Menu: Advisory (adviser-only) + shared Workspace Class/Attendance (both
 // roles, same web data). Gradebook detail is push-only under /workspace/classes.
-// Deprecated /workspace/gradebook*, /teacher/* + /adviser/attendance redirect.
+// Deprecated /teacher/* + /adviser/attendance redirect to /workspace/*.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +24,7 @@ import 'bama/bama_chat_page.dart';
 import 'home/role_home.dart';
 import 'referral/referral_page.dart';
 import 'teacher/classes_page.dart';
+import 'teacher/gradebook_dashboard_page.dart';
 import 'teacher/gradebook_page.dart';
 import 'workspace/workspace_attendance_page.dart';
 import '../core/session.dart' show authProvider;
@@ -57,7 +58,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/adviser/academic', builder: (context, _) => const AdviserShell(selected: AdviserRoute.academic, child: AcademicOverviewPage())),
       GoRoute(path: '/adviser/adm-cases', builder: (context, _) => const AdviserShell(selected: AdviserRoute.admCases, child: AdmCasesPage())),
       GoRoute(path: '/adviser/schedule', builder: (context, _) => const AdviserShell(selected: AdviserRoute.schedule, child: AdviserSchedulePage())),
-      GoRoute(path: '/adviser/bama', builder: (context, _) => const AdviserShell(selected: AdviserRoute.bama, child: BamaChatPage())),
+      GoRoute(
+        path: '/adviser/bama',
+        builder: (context, state) => AdviserShell(
+          selected: AdviserRoute.bama,
+          child: BamaChatPage(freshEntry: state.uri.queryParameters['new'] == '1'),
+        ),
+      ),
       GoRoute(path: '/adviser/referrals', builder: (context, _) => const AdviserShell(selected: AdviserRoute.referrals, child: ReferralPage())),
       GoRoute(
         path: '/adviser/students/:id',
@@ -77,6 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // Shared Workspace (both roles, same web data)
       GoRoute(path: '/workspace/classes', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.classes, child: ClassesPage())),
+      GoRoute(path: '/workspace/gradebook', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.gradebook, child: GradebookDashboardPage())),
       GoRoute(
         path: '/workspace/classes/:id',
         builder: (context, state) {
@@ -88,7 +96,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/workspace/attendance', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.attendance, child: WorkspaceAttendancePage())),
       GoRoute(path: '/teacher/more', builder: (context, _) => const WorkspaceShell(selected: WorkspaceRoute.more, child: TeacherMorePage())),
       // Deprecated aliases (one release): old installs may hold these paths.
-      GoRoute(path: '/workspace/gradebook', redirect: (context, _) => '/workspace/classes'),
       GoRoute(
         path: '/workspace/gradebook/:id',
         redirect: (context, state) {

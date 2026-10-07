@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/session.dart';
+import '../../design/brand.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets.dart';
 
@@ -31,7 +32,15 @@ class TermSelectPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final years = ref.watch(schoolYearsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Zentra'), Text('Select Term', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w400))])),
+      appBar: AppBar(
+          title: const Row(mainAxisSize: MainAxisSize.min, children: [
+            ZLogo(size: 24),
+            SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Zentra'),
+              Text('Select Term', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w400)),
+            ]),
+          ])),
       body: years.when(
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(schoolYearsProvider)),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/session.dart';
+import '../../design/brand.dart';
 import '../../shared/widgets.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -39,7 +40,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               constraints: const BoxConstraints(maxWidth: 400),
               child: ZCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const Text('Zentra', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
+                  const Center(child: ZLogo(size: 64, radius: 12)),
+                  const SizedBox(height: 12),
+                  const Text('Zentra', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.4)),
                   const SizedBox(height: 4),
                   Text('Staff workspace — Advisers and Subject Teachers sign in with staff accounts.',
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),

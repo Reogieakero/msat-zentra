@@ -6,6 +6,7 @@
 // useAnecdotalFlow.ts, bama-conversations.ts. No record preview (toast only).
 
 import 'dart:async';
+import 'dart:math' show Random;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
@@ -18,13 +19,18 @@ import '../../core/api_client.dart';
 import '../../core/config.dart';
 import '../../core/session.dart';
 import '../../core/sync_outbox.dart';
+import '../../design/brand.dart';
 import '../adviser/advisory_list_page.dart' show advisoryProvider, archivedAdvisoryProvider;
-import '../referral/referral_page.dart' show referralsProvider;
+import '../referral/referral_page.dart' show referralsProvider, referableProvider;
 import 'bama_conversations.dart';
 import 'bama_flow.dart';
 
 class BamaChatPage extends ConsumerStatefulWidget {
-  const BamaChatPage({super.key});
+  /// When true (e.g. opened via `/adviser/bama?new=1`), land on the welcome
+  /// cards with no active thread — mirrors web `?new` deep-links. Threads
+  /// are preserved in Chats.
+  final bool freshEntry;
+  const BamaChatPage({super.key, this.freshEntry = false});
   @override
   ConsumerState<BamaChatPage> createState() => _State();
 }
@@ -59,6 +65,10 @@ class _State extends ConsumerState<BamaChatPage> {
   void initState() {
     super.initState();
     _hydrate();
+    if (widget.freshEntry) {
+      _activeId = null;
+      _save();
+    }
     _loadOptions();
   }
 
@@ -78,23 +88,31 @@ class _State extends ConsumerState<BamaChatPage> {
     final box = Hive.box(AppConfig.bamaBox);
     final rawConvos = box.get('conversations');
     final flows = box.get('flows');
-    setState(() {
-      if (rawConvos is List) {
-        _convos = [
-          for (final c in rawConvos)
-            if (c is Map) BamaConversation.fromJson(Map<String, dynamic>.from(c)),
-        ];
-        _convos.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final convos = <BamaConversation>[];
+    if (rawConvos is List) {
+      for (final c in rawConvos) {
+        // Skip corrupt entries instead of killing the screen (Hive reads
+        // maps as Map<dynamic, dynamic>; stale shapes must never crash).
+        try {
+          if (c is Map) convos.add(BamaConversation.fromJson(Map<String, dynamic>.from(c)));
+        } catch (_) {}
       }
+      convos.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    }
+    final parsedFlows = <String, FlowSnapshot>{};
+    if (flows is Map) {
+      for (final e in flows.entries) {
+        try {
+          if (e.value is Map) parsedFlows[e.key.toString()] = FlowSnapshot.fromJson(Map<String, dynamic>.from(e.value as Map));
+        } catch (_) {}
+      }
+    }
+    setState(() {
+      _convos = convos;
       _activeId = box.get('activeId') as String?;
       if (_activeId != null && _convos.every((c) => c.id != _activeId)) _activeId = null;
       _nextMsgId = (box.get('nextId') as int?) ?? 1;
-      if (flows is Map) {
-        _flows = {
-          for (final e in flows.entries)
-            if (e.value is Map) e.key.toString(): FlowSnapshot.fromJson(Map<String, dynamic>.from(e.value as Map)),
-        };
-      }
+      _flows = parsedFlows;
       _hydrated = true;
     });
   }
@@ -489,7 +507,7 @@ class _State extends ConsumerState<BamaChatPage> {
     _progressValue = 4;
     _progressTimer?.cancel();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 220), (_) {
-      _progressValue = (_progressValue + 4 + (_progressValue % 9)).clamp(0, 97);
+      _progressValue = (_progressValue + 4 + Random().nextInt(9)).clamp(0, 97);
       if (!mounted) return;
       setState(() {
         _fileProgress = _progressValue;
@@ -518,6 +536,7 @@ class _State extends ConsumerState<BamaChatPage> {
       ref.invalidate(advisoryProvider);
       ref.invalidate(archivedAdvisoryProvider);
       ref.invalidate(referralsProvider);
+      ref.invalidate(referableProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anecdotal record filed · $name · $categoryLabel.')));
     } on DioException catch (e) {
       final d = e.response?.data;
@@ -810,14 +829,7 @@ class _Welcome extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListView(padding: const EdgeInsets.all(24), children: [
-      Center(
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: theme.colorScheme.primary.withValues(alpha: 0.12)),
-          child: const Icon(Icons.pets, size: 28),
-        ),
-      ),
+      const Center(child: BamaAvatar(radius: 28)),
       const SizedBox(height: 12),
       const Center(child: Text('Chat with Bama', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
       const SizedBox(height: 4),
@@ -980,12 +992,7 @@ class _ThreadView extends StatelessWidget {
   Widget _typingRow(ThemeData theme) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: theme.colorScheme.primary.withValues(alpha: 0.12)),
-            child: const Icon(Icons.pets, size: 14),
-          ),
+          const BamaAvatar(radius: 14),
           const SizedBox(width: 8),
           const Text('Bama is typing…', style: TextStyle(fontSize: 13)),
         ]),
@@ -1018,12 +1025,9 @@ class _Bubble extends StatelessWidget {
       return Align(alignment: Alignment.centerRight, child: bubble);
     }
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(
-        width: 28,
-        height: 28,
-        margin: const EdgeInsets.only(right: 8, top: 2),
-        decoration: BoxDecoration(shape: BoxShape.circle, color: theme.colorScheme.primary.withValues(alpha: 0.12)),
-        child: const Icon(Icons.pets, size: 14),
+      const Padding(
+        padding: EdgeInsets.only(right: 8, top: 2),
+        child: BamaAvatar(radius: 14),
       ),
       Flexible(child: bubble),
     ]);
