@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { CounselingSessionItem } from "./guidance-interventions-data";
+import type { CounselingSessionItem } from "@/services/guidance/interventions.types";
 import {
   deleteInterventionSessionDoc,
   listInterventionSessionDocs,
   sessionDocError,
   uploadInterventionSessionDocs,
-  type InterventionSessionDoc,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.service";
+import type { InterventionSessionDoc } from "@/services/guidance/interventions.types";
 import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import { sessionTypeLabel } from "../../referrals/components/guidance-referrals-table";
 import styles from "./guidance-interventions.module.css";

@@ -8,7 +8,7 @@ import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
 } from "@/services/guidance/guidance.types";
-import type { AtRiskStudentItem } from "../../interventions/components/guidance-interventions-data";
+import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./guidance-alerts-siderail.module.css";
 

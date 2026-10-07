@@ -23,7 +23,7 @@ import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDial
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import type { GuidanceReferralItem } from "@/services/guidance/guidance.types";
 import { formatActionTime, sessionTypeLabel } from "../../referrals/components/guidance-referrals-format";
-import type { AtRiskStudentItem } from "../../interventions/components/guidance-interventions-data";
+import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
 import styles from "./guidance-alerts-table.module.css";
 
 function sessionStatusVariant(status: string): "default" | "success" | "secondary" | "outline" {

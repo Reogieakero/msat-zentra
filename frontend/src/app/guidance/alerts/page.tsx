@@ -13,10 +13,8 @@ import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
 } from "@/services/guidance/guidance.types";
-import {
-  fetchAllGuidanceInterventions,
-  type AtRiskStudentItem,
-} from "../interventions/components/guidance-interventions-data";
+import { fetchAllGuidanceInterventions } from "@/services/guidance/interventions.service";
+import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/guidance-alerts.module.css";
 

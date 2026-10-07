@@ -31,7 +31,7 @@ import type {
   AtRiskStudentItem,
   CounselingSessionItem,
   InterventionOutcome,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.types";
 import { Busy } from "./busy";
 import styles from "./intervention-dialogs.module.css";
 

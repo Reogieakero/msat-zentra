@@ -44,7 +44,7 @@ import {
   latestActionOf,
   rowStatusLabel,
 } from "../../referrals/components/guidance-referrals-format";
-import type { AtRiskStudentItem } from "../../interventions/components/guidance-interventions-data";
+import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
 import {
   GuidanceAlertsRowActions,
   GuidanceInterventionRowActions,

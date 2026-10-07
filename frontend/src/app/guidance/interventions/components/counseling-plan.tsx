@@ -10,7 +10,7 @@ import {
 import type {
   CounselingSessionItem,
   StudentFollowUp,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.types";
 import { Busy } from "./busy";
 import { InterventionSessionDocsDialog } from "./InterventionSessionDocsDialog";
 import styles from "./counseling-plan.module.css";

@@ -5,10 +5,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchGuidanceInterventions,
-  type GuidanceInterventionsData,
-} from "./components/guidance-interventions-data";
+import { fetchGuidanceInterventions } from "@/services/guidance/interventions.service";
+import type { GuidanceInterventionsData } from "@/services/guidance/interventions.types";
 import {
   GuidanceInterventionsTable,
 } from "./components/guidance-interventions-table";

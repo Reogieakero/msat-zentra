@@ -47,7 +47,7 @@ import {
 import type {
   AtRiskStudentItem,
   CounselingSessionItem,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.types";
 import { CounselingPlan, liveSessionLabel, liveSessionState } from "./counseling-plan";
 import {
   EngineBreakdown,
@@ -56,7 +56,7 @@ import {
 } from "./intervention-engine-breakdown";
 import { Busy } from "./busy";
 import { ImageViewer } from "@/components/image-viewer/ImageViewer";
-import { listInterventionSessionDocs } from "./guidance-interventions-data";
+import { listInterventionSessionDocs } from "@/services/guidance/interventions.service";
 import rowStyles from "./intervention-row.module.css";
 import styles from "./guidance-interventions.module.css";
 

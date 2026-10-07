@@ -20,7 +20,7 @@ import type {
   GuidanceInterventionsSummary,
   InterventionOutcome,
   ReviewDecision,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.types";
 import {
   cancelFollowUpSession,
   completeFollowUpSession,
@@ -29,7 +29,7 @@ import {
   reviewIntervention,
   scheduleFollowUpSession,
   startFollowUp,
-} from "./guidance-interventions-data";
+} from "@/services/guidance/interventions.service";
 import { InterventionTableRow } from "./intervention-row";
 import {
   InterventionDialogs,

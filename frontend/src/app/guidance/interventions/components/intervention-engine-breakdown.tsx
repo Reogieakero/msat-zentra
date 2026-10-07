@@ -3,10 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchInterventionEngine,
-  type EngineBreakdown as EngineBreakdownData,
-} from "./guidance-interventions-data";
+import { fetchInterventionEngine } from "@/services/guidance/interventions.service";
+import type { EngineBreakdown as EngineBreakdownData } from "@/services/guidance/interventions.types";
 import rowStyles from "./intervention-row.module.css";
 
 /* Risk-level color code — Low green, Moderate amber, High red — shared by
