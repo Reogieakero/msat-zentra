@@ -48,6 +48,7 @@ class _State extends ConsumerState<BamaChatPage> {
   List<Map<String, dynamic>> _students = [];
   List<Map<String, dynamic>> _classes = [];
   bool _optionsPending = true;
+  String? _optionsError;
 
   bool _sending = false;
   bool _filing = false;
@@ -216,16 +217,30 @@ class _State extends ConsumerState<BamaChatPage> {
   Future<void> _loadOptions() async {
     try {
       final api = ref.read(apiClientProvider);
-      final res = await api.dio.get('/api/anecdotal/options');
+      // Same source web uses (fetchAnecdotalOptions): students + classes +
+      // sectionClasses scoped to the teacher's sections and active term.
+      final res = await api.dio.get('/api/teacher/grade-flags/options');
       if (!mounted) return;
       setState(() {
         _students = [for (final s in (res.data['students'] as List? ?? [])) Map<String, dynamic>.from(s as Map)];
         _classes = [for (final c in (res.data['sectionClasses'] as List? ?? [])) Map<String, dynamic>.from(c as Map)];
         _optionsPending = false;
+        _optionsError = null;
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final d = e.response?.data;
+      final msg = d is Map && d['error'] is Map ? d['error']['message']?.toString() : null;
+      setState(() {
+        _optionsPending = false;
+        _optionsError = msg ?? 'Couldn\'t load students. Check your connection.';
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _optionsPending = false);
+      setState(() {
+        _optionsPending = false;
+        _optionsError = 'Couldn\'t load students. Check your connection.';
+      });
     }
   }
 
@@ -631,6 +646,14 @@ class _State extends ConsumerState<BamaChatPage> {
                     sectionNames: _sectionNames,
                     classesFor: _classesFor,
                     optionsPending: _optionsPending,
+                    optionsError: _optionsError,
+                    onOptionsRetry: () {
+                      setState(() {
+                        _optionsPending = true;
+                        _optionsError = null;
+                      });
+                      _loadOptions();
+                    },
                     dateInput: _dateInput,
                     timeInput: _timeInput,
                     onStudentPick: _handleStudentPick,
@@ -888,6 +911,8 @@ class _ThreadView extends StatelessWidget {
   final Map<String, String> sectionNames;
   final List<Map<String, dynamic>> Function(String?) classesFor;
   final bool optionsPending;
+  final String? optionsError;
+  final VoidCallback onOptionsRetry;
   final String dateInput;
   final String timeInput;
   final ValueChanged<String> onStudentPick;
@@ -912,6 +937,8 @@ class _ThreadView extends StatelessWidget {
     required this.sectionNames,
     required this.classesFor,
     required this.optionsPending,
+    required this.optionsError,
+    required this.onOptionsRetry,
     required this.dateInput,
     required this.timeInput,
     required this.onStudentPick,
@@ -941,6 +968,8 @@ class _ThreadView extends StatelessWidget {
           if (f.studentId.isEmpty)
             _StudentPicker(
               pending: optionsPending,
+              loadError: optionsError,
+              onRetry: onOptionsRetry,
               matches: matches,
               total: students.length,
               query: studentQ,
@@ -1106,6 +1135,8 @@ class _OptionButton extends StatelessWidget {
 
 class _StudentPicker extends StatelessWidget {
   final bool pending;
+  final String? loadError;
+  final VoidCallback onRetry;
   final List<Map<String, dynamic>> matches;
   final int total;
   final TextEditingController query;
@@ -1113,6 +1144,8 @@ class _StudentPicker extends StatelessWidget {
   final ValueChanged<String> onPick;
   const _StudentPicker({
     required this.pending,
+    required this.loadError,
+    required this.onRetry,
     required this.matches,
     required this.total,
     required this.query,
@@ -1130,6 +1163,15 @@ class _StudentPicker extends StatelessWidget {
         TextField(controller: query, decoration: const InputDecoration(prefixIcon: Icon(Icons.search, size: 18), hintText: 'Search name, LRN, or section…')),
         if (pending)
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Loading students…', style: TextStyle(fontSize: 13)))
+        else if (loadError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(loadError!, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
+              const SizedBox(height: 6),
+              OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+            ]),
+          )
         else if (matches.isEmpty)
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('No students match.', style: TextStyle(fontSize: 13)))
         else
