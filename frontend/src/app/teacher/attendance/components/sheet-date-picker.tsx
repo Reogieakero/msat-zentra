@@ -12,7 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { phTodayKey } from "./attendance-taking-data";
+import { phTodayKey } from "@/services/teacher/attendance.service";
 
 function parseDayKey(dayKey: string): Date | undefined {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return undefined;

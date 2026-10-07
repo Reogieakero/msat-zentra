@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTerm } from "@/lib/term/TermContext";
-import { useSheetContext } from "@/app/teacher/attendance/components/attendance-taking-data";
+import { useSheetContext } from "@/services/teacher/attendance.service";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import { CardModal } from "@/components/ui/CardModal";
 import {

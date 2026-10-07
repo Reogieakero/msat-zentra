@@ -9,36 +9,15 @@ import {
   advisoryRosterKey,
   fetchAdvisoryRoster,
   type AdvisoryRoster,
-} from "../../advisory/students/components/advisory-students-data";
-
-export type SheetStatus = "present" | "absent" | "late" | "excused";
-// NOTE: legacy AM/PM takes are archived (GET /api/attendance/legacy/days).
-// New takes are keyed by (subjectId, slot) — no session type remains here.
-
-export interface OfferedSubject {
-  assignmentId: string;
-  subjectId: string;
-  code: string;
-  name: string;
-  gradeLevel: string;
-  teacherId: string;
-  teacherName: string;
-  canMark: boolean;
-}
-
-export interface SheetStudent {
-  studentId: string;
-  name: string;
-  lrn: string;
-  attendanceRate: number;
-}
-
-export interface SheetContext {
-  sectionId: string;
-  sectionName: string;
-  termId: string;
-  students: SheetStudent[];
-}
+} from "@/app/teacher/advisory/students/components/advisory-students-data";
+import type {
+  OfferedSubject,
+  SectionRoster,
+  SheetContext,
+  SheetStatus,
+  SubjectDays,
+  SubmitSheetPayload,
+} from "./attendance.types";
 
 function toSheetContext(roster: AdvisoryRoster): SheetContext {
   const section = roster.advisorySections[0];
@@ -157,22 +136,6 @@ export function useSheetMarks(
   });
 }
 
-/** Term-scoped per-day subject marks for the meetup blocks view. */
-export interface SubjectDayRecord {
-  key: string;
-  date: string; // UTC day key
-  status: SheetStatus;
-}
-
-export interface SubjectDays {
-  sectionId: string;
-  subjectId: string;
-  termId: string;
-  termStart: string | null;
-  termEnd: string | null;
-  records: SubjectDayRecord[];
-}
-
 export function subjectDaysKey(
   sectionId: string | undefined,
   subjectId: string | undefined,
@@ -268,15 +231,6 @@ export function useMeetupDates(
   };
 }
 
-/** Roster for one section the caller may serve (advisory, assignments, or
- *  code-linked timetable slots) — drives code-claimed per-subject sheets. */
-export interface SectionRoster {
-  sectionId: string;
-  sectionName: string;
-  termId: string;
-  students: SheetStudent[];
-}
-
 export function sectionRosterKey(sectionId: string | undefined, termKey = "") {
   return ["attendance-section-roster", sectionId ?? "none", termKey] as const;
 }
@@ -318,16 +272,6 @@ export async function fetchSheetMarks(
   const map: Record<string, SheetStatus> = {};
   for (const m of data.marks) map[m.studentId] = m.status;
   return map;
-}
-
-export interface SubmitSheetPayload {
-  sectionId: string;
-  termId: string;
-  date: string;
-  subjectId: string;
-  assignmentId?: string;
-  slot: number;
-  records: { studentId: string; status: SheetStatus }[];
 }
 
 export async function submitSheet(payload: SubmitSheetPayload): Promise<{ count: number }> {

@@ -17,9 +17,11 @@ import {
   useSheetContext,
   useSheetMarks,
   initialsOf,
-  type SheetContext,
-  type SheetStatus,
-} from "./attendance-taking-data";
+} from "@/services/teacher/attendance.service";
+import type {
+  SheetContext,
+  SheetStatus,
+} from "@/services/teacher/attendance.types";
 import { sileo } from "@/components/ui/sonner";
 import { CardModal } from "@/components/ui/CardModal";
 import { SubmitConfirmDialog } from "./SubmitConfirmDialog";

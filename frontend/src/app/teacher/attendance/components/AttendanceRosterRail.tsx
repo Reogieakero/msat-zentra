@@ -5,9 +5,11 @@ import {
   useSheetContext,
   useSheetMarks,
   initialsOf,
-  type SheetContext,
-  type SheetStatus,
-} from "./attendance-taking-data";
+} from "@/services/teacher/attendance.service";
+import type {
+  SheetContext,
+  SheetStatus,
+} from "@/services/teacher/attendance.types";
 import { RosterRailListSkeleton } from "./attendance-skeleton";
 import sheetStyles from "./AttendanceSheet.module.css";
 import styles from "./AttendanceRosterRail.module.css";

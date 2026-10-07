@@ -16,8 +16,8 @@ import {
   useOfferedSubjects,
   useSectionRoster,
   useSheetContext,
-  type SheetContext,
-} from "./components/attendance-taking-data";
+} from "@/services/teacher/attendance.service";
+import type { SheetContext } from "@/services/teacher/attendance.types";
 import { KeyRound } from "lucide-react";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { TermAccessCard } from "@/components/schedule/TermAccessCard";

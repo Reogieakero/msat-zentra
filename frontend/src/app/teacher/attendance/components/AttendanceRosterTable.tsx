@@ -40,9 +40,11 @@ import {
   submitSheet,
   useMeetupDates,
   useSheetMarks,
-  type SheetContext,
-  type SheetStatus,
-} from "./attendance-taking-data";
+} from "@/services/teacher/attendance.service";
+import type {
+  SheetContext,
+  SheetStatus,
+} from "@/services/teacher/attendance.types";
 
 interface RosterRow {
   id: string;
