@@ -8,7 +8,7 @@ import {
   type BookSessionFields,
   type InviteStaffOption,
 } from "@/components/session-booking/BookSessionDialog";
-import type { AdmCaseRow } from "../../components/coordinator-data";
+import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 
 export interface CoordinatorBookFields {
   meetingDatetime: string;

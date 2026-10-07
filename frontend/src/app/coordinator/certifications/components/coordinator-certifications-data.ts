@@ -3,10 +3,12 @@
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorReferrals,
-  type AdmApprovalRow,
-  type AdmCaseRow,
-  type AdmEligibility,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/overview.service";
+import type {
+  AdmApprovalRow,
+  AdmCaseRow,
+  AdmEligibility,
+} from "@/services/coordinator/coordinator.types";
 
 export type CertStatus =
   | "prepared"

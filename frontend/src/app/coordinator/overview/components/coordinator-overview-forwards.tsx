@@ -25,12 +25,11 @@ import {
   admCaseStatusVariant,
   consultReviewerLabel,
   deriveAdmCaseStatus,
-  formatElapsedShort,
   friendlyActionType,
   latestActionFallback,
-  msSinceDate,
-  type AdmCaseRow,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/labels";
+import { formatElapsedShort, msSinceDate } from "@/services/coordinator/utils";
+import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
 import styles from "./coordinator-overview-forwards.module.css";

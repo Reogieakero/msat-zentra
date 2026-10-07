@@ -3,7 +3,8 @@
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { eligibilityLabel, type AdmEligibility } from "../../components/coordinator-data";
+import { eligibilityLabel } from "@/services/coordinator/labels";
+import type { AdmEligibility } from "@/services/coordinator/coordinator.types";
 import styles from "./case-page.module.css";
 
 export interface ChecklistInput {

@@ -4,9 +4,9 @@ import {
   fetchCoordinatorDashboard,
   fetchCoordinatorDevices,
   fetchCoordinatorReferrals,
-  stageLabel,
-  useNowTick,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/overview.service";
+import { stageLabel } from "@/services/coordinator/labels";
+import { useNowTick } from "@/services/coordinator/utils";
 import {
   countFor,
   SHORT_STAGE,

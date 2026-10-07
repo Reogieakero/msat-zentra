@@ -15,8 +15,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { apiErrorMessage } from "@/services/coordinator/utils";
 import {
-  apiErrorMessage,
   friendlyWords,
   formatManilaDate,
   formatManilaDateLong,
@@ -24,12 +24,16 @@ import {
   meetingInviteeLabel,
   stageLabel,
   eligibilityLabel,
+  venueLabel,
+} from "@/services/coordinator/labels";
+import {
   uploadMeetingAttachments,
   deleteMeetingAttachment,
-  venueLabel,
-  type AdmCaseRow,
-  type AdmMeeting,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/cases.service";
+import type {
+  AdmCaseRow,
+  AdmMeeting,
+} from "@/services/coordinator/coordinator.types";
 import {
   FORM_LABELS,
   FORM_DOT,

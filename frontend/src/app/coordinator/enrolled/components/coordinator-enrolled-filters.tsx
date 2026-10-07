@@ -9,7 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { AdmEligibility } from "../../components/coordinator-data";
+import type { AdmEligibility } from "@/services/coordinator/coordinator.types";
 import { ELIG_OPTIONS } from "./coordinator-enrolled-constants";
 import styles from "./coordinator-enrolled-filters.module.css";
 

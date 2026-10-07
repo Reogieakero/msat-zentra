@@ -13,11 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  formatElapsedShort,
-  msSinceDate,
-  type AdmDeviceRow,
-} from "../../components/coordinator-data";
+import { formatElapsedShort, msSinceDate } from "@/services/coordinator/utils";
+import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-overview-devices.module.css";
 
 interface CoordinatorOverviewDevicesProps {

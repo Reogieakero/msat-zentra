@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { TabletSmartphone } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import type { AdmApprovalsPage } from "@/app/coordinator/components/coordinator-data";
+import type { AdmApprovalsPage } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-sidebar-reminder.module.css";
 
 interface NeedsDeviceCase {

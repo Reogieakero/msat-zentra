@@ -18,9 +18,9 @@ import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorDevices,
-  apiErrorMessage,
-  type AdmDeviceRow,
-} from "../components/coordinator-data";
+} from "@/services/coordinator/overview.service";
+import { apiErrorMessage } from "@/services/coordinator/utils";
+import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import {
   CoordinatorDevicesTable,
   type DeviceFilter,

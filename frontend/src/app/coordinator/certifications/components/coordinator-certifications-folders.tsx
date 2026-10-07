@@ -19,7 +19,7 @@ import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
-import { apiErrorMessage, useNowTick } from "../../components/coordinator-data";
+import { apiErrorMessage, useNowTick } from "@/services/coordinator/utils";
 import {
   CERT_STATUS_META,
   type CertRecord,

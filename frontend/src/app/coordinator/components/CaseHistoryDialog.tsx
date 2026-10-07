@@ -14,12 +14,14 @@ import type {
   TrackerCaseInput,
 } from "@/components/adm-tracker/adm-stage-activity";
 import {
-  fetchCaseHistory,
   friendlyReason,
   stageLabel,
-  type AdmCaseRow,
-  type AdmHistoryEvent,
-} from "./coordinator-data";
+} from "@/services/coordinator/labels";
+import { fetchCaseHistory } from "@/services/coordinator/cases.service";
+import type {
+  AdmCaseRow,
+  AdmHistoryEvent,
+} from "@/services/coordinator/coordinator.types";
 import { stageOrder } from "@/app/teacher/advisory/adm-cases/components/adm-cases-data";
 import trackStyles from "@/app/teacher/advisory/adm-cases/components/AdmCaseDialog.module.css";
 

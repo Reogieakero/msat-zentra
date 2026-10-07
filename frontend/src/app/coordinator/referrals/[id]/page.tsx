@@ -21,18 +21,19 @@ import {
 import { anecdotalCategoryColor } from "@/app/guidance/referrals/components/guidance-referrals-format";
 import {
   admCaseStatusVariant,
-  apiErrorMessage,
   deriveAdmCaseStatus,
   eligibilityLabel,
   endorsementRecommendation,
-  fetchCoordinatorCaseDetail,
   friendlyWords,
   stageLabel,
-  useNowTick,
-  type AdmCaseRow,
-  type AdmFormRef,
-  type CoordinatorCaseDetail,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/labels";
+import { apiErrorMessage, useNowTick } from "@/services/coordinator/utils";
+import { fetchCoordinatorCaseDetail } from "@/services/coordinator/cases.service";
+import type {
+  AdmCaseRow,
+  AdmFormRef,
+  CoordinatorCaseDetail,
+} from "@/services/coordinator/coordinator.types";
 import {
   FORM_DOT,
   FORM_LABELS,

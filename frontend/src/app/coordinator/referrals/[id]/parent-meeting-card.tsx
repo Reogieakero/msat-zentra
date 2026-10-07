@@ -15,8 +15,8 @@ import {
 import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { apiErrorMessage } from "@/services/coordinator/utils";
 import {
-  apiErrorMessage,
   attendeeLabel,
   formatManilaDate,
   formatManilaTime,
@@ -24,14 +24,18 @@ import {
   inviteeToAttendee,
   MEETING_ATTENDEE_ROLE_LABELS,
   meetingInviteeLabel,
+  venueLabel,
+} from "@/services/coordinator/labels";
+import {
   uploadMeetingAttachments,
   deleteMeetingAttachment,
-  venueLabel,
-  type AdmMeetingAttachment,
-  type AdmMeetingInvitee,
-  type MeetingAttendee,
-  type MeetingAttendeeRole,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/cases.service";
+import type {
+  AdmMeetingAttachment,
+  AdmMeetingInvitee,
+  MeetingAttendee,
+  MeetingAttendeeRole,
+} from "@/services/coordinator/coordinator.types";
 import {
   ClinicDatePicker,
   ClinicTimePicker,

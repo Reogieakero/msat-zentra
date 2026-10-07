@@ -8,9 +8,11 @@ import {
   formatManilaTime,
   friendlyWords,
   venueLabel,
-  type AdmFormRef,
-  type MeetingAttendee,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/labels";
+import type {
+  AdmFormRef,
+  MeetingAttendee,
+} from "@/services/coordinator/coordinator.types";
 import { FORM_LABELS } from "../components/coordinator-referrals-constants";
 import styles from "./case-page.module.css";
 

@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CardModal } from "@/components/ui/CardModal";
-import type { AdmDeviceRow } from "../../components/coordinator-data";
+import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./coordinator-devices-table.module.css";
 

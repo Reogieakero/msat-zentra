@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
-import type { AdmCaseRow } from "../../components/coordinator-data";
+import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-referrals-create-dialog.module.css";
 
 interface CoordinatorReferralsCreateDialogProps {

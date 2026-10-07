@@ -26,18 +26,19 @@ import {
   admCaseStatusVariant,
   consultReviewerLabel,
   deriveAdmCaseStatus,
-  formatElapsedShort,
   formatManilaDateLong,
   formatManilaTime,
   friendlyActionType,
-  msSinceDate,
   stageLabel,
   eligibilityLabel,
   venueLabel,
   latestActionFallback,
-  type AdmCaseRow,
-  type AdmEligibility,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/labels";
+import { formatElapsedShort, msSinceDate } from "@/services/coordinator/utils";
+import type {
+  AdmCaseRow,
+  AdmEligibility,
+} from "@/services/coordinator/coordinator.types";
 import { ELIG_OPTIONS } from "./coordinator-referrals-constants";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";

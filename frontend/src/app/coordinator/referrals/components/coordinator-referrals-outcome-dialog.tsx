@@ -10,8 +10,8 @@ import { CardModal } from "@/components/ui/CardModal";
 import {
   meetingInviteeLabel,
   venueLabel,
-  type AdmMeeting,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/labels";
+import type { AdmMeeting } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-referrals-outcome-dialog.module.css";
 
 interface CoordinatorReferralsOutcomeDialogProps {

@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AdmCaseRow } from "../../components/coordinator-data";
+import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { CoordinatorEnrolledCard } from "./coordinator-enrolled-card";
 import styles from "./coordinator-enrolled-card.module.css";

@@ -16,10 +16,8 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
-import {
-  apiErrorMessage,
-  type AdmApprovalRow,
-} from "../../components/coordinator-data";
+import { apiErrorMessage } from "@/services/coordinator/utils";
+import type { AdmApprovalRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-devices-issue-dialog.module.css";
 
 const DEVICE_TYPE_OPTIONS = ["Tablet", "Phone", "Laptop", "Chromebook"] as const;

@@ -9,12 +9,12 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
-import {
-  fetchCoordinatorReferrals,
-  apiErrorMessage,
-  type AdmCaseRow,
-  type AdmEligibility,
-} from "../../components/coordinator-data";
+import { fetchCoordinatorReferrals } from "@/services/coordinator/overview.service";
+import { apiErrorMessage } from "@/services/coordinator/utils";
+import type {
+  AdmCaseRow,
+  AdmEligibility,
+} from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";

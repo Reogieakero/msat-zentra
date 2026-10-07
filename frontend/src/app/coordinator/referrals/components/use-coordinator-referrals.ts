@@ -12,19 +12,19 @@ import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
+import { fetchCoordinatorReferrals } from "@/services/coordinator/overview.service";
 import {
-  fetchCoordinatorReferrals,
   fetchCaseMeetings,
   fetchCoordinatorCaseDetail,
-  apiErrorMessage,
-  inviteeToAttendee,
-  stageLabel,
-  useNowTick,
-  type AdmCaseRow,
-  type AdmEligibility,
-  type AdmMeeting,
-  type AdmMeetingInvitee,
-} from "../../components/coordinator-data";
+} from "@/services/coordinator/cases.service";
+import { apiErrorMessage, useNowTick } from "@/services/coordinator/utils";
+import { inviteeToAttendee, stageLabel } from "@/services/coordinator/labels";
+import type {
+  AdmCaseRow,
+  AdmEligibility,
+  AdmMeeting,
+  AdmMeetingInvitee,
+} from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { useTerm } from "@/lib/term/TermContext";
 import { ELIG_OPTIONS } from "./coordinator-referrals-constants";
