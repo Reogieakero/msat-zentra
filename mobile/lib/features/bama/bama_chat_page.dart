@@ -246,13 +246,13 @@ class _State extends ConsumerState<BamaChatPage> {
 
   // --- threads ---
 
-  void _startChat(String type) {
+  void _startAnecdotalChat() {
     final now = DateTime.now().millisecondsSinceEpoch;
     final convo = BamaConversation(
       id: bamaNewId(),
-      type: type,
+      type: 'anecdotal',
       title: 'New chat',
-      messages: [BamaMessage(id: _mid(), fromUser: false, text: bamaGreetings[type]!, at: now)],
+      messages: [BamaMessage(id: _mid(), fromUser: false, text: bamaGreetings['anecdotal']!, at: now)],
       updatedAt: now,
     );
     setState(() {
@@ -268,11 +268,12 @@ class _State extends ConsumerState<BamaChatPage> {
     _scrollToBottom();
   }
 
-  void _newChat() {
+  void _backToWelcome() {
     setState(() {
       _activeId = null;
       _draft.clear();
       _flowError = null;
+      _confirmFiling = false;
     });
     _save();
   }
@@ -323,7 +324,10 @@ class _State extends ConsumerState<BamaChatPage> {
       setState(() => _flowError = 'No classes found for that student — pick another student.');
       return;
     }
-    setState(() => _flowError = null);
+    setState(() {
+      _flowError = null;
+      _studentQ.clear();
+    });
     f.studentId = id;
     if (active.title == 'New chat') active.title = (picked['name']?.toString() ?? 'New chat');
     _pushUser(picked['name']?.toString() ?? id);
@@ -625,14 +629,20 @@ class _State extends ConsumerState<BamaChatPage> {
     return Stack(
       children: [
         Column(children: [
-          _ThreadHeader(
-            active: active,
-            onChats: _openChats,
-            onNew: _newChat,
-          ),
+          if (active != null)
+            _ChatHeader(
+              title: active.title,
+              onBack: _backToWelcome,
+              onDelete: () => _askDelete(active),
+            ),
           Expanded(
             child: active == null
-                ? _Welcome(onStart: _startChat)
+                ? _Welcome(
+                    conversations: _convos,
+                    onStart: _startAnecdotalChat,
+                    onResume: (id) => setState(() => _activeId = id),
+                    onDelete: _askDelete,
+                  )
                 : _ThreadView(
                     key: ValueKey(active.id),
                     active: active,
@@ -643,6 +653,7 @@ class _State extends ConsumerState<BamaChatPage> {
                     students: _students,
                     matches: _studentMatches,
                     studentQ: _studentQ,
+                    onQueryChanged: () => setState(() {}),
                     sectionNames: _sectionNames,
                     classesFor: _classesFor,
                     optionsPending: _optionsPending,
@@ -668,7 +679,7 @@ class _State extends ConsumerState<BamaChatPage> {
                   ),
           ),
           if (active != null && active.filed)
-            _EndedBar(onNew: () => _startChat(active.type))
+            _EndedBar(onNew: _startAnecdotalChat)
           else if (active != null)
             _Composer(
               draft: _draft,
@@ -682,102 +693,19 @@ class _State extends ConsumerState<BamaChatPage> {
               onChanged: (_) => setState(() {}),
             ),
         ]),
+        if (active == null)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton(
+              tooltip: 'New chat',
+              onPressed: _startAnecdotalChat,
+              child: const Icon(Icons.add),
+            ),
+          ),
         if (_filing) _FilingOverlay(progress: _fileProgress, stage: _fileStage),
         if (_confirmFiling && active != null && _anecMode) _ConfirmSheet(flow: _flow(), onKeep: () => setState(() => _confirmFiling = false), onFile: _fileRecord),
       ],
-    );
-  }
-
-  void _openChats() {
-    final query = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(6))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.7,
-          builder: (_, scroll) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(children: [
-              Row(children: [
-                const Expanded(child: Text('Chats', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
-                FilledButton.icon(icon: const Icon(Icons.add, size: 16), label: const Text('New chat'), onPressed: () {
-                  Navigator.pop(ctx);
-                  _newChat();
-                }),
-              ]),
-              const SizedBox(height: 8),
-              TextField(
-                controller: query,
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search, size: 18), hintText: 'Search chats…'),
-                onChanged: (_) => setSheet(() {}),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Builder(builder: (_) {
-                  final needle = query.text.trim().toLowerCase();
-                  final shown = _convos.where((c) {
-                    if (needle.isEmpty) return true;
-                    return c.title.toLowerCase().contains(needle) || c.messages.any((m) => m.text.toLowerCase().contains(needle));
-                  }).toList();
-                  if (shown.isEmpty) {
-                    return Center(child: Text(needle.isEmpty ? 'No chats yet — start one below.' : 'No chats match "$needle".'));
-                  }
-                  String? lastType;
-                  return ListView.builder(
-                    controller: scroll,
-                    itemCount: shown.length,
-                    itemBuilder: (_, i) {
-                      final c = shown[i];
-                      String? header;
-                      if (lastType != c.type) {
-                        lastType = c.type;
-                        header = bamaTypeLabels[c.type];
-                      }
-                      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (header != null)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-                            child: Text('${header.toUpperCase()} (${_convos.where((e) => e.type == c.type).length})',
-                                style: Theme.of(ctx).textTheme.labelSmall),
-                          ),
-                        ListTile(
-                          dense: true,
-                          selected: c.id == _activeId,
-                          selectedTileColor: Theme.of(ctx).colorScheme.surfaceContainerLow,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          title: Text(c.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          subtitle: Text('${c.messages.length} messages',
-                              style: const TextStyle(fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18),
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _askDelete(c);
-                            },
-                          ),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            setState(() {
-                              _activeId = c.id;
-                              _flowError = null;
-                              _confirmFiling = false;
-                            });
-                            _save();
-                          },
-                        ),
-                      ]);
-                    },
-                  );
-                }),
-              ),
-            ]),
-          ),
-        ),
-      ),
     );
   }
 
@@ -813,30 +741,39 @@ class _State extends ConsumerState<BamaChatPage> {
   }
 }
 
-// --- header ---
+// --- in-chat header (message-style) ---
 
-class _ThreadHeader extends StatelessWidget {
-  final BamaConversation? active;
-  final VoidCallback onChats;
-  final VoidCallback onNew;
-  const _ThreadHeader({required this.active, required this.onChats, required this.onNew});
+class _ChatHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onBack;
+  final VoidCallback onDelete;
+  const _ChatHeader({required this.title, required this.onBack, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: theme.colorScheme.outline))),
       child: Row(children: [
-        IconButton(icon: const Icon(Icons.forum_outlined, size: 20), tooltip: 'Chats', onPressed: onChats),
+        IconButton(icon: const Icon(Icons.arrow_back, size: 20), tooltip: 'Back', onPressed: onBack),
+        const BamaAvatar(radius: 20),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(active?.title ?? 'Chat with Bama',
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-            if (active != null) Text(bamaTypeLabels[active!.type] ?? '', style: theme.textTheme.bodySmall),
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            Text('Anecdotal Record Assistant', style: theme.textTheme.bodySmall),
           ]),
         ),
-        IconButton(icon: const Icon(Icons.add, size: 20), tooltip: 'New chat', onPressed: onNew),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, size: 20),
+          onSelected: (v) {
+            if (v == 'delete') onDelete();
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'delete', child: Text('Delete chat', style: TextStyle(fontSize: 13))),
+          ],
+        ),
       ]),
     );
   }
@@ -845,8 +782,11 @@ class _ThreadHeader extends StatelessWidget {
 // --- welcome ---
 
 class _Welcome extends StatelessWidget {
-  final ValueChanged<String> onStart;
-  const _Welcome({required this.onStart});
+  final VoidCallback onStart;
+  final List<BamaConversation> conversations;
+  final ValueChanged<String> onResume;
+  final ValueChanged<BamaConversation> onDelete;
+  const _Welcome({required this.onStart, required this.conversations, required this.onResume, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -856,46 +796,63 @@ class _Welcome extends StatelessWidget {
       const SizedBox(height: 12),
       const Center(child: Text('Chat with Bama', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
       const SizedBox(height: 4),
-      Center(child: Text('Pick what this chat is for.', style: theme.textTheme.bodySmall)),
+      Center(
+        child: Text(
+          'File anecdotal records by chatting — Bama walks you through the student, class, details, and review, then files the record.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
       const SizedBox(height: 16),
-      for (final t in bamaChatTypes)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: _TypeCard(
-            title: bamaTypeLabels[t]!,
-            subtitle: t == 'anecdotal' ? 'Write an incident report' : 'Raise a grade concern',
-            onTap: () => onStart(t),
+      Card(
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onStart,
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Anecdotal record', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text('Write an incident report', style: TextStyle(fontSize: 13)),
+                ]),
+              ),
+              Icon(Icons.chevron_right, size: 18),
+            ]),
           ),
         ),
+      ),
+      const SizedBox(height: 16),
+      Text('Recent chats', style: theme.textTheme.labelSmall),
+      const SizedBox(height: 8),
+      if (conversations.isEmpty)
+        Text('No chats yet — start one above.', style: theme.textTheme.bodySmall)
+      else
+        for (final c in conversations)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                dense: true,
+                title: Text(c.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  '${c.messages.length} messages${c.filed ? ' · Filed' : ''}',
+                  style: const TextStyle(fontSize: 12, fontFeatures: [FontFeature.tabularFigures()]),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  onPressed: () => onDelete(c),
+                ),
+                onTap: () => onResume(c.id),
+              ),
+            ),
+          ),
     ]);
   }
 }
 
-class _TypeCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  const _TypeCard({required this.title, required this.subtitle, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Card(
-        margin: EdgeInsets.zero,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-              ])),
-              const Icon(Icons.chevron_right, size: 18),
-            ]),
-          ),
-        ),
-      );
-}
 
 // --- thread ---
 
@@ -908,6 +865,7 @@ class _ThreadView extends StatelessWidget {
   final List<Map<String, dynamic>> students;
   final List<Map<String, dynamic>> matches;
   final TextEditingController studentQ;
+  final VoidCallback onQueryChanged;
   final Map<String, String> sectionNames;
   final List<Map<String, dynamic>> Function(String?) classesFor;
   final bool optionsPending;
@@ -934,6 +892,7 @@ class _ThreadView extends StatelessWidget {
     required this.students,
     required this.matches,
     required this.studentQ,
+    required this.onQueryChanged,
     required this.sectionNames,
     required this.classesFor,
     required this.optionsPending,
@@ -968,6 +927,7 @@ class _ThreadView extends StatelessWidget {
           if (f.studentId.isEmpty)
             _StudentPicker(
               pending: optionsPending,
+              onQueryChanged: onQueryChanged,
               loadError: optionsError,
               onRetry: onOptionsRetry,
               matches: matches,
@@ -1140,6 +1100,7 @@ class _StudentPicker extends StatelessWidget {
   final List<Map<String, dynamic>> matches;
   final int total;
   final TextEditingController query;
+  final VoidCallback onQueryChanged;
   final Map<String, String> sectionNames;
   final ValueChanged<String> onPick;
   const _StudentPicker({
@@ -1149,6 +1110,7 @@ class _StudentPicker extends StatelessWidget {
     required this.matches,
     required this.total,
     required this.query,
+    required this.onQueryChanged,
     required this.sectionNames,
     required this.onPick,
   });
@@ -1160,7 +1122,11 @@ class _StudentPicker extends StatelessWidget {
       title: 'Pick a student',
       subtitle: 'Search name, LRN, or section…',
       children: [
-        TextField(controller: query, decoration: const InputDecoration(prefixIcon: Icon(Icons.search, size: 18), hintText: 'Search name, LRN, or section…')),
+        TextField(
+          controller: query,
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.search, size: 18), hintText: 'Search name, LRN, or section…'),
+          onChanged: (_) => onQueryChanged(),
+        ),
         if (pending)
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Loading students…', style: TextStyle(fontSize: 13)))
         else if (loadError != null)
