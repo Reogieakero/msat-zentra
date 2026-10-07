@@ -63,6 +63,7 @@ export function OverviewGradeChart() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-account-breakdown"],
     queryFn: fetchBreakdown,
+    staleTime: 30_000,
   });
 
   const rows: GradeRow[] = React.useMemo(() => {

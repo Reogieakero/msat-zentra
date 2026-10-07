@@ -46,8 +46,10 @@ function fetchViewableFinals() {
 export function FinalGradeApprovals() {
   const router = useRouter();
   const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-final-grades"],
+    // Preview key — never collides with the paged list or detail caches.
+    queryKey: ["record-keeper-final-grades", "preview"],
     queryFn: fetchViewableFinals,
+    staleTime: 30_000,
   });
 
   const viewable = React.useMemo(

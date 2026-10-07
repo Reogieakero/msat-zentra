@@ -59,15 +59,13 @@ router.get(
       // Report cards: every final-grade row for G11–12 students (one row ≈ one
       // report-card subject entry). Used as a proxy since there is no dedicated
       // "report card" model. Roster-enlisted students without accounts count too.
+      // Single read: the total is the row count (was a duplicate count query).
       const inBand = {
         OR: [
           { student: { gradeLevel: { in: GRADE_BAND } } },
           { roster: { gradeLevel: { in: GRADE_BAND } } },
         ],
       };
-      const reportCards = await prisma.finalGrade.count({
-        where: inBand,
-      });
 
       // The registrar is view-only in the grade pipeline: a student's term grades
       const viewableFinalRows = await prisma.finalGrade.findMany({
@@ -95,15 +93,10 @@ router.get(
         }
       }
       const awaitingRows = readyRows;
+      const reportCards = viewableFinalRows.length;
 
       // sections/subjects: G11–12 active sections and subjects (KPI metrics).
-      const [sections, subjects] = await Promise.all([
-        prisma.section.count({
-          where: { gradeLevel: { in: GRADE_BAND }, ...schoolYearWhere(req) },
-        }),
-        prisma.subject.count({ where: { gradeLevel: { in: GRADE_BAND } } }),
-      ]);
-
+      // Totals derive from the grouped reads below — no duplicate counts.
       // sf10ByStatus / sectionsByGrade / subjectsByGrade feed the overview
       // header's KPI charts (donuts + per-grade bars).
       const [sf10ByStatus, sectionsGrouped, subjectsGrouped] = await Promise.all([
@@ -125,6 +118,8 @@ router.get(
         ]);
 
       const sf10Total = sf10ByStatus.reduce((sum, r) => sum + r._count._all, 0);
+      const sections = sectionsGrouped.reduce((sum, r) => sum + r._count._all, 0);
+      const subjects = subjectsGrouped.reduce((sum, r) => sum + r._count._all, 0);
       const sf10Released = sf10ByStatus.find((r) => r.status === "released")?._count._all ?? 0;
       const sf10Available = sf10ByStatus.find((r) => r.status === "available")?._count._all ?? 0;
       const sf10Attach = sf10ByStatus.find((r) => r.status === "attach")?._count._all ?? 0;
@@ -201,14 +196,24 @@ router.get(
       // whose LRN resolves to a roster entry OUTSIDE the band. A bare sign-up
       // with an unresolvable LRN is still included (mirrors /api/auth/pending),
       // shown with an unknown grade so the Overview and Accounts counts match.
+      // Single batched read (was N sequential findFirst calls, max 15).
+      const bareLrns = [...new Set(barePending.map((u) => u.lrn).filter((l): l is string => !!l))];
+      const bareRosters =
+        bareLrns.length > 0
+          ? await prisma.studentRoster.findMany({
+              where: { lrn: { in: bareLrns } },
+              select: { lrn: true, gradeLevel: true, schoolYearId: true },
+            })
+          : [];
+      const latestRosterByLrn = new Map<string, (typeof bareRosters)[number]>();
+      for (const r of bareRosters) {
+        const prev = latestRosterByLrn.get(r.lrn);
+        if (!prev || r.schoolYearId > prev.schoolYearId) latestRosterByLrn.set(r.lrn, r);
+      }
       const bareRows: { name: string; lrn: string; gradeLevel: string }[] = [];
       for (const u of barePending) {
         if (!u.lrn) continue;
-        const roster = await prisma.studentRoster.findFirst({
-          where: { lrn: u.lrn },
-          select: { lrn: true, gradeLevel: true },
-          orderBy: { schoolYearId: "desc" },
-        });
+        const roster = latestRosterByLrn.get(u.lrn);
         if (roster) {
           if (!GRADE_BAND.includes(roster.gradeLevel)) continue; // out-of-band skip
           bareRows.push({ name: u.fullName, lrn: u.lrn, gradeLevel: roster.gradeLevel });
@@ -361,19 +366,17 @@ router.get(
         r.student?.sectionId ?? r.roster?.sectionId ?? "";
 
       // Batch-fetch teacher assignments for all unique (subject, section, term)
-      // combinations present in the result set.
+      // combinations present in the result set. Single term-scoped read
+      // filtered in memory (was one OR branch per unique triple).
       const teacherKeys = new Set<string>();
+      const teacherTermIds = new Set<string>();
       for (const r of rows) {
         const sectionId = sectionIdOf(r);
+        teacherTermIds.add(r.termId);
         if (sectionId) teacherKeys.add(`${r.subjectId}|${sectionId}|${r.termId}`);
       }
       const teacherAssignments = await prisma.teacherSubjectAssignment.findMany({
-        where: {
-          OR: Array.from(teacherKeys).map((k) => {
-            const [subjectId, sectionId, termId] = k.split("|");
-            return { subjectId, sectionId, termId };
-          }),
-        },
+        where: { termId: { in: [...teacherTermIds] } },
         select: {
           subjectId: true,
           sectionId: true,
@@ -383,7 +386,8 @@ router.get(
       });
       const teacherMap = new Map<string, string>();
       for (const ta of teacherAssignments) {
-        teacherMap.set(`${ta.subjectId}|${ta.sectionId}|${ta.termId}`, ta.teacher.fullName);
+        const key = `${ta.subjectId}|${ta.sectionId}|${ta.termId}`;
+        if (teacherKeys.has(key)) teacherMap.set(key, ta.teacher.fullName);
       }
 
       // Group rows by (studentId, termId).
@@ -609,17 +613,32 @@ router.get(
         orderBy: [{ requestedAt: "desc" }],
       });
 
-      const requests = await Promise.all(
-        rows.map(async (r) => {
-          const students = await prisma.studentProfile.findMany({
-            where: { sectionId: r.sectionId },
-            select: {
-              lrn: true,
-              user: { select: { fullName: true } },
-              sf10Records: { select: { status: true } },
-            },
-            orderBy: { lrn: "asc" },
-          });
+      // Single batched advisee read across all request sections (was one
+      // findMany per request). Grouped in memory by sectionId.
+      const sectionIds = [...new Set(rows.map((r) => r.sectionId).filter((id): id is string => !!id))];
+      const allStudents =
+        sectionIds.length > 0
+          ? await prisma.studentProfile.findMany({
+              where: { sectionId: { in: sectionIds } },
+              select: {
+                sectionId: true,
+                lrn: true,
+                user: { select: { fullName: true } },
+                sf10Records: { select: { status: true } },
+              },
+              orderBy: { lrn: "asc" },
+            })
+          : [];
+      const studentsBySection = new Map<string, typeof allStudents>();
+      for (const s of allStudents) {
+        const key = s.sectionId ?? "";
+        const list = studentsBySection.get(key) ?? [];
+        list.push(s);
+        studentsBySection.set(key, list);
+      }
+
+      const requests = rows.map((r) => {
+        const students = studentsBySection.get(r.sectionId ?? "") ?? [];
           const affectedAdvisees = students.map((s) => {
             const sf10 = s.sf10Records[0]?.status;
             return {
@@ -649,8 +668,7 @@ router.get(
             decidedAt: r.decidedAt?.toISOString() ?? null,
             affectedAdvisees,
           };
-        })
-      );
+        });
 
       res.json({ requests });
     } catch (e) {

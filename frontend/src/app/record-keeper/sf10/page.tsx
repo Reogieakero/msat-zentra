@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,8 +11,6 @@ import {
   SearchX,
   X,
 } from "lucide-react";
-import { apiClient } from "@/lib/api/client";
-import { formatSection } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +27,7 @@ import { Sf10UploadPanel } from "./components/Sf10UploadPanel";
 import { Sf10DetailSheet } from "./components/Sf10DetailSheet";
 import { StatusBadge, formatRelativeTime } from "./components/shared";
 import { toast } from "@/components/ui/sonner";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { fetchSf10Records } from "./api";
 import {
   GRADE_LABEL,
@@ -49,52 +48,52 @@ const STATUS_FILTERS: { key: Sf10Status | "all"; label: string }[] = [
 
 export default function RecordKeeperSf10Page() {
   const qc = useQueryClient();
-  const [query, setQuery] = React.useState("");
+  const [queryInput, setQueryInput] = React.useState("");
+  // Debounced 300ms server search — typing rerenders but never refetches.
+  const query = useDebouncedValue(queryInput.trim(), 300);
   const [status, setStatus] = React.useState<Sf10Status | "all">("all");
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState<Sf10Record | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
+  // Server-paged + server-searched: `total` drives the pager (filtered
+  // count); `counts` stay global for the tiles. keepPreviousData keeps rows
+  // on screen while the next page loads — page turns never flash skeletons.
   const {
-    data: records,
+    data,
     isPending,
     isError,
+    isFetching,
   } = useQuery({
     // Record-keeper-scoped key so the realtime channel refreshes this list live.
-    queryKey: ["record-keeper-sf10"],
-    queryFn: ({ signal }) => fetchSf10Records(signal),
+    queryKey: ["record-keeper-sf10", page, query, status],
+    queryFn: ({ signal }) =>
+      fetchSf10Records({
+        page,
+        pageSize: PAGE_SIZE,
+        ...(query ? { q: query } : {}),
+        ...(status !== "all" ? { status } : {}),
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 
-  const all = records ?? [];
+  const pageRows = React.useMemo(() => data?.records ?? [], [data]);
+  const counts = React.useMemo(
+    () => data?.counts ?? { attach: 0, available: 0, released: 0, total: 0 },
+    [data],
+  );
 
-  const counts = React.useMemo(() => {
-    return {
-      attach: all.filter((r) => r.status === "attach").length,
-      available: all.filter((r) => r.status === "available").length,
-      released: all.filter((r) => r.status === "released").length,
-      total: all.length,
-    };
-  }, [all]);
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return all.filter((r) => {
-      if (status !== "all" && r.status !== status) return false;
-      if (!q) return true;
-      return (
-        r.fullName.toLowerCase().includes(q) ||
-        r.lrn.toLowerCase().includes(q) ||
-        r.section.toLowerCase().includes(q)
-      );
-    });
-  }, [all, query, status]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const filteredTotal = data?.total ?? pageRows.length;
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  // Derived (never stored): the backend clamps the requested page and every
+  // control below reads safePage, so the view self-heals without an effect.
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
-  const filtering = query.trim().length > 0 || status !== "all";
+  const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, filteredTotal);
+  const filtering = query.length > 0 || status !== "all";
+  const isSyncing = isFetching && !isPending;
 
   const openRecord = (r: Sf10Record) => {
     setSelected(r);
@@ -117,7 +116,7 @@ export default function RecordKeeperSf10Page() {
     });
   };
 
-  if (!isPending && !isError && all.length === 0) {
+  if (!isPending && !isError && counts.total === 0) {
     return (
       <section className={styles.page}>
         <div className={styles.emptyWrap}>
@@ -198,7 +197,7 @@ export default function RecordKeeperSf10Page() {
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Learner SF10 files for grades 7–10 —{" "}
-                {isPending ? "…" : `${filtered.length} shown`}.
+                {isPending ? "…" : `${filteredTotal} shown${isSyncing ? " · Syncing…" : ""}`}.
               </p>
             </div>
             <div className={styles.headerActions}>
@@ -207,21 +206,21 @@ export default function RecordKeeperSf10Page() {
                 <Input
                   className={styles.search}
                   placeholder="Search name, LRN, or section…"
-                  value={query}
+                  value={queryInput}
                   onChange={(e) => {
-                    setQuery(e.target.value);
+                    setQueryInput(e.target.value);
                     setPage(1);
                   }}
                   aria-label="Search SF10 records"
                 />
               </div>
-              {query && (
+              {queryInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className={styles.clearBtn}
                   onClick={() => {
-                    setQuery("");
+                    setQueryInput("");
                     setPage(1);
                   }}
                 >
@@ -266,7 +265,7 @@ export default function RecordKeeperSf10Page() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Array.from({ length: 6 }).map((_, i) => (
+                    {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                       <TableRow key={i}>
                         <TableCell>
                           <div className={styles.studentCell}>
@@ -287,7 +286,7 @@ export default function RecordKeeperSf10Page() {
               </div>
             ) : isError ? (
               <p className={styles.empty}>Could not load SF10 records.</p>
-            ) : filtering && filtered.length === 0 ? (
+            ) : filtering && pageRows.length === 0 ? (
               <div className={styles.emptyBlock}>
                 <span className={styles.emptyIcon} aria-hidden>
                   <SearchX />
@@ -363,16 +362,16 @@ export default function RecordKeeperSf10Page() {
             )}
           </div>
 
-          {filtered.length > 0 && (
+          {filteredTotal > 0 && (
             <div className={`${styles.footer} relative`}>
               <p className={styles.footerInfo}>
-                Showing {filtered.length > 0 ? `${start}–${end}` : "0"} of {filtered.length}
+                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
               </p>
               <div className={styles.footerActions}>
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={safePage <= 1 || filtered.length === 0}
+                  disabled={safePage <= 1 || filteredTotal === 0}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   <ChevronLeft aria-hidden />
@@ -384,7 +383,7 @@ export default function RecordKeeperSf10Page() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={safePage >= totalPages || filtered.length === 0}
+                  disabled={safePage >= totalPages || filteredTotal === 0}
                   onClick={() => setPage((p) => p + 1)}
                 >
                   Next

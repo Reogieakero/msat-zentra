@@ -30,6 +30,7 @@ export function OverviewShortcuts() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-overview"],
     queryFn: fetchRegistrarOverview,
+    staleTime: 30_000,
   });
 
   if (isPending) {

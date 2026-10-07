@@ -73,7 +73,7 @@ export default function AccountApprovalsPage() {
         .get<{ data: AccountBreakdown[] }>("/api/registrar/account-breakdown")
         // Same non-array-payload guard as the overview charts.
         .then((res) => (Array.isArray(res.data?.data) ? res.data.data : [])),
-    enabled: true,
+    staleTime: 30_000,
   });
 
   const students = data?.students ?? [];
@@ -406,7 +406,7 @@ export default function AccountApprovalsPage() {
 function SkeletonRows() {
   return (
     <>
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 15 }).map((_, i) => (
         <TableRow key={i}>
           <TableCell>
             <div className={styles.studentCell}>

@@ -33,6 +33,7 @@ export function Sf10AttachFeed() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["record-keeper-overview"],
     queryFn: fetchRecordKeeperOverview,
+    staleTime: 30_000,
   });
 
   const feed = React.useMemo(

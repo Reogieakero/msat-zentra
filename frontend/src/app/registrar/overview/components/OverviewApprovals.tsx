@@ -41,6 +41,7 @@ export function OverviewApprovals() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-overview"],
     queryFn: fetchRegistrarOverview,
+    staleTime: 30_000,
   });
 
   const goAccounts = React.useCallback(() => {

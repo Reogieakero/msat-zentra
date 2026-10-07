@@ -192,6 +192,7 @@ export function AccountBreakdown() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-account-breakdown"],
     queryFn: fetchBreakdown,
+    staleTime: 30_000,
   });
 
   // The breakdown endpoint has returned non-array payloads in the wild

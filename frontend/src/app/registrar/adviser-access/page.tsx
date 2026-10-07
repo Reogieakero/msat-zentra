@@ -25,7 +25,9 @@ import styles from "./adviser-access.module.css";
 
 type RequestsResponse = { requests: AdviserAccessRequest[] };
 
-const QUERY_KEY = ["adviser-access-requests"];
+// Role-scoped key — the record-keeper desk fetches a different endpoint
+// under its own key, so switching desks never serves the other's cache.
+const QUERY_KEY = ["registrar-adviser-access"];
 
 async function fetchRequests() {
   return apiClient
@@ -38,6 +40,7 @@ export default function AdviserAccessPage() {
   const { data, isPending, isError } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: fetchRequests,
+    staleTime: 30_000,
   });
 
   const requests = React.useMemo(() => data ?? [], [data]);

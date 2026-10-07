@@ -101,48 +101,75 @@ router.get(
   async (req, res, next) => {
     try {
       const band = await resolveGradeBand(req.user!.role, req.user!.id);
-      const where =
+      const bandWhere =
         band.length > 0
           ? ({ student: { gradeLevel: { in: band } } } as Prisma.Sf10RecordWhereInput)
           : ({} as Prisma.Sf10RecordWhereInput);
 
-      const records = await prisma.sf10Record.findMany({
-        where,
-        orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          studentId: true,
-          source: true,
-          status: true,
-          uploadedFileUrl: true,
-          uploadedAt: true,
-          verifiedBy: true,
-          verifiedAt: true,
-          validatedBy: true,
-          validatedAt: true,
-          releasedAt: true,
-          archivedAt: true,
-          currentVersion: true,
-          updatedAt: true,
-          student: {
-            select: {
-              lrn: true,
-              user: { select: { fullName: true } },
-              gradeLevel: true,
-              section: { select: { name: true } },
+      // Server paging + search (list standard): `total` drives the pager
+      // (filtered count); `counts` stay global (unfiltered) for the tiles.
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 15, 1), 100);
+      const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+      const status =
+        typeof req.query.status === "string" &&
+        ["attach", "available", "released"].includes(req.query.status)
+          ? req.query.status
+          : null;
+      const where: Prisma.Sf10RecordWhereInput = {
+        ...bandWhere,
+        ...(status ? { status: status as "attach" | "available" | "released" } : {}),
+        ...(q
+          ? {
+              OR: [
+                { student: { user: { fullName: { contains: q, mode: "insensitive" } } } },
+                { student: { lrn: { contains: q, mode: "insensitive" } } },
+                { student: { section: { name: { contains: q, mode: "insensitive" } } } },
+              ],
+            }
+          : {}),
+      };
+
+      const [total, counts, records] = await Promise.all([
+        prisma.sf10Record.count({ where }),
+        prisma.sf10Record.groupBy({
+          by: ["status"],
+          where: bandWhere,
+          _count: { _all: true },
+        }),
+        prisma.sf10Record.findMany({
+          where,
+          orderBy: { updatedAt: "desc" },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          select: {
+            id: true,
+            studentId: true,
+            source: true,
+            status: true,
+            uploadedFileUrl: true,
+            uploadedAt: true,
+            verifiedBy: true,
+            verifiedAt: true,
+            validatedBy: true,
+            validatedAt: true,
+            releasedAt: true,
+            archivedAt: true,
+            currentVersion: true,
+            updatedAt: true,
+            student: {
+              select: {
+                lrn: true,
+                user: { select: { fullName: true } },
+                gradeLevel: true,
+                section: { select: { name: true } },
+              },
             },
           },
-          versions: {
-            orderBy: { versionNumber: "asc" },
-            select: {
-              versionNumber: true,
-              changedBy: true,
-              changeReason: true,
-              changedAt: true,
-            },
-          },
-        },
-      });
+        }),
+      ]);
+      const countBy = { attach: 0, available: 0, released: 0 };
+      for (const c of counts) countBy[c.status] = c._count._all;
 
       res.json({
         records: records.map((r) => ({
@@ -164,8 +191,11 @@ router.get(
           archivedAt: r.archivedAt,
           currentVersion: r.currentVersion,
           updatedAt: r.updatedAt,
-          versions: r.versions,
         })),
+        total,
+        page,
+        pageSize,
+        counts: { ...countBy, total: countBy.attach + countBy.available + countBy.released },
       });
     } catch (e) { next(e); }
   }
@@ -281,7 +311,10 @@ router.get(
   requireRole("adviser"),
   async (req, res, next) => {
     try {
-      const record = await prisma.sf10Record.findUnique({ where: { id: String(req.params.jobId) } });
+      const record = await prisma.sf10Record.findUnique({
+        where: { id: String(req.params.jobId) },
+        select: { id: true, ocrExtractedData: true, source: true },
+      });
       if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
       res.json({ id: record.id, ocrExtractedData: record.ocrExtractedData, source: record.source });
     } catch (e) { next(e); }
@@ -294,7 +327,10 @@ router.post(
   requireRole("subject_teacher", "adviser"),
   async (req, res, next) => {
     try {
-      const record = await prisma.sf10Record.findUnique({ where: { id: String(req.params.id) } });
+      const record = await prisma.sf10Record.findUnique({
+        where: { id: String(req.params.id) },
+        select: { id: true },
+      });
       if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
       const updated = await prisma.sf10Record.update({ where: { id: record.id }, data: { verifiedBy: req.user!.id, verifiedAt: new Date() } });
       await invalidateTags(["registrar-sf10", "registrar-overview"]);

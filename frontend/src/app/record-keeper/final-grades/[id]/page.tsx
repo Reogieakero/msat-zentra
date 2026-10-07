@@ -63,13 +63,15 @@ export default function FinalGradeDetailPage() {
   const id = React.useMemo(() => decodeURIComponent(params.id), [params.id]);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-final-grades"],
+    // Detail key — never collides with the paged list or preview caches.
+    queryKey: ["record-keeper-final-grades", "detail"],
     queryFn: () =>
       apiClient
         .get<GradesResponse>("/api/record-keeper/final-grades", {
           params: { pageSize: 100 },
         })
         .then((res) => res.data),
+    staleTime: 30_000,
   });
 
   const student = React.useMemo(

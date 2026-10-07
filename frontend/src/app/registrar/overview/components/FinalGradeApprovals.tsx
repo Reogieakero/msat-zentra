@@ -51,6 +51,7 @@ export function FinalGradeApprovals() {
     // list key ["registrar-final-grades", page, q].
     queryKey: ["registrar-final-grades", "preview"],
     queryFn: fetchViewableFinals,
+    staleTime: 30_000,
   });
 
   const viewable = React.useMemo(

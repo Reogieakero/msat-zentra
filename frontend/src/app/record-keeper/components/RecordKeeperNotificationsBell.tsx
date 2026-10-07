@@ -14,13 +14,6 @@ export function RecordKeeperNotificationsBell() {
   return (
     <NotificationsBell
       queryKey={["record-keeper-notifications"]}
-      refreshKeys={[
-        ["record-keeper-notifications"],
-        ["record-keeper-overview"],
-        ["record-keeper-final-grades"],
-        ["record-keeper-pending-students"],
-        ["record-keeper-access"],
-      ]}
       resolveTarget={recordKeeperNotificationTarget}
       titleFor={recordKeeperNotificationTitle}
     />

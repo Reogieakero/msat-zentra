@@ -13,14 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -193,22 +186,28 @@ function ActDialogs({
 }) {
   return (
     <>
-      <Dialog open={dialog === "reject"} onOpenChange={(o) => { if (!o && !acting) closeDialog(); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deny access request</DialogTitle>
-            <DialogDescription>
-              Deny <strong>{request.adviserName}</strong> ({request.section})? Add a
-              reason for the denial.
-            </DialogDescription>
-          </DialogHeader>
+      <CardModal
+        open={dialog === "reject"}
+        onClose={() => {
+          if (!acting) closeDialog();
+        }}
+        dismissable={!acting}
+        size="sm"
+        title="Deny access request"
+        description={
+          <>
+            Deny <strong>{request.adviserName}</strong> ({request.section})? Add a
+            reason for the denial.
+          </>
+        }
+      >
           <Textarea
             placeholder="Reason for denial (required)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             aria-label="Reason for denial"
           />
-          <DialogFooter>
+          <div className={styles.modalActions}>
             <Button variant="outline" onClick={closeDialog} disabled={acting}>
               Cancel
             </Button>
@@ -222,21 +221,26 @@ function ActDialogs({
               ) : null}
               {acting ? "Denying…" : "Confirm deny"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </CardModal>
 
-      <Dialog open={dialog === "confirm"} onOpenChange={(o) => { if (!o && !acting) closeDialog(); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve SF10 access</DialogTitle>
-            <DialogDescription>
-              Grant <strong>{request.adviserName}</strong> ({request.section}) SF10
-              read access for {request.affectedAdvisees.length} advisee
-              {request.affectedAdvisees.length === 1 ? "" : "s"}?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+      <CardModal
+        open={dialog === "confirm"}
+        onClose={() => {
+          if (!acting) closeDialog();
+        }}
+        dismissable={!acting}
+        size="sm"
+        title="Approve SF10 access"
+        description={
+          <>
+            Grant <strong>{request.adviserName}</strong> ({request.section}) SF10
+            read access for {request.affectedAdvisees.length} advisee
+            {request.affectedAdvisees.length === 1 ? "" : "s"}?
+          </>
+        }
+      >
+          <div className={styles.modalActions}>
             <Button variant="outline" onClick={closeDialog} disabled={acting}>
               Cancel
             </Button>
@@ -246,9 +250,8 @@ function ActDialogs({
               ) : null}
               {acting ? "Approving…" : "Approve"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </CardModal>
     </>
   );
 }

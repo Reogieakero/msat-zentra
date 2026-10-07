@@ -14,7 +14,6 @@ export function CoordinatorNotificationsBell() {
   return (
     <NotificationsBell
       queryKey={["coordinator-notifications"]}
-      refreshKeys={[["coordinator-notifications"], ["coordinator-dashboard"]]}
       resolveTarget={coordinatorNotificationTarget}
       titleFor={coordinatorNotificationTitle}
     />

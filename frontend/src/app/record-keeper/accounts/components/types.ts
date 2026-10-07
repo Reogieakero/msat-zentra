@@ -39,6 +39,10 @@ export type PendingStudent = {
 
 export type PendingStudentsResponse = {
   students: PendingStudent[];
+  total?: number;
+  unfilteredTotal?: number;
+  page?: number;
+  pageSize?: number;
 };
 
 export type AccountsAuditEntry = {

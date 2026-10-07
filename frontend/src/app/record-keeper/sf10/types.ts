@@ -27,10 +27,18 @@ export type Sf10Record = {
   archivedAt: string | null;
   currentVersion: number;
   updatedAt: string;
-  versions: Sf10Version[];
+  /** Embedded only by legacy payloads — the list now omits versions and the
+      detail sheet fetches them on open. */
+  versions?: Sf10Version[];
 };
 
-export type Sf10RecordsResponse = { records: Sf10Record[] };
+export type Sf10RecordsResponse = {
+  records: Sf10Record[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: { attach: number; available: number; released: number; total: number };
+};
 
 export const SF10_STATUS_LABEL: Record<Sf10Status, string> = {
   attach: "Attached",

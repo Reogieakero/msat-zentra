@@ -408,15 +408,32 @@ router.get(
         requestedAt: s.user.createdAt.toISOString(),
       }));
 
+      // Single batched roster read for bare sign-ups (was N sequential
+      // findFirst calls). Latest school year wins per LRN.
+      const bareLrns = [...new Set(bare.map((u) => u.lrn).filter((l): l is string => !!l))];
+      const bareRosters =
+        bareLrns.length > 0
+          ? await prisma.studentRoster.findMany({
+              where: { lrn: { in: bareLrns } },
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                schoolYearId: true,
+                section: { select: { name: true } },
+              },
+            })
+          : [];
+      const latestBareRoster = new Map<string, (typeof bareRosters)[number]>();
+      for (const r of bareRosters) {
+        const prev = latestBareRoster.get(r.lrn);
+        if (!prev || r.schoolYearId > prev.schoolYearId) latestBareRoster.set(r.lrn, r);
+      }
+
       for (const u of bare) {
         let gradeLevel: string = "—";
         let section = "—";
         if (u.lrn) {
-          const roster = await prisma.studentRoster.findFirst({
-            where: { lrn: u.lrn },
-            include: { section: { select: { name: true } } },
-            orderBy: { schoolYearId: "desc" },
-          });
+          const roster = latestBareRoster.get(u.lrn);
           if (roster) {
             if (!band.includes(roster.gradeLevel)) continue; // grade-band enforcement
             gradeLevel = roster.gradeLevel;

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Search, MoreHorizontal, Eye, X, GraduationCap, SearchX } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
@@ -28,6 +28,7 @@ import {
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./final-grades.module.css";
 import { GradePipeline } from "./GradePipeline";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface SubjectRow {
   id: string;
@@ -61,48 +62,54 @@ interface GradesResponse {
   pageSize: number;
 }
 
+const PAGE_SIZE = 15;
+
 export default function FinalGradeApprovalsPage() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-final-grades"],
-    queryFn: () =>
+  // Server-paginated + server-searched (strict-15, registrar precedent):
+  // `total` drives the pager (filtered count); `complete`/`ready` stay
+  // global for the tiles. keepPreviousData keeps rows on screen while the
+  // next page loads — page turns never flash skeletons.
+  const { data, isPending, isError, isFetching } = useQuery<GradesResponse>({
+    queryKey: ["record-keeper-final-grades", page, debouncedQuery],
+    queryFn: ({ signal }) =>
       apiClient
-        .get<GradesResponse>("/api/record-keeper/final-grades", { params: { pageSize: 100 } })
+        .get<GradesResponse>("/api/record-keeper/final-grades", {
+          params: {
+            page,
+            pageSize: PAGE_SIZE,
+            ...(debouncedQuery ? { q: debouncedQuery } : {}),
+          },
+          signal,
+        })
         .then((res) => res.data),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 
   const stats = {
     ready: data?.ready ?? 0,
     complete: data?.complete ?? 0,
-    total: data?.total ?? 0,
+    total: data?.complete ?? 0,
   };
 
-  const allStudents = React.useMemo(() => data?.students ?? [], [data]);
+  const pageRows = React.useMemo(() => data?.students ?? [], [data]);
+  const filteredTotal = data?.total ?? pageRows.length;
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return allStudents.filter((s) => {
-      const matchesQuery =
-        !q ||
-        s.name.toLowerCase().includes(q) ||
-        s.lrn.toLowerCase().includes(q) ||
-        s.section.toLowerCase().includes(q) ||
-        s.subjects.some((sub) => sub.subject.toLowerCase().includes(q));
-      return matchesQuery;
-    });
-  }, [allStudents, query]);
-
-  const PAGE_SIZE = 20;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  // Derived (never stored): if the list shrinks under us the backend clamps
+  // the requested page and every control below reads safePage, so the view
+  // self-heals on the next navigation without an effect.
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
-  const hasRecords = allStudents.length > 0;
-  const searching = query.trim().length > 0;
+  const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, filteredTotal);
+  const hasRecords = (data?.complete ?? 0) > 0;
+  const searching = debouncedQuery.length > 0;
+  const isSyncing = isFetching && !isPending;
 
   return (
     <section className={styles.page}>
@@ -226,7 +233,7 @@ export default function FinalGradeApprovalsPage() {
                   Students appear once every subject is adviser-approved.
                 </p>
               </div>
-            ) : searching && filtered.length === 0 ? (
+            ) : searching && pageRows.length === 0 ? (
               <div className={styles.emptyBlock}>
                 <span className={styles.emptyIcon} aria-hidden>
                   <SearchX />
@@ -298,13 +305,14 @@ export default function FinalGradeApprovalsPage() {
           {hasRecords && (
             <div className={`${styles.footer} relative`}>
               <p className={styles.footerInfo}>
-                Showing {filtered.length > 0 ? `${start}–${end}` : "0"} of {filtered.length}
+                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
+                {isSyncing ? " · Syncing…" : ""}
               </p>
               <div className={styles.footerActions}>
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={safePage <= 1 || filtered.length === 0}
+                  disabled={safePage <= 1 || filteredTotal === 0}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   Previous
@@ -315,7 +323,7 @@ export default function FinalGradeApprovalsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={safePage >= totalPages || filtered.length === 0}
+                  disabled={safePage >= totalPages || filteredTotal === 0}
                   onClick={() => setPage((p) => p + 1)}
                 >
                   Next

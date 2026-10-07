@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -265,21 +259,18 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
         </DropdownMenuContent>
       </DropdownMenu>
       {viewAllOpen ? (
-        <Dialog
+        <CardModal
           open
-          onOpenChange={(open) => {
-            if (!open) setViewAllOpen(false);
-          }}
+          onClose={() => setViewAllOpen(false)}
+          size="md"
+          title="Notifications"
+          description={
+            unread === 0
+              ? "You're all caught up."
+              : `${unread} unread notification${unread === 1 ? "" : "s"}.`
+          }
+          watchKey={[notifications.length, unread, readingId]}
         >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Notifications</DialogTitle>
-              <DialogDescription>
-                {unread === 0
-                  ? "You're all caught up."
-                  : `${unread} unread notification${unread === 1 ? "" : "s"}.`}
-              </DialogDescription>
-            </DialogHeader>
             <div className={styles.modalList} aria-label="All notifications">
               {notifications.map((n) => {
                 const target = resolveTarget(n);
@@ -296,8 +287,7 @@ export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleF
                 );
               })}
             </div>
-          </DialogContent>
-        </Dialog>
+        </CardModal>
       ) : null}
     </>
   );

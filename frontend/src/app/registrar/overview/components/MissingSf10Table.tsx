@@ -35,6 +35,7 @@ export function MissingSf10Table() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-overview"],
     queryFn: fetchRegistrarOverview,
+    staleTime: 30_000,
   });
 
   const goSf10 = React.useCallback(() => {

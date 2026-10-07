@@ -12,6 +12,7 @@ export function AdviserAccessCard() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["registrar-overview"],
     queryFn: fetchRegistrarOverview,
+    staleTime: 30_000,
   });
 
   const pending = data?.pendingAdviserAccess ?? 0;

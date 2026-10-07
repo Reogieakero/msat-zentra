@@ -15,8 +15,10 @@ interface CoordinatorEnrolledGridProps {
   isRefetching: boolean;
   hasActiveFilters: boolean;
   skeletonRows?: number;
+  completingId: string | null;
   onRetry: () => void;
   onHistory: (target: HistoryTarget) => void;
+  onComplete: (row: AdmCaseRow) => void;
 }
 
 function CardSkeleton() {
@@ -48,8 +50,10 @@ export function CoordinatorEnrolledGrid({
   isRefetching,
   hasActiveFilters,
   skeletonRows = 6,
+  completingId,
   onRetry,
   onHistory,
+  onComplete,
 }: CoordinatorEnrolledGridProps) {
   if (isPending) {
     return (
@@ -102,7 +106,13 @@ export function CoordinatorEnrolledGrid({
   return (
     <div className={styles.grid} aria-label="Enrolled ADM students">
       {rows.map((r) => (
-        <CoordinatorEnrolledCard key={r.id} row={r} onHistory={onHistory} />
+        <CoordinatorEnrolledCard
+          key={r.id}
+          row={r}
+          onHistory={onHistory}
+          onComplete={onComplete}
+          completing={completingId === r.id}
+        />
       ))}
     </div>
   );

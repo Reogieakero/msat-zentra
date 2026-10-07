@@ -80,6 +80,7 @@ function CoordinatorReferralsPageInner() {
             hasActiveFilters={r.hasActiveFilters}
             onClear={r.clearFilters}
             bookPendingId={r.bookPendingId}
+            now={r.now}
             onRetry={r.refetchReferrals}
             onHistory={r.setHistoryTarget}
             onBook={r.bookForRow}

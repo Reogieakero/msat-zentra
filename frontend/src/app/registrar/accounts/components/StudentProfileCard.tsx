@@ -1,16 +1,9 @@
 import * as React from "react";
-import { Check, X, UserRound } from "lucide-react";
+import { Check, Loader2, X, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeTime, type PendingStudent } from "./types";
 import { formatGrade } from "@/lib/utils";
@@ -111,9 +104,14 @@ export function StudentProfileCard({ student, acting, onActed, onClose }: Props)
           size="sm"
           className={styles.approve}
           disabled={isActing}
+          aria-busy={isActing || undefined}
           onClick={() => setDialog("approve")}
         >
-          <Check className={styles.actionIcon} />
+          {isActing ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Check className={styles.actionIcon} />
+          )}
           {isActing ? "Processing…" : "Approve"}
         </Button>
         <Button
@@ -128,59 +126,69 @@ export function StudentProfileCard({ student, acting, onActed, onClose }: Props)
         </Button>
       </footer>
 
-      <Dialog open={dialog !== null} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent>
-          {dialog === "approve" ? (
+      <CardModal
+        open={dialog !== null}
+        onClose={() => {
+          if (!isActing) closeDialog();
+        }}
+        dismissable={!isActing}
+        size="sm"
+        title={dialog === "approve" ? "Approve account" : "Reject account"}
+        description={
+          dialog === "approve" ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Approve account</DialogTitle>
-                <DialogDescription>
-                  Approve <strong>{student.name}</strong> ({student.lrn})? They will be
-                  notified that their account is active.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={closeDialog} disabled={isActing}>
-                  Cancel
-                </Button>
-                <Button variant="default" onClick={confirmApprove} disabled={isActing}>
-                  {isActing ? "Approving…" : "Confirm approve"}
-                </Button>
-              </DialogFooter>
+              Approve <strong>{student.name}</strong> ({student.lrn})? They will be
+              notified that their account is active.
             </>
           ) : (
             <>
-              <DialogHeader>
-                <DialogTitle>Reject account</DialogTitle>
-                <DialogDescription>
-                  Reject <strong>{student.name}</strong> ({student.lrn})? Add a reason for
-                  the rejection.
-                </DialogDescription>
-              </DialogHeader>
-              <div className={styles.dialogBody}>
-                <Textarea
-                  placeholder="Reason for rejection (required)"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className={styles.reasonInput}
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={closeDialog} disabled={isActing}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={confirmReject}
-                  disabled={isActing || !reason.trim()}
-                >
-                  {isActing ? "Rejecting…" : "Confirm reject"}
-                </Button>
-              </DialogFooter>
+              Reject <strong>{student.name}</strong> ({student.lrn})? Add a reason for
+              the rejection.
             </>
-          )}
-        </DialogContent>
-      </Dialog>
+          )
+        }
+      >
+          {dialog === "reject" ? (
+            <div className={styles.dialogBody}>
+              <Textarea
+                placeholder="Reason for rejection (required)"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className={styles.reasonInput}
+              />
+            </div>
+          ) : null}
+          <div className={styles.modalActions}>
+            <Button variant="outline" onClick={closeDialog} disabled={isActing}>
+              Cancel
+            </Button>
+            {dialog === "approve" ? (
+              <Button
+                variant="default"
+                onClick={confirmApprove}
+                disabled={isActing}
+                aria-busy={isActing || undefined}
+              >
+                {isActing ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                {isActing ? "Approving…" : "Confirm approve"}
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={confirmReject}
+                disabled={isActing || !reason.trim()}
+                aria-busy={isActing || undefined}
+              >
+                {isActing ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                {isActing ? "Rejecting…" : "Confirm reject"}
+              </Button>
+            )}
+          </div>
+      </CardModal>
     </article>
   );
 }

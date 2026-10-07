@@ -6,11 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
 import type {
@@ -153,26 +149,26 @@ export function CaseHistoryDialog({
   const currentOrder = row ? stageOrder(row.stage) : 2;
 
   return (
-    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
-        <DialogTitle className="sr-only">
-          {target ? `Track case for ${target.title}` : "Track case"}
-        </DialogTitle>
-        {target && row ? (
-          /* Single frame — content sits directly on the DialogContent
-             (which owns the border + its own close button), not nested in
-             a second bordered card with a second X. */
-          <div
-            className="flex min-w-0 flex-col gap-3"
-            aria-label={`Track ADM case for ${row.student}`}
-          >
-            <div className="min-w-0">
-              <h3 className="truncate font-semibold">{row.student} — tracking</h3>
-              <p className="truncate text-xs text-muted-foreground">
-                LRN {row.lrn} · {row.grade}
-              </p>
-            </div>
-
+    <CardModal
+      open={target !== null}
+      onClose={onClose}
+      size="lg"
+      title={target && row ? `${row.student} — tracking` : "Track case"}
+      description={
+        target && row ? `LRN ${row.lrn} · ${row.grade}` : undefined
+      }
+      watchKey={[
+        row?.id ?? null,
+        historyQuery.dataUpdatedAt,
+        historyQuery.isPending,
+      ]}
+    >
+      {target && row ? (
+        /* Single frame — content sits directly in the CardModal body. */
+        <div
+          className="flex min-w-0 flex-col gap-3"
+          aria-label={`Track ADM case for ${row.student}`}
+        >
             <div className="relative flex items-center gap-2">
               <div
                 className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
@@ -241,7 +237,6 @@ export function CaseHistoryDialog({
             </div>
           </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+    </CardModal>
   );
 }

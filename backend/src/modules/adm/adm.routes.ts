@@ -485,12 +485,19 @@ router.get(
         prisma.admLearnerProfile.findMany({
           where,
           include: {
-            student: { include: { user: true, section: { select: { name: true } } } },
+            student: {
+              select: {
+                lrn: true,
+                gradeLevel: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            },
             // consultReviewer powers the queue's "Referred by" source phrase
             // (Direct referral vs Endorsed by …) on profile-stage rows too —
             // without it the source is lost once the profile is created.
             referral: { select: { anecdotalRecordId: true, status: true, consultReviewer: true } },
-            preparedByUser: true,
+            preparedByUser: { select: { fullName: true } },
             forms: { orderBy: { uploadedAt: "desc" }, take: 8 },
             // Invitee ids ride the row snapshot so rescheduling from the
             // table menu prefills (never wipes) the invite list.
@@ -750,6 +757,9 @@ router.get(
             },
             select: { sourceId: true, sourceTable: true, actionType: true, createdAt: true },
             orderBy: { createdAt: "desc" },
+            // Page-bounded read: the slice holds at most `limit` rows, so
+            // this cap never truncates real results — it only bounds memory.
+            take: 1000,
           });
           for (const log of logs) {
             let caseKey: string | null = null;

@@ -6,14 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import {
   meetingInviteeLabel,
   venueLabel,
@@ -59,26 +52,25 @@ export function CoordinatorReferralsOutcomeDialog({
     );
   }
   return (
-    <Dialog
+    <CardModal
       open={target !== null}
-      onOpenChange={(open) => {
+      onClose={() => {
         // Locked while saving — X/backdrop/Escape can't drop the flight.
-        if (!open && !pending) onClose();
+        if (!pending) onClose();
       }}
+      dismissable={!pending}
+      size="md"
+      title="Record meeting outcome"
+      description={
+        target ? (
+          <>
+            {venueLabel(target.venue)} on {target.meetingDatetime.slice(0, 10)}.
+            Attended meetings log minutes; missed ones route the case to home
+            visitation.
+          </>
+        ) : undefined
+      }
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Record meeting outcome</DialogTitle>
-          <DialogDescription>
-            {target ? (
-              <>
-                {venueLabel(target.venue)} on {target.meetingDatetime.slice(0, 10)}.
-                Attended meetings log minutes; missed ones route the case to home
-                visitation.
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
         <div className={styles.formGrid}>
           <label
             className={styles.checkRow}
@@ -140,7 +132,7 @@ export function CoordinatorReferralsOutcomeDialog({
             />
           </div>
         </div>
-        <DialogFooter>
+        <div className={styles.actions}>
           <Button variant="outline" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
@@ -154,8 +146,7 @@ export function CoordinatorReferralsOutcomeDialog({
             ) : null}
             {pending ? "Saving…" : "Save outcome"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </CardModal>
   );
 }

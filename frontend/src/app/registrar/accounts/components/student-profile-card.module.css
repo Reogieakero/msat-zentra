@@ -185,6 +185,14 @@
   resize: vertical;
 }
 
+/* Action row inside CardModal body — right-aligned footer. */
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);

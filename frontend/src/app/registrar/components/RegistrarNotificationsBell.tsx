@@ -13,13 +13,6 @@ export function RegistrarNotificationsBell() {
   return (
     <NotificationsBell
       queryKey={["registrar-notifications"]}
-      refreshKeys={[
-        ["registrar-notifications"],
-        ["registrar-overview"],
-        ["registrar-final-grades"],
-        ["pending-students"],
-        ["registrar-access"],
-      ]}
       resolveTarget={registrarNotificationTarget}
       titleFor={registrarNotificationTitle}
     />

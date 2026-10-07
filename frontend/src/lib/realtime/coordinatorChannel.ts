@@ -10,12 +10,47 @@ import { coordinatorNotificationTitle } from "@/lib/notifications/label";
 const COORDINATOR_KEYS = [
   ["coordinator-dashboard"],
   ["coordinator-referrals"],
+  ["coordinator-meetings"],
   ["coordinator-enrolled"],
   ["coordinator-certifications"],
   ["coordinator-approvals"],
   ["coordinator-devices"],
   ["coordinator-notifications"],
 ] as const;
+
+type KeyTuple = readonly [string, ...string[]];
+
+/* Targeted realtime invalidation: each event refreshes only the queries its
+   source table feeds (plus the bell). Unknown tables fall back to the full
+   sweep so correctness never depends on the map staying exhaustive. */
+function keysForNotification(
+  row: Pick<CoordinatorNotification, "sourceTable" | "type">,
+): KeyTuple[] {
+  const bell: KeyTuple = ["coordinator-notifications"];
+  switch (row.sourceTable) {
+    case "adm_devices":
+      return [["coordinator-devices"], ["coordinator-dashboard"], bell];
+    case "adm_parent_meetings":
+      return [
+        ["coordinator-referrals"],
+        ["coordinator-meetings"],
+        ["coordinator-dashboard"],
+        bell,
+      ];
+    case "referrals":
+      return [["coordinator-referrals"], ["coordinator-dashboard"], bell];
+    case "adm_learner_profiles":
+      return [
+        ["coordinator-dashboard"],
+        ["coordinator-referrals"],
+        ["coordinator-certifications"],
+        ["coordinator-enrolled"],
+        bell,
+      ];
+    default:
+      return [...COORDINATOR_KEYS];
+  }
+}
 
 interface CoordinatorNotification {
   id: string;
@@ -79,6 +114,8 @@ function currentUserId(): string | null {
 export function useCoordinatorRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const lastInvalidated = React.useRef(0);
+  const pendingRows = React.useRef<CoordinatorNotification[]>([]);
+  const trailingTimer = React.useRef<number | null>(null);
   const seenIds = React.useRef<Set<string>>(new Set());
   const realtimeOk = React.useRef(false);
 
@@ -109,7 +146,7 @@ export function useCoordinatorRealtime(enabled = true) {
           description: row.message,
         });
       }
-      void invalidate();
+      void invalidate([row]);
     }
 
     try {
@@ -163,7 +200,7 @@ export function useCoordinatorRealtime(enabled = true) {
         for (const n of ordered) notify(n);
         // Mark the rest seen (lists still refresh below) to avoid backlog.
         for (const n of fresh) seenIds.current.add(n.id);
-        if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate();
+        void invalidate(fresh);
       } catch {
         // Offline / unauthorized — try again on the next tick.
       }
@@ -180,12 +217,39 @@ export function useCoordinatorRealtime(enabled = true) {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
-    function invalidate() {
+    function invalidate(rows?: CoordinatorNotification[]) {
       // Throttle bursts to one invalidate per 2s (toasts still fire per row).
+      // Rows arriving inside the window accumulate and flush together so no
+      // table's keys are ever dropped by the throttle.
       const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
+      if (rows) {
+        for (const row of rows) pendingRows.current.push(row);
+      }
+      if (now - lastInvalidated.current < 2000) {
+        if (pendingRows.current.length > 0 && !trailingTimer.current) {
+          trailingTimer.current = window.setTimeout(() => {
+            trailingTimer.current = null;
+            if (cancelled) return;
+            lastInvalidated.current = Date.now();
+            flushPending();
+          }, 2000 - (now - lastInvalidated.current));
+        }
+        return;
+      }
       lastInvalidated.current = now;
-      for (const key of COORDINATOR_KEYS) {
+      flushPending();
+    }
+
+    function flushPending() {
+      const queued = [...pendingRows.current];
+      pendingRows.current = [];
+      const keys = new Map<string, KeyTuple>();
+      for (const row of queued) {
+        for (const key of keysForNotification(row)) keys.set(key.join("|"), key);
+      }
+      // No rows (or unknown table) → full sweep preserves correctness.
+      const targets = keys.size > 0 ? [...keys.values()] : [...COORDINATOR_KEYS];
+      for (const key of targets) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
       }
     }
@@ -194,6 +258,7 @@ export function useCoordinatorRealtime(enabled = true) {
       cancelled = true;
       window.clearInterval(timer);
       window.clearTimeout(seedTimer);
+      if (trailingTimer.current) window.clearTimeout(trailingTimer.current);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
       try {

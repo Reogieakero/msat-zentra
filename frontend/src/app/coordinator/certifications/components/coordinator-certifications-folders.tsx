@@ -14,19 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { HelpCircle, Loader2 } from "lucide-react";
+import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
-import { apiErrorMessage } from "../../components/coordinator-data";
+import { apiErrorMessage, useNowTick } from "../../components/coordinator-data";
 import {
   CERT_STATUS_META,
   type CertRecord,
@@ -56,6 +49,8 @@ interface CoordinatorCertificationsFoldersProps {
   onQueryChange: (value: string) => void;
   status: CertStatusFilter;
   onStatusChange: (value: CertStatusFilter) => void;
+  /** Background refresh with folders on screen — inline hint, never a skeleton. */
+  isSyncing?: boolean;
 }
 
 /* Desk-level pagination standard: the folder grid pages at the list size. */
@@ -72,6 +67,7 @@ export function CoordinatorCertificationsFolders({
   onQueryChange,
   status,
   onStatusChange,
+  isSyncing = false,
 }: CoordinatorCertificationsFoldersProps) {
   const queryClient = useQueryClient();
   const [forwardTarget, setForwardTarget] =
@@ -117,10 +113,32 @@ export function CoordinatorCertificationsFolders({
     onSettled: () => setForwardingId(null),
   });
 
-  const filtered =
-    status === "all" ? records : records.filter((r) => r.status === status);
+  const filtered = React.useMemo(
+    () => (status === "all" ? records : records.filter((r) => r.status === status)),
+    [records, status],
+  );
   const total = filtered.length;
-  const visible = filtered.slice(0, DISPLAY_LIMIT);
+  // Client pager over the merged records — the wide summary fetch can hold
+  // up to 200 rows, so page instead of slicing only the first 15.
+  const totalPages = Math.max(1, Math.ceil(total / DISPLAY_LIMIT));
+  const [page, setPage] = React.useState(1);
+  // Derived clamp — never setState in an effect. Filter changes reset to
+  // page 1 in the change handlers below; shrinkage self-heals via safePage.
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = total === 0 ? 0 : (safePage - 1) * DISPLAY_LIMIT + 1;
+  const end = Math.min(safePage * DISPLAY_LIMIT, total);
+  // Relative timestamps tick with the 30s overview clock so "5m ago" never
+  // goes stale without a refetch; memoized against the visible slice.
+  const nowTick = useNowTick();
+  const visible = React.useMemo(
+    () =>
+      filtered.slice(start - 1, end).map((record) => ({
+        record,
+        date: record.datePrepared ?? record.approvalDate,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, start, end, nowTick],
+  );
 
   const openRecord = (record: CertRecord) => {
     window.open(
@@ -153,15 +171,22 @@ export function CoordinatorCertificationsFolders({
             </div>
             <p className={styles.sectionDesc}>
               One folder per certification you issued — {total} record
-              {total === 1 ? "" : "s"}.
+              {total === 1 ? "" : "s"}
+              {isSyncing ? " · Syncing…" : ""}.
             </p>
           </div>
           <div className={styles.headerActions}>
             <CoordinatorCertificationsFilters
               query={query}
-              onQueryChange={onQueryChange}
+              onQueryChange={(v) => {
+                setPage(1);
+                onQueryChange(v);
+              }}
               status={status}
-              onStatusChange={onStatusChange}
+              onStatusChange={(v) => {
+                setPage(1);
+                onStatusChange(v);
+              }}
             />
           </div>
         </div>
@@ -172,9 +197,8 @@ export function CoordinatorCertificationsFolders({
             </p>
           ) : (
             <div className={styles.studentGrid}>
-              {visible.map((record) => {
+              {visible.map(({ record, date }) => {
                 const meta = CERT_STATUS_META[record.status];
-                const date = record.datePrepared ?? record.approvalDate;
                 return (
                   <div key={record.id} className={styles.studentBlock}>
                     <button
@@ -256,6 +280,32 @@ export function CoordinatorCertificationsFolders({
               })}
             </div>
           )}
+          {totalPages > 1 ? (
+            <div className={styles.pager} aria-label="Certification pagination">
+              <p className={styles.pagerCount}>
+                Showing {start}–{end} of {total} · Page {safePage} of{" "}
+                {totalPages}
+              </p>
+              <div className={styles.pagerActions}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage(safePage - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage(safePage + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -295,15 +345,13 @@ export function CoordinatorCertificationsFolders({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={helpOpen} onOpenChange={(open) => !open && setHelpOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>What do the folder badges mean?</DialogTitle>
-            <DialogDescription>
-              Every folder is a certification you issued. The badge is its
-              current status — click any folder to open the full case file.
-            </DialogDescription>
-          </DialogHeader>
+      <CardModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        size="sm"
+        title="What do the folder badges mean?"
+        description="Every folder is a certification you issued. The badge is its current status — click any folder to open the full case file."
+      >
           <ul className={styles.helpList}>
             <li>
               <p className={styles.helpItemTitle}>Prepared — ready to endorse</p>
@@ -337,13 +385,12 @@ export function CoordinatorCertificationsFolders({
               </p>
             </li>
           </ul>
-          <DialogFooter>
+          <div className={styles.helpActions}>
             <Button type="button" onClick={() => setHelpOpen(false)}>
               Understood
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </CardModal>
     </>
   );
 }

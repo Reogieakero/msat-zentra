@@ -159,6 +159,14 @@
   gap: 0.375rem;
 }
 
+/* Action row inside CardModal body — right-aligned footer. */
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .reasonCell {
   max-width: 22rem;
   overflow: hidden;

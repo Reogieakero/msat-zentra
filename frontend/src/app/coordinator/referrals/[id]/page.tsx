@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -151,6 +151,9 @@ function CoordinatorCasePageInner({ caseId }: { caseId: string }) {
   const detailQuery = useQuery({
     queryKey: ["coordinator-case", caseId],
     queryFn: ({ signal }) => fetchCoordinatorCaseDetail(caseId, signal),
+    // Hold the previous file on case→case navigation instead of flashing
+    // the full skeleton — background fetch swaps in the new case.
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
   const now = useNowTick();

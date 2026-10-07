@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   X,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +27,12 @@ import styles from "./accounts.module.css";
 
 const PAGE_SIZE = 8;
 
-async function fetchPendingStudents() {
+async function fetchPendingStudents(page: number, q: string, signal?: AbortSignal) {
   return apiClient
-    .get<PendingStudentsResponse>("/api/auth/pending", { params: { role: "student" } })
+    .get<PendingStudentsResponse>("/api/auth/pending", {
+      params: { role: "student", page, pageSize: PAGE_SIZE, ...(q ? { q } : {}) },
+      signal,
+    })
     .then((res) => res.data);
 }
 
@@ -36,10 +40,16 @@ export default function AccountApprovalsPage() {
   const qc = useQueryClient();
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-pending-students"],
-    queryFn: fetchPendingStudents,
+  // Server-paginated + server-searched (registrar precedent): the pager
+  // reads the filtered total, the tiles read the unfiltered total.
+  // keepPreviousData keeps rows on screen while the next page loads.
+  const { data, isPending, isError, isFetching } = useQuery({
+    queryKey: ["record-keeper-pending-students", page, debouncedQuery],
+    queryFn: ({ signal }) => fetchPendingStudents(page, debouncedQuery, signal),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 
   const { data: breakdownData, isPending: breakdownPending } = useQuery({
@@ -48,21 +58,13 @@ export default function AccountApprovalsPage() {
       apiClient
         .get<{ data: AccountBreakdown[] }>("/api/record-keeper/account-breakdown")
         .then((res) => (Array.isArray(res.data?.data) ? res.data.data : [])),
-    enabled: true,
+    staleTime: 30_000,
   });
 
   const students = data?.students ?? [];
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.lrn.toLowerCase().includes(q) ||
-        s.section.toLowerCase().includes(q)
-    );
-  }, [students, query]);
+  const filteredTotal = data?.total ?? students.length;
+  const unfilteredTotal = data?.unfilteredTotal ?? filteredTotal;
+  const isSyncing = isFetching && !isPending;
 
   const act = useMutation({
     mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
@@ -91,13 +93,15 @@ export default function AccountApprovalsPage() {
     },
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  // Derived (never stored): the backend clamps the requested page and every
+  // control below reads safePage, so the view self-heals without an effect.
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, filtered.length);
-  const hasRecords = students.length > 0;
-  const searching = query.trim().length > 0;
+  const pageRows = students;
+  const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, filteredTotal);
+  const hasRecords = unfilteredTotal > 0;
+  const searching = debouncedQuery.length > 0;
 
   const sideStats = React.useMemo(() => {
     const rows = breakdownData ?? [];
@@ -128,7 +132,7 @@ export default function AccountApprovalsPage() {
           ) : (
             <ul className={`${styles.tiles} relative`}>
               <li className={styles.tile}>
-                <span className={styles.tileValue}>{students.length}</span>
+                <span className={styles.tileValue}>{unfilteredTotal}</span>
                 <span className={styles.tileLabel}>Pending approval</span>
                 <span className={styles.tileHint}>G7–10 sign-ups awaiting sign-off</span>
               </li>
@@ -162,7 +166,7 @@ export default function AccountApprovalsPage() {
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Approve or reject student account requests for grades 7–10 —{" "}
-                {isPending ? "…" : `${students.length} pending`}.
+                {isPending ? "…" : `${filteredTotal} pending${isSyncing ? " · Syncing…" : ""}`}.
               </p>
             </div>
             <div className={styles.queueActions}>
@@ -227,7 +231,7 @@ export default function AccountApprovalsPage() {
                   New G7–10 sign-ups awaiting record keeper sign-off will appear here.
                 </p>
               </div>
-            ) : searching && filtered.length === 0 ? (
+            ) : searching && pageRows.length === 0 ? (
               <div className={styles.emptyBlock}>
                 <span className={styles.emptyIcon} aria-hidden>
                   <SearchX />
@@ -289,13 +293,13 @@ export default function AccountApprovalsPage() {
           {hasRecords && (
             <div className={`${styles.pager} relative`}>
               <p className={styles.range}>
-                Showing {filtered.length > 0 ? `${start}–${end}` : "0"} of {filtered.length}
+                Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}
               </p>
               <div className={styles.pagerButtons}>
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={safePage <= 1 || filtered.length === 0}
+                  disabled={safePage <= 1 || filteredTotal === 0}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   Previous
@@ -306,7 +310,7 @@ export default function AccountApprovalsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={safePage >= totalPages || filtered.length === 0}
+                  disabled={safePage >= totalPages || filteredTotal === 0}
                   onClick={() => setPage((p) => p + 1)}
                 >
                   Next
@@ -325,7 +329,7 @@ export default function AccountApprovalsPage() {
 function SkeletonRows() {
   return (
     <>
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <TableRow key={i}>
           <TableCell>
             <div className={styles.studentCell}>

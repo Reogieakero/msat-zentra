@@ -299,21 +299,17 @@ export function ParentMeetingCard({
 
   async function uploadPickedDocs(): Promise<{ uploaded: number; failed: boolean }> {
     const toUpload = images.map((i) => i.file).filter((f): f is File => !!f);
-    let uploaded = 0;
-    let failed = false;
-    // One file per request, dropping each success from the picker as we go —
-    // a mid-batch failure never duplicates on retry.
-    for (const f of toUpload) {
-      try {
-        await uploadMeetingAttachments(m.id, [f]);
-        uploaded += 1;
-        setImages((prev) => prev.filter((i) => i.file !== f));
-      } catch {
-        failed = true;
-        break;
-      }
+    if (toUpload.length === 0) return { uploaded: 0, failed: false };
+    // One batched request for all files (same helper the case sheet uses) —
+    // a failure leaves the picker untouched so retry never duplicates.
+    try {
+      await uploadMeetingAttachments(m.id, toUpload);
+      const done = new Set(toUpload);
+      setImages((prev) => prev.filter((i) => !done.has(i.file as File)));
+      return { uploaded: toUpload.length, failed: false };
+    } catch {
+      return { uploaded: 0, failed: true };
     }
-    return { uploaded, failed };
   }
 
   async function removeDoc(id: string) {

@@ -75,11 +75,16 @@ function CertificationsBody() {
   const summary = React.useMemo(() => summarizeCertRecords(records), [records]);
 
   const isPending =
-    certQuery.isPending || approvalQuery.isPending || approvedQuery.isPending;
+    (certQuery.isPending || approvalQuery.isPending || approvedQuery.isPending) &&
+    records.length === 0 &&
+    certQuery.data === undefined &&
+    approvalQuery.data === undefined &&
+    approvedQuery.data === undefined;
   const isFetching =
     certQuery.isFetching || approvalQuery.isFetching || approvedQuery.isFetching;
   const isError =
-    certQuery.isError || approvalQuery.isError || approvedQuery.isError;
+    (certQuery.isError || approvalQuery.isError || approvedQuery.isError) &&
+    records.length === 0;
 
   const refetchAll = () => {
     void certQuery.refetch();
@@ -189,6 +194,7 @@ function CertificationsBody() {
             onQueryChange={handleQueryInputChange}
             status={status}
             onStatusChange={setStatus}
+            isSyncing={isFetching}
           />
         </div>
 

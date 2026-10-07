@@ -30,6 +30,7 @@ export function OverviewShortcuts() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["record-keeper-overview"],
     queryFn: fetchRecordKeeperOverview,
+    staleTime: 30_000,
   });
 
   if (isPending) {

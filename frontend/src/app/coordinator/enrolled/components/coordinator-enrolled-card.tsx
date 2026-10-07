@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   deriveAdmCaseStatus,
@@ -16,6 +16,8 @@ import styles from "./coordinator-enrolled-card.module.css";
 interface CoordinatorEnrolledCardProps {
   row: AdmCaseRow;
   onHistory: (target: HistoryTarget) => void;
+  onComplete: (row: AdmCaseRow) => void;
+  completing: boolean;
 }
 
 /* Enrolled learner card — view-only info card. Mirrors the coordinator
@@ -26,6 +28,8 @@ interface CoordinatorEnrolledCardProps {
 export function CoordinatorEnrolledCard({
   row,
   onHistory,
+  onComplete,
+  completing,
 }: CoordinatorEnrolledCardProps) {
   const caseStatus = deriveAdmCaseStatus(
     row.stage,
@@ -123,6 +127,23 @@ export function CoordinatorEnrolledCard({
       </div>
 
       <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.ctaSecondary}
+          onClick={() => onComplete(row)}
+          disabled={completing}
+          aria-busy={completing || undefined}
+          aria-label={`Mark ${row.student} as completed`}
+        >
+          {completing ? (
+            <Loader2
+              aria-hidden="true"
+              style={{ width: "0.875rem", height: "0.875rem" }}
+              className="animate-spin"
+            />
+          ) : null}
+          {completing ? "Marking…" : "Mark completed"}
+        </button>
         <button
           type="button"
           className={styles.cta}

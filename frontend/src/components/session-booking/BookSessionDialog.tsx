@@ -4,14 +4,7 @@ import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CardModal } from "@/components/ui/CardModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormDropdown } from "@/app/guidance/referrals/components/form-dropdown";
@@ -236,46 +229,44 @@ export function BookSessionDialog({
   }
 
   return (
-    <Dialog
+    <CardModal
       open
-      onOpenChange={(next) => {
+      onClose={() => {
         // Locked while the booking is in flight — closes only on server
         // confirmation, never early.
-        if (!next && !busy) {
+        if (!busy) {
           onClose();
           setError(null);
         }
       }}
+      dismissable={!busy}
+      size="lg"
+      title={title}
+      description={description}
+      watchKey={step}
     >
-      <DialogContent
-        className={styles.dialogScrollHidden}
-        aria-busy={busy || undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-          {isStepped ? (
-            <div className={styles.steps} role="list" aria-label="Booking progress">
-              <span
-                role="listitem"
-                aria-current={step === 1 ? "step" : undefined}
-                className={step === 1 ? styles.stepActive : styles.step}
-              >
-                1 · Schedule
-              </span>
-              <span className={styles.stepGap} aria-hidden="true">
-                →
-              </span>
-              <span
-                role="listitem"
-                aria-current={step === 2 ? "step" : undefined}
-                className={step === 2 ? styles.stepActive : styles.step}
-              >
-                2 · Invite staff
-              </span>
-            </div>
-          ) : null}
-        </DialogHeader>
+        <div aria-busy={busy || undefined}>
+        {isStepped ? (
+          <div className={styles.steps} role="list" aria-label="Booking progress">
+            <span
+              role="listitem"
+              aria-current={step === 1 ? "step" : undefined}
+              className={step === 1 ? styles.stepActive : styles.step}
+            >
+              1 · Schedule
+            </span>
+            <span className={styles.stepGap} aria-hidden="true">
+              →
+            </span>
+            <span
+              role="listitem"
+              aria-current={step === 2 ? "step" : undefined}
+              className={step === 2 ? styles.stepActive : styles.step}
+            >
+              2 · Invite staff
+            </span>
+          </div>
+        ) : null}
         <div className={styles.sections}>
           {!isStepped || step === 1 ? (
             <>
@@ -395,7 +386,7 @@ export function BookSessionDialog({
             <p className={styles.errorText}>{error ?? serverError}</p>
           </div>
         ) : null}
-        <DialogFooter>
+        <div className={styles.modalActions}>
           {isStepped && step === 2 ? (
             <Button variant="outline" onClick={() => setStep(1)} disabled={busy}>
               Back
@@ -422,8 +413,8 @@ export function BookSessionDialog({
               {busy ? (busyLabel ?? "Booking…") : submitLabel}
             </Button>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+        </div>
+    </CardModal>
   );
 }

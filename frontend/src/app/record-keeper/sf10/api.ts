@@ -5,9 +5,43 @@ import type {
   Sf10Version,
 } from "./types";
 
-export async function fetchSf10Records(signal?: AbortSignal): Promise<Sf10Record[]> {
-  const res = await apiClient.get<Sf10RecordsResponse>("/api/sf10/records", { signal });
-  return res.data.records;
+export interface Sf10ListParams {
+  page: number;
+  pageSize: number;
+  q?: string;
+  status?: string;
+  signal?: AbortSignal;
+}
+
+export interface Sf10ListResult {
+  records: Sf10Record[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: { attach: number; available: number; released: number; total: number };
+}
+
+export async function fetchSf10Records(
+  params: Sf10ListParams,
+): Promise<Sf10ListResult> {
+  const { signal, ...query } = params;
+  const res = await apiClient.get<Sf10RecordsResponse>("/api/sf10/records", {
+    params: query,
+    signal,
+  });
+  const data = res.data;
+  return {
+    records: data.records,
+    total: data.total ?? data.records.length,
+    page: data.page ?? params.page,
+    pageSize: data.pageSize ?? params.pageSize,
+    counts: data.counts ?? {
+      attach: 0,
+      available: 0,
+      released: 0,
+      total: data.records.length,
+    },
+  };
 }
 
 export async function validateSf10(id: string): Promise<void> {

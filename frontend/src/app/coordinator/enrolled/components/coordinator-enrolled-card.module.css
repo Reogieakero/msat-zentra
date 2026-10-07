@@ -229,6 +229,38 @@
   outline-offset: 2px;
 }
 
+.ctaSecondary {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.ctaSecondary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.ctaSecondary:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.ctaSecondary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 /* Empty + error states. */
 .emptyWrap {
   display: flex;

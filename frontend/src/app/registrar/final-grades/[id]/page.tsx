@@ -72,6 +72,7 @@ export default function FinalGradeDetailPage() {
           params: { pageSize: 100 },
         })
         .then((res) => res.data),
+    staleTime: 30_000,
   });
 
   const student = React.useMemo(

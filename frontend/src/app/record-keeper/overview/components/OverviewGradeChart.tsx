@@ -65,6 +65,7 @@ export function OverviewGradeChart() {
     // same array payload) — never the accounts-page key.
     queryKey: ["record-keeper-overview-breakdown"],
     queryFn: fetchBreakdown,
+    staleTime: 30_000,
   });
 
   const rows: GradeRow[] = React.useMemo(() => {

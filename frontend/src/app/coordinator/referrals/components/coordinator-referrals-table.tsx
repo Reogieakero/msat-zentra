@@ -33,7 +33,6 @@ import {
   msSinceDate,
   stageLabel,
   eligibilityLabel,
-  useNowTick,
   venueLabel,
   latestActionFallback,
   type AdmCaseRow,
@@ -62,6 +61,8 @@ interface CoordinatorReferralsTableProps {
   onClear: () => void;
   /** Row id currently being booked/rescheduled — only it disables. */
   bookPendingId: string | null;
+  /** Shared 30s clock from the hook — one interval per page, not per table. */
+  now: number;
   onRetry: () => void;
   onHistory: (target: HistoryTarget) => void;
   onBook: (row: AdmCaseRow) => void;
@@ -187,14 +188,12 @@ export function CoordinatorReferralsTable({
   hasActiveFilters,
   onClear,
   bookPendingId,
+  now,
   onRetry,
   onHistory,
   onBook,
 }: CoordinatorReferralsTableProps) {
   const router = useRouter();
-  // Ticks so "x ago" readouts in the Latest action column stay live.
-  // Called before any early return (rules of hooks).
-  const now = useNowTick();
   if (isInitialLoading) {
     // Real filters header, rail, and pager stay mounted in the page around
     // this — only the table card is skeletonized here (other mirrors would

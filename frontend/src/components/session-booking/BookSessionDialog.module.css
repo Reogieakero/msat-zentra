@@ -192,8 +192,7 @@
 
 /* Cancel stays solid red in every state. */
 .btnRed,
-.btnRed:disabled {
-  background-color: #dc2626 !important;
+.btnRed:disabled {  background-color: #dc2626 !important;
   border-color: #dc2626 !important;
   color: #ffffff !important;
   opacity: 1 !important;
@@ -203,4 +202,12 @@
   background-color: #b91c1c !important;
   border-color: #b91c1c !important;
   color: #ffffff !important;
+}
+
+/* Action row inside CardModal body — right-aligned footer. */
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
 }

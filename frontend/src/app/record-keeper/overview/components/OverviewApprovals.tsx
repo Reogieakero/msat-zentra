@@ -4,8 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronLeft,
-  ChevronRight,
   UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,26 +27,29 @@ import { formatRelativeTime } from "../../accounts/components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";
 
-// Same pending-students table as the Accounts page: identical query key +
-// fetcher (one shared cache entry — both views can never disagree), identical
-// column set and backend order (no client re-sort), same verify-and-approve
-// action. Preview pager matches the Accounts page size.
+// Same pending-students source as the Accounts page: identical column set
+// and backend order (no client re-sort), same verify-and-approve action.
+// Preview fetches only the first page (dedicated preview key so it never
+// poisons the paged list cache); page turns live on the Accounts page.
 const PAGE_SIZE = 8;
 
-async function fetchPendingStudents() {
+async function fetchPendingStudents(signal?: AbortSignal) {
   return apiClient
-    .get<PendingStudentsResponse>("/api/auth/pending", { params: { role: "student" } })
+    .get<PendingStudentsResponse>("/api/auth/pending", {
+      params: { role: "student", page: 1, pageSize: PAGE_SIZE },
+      signal,
+    })
     .then((res) => res.data);
 }
 
 export function OverviewApprovals() {
   const router = useRouter();
   const qc = useQueryClient();
-  const [page, setPage] = React.useState(1);
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["record-keeper-pending-students"],
-    queryFn: fetchPendingStudents,
+    queryKey: ["record-keeper-pending-students", "preview"],
+    queryFn: ({ signal }) => fetchPendingStudents(signal),
+    staleTime: 30_000,
   });
 
   const goAccounts = React.useCallback(() => {
@@ -57,7 +58,13 @@ export function OverviewApprovals() {
 
   // Backend order (requested oldest-first) — exactly as the Accounts page
   // renders it. No client re-sort so the two tables stay identical.
+  // Preview shows the first page only; full paging lives on Accounts.
   const pendingStudents = data?.students ?? [];
+  const total = data?.total ?? pendingStudents.length;
+  const pageRows = pendingStudents;
+  const start = total === 0 ? 0 : 1;
+  const end = Math.min(PAGE_SIZE, total);
+  const hasRecords = total > 0;
 
   const act = useMutation({
     mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
@@ -83,17 +90,8 @@ export function OverviewApprovals() {
       qc.invalidateQueries({ queryKey: ["record-keeper-account-breakdown"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-overview"] });
       qc.invalidateQueries({ queryKey: ["record-keeper-notifications"] });
-      setPage(1);
     },
   });
-
-  const total = pendingStudents.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = pendingStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(safePage * PAGE_SIZE, total);
-  const hasRecords = pendingStudents.length > 0;
 
   return (
     <section className={assign.card} aria-labelledby="overview-pending-approvals">
@@ -183,28 +181,11 @@ export function OverviewApprovals() {
       {hasRecords && (
         <div className={`${styles.footer} relative`}>
           <span className={styles.footerInfo}>
-            {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}
+            {total > 0 ? `Showing ${start}–${end} of ${total}` : "0 of 0"} —{" "}
+            <button type="button" className={styles.viewAll} onClick={goAccounts}>
+              View all
+            </button>
           </span>
-          <div className={styles.footerActions}>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1 || total === 0}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft aria-hidden />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages || total === 0}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
         </div>
       )}
     </section>

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck, ShieldAlert, ShieldX, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import type { LrnMatchResult } from "./types";
@@ -13,61 +14,56 @@ export function LrnVerification({ lrn, name }: Props) {
   const trimmed = lrn.trim();
   const hasLrn = trimmed !== "" && trimmed !== "—";
 
-  const [state, setState] = React.useState<
-    { status: "idle" } | { status: "loading" } | { status: "done"; data: LrnMatchResult } | { status: "error"; message: string }
-  >(
-    hasLrn
-      ? { status: "loading" }
-      : { status: "error", message: "No LRN was provided at sign-up." },
-  );
-  const [runId, setRunId] = React.useState(0);
-
-  React.useEffect(() => {
-    if (!hasLrn) return;
-    let active = true;
-    apiClient
-      .get<LrnMatchResult>("/api/auth/match-lrn", {
-        params: { lrn: trimmed, name },
-      })
-      .then((res) => {
-        if (active) setState({ status: "done", data: res.data });
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        const message =
-          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-          "Could not run LRN verification.";
-        setState({ status: "error", message });
-      });
-    return () => {
-      active = false;
-    };
-  }, [hasLrn, trimmed, name, runId]);
+  // Cached per LRN+name so selecting back and forth never refetches within
+  // the window; manual Re-check forces a fresh read. No placeholder data —
+  // a previous student's verdict must never render under a new name.
+  const verificationQuery = useQuery({
+    queryKey: ["lrn-verification", trimmed, name],
+    queryFn: ({ signal }) =>
+      apiClient
+        .get<LrnMatchResult>("/api/auth/match-lrn", {
+          params: { lrn: trimmed, name },
+          signal,
+        })
+        .then((res) => res.data),
+    enabled: hasLrn,
+    staleTime: 5 * 60_000,
+  });
 
   const recheck = () => {
     if (!hasLrn) return;
-    setState({ status: "loading" });
-    setRunId((n) => n + 1);
+    void verificationQuery.refetch();
   };
 
   return (
     <section className={styles.panel}>
       <header className={styles.head}>
         <h3 className={styles.title}>LRN Verification</h3>
-        <button type="button" className={styles.refresh} onClick={recheck} disabled={state.status === "loading"}>
+        <button
+          type="button"
+          className={styles.refresh}
+          onClick={recheck}
+          disabled={!hasLrn || verificationQuery.isFetching}
+        >
           Re-check
         </button>
       </header>
 
-      {state.status === "loading" ? (
+      {!hasLrn ? (
+        <p className={styles.error}>No LRN was provided at sign-up.</p>
+      ) : verificationQuery.isPending ? (
         <div className={styles.loading}>
           <Loader2 className={styles.spinner} />
           <span>Comparing against student records…</span>
         </div>
-      ) : state.status === "error" ? (
-        <p className={styles.error}>{state.message}</p>
-      ) : state.status === "done" ? (
-        <Result data={state.data} />
+      ) : verificationQuery.isError ? (
+        <p className={styles.error}>
+          {verificationQuery.isRefetching
+            ? "Re-checking…"
+            : "Could not run LRN verification."}
+        </p>
+      ) : verificationQuery.data ? (
+        <Result data={verificationQuery.data} />
       ) : null}
     </section>
   );

@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CardModal } from "@/components/ui/CardModal";
 import { CaseHistoryDialog, historyTargetFor } from "../components/CaseHistoryDialog";
 import { useCoordinatorEnrolled } from "./components/use-coordinator-enrolled";
 import { CoordinatorEnrolledFilters } from "./components/coordinator-enrolled-filters";
@@ -48,8 +50,10 @@ function CoordinatorEnrolledPageInner() {
         isError={r.enrolledError}
         isRefetching={r.enrolledRefetching}
         hasActiveFilters={r.hasActiveFilters}
+        completingId={r.completingId}
         onRetry={r.refetchEnrolled}
         onHistory={r.setHistoryTarget}
+        onComplete={r.setCompleteTarget}
       />
       {/* Server pager (strict 15-row list pages). Tiles read unfiltered
           totals; this pager reads the filtered count. */}
@@ -93,6 +97,47 @@ function CoordinatorEnrolledPageInner() {
         target={r.historyTarget}
         onClose={() => r.setHistoryTarget(null)}
       />
+
+      {/* Mark completed — confirm then pessimistic server-confirmed update. */}
+      <CardModal
+        open={r.completeTarget !== null}
+        onClose={() => {
+          if (!r.stagePending) r.setCompleteTarget(null);
+        }}
+        dismissable={!r.stagePending}
+        size="sm"
+        title="Mark as completed?"
+        description={
+          r.completeTarget ? (
+            <>
+              {r.completeTarget.student} will leave enrollment monitoring.
+              Device return can then be recorded on the Devices page.
+            </>
+          ) : undefined
+        }
+      >
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}
+        >
+          <Button
+            variant="outline"
+            disabled={r.stagePending}
+            onClick={() => r.setCompleteTarget(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={r.stagePending}
+            aria-busy={r.stagePending || undefined}
+            onClick={r.confirmComplete}
+          >
+            {r.stagePending ? (
+              <Loader2 className="animate-spin" aria-hidden="true" />
+            ) : null}
+            {r.stagePending ? "Marking…" : "Mark completed"}
+          </Button>
+        </div>
+      </CardModal>
     </section>
   );
 }

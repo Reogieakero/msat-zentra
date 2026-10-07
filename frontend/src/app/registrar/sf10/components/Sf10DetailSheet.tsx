@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -9,11 +10,12 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, CheckCircle2, Archive, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { StatusBadge, formatRelativeTime } from "./shared";
 import { GRADE_LABEL, SF10_SOURCE_LABEL, type Sf10Record } from "../types";
-import { validateSf10, releaseSf10 } from "../api";
+import { validateSf10, releaseSf10, fetchSf10Versions } from "../api";
 import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import styles from "../sf10.module.css";
 
@@ -29,8 +31,26 @@ export function Sf10DetailSheet({
   onChanged?: () => void;
 }) {
   const [acting, setActing] = React.useState<"validate" | "release" | null>(null);
+  const queryClient = useQueryClient();
+
+  // Version history loads only while the sheet is open — the list query no
+  // longer embeds versions per row. Cached per record for instant reopen.
+  const versionsQuery = useQuery({
+    queryKey: ["sf10-versions", record?.id ?? null],
+    queryFn: ({ signal }) => fetchSf10Versions(record!.id, signal),
+    enabled: open && record !== null,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+  });
+  const versions = versionsQuery.data ?? record?.versions ?? [];
 
   if (!record) return null;
+
+  const refreshVersions = () => {
+    if (record) {
+      void queryClient.invalidateQueries({ queryKey: ["sf10-versions", record.id] });
+    }
+  };
 
   // Pessimistic: the list behind the sheet repaints only via onChanged's
   // refetch after the server confirms. No optimistic flip: the UI must never
@@ -42,6 +62,7 @@ export function Sf10DetailSheet({
       await validateSf10(record.id);
       markSelfNotified(record.id);
       toast.success({ title: "Validated", description: `${record.fullName} marked available.` });
+      refreshVersions();
       onChanged?.();
       onOpenChange(false);
     } catch {
@@ -57,6 +78,7 @@ export function Sf10DetailSheet({
       await releaseSf10(record.id);
       markSelfNotified(record.id);
       toast.success({ title: "Released", description: `${record.fullName} released & archived.` });
+      refreshVersions();
       onChanged?.();
       onOpenChange(false);
     } catch {
@@ -121,17 +143,25 @@ export function Sf10DetailSheet({
 
           <div>
             <p className={styles.sectionLabel}>Version history</p>
-            <div className={styles.timeline}>
-              {record.versions.map((v) => (
-                <div key={v.versionNumber} className={styles.timelineRow}>
-                  <span>
-                    <span className={styles.name}>v{v.versionNumber}</span>{" "}
-                    <span className={styles.timelineReason}>— {v.changeReason}</span>
-                  </span>
-                  <span className={styles.muted}>{formatRelativeTime(v.changedAt)}</span>
-                </div>
-              ))}
-            </div>
+            {versionsQuery.isPending ? (
+              <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading version history">
+                {[0, 1].map((i) => (
+                  <Skeleton key={i} style={{ width: `${90 - i * 15}%`, height: "0.875rem" }} />
+                ))}
+              </div>
+            ) : (
+              <div className={styles.timeline}>
+                {versions.map((v) => (
+                  <div key={v.versionNumber} className={styles.timelineRow}>
+                    <span>
+                      <span className={styles.name}>v{v.versionNumber}</span>{" "}
+                      <span className={styles.timelineReason}>— {v.changeReason}</span>
+                    </span>
+                    <span className={styles.muted}>{formatRelativeTime(v.changedAt)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

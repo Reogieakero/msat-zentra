@@ -14,10 +14,45 @@ const RECORD_KEEPER_KEYS = [
   ["record-keeper-account-breakdown"],
   ["record-keeper-accounts-audit"],
   ["record-keeper-sf10"],
-  ["record-keeper-access"],
-  ["adviser-access-requests"],
+  ["record-keeper-adviser-access"],
   ["record-keeper-notifications"],
 ] as const;
+
+type KeyTuple = readonly [string, ...string[]];
+
+/* Targeted realtime invalidation: each event refreshes only the queries its
+   source table feeds (plus the bell). Unknown tables fall back to the full
+   sweep so correctness never depends on the map staying exhaustive. */
+function keysForNotification(
+  row: Pick<RecordKeeperNotification, "sourceTable" | "type">,
+): KeyTuple[] {
+  const bell: KeyTuple = ["record-keeper-notifications"];
+  switch (row.sourceTable) {
+    case "users":
+      return [
+        ["record-keeper-pending-students"],
+        ["record-keeper-account-breakdown"],
+        ["record-keeper-overview"],
+        bell,
+      ];
+    case "final_grades":
+      return [["record-keeper-final-grades"], ["record-keeper-overview"], bell];
+    case "adviser_sf10_access_requests":
+      return [["record-keeper-adviser-access"], ["record-keeper-overview"], bell];
+    case "sf10_records":
+      return [["record-keeper-sf10"], ["record-keeper-overview"], bell];
+    case "subjects":
+    case "sections":
+    case "teacher_subject_assignments":
+      return [
+        ["record-keeper-overview"],
+        ["record-keeper-account-breakdown"],
+        bell,
+      ];
+    default:
+      return [...RECORD_KEEPER_KEYS];
+  }
+}
 
 interface RecordKeeperNotification {
   id: string;
@@ -82,6 +117,8 @@ function currentUserId(): string | null {
 export function useRecordKeeperRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const lastInvalidated = React.useRef(0);
+  const pendingRows = React.useRef<RecordKeeperNotification[]>([]);
+  const trailingTimer = React.useRef<number | null>(null);
   const seenIds = React.useRef<Set<string>>(new Set());
   const realtimeOk = React.useRef(false);
 
@@ -111,7 +148,7 @@ export function useRecordKeeperRealtime(enabled = true) {
           description: row.message,
         });
       }
-      void invalidate();
+      void invalidate([row]);
     }
 
     try {
@@ -165,7 +202,7 @@ export function useRecordKeeperRealtime(enabled = true) {
         for (const n of ordered) notify(n);
         // Mark the rest seen (lists still refresh below) to avoid backlog.
         for (const n of fresh) seenIds.current.add(n.id);
-        if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate();
+        void invalidate(fresh);
       } catch {
         // Offline / unauthorized — try again on the next tick.
       }
@@ -182,12 +219,39 @@ export function useRecordKeeperRealtime(enabled = true) {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
-    function invalidate() {
+    function invalidate(rows?: RecordKeeperNotification[]) {
       // Throttle bursts to one invalidate per 2s (toasts still fire per row).
+      // Rows arriving inside the window accumulate and flush together so no
+      // table's keys are ever dropped by the throttle.
       const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
+      if (rows) {
+        for (const row of rows) pendingRows.current.push(row);
+      }
+      if (now - lastInvalidated.current < 2000) {
+        if (pendingRows.current.length > 0 && !trailingTimer.current) {
+          trailingTimer.current = window.setTimeout(() => {
+            trailingTimer.current = null;
+            if (cancelled) return;
+            lastInvalidated.current = Date.now();
+            flushPending();
+          }, 2000 - (now - lastInvalidated.current));
+        }
+        return;
+      }
       lastInvalidated.current = now;
-      for (const key of RECORD_KEEPER_KEYS) {
+      flushPending();
+    }
+
+    function flushPending() {
+      const queued = [...pendingRows.current];
+      pendingRows.current = [];
+      const keys = new Map<string, KeyTuple>();
+      for (const row of queued) {
+        for (const key of keysForNotification(row)) keys.set(key.join("|"), key);
+      }
+      // No rows (or unknown table) → full sweep preserves correctness.
+      const targets = keys.size > 0 ? [...keys.values()] : [...RECORD_KEEPER_KEYS];
+      for (const key of targets) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
       }
     }
@@ -196,6 +260,7 @@ export function useRecordKeeperRealtime(enabled = true) {
       cancelled = true;
       window.clearInterval(timer);
       window.clearTimeout(seedTimer);
+      if (trailingTimer.current) window.clearTimeout(trailingTimer.current);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
       try {
