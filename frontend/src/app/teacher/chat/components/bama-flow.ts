@@ -3,7 +3,7 @@ import {
   ANEC_TIER_LABELS,
   type AnecdotalCategory,
   type AnecdotalTier,
-} from "../../anecdotal/components/anecdotal-data";
+} from "@/services/anecdotal/anecdotal.types";
 
 /** Guided filing flow constants + per-conversation progress persistence. */
 

@@ -19,14 +19,16 @@ import { ArrowUp, Bot, CalendarIcon, Check, ChevronDown, Clock, Download, Eraser
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
-  createAnecdotalRecord,
-  fetchAnecdotalOptions,
   type AnecdotalCategory,
   type AnecdotalTier,
   type ChatMessage,
   type FiledDetail,
   type PreviewDetail,
-} from "./anecdotal-data";
+} from "@/services/anecdotal/anecdotal.types";
+import {
+  createAnecdotalRecord,
+  fetchAnecdotalOptions,
+} from "@/services/anecdotal/records.service";
 import {
   createConversation,
   loadConversationStore,

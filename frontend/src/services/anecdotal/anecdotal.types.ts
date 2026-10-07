@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api/client";
-
+// Shared shapes for filing anecdotal records (teacher filing chat +
+// Bama chat flow). Pure types plus the category/tier vocabulary consts.
 export type AnecdotalCategory =
   | "behavioral"
   | "bullying"
@@ -45,13 +45,6 @@ export interface AnecdotalOptions {
   sectionClasses: AnecdotalClassOption[];
 }
 
-export async function fetchAnecdotalOptions(): Promise<AnecdotalOptions> {
-  const { data } = await apiClient.get<AnecdotalOptions>(
-    "/api/teacher/grade-flags/options"
-  );
-  return data;
-}
-
 export interface AnecdotalPayload {
   studentId: string;
   sectionId: string;
@@ -64,16 +57,6 @@ export interface AnecdotalPayload {
   attendanceSummary?: string;
   category: AnecdotalCategory;
   confidentialityLevel: AnecdotalTier;
-}
-
-export async function createAnecdotalRecord(
-  payload: AnecdotalPayload
-): Promise<CreatedAnecdotalRecord> {
-  const { data } = await apiClient.post<CreatedAnecdotalRecord>(
-    "/api/anecdotal",
-    payload
-  );
-  return data;
 }
 
 /** Backend returns the created row (including its id) on POST /api/anecdotal. */

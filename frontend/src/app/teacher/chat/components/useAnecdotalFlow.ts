@@ -11,13 +11,15 @@ import {
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
-  createAnecdotalRecord,
-  fetchAnecdotalOptions,
   type AnecdotalCategory,
   type AnecdotalClassOption,
   type AnecdotalStudent,
   type AnecdotalTier,
-} from "../../anecdotal/components/anecdotal-data";
+} from "@/services/anecdotal/anecdotal.types";
+import {
+  createAnecdotalRecord,
+  fetchAnecdotalOptions,
+} from "@/services/anecdotal/records.service";
 import {
   nextMessageId,
   type BamaConversation,

@@ -1,4 +1,4 @@
-import type { ChatMessage } from "./anecdotal-data";
+import type { ChatMessage } from "@/services/anecdotal/anecdotal.types";
 
 /**
  * Multi-conversation history for the anecdotal filing chat. Every new
