@@ -146,10 +146,20 @@ export function PaletteCard() {
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => {
+  // Render-phase sync (not an effect): reseed the editable colors
+  // whenever the server values change. Same committed UI as the effect
+  // version, without the extra render pass.
+  const [prevSavedPalette, setPrevSavedPalette] = React.useState<
+    [string | null, string | null]
+  >([savedPrimary, savedSecondary]);
+  if (
+    prevSavedPalette[0] !== savedPrimary ||
+    prevSavedPalette[1] !== savedSecondary
+  ) {
+    setPrevSavedPalette([savedPrimary, savedSecondary]);
     setPrimary(savedPrimary);
     setSecondary(savedSecondary);
-  }, [savedPrimary, savedSecondary]);
+  }
 
   // Live preview across the site as colors are picked.
   React.useEffect(() => {

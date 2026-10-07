@@ -50,9 +50,14 @@ export function ProfileCard() {
   const [photoSaving, setPhotoSaving] = React.useState(false);
 
   const savedName = profile.data?.fullName ?? "";
-  React.useEffect(() => {
+  // Render-phase sync (not an effect): reseed the editable field whenever
+  // the server value changes. Same committed UI as the effect version,
+  // without the extra render pass.
+  const [prevSavedName, setPrevSavedName] = React.useState(savedName);
+  if (prevSavedName !== savedName) {
+    setPrevSavedName(savedName);
     setName(savedName);
-  }, [savedName]);
+  }
 
   const photoUrl = profile.data?.photoUrl ?? null;
   const displayName = savedName || "";
