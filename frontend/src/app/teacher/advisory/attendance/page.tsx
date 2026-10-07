@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SearchIcon } from "lucide-react";
 import { AdvisoryAttendanceList } from "./components/AdvisoryAttendanceList";
-import { useAdvisoryRoster } from "@/app/teacher/advisory/students/components/advisory-students-data";
+import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
 import {
   Select,
   SelectContent,

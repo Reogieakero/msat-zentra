@@ -42,11 +42,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/app/teacher/overview/components/teacher-overview-advisory";
-import {
-  useAdvisoryRoster,
-  type AdviseeRow,
-  type AdviseeRiskFlag,
-} from "../students/components/advisory-students-data";
+import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
+import type {
+  AdviseeRow,
+  AdviseeRiskFlag,
+} from "@/services/teacher/advisory.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import listStyles from "./components/advisory-list.module.css";

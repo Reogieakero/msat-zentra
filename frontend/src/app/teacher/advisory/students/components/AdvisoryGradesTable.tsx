@@ -27,7 +27,7 @@ import {
 import type {
   AdviseeRow,
   AdvisorySectionInfo,
-} from "./advisory-students-data";
+} from "@/services/teacher/advisory.types";
 import tableScroll from "./advisory-grades-table.module.css";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 

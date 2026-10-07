@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AdvisoryGradesTable } from "./components/AdvisoryGradesTable";
-import { useAdvisoryRoster } from "./components/advisory-students-data";
+import { useAdvisoryRoster } from "@/services/teacher/advisory.service";
 
 /* Advisory students — roster-wide per-subject live grades table (realtime
    mean of recorded scores, lock-agnostic). Student names link to their

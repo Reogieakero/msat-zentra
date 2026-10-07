@@ -7,7 +7,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import {
   advisoryRosterKey,
   fetchAdvisoryRoster,
-} from "../../advisory/students/components/advisory-students-data";
+} from "@/services/teacher/advisory.service";
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,

@@ -8,8 +8,8 @@ import { useTerm } from "@/lib/term/TermContext";
 import {
   advisoryRosterKey,
   fetchAdvisoryRoster,
-  type AdvisoryRoster,
-} from "@/app/teacher/advisory/students/components/advisory-students-data";
+} from "@/services/teacher/advisory.service";
+import type { AdvisoryRoster } from "@/services/teacher/advisory.types";
 import type {
   OfferedSubject,
   SectionRoster,
