@@ -1,9 +1,9 @@
-import {
-  NURSE_STATUS_LABELS,
-  type ClinicAttachment,
-  type NurseQueueRow,
-  type NurseSessionItem,
-} from "../../overview/components/nurse-overview-data";
+import { NURSE_STATUS_LABELS } from "@/services/nurse/labels";
+import type {
+  ClinicAttachment,
+  NurseQueueRow,
+  NurseSessionItem,
+} from "@/services/nurse/nurse.types";
 import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
 
 export interface DocEntry {

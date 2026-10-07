@@ -7,11 +7,11 @@ import {
   type AdmReferralFormDraft,
 } from "@/components/adm-referral-form/AdmReferralFormPage";
 import { CONCERN_OPTIONS, type GcForm03Data } from "@/app/guidance/adm/components/gcform03-data";
-import {
-  confirmNurseReferralAndEndorse,
-  type NurseAdmReferralForm,
-  type NurseQueueRow,
-} from "../../overview/components/nurse-overview-data";
+import { confirmNurseReferralAndEndorse } from "@/services/nurse/referrals.service";
+import type {
+  NurseAdmReferralForm,
+  NurseQueueRow,
+} from "@/services/nurse/nurse.types";
 
 /* Flatten the filled form into the internal note the coordinator receives
    with the endorsed case. */

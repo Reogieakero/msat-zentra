@@ -30,10 +30,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import {
-  deriveActionStatus,
-  type NurseQueueRow,
-} from "./nurse-overview-data";
+import { deriveActionStatus } from "@/services/nurse/labels";
+import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { NurseQueueRowActions } from "./NurseQueueRowActions";
 import { NurseAdmReviewDialog } from "./NurseAdmReviewDialog";
 import { NurseForwardAdmButton } from "./NurseForwardAdmButton";

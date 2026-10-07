@@ -2,9 +2,11 @@ import { apiClient } from "@/lib/api/client";
 import {
   isNurseScope,
   toQueueRow,
-  type NurseQueueRow,
-  type RawReferral,
-} from "../../overview/components/nurse-overview-data";
+} from "@/services/nurse/labels";
+import type {
+  NurseQueueRow,
+  RawReferral,
+} from "@/services/nurse/nurse.types";
 
 /**
  * Nurse risk desk fetch — the dashboard math itself lives in the shared

@@ -7,11 +7,9 @@ import {
   AdmReviewDialog as SharedAdmReviewDialog,
   type AdmReviewDraft,
 } from "@/components/adm-review/AdmReviewDialog";
-import {
-  reviewNurseAdmCase,
-  scheduleClinicSession,
-  type NurseQueueRow,
-} from "./nurse-overview-data";
+import { reviewNurseAdmCase } from "@/services/nurse/referrals.service";
+import { scheduleClinicSession } from "@/services/nurse/sessions.service";
+import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
 
 /**

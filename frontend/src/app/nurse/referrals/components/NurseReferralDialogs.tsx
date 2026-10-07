@@ -26,21 +26,25 @@ import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/s
 import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
 import { apiErrorMessage } from "@/lib/api/errors";
 import {
+  forwardNurseAdmCase,
+  parseSavedNurseAdmForm,
+  updateNurseReferralStatus,
+} from "@/services/nurse/referrals.service";
+import {
   cancelClinicSession,
   clinicAttachmentError,
   completeClinicSession,
   deleteClinicAttachment,
   deleteClinicSession,
-  forwardNurseAdmCase,
-  parseSavedNurseAdmForm,
   rescheduleClinicSession,
   scheduleClinicSession,
-  updateNurseReferralStatus,
   uploadClinicAttachments,
-  type ClinicAttachment,
-  type NurseQueueRow,
-  type NurseSessionItem,
-} from "../../overview/components/nurse-overview-data";
+} from "@/services/nurse/sessions.service";
+import type {
+  ClinicAttachment,
+  NurseQueueRow,
+  NurseSessionItem,
+} from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import styles from "./NurseReferralDialogs.module.css";

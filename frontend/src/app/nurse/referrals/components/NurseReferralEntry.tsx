@@ -17,7 +17,7 @@ import { NurseAdmReviewDialog } from "../../overview/components/NurseAdmReviewDi
 import type {
   NurseQueueRow,
   NurseSessionItem,
-} from "../../overview/components/nurse-overview-data";
+} from "@/services/nurse/nurse.types";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
 import {

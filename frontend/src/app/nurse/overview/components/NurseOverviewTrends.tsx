@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { NurseQueueRow, NurseTrendPoint } from "./nurse-overview-data";
+import type { NurseQueueRow, NurseTrendPoint } from "@/services/nurse/nurse.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 

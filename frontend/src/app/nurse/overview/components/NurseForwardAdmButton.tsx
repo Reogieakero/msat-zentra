@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { forwardNurseAdmCase } from "./nurse-overview-data";
+import { forwardNurseAdmCase } from "@/services/nurse/referrals.service";
 import { useNurseMutation } from "./use-nurse-mutation";
 
 /**

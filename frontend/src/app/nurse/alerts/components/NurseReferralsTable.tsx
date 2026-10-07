@@ -50,7 +50,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
+import { deriveActionStatus } from "@/services/nurse/labels";
 import { NurseQueueRowActions } from "../../overview/components/NurseQueueRowActions";
 import {
   formatActionTime,

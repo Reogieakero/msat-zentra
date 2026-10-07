@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
-import { NURSE_REFERRAL_DRAFT_KEY } from "./overview/components/nurse-overview-data";
+import { NURSE_REFERRAL_DRAFT_KEY } from "@/services/nurse/referrals.service";
 import { useNurseRealtime } from "@/lib/realtime/nurseChannel";
 import { useRoleGuard } from "@/lib/auth/useRoleGuard";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";

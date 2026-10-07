@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { NurseBreakdownRow } from "./nurse-overview-data";
+import type { NurseBreakdownRow } from "@/services/nurse/nurse.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 

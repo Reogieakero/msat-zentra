@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
+import { deriveActionStatus } from "@/services/nurse/labels";
 import {
   formatActionTime,
   latestActionOf,

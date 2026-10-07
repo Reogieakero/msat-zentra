@@ -16,10 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { ClinicDatePicker, ClinicTimePicker } from "./ClinicDateTimePicker";
 import { apiErrorMessage } from "@/lib/api/errors";
-import {
-  acceptNurseCase,
-  type NurseQueueRow,
-} from "./nurse-overview-data";
+import { acceptNurseCase } from "@/services/nurse/referrals.service";
+import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
 import styles from "./nurse-overview.module.css";
 

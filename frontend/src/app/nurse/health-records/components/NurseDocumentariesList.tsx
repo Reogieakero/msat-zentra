@@ -9,7 +9,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { ImageViewer } from "@/components/image-viewer/ImageViewer";
-import { type ClinicAttachment } from "../../overview/components/nurse-overview-data";
+import { type ClinicAttachment } from "@/services/nurse/nurse.types";
 import { type NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
 import { DocumentaryDetails } from "./DocumentaryDetails";
 import { StudentHealthFolders } from "./StudentHealthFolders";

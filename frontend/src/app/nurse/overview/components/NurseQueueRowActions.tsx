@@ -29,9 +29,11 @@ import { apiErrorMessage } from "@/lib/api/errors";
 import {
   addNurseFollowUpNote,
   updateNurseReferralStatus,
-  type NurseQueueRow,
-  type NurseReferralStatus,
-} from "./nurse-overview-data";
+} from "@/services/nurse/referrals.service";
+import type {
+  NurseQueueRow,
+  NurseReferralStatus,
+} from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
 import { isEndorsed } from "../../referrals/components/nurse-referrals-format";
 import styles from "./nurse-overview.module.css";

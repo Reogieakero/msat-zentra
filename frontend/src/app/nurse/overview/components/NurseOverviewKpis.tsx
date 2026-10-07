@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity, CalendarClock, CheckCircle2, Send, Stethoscope } from "lucide-react";
-import type { NurseKpis } from "./nurse-overview-data";
+import type { NurseKpis } from "@/services/nurse/nurse.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 

@@ -9,10 +9,8 @@ import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
 import { NurseOverviewBreakdown } from "./components/NurseOverviewBreakdown";
 import { NurseOverviewTrends } from "./components/NurseOverviewTrends";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
-import {
-  fetchNurseOverview,
-  type NurseOverviewData,
-} from "./components/nurse-overview-data";
+import { fetchNurseOverview } from "@/services/nurse/overview.service";
+import type { NurseOverviewData } from "@/services/nurse/nurse.types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/nurse-overview.module.css";

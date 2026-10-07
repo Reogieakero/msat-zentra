@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { NurseQueueRow } from "../../overview/components/nurse-overview-data";
+import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import {
   RISK_FACTOR_WORDS,
   type NurseRiskFactors,

@@ -2,7 +2,7 @@ import type { NurseAlertItem } from "../../alerts/components/nurse-alerts-data";
 import type {
   NurseQueueRow,
   NurseSessionItem,
-} from "../../overview/components/nurse-overview-data";
+} from "@/services/nurse/nurse.types";
 import { actorActionLabel } from "@/lib/notifications/action-label";
 
 /* Folder body color per anecdotal category — mirrors the teacher

@@ -3,9 +3,11 @@ import {
   deriveActionStatus,
   isNurseScope,
   toQueueRow,
-  type NurseQueueRow,
-  type RawReferral,
-} from "../../overview/components/nurse-overview-data";
+} from "@/services/nurse/labels";
+import type {
+  NurseQueueRow,
+  RawReferral,
+} from "@/services/nurse/nurse.types";
 
 export type NurseAlertSeverity = "urgent" | "new" | "info" | "done";
 

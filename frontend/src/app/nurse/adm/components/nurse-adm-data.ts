@@ -1,4 +1,4 @@
-import { deriveActionStatus } from "../../overview/components/nurse-overview-data";
+import { deriveActionStatus } from "@/services/nurse/labels";
 import type {
   NurseAlertItem,
   NurseRiskLevel,
