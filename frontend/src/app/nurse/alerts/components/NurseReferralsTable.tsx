@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatElapsedShort, useNowTick } from "@/lib/clock";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -72,33 +73,6 @@ const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
   { value: "Low", label: "Low" },
   { value: "none", label: "No level" },
 ];
-
-/* Live clock — ticks every 30s; the elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. Exported for
-   the nurse ADM referrals queue, which shares this table vocabulary. */
-export function useNowTick(): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
-}
-
-/* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes only,
-   never seconds. Shared with the nurse ADM referrals queue. */
-export function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
-}
 
 /* Wall-clock ms of an alert's latest action. Null when unknown — those
    rows sink to the bottom of the sequence. */

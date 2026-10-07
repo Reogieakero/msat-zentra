@@ -1,12 +1,17 @@
-// Small shared runtime helpers used across the coordinator desk. (Sibling
-// desks carry their own copies of these — centralizing all of them is a
-// separate pass; this module just gives the coordinator imports a home
-// outside the old grab-bag.)
+"use client";
+
 import * as React from "react";
 
+// Single home for the live-clock + elapsed-time vocabulary shared by every
+// queue surface (coordinator / nurse / guidance / principal). Merged from
+// the identical copies that lived in the coordinator grab-bag, the nurse
+// referrals table, and the guidance intervention row.
+//
+// File-local `useNowTick(active)` variants still exist in a few tables —
+// those pause ticking when their dialog closes and are intentionally left
+// alone. Only the shared always-on 30s clock lives here.
 /* Live clock — ticks every 30s; elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. Mirrors the
-   nurse alerts queue. */
+   minutes only, so per-second ticks would just burn renders. */
 export function useNowTick(): number {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -17,7 +22,7 @@ export function useNowTick(): number {
 }
 
 /* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes only,
-   never seconds. Mirrors the nurse alerts queue. */
+   never seconds. */
 export function formatElapsedShort(ms: number): string {
   const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
   if (totalMinutes < 1) return "just now";

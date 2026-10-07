@@ -6,7 +6,7 @@ import {
   fetchCoordinatorReferrals,
 } from "@/services/coordinator/overview.service";
 import { stageLabel } from "@/services/coordinator/labels";
-import { useNowTick } from "@/services/coordinator/utils";
+import { useNowTick } from "@/lib/clock";
 import {
   countFor,
   SHORT_STAGE,

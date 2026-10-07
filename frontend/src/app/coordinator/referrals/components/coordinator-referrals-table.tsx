@@ -34,7 +34,7 @@ import {
   venueLabel,
   latestActionFallback,
 } from "@/services/coordinator/labels";
-import { formatElapsedShort, msSinceDate } from "@/services/coordinator/utils";
+import { formatElapsedShort, msSinceDate } from "@/lib/clock";
 import type {
   AdmCaseRow,
   AdmEligibility,

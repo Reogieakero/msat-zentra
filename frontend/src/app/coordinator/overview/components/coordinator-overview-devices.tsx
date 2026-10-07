@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatElapsedShort, msSinceDate } from "@/services/coordinator/utils";
+import { formatElapsedShort, msSinceDate } from "@/lib/clock";
 import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-overview-devices.module.css";
 

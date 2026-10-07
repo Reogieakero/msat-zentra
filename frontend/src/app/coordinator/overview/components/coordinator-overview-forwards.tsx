@@ -28,7 +28,7 @@ import {
   friendlyActionType,
   latestActionFallback,
 } from "@/services/coordinator/labels";
-import { formatElapsedShort, msSinceDate } from "@/services/coordinator/utils";
+import { formatElapsedShort, msSinceDate } from "@/lib/clock";
 import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";

@@ -20,7 +20,7 @@ import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
-import { useNowTick } from "@/services/coordinator/utils";
+import { useNowTick } from "@/lib/clock";
 import {
   CERT_STATUS_META,
   type CertRecord,

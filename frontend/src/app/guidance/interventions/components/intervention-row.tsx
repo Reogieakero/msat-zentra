@@ -15,6 +15,7 @@ import {
   Send,
 } from "lucide-react";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
+import { formatElapsedShort } from "@/lib/clock";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
@@ -152,19 +153,6 @@ export function msSinceAction(time: string, now: number): number | null {
   const t = new Date(iso).getTime();
   if (!Number.isFinite(t)) return null;
   return Math.max(0, now - t);
-}
-
-export function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
 }
 
 interface InterventionTableRowProps {
