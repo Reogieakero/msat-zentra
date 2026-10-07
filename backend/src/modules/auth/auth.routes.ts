@@ -1,79 +1,43 @@
 import { Router } from "express";
-import argon2 from "argon2";
-import { z } from "zod";
-import { prisma } from "../../lib/prisma.js";
-import { AppError } from "../../lib/errors.js";
-import { signAccess, signRefresh } from "../../lib/jwt.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
-import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
-import { writeAudit } from "../../lib/audit.js";
-import { invalidateTags } from "../../lib/cache.js";
 import { matchLrn } from "../../lib/lrnMatch.js";
-import type { Role, GradeLevel } from "../../generated/prisma/client.js";
+import { AppError } from "../../lib/errors.js";
+import type { GradeLevel } from "../../generated/prisma/client.js";
+import {
+  approveSchema,
+  changePasswordSchema,
+  loginSchema,
+  refreshSchema,
+  registerSchema,
+  rejectSchema,
+} from "./auth.schemas.js";
+import {
+  changePassword,
+  login,
+  refreshTokens,
+  register,
+} from "../../services/auth/session.service.js";
+import { approveAccount, listPending, rejectAccount } from "../../services/auth/approval.service.js";
 
 const router = Router();
 
-const SELF_ROLES: Role[] = ["student", "parent", "subject_teacher", "adviser"];
-
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  fullName: z.string().min(1),
-  role: z.enum(["student", "parent", "subject_teacher", "adviser"]),
-  contactNumber: z.string().optional(),
-  lrn: z.string().optional(),
-});
-
 router.post("/register/:kind", validate("body", registerSchema), async (req, res, next) => {
   try {
-    const { email, password, fullName, role, contactNumber, lrn } = req.body;
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) throw new AppError(409, "EMAIL_EXISTS", "Email already registered");
-
-    // LRN is captured only for student self-registration; it is verified
-    // against the StudentRoster by the registrar before approval.
-    const passwordHash = await argon2.hash(password);
-    const user = await prisma.user.create({
-      data: { email, passwordHash, fullName, role, contactNumber, lrn: role === "student" ? lrn ?? null : null, status: "pending" },
-    });
-    res.status(201).json({ id: user.id, email: user.email, role: user.role, status: user.status });
-
-    // Registrar desk handoff (best-effort, never delays the 201): a new
-    // student sign-up notifies the grade-band owner so the Pending queue pops
-    // live. Band resolves from the official roster via claimed LRN; unknown
-    // LRNs still notify the registrar (they appear as "unknown grade" in the
-    // overview until reconciled).
-    if (role === "student") {
-      void (async () => {
-        try {
-          let gradeLevel: string | null = null;
-          if (lrn) {
-            const roster = await prisma.studentRoster.findFirst({
-              where: { lrn },
-              select: { gradeLevel: true },
-              orderBy: { schoolYearId: "desc" },
-            });
-            gradeLevel = roster?.gradeLevel ?? null;
-          }
-          const bandRole =
-            gradeLevel === "G7" || gradeLevel === "G8" || gradeLevel === "G9" || gradeLevel === "G10"
-              ? "record_keeper"
-              : "registrar";
-          const gradeLabel = gradeLevel === "G11" ? "G11" : gradeLevel === "G12" ? "G12" : gradeLevel ?? "unknown grade";
-          await fanoutToRole(bandRole, {
-            sourceTable: "users",
-            action: "pending_signup",
-            message: `New ${gradeLabel} sign-up: ${fullName} (LRN ${lrn ?? "—"}) — awaiting approval.`,
-            sourceId: user.id,
-          });
-        } catch {
-          // Best-effort only — sign-up already succeeded.
-        }
-      })();
-    }
-  } catch (e) { next(e); }
+    const { email, password, fullName, role, contactNumber, lrn } = req.body as {
+      email: string;
+      password: string;
+      fullName: string;
+      role: "student" | "parent" | "subject_teacher" | "adviser";
+      contactNumber?: string;
+      lrn?: string;
+    };
+    const user = await register({ email, password, fullName, role, contactNumber, lrn });
+    res.status(201).json(user);
+  } catch (e) {
+    next(e);
+  }
 });
 
 // LRN verification engine. Given a claimed LRN + name, returns the matching
@@ -90,61 +54,23 @@ router.get(
       if (!lrn) throw new AppError(400, "LRN_REQUIRED", "lrn query parameter is required");
       const result = await matchLrn(lrn, name);
       res.json(result);
-    } catch (e) { next(e); }
+    } catch (e) {
+      next(e);
+    }
   }
 );
 
-const STAFF_ROLES: Role[] = [
-  "subject_teacher",
-  "adviser",
-  "nurse",
-  "adm_coordinator",
-  "guidance_counselor",
-  "record_keeper",
-  "registrar",
-  "principal",
-];
-
-const KNOWN_ROLES: Role[] = [...STAFF_ROLES, "student", "parent"];
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-  role: z.enum(["student", "staff", "parent"]),
-});
-
-const roleKindToRoles: Record<string, Role[]> = {
-  student: ["student"],
-  staff: STAFF_ROLES,
-  parent: ["parent"],
-};
-
 router.post("/login", validate("body", loginSchema), async (req, res, next) => {
   try {
-    const { email, password, role } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || user.status !== "active") throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
-
-    const allowedRoles = roleKindToRoles[role] ?? [];
-    if (!KNOWN_ROLES.includes(user.role) || !allowedRoles.includes(user.role)) {
-      throw new AppError(403, "ROLE_MISMATCH", "This account cannot sign in through this portal.");
-    }
-
-    const ok = await argon2.verify(user.passwordHash, password);
-    if (!ok) throw new AppError(401, "INVALID_CREDENTIALS", "Invalid credentials");
-
-    const band = user.role === "record_keeper" ? "7-10" : user.role === "registrar" ? "11-12" : null;
-    const access = signAccess({ sub: user.id, role: user.role, gradeBand: band as any });
-    const refresh = signRefresh({ sub: user.id });
-    res.json({ accessToken: access, refreshToken: refresh, role: user.role });
-  } catch (e) { next(e); }
-});
-
-const refreshSchema = z.object({ refreshToken: z.string().min(1) });
-
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+    const { email, password, role } = req.body as {
+      email: string;
+      password: string;
+      role: "student" | "staff" | "parent";
+    };
+    res.json(await login({ email, password, role }));
+  } catch (e) {
+    next(e);
+  }
 });
 
 // Self-service password change for any authenticated account (used by the
@@ -159,47 +85,21 @@ router.post(
         currentPassword: string;
         newPassword: string;
       };
-      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-      if (!user) throw new AppError(401, "UNAUTHORIZED", "Account not found");
-      const ok = await argon2.verify(user.passwordHash, currentPassword);
-      if (!ok) throw new AppError(403, "WRONG_PASSWORD", "Current password is incorrect");
-      if (currentPassword === newPassword) {
-        throw new AppError(400, "SAME_PASSWORD", "New password must be different from the current one");
-      }
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash: await argon2.hash(newPassword) },
-      });
-      await writeAudit({
-        userId: user.id,
-        actionType: "update",
-        sourceTable: "users",
-        sourceId: user.id,
-        reason: "Account changed own password",
-      });
-      res.json({ changed: true });
-    } catch (e) { next(e); }
+      res.json(await changePassword(req.user!.id, currentPassword, newPassword));
+    } catch (e) {
+      next(e);
+    }
   }
 );
+
 router.post("/refresh", validate("body", refreshSchema), async (req, res, next) => {
   try {
-    const { verifyRefresh, signAccess, signRefresh } = await import("../../lib/jwt.js");
-    const { default: jwt } = await import("jsonwebtoken");
-    const env = (await import("../../config/env.js")).getEnv();
-    let payload: any;
-    try { payload = verifyRefresh(req.body.refreshToken); }
-    catch { throw new AppError(401, "INVALID_REFRESH", "Invalid refresh token"); }
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user) throw new AppError(401, "INVALID_REFRESH", "User not found");
-    const band = user.role === "record_keeper" ? "7-10" : user.role === "registrar" ? "11-12" : null;
-    const access = signAccess({ sub: user.id, role: user.role, gradeBand: band as any });
-    const refresh = signRefresh({ sub: user.id });
-    res.json({ accessToken: access, refreshToken: refresh });
-    void jwt; void env;
-  } catch (e) { next(e); }
+    res.json(await refreshTokens((req.body as { refreshToken: string }).refreshToken));
+  } catch (e) {
+    next(e);
+  }
 });
 
-const approveSchema = z.object({ userId: z.string().min(1) });
 router.post(
   "/approve/:userId",
   requireAuth,
@@ -208,135 +108,10 @@ router.post(
   validate("params", approveSchema),
   async (req, res, next) => {
     try {
-      const target = await prisma.user.findUnique({ where: { id: String(req.params.userId) } });
-      if (!target) throw new AppError(404, "USER_NOT_FOUND", "User not found");
-      if (target.status === "active") throw new AppError(409, "ALREADY_ACTIVE", "User already active");
-
-      const updated = await prisma.user.update({
-        where: { id: target.id },
-        data: { status: "active", approvedBy: req.user!.id, approvedAt: new Date() },
-      });
-
-      // Auto-provision the student profile from the official roster so an
-      // approved student immediately lands in their section — and therefore in
-      // section counts, subject lists, and gradebooks — instead of remaining
-      // invisible until a profile exists. Roster is the canonical source for
-      // grade level + section, matching the pending list.
-      if (target.role === "student" && target.lrn) {
-        // A provisioned placeholder (auto-created by another desk from the
-        // roster, e.g. ADM) already owns this LRN — adopting it needs a
-        // human identity decision, so stop here instead of crashing on the
-        // unique constraint.
-        const lrnTaken = await prisma.studentProfile.findUnique({
-          where: { lrn: target.lrn },
-          select: { userId: true },
-        });
-        if (lrnTaken && lrnTaken.userId !== target.id) {
-          throw new AppError(
-            409,
-            "LRN_ALREADY_PROVISIONED",
-            "This LRN already has a learner record created by another desk. Ask an administrator to merge the accounts before approving.",
-          );
-        }
-        const existingProfile = await prisma.studentProfile.findUnique({
-          where: { userId: target.id },
-          select: { userId: true },
-        });
-        if (!existingProfile) {
-          const roster = await prisma.studentRoster.findFirst({
-            where: { lrn: target.lrn },
-            orderBy: { schoolYearId: "desc" },
-            select: { gradeLevel: true, sectionId: true },
-          });
-          if (roster) {
-            await prisma.studentProfile.create({
-              data: {
-                userId: target.id,
-                lrn: target.lrn,
-                gradeLevel: roster.gradeLevel,
-                sectionId: roster.sectionId,
-              },
-            });
-            // Carry over everything recorded under roster enlistments for this
-            // LRN (scores, finals, attendance, anecdotal, referrals) onto the
-            // new profile. The profile is brand-new so no unique conflicts
-            // are possible.
-            const rosterIds = (
-              await prisma.studentRoster.findMany({
-                where: { lrn: target.lrn },
-                select: { id: true },
-              })
-            ).map((r) => r.id);
-            if (rosterIds.length > 0) {
-              await prisma.$transaction([
-                prisma.studentGrade.updateMany({
-                  where: { rosterId: { in: rosterIds } },
-                  data: { studentId: target.id, rosterId: null },
-                }),
-                prisma.finalGrade.updateMany({
-                  where: { rosterId: { in: rosterIds } },
-                  data: { studentId: target.id, rosterId: null },
-                }),
-                prisma.attendanceRecord.updateMany({
-                  where: { rosterId: { in: rosterIds } },
-                  data: { studentId: target.id, rosterId: null },
-                }),
-                prisma.anecdotalRecord.updateMany({
-                  where: { rosterId: { in: rosterIds } },
-                  data: { studentId: target.id, rosterId: null },
-                }),
-                prisma.referral.updateMany({
-                  where: { rosterId: { in: rosterIds } },
-                  data: { studentId: target.id, rosterId: null },
-                }),
-              ]);
-            }
-          }
-        }
-      }
-
-      await writeAudit({
-        userId: req.user!.id, actionType: "account_approval",
-        sourceTable: "users", sourceId: updated.id, reason: "Account activation",
-      });
-      // Approvals change enrollment composition — refresh cached headcounts.
-      await invalidateTags([
-        "registrar",
-        "registrar-accounts",
-        "registrar-overview",
-        "record-keeper",
-        "academics",
-        "overview",
-        "principal",
-        "teacher",
-      ]);
-      await fanoutNotification({
-        userId: updated.id, sourceTable: "users", action: "approve",
-        message: "Your account has been approved.",
-      });
-      // Own-bell receipt: the acting registrar/record keeper also gets an
-      // inbox row so their badge bumps live (their echo toast is suppressed
-      // client-side — the mutation toast already confirmed it).
-      void (async () => {
-        try {
-          const profile = target.lrn
-            ? await prisma.studentProfile.findUnique({
-                where: { lrn: target.lrn },
-                select: { gradeLevel: true },
-              })
-            : null;
-          const grade = profile?.gradeLevel ?? "unknown grade";
-          await fanoutNotification({
-            userId: req.user!.id, sourceTable: "users", action: "approve_self",
-            message: `You approved ${target.fullName} (LRN ${target.lrn ?? "—"}) — ${grade}.`,
-            sourceId: updated.id,
-          });
-        } catch {
-          // Best-effort only.
-        }
-      })();
-      res.json({ id: updated.id, status: updated.status });
-    } catch (e) { next(e); }
+      res.json(await approveAccount({ userId: req.user!.id, role: req.user!.role }, String(req.params.userId)));
+    } catch (e) {
+      next(e);
+    }
   }
 );
 
@@ -352,149 +127,26 @@ router.get(
       const band: GradeLevel[] =
         req.user!.role === "registrar" ? ["G11", "G12"] : ["G7", "G8", "G9", "G10"];
       const roleFilter = req.query.role ? String(req.query.role) : "student";
-
-      // Two sources of pending students:
-      //  1) Those with a StudentProfile already (e.g. seeded) — use profile data.
-      //  2) Real sign-ups with no profile yet — read the claimed LRN from User
-      //     and resolve grade band from the official StudentRoster.
-      const [profiled, bare, rosterSections] = await Promise.all([
-        prisma.studentProfile.findMany({
-          where: { gradeLevel: { in: band }, user: { status: "pending", role: roleFilter as Role } },
-          select: {
-            userId: true,
-            lrn: true,
-            gradeLevel: true,
-            birthdate: true,
-            address: true,
-            photoUrl: true,
-            section: { select: { name: true } },
-            user: {
-              select: { id: true, fullName: true, email: true, contactNumber: true, status: true, createdAt: true },
-            },
-          },
-          orderBy: { user: { createdAt: "asc" } },
-        }),
-        prisma.user.findMany({
-          where: {
-            status: "pending",
-            role: roleFilter as Role,
-            studentProfile: null,
-          },
-          select: { id: true, fullName: true, email: true, contactNumber: true, lrn: true, status: true, createdAt: true },
-          orderBy: { createdAt: "asc" },
-        }),
-        // Canonical section source: the enrolled StudentRoster, not the profile.
-        prisma.studentRoster.findMany({
-          where: { gradeLevel: { in: band } },
-          select: { lrn: true, section: { select: { name: true } } },
-        }),
-      ]);
-
-      const rosterSectionByLrn = new Map<string, string>();
-      for (const r of rosterSections) rosterSectionByLrn.set(r.lrn, r.section?.name ?? "—");
-
-      const students = profiled.map((s) => ({
-        id: s.user.id,
-        lrn: s.lrn,
-        name: s.user.fullName,
-        gradeLevel: s.gradeLevel as GradeLevel | string,
-        section: rosterSectionByLrn.get(s.lrn) ?? s.section?.name ?? "—",
-        email: s.user.email,
-        contactNumber: s.user.contactNumber ?? "—",
-        birthdate: s.birthdate ? s.birthdate.toISOString().slice(0, 10) : "—",
-        address: s.address ?? "—",
-        imageUrl: s.photoUrl ?? null,
-        status: s.user.status,
-        requestedAt: s.user.createdAt.toISOString(),
-      }));
-
-      // Single batched roster read for bare sign-ups (was N sequential
-      // findFirst calls). Latest school year wins per LRN.
-      const bareLrns = [...new Set(bare.map((u) => u.lrn).filter((l): l is string => !!l))];
-      const bareRosters =
-        bareLrns.length > 0
-          ? await prisma.studentRoster.findMany({
-              where: { lrn: { in: bareLrns } },
-              select: {
-                lrn: true,
-                gradeLevel: true,
-                schoolYearId: true,
-                section: { select: { name: true } },
-              },
-            })
-          : [];
-      const latestBareRoster = new Map<string, (typeof bareRosters)[number]>();
-      for (const r of bareRosters) {
-        const prev = latestBareRoster.get(r.lrn);
-        if (!prev || r.schoolYearId > prev.schoolYearId) latestBareRoster.set(r.lrn, r);
-      }
-
-      for (const u of bare) {
-        let gradeLevel: string = "—";
-        let section = "—";
-        if (u.lrn) {
-          const roster = latestBareRoster.get(u.lrn);
-          if (roster) {
-            if (!band.includes(roster.gradeLevel)) continue; // grade-band enforcement
-            gradeLevel = roster.gradeLevel;
-            section = roster.section?.name ?? "—";
-          }
-        }
-        students.push({
-          id: u.id,
-          lrn: u.lrn ?? "—",
-          name: u.fullName,
-          gradeLevel,
-          section,
-          email: u.email,
-          contactNumber: u.contactNumber ?? "—",
-          birthdate: "—",
-          address: "—",
-          imageUrl: null,
-          status: u.status,
-          requestedAt: u.createdAt.toISOString(),
-        });
-      }
-
-      // Server search + pagination (strict-15 standard): ?q= filters the merged
-      // list by name/LRN/section/email, then ?page=&pageSize= slice it.
-      // Absent params return the full list (legacy clients).
       const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      const unfilteredTotal = students.length;
-      const matched = q
-        ? students.filter(
-            (s) =>
-              s.name.toLowerCase().includes(q) ||
-              s.lrn.toLowerCase().includes(q) ||
-              s.section.toLowerCase().includes(q) ||
-              (s.email ?? "").toLowerCase().includes(q),
-          )
-        : students;
       const rawPage = req.query.page !== undefined ? Number(req.query.page) : NaN;
       const rawSize = req.query.pageSize !== undefined ? Number(req.query.pageSize) : NaN;
-      if (q || Number.isFinite(rawPage) || Number.isFinite(rawSize)) {
-        const page = Math.max(1, Number.isFinite(rawPage) ? Math.floor(rawPage) : 1);
-        const pageSize = Math.min(Math.max(1, Number.isFinite(rawSize) ? Math.floor(rawSize) : 15), 15);
-        const total = matched.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const clamped = Math.min(page, totalPages);
-        return res.json({
-          students: matched.slice((clamped - 1) * pageSize, clamped * pageSize),
-          total,
-          unfilteredTotal,
-          page: clamped,
-          pageSize,
-        });
-      }
-
-      res.json({ students });
+      const hasPaging = !!q || Number.isFinite(rawPage) || Number.isFinite(rawSize);
+      res.json(
+        await listPending({
+          band,
+          roleFilter,
+          q,
+          page: rawPage,
+          pageSize: rawSize,
+          hasPaging,
+        }),
+      );
     } catch (e) {
       next(e);
     }
   }
 );
 
-const rejectSchema = z.object({ reason: z.string().min(1) });
 router.post(
   "/reject/:userId",
   requireAuth,
@@ -504,54 +156,13 @@ router.post(
   validate("body", rejectSchema),
   async (req, res, next) => {
     try {
-      const target = await prisma.user.findUnique({ where: { id: String(req.params.userId) } });
-      if (!target) throw new AppError(404, "USER_NOT_FOUND", "User not found");
-      if (target.status !== "pending")
-        throw new AppError(409, "NOT_PENDING", "Only pending accounts can be rejected");
-
-      const updated = await prisma.user.update({
-        where: { id: target.id },
-        data: { status: "suspended", approvedBy: req.user!.id, approvedAt: new Date() },
-      });
-      await writeAudit({
-        userId: req.user!.id,
-        actionType: "account_approval",
-        sourceTable: "users",
-        sourceId: updated.id,
-        reason: req.body.reason,
-        oldValue: { status: "pending" },
-        newValue: { status: "suspended" },
-      });
-      await fanoutNotification({
-        userId: updated.id,
-        sourceTable: "users",
-        action: "reject",
-        message: "Your account request was not approved.",
-      });
-      // Own-bell receipt + cache refresh (this endpoint previously skipped
-      // invalidation): the actor's badge bumps live with no refresh.
-      await invalidateTags([
-        "registrar",
-        "registrar-accounts",
-        "registrar-overview",
-        "record-keeper",
-        "academics",
-        "overview",
-        "principal",
-        "teacher",
-      ]);
-      void (async () => {
-        try {
-          await fanoutNotification({
-            userId: req.user!.id, sourceTable: "users", action: "reject_self",
-            message: `You rejected ${target.fullName} (LRN ${target.lrn ?? "—"}).`,
-            sourceId: updated.id,
-          });
-        } catch {
-          // Best-effort only.
-        }
-      })();
-      res.json({ id: updated.id, status: updated.status });
+      res.json(
+        await rejectAccount(
+          { userId: req.user!.id, role: req.user!.role },
+          String(req.params.userId),
+          (req.body as { reason: string }).reason,
+        ),
+      );
     } catch (e) {
       next(e);
     }
