@@ -2,8 +2,8 @@ import * as React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RISK_LEVEL_COLORS } from "../riskData";
-import type { RiskLevelKey } from "../riskBoard";
+import { RISK_LEVEL_COLORS } from "@/services/principal/risk.types";
+import type { RiskLevelKey } from "@/services/principal/risk.types";
 import styles from "./risk-level-donut.module.css";
 
 const LOOP_MS = 3000;

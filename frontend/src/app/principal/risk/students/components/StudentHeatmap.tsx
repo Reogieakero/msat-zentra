@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Loader2 } from "lucide-react";
-import { FACTOR_CHIP, type BackendHeatmap, type RiskFactor } from "../api";
+import { FACTOR_CHIP, type BackendHeatmap, type RiskFactor } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentHeatmap.module.css";
 

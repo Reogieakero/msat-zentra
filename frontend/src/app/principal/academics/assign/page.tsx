@@ -11,7 +11,7 @@ import { ConfirmActionDialog } from "./components/ConfirmActionDialog";
 import { STATUS_META } from "./components/status-dots";
 import { AssignSkeleton } from "./components/AssignSkeleton";
 import { useTerm } from "@/lib/term/TermContext";
-import type { AdvisoryEntryInput, GradeLevel } from "./api";
+import type { AdvisoryEntryInput, GradeLevel } from "@/services/principal/assign.types";
 import { useAssignAdvisers, useAssignSectionsData } from "./hooks/useAssignSections";
 import { usePrincipalAssignRealtime } from "@/lib/realtime/principalAssignChannel";
 import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";

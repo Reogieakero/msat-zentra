@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ReportKpis as KpiData } from "../reports-data";
+import type { ReportKpis as KpiData } from "@/services/principal/reports";
 import styles from "./reports-kpis.module.css";
 
 function bandFor(avg: number): string {

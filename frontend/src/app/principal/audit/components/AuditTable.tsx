@@ -24,7 +24,7 @@ import {
   ACTION_LABELS,
   ROLE_LABELS,
   type AuditEntry,
-} from "../audit-data";
+} from "@/services/principal/audit.types";
 import { buildChangeLines, summarizeAction } from "../format-change";
 import styles from "./audit-table.module.css";
 

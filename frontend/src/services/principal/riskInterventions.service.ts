@@ -1,5 +1,7 @@
+// Principal risk-interventions reads + counselor nudge. (StudentFilters /
+// InterventionStudentsResult shapes stay in the colocated ./types file.)
 import { apiClient } from "@/lib/api/client";
-import type { InterventionStudentsResult, StudentFilters } from "./types";
+import type { InterventionStudentsResult, StudentFilters } from "@/app/principal/risk/interventions/types";
 
 export async function fetchInterventionStudents(
   filters: StudentFilters,

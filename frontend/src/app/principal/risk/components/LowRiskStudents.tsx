@@ -2,7 +2,7 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useLowRiskStudents } from "../riskBoard";
+import { useLowRiskStudents } from "@/services/principal/risk.service";
 import styles from "./low-risk-students.module.css";
 
 const PAGE_SIZE = 15;

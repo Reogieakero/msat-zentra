@@ -12,7 +12,7 @@ import type {
   GradeLevel,
   Section,
   Teacher,
-} from "../api";
+} from "@/services/principal/assign.types";
 import styles from "./form.module.css";
 
 // Principal is school-wide — every grade band (G7–G12).

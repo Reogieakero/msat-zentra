@@ -8,7 +8,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import { useGradeMode } from "../../grade-mode-context";
 import { SectionCardGrid } from "./SectionCardGrid";
 import { SectionStudentsTable } from "./SectionStudentsTable";
-import type { AcademicsMock } from "../academics-data";
+import type { AcademicsMock } from "@/services/principal/academics";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentsAcademicsGrid.module.css";
 

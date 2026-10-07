@@ -36,11 +36,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import {
-  fetchAdmReferrals,
-  type AdmReferralForm,
-  type AdmReferralRow,
-} from "../../../adm/api";
+import { fetchAdmReferrals } from "@/services/principal/adm.service";
+import type {
+  AdmReferralForm,
+  AdmReferralRow,
+} from "@/services/principal/adm.types";
 import { FormIcon } from "../../../adm/components/FormIcon";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";

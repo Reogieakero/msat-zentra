@@ -19,7 +19,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useTerm } from "@/lib/term/TermContext";
-import { fetchOverview } from "./overview-data";
+import { fetchOverview } from "@/services/principal/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewRisk.module.css";
 

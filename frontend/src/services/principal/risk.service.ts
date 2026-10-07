@@ -1,56 +1,20 @@
+// Principal risk-board reads + local fetch-state hooks.
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api/client";
-
-export type RiskLevelKey = "High" | "Moderate" | "Low";
-
-export interface RiskBoardData {
-  kpis: {
-    totalAtRiskFlags: number;
-    highRiskStudents: number;
-  };
-  levelDistribution: { level: RiskLevelKey; count: number }[];
-  factorTotals: { Academic: number; Attendance: number; Behavioral: number };
-  interventionOutcome: {
-    ongoing: number;
-    resolved: number;
-    unresolved: number;
-  };
-  trend: { term: string; high: number; moderate: number; low: number }[];
-}
+import type {
+  HeatmapData,
+  HeatmapStudent,
+  LowRiskResult,
+  LowRiskStudent,
+  RiskBoardData,
+  RiskFactor,
+} from "./risk.types";
 
 export async function fetchRiskBoard(gradeMode: "raw" | "final" = "final"): Promise<RiskBoardData> {
   const { data } = await apiClient.get<RiskBoardData>("/api/risk/board", {
     params: { gradeMode },
   });
   return data;
-}
-
-export interface RiskTrendData {
-  schoolYearId: string | null;
-  termId: string | null;
-  trend: { date: string; term: string; high: number; moderate: number; low: number }[];
-}
-
-export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
-
-export interface HeatmapSection {
-  sectionId: string;
-  section: string;
-  gradeLevel: string;
-  factors: Record<RiskFactor, number>;
-}
-
-export interface HeatmapData {
-  termId: string;
-  sections: HeatmapSection[];
-  factorTotals: Record<RiskFactor, number>;
-}
-
-export interface HeatmapStudent {
-  lrn: string;
-  name: string;
-  riskLevel: RiskLevelKey;
-  factor: RiskFactor;
 }
 
 export async function fetchRiskHeatmap(gradeMode: "raw" | "final" = "final"): Promise<HeatmapData> {
@@ -71,18 +35,6 @@ export async function fetchSectionFactorStudents(
     { params: { termId, factor, gradeMode } }
   );
   return data.students;
-}
-
-export interface LowRiskStudent {
-  lrn: string;
-  name: string;
-}
-
-export interface LowRiskResult {
-  students: LowRiskStudent[];
-  total: number;
-  page: number;
-  pageSize: number;
 }
 
 export async function fetchLowRiskStudents(

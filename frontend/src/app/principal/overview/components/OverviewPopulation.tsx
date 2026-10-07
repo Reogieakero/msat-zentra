@@ -17,7 +17,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useTerm } from "@/lib/term/TermContext";
-import { fetchOverview, type OverviewSectionRow } from "./overview-data";
+import { fetchOverview } from "@/services/principal/overview.service";
+import type { OverviewSectionRow } from "@/services/principal/overview.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { AuroraBanner } from "./AuroraBanner";
 import styles from "./OverviewPopulation.module.css";

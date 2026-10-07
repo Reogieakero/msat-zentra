@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { apiClient } from "@/lib/api/client";
 import { useGradeMode } from "../../grade-mode-context";
-import type { BackendStudent } from "../students/api";
+import type { BackendStudent } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./RiskLevelDistribution.module.css";
 

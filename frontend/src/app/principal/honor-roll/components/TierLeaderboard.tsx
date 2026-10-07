@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Medal, Star, Sprout, Leaf } from "lucide-react";
-import type { DescriptorBand, HonorRollCandidate } from "../honor-roll-data";
+import type { DescriptorBand } from "@/services/principal/academics";
+import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
 import styles from "./TierLeaderboard.module.css";
 
 interface Props {

@@ -22,7 +22,7 @@ import {
 import {
   type PanelDef,
   type ReportsPayload,
-} from "../reports-data";
+} from "@/services/principal/reports";
 import styles from "./reports-panels.module.css";
 
 const CHART_CONFIG = {

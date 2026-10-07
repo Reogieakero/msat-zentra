@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchHeatmap } from "./api";
+import { fetchHeatmap } from "@/services/principal/riskStudents.service";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../grade-mode-context";
 import { StudentHeatmap } from "./components/StudentHeatmap";

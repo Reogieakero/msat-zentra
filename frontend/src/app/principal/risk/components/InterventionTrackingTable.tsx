@@ -35,7 +35,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import type { RiskLevelKey } from "../riskBoard";
+import type { RiskLevelKey } from "@/services/principal/risk.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { AuroraBanner } from "../../overview/components/AuroraBanner";
 import styles from "./InterventionTrackingTable.module.css";

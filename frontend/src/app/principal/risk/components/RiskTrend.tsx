@@ -31,7 +31,7 @@ import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import type { RiskTrendData } from "../riskBoard";
+import type { RiskTrendData } from "@/services/principal/risk.types";
 import styles from "./RiskTrend.module.css";
 
 type SchoolYearOption = {

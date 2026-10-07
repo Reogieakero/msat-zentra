@@ -1,5 +1,4 @@
-import { apiClient } from "@/lib/api/client";
-
+// Principal overview dashboard shapes. Pure types only.
 export interface OverviewKpis {
   enrollment: number;
   activeSections: number;
@@ -41,9 +40,4 @@ export interface OverviewData {
   accountApprovals: number;
   attendanceWatch: number;
   honorRoll: number;
-}
-
-export async function fetchOverview(): Promise<OverviewData> {
-  const { data } = await apiClient.get<OverviewData>("/api/overview");
-  return data;
 }

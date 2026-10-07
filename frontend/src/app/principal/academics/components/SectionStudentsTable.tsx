@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RiskBadge } from "./RiskBadge";
-import type { SectionSummary, StudentRow } from "../academics-data";
+import type { SectionSummary, StudentRow } from "@/services/principal/academics";
 import type { GradeMode } from "../../grade-mode-context";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./SectionStudentsTable.module.css";

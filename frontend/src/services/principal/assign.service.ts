@@ -1,10 +1,20 @@
-import { apiClient } from "@/lib/api/client";
-import type { AxiosError } from "axios";
-import { isCancel } from "axios";
-
 // Principal assigning client — school-wide (G7–G12).
 // Mirrors the registrar assign client but targets the principal-scoped
 // /api/academics/assign/* routes (requireRole("principal")).
+import { apiClient } from "@/lib/api/client";
+import type { AxiosError } from "axios";
+import { isCancel } from "axios";
+import type {
+  AdviserBatchInput,
+  Assignment,
+  GradeLevel,
+  SchoolYearOption,
+  Section,
+  SectionAdviserResult,
+  Subject,
+  Teacher,
+  TermOption,
+} from "./assign.types";
 
 function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
@@ -30,58 +40,6 @@ function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
         /* unreachable, kept for clarity */
       });
   });
-}
-
-export type GradeLevel = 7 | 8 | 9 | 10 | 11 | 12;
-
-export interface Assignment {
-  id: string;
-  subjectId: string;
-  subjectCode: string;
-  subjectName: string;
-  teacherId: string;
-  teacherName: string;
-  term: string;
-}
-
-export interface Section {
-  id: string;
-  name: string;
-  gradeLevel: GradeLevel;
-  schoolYear: string;
-  schoolYearId: string;
-  adviserId: string;
-  adviserName: string;
-  /** Free-text advisory listing — shown when no teacher account is linked. */
-  adviserLabel: string;
-  /** Advisory claim code (principal-only). Teacher enters this to claim the seat. */
-  adviserCode: string;
-  assignments: Assignment[];
-}
-
-export interface Subject {
-  id: string;
-  code: string;
-  name: string;
-  gradeLevel: GradeLevel;
-  category: string;
-  active: boolean;
-}
-
-export interface Teacher {
-  id: string;
-  name: string;
-}
-
-export interface SchoolYearOption {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
-
-export interface TermOption {
-  id: string;
-  termNumber: number;
 }
 
 export async function fetchSchoolYears(signal?: AbortSignal): Promise<SchoolYearOption[]> {
@@ -155,19 +113,6 @@ export async function removeAssignment(id: string): Promise<{ id: string; delete
   return res.data;
 }
 
-export interface SectionAdviserResult {
-  id: string;
-  name: string;
-  gradeLevel: GradeLevel;
-  schoolYear: string;
-  schoolYearId: string;
-  adviserId: string;
-  adviserName: string;
-  adviserLabel: string;
-  /** Freshly minted claim code — share with the listed teacher out-of-band. */
-  adviserCode: string;
-}
-
 // Principal advisory — assign (or clear with null/empty) the section adviser.
 // Assigning files label + a fresh claim code (adviserId stays empty until the
 // teacher claims with the code); clearing wipes all three.
@@ -190,23 +135,6 @@ export async function regenerateAdviserCode(sectionId: string): Promise<SectionA
     `/api/academics/assign/sections/${sectionId}/adviser-code/regenerate`,
   );
   return res.data;
-}
-
-export interface AdviserBatchInput {
-  /** Known record ids (fast path) — omitted when resolving by typed name. */
-  sectionId?: string;
-  sectionName?: string;
-  gradeLevel?: GradeLevel;
-  adviserId?: string | null;
-  adviserName?: string;
-}
-
-/** One modal row: raw typed values. The mutation resolves ids, auto-creates
-  missing sections, then assigns — all in one flow. */
-export interface AdvisoryEntryInput {
-  sectionName: string;
-  gradeLevel: GradeLevel;
-  adviserName: string;
 }
 
 // Atomic batch: ONE request assigns every row (all-or-nothing transaction

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAdmDashboard } from "../api";
+import { fetchAdmDashboard } from "@/services/principal/adm.service";
 import styles from "./AdmStats.module.css";
 
 const STATS = [

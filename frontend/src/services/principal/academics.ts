@@ -1,3 +1,6 @@
+// Principal academics board: section/grade shapes, DO 15 descriptor
+// bands, honor-roll preview shapes, subject vocabulary. Pure — no API
+// calls (the board reads the same summary the page assembles).
 export type RiskLevel = "High" | "Moderate" | "Low";
 export type Remarks = "Passed" | "Failed";
 export type SubjectStatus = "On Track" | "At Risk" | "Failing";

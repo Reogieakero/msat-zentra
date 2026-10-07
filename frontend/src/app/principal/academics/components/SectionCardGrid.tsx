@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Users, Flame, Gauge } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { SectionSummary } from "../academics-data";
+import type { SectionSummary } from "@/services/principal/academics";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./SectionCardGrid.module.css";
 

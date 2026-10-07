@@ -40,7 +40,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "../api";
+import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentsListTable.module.css";
 

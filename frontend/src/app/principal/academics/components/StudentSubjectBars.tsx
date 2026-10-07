@@ -1,7 +1,7 @@
 "use client";
 
-import type { StudentRow } from "../academics-data";
-import { SUBJECT_CODES } from "../academics-data";
+import type { StudentRow } from "@/services/principal/academics";
+import { SUBJECT_CODES } from "@/services/principal/academics";
 import styles from "./StudentSubjectBars.module.css";
 
 interface Props {

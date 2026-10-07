@@ -1,5 +1,6 @@
-import { apiClient } from "@/lib/api/client";
-
+// Principal at-risk-students list shapes. Pure types only. Note: these
+// Backend* shapes overlap the risk-board projections (same endpoints,
+// slightly different fields per page) — pre-existing, kept separate.
 export type RiskLevelKey = "High" | "Moderate" | "Low";
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
@@ -30,15 +31,6 @@ export interface BackendHeatmap {
   factorTotals: Record<RiskFactor, number>;
 }
 
-export async function fetchHeatmap(
-  gradeMode: "raw" | "final" = "final"
-): Promise<BackendHeatmap> {
-  const { data } = await apiClient.get<BackendHeatmap>("/api/risk/heatmap", {
-    params: { gradeMode },
-  });
-  return data;
-}
-
 export interface BackendBoard {
   kpis: {
     totalAtRiskFlags: number;
@@ -50,11 +42,6 @@ export interface BackendBoard {
     Attendance: number;
     Behavioral: number;
   };
-}
-
-export async function fetchRiskBoard(): Promise<BackendBoard> {
-  const { data } = await apiClient.get<BackendBoard>("/api/risk/board");
-  return data;
 }
 
 export interface BackendStudent {
@@ -76,20 +63,4 @@ export interface BackendStudentsResult {
   total: number;
   page: number;
   pageSize: number;
-}
-
-export async function fetchRiskStudents(
-  section?: string,
-  gradeMode: "raw" | "final" = "final",
-  pageSize = 50,
-): Promise<BackendStudentsResult> {
-  // Default 50 (Teacher-aligned); explicit pageSize=1000 preserved for
-  // export/full-scan callers. Server cap stays 1000.
-  const params: Record<string, string> = { pageSize: String(pageSize) };
-  if (section) params.section = section;
-  params.gradeMode = gradeMode;
-  const { data } = await apiClient.get<BackendStudentsResult>("/api/risk/students", {
-    params,
-  });
-  return data;
 }

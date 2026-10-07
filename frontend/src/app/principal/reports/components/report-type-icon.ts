@@ -5,7 +5,7 @@ import {
   Award,
   type LucideIcon,
 } from "lucide-react";
-import type { ReportType } from "../reports-data";
+import type { ReportType } from "@/services/principal/reports";
 
 export const REPORT_TYPE_ICON: Record<ReportType, LucideIcon> = {
   trends: TrendingUp,

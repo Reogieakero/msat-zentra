@@ -11,12 +11,14 @@ import {
   fetchSections,
   fetchTeachers,
   regenerateAdviserCode,
-  type AdvisoryEntryInput,
-  type AdviserBatchInput,
-  type Section,
-  type SectionAdviserResult,
-  type Teacher,
-} from "../api";
+} from "@/services/principal/assign.service";
+import type {
+  AdvisoryEntryInput,
+  AdviserBatchInput,
+  Section,
+  SectionAdviserResult,
+  Teacher,
+} from "@/services/principal/assign.types";
 import { markPrincipalAssignLocalMutation } from "@/lib/realtime/principalAssignRealtimeMeta";
 
 export const assignSectionsKey = (schoolYearId: string) =>

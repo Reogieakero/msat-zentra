@@ -1,5 +1,5 @@
 // Human-friendly rendering of audit old/new values for non-technical readers.
-import { AuditActionType, AuditEntry } from "./audit-data";
+import type { AuditActionType, AuditEntry } from "@/services/principal/audit.types";
 
 type FieldMap = Record<string, string>;
 

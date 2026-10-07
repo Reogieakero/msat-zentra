@@ -15,12 +15,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  AuditActionType,
   ACTION_TYPES,
   ACTOR_ROLES,
   ROLE_LABELS,
-  AuditRole,
-} from "../audit-data";
+  type AuditActionType,
+  type AuditRole,
+} from "@/services/principal/audit.types";
 import styles from "./audit-toolbar.module.css";
 import ivStyles from "../../risk/interventions/components/InterventionsListTable.module.css";
 

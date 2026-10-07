@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { useGradeMode } from "../../grade-mode-context";
-import type { RiskBoardData, RiskFactor, RiskLevelKey } from "../riskBoard";
+import type { RiskBoardData, RiskFactor, RiskLevelKey } from "@/services/principal/risk.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./RiskLevelBreakdown.module.css";
 

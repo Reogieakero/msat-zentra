@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PANEL_ROWS, type ReportsPayload, type ReportScope } from "./reports-data";
+import { PANEL_ROWS, type ReportsPayload, type ReportScope } from "@/services/principal/reports";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { toast } from "@/components/ui/sonner";

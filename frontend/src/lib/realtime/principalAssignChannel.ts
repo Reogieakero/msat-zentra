@@ -11,7 +11,7 @@ import type {
   Assignment,
   Section,
   Teacher,
-} from "@/app/principal/academics/assign/api";
+} from "@/services/principal/assign.types";
 // Desk-agnostic event dedupe helpers (shared with the nurse desk).
 import { realtimeEventKey, seenRealtimeEvent } from "./nurseRealtimeMeta";
 import { wasRecentPrincipalAssignMutation } from "./principalAssignRealtimeMeta";

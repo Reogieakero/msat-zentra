@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { X } from "lucide-react";
-import { useRiskHeatmap, fetchSectionFactorStudents, type HeatmapStudent, type RiskFactor } from "../riskBoard";
+import { useRiskHeatmap, fetchSectionFactorStudents } from "@/services/principal/risk.service";
+import type { HeatmapStudent, RiskFactor } from "@/services/principal/risk.types";
 import styles from "./risk-factor-heatmap.module.css";
 
 const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];

@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { HonorRollCandidate } from "../honor-roll-data";
+import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./CandidateTable.module.css";
 

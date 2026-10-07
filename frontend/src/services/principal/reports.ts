@@ -1,7 +1,6 @@
-// Types and UI registry for the Principal Reports & Analytics command center.
-// All values are fetched live from GET /api/reports (see backend
-// modules/reports). No mock data.
-
+// Principal Reports & Analytics command center: types, UI registry, and
+// heatmap helpers. Pure — all values are fetched live from GET
+// /api/reports by the page. No mock data.
 export type ReportType = "trends" | "intervention_success" | "heat_map" | "honor_roll";
 export type ReportScope = "school" | "grade" | "section";
 

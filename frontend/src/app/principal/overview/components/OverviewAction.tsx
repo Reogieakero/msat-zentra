@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTerm } from "@/lib/term/TermContext";
-import { fetchOverview } from "./overview-data";
+import { fetchOverview } from "@/services/principal/overview.service";
 import { AuroraBanner } from "./AuroraBanner";
 import styles from "./OverviewAction.module.css";
 

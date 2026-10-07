@@ -13,10 +13,12 @@ import { toast } from "@/components/ui/sonner";
 import {
   fetchAuditEntries,
   exportAuditCsv,
+} from "@/services/principal/audit.service";
+import type {
   AuditActionType,
+  AuditEntry,
   AuditRole,
-} from "./audit-data";
-import type { AuditEntry } from "./audit-data";
+} from "@/services/principal/audit.types";
 import styles from "./page.module.css";
 import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
 import assign from "../academics/assign/components/section-assignments.module.css";

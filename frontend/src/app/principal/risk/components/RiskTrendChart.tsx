@@ -9,8 +9,8 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RISK_LEVEL_COLORS } from "../riskData";
-import type { RiskBoardData } from "../riskBoard";
+import { RISK_LEVEL_COLORS } from "@/services/principal/risk.types";
+import type { RiskBoardData } from "@/services/principal/risk.types";
 import styles from "./risk-trend-chart.module.css";
 
 const LOOP_MS = 3000;

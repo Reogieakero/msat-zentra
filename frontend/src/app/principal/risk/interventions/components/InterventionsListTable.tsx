@@ -61,7 +61,7 @@ import { StatusBadge } from "@/app/teacher/overview/components/teacher-overview-
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
 import { apiErrorMessage } from "@/lib/api/errors";
-import { alertGuidance, fetchInterventionStudents } from "../api";
+import { alertGuidance, fetchInterventionStudents } from "@/services/principal/riskInterventions.service";
 import styles from "./InterventionsListTable.module.css";
 
 const gradeNum = (name: string) => {

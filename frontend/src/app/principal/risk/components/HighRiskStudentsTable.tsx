@@ -42,7 +42,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import type { BackendStudent, RiskFactor } from "../students/api";
+import type { BackendStudent, RiskFactor } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./HighRiskStudentsTable.module.css";
 

@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import type { SectionSummary, StudentRow, StudentSubject } from "../academics-data";
-import { SUBJECT_CODES } from "../academics-data";
+import type { SectionSummary, StudentRow, StudentSubject } from "@/services/principal/academics";
+import { SUBJECT_CODES } from "@/services/principal/academics";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,

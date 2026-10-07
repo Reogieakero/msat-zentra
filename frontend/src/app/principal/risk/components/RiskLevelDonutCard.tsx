@@ -6,7 +6,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { useGradeMode } from "../../grade-mode-context";
-import type { RiskBoardData, RiskLevelKey } from "../riskBoard";
+import type { RiskBoardData, RiskLevelKey } from "@/services/principal/risk.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./RiskLevelDonutCard.module.css";
 

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { CardModal } from "@/components/ui/CardModal";
 import { RiskBadge } from "./RiskBadge";
-import type { StudentRow } from "../academics-data";
+import type { StudentRow } from "@/services/principal/academics";
 import type { GradeMode } from "../../grade-mode-context";
 import styles from "./GradeBreakdownDrawer.module.css";
 import shared from "../academics.module.css";

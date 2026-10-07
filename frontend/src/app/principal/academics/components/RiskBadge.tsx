@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { RiskLevel } from "../academics-data";
+import type { RiskLevel } from "@/services/principal/academics";
 
 /* Risk-level color code — Low green, Moderate amber, High red — same as
    the guidance interventions desk. NOTE: the app theme is monochrome

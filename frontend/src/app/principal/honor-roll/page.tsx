@@ -11,9 +11,11 @@ import { CandidateTable } from "./components/CandidateTable";
 import {
   deriveHonorRoll,
   fetchLiveHonorRoll,
+} from "@/services/principal/honorRoll.service";
+import {
   HONOR_ROLL_GRADES,
   type HonorRollCandidate,
-} from "./honor-roll-data";
+} from "@/services/principal/honorRoll.types";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./honor-roll.module.css";
 
