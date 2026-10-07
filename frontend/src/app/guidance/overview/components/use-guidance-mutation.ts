@@ -36,13 +36,57 @@ export const GUIDANCE_QUERY_KEYS = [
   ["adm-consultation-sessions"],
 ] as const;
 
-export function useGuidanceInvalidate() {
+/**
+ * Scoped invalidation: a mutation (or realtime event) only refetches the
+ * queries it can actually change. Previously every guidance write and every
+ * realtime event invalidated all sixteen prefixes — one counseling note
+ * refetched the risk heatmap walks, anecdotal folders, ADM report, and
+ * session documents. The default (no scope) preserves the old all-keys
+ * behavior so existing call sites stay correct; pass scopes to narrow.
+ */
+export type GuidanceScope =
+  | "referrals"
+  | "interventions"
+  | "overview"
+  | "alerts"
+  | "adm"
+  | "anecdotal"
+  | "risk"
+  | "documents"
+  | "notifications";
+
+const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]> = {
+  referrals: [["guidance-referrals"], ["guidance-referrals-highlight"], ["adm-consultation-sessions"]],
+  interventions: [["guidance-interventions"]],
+  overview: [["guidance-overview"]],
+  alerts: [["guidance-alerts"]],
+  adm: [["guidance-adm"], ["guidance-adm-report"]],
+  anecdotal: [["guidance-anecdotal"], ["guidance-risk-behavioral"]],
+  risk: [
+    ["guidance-risk"],
+    ["guidance-risk-levels"],
+    ["guidance-risk-heatmap"],
+    ["guidance-risk-alert-factors"],
+  ],
+  documents: [["guidance-session-documents"]],
+  notifications: [["guidance-notifications"]],
+};
+
+export function invalidateGuidanceQueries(
+  queryClient: { invalidateQueries: (filters: { queryKey: string[] }) => void },
+  scopes?: GuidanceScope | GuidanceScope[],
+) {
+  const keys = !scopes
+    ? GUIDANCE_QUERY_KEYS
+    : (Array.isArray(scopes) ? scopes : [scopes]).flatMap((s) => GUIDANCE_SCOPE_KEYS[s]);
+  for (const key of keys) {
+    void queryClient.invalidateQueries({ queryKey: [...key] });
+  }
+}
+
+export function useGuidanceInvalidate(scopes?: GuidanceScope | GuidanceScope[]) {
   const queryClient = useQueryClient();
-  return () => {
-    for (const key of GUIDANCE_QUERY_KEYS) {
-      void queryClient.invalidateQueries({ queryKey: [...key] });
-    }
-  };
+  return () => invalidateGuidanceQueries(queryClient, scopes);
 }
 
 interface GuidanceMutationOptions<TData, TVariables> {
@@ -60,6 +104,10 @@ interface GuidanceMutationOptions<TData, TVariables> {
       their own realtime echo toast for 30s (bell row still lands). Falls
       back to `data.id` when the mutation resolves one. */
   sourceId?: string | ((variables: TVariables) => string);
+  /** Narrow the post-success refetch (default: all guidance keys, the
+      previous behavior). Case writes usually only move queue/overview/
+      alerts/adm state — never the heatmap walks or document folders. */
+  scopes?: GuidanceScope | GuidanceScope[];
 }
 
 /**
@@ -72,11 +120,7 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
   options: GuidanceMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
-  const invalidate = () => {
-    for (const key of GUIDANCE_QUERY_KEYS) {
-      void queryClient.invalidateQueries({ queryKey: [...key] });
-    }
-  };
+  const invalidate = () => invalidateGuidanceQueries(queryClient, options.scopes);
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onSuccess: (data, variables) => {
@@ -109,10 +153,10 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
       options.onSuccessExtra?.(data, variables);
     },
     // Pessimistic: rows stay put with their spinner until the server
-    // confirms — only this settled refetch moves/removes them.
-    onSettled: () => {
-      invalidate();
-    },
+    // confirms — only the success refetch above moves/removes them. No
+    // onSettled blanket refetch: it doubled every mutation's network cost
+    // (success invalidated, then settled invalidated again) and refetched
+    // on error when nothing changed.
     onError: (err) => {
       if (!options.silentError) {
         toast.error({

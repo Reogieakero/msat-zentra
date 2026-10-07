@@ -6,27 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { guidanceNotificationTitle } from "@/lib/notifications/label";
-
-const GUIDANCE_KEYS = [
-  ["guidance-notifications"],
-  ["guidance-referrals"],
-  ["guidance-referrals-highlight"],
-  ["guidance-interventions"],
-  ["guidance-overview"],
-  // ["guidance-alerts"] prefix covers the nested alerts queries
-  // (["guidance-alerts", "referrals"] / ["guidance-alerts", "interventions"]).
-  ["guidance-alerts"],
-  ["guidance-adm"],
-  ["guidance-adm-report"],
-  ["guidance-anecdotal"],
-  ["guidance-risk"],
-  ["guidance-risk-levels"],
-  ["guidance-risk-heatmap"],
-  ["guidance-risk-behavioral"],
-  ["guidance-risk-alert-factors"],
-  ["guidance-session-documents"],
-  ["adm-consultation-sessions"],
-] as const;
+import {
+  invalidateGuidanceQueries,
+  type GuidanceScope,
+} from "@/app/guidance/overview/components/use-guidance-mutation";
 
 interface GuidanceInboxRow {
   id: string;
@@ -87,10 +70,60 @@ function currentUserId(): string | null {
  * never type alone — every referral fanout shares type
  * `referral_status_change`), so the bell and the sileo always agree.
  */
+// Type-mapped invalidation: each table wake-up (and each notification
+// row) refetches only the scopes it can change. Previously every event
+// refetched all sixteen prefixes — including the heatmap/anecdotal
+// walks — on any single change.
+function scopesForTable(table: string): GuidanceScope[] {
+  switch (table) {
+    case "Referral":
+      return ["referrals", "alerts", "adm", "overview", "notifications"];
+    case "Intervention":
+      return ["interventions", "alerts", "overview", "notifications"];
+    case "CounselingSession":
+      return ["referrals", "interventions", "overview", "documents", "notifications"];
+    case "AdmLearnerProfile":
+      return ["adm", "overview", "notifications"];
+    default:
+      return ["notifications"];
+  }
+}
+
+function scopesForRow(row: GuidanceInboxRow): GuidanceScope[] {
+  const table = row.sourceTable ?? "";
+  if (table === "referrals") return ["referrals", "alerts", "adm", "overview", "notifications"];
+  if (table === "counseling_sessions") {
+    return ["referrals", "interventions", "overview", "documents", "notifications"];
+  }
+  if (table === "interventions") return ["interventions", "alerts", "overview", "notifications"];
+  if (table === "adm_learner_profiles") return ["adm", "overview", "notifications"];
+  return ["notifications"];
+}
+
 export function useGuidanceRealtime(enabled = true) {
   const queryClient = useQueryClient();
-  const lastInvalidated = React.useRef(0);
+  // Per-scope throttle: bursts invalidate once per scope per 2s (toasts
+  // still fire per row), and a referral burst no longer starves an
+  // intervention refresh the way a single shared timestamp did.
+  const lastInvalidatedByScope = React.useRef<Map<string, number>>(new Map());
   const seenIds = React.useRef<Set<string>>(new Set());
+
+  const invalidate = React.useCallback(
+    (scopes?: GuidanceScope | GuidanceScope[]) => {
+      const list: GuidanceScope[] = !scopes
+        ? ["referrals", "interventions", "overview", "alerts", "adm", "anecdotal", "risk", "documents", "notifications"]
+        : Array.isArray(scopes) ? scopes : [scopes];
+      const now = Date.now();
+      const due = list.filter((s) => {
+        const last = lastInvalidatedByScope.current.get(s) ?? 0;
+        if (now - last < 2000) return false;
+        lastInvalidatedByScope.current.set(s, now);
+        return true;
+      });
+      if (due.length) invalidateGuidanceQueries(queryClient, due);
+    },
+    [queryClient],
+  );
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -121,7 +154,7 @@ export function useGuidanceRealtime(enabled = true) {
           description: row.message,
         });
       }
-      void invalidate();
+      void invalidate(scopesForRow(row));
     }
 
     try {
@@ -142,25 +175,26 @@ export function useGuidanceRealtime(enabled = true) {
         )
         // Table events are invalidate-only wake-ups (payloads carry no
         // recipient-safe data): the poll below resolves what changed.
+        // Each table maps to its affected scopes — never the whole desk.
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "Referral" },
-          () => void invalidate()
+          () => void invalidate(scopesForTable("Referral"))
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "Intervention" },
-          () => void invalidate()
+          () => void invalidate(scopesForTable("Intervention"))
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "CounselingSession" },
-          () => void invalidate()
+          () => void invalidate(scopesForTable("CounselingSession"))
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "AdmLearnerProfile" },
-          () => void invalidate()
+          () => void invalidate(scopesForTable("AdmLearnerProfile"))
         )
         .subscribe((status) => {
           if (!cancelled && status !== "SUBSCRIBED") {
@@ -179,8 +213,10 @@ export function useGuidanceRealtime(enabled = true) {
     async function poll() {
       if (cancelled || document.hidden) return;
       try {
+        // Light poll: only the latest rows are needed to detect arrivals
+        // (seenIds dedupes); the bell's own query keeps the full inbox.
         const { data } = await apiClient.get<GuidanceInboxRow[]>(
-          "/api/notifications/",
+          "/api/notifications/?take=10",
         );
         if (cancelled || !Array.isArray(data)) return;
         const mine = data.filter((n) => n.userId === userId);
@@ -213,16 +249,6 @@ export function useGuidanceRealtime(enabled = true) {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
-    function invalidate() {
-      // Throttle bursts to one invalidate per 2s (toasts still fire per row).
-      const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
-      lastInvalidated.current = now;
-      for (const key of GUIDANCE_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-    }
-
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -235,5 +261,5 @@ export function useGuidanceRealtime(enabled = true) {
         // Ignore cleanup errors.
       }
     };
-  }, [enabled, queryClient]);
+  }, [enabled, queryClient, invalidate]);
 }

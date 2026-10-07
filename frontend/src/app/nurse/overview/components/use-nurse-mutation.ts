@@ -25,13 +25,38 @@ export const NURSE_QUERY_KEYS = [
   ["nurse-notifications"],
 ] as const;
 
-export function useNurseInvalidate() {
+/**
+ * Scoped invalidation: a mutation (or realtime event) only refetches the
+ * queries it can actually change. Previously every nurse write and every
+ * realtime event invalidated all six prefixes — one session booking
+ * refetched overview + alerts + referrals + risk + notifications. The
+ * default (no scope) preserves the old all-keys behavior so existing call
+ * sites stay correct; pass scopes to narrow.
+ */
+export type NurseScope = "alerts" | "overview" | "risk" | "notifications";
+
+const NURSE_SCOPE_KEYS: Record<NurseScope, readonly (readonly string[])[]> = {
+  alerts: [["nurse-alerts"]],
+  overview: [["nurse-overview"]],
+  risk: [["nurse-risk"], ["nurse-risk-levels"], ["nurse-risk-factors"]],
+  notifications: [["nurse-notifications"]],
+};
+
+export function invalidateNurseQueries(
+  queryClient: { invalidateQueries: (filters: { queryKey: string[] }) => void },
+  scopes?: NurseScope | NurseScope[],
+) {
+  const keys = !scopes
+    ? NURSE_QUERY_KEYS
+    : (Array.isArray(scopes) ? scopes : [scopes]).flatMap((s) => NURSE_SCOPE_KEYS[s]);
+  for (const key of keys) {
+    void queryClient.invalidateQueries({ queryKey: [...key] });
+  }
+}
+
+export function useNurseInvalidate(scopes?: NurseScope | NurseScope[]) {
   const queryClient = useQueryClient();
-  return () => {
-    for (const key of NURSE_QUERY_KEYS) {
-      void queryClient.invalidateQueries({ queryKey: [...key] });
-    }
-  };
+  return () => invalidateNurseQueries(queryClient, scopes);
 }
 
 interface NurseMutationOptions<TData, TVariables> {
@@ -46,6 +71,9 @@ interface NurseMutationOptions<TData, TVariables> {
       realtime echo toast for 30s (bell row still lands). Falls back to
       `data.id` when the mutation resolves one. */
   sourceId?: string | ((variables: TVariables) => string);
+  /** Narrow the post-success refetch (default: all nurse keys, the previous
+      behavior). Most case writes only move queue/overview/risk state. */
+  scopes?: NurseScope | NurseScope[];
 }
 
 /**
@@ -58,11 +86,7 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
   options: NurseMutationOptions<TData, TVariables>
 ) {
   const queryClient = useQueryClient();
-  const invalidate = () => {
-    for (const key of NURSE_QUERY_KEYS) {
-      void queryClient.invalidateQueries({ queryKey: [...key] });
-    }
-  };
+  const invalidate = () => invalidateNurseQueries(queryClient, options.scopes);
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onSuccess: (data, variables) => {
@@ -93,10 +117,10 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
       options.onSuccessExtra?.(data, variables);
     },
     // Pessimistic: rows stay put with their spinner until the server
-    // confirms — only this settled refetch moves/removes them.
-    onSettled: () => {
-      invalidate();
-    },
+    // confirms — only the success refetch above moves/removes them. No
+    // onSettled blanket refetch: it doubled every mutation's network cost
+    // (success invalidated, then settled invalidated again) and refetched
+    // on error when nothing changed.
     onError: (err) => {
       if (!options.silentError) {
         toast.error({

@@ -2415,44 +2415,192 @@ router.get(
           : scopeClauses.length === 1
             ? scopeClauses[0]
             : { AND: scopeClauses };
-      const referrals = await prisma.referral.findMany({
-        where,
-        include: {
-          anecdotalRecord: true,
-          student: { include: { section: { select: { name: true } } } },
-          roster: { include: { section: { select: { name: true } } } },
-          // Clinic/counseling sessions per case (oldest first) so the nurse
-          // referrals page renders the same counseling-plan workflow as the
-          // guidance referrals page without extra round-trips.
-          counselingSessions: {
-            orderBy: { scheduledAt: "asc" },
-            select: {
-              id: true,
-              sessionType: true,
-              scheduledAt: true,
-              venue: true,
-              status: true,
-              sessionNotes: true,
-              outcome: true,
-              cancelReason: true,
-              createdAt: true,
-              completedAt: true,
-              attachments: {
-                orderBy: { uploadedAt: "asc" },
+      // Two-phase read: the queue can hold hundreds of cases, but a page
+      // renders 15. Phase 1 fetches a LIGHT row per case (scalars + names
+      // only — no sessions, no attachments, no full write-ups) to sort and
+      // filter in memory; phase 2 fetches the FULL payload for the 15 ids
+      // on the requested page only. Ordering, search, highlight landing,
+      // and response shapes are unchanged — only the transferred bytes and
+      // the audit-log fan-out shrink. Legacy callers without pagination
+      // params keep the previous full-array behavior.
+      const highlightRawEarly = qRaw.highlight;
+      const highlightEarly =
+        typeof highlightRawEarly === "string" && highlightRawEarly.trim()
+          ? highlightRawEarly.trim()
+          : "";
+      let unfilteredTotal = 0;
+      let filteredTotal = 0;
+      let safePage = page;
+      const referrals: any[] = await (async () => {
+        if (!hasPaginationParams) {
+          return prisma.referral.findMany({
+            where,
+            include: {
+              anecdotalRecord: true,
+              student: { include: { section: { select: { name: true } } } },
+              roster: { include: { section: { select: { name: true } } } },
+              counselingSessions: {
+                orderBy: { scheduledAt: "asc" },
                 select: {
                   id: true,
-                  fileUrl: true,
-                  fileName: true,
-                  mimeType: true,
-                  fileSize: true,
-                  uploadedAt: true,
+                  sessionType: true,
+                  scheduledAt: true,
+                  venue: true,
+                  status: true,
+                  sessionNotes: true,
+                  outcome: true,
+                  cancelReason: true,
+                  createdAt: true,
+                  completedAt: true,
+                  attachments: {
+                    orderBy: { uploadedAt: "asc" },
+                    select: {
+                      id: true,
+                      fileUrl: true,
+                      fileName: true,
+                      mimeType: true,
+                      fileSize: true,
+                      uploadedAt: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { id: "asc" },
+          });
+        }
+        const light = await prisma.referral.findMany({
+          where,
+          select: {
+            id: true,
+            reason: true,
+            status: true,
+            notes: true,
+            anecdotalRecord: {
+              select: {
+                observationDatetime: true,
+                descriptionOfIncident: true,
+              },
+            },
+            student: {
+              select: {
+                lrn: true,
+                user: { select: { fullName: true } },
+                section: { select: { name: true } },
+              },
+            },
+            roster: {
+              select: {
+                fullName: true,
+                lrn: true,
+                section: { select: { name: true } },
+              },
+            },
+          },
+          orderBy: { id: "asc" },
+        });
+        const lightIds = light.map((r) => r.id);
+        const lightLogs = lightIds.length
+          ? await prisma.auditLog.findMany({
+              where: { sourceTable: "referrals", sourceId: { in: lightIds } },
+              select: { sourceId: true, createdAt: true },
+              orderBy: { createdAt: "asc" },
+            })
+          : [];
+        const lightReferredAt = new Map<string, string>();
+        for (const log of lightLogs) {
+          if (!lightReferredAt.has(log.sourceId)) {
+            lightReferredAt.set(log.sourceId, log.createdAt.toISOString());
+          }
+        }
+        const lightAt = (r: { id: string; anecdotalRecord?: { observationDatetime?: Date | null } | null }) =>
+          lightReferredAt.get(r.id) ??
+          (r.anecdotalRecord?.observationDatetime as unknown as Date | undefined)?.toISOString?.() ??
+          "";
+        const ordered = [...light].sort((a, b) => {
+          const at = lightAt(a);
+          const bt = lightAt(b);
+          if (at === bt) return 0;
+          return bt < at ? -1 : 1;
+        });
+        unfilteredTotal = ordered.length;
+        const qFiltered = q
+          ? ordered.filter((r) => {
+              const hay = [
+                (r as { reason?: unknown }).reason,
+                (r as { status?: unknown }).status,
+                (r as { notes?: unknown }).notes,
+                (r as { student?: { user?: { fullName?: unknown } } }).student
+                  ?.user?.fullName,
+                (r as { roster?: { fullName?: unknown } }).roster?.fullName,
+                (r as {
+                  student?: { section?: { name?: unknown } };
+                }).student?.section?.name,
+                (r as { roster?: { section?: { name?: unknown } } }).roster
+                  ?.section?.name,
+                (r as { anecdotalRecord?: { descriptionOfIncident?: unknown } })
+                  .anecdotalRecord?.descriptionOfIncident,
+              ]
+                .filter((v) => typeof v === "string")
+                .join(" ")
+                .toLowerCase();
+              return hay.includes(q);
+            })
+          : ordered;
+        filteredTotal = qFiltered.length;
+        const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
+        safePage = Math.min(page, totalPages);
+        if (highlightEarly) {
+          const idx = qFiltered.findIndex(
+            (r) => (r as { id?: unknown }).id === highlightEarly
+          );
+          if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
+        }
+        const start = (safePage - 1) * pageSize;
+        const pageIds = qFiltered.slice(start, start + pageSize).map((r) => r.id);
+        if (pageIds.length === 0) return [];
+        const pageRows = await prisma.referral.findMany({
+          where: { id: { in: pageIds } },
+          include: {
+            anecdotalRecord: true,
+            student: { include: { section: { select: { name: true } } } },
+            roster: { include: { section: { select: { name: true } } } },
+            // Clinic/counseling sessions per case (oldest first) so the nurse
+            // referrals page renders the same counseling-plan workflow as the
+            // guidance referrals page without extra round-trips.
+            counselingSessions: {
+              orderBy: { scheduledAt: "asc" },
+              select: {
+                id: true,
+                sessionType: true,
+                scheduledAt: true,
+                venue: true,
+                status: true,
+                sessionNotes: true,
+                outcome: true,
+                cancelReason: true,
+                createdAt: true,
+                completedAt: true,
+                attachments: {
+                  orderBy: { uploadedAt: "asc" },
+                  select: {
+                    id: true,
+                    fileUrl: true,
+                    fileName: true,
+                    mimeType: true,
+                    fileSize: true,
+                    uploadedAt: true,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy: { id: "asc" },
-      });
+        });
+        const order = new Map(pageIds.map((id, i) => [id, i]));
+        return pageRows.sort(
+          (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)
+        );
+      })();
       // Referral time = earliest audit entry for the referral (creation
       // always writes one). Legacy rows without an audit trail fall back
       // to the observation date so "waiting" never goes blank.
@@ -2460,7 +2608,7 @@ router.get(
       // (session booked/done/cancelled/moved + status changes) so the DUI
       // shows the execution time, not the future appointment time.
       const ids = referrals.map((r) => r.id);
-      const sessionIds = referrals.flatMap((r) => r.counselingSessions.map((s) => s.id));
+      const sessionIds = referrals.flatMap((r: any) => r.counselingSessions.map((s: any) => s.id));
       const logs = ids.length
         ? await prisma.auditLog.findMany({
             where: { sourceTable: "referrals", sourceId: { in: ids } },
@@ -2530,7 +2678,7 @@ router.get(
       const enriched = referrals
         .map((r) => ({
           ...r,
-          counselingSessions: r.counselingSessions.map((s) => ({
+          counselingSessions: r.counselingSessions.map((s: any) => ({
             ...s,
             cancelledByRole: cancelledByRole.get(s.id) ?? null,
           })),
@@ -2555,60 +2703,22 @@ router.get(
       if (!hasPaginationParams) {
         res.json(enriched);
       } else {
-        // Tile stats stay UNFILTERED so searching never shrinks the tiles;
-        // `total` is the filtered pager count.
-        const unfilteredTotal = enriched.length;
-        const filtered = q
-          ? enriched.filter((r) => {
-              const hay = [
-                (r as { reason?: unknown }).reason,
-                (r as { status?: unknown }).status,
-                (r as { notes?: unknown }).notes,
-                (r as { student?: { user?: { fullName?: unknown } } }).student
-                  ?.user?.fullName,
-                (r as { roster?: { fullName?: unknown } }).roster?.fullName,
-                (r as {
-                  student?: { section?: { name?: unknown } };
-                }).student?.section?.name,
-                (r as { roster?: { section?: { name?: unknown } } }).roster
-                  ?.section?.name,
-                (r as { anecdotalRecord?: { descriptionOfIncident?: unknown } })
-                  .anecdotalRecord?.descriptionOfIncident,
-              ]
-                .filter((v) => typeof v === "string")
-                .join(" ")
-                .toLowerCase();
-              return hay.includes(q);
-            })
-          : enriched;
-        const total = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        // Deep-link landing (?highlight=<id>): serve the page containing
-        // the case so the bell deep-link lands with highlight, no extra
-        // round-trip. Unknown ids fall back to the requested page.
-        const highlightRaw = qRaw.highlight;
-        const highlight =
-          typeof highlightRaw === "string" && highlightRaw.trim()
-            ? highlightRaw.trim()
-            : "";
-        let safePage = Math.min(page, totalPages);
-        if (highlight) {
-          const idx = filtered.findIndex(
-            (r) => (r as { id?: unknown }).id === highlight
-          );
-          if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
-        }
-        const start = (safePage - 1) * pageSize;
-        const rows = filtered.slice(start, start + pageSize);
+        // Paging, filtering, and highlight landing were resolved in the
+        // two-phase read above (`unfilteredTotal`/`filteredTotal`/`safePage`
+        // computed over the light rows); `enriched` already holds exactly
+        // the requested page in display order. Tile stats stay UNFILTERED
+        // so searching never shrinks the tiles; `total` is the filtered
+        // pager count.
+        const rows = enriched;
         res.json({
           data: rows,
           rows,
           referrals: rows,
-          total,
+          total: filteredTotal,
           unfilteredTotal,
-          summary: { total: unfilteredTotal, filtered: total },
+          summary: { total: unfilteredTotal, filtered: filteredTotal },
           page: safePage,
-          totalPages,
+          totalPages: Math.max(1, Math.ceil(filteredTotal / pageSize)),
           limit: pageSize,
           pageSize,
         });

@@ -7,15 +7,10 @@ import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import { useSession } from "@/lib/auth/useSession";
 import { nurseNotificationTitle } from "@/lib/notifications/label";
-
-const NURSE_KEYS = [
-  ["nurse-alerts"],
-  ["nurse-overview"],
-  ["nurse-risk"],
-  ["nurse-risk-levels"],
-  ["nurse-risk-factors"],
-  ["nurse-notifications"],
-] as const;
+import {
+  invalidateNurseQueries,
+  type NurseScope,
+} from "@/app/nurse/overview/components/use-nurse-mutation";
 
 interface NurseNotification {
   id: string;
@@ -47,6 +42,17 @@ export function markSelfNotified(sourceId: string) {
   selfSaved.set(sourceId, Date.now());
 }
 
+// Narrow the refetch to what the event can change: case/session events
+// move queue + overview + risk state; anything else only touches the
+// bell. Previously every event refetched all six prefixes.
+function scopesFor(row: NurseNotification): NurseScope[] {
+  const table = row.sourceTable ?? "";
+  if (table === "referrals" || table === "counseling_sessions") {
+    return ["alerts", "overview", "risk", "notifications"];
+  }
+  return ["notifications"];
+}
+
 /**
  * Nurse desk realtime sync — one shared Supabase channel per mount.
  * Clone of the teacher desk channel: a 5s auth-gated backend poll is the
@@ -62,8 +68,28 @@ export function useNurseRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const session = useSession();
   const userId = session?.sub ?? null;
-  const lastInvalidated = React.useRef(0);
+  // Per-scope throttle: bursts invalidate once per scope per 2s (toasts
+  // still fire per row), and a referral burst no longer starves a
+  // notification refresh the way a single shared timestamp did.
+  const lastInvalidatedByScope = React.useRef<Map<string, number>>(new Map());
   const seenIds = React.useRef<Set<string>>(new Set());
+
+  const invalidate = React.useCallback(
+    (scopes?: NurseScope | NurseScope[]) => {
+      const list: NurseScope[] = !scopes
+        ? (["alerts", "overview", "risk", "notifications"] as NurseScope[])
+        : Array.isArray(scopes) ? scopes : [scopes];
+      const now = Date.now();
+      const due = list.filter((s) => {
+        const last = lastInvalidatedByScope.current.get(s) ?? 0;
+        if (now - last < 2000) return false;
+        lastInvalidatedByScope.current.set(s, now);
+        return true;
+      });
+      if (due.length) invalidateNurseQueries(queryClient, due);
+    },
+    [queryClient],
+  );
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -93,7 +119,7 @@ export function useNurseRealtime(enabled = true) {
           description: row.message,
         });
       }
-      void invalidate();
+      void invalidate(scopesFor(row));
     }
 
     try {
@@ -129,8 +155,10 @@ export function useNurseRealtime(enabled = true) {
     async function poll() {
       if (cancelled || document.hidden) return;
       try {
+        // Light poll: only the latest rows are needed to detect arrivals
+        // (seenIds dedupes); the bell's own query keeps the full inbox.
         const { data } = await apiClient.get<NurseNotification[]>(
-          "/api/notifications/",
+          "/api/notifications/?take=10",
         );
         if (cancelled || !Array.isArray(data)) return;
         const mine = data.filter((n) => n.userId === userId);
@@ -163,16 +191,6 @@ export function useNurseRealtime(enabled = true) {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
-    function invalidate() {
-      // Throttle bursts to one invalidate per 2s (toasts still fire per row).
-      const now = Date.now();
-      if (now - lastInvalidated.current < 2000) return;
-      lastInvalidated.current = now;
-      for (const key of NURSE_KEYS) {
-        void queryClient.invalidateQueries({ queryKey: [...key] });
-      }
-    }
-
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -185,5 +203,5 @@ export function useNurseRealtime(enabled = true) {
         // Ignore cleanup errors.
       }
     };
-  }, [enabled, queryClient, userId]);
+  }, [enabled, queryClient, userId, invalidate]);
 }

@@ -12,8 +12,6 @@ import { cache, invalidateTags } from "../../lib/cache.js";
 import { AppError } from "../../lib/errors.js";
 import {
   computeRiskFactors,
-  evaluateRisk,
-  evaluateRosterRisk,
   isAtRisk,
   levelFromFlags,
   resolveActiveTermId,
@@ -728,10 +726,14 @@ router.get(
             select: { id: true },
           }),
           prisma.referral.findMany({
-            where: { referredToRole: "guidance_counselor" },
+            where: {
+              referredToRole: "guidance_counselor",
+              ...(termId ? { termId } : {}),
+            },
             select: { studentId: true, rosterId: true, status: true },
           }),
           prisma.intervention.findMany({
+            where: termId ? { termId } : undefined,
             orderBy: { id: "desc" },
             take: 2000,
             select: { studentId: true, rosterId: true, outcomeStatus: true },
@@ -740,10 +742,14 @@ router.get(
           // an ADM-track referral marks the case ADM; everything else is the
           // general guidance caseload.
           prisma.admLearnerProfile.findMany({
+            where: termId ? { termId } : undefined,
             select: { studentId: true, stage: true },
           }),
           prisma.referral.findMany({
-            where: { referredToRole: "adm_coordinator" },
+            where: {
+              referredToRole: "adm_coordinator",
+              ...(termId ? { termId } : {}),
+            },
             select: { studentId: true, rosterId: true },
           }),
         ]);
@@ -964,6 +970,38 @@ router.get(
       // Term-scoped: prior-term cases never leak into the active term queue.
       const scopeTermId = req.termScope?.termId ?? null;
 
+      // Push the exact-match filters into the database so the transfer —
+      // and every downstream audit fan-out — scales with the filtered
+      // queue, not the whole desk. Session-gated filters (booked /
+      // completed / open), free-text search, and highlight landing stay
+      // in memory below because they derive from sessions or joined
+      // names; their predicates are unchanged.
+      const dbClauses: any[] = [];
+      if (statusFilter) dbClauses.push({ status: statusFilter });
+      if (typeFilter === "adm") {
+        dbClauses.push({
+          OR: [
+            { escalatedTo: "adm_coordinator" },
+            { referredToRole: "adm_coordinator" },
+          ],
+        });
+      } else if (typeFilter === "counseling") {
+        // NOTE: `escalatedTo` is nullable — a bare `{ not: … }` would
+        // drop every never-escalated case (SQL NULL semantics), so NULL
+        // is matched explicitly here.
+        dbClauses.push({
+          AND: [
+            {
+              OR: [
+                { escalatedTo: null },
+                { escalatedTo: { not: "adm_coordinator" } },
+              ],
+            },
+            { referredToRole: { not: "adm_coordinator" } },
+          ],
+        });
+      }
+
       const rows = await prisma.referral.findMany({
         // The desk receives direct counseling referrals PLUS ADM-track
         // cases picked for the guidance counselor as consultation
@@ -979,6 +1017,7 @@ router.get(
               OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
             },
           ],
+          ...(dbClauses.length ? { AND: dbClauses } : {}),
         },
         orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
         take: 1000,
@@ -1327,6 +1366,35 @@ router.get(
       // Term-scoped: prior-term filings never leak into the active term view.
       const scopeTermId = req.termScope?.termId ?? null;
 
+      // Push exact-match filters into the database (same ADM/counseling
+      // mapping as GET /api/guidance/referrals, NULL-safe on
+      // `escalatedTo`). Free-text search and the docs-only facet stay in
+      // memory — they derive from joined names and attachment mime types.
+      const anecdotalDbClauses: any[] = [];
+      if (categoryFilter) {
+        anecdotalDbClauses.push({ anecdotalRecord: { category: categoryFilter } });
+      }
+      if (anecdotalTypeFilter === "adm") {
+        anecdotalDbClauses.push({
+          OR: [
+            { escalatedTo: "adm_coordinator" },
+            { referredToRole: "adm_coordinator" },
+          ],
+        });
+      } else if (anecdotalTypeFilter === "counseling") {
+        anecdotalDbClauses.push({
+          AND: [
+            {
+              OR: [
+                { escalatedTo: null },
+                { escalatedTo: { not: "adm_coordinator" } },
+              ],
+            },
+            { referredToRole: { not: "adm_coordinator" } },
+          ],
+        });
+      }
+
       const rows = await prisma.referral.findMany({
         // Same desk scope as GET /api/guidance/referrals: direct
         // counseling referrals PLUS ADM-track cases picked for the
@@ -1343,6 +1411,7 @@ router.get(
               OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
             },
           ],
+          ...(anecdotalDbClauses.length ? { AND: anecdotalDbClauses } : {}),
         },
         orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
         take: 1000,
@@ -1550,7 +1619,7 @@ router.get(
       // Term-scoped: prior-term ADM work never leaks into the active term.
       const scopeTermId = req.termScope?.termId ?? null;
 
-      const [profiles, earlyReferrals, consultationReferrals, consultAudits, counselor] =
+      const [profiles, earlyReferrals, consultationReferrals, counselor] =
         await Promise.all([
         prisma.admLearnerProfile.findMany({
           where: scopeTermId ? { termId: scopeTermId } : undefined,
@@ -1624,7 +1693,7 @@ router.get(
                 lrn: true,
                 gradeLevel: true,
                 user: { select: { fullName: true } },
-                section: { select: { name: true } },
+                section: { select: { id: true, name: true } },
               },
             },
             roster: {
@@ -1633,7 +1702,7 @@ router.get(
                 lrn: true,
                 fullName: true,
                 gradeLevel: true,
-                section: { select: { name: true } },
+                section: { select: { id: true, name: true } },
               },
             },
           },
@@ -1676,23 +1745,32 @@ router.get(
             },
           },
         }),
-        // Which early ADM referrals guidance already reviewed — the review
-        // writes a marker-prefixed audit reason, so no schema change is
-        // needed to tell "waiting on your review" from "with coordinator".
-        prisma.auditLog.findMany({
-          where: {
-            sourceTable: "referrals",
-            actionType: { in: ["referral_status_change", "referral_reassigned", "referral_dismissed"] },
-            reason: { startsWith: "ADM consultation " },
-          },
-          select: { sourceId: true, reason: true },
-        }),
         // Counselor name for auto-filling the referral form signature line.
         prisma.user.findUnique({
           where: { id: req.user!.id },
           select: { fullName: true },
         }),
       ]);
+
+      // Which early ADM referrals guidance already reviewed — the review
+      // writes a marker-prefixed audit reason, so no schema change is
+      // needed to tell "waiting on your review" from "with coordinator".
+      // Scoped to this queue's ids (previously an unbounded full-table
+      // scan) with a generous take cap — one referral can carry a few
+      // consultation audits, never thousands.
+      const earlyIds = earlyReferrals.map((r) => r.id);
+      const consultAudits = earlyIds.length
+        ? await prisma.auditLog.findMany({
+            where: {
+              sourceTable: "referrals",
+              sourceId: { in: earlyIds },
+              actionType: { in: ["referral_status_change", "referral_reassigned", "referral_dismissed"] },
+              reason: { startsWith: "ADM consultation " },
+            },
+            select: { sourceId: true, reason: true },
+            take: 5000,
+          })
+        : [];
 
       const reviewedIds = new Set(
         consultAudits
@@ -1775,24 +1853,120 @@ router.get(
       // so the level here never disagrees with it. Stored snapshots are only
       // written when grades/attendance change, so a snapshot lookup alone
       // goes stale (and blank for never-snapshotted students).
+      //
+      // Batched: one grades query + one attendance query + two anecdotal
+      // count queries + one headcount lookup for the whole queue, then the
+      // pure `computeRiskFactors` rule per student. Previously this was a
+      // per-student `evaluateRisk`/`evaluateRosterRisk` loop (4–5 queries
+      // each, up to ~5000 round-trips for a full queue).
       {
         const termId = await resolveActiveTermId(req);
-        if (termId) {
-          await Promise.all(
-            earlyReferrals.map(async (r, i) => {
-              try {
-                const live = r.student?.userId
-                  ? (await evaluateRisk(r.student.userId, termId)).result.riskLevel
-                  : r.roster?.id
-                    ? (await evaluateRosterRisk(r.roster.id, termId)).result.riskLevel
-                    : null;
-                if (live) earlyRows[i].riskLevel = live;
-              } catch {
-                // Keep the snapshot value (or null) — one student's failure
-                // never blocks the rest of the queue.
-              }
-            })
-          );
+        if (termId && earlyReferrals.length > 0) {
+          try {
+            const userIds = [
+              ...new Set(
+                earlyReferrals
+                  .map((r) => r.student?.userId ?? null)
+                  .filter((v): v is string => !!v)
+              ),
+            ];
+            const rosterIds = [
+              ...new Set(
+                earlyReferrals
+                  .map((r) => r.roster?.id ?? null)
+                  .filter((v): v is string => !!v)
+              ),
+            ];
+            const sectionIds = [
+              ...new Set(
+                earlyReferrals
+                  .flatMap((r) => [r.student?.section?.id, r.roster?.section?.id])
+                  .filter((v): v is string => !!v)
+              ),
+            ];
+            const idOr = [
+              ...(userIds.length ? [{ studentId: { in: userIds } }] : []),
+              ...(rosterIds.length ? [{ rosterId: { in: rosterIds } }] : []),
+            ];
+            const [grades, attendance, anecdStudents, anecdRosters, headcounts] =
+              await Promise.all([
+                idOr.length
+                  ? prisma.finalGrade.findMany({
+                      where: { termId, OR: idOr },
+                      select: {
+                        studentId: true,
+                        rosterId: true,
+                        computedAverage: true,
+                        transmutedGrade: true,
+                      },
+                    })
+                  : [],
+                idOr.length
+                  ? prisma.attendanceRecord.findMany({
+                      where: { termId, OR: idOr },
+                      select: {
+                        studentId: true,
+                        rosterId: true,
+                        status: true,
+                        subjectId: true,
+                      },
+                    })
+                  : [],
+                userIds.length
+                  ? prisma.anecdotalRecord.groupBy({
+                      by: ["studentId"],
+                      where: { termId, studentId: { in: userIds } },
+                      _count: { _all: true },
+                    })
+                  : [],
+                rosterIds.length
+                  ? prisma.anecdotalRecord.groupBy({
+                      by: ["rosterId"],
+                      where: { termId, rosterId: { in: rosterIds } },
+                      _count: { _all: true },
+                    })
+                  : [],
+                sectionHeadcounts(sectionIds),
+              ]);
+            const gradesByKey = new Map<string, { computedAverage: number | null; transmutedGrade: number | null }[]>();
+            for (const g of grades) {
+              const key = g.studentId ?? (g.rosterId ? `roster:${g.rosterId}` : null);
+              if (!key) continue;
+              const list = gradesByKey.get(key) ?? [];
+              list.push({ computedAverage: g.computedAverage, transmutedGrade: g.transmutedGrade });
+              gradesByKey.set(key, list);
+            }
+            const attendanceByKey = new Map<string, { status: string; subjectId: string | null }[]>();
+            for (const a of attendance) {
+              const key = a.studentId ?? (a.rosterId ? `roster:${a.rosterId}` : null);
+              if (!key) continue;
+              const list = attendanceByKey.get(key) ?? [];
+              list.push({ status: a.status, subjectId: a.subjectId });
+              attendanceByKey.set(key, list);
+            }
+            const anecdByKey = new Map<string, number>();
+            for (const c of anecdStudents) {
+              if (c.studentId) anecdByKey.set(c.studentId, c._count._all);
+            }
+            for (const c of anecdRosters) {
+              if (c.rosterId) anecdByKey.set(`roster:${c.rosterId}`, c._count._all);
+            }
+            earlyReferrals.forEach((r, i) => {
+              const key = r.student?.userId ?? (r.roster?.id ? `roster:${r.roster.id}` : null);
+              if (!key) return;
+              const sectionId = r.student?.section?.id ?? r.roster?.section?.id ?? "";
+              const flags = computeRiskFactors({
+                finalGrades: gradesByKey.get(key) ?? [],
+                attendance: attendanceByKey.get(key) ?? [],
+                anecdotalCount: anecdByKey.get(key) ?? 0,
+                enrolled: headcounts.get(sectionId) ?? 0,
+              });
+              earlyRows[i].riskLevel = levelFromFlags(flags);
+            });
+          } catch {
+            // Keep the null risk levels — one batch failure never blocks
+            // the rest of the queue (same failure semantics as before).
+          }
         }
       }
 
