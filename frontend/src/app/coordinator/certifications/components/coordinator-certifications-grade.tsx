@@ -1,6 +1,6 @@
 "use client";
 
-import type { CertSummary } from "./coordinator-certifications-data";
+import type { CertSummary } from "@/services/coordinator/certifications.types";
 import styles from "./coordinator-certifications-charts.module.css";
 
 export function CoordinatorCertificationsGradeChart({ summary }: { summary: CertSummary }) {

@@ -10,11 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  CERT_STATUS_META,
-  type CertStatus,
-  type CertStatusFilter,
-} from "./coordinator-certifications-data";
+import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
+import type {
+  CertStatus,
+  CertStatusFilter,
+} from "@/services/coordinator/certifications.types";
 import styles from "./coordinator-certifications-filters.module.css";
 
 const OPTIONS: { value: CertStatusFilter; label: string }[] = [

@@ -16,8 +16,8 @@ import {
   fetchCertStageRows,
   mergeCertRecords,
   summarizeCertRecords,
-  type CertStatusFilter,
-} from "./components/coordinator-certifications-data";
+} from "@/services/coordinator/certifications.service";
+import type { CertStatusFilter } from "@/services/coordinator/certifications.types";
 import styles from "./components/coordinator-certifications.module.css";
 
 function tabToStatus(tab: string | null): CertStatusFilter {

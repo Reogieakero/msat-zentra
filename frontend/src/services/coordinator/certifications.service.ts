@@ -1,49 +1,22 @@
 "use client";
 
+// Certification board derivation + wide summary reads for the coordinator
+// desk: merge stage + approval rows, summarize, serve the folder grid.
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorReferrals,
-} from "@/services/coordinator/overview.service";
+} from "./overview.service";
 import type {
   AdmApprovalRow,
   AdmCaseRow,
   AdmEligibility,
-} from "@/services/coordinator/coordinator.types";
-
-export type CertStatus =
-  | "prepared"
-  | "awaiting"
-  | "revision"
-  | "approved";
-
-export type CertStatusFilter = "all" | CertStatus;
-
-export interface CertRecord {
-  id: string;
-  student: string;
-  lrn: string;
-  grade: string;
-  eligibilityStatus: AdmEligibility;
-  status: CertStatus;
-  datePrepared: string | null;
-  approvalDate: string | null;
-  approvedBy: string | null;
-  formsCount: number;
-}
-
-export interface CertGradeCount {
-  grade: string;
-  count: number;
-}
-
-export interface CertSummary {
-  total: number;
-  prepared: number;
-  awaiting: number;
-  revision: number;
-  approved: number;
-  byGrade: CertGradeCount[];
-}
+} from "./coordinator.types";
+import type {
+  CertGradeCount,
+  CertRecord,
+  CertStatus,
+  CertSummary,
+} from "./certifications.types";
 
 export const CERT_STATUS_META: Record<
   CertStatus,

@@ -8,11 +8,11 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import {
-  CERT_STATUS_META,
-  type CertStatus,
-  type CertSummary,
-} from "./coordinator-certifications-data";
+import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
+import type {
+  CertStatus,
+  CertSummary,
+} from "@/services/coordinator/certifications.types";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import { useCoordinatorProfileSettings } from "@/services/settings/profile-settings";
 import styles from "./coordinator-certifications-charts.module.css";

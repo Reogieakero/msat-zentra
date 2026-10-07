@@ -21,11 +21,11 @@ import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { useNowTick } from "@/lib/clock";
-import {
-  CERT_STATUS_META,
-  type CertRecord,
-  type CertStatusFilter,
-} from "./coordinator-certifications-data";
+import { CERT_STATUS_META } from "@/services/coordinator/certifications.service";
+import type {
+  CertRecord,
+  CertStatusFilter,
+} from "@/services/coordinator/certifications.types";
 import { CoordinatorCertificationsFilters } from "./coordinator-certifications-filters";
 import styles from "./coordinator-certifications-folders.module.css";
 
