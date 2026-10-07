@@ -2,6 +2,7 @@
 // fetch, status/accept lifecycle, escalation, reassignment, notes,
 // follow-ups, dismissal, specialist referral, ADM initiation.
 import { apiClient } from "@/lib/api/client";
+import { pickList } from "@/lib/api/payload";
 import type {
   AcceptReferralInput,
   GuidanceReferralItem,
@@ -44,11 +45,7 @@ export async function fetchGuidanceReferrals(
       unfilteredTotal: data.length,
     };
   }
-  const referrals = Array.isArray(
-    (data as { referrals?: unknown }).referrals
-  )
-    ? (data as { referrals: GuidanceReferralItem[] }).referrals
-    : [];
+  const referrals = pickList<GuidanceReferralItem>(data, "referrals");
   return { ...(data as GuidanceReferralsData), referrals };
 }
 

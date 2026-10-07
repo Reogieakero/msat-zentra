@@ -2,6 +2,7 @@
 // referred student, and the risk-board desk fetch. Never throws — misses
 // simply render "—" / hide driver lines.
 import { apiClient } from "@/lib/api/client";
+import { pickList } from "@/lib/api/payload";
 import { isNurseScope, toQueueRow } from "./labels";
 import type {
   NurseQueueRow,
@@ -105,15 +106,7 @@ export async function fetchNurseRisk(signal?: AbortSignal): Promise<{
   const { data } = await apiClient.get<
     RawReferral[] | { referrals: RawReferral[] } | { data: RawReferral[]; rows: RawReferral[] }
   >("/api/referrals/?page=1&pageSize=100", { signal });
-  const list: RawReferral[] = Array.isArray(data)
-    ? data
-    : Array.isArray((data as { data?: unknown })?.data)
-      ? (data as { data: RawReferral[] }).data
-      : Array.isArray((data as { rows?: unknown })?.rows)
-        ? (data as { rows: RawReferral[] }).rows
-        : Array.isArray((data as { referrals?: unknown })?.referrals)
-          ? (data as { referrals: RawReferral[] }).referrals
-          : [];
+  const list = pickList<RawReferral>(data, "data", "rows", "referrals");
   const scoped = list.filter(isNurseScope);
   const rows = scoped.map(toQueueRow);
   const referralToStudent: Record<string, string> = {};

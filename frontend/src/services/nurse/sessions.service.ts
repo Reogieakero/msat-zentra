@@ -4,6 +4,7 @@
 // /api/referrals/:id/sessions*). Nurse sessions are always one-on-one
 // clinic talks at the school clinic unless another venue is given.
 import { apiClient } from "@/lib/api/client";
+import { asArray } from "@/lib/api/payload";
 import type { ClinicAttachment, NurseScheduleSessionInput } from "./nurse.types";
 
 export async function scheduleClinicSession(
@@ -72,7 +73,7 @@ export async function listClinicAttachments(
   const { data } = await apiClient.get<ClinicAttachment[]>(
     `/api/referrals/${referralId}/sessions/${sessionId}/attachments`
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<ClinicAttachment>(data);
 }
 
 const CLINIC_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -112,7 +113,7 @@ export async function uploadClinicAttachments(
       ...(opts?.signal ? { signal: opts.signal } : {}),
     }
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<ClinicAttachment>(data);
 }
 
 export async function deleteClinicAttachment(

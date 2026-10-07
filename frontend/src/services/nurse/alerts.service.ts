@@ -2,6 +2,7 @@
 // referrals + notification inbox, the paginated alerts fetch, and inbox
 // read markers.
 import { apiClient } from "@/lib/api/client";
+import { asArray, pickList } from "@/lib/api/payload";
 import { deriveActionStatus, isNurseScope, toQueueRow } from "./labels";
 import type {
   NurseAlertItem,
@@ -277,17 +278,9 @@ export async function fetchNurseAlerts(
   // Defensive: the endpoint has returned array, {referrals}, and paginated
   // {data/total/unfilteredTotal} shapes — never let rows.reduce crash us.
   const raw = referralsRes.data;
-  const referrals: RawReferral[] = Array.isArray(raw)
-    ? raw
-    : Array.isArray((raw as PaginatedReferrals)?.data)
-      ? (raw as PaginatedReferrals).data!
-      : Array.isArray((raw as PaginatedReferrals)?.rows)
-        ? (raw as PaginatedReferrals).rows!
-        : Array.isArray((raw as PaginatedReferrals)?.referrals)
-          ? (raw as PaginatedReferrals).referrals!
-          : [];
+  const referrals = pickList<RawReferral>(raw, "data", "rows", "referrals");
   const pager = (Array.isArray(raw) ? null : (raw as PaginatedReferrals)) ?? null;
-  const notifications = Array.isArray(notificationsRes.data) ? notificationsRes.data : [];
+  const notifications = asArray<RawNotification>(notificationsRes.data);
   const built = buildNurseAlerts(referrals, notifications);
   const total = pager?.total ?? referrals.length;
   const unfilteredTotal =

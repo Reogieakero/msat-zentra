@@ -1,6 +1,7 @@
 // Overview fetch for the nurse desk: tiles + breakdowns + trends derive
 // from one bounded desk-list fetch via buildNurseOverview.
 import { apiClient } from "@/lib/api/client";
+import { pickList } from "@/lib/api/payload";
 import { buildNurseOverview } from "./labels";
 import type { NurseOverviewData, RawReferral } from "./nurse.types";
 
@@ -12,14 +13,6 @@ export async function fetchNurseOverview(signal?: AbortSignal): Promise<NurseOve
   const { data } = await apiClient.get<
     RawReferral[] | { referrals: RawReferral[] } | { data: RawReferral[]; rows: RawReferral[] }
   >("/api/referrals/?page=1&pageSize=100", { signal });
-  const list: RawReferral[] = Array.isArray(data)
-    ? data
-    : Array.isArray((data as { data?: unknown })?.data)
-      ? (data as { data: RawReferral[] }).data
-      : Array.isArray((data as { rows?: unknown })?.rows)
-        ? (data as { rows: RawReferral[] }).rows
-        : Array.isArray((data as { referrals?: unknown })?.referrals)
-          ? (data as { referrals: RawReferral[] }).referrals
-          : [];
+  const list = pickList<RawReferral>(data, "data", "rows", "referrals");
   return buildNurseOverview(list);
 }

@@ -1,6 +1,7 @@
 // Case-level fetchers for the ADM Coordinator desk: history timeline,
 // parent meetings (+ attachment uploads), and the full case file.
 import { apiClient } from "@/lib/api/client";
+import { asArray } from "@/lib/api/payload";
 import { parseMeetingAttendees } from "./labels";
 import type {
   AdmHistoryEvent,
@@ -41,7 +42,7 @@ export async function uploadMeetingAttachments(
       timeout: 60_000,
     },
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<AdmMeetingAttachment>(data);
 }
 
 export async function deleteMeetingAttachment(

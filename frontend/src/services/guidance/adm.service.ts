@@ -1,5 +1,6 @@
 // ADM queue + consultation review for the guidance desk.
 import { apiClient } from "@/lib/api/client";
+import { asArray } from "@/lib/api/payload";
 import type {
   AdmConsultationSession,
   GuidanceAdmData,
@@ -61,7 +62,7 @@ export async function listAdmConsultationSessions(
   const { data } = await apiClient.get<AdmConsultationSession[]>(
     `/api/referrals/${referralId}/sessions`
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<AdmConsultationSession>(data);
 }
 
 export async function bookAdmConsultationSession(

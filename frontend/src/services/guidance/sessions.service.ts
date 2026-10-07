@@ -3,6 +3,7 @@
 // Filing is optional — these helpers only build the evidence trail, they
 // never gate Done or resolve.
 import { apiClient } from "@/lib/api/client";
+import { asArray } from "@/lib/api/payload";
 import type {
   CounselingSessionAttachment,
   ScheduleSessionInput,
@@ -74,7 +75,7 @@ export async function listSessionAttachments(
   const { data } = await apiClient.get<CounselingSessionAttachment[]>(
     `/api/referrals/${referralId}/sessions/${sessionId}/attachments`
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<CounselingSessionAttachment>(data);
 }
 
 const SESSION_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -106,7 +107,7 @@ export async function uploadSessionAttachments(
     form,
     { headers: { "Content-Type": "multipart/form-data" } }
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<CounselingSessionAttachment>(data);
 }
 
 export async function deleteSessionAttachment(

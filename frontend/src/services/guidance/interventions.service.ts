@@ -2,6 +2,8 @@
 // fetch, session docs, staff/review/assign/outcome, engine breakdown,
 // follow-up lifecycle (start + session schedule/complete/move/cancel).
 import { apiClient } from "@/lib/api/client";
+import { pickList } from "@/lib/api/payload";
+import { asArray } from "@/lib/api/payload";
 import type {
   AtRiskStudentItem,
   EngineBreakdown,
@@ -36,9 +38,7 @@ export async function fetchGuidanceInterventions(
   );
   // Defensive: the endpoint has served bare {students} shapes — never let
   // a shape change crash the table.
-  const students = Array.isArray((data as { students?: unknown }).students)
-    ? (data as { students: AtRiskStudentItem[] }).students
-    : [];
+  const students = pickList<AtRiskStudentItem>(data, "students");
   return { ...(data as GuidanceInterventionsData), students };
 }
 
@@ -75,7 +75,7 @@ export async function listInterventionSessionDocs(
   const { data } = await apiClient.get<InterventionSessionDoc[]>(
     `/api/interventions/${followUpId}/sessions/${sessionId}/attachments`
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<InterventionSessionDoc>(data);
 }
 
 const SESSION_DOC_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -107,7 +107,7 @@ export async function uploadInterventionSessionDocs(
     form,
     { headers: { "Content-Type": "multipart/form-data" } }
   );
-  return Array.isArray(data) ? data : [];
+  return asArray<InterventionSessionDoc>(data);
 }
 
 export async function deleteInterventionSessionDoc(

@@ -1,5 +1,6 @@
 // Folder fetch for the guidance anecdotal desk.
 import { apiClient } from "@/lib/api/client";
+import { pickList } from "@/lib/api/payload";
 import type {
   GuidanceAnecdotalData,
   GuidanceAnecdotalParams,
@@ -26,8 +27,6 @@ export async function fetchGuidanceAnecdotal(
   );
   // Defensive: the endpoint has served bare {records} shapes — never let
   // a shape change crash the folders.
-  const records = Array.isArray((data as { records?: unknown }).records)
-    ? (data as { records: GuidanceAnecdotalRecord[] }).records
-    : [];
+  const records = pickList<GuidanceAnecdotalRecord>(data, "records");
   return { ...(data as GuidanceAnecdotalData), records };
 }
