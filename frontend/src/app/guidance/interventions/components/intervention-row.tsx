@@ -147,13 +147,7 @@ export function interventionLatestAction(item: AtRiskStudentItem): {
   return { label: "No follow-up yet", time: "" };
 }
 
-export function msSinceAction(time: string, now: number): number | null {
-  if (!time || time === "—") return null;
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, now - t);
-}
+import { msSinceDate as msSinceAction } from "@/lib/clock";
 
 interface InterventionTableRowProps {
   row: AtRiskStudentItem;

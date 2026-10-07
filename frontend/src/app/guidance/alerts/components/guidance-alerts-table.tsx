@@ -49,6 +49,7 @@ import {
   GuidanceAlertsRowActions,
   GuidanceInterventionRowActions,
 } from "./GuidanceAlertsRowActions";
+import { msSinceDate as msSince } from "@/lib/clock";
 import styles from "./guidance-alerts-table.module.css";
 
 const PAGE_SIZE = 15;
@@ -183,16 +184,6 @@ function actionTimeOf(row: GuidanceAlertRow): number | null {
   const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
   const t = new Date(iso).getTime();
   return Number.isFinite(t) ? t : null;
-}
-
-/* ms from the given action time to now. Null when unparseable — the cell
-   then shows "—". */
-function msSince(time: string, now: number): number | null {
-  if (!time || time === "—") return null;
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, now - t);
 }
 
 function referralStatusVariant(

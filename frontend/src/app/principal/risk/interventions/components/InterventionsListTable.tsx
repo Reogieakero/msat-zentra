@@ -140,26 +140,7 @@ function latestAction(s: RiskSnapshotStudent): { label: string; time: string } {
   return { label: "Intervention opened", time: date };
 }
 
-function msSinceAction(time: string, now: number): number | null {
-  if (!time || time === "—") return null;
-  const iso = /^\d{4}-\d{2}-\d{2}$/.test(time) ? `${time}T00:00:00` : time;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.max(0, now - t);
-}
-
-function formatElapsedShort(ms: number): string {
-  const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (totalMinutes < 1) return "just now";
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
-}
+import { formatElapsedShort, msSinceDate as msSinceAction } from "@/lib/clock";
 
 function planStatus(s: RiskSnapshotStudent): string {
   return s.intervention ? s.intervention.outcomeStatus : "none";
