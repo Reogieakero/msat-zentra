@@ -1,13 +1,7 @@
 "use client";
 
 // Certification board shapes for the coordinator desk. Pure types only.
-// Row inputs (`AdmCaseRow`/`AdmApprovalRow`) come from the shared
-// coordinator types.
-import type {
-  AdmApprovalRow,
-  AdmCaseRow,
-  AdmEligibility,
-} from "./coordinator.types";
+import type { AdmEligibility } from "./coordinator.types";
 
 export type CertStatus =
   | "prepared"
