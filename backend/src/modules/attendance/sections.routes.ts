@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { AppError } from "../../lib/errors.js";
 import { scopedTermRow, scopedYearId } from "../../lib/termScope.js";
-import { teachableSectionIds } from "../teacher/advisory.routes.js";
+import { teachableSectionIds } from "../teacher/advisory.repository.js";
 import {
   getSectionRoster,
   getSectionStudents,

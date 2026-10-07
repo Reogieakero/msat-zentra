@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { AppError } from "../../lib/errors.js";
 import { scopedTermRow } from "../../lib/termScope.js";
-import { teachableSectionIds } from "../teacher/advisory.routes.js";
+import { teachableSectionIds } from "../teacher/advisory.repository.js";
 import { getOfferedSubjects, getSubjectDays } from "../../services/attendance/subjects.service.js";
 
 const router = Router();

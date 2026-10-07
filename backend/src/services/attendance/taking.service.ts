@@ -3,7 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
 import { invalidateTags } from "../../lib/cache.js";
 import { fanoutNotification } from "../../lib/notify.js";
-import { adviserSectionsOr404 } from "../../modules/teacher/advisory.routes.js";
+import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import { recomputeRisk, recomputeRosterRisk } from "../risk.js";
 import {
   mondayOf,

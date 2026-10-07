@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
-import { adviserSectionsOr404 } from "../../modules/teacher/advisory.routes.js";
+import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 
 export interface OfferedSubjectsQuery {
   teacherId: string;

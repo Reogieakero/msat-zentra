@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { requireAdvisorySections } from "../src/modules/teacher/advisory.routes.js";
+import { requireAdvisorySections } from "../src/modules/teacher/advisory.repository.js";
 import { AppError } from "../src/lib/errors.js";
 
 describe("Adviser gate (Phase 1)", () => {
