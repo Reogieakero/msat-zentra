@@ -9,7 +9,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification } from "../../lib/notify.js";
 import { AppError } from "../../lib/errors.js";
 import { resolveActiveTermId } from "../../services/risk.js";
-import { ensureSubjectAssignment, findSubjectTeacherSplits } from "../teacher/teacher.routes.js";
+import { ensureSubjectAssignment, findSubjectTeacherSplits } from "../teacher/teacher.repository.js";
 import { getAcademicsSummary } from "./academics.service.js";
 import { getLiveHonorRoll } from "./honor-roll-live.service.js";
 import { MAX_ADVISER_BATCH, normalizeAdviserBatch, type AdviserBatchInputRow } from "./adviserBatch.js";

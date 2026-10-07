@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { gradeToNumber, isMasterTeacherEligible } from "../src/modules/teacher/teacher.routes.js";
+import { gradeToNumber } from "../src/modules/teacher/teacher.repository.js";
+import { isMasterTeacherEligible } from "../src/services/teacher/settings.service.js";
 
 describe("Master Teacher eligibility (grades 7–10)", () => {
   it("accepts grades 7–10 in enum or numeric form", () => {
