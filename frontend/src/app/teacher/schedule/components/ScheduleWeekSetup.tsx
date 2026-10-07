@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check, Clock, Coffee, Copy, Info, Loader2, PanelRightClose, PanelRightOpen, Pencil, Trash2, Undo2, Utensils } from "lucide-react";
+import { ArrowLeft, Check, Clock, Coffee, Info, Loader2, PanelRightClose, PanelRightOpen, Pencil, Trash2, Undo2, Utensils } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { apiErrorMessage } from "@/lib/api/errors";
 import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { toast } from "@/components/ui/sonner";
@@ -14,6 +15,7 @@ import { CardModal } from "@/components/ui/CardModal";
 import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 import { buildTimetable, formatRange, type DayConfig } from "./schedule-time";
 import { SlotEntryDialog, type SlotValue } from "./SlotEntryDialog";
+import { ScheduleGridCell } from "./ScheduleGridCell";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { AddSubjectDialog, AddTeacherDialog, CatalogCards } from "./CatalogCards";
 import { CopiedSlotCard, type CopiedSlot } from "./CopiedSlotCard";
@@ -25,17 +27,6 @@ type Props = {
 };
 
 const DAYS = [1, 2, 3, 4, 5];
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  // The backend envelopes errors as { error: { code, message } } — read that
-  // first so users see "Santos already teaches…" instead of axios's raw
-  // "Request failed with status code 409".
-  const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
-  const message = data?.error?.message ?? data?.message;
-  if (typeof message === "string" && message) return message;
-  if (err instanceof Error && err.message) return err.message;
-  return fallback;
-}
 
 function cellKey(day: number, period: number): string {
   return `${day}:${period}`;
@@ -158,7 +149,7 @@ export function ScheduleWeekSetup({ section }: Props) {
     onError: (err: unknown, vars) => {
       // Nothing was saved — revert the optimistic cell.
       setCells((prev) => ({ ...prev, [vars.key]: null }));
-      const message = getErrorMessage(err, "Failed to save timetable slot.");
+      const message = apiErrorMessage(err, "Failed to save timetable slot.");
       setSlotError(message);
       toast.error({ title: "Could not save slot", description: message });
     },
@@ -178,7 +169,7 @@ export function ScheduleWeekSetup({ section }: Props) {
       setSlotModal(null);
     },
     onError: (err: unknown) => {
-      const message = getErrorMessage(err, "Failed to clear timetable slot.");
+      const message = apiErrorMessage(err, "Failed to clear timetable slot.");
       setSlotError(message);
       toast.error({ title: "Could not clear slot", description: message });
     },
@@ -215,7 +206,7 @@ export function ScheduleWeekSetup({ section }: Props) {
       });
     },
     onError: (err: unknown) => {
-      const message = getErrorMessage(err, "Failed to clear timetable.");
+      const message = apiErrorMessage(err, "Failed to clear timetable.");
       toast.error({ title: "Could not clear timetable", description: message });
     },
   });
@@ -236,7 +227,7 @@ export function ScheduleWeekSetup({ section }: Props) {
       });
     },
     onError: (err: unknown) => {
-      const message = getErrorMessage(err, "Failed to unlock timetable.");
+      const message = apiErrorMessage(err, "Failed to unlock timetable.");
       toast.error({ title: "Could not unlock timetable", description: message });
     },
   });
@@ -544,127 +535,47 @@ export function ScheduleWeekSetup({ section }: Props) {
                     const teacher = cell?.teacherNameId
                       ? teacherById.get(cell.teacherNameId)
                       : undefined;
-                    const teacherName = teacher?.name;
-                    const teacherCode = teacher?.code;
                     const timeLabel = `${WEEK_LABELS_SHORT[day - 1]} ${formatRange(row.startMin, row.endMin)}`;
                     const status = statusOf(key);
                     // A draft slot that still carries the principal's note was
                     // sent back — it reads as "returned" (amber) until the
                     // teacher reworks it (edits clear the note) or resubmits.
                     const returned = status === "DRAFT" && !!serverStatus.get(key)?.reviewNote;
-                    const statusName =
-                      status === "APPROVED"
-                        ? "approved"
-                        : status === "SUBMITTED"
-                          ? "submitted"
-                          : returned
-                            ? "returned"
-                            : "draft";
-                    const label = cell
-                      ? `${timeLabel}, ${sub ? `${sub.name}${teacherName ? ` with ${teacherName}` : ""}` : "filled"} (${statusName})`
-                      : copied
-                        ? `${timeLabel}, empty — tap to paste ${subjectById.get(copied.subjectId)?.name ?? "copied slot"}`
-                        : `${timeLabel}, empty`;
+                    const filled = cell !== null && sub !== undefined && !!cell.teacherNameId;
                     return (
-                      <td key={day} className="border-t p-1">
-                        {cell && sub && cell.teacherNameId ? (
-                          <div className="relative">
-                            {isLocked ? (
-                              <div
-                                aria-label={label}
-                                title={
-                                  sub
-                                    ? `${sub.name}${teacherName ? ` — ${teacherName}${teacherCode ? ` (${teacherCode})` : ""}` : ""} (${statusName}) — unlock to edit`
-                                    : "Locked slot — unlock to edit"
-                                }
-                                className="flex min-h-14 w-full items-center justify-center rounded-md border border-solid bg-primary/5 px-1 py-1 text-center text-xs"
-                              >
-                                <span className="flex min-w-0 max-w-full flex-col items-center leading-tight">
-                                  <span className="w-full truncate font-medium">{sub.name}</span>
-                                  {teacherName ? (
-                                    <span className="w-full truncate text-[11px] font-normal text-muted-foreground">
-                                      {teacherName}
-                                    </span>
-                                  ) : null}
-                                </span>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSlotModal({ day, period: row.periodIndex });
-                                  setSlotError(null);
-                                }}
-                                aria-label={label}
-                                title={
-                                  sub
-                                    ? `${sub.name}${teacherName ? ` — ${teacherName}${teacherCode ? ` (${teacherCode})` : ""}` : ""} (${statusName})`
-                                    : "Empty slot — tap to schedule"
-                                }
-                                className="flex min-h-14 w-full items-center justify-center rounded-md border border-solid bg-primary/5 px-1 py-1 pr-6 text-center text-xs transition-colors"
-                              >
-                                <span className="flex min-w-0 max-w-full flex-col items-center leading-tight">
-                                  <span className="w-full truncate font-medium">{sub.name}</span>
-                                  {teacherName ? (
-                                    <span className="w-full truncate text-[11px] font-normal text-muted-foreground">
-                                      {teacherName}
-                                    </span>
-                                  ) : null}
-                                </span>
-                              </button>
-                            )}
-                            <span
-                              aria-hidden="true"
-                              title={statusName}
-                              className={`absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full ${
-                                status === "APPROVED"
-                                  ? "bg-green-500"
-                                  : status === "SUBMITTED"
-                                    ? "bg-blue-500"
-                                    : returned
-                                      ? "bg-amber-500"
-                                      : "bg-red-500"
-                              }`}
-                            />
-                            {isLocked ? null : (
-                              <button
-                                type="button"
-                                onClick={() => copyCell(cell.subjectId, cell.teacherNameId as string)}
-                                aria-label={`Copy ${sub.name}${teacherName ? ` with ${teacherName}` : ""}`}
-                                title="Copy slot"
-                                className="absolute top-1 right-1 rounded-md border border-input bg-card p-1 text-muted-foreground shadow-sm transition-colors hover:border-primary hover:text-foreground"
-                              >
-                                <Copy size={12} aria-hidden />
-                              </button>
-                            )}
-                          </div>
-                        ) : isLocked ? (
-                          <div
-                            aria-label={`${timeLabel}, locked`}
-                            title="Approved — unlock to edit"
-                            className="flex min-h-14 w-full items-center justify-center rounded-md border border-dashed border-input px-1 text-center text-xs text-muted-foreground"
-                          >
-                            <span aria-hidden="true">—</span>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (copied) {
-                                pasteCell(day, row.periodIndex);
-                              } else {
-                                setSlotModal({ day, period: row.periodIndex });
-                                setSlotError(null);
-                              }
-                            }}
-                            aria-label={label}
-                            title={copied ? "Tap to paste copied slot" : "Empty slot — tap to schedule"}
-                            className="flex min-h-14 w-full items-center justify-center rounded-md border border-dashed border-input px-1 text-center text-xs text-muted-foreground transition-colors hover:border-primary"
-                          >
-                            <span className="text-muted-foreground">+</span>
-                          </button>
-                        )}
-                      </td>
+                      <ScheduleGridCell
+                        key={day}
+                        filled={filled}
+                        timeLabel={timeLabel}
+                        subjectName={sub?.name ?? null}
+                        teacherName={teacher?.name ?? null}
+                        teacherCode={teacher?.code ?? null}
+                        status={status}
+                        returned={returned}
+                        copiedSubjectName={
+                          filled || !copied
+                            ? null
+                            : (subjectById.get(copied.subjectId)?.name ?? "copied slot")
+                        }
+                        locked={isLocked}
+                        onEdit={() => {
+                          setSlotModal({ day, period: row.periodIndex });
+                          setSlotError(null);
+                        }}
+                        onPaste={() => {
+                          if (copied) {
+                            pasteCell(day, row.periodIndex);
+                          } else {
+                            setSlotModal({ day, period: row.periodIndex });
+                            setSlotError(null);
+                          }
+                        }}
+                        onCopy={() => {
+                          if (cell?.subjectId && cell.teacherNameId) {
+                            copyCell(cell.subjectId, cell.teacherNameId);
+                          }
+                        }}
+                      />
                     );
                   })}
                 </tr>
