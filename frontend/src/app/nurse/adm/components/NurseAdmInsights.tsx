@@ -3,7 +3,7 @@
 import type {
   NurseAdmInsightsData,
   NurseAdmRecommendation,
-} from "./nurse-adm-data";
+} from "@/services/nurse/adm.reports";
 import { PRIMARY_STEPS } from "./NurseAdmReports";
 import styles from "./nurse-adm.module.css";
 

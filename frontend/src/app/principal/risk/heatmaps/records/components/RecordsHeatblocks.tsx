@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
 import styles from "./RecordsHeatblocks.module.css";
-import { CATEGORY_META, fetchRecords } from "./records-data";
+import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
 import type { BehavioralRecord } from "../types";
 
 const PAGE_SIZE = 21;

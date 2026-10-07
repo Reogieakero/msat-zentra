@@ -5,7 +5,7 @@ import type {
   RecordDataset,
   RecordSection,
   RecordStudent,
-} from "../types";
+} from "@/app/principal/risk/heatmaps/records/types";
 
 // Canonical backend anecdotal categories (mirror of the AnecdotalCategory enum
 // + CATEGORY_META in backend/src/modules/anecdotal/anecdotal.routes.ts).

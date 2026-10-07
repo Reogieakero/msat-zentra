@@ -1,8 +1,13 @@
-import { deriveActionStatus } from "@/services/nurse/labels";
+// Referrals Report + insights derivation for the nurse desk — same
+// contents as the guidance Referrals Report, but over the nurse referrals
+// scope (clinic + ADM) instead of the guidance scope (ADM + Counseling).
+// Pure derivation from the desk-wide alert list. Moved verbatim from the
+// nurse adm folder.
+import { deriveActionStatus } from "./labels";
 import type {
   NurseAlertItem,
   NurseRiskLevel,
-} from "@/services/nurse/nurse.types";
+} from "./nurse.types";
 
 export interface NurseAdmActionCount {
   action: string;

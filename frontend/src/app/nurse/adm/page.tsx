@@ -16,7 +16,7 @@ import type {
 import {
   buildNurseAdmInsights,
   buildNurseAdmReferrals,
-} from "./components/nurse-adm-data";
+} from "@/services/nurse/adm.reports";
 import { NurseAdmInsights } from "./components/NurseAdmInsights";
 import { NurseAdmReports } from "./components/NurseAdmReports";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";

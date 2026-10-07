@@ -23,7 +23,7 @@ import {
 import type {
   NurseAdmActionCount,
   NurseAdmReferralsData,
-} from "./nurse-adm-data";
+} from "@/services/nurse/adm.reports";
 import styles from "./nurse-adm.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {

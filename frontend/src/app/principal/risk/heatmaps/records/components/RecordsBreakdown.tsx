@@ -27,7 +27,7 @@ import {
   CATEGORY_KEYS,
   CATEGORY_META,
   fetchRecords,
-} from "./records-data";
+} from "@/services/principal/records.service";
 import styles from "./RecordsOverview.module.css";
 
 const chartConfig = {
