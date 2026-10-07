@@ -1,3 +1,7 @@
+// Shared schedule-grid constants for the teacher/principal class and
+// attendance views (week labels, timeline, lunch window, demo agenda +
+// week schedule). Moved verbatim from the teacher classes folder — no
+// API calls, display config only.
 export interface ScheduleBlock {
   subject: string;
   section: string;

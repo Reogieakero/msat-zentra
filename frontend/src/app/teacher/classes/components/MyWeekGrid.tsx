@@ -1,7 +1,7 @@
 "use client";
 
 import { Coffee, Utensils } from "lucide-react";
-import { WEEK_LABELS_SHORT } from "./classes-data";
+import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 import { buildTimetable, formatRange, type DayConfig } from "@/app/teacher/schedule/components/schedule-time";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 

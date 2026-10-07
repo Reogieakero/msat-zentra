@@ -8,7 +8,7 @@ import {
   WEEK_LABELS_FULL,
   formatBlockTime,
   type ScheduleBlock,
-} from "./classes-data";
+} from "@/services/teacher/schedule";
 import styles from "./ClassDetailDialog.module.css";
 
 interface ClassDetailDialogProps {

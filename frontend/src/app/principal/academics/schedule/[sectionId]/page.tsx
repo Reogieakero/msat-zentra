@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { Textarea } from "@/components/ui/textarea";
 import formStyles from "@/app/principal/academics/assign/components/form.module.css";
-import { WEEK_LABELS_SHORT } from "@/app/teacher/classes/components/classes-data";
+import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 // Per-section review URL: /principal/academics/schedule/[sectionId]. Same
 // shared ["principal-schedule-sections"] cache as the grid, so opening a
 // section card is instant — mirroring teacher/schedule/[sectionId]. Layout

@@ -21,7 +21,7 @@ import {
   HOUR_HEIGHT,
   formatBlockTime,
   type ScheduleBlock,
-} from "./classes-data";
+} from "@/services/teacher/schedule";
 import { ClassDetailDialog } from "./ClassDetailDialog";
 import styles from "./ClassesSchedule.module.css";
 

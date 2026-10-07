@@ -29,7 +29,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import BranchedMenu from "@/components/nav/BranchedMenu";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
-import { WEEK_LABELS_SHORT } from "@/app/teacher/classes/components/classes-data";
+import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 import {
   buildTimetable,
   formatClock,

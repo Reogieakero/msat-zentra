@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CardModal } from "@/components/ui/CardModal";
-import { WEEK_LABELS_SHORT } from "../../classes/components/classes-data";
+import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 import { buildTimetable, formatRange, type DayConfig } from "./schedule-time";
 import { SlotEntryDialog, type SlotValue } from "./SlotEntryDialog";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
