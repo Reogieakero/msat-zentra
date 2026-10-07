@@ -7,8 +7,10 @@ import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import { useTeacherInvalidate } from "../components/use-teacher-invalidate";
 import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
 import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
+import { AttendanceTermGate } from "./components/AttendanceTermGate";
 import { SheetDatePicker } from "./components/sheet-date-picker";
 import {
   phTodayKey,
@@ -18,7 +20,6 @@ import {
   useSheetContext,
 } from "@/services/teacher/attendance.service";
 import type { SheetContext } from "@/services/teacher/attendance.types";
-import { KeyRound } from "lucide-react";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
@@ -38,7 +39,6 @@ import {
 } from "@/app/teacher/schedule/components/schedule-time";
 import type { AttendanceLive } from "./components/AttendanceRosterTable";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
@@ -73,14 +73,6 @@ interface MySlot {
    the same link code re-entered) and records a DB grant row for that term;
    Term 1 state never opens another term, and bulk submits enforce the grant
    server-side. */
-function getVerifyErrorMessage(err: unknown): string {
-  const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
-  const message = data?.error?.message ?? data?.message;
-  if (typeof message === "string" && message) return message;
-  if (err instanceof Error && err.message) return err.message;
-  return "Could not verify teacher code.";
-}
-
 export default function TeacherAdvisoryAttendancePage() {
   const invalidateTeacher = useTeacherInvalidate();
   // Live clock for the time gate — re-evaluates the current slot every
@@ -181,7 +173,7 @@ export default function TeacherAdvisoryAttendancePage() {
       });
     },
     onError: (err: unknown) => {
-      const message = getVerifyErrorMessage(err);
+      const message = apiErrorMessage(err, "Could not verify teacher code.");
       setAttCodeError(message);
       toast.error({ title: "Could not verify code", description: message });
     },
@@ -205,7 +197,7 @@ export default function TeacherAdvisoryAttendancePage() {
       });
     },
     onError: (err: unknown) => {
-      const message = getVerifyErrorMessage(err);
+      const message = apiErrorMessage(err, "Could not verify teacher code.");
       toast.error({ title: "Could not enter term", description: message });
     },
   });
@@ -611,83 +603,24 @@ export default function TeacherAdvisoryAttendancePage() {
   // Masters bypass — records open directly.
   if (!hasGrant && !isMasterTeacher) {
     return (
-      <section className={styles.page}>
-        <div className={styles.gateBody}>
-          <div className={emptyStyles.emptyWrap}>
-            <div className={assign.card} style={{ width: "100%", maxWidth: "28rem" }}>
-              <span className={assign.glowClip} aria-hidden="true">
-                <span className={assign.cardGlow} />
-              </span>
-              <div className="relative flex flex-col items-center text-center">
-                <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-                  <KeyRound size={32} className="text-primary" />
-                </span>
-                <h3 className="text-lg font-semibold">Enter {termLabel}</h3>
-                <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                  {isAdviser
-                    ? `You advise ${sheetContext.data?.sectionName ?? "a section"} — continue as adviser to open per-subject attendance for ${termLabel}, or verify with your teacher code instead.`
-                    : `Enter the same teacher code you linked on My Classes to open per-subject attendance for ${termLabel}. Codes never carry across terms.`}
-                </p>
-                <div className="mt-4 flex w-full flex-col gap-2">
-                  {isAdviser && !showCodeVerify ? (
-                    <>
-                      <Button onClick={() => grantTap.mutate()} disabled={grantTap.isPending}>
-                        {grantTap.isPending ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" aria-hidden />
-                            <span aria-live="polite">Entering…</span>
-                          </>
-                        ) : (
-                          "Continue as adviser"
-                        )}
-                      </Button>
-                      <Button variant="ghost" onClick={() => setShowCodeVerify(true)}>
-                        Verify with teacher code instead
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Input
-                        placeholder="Teacher code (e.g. MS-101)…"
-                        value={attCode}
-                        onChange={(e) => {
-                          setAttCode(e.target.value);
-                          setAttCodeError(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleVerify();
-                        }}
-                        aria-label="Attendance teacher code"
-                        className="text-center uppercase"
-                      />
-                      {attCodeError ? (
-                        <p role="alert" className="text-sm text-destructive">
-                          {attCodeError}
-                        </p>
-                      ) : null}
-                      <Button onClick={handleVerify} disabled={verify.isPending}>
-                        {verify.isPending ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" aria-hidden />
-                            <span aria-live="polite">Verifying…</span>
-                          </>
-                        ) : (
-                          "Verify code"
-                        )}
-                      </Button>
-                      {isAdviser ? (
-                        <Button variant="ghost" onClick={() => setShowCodeVerify(false)}>
-                          Back to adviser entry
-                        </Button>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AttendanceTermGate
+        termLabel={termLabel}
+        isAdviser={isAdviser}
+        sectionName={sheetContext.data?.sectionName ?? null}
+        showCodeVerify={showCodeVerify}
+        attCode={attCode}
+        attCodeError={attCodeError}
+        verifyPending={verify.isPending}
+        grantPending={grantTap.isPending}
+        onAttCodeChange={(value) => {
+          setAttCode(value);
+          setAttCodeError(null);
+        }}
+        onShowCodeVerify={setShowCodeVerify}
+        onBackToAdviser={() => setShowCodeVerify(false)}
+        onVerify={handleVerify}
+        onGrantTap={() => grantTap.mutate()}
+      />
     );
   }
 
