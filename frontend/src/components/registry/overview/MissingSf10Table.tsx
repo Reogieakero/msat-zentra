@@ -19,28 +19,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRegistrarOverview } from "@/services/registry/overview.service";
+import {
+  fetchRecordKeeperOverview,
+  fetchRegistrarOverview,
+  type RegistryDesk,
+} from "@/services/registry/overview.service";
 import { formatSection } from "@/lib/utils";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";
 
-// Overview preview pager: 10 rows per page (registrar overview standard).
+// Overview preview pager: 10 rows (registrar) / 5 rows (record-keeper).
 // The full list lives on the SF10 page.
-const PAGE_SIZE = 10;
+const PAGE_SIZE_BY_DESK: Record<RegistryDesk, number> = {
+  registrar: 10,
+  "record-keeper": 5,
+};
 
-export function MissingSf10Table() {
+export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
   const router = useRouter();
   const [page, setPage] = React.useState(1);
+  const PAGE_SIZE = PAGE_SIZE_BY_DESK[desk];
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-overview"],
-    queryFn: fetchRegistrarOverview,
+    queryKey: [`${desk}-overview`],
+    queryFn: desk === "registrar" ? fetchRegistrarOverview : fetchRecordKeeperOverview,
     staleTime: 30_000,
   });
 
   const goSf10 = React.useCallback(() => {
-    router.push("/registrar/sf10");
-  }, [router]);
+    router.push(`/${desk}/sf10`);
+  }, [router, desk]);
 
   const rows = React.useMemo(() => {
     return [...(data?.missingSf10 ?? [])].sort((a, b) =>

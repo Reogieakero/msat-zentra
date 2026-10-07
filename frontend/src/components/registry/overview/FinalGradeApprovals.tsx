@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
 import { formatSection } from "@/lib/utils";
+import type { RegistryDesk } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./FinalGradeApprovals.module.css";
 
@@ -31,26 +32,26 @@ interface FinalGradesResponse {
   complete: number;
 }
 
-function fetchViewableFinals() {
+function fetchViewableFinals(desk: RegistryDesk) {
   return apiClient
-    .get<FinalGradesResponse>("/api/registrar/final-grades", {
+    .get<FinalGradesResponse>(`/api/${desk}/final-grades`, {
       params: { page: 1, pageSize: FETCH_PAGE_SIZE },
     })
     .then((res) => res.data)
     .catch((err) => {
-      console.error("[/api/registrar/final-grades] fetch failed:", err);
+      console.error(`[/api/${desk}/final-grades] fetch failed:`, err);
       throw err;
     });
 }
 
-export function FinalGradeApprovals() {
+export function FinalGradeApprovals({ desk }: { desk: RegistryDesk }) {
   const router = useRouter();
   const { data, isPending, isError } = useQuery({
-    // Namespaced preview key: shares the "registrar-final-grades" prefix so
+    // Namespaced preview key: shares the "<desk>-final-grades" prefix so
     // realtime invalidation refreshes it, without colliding with the paged
-    // list key ["registrar-final-grades", page, q].
-    queryKey: ["registrar-final-grades", "preview"],
-    queryFn: fetchViewableFinals,
+    // list key ["<desk>-final-grades", page, q].
+    queryKey: [`${desk}-final-grades`, "preview"],
+    queryFn: () => fetchViewableFinals(desk),
     staleTime: 30_000,
   });
 
@@ -60,8 +61,8 @@ export function FinalGradeApprovals() {
   );
 
   const goFinals = React.useCallback(() => {
-    router.push("/registrar/final-grades");
-  }, [router]);
+    router.push(`/${desk}/final-grades`);
+  }, [router, desk]);
 
   return (
     <section className={assign.card} aria-labelledby="overview-finals-ready">

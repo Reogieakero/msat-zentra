@@ -7,7 +7,11 @@ import { FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/FolderCard";
-import { fetchRegistrarOverview } from "@/services/registry/overview.service";
+import {
+  fetchRecordKeeperOverview,
+  fetchRegistrarOverview,
+  type RegistryDesk,
+} from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./Sf10AttachFeed.module.css";
 
@@ -28,11 +32,11 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
-export function Sf10AttachFeed() {
+export function Sf10AttachFeed({ desk }: { desk: RegistryDesk }) {
   const router = useRouter();
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-overview"],
-    queryFn: fetchRegistrarOverview,
+    queryKey: [`${desk}-overview`],
+    queryFn: desk === "registrar" ? fetchRegistrarOverview : fetchRecordKeeperOverview,
     staleTime: 30_000,
   });
 
@@ -67,8 +71,8 @@ export function Sf10AttachFeed() {
   }, [feed, rowWidth]);
 
   const goSf10 = React.useCallback(() => {
-    router.push("/registrar/sf10");
-  }, [router]);
+    router.push(`/${desk}/sf10`);
+  }, [router, desk]);
 
   return (
     <section className={assign.card} aria-labelledby="overview-sf10-feed">

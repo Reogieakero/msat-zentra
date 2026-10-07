@@ -25,7 +25,7 @@ import { LrnVerifyButton } from "../../accounts/components/LrnVerifyButton";
 import type { PendingStudentsResponse } from "../../accounts/components/types";
 import { formatRelativeTime } from "../../accounts/components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "./OverviewApprovals.module.css";
+import styles from "@/components/registry/overview/OverviewApprovals.module.css";
 
 // Same pending-students source as the Accounts page: identical column set
 // and backend order (no client re-sort), same verify-and-approve action.

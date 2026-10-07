@@ -13,6 +13,7 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
+import type { RegistryDesk } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./AccountBreakdown.module.css";
 
@@ -31,12 +32,12 @@ interface BreakdownResponse {
   data: BreakdownGroup[];
 }
 
-function fetchBreakdown() {
+function fetchBreakdown(desk: RegistryDesk) {
   return apiClient
-    .get<BreakdownResponse>("/api/registrar/account-breakdown")
+    .get<BreakdownResponse>(`/api/${desk}/account-breakdown`)
     .then((res) => res.data)
     .catch((err) => {
-      console.error("[/api/registrar/account-breakdown] fetch failed:", err);
+      console.error(`[/api/${desk}/account-breakdown] fetch failed:`, err);
       throw err;
     });
 }
@@ -188,10 +189,18 @@ function BandGauge({
   );
 }
 
-export function AccountBreakdown() {
+export function AccountBreakdown({ desk }: { desk: RegistryDesk }) {
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-account-breakdown"],
-    queryFn: fetchBreakdown,
+    // Dedicated overview key per desk: the accounts page uses a different
+    // key with a PLAIN-ARRAY payload — sharing it overwrote this
+    // object-shaped cache entry (and vice versa), crashing rows.reduce.
+    // Registrar shares ["registrar-account-breakdown"] with the grade
+    // chart; record-keeper uses ["record-keeper-overview-breakdown"].
+    queryKey:
+      desk === "registrar"
+        ? ["registrar-account-breakdown"]
+        : ["record-keeper-overview-breakdown"],
+    queryFn: () => fetchBreakdown(desk),
     staleTime: 30_000,
   });
 

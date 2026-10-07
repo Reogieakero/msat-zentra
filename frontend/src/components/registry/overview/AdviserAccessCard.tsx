@@ -4,14 +4,18 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRegistrarOverview } from "@/services/registry/overview.service";
+import {
+  fetchRecordKeeperOverview,
+  fetchRegistrarOverview,
+  type RegistryDesk,
+} from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./AdviserAccessCard.module.css";
 
-export function AdviserAccessCard() {
+export function AdviserAccessCard({ desk }: { desk: RegistryDesk }) {
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-overview"],
-    queryFn: fetchRegistrarOverview,
+    queryKey: [`${desk}-overview`],
+    queryFn: desk === "registrar" ? fetchRegistrarOverview : fetchRecordKeeperOverview,
     staleTime: 30_000,
   });
 

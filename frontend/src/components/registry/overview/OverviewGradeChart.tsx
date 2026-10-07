@@ -13,6 +13,7 @@ import {
 import { BarChart3 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/client";
+import type { RegistryDesk } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewGradeChart.module.css";
 
@@ -46,9 +47,9 @@ interface GradeRow {
   total: number;
 }
 
-function fetchBreakdown(): Promise<{ data: BreakdownGroup[] }> {
+function fetchBreakdown(desk: RegistryDesk): Promise<{ data: BreakdownGroup[] }> {
   return apiClient
-    .get<{ data: BreakdownGroup[] }>("/api/registrar/account-breakdown")
+    .get<{ data: BreakdownGroup[] }>(`/api/${desk}/account-breakdown`)
     // The breakdown endpoint has returned non-array payloads in the wild
     // (cached/error shapes) — normalize to { data: [] } and never crash.
     // Object shape matches AccountBreakdown: both share this query key.
@@ -59,10 +60,15 @@ function formatGrade(grade: string) {
   return grade.startsWith("G") ? `Grade ${grade.slice(1)}` : grade;
 }
 
-export function OverviewGradeChart() {
+export function OverviewGradeChart({ desk }: { desk: RegistryDesk }) {
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-account-breakdown"],
-    queryFn: fetchBreakdown,
+    // Same dedicated overview key as AccountBreakdown above (shared cache,
+    // same array payload) — never the accounts-page key.
+    queryKey:
+      desk === "registrar"
+        ? ["registrar-account-breakdown"]
+        : ["record-keeper-overview-breakdown"],
+    queryFn: () => fetchBreakdown(desk),
     staleTime: 30_000,
   });
 

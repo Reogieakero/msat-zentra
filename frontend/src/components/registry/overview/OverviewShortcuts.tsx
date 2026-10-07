@@ -12,7 +12,11 @@ import {
   UserCog,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRegistrarOverview } from "@/services/registry/overview.service";
+import {
+  fetchRecordKeeperOverview,
+  fetchRegistrarOverview,
+  type RegistryDesk,
+} from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewShortcuts.module.css";
 
@@ -25,11 +29,11 @@ interface ShortcutItem {
   hint: string;
 }
 
-export function OverviewShortcuts() {
+export function OverviewShortcuts({ desk }: { desk: RegistryDesk }) {
   const pathname = usePathname();
   const { data, isPending, isError } = useQuery({
-    queryKey: ["registrar-overview"],
-    queryFn: fetchRegistrarOverview,
+    queryKey: [`${desk}-overview`],
+    queryFn: desk === "registrar" ? fetchRegistrarOverview : fetchRecordKeeperOverview,
     staleTime: 30_000,
   });
 
@@ -67,7 +71,7 @@ export function OverviewShortcuts() {
       icon: FileSignature,
       title: "Final Grade Approvals",
       count: data?.lockedFinalsAwaiting ?? 0,
-      href: "/registrar/final-grades",
+      href: `/${desk}/final-grades`,
       hint: "Ready to view",
     },
     {
@@ -75,7 +79,7 @@ export function OverviewShortcuts() {
       icon: GraduationCap,
       title: "Pending Students",
       count: data?.pendingStudents.length ?? 0,
-      href: "/registrar/accounts",
+      href: `/${desk}/accounts`,
       hint: "Awaiting decision",
     },
     {
@@ -83,7 +87,7 @@ export function OverviewShortcuts() {
       icon: ShieldQuestion,
       title: "Adviser Access",
       count: data?.pendingAdviserAccess ?? 0,
-      href: "/registrar/adviser-access",
+      href: `/${desk}/adviser-access`,
       hint: "Requests to review",
     },
     {
@@ -91,7 +95,7 @@ export function OverviewShortcuts() {
       icon: FileStack,
       title: "SF10 Records to Attach",
       count: data?.latestAttachments.length ?? 0,
-      href: "/registrar/sf10",
+      href: `/${desk}/sf10`,
       hint: "Files in flight",
     },
   ];
