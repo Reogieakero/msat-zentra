@@ -99,27 +99,36 @@ export async function completeSession(
   if (input.followUpSession && !isSessionType(input.followUpSession.sessionType)) {
     throw new AppError(400, "INVALID_ACTION", "Unknown follow-up session type");
   }
-  const updated = await prisma.counselingSession.update({
-    where: { id: session.id },
-    data: {
-      status: "completed",
-      sessionNotes: input.sessionNotes.trim(),
-      outcome: input.outcome?.trim() || null,
-      completedAt: new Date(),
-    },
-  });
-  await writeAudit({ userId: ctx.userId, actionType: "session_completed", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session completed", oldValue: { status: session.status }, newValue: { status: "completed" } });
-  if (input.followUpSession) {
-    const next = await prisma.counselingSession.create({
+  // Atomic completion: the done-flip and the follow-up booking succeed
+  // together or roll back together — a completed session with no follow-up
+  // row (or vice versa) must never persist.
+  const { updated, next } = await prisma.$transaction(async (tx) => {
+    const done = await tx.counselingSession.update({
+      where: { id: session.id },
       data: {
-        interventionId: row.id,
-        sessionType: input.followUpSession.sessionType,
-        scheduledAt: parseScheduledAt(input.followUpSession.scheduledAt),
-        venue: input.followUpSession.venue?.trim() || null,
-        status: "scheduled",
-        createdBy: ctx.userId,
+        status: "completed",
+        sessionNotes: input.sessionNotes.trim(),
+        outcome: input.outcome?.trim() || null,
+        completedAt: new Date(),
       },
     });
+    let created: { id: string; sessionType: string; scheduledAt: Date } | null = null;
+    if (input.followUpSession) {
+      created = await tx.counselingSession.create({
+        data: {
+          interventionId: row.id,
+          sessionType: input.followUpSession.sessionType,
+          scheduledAt: parseScheduledAt(input.followUpSession.scheduledAt),
+          venue: input.followUpSession.venue?.trim() || null,
+          status: "scheduled",
+          createdBy: ctx.userId,
+        },
+      });
+    }
+    return { updated: done, next: created };
+  });
+  await writeAudit({ userId: ctx.userId, actionType: "session_completed", sourceTable: "counseling_sessions", sourceId: session.id, reason: "Counseling session completed", oldValue: { status: session.status }, newValue: { status: "completed" } });
+  if (next) {
     await writeAudit({ userId: ctx.userId, actionType: "session_scheduled", sourceTable: "counseling_sessions", sourceId: next.id, reason: "Follow-up session booked", oldValue: null, newValue: { sessionType: next.sessionType, scheduledAt: next.scheduledAt } });
     // Auto-close: the final session is done, no next one was booked, and the
     // plan was already reviewed — the session notes become the closing record.

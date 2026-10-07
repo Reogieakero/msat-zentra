@@ -22,16 +22,17 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
   if (!target) throw new AppError(404, "USER_NOT_FOUND", "User not found");
   if (target.status === "active") throw new AppError(409, "ALREADY_ACTIVE", "User already active");
 
-  const updated = await prisma.user.update({
-    where: { id: target.id },
-    data: { status: "active", approvedBy: ctx.userId, approvedAt: new Date() },
-  });
-
   // Auto-provision the student profile from the official roster so an
   // approved student immediately lands in their section — and therefore in
   // section counts, subject lists, and gradebooks — instead of remaining
   // invisible until a profile exists. Roster is the canonical source for
   // grade level + section, matching the pending list.
+  //
+  // Guard reads stay outside the transaction; every write below runs inside
+  // one atomic unit (activation + provision + carry-over succeed together or
+  // roll back together — a half-approved account must never persist).
+  let provisionRoster: { gradeLevel: GradeLevel; sectionId: string } | null = null;
+  let carryoverRosterIds: string[] = [];
   if (target.role === "student" && target.lrn) {
     // A provisioned placeholder (auto-created by another desk from the
     // roster, e.g. ADM) already owns this LRN — adopting it needs a
@@ -59,51 +60,61 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
         select: { gradeLevel: true, sectionId: true },
       });
       if (roster) {
-        await prisma.studentProfile.create({
-          data: {
-            userId: target.id,
-            lrn: target.lrn,
-            gradeLevel: roster.gradeLevel,
-            sectionId: roster.sectionId,
-          },
-        });
+        provisionRoster = roster;
         // Carry over everything recorded under roster enlistments for this
         // LRN (scores, finals, attendance, anecdotal, referrals) onto the
         // new profile. The profile is brand-new so no unique conflicts
         // are possible.
-        const rosterIds = (
+        carryoverRosterIds = (
           await prisma.studentRoster.findMany({
             where: { lrn: target.lrn },
             select: { id: true },
           })
         ).map((r) => r.id);
-        if (rosterIds.length > 0) {
-          await prisma.$transaction([
-            prisma.studentGrade.updateMany({
-              where: { rosterId: { in: rosterIds } },
-              data: { studentId: target.id, rosterId: null },
-            }),
-            prisma.finalGrade.updateMany({
-              where: { rosterId: { in: rosterIds } },
-              data: { studentId: target.id, rosterId: null },
-            }),
-            prisma.attendanceRecord.updateMany({
-              where: { rosterId: { in: rosterIds } },
-              data: { studentId: target.id, rosterId: null },
-            }),
-            prisma.anecdotalRecord.updateMany({
-              where: { rosterId: { in: rosterIds } },
-              data: { studentId: target.id, rosterId: null },
-            }),
-            prisma.referral.updateMany({
-              where: { rosterId: { in: rosterIds } },
-              data: { studentId: target.id, rosterId: null },
-            }),
-          ]);
-        }
       }
     }
   }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.update({
+      where: { id: target.id },
+      data: { status: "active", approvedBy: ctx.userId, approvedAt: new Date() },
+    });
+    if (provisionRoster && target.lrn) {
+      await tx.studentProfile.create({
+        data: {
+          userId: target.id,
+          lrn: target.lrn,
+          gradeLevel: provisionRoster.gradeLevel,
+          sectionId: provisionRoster.sectionId,
+        },
+      });
+      if (carryoverRosterIds.length > 0) {
+        const carry = { studentId: target.id, rosterId: null };
+        await tx.studentGrade.updateMany({
+          where: { rosterId: { in: carryoverRosterIds } },
+          data: carry,
+        });
+        await tx.finalGrade.updateMany({
+          where: { rosterId: { in: carryoverRosterIds } },
+          data: carry,
+        });
+        await tx.attendanceRecord.updateMany({
+          where: { rosterId: { in: carryoverRosterIds } },
+          data: carry,
+        });
+        await tx.anecdotalRecord.updateMany({
+          where: { rosterId: { in: carryoverRosterIds } },
+          data: carry,
+        });
+        await tx.referral.updateMany({
+          where: { rosterId: { in: carryoverRosterIds } },
+          data: carry,
+        });
+      }
+    }
+    return u;
+  });
 
   await writeAudit({
     userId: ctx.userId, actionType: "account_approval",

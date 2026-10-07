@@ -358,42 +358,47 @@ export async function certify(ctx: AdmContext, profileId: string, recommendation
   }
   // Final evidence sync so the chain, the page, and eligibility agree:
   // every row below is provable from a source record on this case.
+  // Atomic unit: evidence forms + eligibility + stage move succeed together
+  // or roll back together — a certified case with a half-built evidence
+  // chain must never persist.
   const me = ctx.userId;
-  await ensureAdmForm(profile.id, "REFERRAL_FORM", "Referral form", me);
-  if (profile.referral?.anecdotalRecordId) {
-    await ensureAdmForm(profile.id, "ANECDOTAL_REPORT", "Anecdotal report", me);
-  }
-  await ensureAdmForm(profile.id, "MINUTES_OF_MEETING", "Minutes of meeting", me);
-  if ((profile.referral?.homeVisitations?.length ?? 0) > 0) {
-    await ensureAdmForm(profile.id, "HV_FORM", "Home visitation form", me);
-  }
-  await ensureAdmForm(profile.id, "CERTIFICATION", "ADM certification", me);
-  const forms = await prisma.admForm.findMany({
-    where: { admLearnerProfileId: profile.id },
-    select: { formType: true, status: true },
-  });
-  const eligibilityStatus = evaluateAdmEligibility({
-    stage: "principal_approval",
-    forms,
-    parentMeetings: profile.parentMeetings,
-  });
-  const prev = profile.certificationDetails;
-  const prevDetails =
-    prev && typeof prev === "object" && !Array.isArray(prev)
-      ? (prev as Record<string, unknown>)
-      : {};
-  const updated = await prisma.admLearnerProfile.update({
-    where: { id: profile.id },
-    data: {
+  const updated = await prisma.$transaction(async (tx) => {
+    await ensureAdmForm(profile.id, "REFERRAL_FORM", "Referral form", me, tx);
+    if (profile.referral?.anecdotalRecordId) {
+      await ensureAdmForm(profile.id, "ANECDOTAL_REPORT", "Anecdotal report", me, tx);
+    }
+    await ensureAdmForm(profile.id, "MINUTES_OF_MEETING", "Minutes of meeting", me, tx);
+    if ((profile.referral?.homeVisitations?.length ?? 0) > 0) {
+      await ensureAdmForm(profile.id, "HV_FORM", "Home visitation form", me, tx);
+    }
+    await ensureAdmForm(profile.id, "CERTIFICATION", "ADM certification", me, tx);
+    const forms = await tx.admForm.findMany({
+      where: { admLearnerProfileId: profile.id },
+      select: { formType: true, status: true },
+    });
+    const eligibilityStatus = evaluateAdmEligibility({
       stage: "principal_approval",
-      eligibilityStatus,
-      certificationDetails: {
-        ...prevDetails,
-        recommendation,
-        certifiedBy: ctx.userId,
-        certifiedAt: new Date().toISOString(),
+      forms,
+      parentMeetings: profile.parentMeetings,
+    });
+    const prev = profile.certificationDetails;
+    const prevDetails =
+      prev && typeof prev === "object" && !Array.isArray(prev)
+        ? (prev as Record<string, unknown>)
+        : {};
+    return tx.admLearnerProfile.update({
+      where: { id: profile.id },
+      data: {
+        stage: "principal_approval",
+        eligibilityStatus,
+        certificationDetails: {
+          ...prevDetails,
+          recommendation,
+          certifiedBy: ctx.userId,
+          certifiedAt: new Date().toISOString(),
+        },
       },
-    },
+    });
   });
   await writeAudit({
     userId: ctx.userId,
