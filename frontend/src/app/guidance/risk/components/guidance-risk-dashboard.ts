@@ -1,5 +1,5 @@
 import type { RiskCaseRow } from "@/components/risk-dashboard/risk-dashboard-data";
-import { fetchAllGuidanceReferrals } from "../../referrals/components/guidance-referrals-data";
+import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
 
 /**
  * Guidance risk dashboard data — desk-scoped only.

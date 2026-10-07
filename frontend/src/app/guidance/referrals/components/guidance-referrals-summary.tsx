@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import type { GuidanceReferralsSummary } from "./guidance-referrals-data";
+import type { GuidanceReferralsSummary } from "@/services/guidance/guidance.types";
 import styles from "./guidance-referrals-summary.module.css";
 
 interface GuidanceReferralsSummaryProps {

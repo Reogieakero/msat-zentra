@@ -5,10 +5,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RefreshBadge } from "@/components/ui/refresh-badge";
-import {
-  fetchGuidanceReferrals,
-  type GuidanceReferralsData,
-} from "./guidance-referrals-data";
+import { fetchGuidanceReferrals } from "@/services/guidance/referrals.service";
+import type { GuidanceReferralsData } from "@/services/guidance/guidance.types";
 import { GuidanceReferralsTable } from "./guidance-referrals-table";
 import { GuidanceReferralsSkeleton } from "./GuidanceReferralsSkeleton";
 import {

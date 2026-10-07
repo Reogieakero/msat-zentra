@@ -12,7 +12,7 @@ import {
   listAdmConsultationSessions,
   reviewAdmConsultation,
 } from "./guidance-adm-data";
-import { dismissReferral } from "../../referrals/components/guidance-referrals-data";
+import { dismissReferral } from "@/services/guidance/referrals.service";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 
 /* Case identity for the intake summary (Name / LRN / Section / Observed /

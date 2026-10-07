@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
-import type { GuidanceReferralItem } from "../../referrals/components/guidance-referrals-data";
+import type { GuidanceReferralItem } from "@/services/guidance/guidance.types";
 import { formatActionTime, sessionTypeLabel } from "../../referrals/components/guidance-referrals-format";
 import type { AtRiskStudentItem } from "../../interventions/components/guidance-interventions-data";
 import styles from "./guidance-alerts-table.module.css";

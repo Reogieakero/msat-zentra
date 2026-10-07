@@ -10,7 +10,7 @@ import {
   type GuidanceTrack,
   type GuidanceTypeFilter,
 } from "./guidance-referrals-format";
-import type { GuidanceReferralsSummary } from "./guidance-referrals-data";
+import type { GuidanceReferralsSummary } from "@/services/guidance/guidance.types";
 import styles from "./GuidanceActionMenu.module.css";
 
 /* Right sidebar — separate Counseling vs ADM menus mirroring the nurse

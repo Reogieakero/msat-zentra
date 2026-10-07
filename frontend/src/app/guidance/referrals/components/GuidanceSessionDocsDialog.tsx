@@ -17,9 +17,11 @@ import {
   deleteSessionAttachment,
   sessionAttachmentError,
   uploadSessionAttachments,
-  type CounselingSessionAttachment,
-  type CounselingSessionItem,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/sessions.service";
+import type {
+  CounselingSessionAttachment,
+  CounselingSessionItem,
+} from "@/services/guidance/guidance.types";
 import { useGuidanceMutation } from "../../overview/components/use-guidance-mutation";
 import styles from "./GuidanceReferralDialogs.module.css";
 

@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshBadge } from "@/components/ui/refresh-badge";
-import {
-  fetchAllGuidanceReferrals,
-  fetchGuidanceRiskLevels,
-  type GuidanceReferralItem,
-  type GuidanceRiskLevel,
-} from "../referrals/components/guidance-referrals-data";
+import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
+import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
+import type {
+  GuidanceReferralItem,
+  GuidanceRiskLevel,
+} from "@/services/guidance/guidance.types";
 import {
   buildGuidanceAdmInsights,
   buildGuidanceAdmReferrals,

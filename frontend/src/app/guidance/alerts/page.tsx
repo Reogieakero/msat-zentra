@@ -7,12 +7,12 @@ import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GuidanceAlertsTable } from "./components/guidance-alerts-table";
 import { GuidanceAlertsSideRail } from "./components/GuidanceAlertsSideRail";
-import {
-  fetchAllGuidanceReferrals,
-  fetchGuidanceRiskLevels,
-  type GuidanceReferralItem,
-  type GuidanceRiskLevel,
-} from "../referrals/components/guidance-referrals-data";
+import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
+import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
+import type {
+  GuidanceReferralItem,
+  GuidanceRiskLevel,
+} from "@/services/guidance/guidance.types";
 import {
   fetchAllGuidanceInterventions,
   type AtRiskStudentItem,

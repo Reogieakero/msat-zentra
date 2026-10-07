@@ -17,7 +17,7 @@ import type {
   CounselingSessionItem,
   CounselingSessionType,
   GuidanceReferralItem,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 import {
   SESSION_KIND_OPTIONS,
   combineDateTime,

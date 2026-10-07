@@ -37,7 +37,7 @@ import {
 import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
-} from "../../referrals/components/guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 import {
   formatActionTime,
   isEndorsed,

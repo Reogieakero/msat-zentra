@@ -4,7 +4,7 @@ import type {
   GuidanceReferralStatus,
   GuidanceReferralsSummary,
   GuidanceTypeSummary,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 import { actorActionLabel } from "@/lib/notifications/action-label";
 
 /* Case type — which action track the referral needs: ADM-bound (moving

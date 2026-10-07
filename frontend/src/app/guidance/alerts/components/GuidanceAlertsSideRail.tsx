@@ -7,7 +7,7 @@ import { ClipboardList, Flame, Radar } from "lucide-react";
 import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
-} from "../../referrals/components/guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 import type { AtRiskStudentItem } from "../../interventions/components/guidance-interventions-data";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./guidance-alerts-siderail.module.css";

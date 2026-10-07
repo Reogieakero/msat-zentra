@@ -1,7 +1,7 @@
 import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
-} from "../../referrals/components/guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 
 /**
  * Referrals Report derivation for the guidance desk — same contents as the

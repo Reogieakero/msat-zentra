@@ -18,7 +18,7 @@ import type {
   GuidanceReferralItem,
   GuidanceReferralStatus,
   GuidanceReferralsSummary,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 import {
   acceptReferral,
   updateReferralStatus,
@@ -29,12 +29,14 @@ import {
   dismissReferral,
   referToSpecialist,
   initiateAdm,
+} from "@/services/guidance/referrals.service";
+import {
   scheduleSession,
   completeSession,
   rescheduleSession,
   cancelSession,
   deleteSession,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/sessions.service";
 import {
   GuidanceReferralDialogs,
   INITIAL_GUIDANCE_FORM,

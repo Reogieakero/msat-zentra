@@ -20,10 +20,8 @@ import { RiskCategories } from "@/components/risk-dashboard/RiskCategories";
 import { RiskTrendLines } from "@/components/risk-dashboard/RiskTrendLines";
 import { RiskLevels } from "@/components/risk-dashboard/RiskLevels";
 import { findHotspot, RiskHotspot } from "@/components/risk-dashboard/RiskHotspot";
-import {
-  fetchGuidanceRiskLevels,
-  type GuidanceRiskLevel,
-} from "../referrals/components/guidance-referrals-data";
+import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
+import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import { fetchGuidanceRisk } from "./components/guidance-risk-dashboard";
 import {
   buildGuidanceRiskWatch,

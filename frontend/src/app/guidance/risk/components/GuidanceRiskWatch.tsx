@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { fetchGuidanceAlerts } from "../../alerts/components/guidance-alerts-data";
-import type { GuidanceRiskLevel } from "../../referrals/components/guidance-referrals-data";
+import type { GuidanceRiskLevel } from "@/services/guidance/guidance.types";
 import type { GuidanceRiskRow } from "./guidance-risk-dashboard";
 import styles from "./risk-watch.module.css";
 

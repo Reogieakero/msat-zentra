@@ -23,7 +23,7 @@ import { GcForm03PreviewDialog } from "../../adm/components/GcForm03PreviewDialo
 import type {
   CounselingSessionItem,
   GuidanceReferralItem,
-} from "./guidance-referrals-data";
+} from "@/services/guidance/guidance.types";
 import {
   anecdotalCategoryColor,
   formatActionTime,
