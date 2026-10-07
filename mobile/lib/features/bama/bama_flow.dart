@@ -128,3 +128,30 @@ class FlowSnapshot {
         previewShown: (j['previewShown'] ?? false) as bool,
       );
 }
+
+/// Reset [f] back to [step] (student|class|category|tier|datetime), clearing
+/// that step and everything after it (including typed texts, which are
+/// student-specific). Pure so it stays unit-tested without widgets.
+void resetFlowTo(FlowSnapshot f, String step) {
+  const order = ['student', 'class', 'category', 'tier', 'datetime'];
+  final at = order.indexOf(step);
+  if (at < 0) return;
+  if (at <= 0) f.studentId = '';
+  if (at <= 1) f.classKey = '';
+  if (at <= 2) f.category = null;
+  if (at <= 3) f.tier = null;
+  if (at <= 4) {
+    f.observationDate = null;
+    f.observationTime = '';
+  }
+  f.incident = '';
+  f.location = '';
+  f.notes = '';
+  f.classPerf = '';
+  f.attendance = '';
+  f.textQuestion = null;
+  f.previewShown = false;
+  f.askedCategory = at >= 2;
+  f.askedTier = at >= 3;
+  f.askedDatetime = at >= 4;
+}

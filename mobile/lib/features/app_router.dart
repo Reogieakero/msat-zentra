@@ -21,6 +21,8 @@ import 'auth/first_time_gate.dart';
 import 'auth/login_page.dart';
 import 'auth/term_select_page.dart';
 import 'bama/bama_chat_page.dart';
+import 'bama/bama_conversations.dart';
+import 'bama/bama_history_page.dart';
 import 'home/role_home.dart';
 import 'referral/referral_page.dart';
 import 'teacher/classes_page.dart';
@@ -66,6 +68,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: '/adviser/referrals', builder: (context, _) => const AdviserShell(selected: AdviserRoute.referrals, child: ReferralPage())),
+      GoRoute(
+        path: '/adviser/bama/history',
+        builder: (context, state) {
+          final type = state.uri.queryParameters['type'] ?? 'anecdotal';
+          final extra = state.extra;
+          List<BamaConversation> convos = const [];
+          ValueChanged<String> onResume = (_) {};
+          ValueChanged<BamaConversation> onDelete = (_) {};
+          if (extra is Map) {
+            if (extra['conversations'] is List) convos = (extra['conversations'] as List).whereType<BamaConversation>().toList();
+            if (extra['onResume'] is ValueChanged<String>) onResume = extra['onResume'] as ValueChanged<String>;
+            if (extra['onDelete'] is ValueChanged<BamaConversation>) onDelete = extra['onDelete'] as ValueChanged<BamaConversation>;
+          }
+          return AdviserShell(
+            selected: AdviserRoute.bama,
+            child: BamaHistoryPage(type: type, conversations: convos, onResume: onResume, onDelete: onDelete),
+          );
+        },
+      ),
       GoRoute(
         path: '/adviser/students/:id',
         builder: (context, state) {

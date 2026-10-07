@@ -16,4 +16,43 @@ void main() {
     expect(back.studentId, 'roster:abc');
     expect(back.textQuestion, TextQuestion.incident);
   });
+
+  test('resetFlowTo clears step and downstream, keeps upstream', () {
+    final f = FlowSnapshot(
+      studentId: 's1',
+      classKey: 'sub|sec|term',
+      category: 'behavioral',
+      tier: 'restricted',
+      observationDate: '2026-10-01',
+      observationTime: '08:00',
+      incident: 'x',
+      location: 'y',
+      previewShown: true,
+    );
+    resetFlowTo(f, 'category');
+    expect(f.studentId, 's1');
+    expect(f.classKey, 'sub|sec|term');
+    expect(f.category, isNull);
+    expect(f.tier, isNull);
+    expect(f.observationDate, isNull);
+    expect(f.incident, isEmpty);
+    expect(f.previewShown, isFalse);
+    expect(f.askedCategory, isTrue);
+  });
+
+  test('resetFlowTo student clears everything', () {
+    final f = FlowSnapshot(studentId: 's1', classKey: 'k', category: 'academic', tier: 'restricted');
+    resetFlowTo(f, 'student');
+    expect(f.studentId, isEmpty);
+    expect(f.classKey, isEmpty);
+    expect(f.category, isNull);
+    expect(f.askedCategory, isFalse);
+  });
+
+  test('resetFlowTo ignores unknown steps', () {
+    final f = FlowSnapshot(studentId: 's1', category: 'academic');
+    resetFlowTo(f, 'nope');
+    expect(f.studentId, 's1');
+    expect(f.category, 'academic');
+  });
 }
