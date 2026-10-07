@@ -1,3 +1,5 @@
+// Shared SF10 shapes (registrar + record-keeper desks). Merged from the
+// two identical per-desk `types.ts` copies.
 export type Sf10Status = "attach" | "available" | "released";
 export type Sf10Source = "ocr_upload" | "manual" | "auto_populated";
 

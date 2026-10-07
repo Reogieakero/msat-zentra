@@ -1,9 +1,13 @@
+// Shared SF10 record actions (registrar + record-keeper desks hit the
+// same role-agnostic `/api/sf10/*` endpoints). Registrar-only extras
+// (`uploadSf10`, `fetchRegistrarStudents`) currently have no consumers —
+// moved verbatim and flagged, not deleted.
 import { apiClient } from "@/lib/api/client";
 import type {
   Sf10Record,
   Sf10RecordsResponse,
   Sf10Version,
-} from "./types";
+} from "./sf10.types";
 
 export interface Sf10ListParams {
   page: number;

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
-import type { Sf10Status } from "../types";
+import type { Sf10Status } from "@/services/registry/sf10.types";
 
 export function formatRelativeTime(iso: string | null): string {
   if (!iso) return "—";

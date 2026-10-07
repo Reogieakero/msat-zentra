@@ -27,13 +27,13 @@ import { Sf10DetailSheet } from "./components/Sf10DetailSheet";
 import { StatusBadge, formatRelativeTime } from "./components/shared";
 import { toast } from "@/components/ui/sonner";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
-import { fetchSf10Records } from "./api";
+import { fetchSf10Records } from "@/services/registry/sf10.service";
 import {
   GRADE_LABEL,
   SF10_SOURCE_LABEL,
   type Sf10Record,
   type Sf10Status,
-} from "./types";
+} from "@/services/registry/sf10.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./sf10.module.css";
 

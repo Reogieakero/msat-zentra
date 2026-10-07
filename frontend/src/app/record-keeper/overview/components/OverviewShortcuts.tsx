@@ -12,7 +12,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRecordKeeperOverview } from "./overview-data";
+import { fetchRecordKeeperOverview } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewShortcuts.module.css";
 

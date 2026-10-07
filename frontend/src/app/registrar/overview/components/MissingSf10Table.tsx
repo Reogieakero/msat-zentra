@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRegistrarOverview } from "./overview-data";
+import { fetchRegistrarOverview } from "@/services/registry/overview.service";
 import { formatSection } from "@/lib/utils";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";

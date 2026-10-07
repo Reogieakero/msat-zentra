@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchRegistrarOverview } from "./overview-data";
+import { fetchRegistrarOverview } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";
 

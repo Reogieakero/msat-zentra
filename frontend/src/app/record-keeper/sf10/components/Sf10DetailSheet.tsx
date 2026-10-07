@@ -14,8 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, CheckCircle2, Archive, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { StatusBadge, formatRelativeTime } from "./shared";
-import { GRADE_LABEL, SF10_SOURCE_LABEL, type Sf10Record } from "../types";
-import { validateSf10, releaseSf10, fetchSf10Versions } from "../api";
+import { GRADE_LABEL, SF10_SOURCE_LABEL, type Sf10Record } from "@/services/registry/sf10.types";
+import { validateSf10, releaseSf10, fetchSf10Versions } from "@/services/registry/sf10.service";
 import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import styles from "../sf10.module.css";
 
