@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +13,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Bot, CalendarIcon, Check, ChevronDown, Clock, Eraser, Folder, History, Plus } from "lucide-react";
+import { ArrowUp, Bot, CalendarIcon, ChevronDown, Clock, Eraser, Folder, History, Plus } from "lucide-react";
 import {
   ANEC_CATEGORY_LABELS,
   ANEC_TIER_LABELS,
@@ -38,6 +37,7 @@ import {
 } from "./anecdotal-conversations";
 import { AnecdotalHistoryMenu } from "./AnecdotalHistoryMenu";
 import { FiledDetailCard, PreviewDetailCard } from "./AnecdotalDetailCards";
+import { ClassPicker, StudentPicker } from "./AnecdotalPickers";
 import { useTerm } from "@/lib/term/TermContext";
 import { downloadOcForm01 } from "@/components/ocform01/ocform01";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
@@ -89,10 +89,6 @@ export function AnecdotalChat() {
   const [classKey, setClassKey] = useState("");
   const [studentOpen, setStudentOpen] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
-  const [studentQ, setStudentQ] = useState("");
-  const [classQ, setClassQ] = useState("");
-  const [studentPage, setStudentPage] = useState(1);
-  const [classPage, setClassPage] = useState(1);
   const [gcformKnown, setGcformKnown] = useState<
     "yes" | "no" | null
   >(null);
@@ -153,10 +149,6 @@ export function AnecdotalChat() {
     setAskedTier(false);
     setTextQuestion(null);
     setTextInput("");
-    setStudentQ("");
-    setClassQ("");
-    setStudentPage(1);
-    setClassPage(1);
     closeFormPreview();
   }
 
@@ -624,40 +616,6 @@ export function AnecdotalChat() {
     sectionNameById,
   ]);
 
-  const studentNeedle = studentQ.trim().toLowerCase();
-  const visibleStudents = students.filter((s) => {
-    if (!studentNeedle) return true;
-    return (
-      s.name.toLowerCase().includes(studentNeedle) ||
-      s.lrn.includes(studentNeedle) ||
-      (sectionNameById.get(s.sectionId ?? "") ?? "")
-        .toLowerCase()
-        .includes(studentNeedle)
-    );
-  });
-
-  const PAGE_SIZE = 10;
-  const studentTotalPages = Math.max(1, Math.ceil(visibleStudents.length / PAGE_SIZE));
-  const studentPageRows = visibleStudents.slice(
-    (studentPage - 1) * PAGE_SIZE,
-    studentPage * PAGE_SIZE
-  );
-
-  const classNeedle = classQ.trim().toLowerCase();
-  const visibleClasses = classes.filter((c) => {
-    if (!classNeedle) return true;
-    return (
-      c.subjectName.toLowerCase().includes(classNeedle) ||
-      c.sectionName.toLowerCase().includes(classNeedle)
-    );
-  });
-
-  const classTotalPages = Math.max(1, Math.ceil(visibleClasses.length / PAGE_SIZE));
-  const classPageRows = visibleClasses.slice(
-    (classPage - 1) * PAGE_SIZE,
-    classPage * PAGE_SIZE
-  );
-
   async function handleSend() {
     if (sending) return;
 
@@ -1059,286 +1017,35 @@ export function AnecdotalChat() {
             </Button>
           </div>
           <div className={styles.composerBar}>
-            <Popover open={studentOpen} onOpenChange={setStudentOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={`${styles.pickerBtn} ${
-                    student ? styles.pickerSet : ""
-                  }`}
-                  aria-haspopup="dialog"
-                  aria-expanded={studentOpen}
-                >
-                  <span className={styles.pickerLabel}>
-                    {student
-                      ? `${student.name} · ${
-                          sectionNameById.get(student.sectionId ?? "") ?? ""
-                        }`
-                      : "Student"}
-                  </span>
-                  <ChevronDown className={styles.pickerChevron} aria-hidden />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className={styles.dropPanel}
-                align="start"
-              >
-                <Input
-                  value={studentQ}
-                  onChange={(e) => {
-                    setStudentQ(e.target.value);
-                    setStudentPage(1);
-                  }}
-                  placeholder="Search students…"
-                  aria-label="Search students"
-                  className={styles.dropSearch}
-                />
-                <table className={styles.dropTable}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Name</th>
-                      <th scope="col">LRN</th>
-                      <th scope="col">Section</th>
-                      <th scope="col">
-                        <span className={styles.srOnly}>Selected</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {studentPageRows.map((s) => (
-                      <tr
-                        key={s.id}
-                        className={`${styles.dropRow} ${
-                          s.id === studentId ? styles.dropRowActive : ""
-                        }`}
-                        tabIndex={0}
-                        onClick={() => {
-                          setStudentId(s.id);
-                          setStudentOpen(false);
-                          if (
-                            selectedClass &&
-                            selectedClass.sectionId !== s.sectionId
-                          ) {
-                            setClassKey("");
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setStudentId(s.id);
-                            setStudentOpen(false);
-                            if (
-                              selectedClass &&
-                              selectedClass.sectionId !== s.sectionId
-                            ) {
-                              setClassKey("");
-                            }
-                          }
-                        }}
-                      >
-                        <td className={styles.dropName}>{s.name}</td>
-                        <td className={styles.dropDim}>{s.lrn}</td>
-                        <td className={styles.dropDim}>
-                          {sectionNameById.get(s.sectionId ?? "") ?? "—"}
-                        </td>
-                        <td className={styles.dropCheck}>
-                          {s.id === studentId ? (
-                            <Check aria-hidden />
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                    {optionsQuery.isPending ? (
-                      <tr aria-hidden>
-                        <td colSpan={4}>
-                          <div className={styles.dropSkelRows}>
-                            <Skeleton className={styles.dropSkel} />
-                            <Skeleton className={styles.dropSkel} />
-                            <Skeleton className={styles.dropSkel} />
-                          </div>
-                        </td>
-                      </tr>
-                    ) : studentPageRows.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className={styles.dropDim}
-                        >
-                          No students match.
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-                {studentTotalPages > 1 && (
-                  <div className={styles.dropPagination}>
-                    <button
-                      type="button"
-                      className={styles.dropPageBtn}
-                      disabled={studentPage <= 1}
-                      onClick={() =>
-                        setStudentPage((p) => Math.max(1, p - 1))
-                      }
-                      aria-label="Previous page"
-                    >
-                      Prev
-                    </button>
-                    <span className={styles.dropPageInfo}>
-                      {studentPage} / {studentTotalPages}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.dropPageBtn}
-                      disabled={studentPage >= studentTotalPages}
-                      onClick={() =>
-                        setStudentPage((p) =>
-                          Math.min(studentTotalPages, p + 1)
-                        )
-                      }
-                      aria-label="Next page"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
+            <StudentPicker
+              open={studentOpen}
+              onOpenChange={setStudentOpen}
+              students={students}
+              sectionNameById={sectionNameById}
+              selectedId={studentId}
+              isPending={optionsQuery.isPending}
+              onPick={(id) => {
+                setStudentId(id);
+                const picked = students.find((s) => s.id === id) ?? null;
+                if (
+                  selectedClass &&
+                  picked &&
+                  selectedClass.sectionId !== picked.sectionId
+                ) {
+                  setClassKey("");
+                }
+              }}
+            />
 
-            <Popover open={classOpen} onOpenChange={setClassOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={`${styles.pickerBtn} ${
-                    selectedClass ? styles.pickerSet : ""
-                  }`}
-                  aria-haspopup="dialog"
-                  aria-expanded={classOpen}
-                >
-                  <span className={styles.pickerLabel}>
-                    {selectedClass
-                      ? `${selectedClass.subjectName} · ${selectedClass.sectionName}`
-                      : "Class"}
-                  </span>
-                  <ChevronDown className={styles.pickerChevron} aria-hidden />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className={styles.dropPanel}
-                align="start"
-              >
-                <Input
-                  value={classQ}
-                  onChange={(e) => {
-                    setClassQ(e.target.value);
-                    setClassPage(1);
-                  }}
-                  placeholder="Search subjects…"
-                  aria-label="Search student's subjects"
-                  className={styles.dropSearch}
-                />
-                <table className={styles.dropTable}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Subject</th>
-                      <th scope="col">Teacher</th>
-                      <th scope="col">
-                        <span className={styles.srOnly}>Selected</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {classPageRows.map((c) => {
-                      const key = `${c.subjectId}|${c.sectionId}|${c.termId}`;
-                      return (
-                        <tr
-                          key={key}
-                          className={`${styles.dropRow} ${
-                            key === classKey ? styles.dropRowActive : ""
-                          }`}
-                          tabIndex={0}
-                          onClick={() => {
-                            setClassKey(key);
-                            setClassOpen(false);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setClassKey(key);
-                              setClassOpen(false);
-                            }
-                          }}
-                        >
-                          <td className={styles.dropName}>
-                            {c.subjectName}
-                          </td>
-                          <td className={styles.dropDim}>
-                            {c.ownerName ?? "—"}
-                          </td>
-                          <td className={styles.dropCheck}>
-                            {key === classKey ? (
-                              <Check aria-hidden />
-                            ) : null}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {optionsQuery.isPending ? (
-                      <tr aria-hidden>
-                        <td colSpan={3}>
-                          <div className={styles.dropSkelRows}>
-                            <Skeleton className={styles.dropSkel} />
-                            <Skeleton className={styles.dropSkel} />
-                            <Skeleton className={styles.dropSkel} />
-                          </div>
-                        </td>
-                      </tr>
-                    ) : classPageRows.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className={styles.dropDim}
-                        >
-                          {student
-                            ? "No subjects for this student."
-                            : "Pick a student to see their subjects."}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-                {classTotalPages > 1 && (
-                  <div className={styles.dropPagination}>
-                    <button
-                      type="button"
-                      className={styles.dropPageBtn}
-                      disabled={classPage <= 1}
-                      onClick={() =>
-                        setClassPage((p) => Math.max(1, p - 1))
-                      }
-                      aria-label="Previous page"
-                    >
-                      Prev
-                    </button>
-                    <span className={styles.dropPageInfo}>
-                      {classPage} / {classTotalPages}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.dropPageBtn}
-                      disabled={classPage >= classTotalPages}
-                      onClick={() =>
-                        setClassPage((p) =>
-                          Math.min(classTotalPages, p + 1)
-                        )
-                      }
-                      aria-label="Next page"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
+            <ClassPicker
+              open={classOpen}
+              onOpenChange={setClassOpen}
+              classes={classes}
+              selectedKey={classKey}
+              hasStudent={student !== null}
+              isPending={optionsQuery.isPending}
+              onPick={(key) => setClassKey(key)}
+            />
 
             <Button
               type="button"
