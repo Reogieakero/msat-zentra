@@ -22,7 +22,7 @@ import type {
   AdmCaseRow,
   AdmHistoryEvent,
 } from "@/services/coordinator/coordinator.types";
-import { stageOrder } from "@/app/teacher/advisory/adm-cases/components/adm-cases-data";
+import { stageOrder } from "@/services/teacher/admCases.labels";
 import trackStyles from "@/app/teacher/advisory/adm-cases/components/AdmCaseDialog.module.css";
 
 export interface HistoryTarget {

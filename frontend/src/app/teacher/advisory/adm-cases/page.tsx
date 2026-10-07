@@ -9,11 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { writeLastViewedReferralId } from "../referrals/last-viewed";
 import { AdmCaseCard } from "./components/AdmCaseCard";
 import { AdmCaseRail } from "./components/AdmCaseRail";
-import {
-  fetchMyAdmCases,
-  type AdmCase,
-  type MyAdmCasesPage,
-} from "./components/adm-cases-data";
+import { fetchMyAdmCases } from "@/services/teacher/admCases.service";
+import type {
+  AdmCase,
+  MyAdmCasesPage,
+} from "@/services/teacher/admCases.types";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/adm-cases.module.css";

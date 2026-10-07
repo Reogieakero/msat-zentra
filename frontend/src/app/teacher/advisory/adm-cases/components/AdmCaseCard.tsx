@@ -1,10 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  initialsOf,
-  type AdmCase,
-} from "./adm-cases-data";
+import { initialsOf } from "@/services/teacher/admCases.labels";
+import type { AdmCase } from "@/services/teacher/admCases.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
 interface AdmCaseCardProps {

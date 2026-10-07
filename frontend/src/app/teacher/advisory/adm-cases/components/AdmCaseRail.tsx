@@ -7,8 +7,8 @@ import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
 import {
   gradeLabel,
   stageOrder,
-  type AdmCase,
-} from "./adm-cases-data";
+} from "@/services/teacher/admCases.labels";
+import type { AdmCase } from "@/services/teacher/admCases.types";
 import { AdmTrackingTimeline } from "@/components/adm-tracker/AdmTrackingTimeline";
 import type { TrackerCaseInput } from "@/components/adm-tracker/adm-stage-activity";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
