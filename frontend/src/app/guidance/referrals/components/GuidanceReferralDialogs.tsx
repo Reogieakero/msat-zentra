@@ -21,19 +21,13 @@ import type {
 import {
   SESSION_KIND_OPTIONS,
   combineDateTime,
-  formatDateTime,
-  sessionTypeLabel,
 } from "./guidance-referrals-format";
 import {
   SessionDatePicker,
   SessionTimePicker,
 } from "./session-datetime-picker";
 import { FormDropdown } from "./form-dropdown";
-import { BookSessionDialog } from "@/components/session-booking/BookSessionDialog";
-import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/session-booking/FinishSessionDialog";
-import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
-import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
-import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
+import { GuidanceSessionDialogs } from "./GuidanceSessionDialogs";
 import styles from "./GuidanceReferralDialogs.module.css";
 
 export interface GuidanceActionDialogs {
@@ -633,127 +627,14 @@ export function GuidanceReferralDialogs({
         </DialogContent>
       </Dialog>
 
-      {/* Schedule a session — shared book-session modal */}
-      {dialogs.schedule && (
-        <BookSessionDialog
-          open
-          onClose={() => closeDialog("schedule")}
-          onSubmit={(fields) =>
-            handleAction("schedule", {
-              scheduledAt: fields.scheduledAt,
-              sessionType: fields.sessionType as CounselingSessionType,
-              ...(fields.venue ? { venue: fields.venue } : {}),
-            })
-          }
-          description={`Book a counseling session${activeRow ? ` for ${activeRow.student}` : ""}.`}
-          venueHint="Held at the guidance office unless another venue is given."
-          venuePlaceholder="e.g. Guidance office"
-          showSessionType
-          sessionTypeOptions={SESSION_KIND_OPTIONS}
-          hasActiveSession={
-            !!activeRow?.sessions.some((s) => s.status === "scheduled")
-          }
-          busy={isActionPending}
-          idPrefix="ref-sess"
-        />
-      )}
-
-      {/* Mark a session done — shared finish modal */}
-      {dialogs.finish && (
-        <SharedFinishSessionDialog
-          open
-          onClose={() => closeDialog("finish")}
-          onSubmit={(fields) => {
-            if (!activeSession?.id) return;
-            handleAction("finish", {
-              sessionId: activeSession.id,
-              sessionNotes: fields.sessionNotes,
-              ...(fields.outcome ? { outcome: fields.outcome } : {}),
-              ...(fields.followUpSession
-                ? {
-                    followUpSession: {
-                      scheduledAt: fields.followUpSession.scheduledAt,
-                      sessionType:
-                        fields.followUpSession.sessionType as CounselingSessionType,
-                      ...(fields.followUpSession.venue
-                        ? { venue: fields.followUpSession.venue }
-                        : {}),
-                    },
-                  }
-                : {}),
-            });
-          }}
-          description={
-            activeSession
-              ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)}${activeSession.venue ? ` · ${activeSession.venue}` : ""}`
-              : "Record what happened in this session."
-          }
-          followUpTitle="Book a follow-up session (optional)"
-          followUpHint="If this needs another talk, book it now so it stays on the plan."
-          followUpDateLabel="Follow-up date"
-          followUpTimeLabel="Follow-up time"
-          venuePlaceholder="e.g. Guidance office"
-          showSessionType
-          sessionTypeOptions={SESSION_KIND_OPTIONS}
-          busy={isActionPending}
-          idPrefix="ref-done"
-        />
-      )}
-
-      {/* Move a session — shared reschedule modal */}
-      {dialogs.move && (
-        <SharedRescheduleSessionDialog
-          open
-          onClose={() => closeDialog("move")}
-          onSubmit={(scheduledAt) => {
-            if (!activeSession?.id) return;
-            handleAction("move", { sessionId: activeSession.id, scheduledAt });
-          }}
-          description={
-            activeSession
-              ? `Currently ${formatDateTime(activeSession.scheduledAt)}. Pick the new date and time.`
-              : "Pick the new date and time."
-          }
-          busy={isActionPending}
-          idPrefix="ref-move"
-        />
-      )}
-
-      {/* Cancel a session — shared cancel modal */}
-      {dialogs.cancelSess && (
-        <SharedCancelSessionDialog
-          open
-          onClose={() => closeDialog("cancelSess")}
-          onSubmit={(reason) => {
-            if (!activeSession?.id) return;
-            handleAction("cancelSess", {
-              sessionId: activeSession.id,
-              ...(reason ? { cancelReason: reason } : {}),
-            });
-          }}
-          description={
-            activeSession
-              ? `${sessionTypeLabel(activeSession.sessionType)} · ${formatDateTime(activeSession.scheduledAt)} will be cancelled.`
-              : "This session will be cancelled."
-          }
-          keepLabel="Keep session"
-          busy={isActionPending}
-          idPrefix="ref-cancel"
-        />
-      )}
-
-      {/* Delete a cancelled session — shared delete confirm */}
-      {dialogs.deleteSess && (
-        <SharedDeleteSessionDialog
-          open
-          onClose={() => closeDialog("deleteSess")}
-          onConfirm={() => {
-            if (!activeSession?.id) return;
-            handleAction("deleteSess", { sessionId: activeSession.id });
-          }}
-          busy={isActionPending}
-        />
-      )}
+      <GuidanceSessionDialogs
+        dialogs={dialogs}
+        activeRow={activeRow}
+        activeSession={activeSession}
+        isActionPending={isActionPending}
+        closeDialog={closeDialog}
+        handleAction={handleAction}
+      />
 
       {/* Finish & close with strict requirements */}
       <Dialog open={dialogs.resolve} onOpenChange={(next) => { if (!next && isActionPending) return; closeDialog("resolve") }}>
