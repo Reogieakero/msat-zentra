@@ -17,7 +17,7 @@ import type {
 import {
   buildGuidanceAdmInsights,
   buildGuidanceAdmReferrals,
-} from "./components/guidance-adm-report-data";
+} from "@/services/guidance/adm.reports";
 import { GuidanceAdmInsights } from "./components/GuidanceAdmInsights";
 import { GuidanceAdmReports } from "./components/guidance-adm-reports";
 import pageStyles from "../pages.module.css";

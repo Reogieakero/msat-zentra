@@ -44,10 +44,8 @@ import {
 import { FormIcon } from "../../../adm/components/FormIcon";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
-import {
-  buildGcForm03Data,
-  type GcForm03Data,
-} from "@/app/guidance/adm/components/gcform03-data";
+import { buildGcForm03Data } from "@/services/guidance/gcform03.service";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import {
   fetchOcForm01Detail,
   type OcForm01Detail,

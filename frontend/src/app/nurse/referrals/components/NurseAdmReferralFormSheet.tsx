@@ -6,7 +6,7 @@ import {
   AdmReferralFormSheet,
   type AdmReferralFormDraft,
 } from "@/components/adm-referral-form/AdmReferralFormPage";
-import { CONCERN_OPTIONS, type GcForm03Data } from "@/app/guidance/adm/components/gcform03-data";
+import { CONCERN_OPTIONS, type GcForm03Data } from "@/services/guidance/gcform03.types";
 import { confirmNurseReferralAndEndorse } from "@/services/nurse/referrals.service";
 import type {
   NurseAdmReferralForm,

@@ -17,8 +17,8 @@ import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/
 import {
   buildGcForm03Data,
   consultRecommendation,
-  type GcForm03Data,
-} from "../../adm/components/gcform03-data";
+} from "@/services/guidance/gcform03.service";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import { GcForm03PreviewDialog } from "../../adm/components/GcForm03PreviewDialog";
 import type {
   CounselingSessionItem,

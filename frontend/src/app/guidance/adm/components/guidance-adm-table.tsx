@@ -28,8 +28,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type {
   GuidanceAdmCase,
   GuidanceAdmSummary,
-} from "./guidance-adm-data";
-import { reviewAdmConsultation } from "./guidance-adm-data";
+} from "@/services/guidance/adm.types";
+import { reviewAdmConsultation } from "@/services/guidance/adm.service";
 import { AdmReviewDialog } from "./AdmReviewDialog";
 import { GuidanceAdmReferralFormSheet } from "./GuidanceAdmReferralFormSheet";
 import { AdmTrackDialog } from "@/components/adm-tracker/AdmTrackDialog";
@@ -38,8 +38,8 @@ import { fetchOcForm01Detail, type OcForm01Detail } from "@/components/ocform01/
 import {
   buildGcForm03Data,
   consultRecommendation,
-  type GcForm03Data,
-} from "./gcform03-data";
+} from "@/services/guidance/gcform03.service";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import { GcForm03PreviewDialog } from "./GcForm03PreviewDialog";
 import styles from "./guidance-adm.module.css";
 

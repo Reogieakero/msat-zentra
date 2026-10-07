@@ -6,11 +6,11 @@ import {
   AdmReferralFormSheet,
   type AdmReferralFormDraft,
 } from "@/components/adm-referral-form/AdmReferralFormPage";
-import type { GuidanceAdmCase } from "./guidance-adm-data";
-import { listAdmConsultationSessions, reviewAdmConsultation } from "./guidance-adm-data";
+import type { GuidanceAdmCase } from "@/services/guidance/adm.types";
+import { listAdmConsultationSessions, reviewAdmConsultation } from "@/services/guidance/adm.service";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
-import type { GcForm03Data } from "./gcform03-data";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 
 /**
  * Guidance GCForm-03 fill-up sheet — shared fill-up UI opening in place

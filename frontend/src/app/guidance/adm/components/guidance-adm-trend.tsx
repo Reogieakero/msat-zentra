@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { GuidanceAdmSummary } from "./guidance-adm-data";
+import type { GuidanceAdmSummary } from "@/services/guidance/adm.types";
 import styles from "./guidance-adm-reports.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {

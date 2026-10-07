@@ -11,7 +11,7 @@ import {
   bookAdmConsultationSession,
   listAdmConsultationSessions,
   reviewAdmConsultation,
-} from "./guidance-adm-data";
+} from "@/services/guidance/adm.service";
 import { dismissReferral } from "@/services/guidance/referrals.service";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 

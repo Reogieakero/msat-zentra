@@ -9,7 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { GuidanceAdmStageFilter } from "./guidance-adm-data";
+import type { GuidanceAdmStageFilter } from "@/services/guidance/adm.types";
 import styles from "./guidance-adm-filters.module.css";
 
 export const ADM_STAGE_OPTIONS: { value: GuidanceAdmStageFilter; label: string }[] = [

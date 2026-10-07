@@ -14,10 +14,8 @@ import {
   type OcForm01Detail,
 } from "@/components/ocform01/ocform01";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
-import {
-  buildGcForm03Data,
-  type GcForm03Data,
-} from "@/app/guidance/adm/components/gcform03-data";
+import { buildGcForm03Data } from "@/services/guidance/gcform03.service";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import { anecdotalCategoryColor } from "@/app/guidance/referrals/components/guidance-referrals-format";
 import {
   admCaseStatusVariant,

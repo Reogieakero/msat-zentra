@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadGcForm03 } from "./gcform03-workbook";
-import type { GcForm03Data } from "./gcform03-data";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import styles from "./GcForm03PreviewDialog.module.css";
 
 interface GcForm03PreviewDialogProps {

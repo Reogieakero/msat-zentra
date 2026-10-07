@@ -1,19 +1,16 @@
+// Referrals Report + insights derivation for the guidance desk — same
+// contents as the nurse Referrals Report (`nurse/adm`), but over the
+// guidance referrals scope (ADM + Counseling tracks) instead of the nurse
+// scope (clinic + ADM).
+//
+// Pure derivation from the desk-wide referral list (every status: pending
+// through dismissed), so insights, charts, and counts can never disagree.
+// Waiting/response clocks derive from the referral `date` (YYYY-MM-DD)
+// because `GuidanceReferralItem` carries no server `waitingDays` field.
 import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
-} from "@/services/guidance/guidance.types";
-
-/**
- * Referrals Report derivation for the guidance desk — same contents as the
- * nurse Referrals Report (`nurse/adm`), but over the guidance referrals
- * scope (ADM + Counseling tracks) instead of the nurse scope
- * (clinic + ADM).
- *
- * Pure derivation from the desk-wide referral list (every status: pending
- * through dismissed), so insights, charts, and counts can never disagree.
- * Waiting/response clocks derive from the referral `date` (YYYY-MM-DD)
- * because `GuidanceReferralItem` carries no server `waitingDays` field.
- */
+} from "./guidance.types";
 
 export interface GuidanceAdmReportActionCount {
   action: string;

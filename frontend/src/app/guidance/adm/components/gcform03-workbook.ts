@@ -1,10 +1,10 @@
 import type { Workbook, Worksheet } from "exceljs";
-import type { GcForm03Data } from "./gcform03-data";
+import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 import {
   splitGcForm03Block,
   templateConcernLabel,
   templateOthersLabel,
-} from "./gcform03-data";
+} from "@/services/guidance/gcform03.service";
 
 /**
  * Fill engine for the official GCForm-03 Referral Form template

@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type {
   GuidanceAdmReferralsData,
   GuidanceAdmReportActionCount,
-} from "./guidance-adm-report-data";
+} from "@/services/guidance/adm.reports";
 import styles from "./guidance-adm-reports.module.css";
 
 const TOOLTIP_STYLE: React.CSSProperties = {

@@ -14,16 +14,18 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { fetchOcForm01Detail } from "@/components/ocform01/ocform01";
 import { SessionDatePicker } from "@/app/guidance/referrals/components/session-datetime-picker";
 import { ClinicDatePicker, ClinicTimePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
-import type { GuidanceAdmCase } from "@/app/guidance/adm/components/guidance-adm-data";
+import type { GuidanceAdmCase } from "@/services/guidance/adm.types";
 import {
   buildGcForm03Data,
   clearGcForm03Draft,
-  CONCERN_OPTIONS,
   loadGcForm03Draft,
   sanitizeGcForm03Draft,
   saveGcForm03Draft,
+} from "@/services/guidance/gcform03.service";
+import {
+  CONCERN_OPTIONS,
   type GcForm03Data,
-} from "@/app/guidance/adm/components/gcform03-data";
+} from "@/services/guidance/gcform03.types";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
 import pageStyles from "@/app/guidance/pages.module.css";
 import styles from "@/app/guidance/adm/components/guidance-adm.module.css";

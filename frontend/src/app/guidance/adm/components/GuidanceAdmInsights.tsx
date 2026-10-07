@@ -3,7 +3,7 @@
 import type {
   GuidanceAdmInsightsData,
   GuidanceAdmRecommendation,
-} from "./guidance-adm-report-data";
+} from "@/services/guidance/adm.reports";
 import { PRIMARY_STEPS } from "./guidance-adm-reports";
 import styles from "./guidance-adm.module.css";
 
