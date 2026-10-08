@@ -25,8 +25,6 @@ import {
 
 const router = Router();
 
-// Fixed desk band: this mount always serves G11–12, even to record-keeper
-// callers (roles below stay dual for cross-desk reads).
 const BAND = GRADE_BAND_11_12;
 const TAGS = ["registrar", "registrar-academics", "academics"];
 const WRITE_TAGS = ["registrar", "registrar-academics", "academics"];
@@ -40,8 +38,6 @@ function yearOf(req: { termScope?: { schoolYearId: string } | null }) {
   return req.termScope?.schoolYearId ?? null;
 }
 
-// List G11–G12 subjects with live enrollment / pass / fail counts derived from
-// final grades. No mocked data.
 router.get(
   "/subjects",
   requireAuth,
@@ -56,11 +52,6 @@ router.get(
   }
 );
 
-// Registrar "Sections & Subjects" landing overview. Returns the active school
-// year + active term, and every in-band subject with its total enrollment and a
-// per-section breakdown of that enrollment (for the grade-level filter + donut).
-// The subjects "active for the term / school year" are the active school year's
-// subjects (there is no per-term subject switch in this band).
 router.get(
   "/overview",
   requireAuth,
@@ -75,8 +66,6 @@ router.get(
   }
 );
 
-// Create a G11–G12 subject. Codes are unique per grade level, so the same
-// code may exist in both Grade 11 and Grade 12 as separate rows.
 router.post(
   "/subjects",
   requireAuth,
@@ -110,7 +99,6 @@ router.post(
   }
 );
 
-// Update a subject (name + category; code is immutable identity, gradeLevel fixed).
 router.patch(
   "/subjects/:id",
   requireAuth,
@@ -137,7 +125,6 @@ router.patch(
   }
 );
 
-// School years (DB-driven; no hardcoded year lists on the client).
 router.get(
   "/school-years",
   requireAuth,
@@ -159,8 +146,7 @@ router.get(
   cache({ tags: TAGS }),
   async (req, res, next) => {
     try {
-      // Optional ?schoolYearId= lets callers list sections for any year.
-      // Defaults to the session's active School Year — pages no longer ask.
+
       const requestedYearId =
         typeof req.query.schoolYearId === "string" && req.query.schoolYearId.trim()
           ? req.query.schoolYearId.trim()
@@ -174,9 +160,6 @@ router.get(
   }
 );
 
-// Terms for a school year, straight from the database — the Assign Subjects
-// dialog populates its Term picker from here instead of a hardcoded list.
-// Missing term rows (1–3) are backfilled so every year always offers Term 1–3.
 router.get(
   "/terms",
   requireAuth,
@@ -184,7 +167,7 @@ router.get(
   cache({ tags: TAGS }),
   async (req, res, next) => {
     try {
-      // Defaults to the session's active School Year — pages no longer ask.
+
       const requestedYearId =
         typeof req.query.schoolYearId === "string" && req.query.schoolYearId.trim()
           ? req.query.schoolYearId.trim()
@@ -262,7 +245,6 @@ router.patch(
   }
 );
 
-// Teacher assignments (assign a teacher to a subject within a section + term).
 router.get(
   "/teachers",
   requireAuth,
@@ -277,8 +259,6 @@ router.get(
   }
 );
 
-// Single teacher with their full workload/assignment rows for the active
-// school year within the registrar grade band. One row per section+term.
 router.get(
   "/teachers/:id",
   requireAuth,
@@ -353,10 +333,6 @@ router.delete(
   }
 );
 
-// Students in the subject's grade level. Every student in the grade level takes
-// the subject, so this lists ALL of them — including enlisted students without
-// accounts and those who do not yet have a final grade recorded. Live data;
-// final grade / remarks are shown when present.
 router.get(
   "/subjects/:id/students",
   requireAuth,

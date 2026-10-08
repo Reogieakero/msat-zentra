@@ -3,10 +3,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import cardStyles from "./coordinator-enrolled-card.module.css";
 
-/* Full-section loading state that mirrors the enrolled card grid 1:1 —
-   card-shaped mirrors (visual, title, facts, progress bar, meta, CTA) —
-   so skeleton → content swaps with minimal layout shift. Filters stay
-   mounted above; this covers the grid only. */
 export function CoordinatorEnrolledSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <div aria-busy="true" aria-label="Loading enrolled students">

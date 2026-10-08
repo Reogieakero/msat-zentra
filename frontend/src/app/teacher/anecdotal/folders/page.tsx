@@ -64,10 +64,6 @@ function groupByStudent(records: MyAnecdotalRecord[]): StudentGroup[] {
   return [...map.values()].sort((a, b) => (a.latest < b.latest ? 1 : -1));
 }
 
-/**
- * Record folders hub: one folder appears automatically per student with
- * filed GCForm-01 records. Opening a folder shows that student's repository.
- */
 export default function AnecdotalFoldersPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;

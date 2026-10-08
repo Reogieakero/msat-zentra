@@ -72,8 +72,7 @@ function round1(n: number): number {
 }
 
 export function SchoolTrend() {
-  // Same query as the Subjects tab — shared cache, no extra request once
-  // either tab has loaded. Per-take basis, consistent with subject blocks.
+
   const { data, isPending } = useQuery({
     queryKey: ["attendance-section-subject-heatmap", "all"],
     queryFn: async () => {
@@ -95,8 +94,6 @@ export function SchoolTrend() {
   const subjects = React.useMemo(() => data?.subjects ?? [], [data]);
   const termNumber = data?.term?.termNumber;
 
-  // Grouping: one line per subject, or one line per grade level (pooled
-  // across that grade's sections). Persisted per browser.
   const [mode, setMode] = usePersistentState<"subject" | "grade">(
     "zentra.attendance.trend.mode",
     "subject"
@@ -125,13 +122,10 @@ export function SchoolTrend() {
     [mode, subjects, grades]
   );
 
-  // Daily school rate per series: pooled present ÷ pooled enrolled.
-  // Subjects pool across offering sections; grades pool across the grade's
-  // sections and subjects. Plus the mean-of-series average.
   const chartData = React.useMemo(() => {
     if (sections.length === 0 || series.length === 0) return [];
     const axis = sections[0]?.days ?? [];
-    // Section → subjectId → cell index (cells align with row.subjects order).
+
     const indexBySection = new Map<string, Map<string, number>>();
     const enrolledBySubject = new Map<string, number>();
     const sectionsByGrade = new Map<string, SubjectRow[]>();
@@ -164,9 +158,7 @@ export function SchoolTrend() {
             present += s.days[di]?.cells[ci]?.present ?? 0;
           }
         } else {
-          // Grade level: pool every take in the grade. The denominator is
-          // headcount × offered subjects (one enrolled slot per take), so
-          // the rate stays 0..100 on the same per-take basis as subjects.
+
           const grade = item.key.slice("grade:".length);
           const members = sectionsByGrade.get(grade) ?? [];
           for (const s of members) {
@@ -188,9 +180,6 @@ export function SchoolTrend() {
     });
   }, [sections, series, mode]);
 
-  // Every series line is a step of the viewer's own primary color (darkest
-  // first) — one family, not many hues. The school-average line keeps its
-  // contrast dashed style below.
   const colors = usePrimaryScale(series.length, profile.data?.primaryColor);
   const colorOf = React.useCallback(
     (i: number) => colors[i % Math.max(1, colors.length)] ?? "#888888",
@@ -207,12 +196,8 @@ export function SchoolTrend() {
     return config;
   }, [series, colorOf]);
 
-  // Clickable legend state. Null = defaults (only the average line and
-  // the weakest series visible); the first toggle materializes the set so
-  // manual picks survive refetches. Mode switches reset to defaults.
   const [hidden, setHidden] = React.useState<Set<string> | null>(null);
-  // Mode switches reset to defaults — adjusted during render, never in an
-  // effect (avoids cascading renders).
+
   const [prevMode, setPrevMode] = React.useState(mode);
   if (prevMode !== mode) {
     setPrevMode(mode);
@@ -227,8 +212,7 @@ export function SchoolTrend() {
     });
   };
   const resetLines = () => setHidden(null);
-  // Worst-first ranking. Single-expression memo body (no early return, no
-  // in-place mutation) so the React Compiler can preserve this memoization.
+
   const ranked = React.useMemo(
     () =>
       chartData.length === 0
@@ -256,10 +240,6 @@ export function SchoolTrend() {
   const seriesBelow80 = ranked.filter((r) => r.avg < 80).length;
   const atRisk = (weakest?.avg ?? 100) < 80;
 
-  // Defaults hide every series except the weakest (+ the average, which is
-  // never hidden by default). Used until the first manual toggle. Plain
-  // derivation (not memoized): the compiler cannot preserve memoization of
-  // a freshly built Set, and rebuilding it per render is negligible.
   const defaultHidden = (() => {
     const weakestKey = weakest?.key;
     return new Set(

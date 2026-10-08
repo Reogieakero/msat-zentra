@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { ADM_STAGES, type AdmStage } from "../../services/adm.js";
 
-// Request validation for the ADM Coordinator desk (POST/PATCH bodies).
-// Business-rule validation (stage gates, endorsement, locks) lives in
-// src/services/adm/*.service.ts; these schemas only check request shape.
-
 export const profileSchema = z.object({
   studentId: z.string().min(1).optional(),
   referralId: z.string().min(1),
@@ -29,7 +25,7 @@ export const meetingBookSchema = z.object({
   venue: z.enum(["school", "home"]).default("school"),
   minutesOfMeeting: z.string().optional(),
   attendanceLogbookRef: z.string().optional(),
-  // Staff invited to the meeting (guidance / nurse / adviser user ids).
+
   inviteeIds: z.array(z.string().uuid()).max(10).optional(),
 });
 
@@ -37,7 +33,7 @@ export const meetingRescheduleSchema = z.object({
   meetingDatetime: z.string().datetime(),
   venue: z.enum(["school", "home"]).default("school"),
   attendanceLogbookRef: z.string().trim().max(200).optional(),
-  // Omitted = keep the current invite list; provided = replace it.
+
   inviteeIds: z.array(z.string().uuid()).max(10).optional(),
 });
 
@@ -46,10 +42,7 @@ export const meetingOutcomeSchema = z.object({
   minutesOfMeeting: z.string().optional(),
   attendanceLogbookRef: z.string().optional(),
   parentConfirmedAt: z.string().datetime().optional(),
-  // People present, logged by the ADM Coordinator with the outcome:
-  // at most 20 { name, role } entries. Entries checked off the invitee
-  // checklist carry the invited staff account id (userId) so attendance
-  // links back to the invite.
+
   attendees: z
     .array(
       z.object({

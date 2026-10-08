@@ -14,7 +14,6 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Coordinator settings sections — preferences only. */
 export function coordinatorSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },

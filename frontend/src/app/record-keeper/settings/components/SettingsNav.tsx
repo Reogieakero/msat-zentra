@@ -14,7 +14,6 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Record Keeper settings sections — preferences only. */
 export function recordKeeperSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },

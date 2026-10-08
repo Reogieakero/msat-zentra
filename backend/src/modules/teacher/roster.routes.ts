@@ -20,10 +20,6 @@ function ctxOf(req: {
   };
 }
 
-// POST /api/teacher/advisory/roster — enlist a student into the adviser's
-// section roster (enrolled, no login account yet). When the student later
-// registers with the same LRN, the registrar's breakdown links them.
-// Adviser-only (404 otherwise).
 router.post(
   "/roster",
   requireAuth,
@@ -32,16 +28,14 @@ router.post(
   async (req, res, next) => {
     try {
       const body = req.body as { fullName: string; lrn: string; sectionId?: string };
-      // Enlistments are saved under the session's active School Year.
+
       const yearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
       const response = await enlistRoster(ctxOf(req), {
         fullName: body.fullName,
         lrn: body.lrn,
         sectionId: body.sectionId,
       }, yearId);
-      // Respond the moment the row exists — audit, cache invalidation,
-      // and the bell fanout all run behind the response so enlisting
-      // feels instant.
+
       res.status(201).json(response);
     } catch (e) {
       next(e);
@@ -49,14 +43,6 @@ router.post(
   }
 );
 
-// GET /api/teacher/advisory/attendance — submitted marks for one section +
-// date (+ subject & slot) — per-subject sheet prefill.
-//
-// Subject path (subjectId present) filters by (section, subject, day, slot);
-// legacy path filters by session. Without sectionId the scope stays the
-// caller's teachable sections (advisory UNION assignments UNION code-linked
-// timetable sections); with sectionId the scope narrows to that section
-// (403 unless teachable), so two sections sharing a subject never mix marks.
 router.get(
   "/attendance",
   requireAuth,

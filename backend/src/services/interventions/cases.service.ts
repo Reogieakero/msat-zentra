@@ -23,9 +23,6 @@ export interface StartInterventionInput {
   firstSession?: { scheduledAt: string; sessionType: string; venue?: string };
 }
 
-// Start a follow-up for a live at-risk student who has no open one yet —
-// same intake as accepting a referral: urgency, first impressions, and an
-// optional first counseling session booked on the spot.
 export async function startIntervention(
   ctx: InterventionContext,
   input: StartInterventionInput,
@@ -154,7 +151,7 @@ export async function reviewIntervention(ctx: InterventionContext, interventionI
         : {}),
     },
   });
-  // Best-effort fan-outs after the confirmed response (never block it).
+
   if (row.assignedTo && row.assignedTo !== ctx.userId) {
     void fanoutNotification({
       userId: row.assignedTo,
@@ -164,7 +161,7 @@ export async function reviewIntervention(ctx: InterventionContext, interventionI
       message: `Your intervention was ${input.decision} by guidance`,
     });
   }
-  // Reviewer receipt: bell row for the acting counselor.
+
   void fanoutNotification({
     userId: ctx.userId,
     sourceTable: "interventions",
@@ -189,8 +186,7 @@ export async function assignIntervention(
   if (row.outcomeStatus === "resolved") {
     throw new AppError(400, "INVALID_ACTION", "A resolved intervention can no longer be reassigned");
   }
-  // No hand-offs while a session is still upcoming — finish or cancel it
-  // first so the booked session never strands with the wrong handler.
+
   const upcoming = await prisma.counselingSession.count({
     where: { interventionId: row.id, status: "scheduled" },
   });
@@ -217,7 +213,7 @@ export async function assignIntervention(
     oldValue: { assignedTo: row.assignedTo },
     newValue: { assignedTo: assigneeId },
   });
-  // Best-effort fan-out after the confirmed response (never blocks it).
+
   if (assigneeId && assigneeId !== ctx.userId) {
     void fanoutNotification({
       userId: assigneeId,
@@ -249,18 +245,12 @@ export async function recordOutcome(
   ) {
     throw new AppError(400, "INVALID_ACTION", "Review the recommendation before closing the outcome");
   }
-  // No outcome while a session is still upcoming — finish or cancel it
-  // first (same rule as endorsing: the booked session decides the case).
-  // Strict close-out (same rule as referrals): a finished session plus a
-  // closing note are mandatory before a follow-up can be closed — except
-  // a discontinue close (unresolved) for a student whose live risk has
-  // genuinely cleared to Low: there is nothing left to counsel, so the
-  // closing note alone suffices and the case leaves the queue.
+
   const closing =
     input.outcomeStatus === "resolved" ||
     input.outcomeStatus === "unresolved";
   if (closing) {
-    // Independent counts run in parallel.
+
     const [upcomingCount, doneCount] = await Promise.all([
       prisma.counselingSession.count({
         where: { interventionId: row.id, status: "scheduled" },
@@ -305,7 +295,7 @@ export async function recordOutcome(
     oldValue: { outcomeStatus: row.outcomeStatus },
     newValue: { outcomeStatus: input.outcomeStatus },
   });
-  // Best-effort fan-outs after the confirmed response (never block it).
+
   if (row.assignedTo && row.assignedTo !== ctx.userId) {
     void fanoutNotification({
       userId: row.assignedTo,

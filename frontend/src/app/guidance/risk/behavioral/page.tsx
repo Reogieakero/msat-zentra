@@ -32,20 +32,13 @@ import styles from "../../pages.module.css";
 
 const GUIDANCE_BEHAVIORAL_PAGE_SIZE = 15;
 
-/**
- * Guidance behavioral records — fully live. Lists only filings an adviser
- * explicitly referred to guidance (`/api/guidance/anecdotal`): category
- * flags and counts that feed the behavioral risk flag (≥ 1 report).
- * Students and parents later see the level + category only, never the
- * write-up — and that write-up never leaves the case file here either.
- */
 export default function GuidanceBehavioralPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
   const [category, setCategory] = React.useState<BehavioralCategoryFilter>("all");
   const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+
   const query = useDebouncedValue(queryInput.trim(), 300);
 
   const { data, isPending, isError, refetch, isFetching } =
@@ -65,7 +58,6 @@ export default function GuidanceBehavioralPage() {
       placeholderData: keepPreviousData,
     });
 
-  // Derived, never setState-in-effect.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 
@@ -81,7 +73,6 @@ export default function GuidanceBehavioralPage() {
           <Skeleton style={{ width: "8rem", height: "1.5rem" }} />
         </div>
 
-        {/* Donut card mirror — chart + legend + interpretation. */}
         <Card className={styles.card} aria-hidden="true">
           <CardHeader>
             <CardTitle className={styles.sectionTitle}>
@@ -93,7 +84,7 @@ export default function GuidanceBehavioralPage() {
           </CardHeader>
           <CardContent>
             <div className={donutStyles.chartRow}>
-              {/* Donut diameter is constrained by the 168px chart height. */}
+
               <Skeleton style={{ width: "10.5rem", height: "10.5rem", borderRadius: "50%", flexShrink: 0 }} />
               <div style={{ flex: "1 1 12rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
                 {[0, 1, 2, 3, 4].map((i) => (
@@ -105,7 +96,6 @@ export default function GuidanceBehavioralPage() {
           </CardContent>
         </Card>
 
-        {/* Feed card mirror — header action, filter row, cards grid, pager. */}
         <Card className={styles.card} aria-hidden="true">
           <CardHeader>
             <CardTitle className={styles.sectionTitle}>

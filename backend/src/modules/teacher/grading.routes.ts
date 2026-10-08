@@ -32,11 +32,6 @@ async function gradingCtxOf(req: Request) {
   };
 }
 
-// GET /api/teacher/grading/classes/:assignmentId — everything the class
-// workspace needs: assignment meta, section students (registered profiles
-// with their final grade for this subject + term), enlisted students without
-// accounts (read-only — scoring requires a profile), components with weights,
-// and assessments with per-student scores.
 router.get(
   "/classes/:assignmentId",
   requireAuth,
@@ -50,8 +45,6 @@ router.get(
   }
 );
 
-// POST /api/teacher/grading/classes/:assignmentId/components — create or
-// update the weight for one WW/PT/E category of the class subject + term.
 router.post(
   "/classes/:assignmentId/components",
   requireAuth,
@@ -67,7 +60,7 @@ router.post(
         componentType,
         weightPercentage,
       });
-      // Weights reshape every final in the subject + term — recompute them now.
+
       await invalidateGradingCaches();
 
       res.status(201).json(component);
@@ -77,8 +70,6 @@ router.post(
   }
 );
 
-// POST /api/teacher/grading/classes/:assignmentId/components/preset — apply
-// a DepEd Order No. 8 weight set (WW/PT/E) to all three categories at once.
 router.post(
   "/classes/:assignmentId/components/preset",
   requireAuth,
@@ -99,9 +90,6 @@ router.post(
   }
 );
 
-// POST /api/teacher/grading/classes/:assignmentId/assessments — add a WW/PT/E
-// assessment (quiz, activity, exam…). The category row is auto-created at
-// weight 0 when missing so entry never blocks on ordering.
 router.post(
   "/classes/:assignmentId/assessments",
   requireAuth,
@@ -130,9 +118,6 @@ router.post(
   }
 );
 
-// PATCH /api/teacher/grading/assessments/:id — rename / rescale / redate.
-// Ownership: the caller must hold an assignment for the assessment's
-// subject + term (components are shared school-wide per subject + term).
 router.patch(
   "/assessments/:id",
   requireAuth,
@@ -155,8 +140,6 @@ router.patch(
   }
 );
 
-// DELETE /api/teacher/grading/assessments/:id — removes the assessment and
-// its encoded scores (same ownership rule as PATCH).
 router.delete(
   "/assessments/:id",
   requireAuth,

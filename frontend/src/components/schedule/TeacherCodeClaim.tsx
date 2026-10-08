@@ -23,10 +23,6 @@ interface TeacherCodeClaimProps {
   description: string;
 }
 
-/* Teacher-code claim card — the teacher enters the code next to their name
-   in the master teacher's teacher list, linking their login to that catalog
-   row (subjects + timeslots attach). Shared by teacher/classes and
-   teacher/attendance. Section-grid card design, centered in the viewport. */
 export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) {
   const queryClient = useQueryClient();
   const [code, setCode] = useState("");

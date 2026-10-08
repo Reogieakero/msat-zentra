@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -137,9 +136,7 @@ export default function ClassRecordPage() {
                     const pct = grade?.categories.find((c) => c.componentType === t)?.percentage;
                     return pct == null ? null : pct;
                   };
-                  // Computed / Transmuted / Remarks come from recorded
-                  // assessments only (same engine as the workspace) — never
-                  // across all types, and "—" when nothing is recorded yet.
+
                   return (
                     <tr key={s.id}>
                       <th className={styles.stickyCol} scope="row">

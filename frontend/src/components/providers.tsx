@@ -9,7 +9,6 @@ import { TermSelectOverlay } from "@/components/term/TermSelectOverlay";
 
 type Theme = "light" | "dark";
 
-// Single workspace font (Inter) — the Nunito option was retired.
 export type FontPref = "inter";
 
 type ThemeContextValue = {
@@ -53,7 +52,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(FONT_STORAGE_KEY, next);
     } catch {
-      /* ignore storage failures */
+
     }
   }, []);
 
@@ -105,7 +104,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      /* ignore storage failures */
+
     }
   }, []);
 
@@ -133,12 +132,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
         queries: {
-          // Read-heavy role dashboards (Principal/Registrar) are also cached at
-          // the API layer (Upstash Redis, see backend/src/lib/cache.ts). Keep a
-          // client-side window so navigations between tabs feel instant without
-          // hammering the backend. Background refetch on window focus stays off
-          // on purpose: returning to a fresh page shows cached data immediately
-          // with no skeleton flash, and mutations invalidate explicitly.
+
           staleTime: 30_000,
             gcTime: 5 * 60_000,
             refetchOnWindowFocus: false,

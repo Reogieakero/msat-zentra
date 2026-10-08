@@ -1,8 +1,3 @@
-// Clinic sessions on one nurse referral: schedule / complete /
-// reschedule / cancel / delete, plus optional photo documentation.
-// Same workflow as the guidance referrals page (POST
-// /api/referrals/:id/sessions*). Nurse sessions are always one-on-one
-// clinic talks at the school clinic unless another venue is given.
 import { apiClient } from "@/lib/api/client";
 import { asArray } from "@/lib/api/payload";
 import type { ClinicAttachment, NurseScheduleSessionInput } from "./nurse.types";
@@ -63,9 +58,6 @@ export async function deleteClinicSession(
   await apiClient.delete(`/api/referrals/${id}/sessions/${sessionId}`);
 }
 
-// Optional documentation on one clinic session: list / upload / remove
-// image attachments. Filing is optional before Done — these helpers only
-// build the evidence trail, they never gate the resolve call.
 export async function listClinicAttachments(
   referralId: string,
   sessionId: string
@@ -106,9 +98,7 @@ export async function uploadClinicAttachments(
     form,
     {
       headers: { "Content-Type": "multipart/form-data" },
-      // Photo uploads (up to 5×5MB) must never hang the spinner forever:
-      // 60s timeout + caller-provided abort on dialog close/unmount.
-      // Never auto-retried — a retry could file duplicates.
+
       timeout: opts?.timeoutMs ?? 60_000,
       ...(opts?.signal ? { signal: opts.signal } : {}),
     }

@@ -19,19 +19,13 @@ import styles from "./components/guidance-anecdotal.module.css";
 
 const GUIDANCE_ANECDOTAL_PAGE_SIZE = 15;
 
-/**
- * Guidance anecdotal repository — same layout as the teacher records page:
- * folder panel + right rail (top referred + legend). Every ADM and
- * counseling case referred to the desk, one folder per case; search + type
- * stay in the panel header.
- */
 export default function GuidanceAnecdotalPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
   const [type, setType] = React.useState<TypeFilter>("");
   const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+
   const query = useDebouncedValue(queryInput.trim(), 300);
 
   const handleQueryInputChange = (value: string) => {
@@ -51,7 +45,6 @@ export default function GuidanceAnecdotalPage() {
       placeholderData: keepPreviousData,
     });
 
-  // Derived, never setState-in-effect.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 

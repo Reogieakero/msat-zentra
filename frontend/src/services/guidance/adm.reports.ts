@@ -1,12 +1,3 @@
-// Referrals Report + insights derivation for the guidance desk — same
-// contents as the nurse Referrals Report (`nurse/adm`), but over the
-// guidance referrals scope (ADM + Counseling tracks) instead of the nurse
-// scope (clinic + ADM).
-//
-// Pure derivation from the desk-wide referral list (every status: pending
-// through dismissed), so insights, charts, and counts can never disagree.
-// Waiting/response clocks derive from the referral `date` (YYYY-MM-DD)
-// because `GuidanceReferralItem` carries no server `waitingDays` field.
 import type {
   GuidanceReferralItem,
   GuidanceRiskLevel,
@@ -28,9 +19,9 @@ export interface GuidanceAdmReferralsData {
   total: number;
   actions: GuidanceAdmReportActionCount[];
   trend: GuidanceAdmReportTrendWeek[];
-  /** ADM-track cases only, newest referred first — mirrors the nurse review `queue`. */
+
   queue: GuidanceReferralItem[];
-  /** Every referral on the guidance desk (ADM + Counseling), newest first. */
+
   desk: GuidanceReferralItem[];
 }
 
@@ -115,7 +106,6 @@ function wholeDaysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / DAY_MS);
 }
 
-/** Days a case has waited since its referral date (null when unknown). */
 export function guidanceWaitingDays(item: GuidanceReferralItem): number | null {
   const referred = parseDay(item.date);
   if (!referred) return null;
@@ -141,12 +131,6 @@ function titleCase(raw: string): string {
     .join(" ");
 }
 
-/**
- * Action-based status key + label — the guidance-desk vocabulary matching
- * the nurse `deriveActionStatus` order so both Referrals Reports read alike:
- * endorsed ADM first, then terminal states, follow-ups, booked sessions,
- * finished sessions, and anything awaiting action.
- */
 export function deriveGuidanceActionStatus(
   type: string,
   status: string,
@@ -168,13 +152,6 @@ export function deriveGuidanceActionStatus(
   return { key: status, label: titleCase(status) };
 }
 
-/**
- * Desk-wide referrals report — derived from every case on the guidance desk
- * (ADM + Counseling, every status), NOT the ADM pipeline endpoint, so
- * terminal rows are counted too and reports always reflect the current
- * referrals whatever their status. Mirrors `buildNurseAdmReferrals` with the
- * guidance action vocabulary.
- */
 export function buildGuidanceAdmReferrals(
   items: GuidanceReferralItem[]
 ): GuidanceAdmReferralsData {
@@ -193,8 +170,7 @@ export function buildGuidanceAdmReferrals(
   const counts = new Map<string, { label: string; count: number }>();
   for (const row of desk) {
     const action = deriveGuidanceActionStatus(row.type, row.status, row.sessions);
-    // Finished counseling sessions read as Done — same bucket the nurse
-    // overview charts use.
+
     const key = action.key === "done_session" ? "done" : action.key;
     const label = key === "done" ? "Done" : action.label;
     const existing = counts.get(key);
@@ -205,7 +181,6 @@ export function buildGuidanceAdmReferrals(
     .map(([action, { label, count }]) => ({ action, label, count }))
     .sort((a, b) => actionRank(a.action) - actionRank(b.action) || b.count - a.count);
 
-  // Weekly referral trend over the trailing 12 weeks, oldest first.
   const nowMs = Date.now();
   const trend: GuidanceAdmReportTrendWeek[] = [];
   const trendIndex = new Map<string, number>();
@@ -234,10 +209,6 @@ function capitalize(word: string): string {
   return word.length === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-/* First counselor handling per case, in ms after referral — earliest booked
-   session wins (booking is handling); otherwise the latest recorded action
-   when the case visibly moved. Untouched pendings measure nothing, so they
-   stay out of the average. */
 function firstHandlingMs(row: GuidanceReferralItem): number | null {
   const referred = parseDay(row.date)?.getTime();
   if (referred === undefined || !Number.isFinite(referred)) return null;
@@ -253,12 +224,6 @@ function firstHandlingMs(row: GuidanceReferralItem): number | null {
   return null;
 }
 
-/**
- * Referral insights over the whole guidance desk (ADM + Counseling) — key
- * findings, category mix, waiting bottlenecks, and rule-based
- * recommendations. Pure derivation from the same desk list the reports
- * read, so insights and charts can never disagree.
- */
 export function buildGuidanceAdmInsights(
   items: GuidanceReferralItem[],
   riskByStudent: Record<string, GuidanceRiskLevel> = {}
@@ -348,8 +313,6 @@ export function buildGuidanceAdmInsights(
       reason: r.reason || "",
     }));
 
-  // Every count below is track-split so it links to the list that shows
-  // exactly those rows (ADM → ADM cases, counseling → counseling cases).
   const isAdm = (r: { type: string }) => r.type === "ADM";
   const bookedAdm = rows.filter(
     (r) => isAdm(r) && r.sessions.some((s) => s.status === "scheduled")

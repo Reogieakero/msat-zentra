@@ -1,6 +1,3 @@
-// Referral actions for the nurse desk: clinic intake, ADM consultation
-// review, referral-form save/forward, status changes, follow-up notes,
-// and the sessionStorage draft handoff to the dedicated form page.
 import { apiClient } from "@/lib/api/client";
 import type {
   NurseAcceptInput,
@@ -10,8 +7,6 @@ import type {
   SavedNurseAdmForm,
 } from "./nurse.types";
 
-// Clinic intake: accept the case with first impressions and an optional
-// first clinic session booked on the spot (POST /api/referrals/:id/nurse-accept).
 export async function acceptNurseCase(id: string, input: NurseAcceptInput): Promise<void> {
   const body: Record<string, unknown> = {};
   if (input.intakeNotes?.trim()) body.intakeNotes = input.intakeNotes.trim();
@@ -24,13 +19,6 @@ export async function acceptNurseCase(id: string, input: NurseAcceptInput): Prom
   await apiClient.post(`/api/referrals/${id}/nurse-accept`, body);
 }
 
-// ADM consultation review by the nurse (POST /api/referrals/:id/nurse-adm-review).
-// Endorse forwards the case to the ADM coordinator; reject closes it.
-// An optional first clinic session can be booked alongside an endorsement
-// (scheduledAt "YYYY-MM-DDTHH:MM:SS", optional venue), plus the referral
-// form fill-up (concerns / details / actions / follow-up) the nurse
-// completes before forwarding — same gate as the guidance Create-referral
-// flow.
 export async function reviewNurseAdmCase(
   id: string,
   input: { recommendation: string; outcome: "endorse" | "reject"; scheduledAt?: string; venue?: string; referralForm?: NurseAdmReferralForm },
@@ -60,9 +48,6 @@ function buildReferralFormBody(input: NurseAdmReferralForm | undefined): Record<
   return Object.keys(form).length > 0 ? form : null;
 }
 
-// Save the referral form on the dedicated form page
-// (POST /api/referrals/:id/nurse-referral-form). The case STAYS pending —
-// forwarding to the coordinator happens only through forwardNurseAdmCase.
 export async function saveNurseReferralForm(
   id: string,
   input: { recommendation: string; scheduledAt?: string; venue?: string; referralForm?: NurseAdmReferralForm },
@@ -81,17 +66,10 @@ export async function saveNurseReferralForm(
   await apiClient.post(`/api/referrals/${id}/nurse-referral-form`, body);
 }
 
-// Explicit forward of a form-ready ADM case to the ADM coordinator
-// (POST /api/referrals/:id/nurse-adm-forward). Server rejects cases whose
-// referral form was never completed.
 export async function forwardNurseAdmCase(id: string): Promise<void> {
   await apiClient.post(`/api/referrals/${id}/nurse-adm-forward`);
 }
 
-// Confirm + auto-endorse in one action: save the referral form, then forward
-// the case to the ADM coordinator immediately. Saving is retry-safe
-// (re-saving while pending just refreshes the answers), so if the forward
-// fails the nurse can safely retry Confirm.
 export async function confirmNurseReferralAndEndorse(
   id: string,
   input: { recommendation: string; scheduledAt?: string; venue?: string; referralForm?: NurseAdmReferralForm },
@@ -108,8 +86,7 @@ function parseAdmFormParts(body: string): SavedNurseAdmForm {
     actions: "",
     followUp: "",
   };
-  // Continuations (an answer containing " | ") rejoin the previous field, so
-  // the parse is a lossless round-trip of what the save endpoint wrote.
+
   let current: "recommendation" | "details" | "actions" | "followUp" | "concerns" = "recommendation";
   const appendText = (key: "recommendation" | "details" | "actions" | "followUp", value: string) => {
     out[key] = out[key] ? `${out[key]} | ${value}` : value;
@@ -144,10 +121,6 @@ function parseAdmFormParts(body: string): SavedNurseAdmForm {
   return out;
 }
 
-// Read a confirmed referral form back out of the internal note so the
-// referrals page can display the filled (autofilled) template. Supports the
-// current `[ADM endorsed] …` line and the legacy `[ADM consult]` /
-// `[ADM referral]` lines. Returns null when no saved form is found.
 export function parseSavedNurseAdmForm(notes: string | null | undefined): SavedNurseAdmForm | null {
   if (!notes) return null;
   const lines = notes
@@ -175,8 +148,6 @@ export function parseSavedNurseAdmForm(notes: string | null | undefined): SavedN
   };
 }
 
-// Status changes the nurse role is allowed to make
-// (POST /api/referrals/:id/status).
 export async function updateNurseReferralStatus(
   id: string,
   status: NurseReferralStatus,
@@ -188,23 +159,17 @@ export async function updateNurseReferralStatus(
   );
 }
 
-// Follow-up notes on the underlying anecdotal record
-// (POST /api/anecdotal/:id/followups).
 export async function addNurseFollowUpNote(anecdotalId: string, notes: string): Promise<void> {
   await apiClient.post(`/api/anecdotal/${anecdotalId}/followups`, { notes });
 }
 
-// Stash passed from the Review ADM dialog to the dedicated referral form
-// page (/nurse/adm/referral/[referralId]) — same handoff pattern as the
-// guidance Create-referral flow: the typed recommendation plus the optional
-// clinic session travel in sessionStorage so the form page opens pre-filled.
 export const NURSE_REFERRAL_DRAFT_KEY = "zentra.nurse-adm-referral-draft";
 
 export function saveNurseReferralDraft(draft: NurseReferralDraft): void {
   try {
     window.sessionStorage.setItem(NURSE_REFERRAL_DRAFT_KEY, JSON.stringify(draft));
   } catch {
-    /* Private mode — the form page still works, fields start empty. */
+
   }
 }
 

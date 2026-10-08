@@ -3,10 +3,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-// Shared section grid card for the scheduling workspaces — one design used
-// by both teacher/schedule and principal/academics/schedule: glow, grade
-// badge, avatar, status dot + label, teacher block, optional hint line,
-// hover. Same grid-card shell as the principal's assign grid.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { STATUS_META } from "@/app/principal/academics/assign/components/status-dots";
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
@@ -20,9 +16,6 @@ export interface StatusEntry {
 
 export type SectionCardStatus = "submitted" | "returned" | "approved" | "draft" | "empty";
 
-// Card status legend — dot + label follow the same priority as the detail
-// views: submitted beats returned, returned beats draft, approved only when
-// every slot is approved, empty when nothing is scheduled yet.
 export function sectionCardStatus(entries: StatusEntry[]): SectionCardStatus {
   if (entries.some((e) => e.status === "SUBMITTED")) return "submitted";
   if (entries.some((e) => e.reviewNote)) return "returned";
@@ -36,15 +29,12 @@ export const SECTION_CARD_STATUS_META: Record<
   { color: string; label: string }
 > = {
   submitted: { color: STATUS_META.progress.color, label: "Submitted" },
-  // Same amber as the detail-view returned dots.
   returned: { color: "#f59e0b", label: "Returned" },
   approved: { color: STATUS_META.success.color, label: "Approved" },
   draft: { color: STATUS_META.error.color, label: "Draft" },
   empty: { color: STATUS_META.idle.color, label: "Empty" },
 };
 
-// Grade palette (used by the overview profile card — section cards stay
-// in the plain primary shell).
 export const GRADE_GRADIENT: Record<string, { from: string; to: string }> = {
   G7: { from: "#22c55e", to: "#16a34a" },
   G8: { from: "#f59e0b", to: "#d9770f" },
@@ -54,7 +44,6 @@ export const GRADE_GRADIENT: Record<string, { from: string; to: string }> = {
   G12: { from: "#8b5cf6", to: "#7c3aed" },
 };
 
-// Avatar initials from the section name ("Macopa" → "MA", "St. Rosa" → "SR").
 export function sectionInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -64,33 +53,21 @@ export function sectionInitials(name: string): string {
 }
 
 interface SectionScheduleCardProps {
-  /** Link mode (grids that open their own URL). Omit when using onSelect. */
   href?: string;
-  /** Button mode (inline master-detail pickers like attendance). */
   onSelect?: () => void;
   selected?: boolean;
   ariaLabel: string;
-  /** Grade badge hides when absent (e.g. attendance sections without grade data). */
   gradeLevel?: string | null;
-  /** Custom floating pill (e.g. a live metric). Overrides the grade badge. */
   pill?: ReactNode;
-  /** Rendered inside the avatar circle instead of name initials. */
   avatarIcon?: ReactNode;
-  /** Field label above the title. Defaults to "Section". */
   titleLabel?: string;
   sectionName: string;
   adviserName: string | null;
-  /** Schedule-status entries. Omit when `statusMeta` is given directly. */
   timetableEntries?: StatusEntry[];
-  /** Explicit dot + label, bypassing the timetable computation. */
   statusMeta?: { color: string; label: string };
-  /** Bottom hint line (e.g. "No schedule yet — tap to set up"). Omit for none. */
   hint?: string | null;
-  /** Replaces the Teacher block (e.g. attendance cards list subjects). */
   middle?: ReactNode;
-  /** Extra content below the hint (e.g. a heatblock grid). */
   children?: ReactNode;
-  /** Selected-ring tone. Defaults to "primary". */
   tone?: "primary" | "green";
 }
 
@@ -198,8 +175,6 @@ export function SectionScheduleCard({
       </Link>
     );
   }
-  // Static mode — plain card, no navigation (e.g. dashboard tiles with
-  // their own action buttons inside).
   return (
     <article aria-label={ariaLabel} className={className}>
       {inner}

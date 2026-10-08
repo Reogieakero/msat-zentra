@@ -1,4 +1,3 @@
-// Grade-flag board actions for teachers: list, options, raise, resolve.
 import { apiClient } from "@/lib/api/client";
 import { pickList } from "@/lib/api/payload";
 import type {
@@ -21,8 +20,7 @@ export async function fetchFlags(
   const { data } = await apiClient.get<
     GradeFlagRow[] | { data: GradeFlagRow[]; rows: GradeFlagRow[] }
   >(`/api/teacher/grade-flags?${params.toString()}`, { signal: opts?.signal });
-  // Defensive: the endpoint serves bare arrays today and a paginated object
-  // tomorrow — never let a shape change crash the board.
+
   return pickList<GradeFlagRow>(data, "rows", "data");
 }
 

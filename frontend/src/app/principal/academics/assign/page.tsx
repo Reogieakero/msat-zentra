@@ -18,7 +18,6 @@ import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
 import assign from "./components/section-assignments.module.css";
 import page from "./assign.module.css";
 
-// Principal is school-wide — every grade band (G7–G12).
 const GRADES: GradeLevel[] = [7, 8, 9, 10, 11, 12];
 
 type DialogState = {
@@ -26,7 +25,6 @@ type DialogState = {
   sectionId: string;
 };
 
-// Avatar initials from the section name ("Macopa" → "MA", "St. Rosa" → "SR").
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -36,23 +34,20 @@ function initialsOf(name: string): string {
 }
 
 export default function PrincipalAssignPage() {
-  // Global session scope (Login → select → active term). Advisory lives on the
-  // Section row per school year — the scope travels on every request via the
-  // API client's term headers, so this page never asks for it again.
+
   const { activeTerm } = useTerm();
   const schoolYearId = activeTerm?.schoolYearId ?? "";
   const schoolYearName = activeTerm?.schoolYearName ?? "";
 
   const [grade, setGrade] = React.useState<GradeLevel | null>(null);
   const [dialog, setDialog] = React.useState<DialogState | null>(null);
-  // Confirm dialog for section deletion.
+
   const [confirmDelete, setConfirmDelete] = React.useState<{ sectionId: string; name: string } | null>(
     null,
   );
 
-  // Cached data (react-query): sections for the active year + teachers once.
   const { sectionsQuery, teachersQuery } = useAssignSectionsData(schoolYearId);
-  // Optimistic mutations: instant per-row feedback, rollback + toast on failure.
+
   const { batch, clear, regenerateCode, removeSection, pendingIds } = useAssignAdvisers(
     schoolYearId,
     schoolYearName,
@@ -69,13 +64,12 @@ export default function PrincipalAssignPage() {
       toast.error({ title: "Copy failed", description: "Select the code and copy it manually." });
     }
   }, []);
-  // Other principals' changes merge silently into the same cache.
+
   usePrincipalAssignRealtime(!!schoolYearId && sectionsQuery.isSuccess, schoolYearId, schoolYearName);
 
   const sections = React.useMemo(() => sectionsQuery.data ?? [], [sectionsQuery.data]);
   const teachers = React.useMemo(() => teachersQuery.data ?? [], [teachersQuery.data]);
 
-  // Sections available for the chosen grade level.
   const gradeSections = React.useMemo(
     () => (grade == null ? sections : sections.filter((s) => s.gradeLevel === grade)),
     [sections, grade],
@@ -86,9 +80,6 @@ export default function PrincipalAssignPage() {
     [gradeSections],
   );
 
-  // State machine: loading → skeleton; load error → error + retry;
-  // loaded + empty → empty state; loaded + rows → content. Errors never
-  // masquerade as "no data", and mutations never touch this machine.
   const hasNoScope = !schoolYearId;
   const isLoading = !!schoolYearId && sectionsQuery.isPending;
   const isError = !!schoolYearId && sectionsQuery.isError;
@@ -99,8 +90,6 @@ export default function PrincipalAssignPage() {
     void teachersQuery.refetch();
   };
 
-  // Fire-and-forget: the hook paints optimistic cards in the same tick and
-  // owns toasts/rollback, so the dialog closes instantly on submit.
   const submitBatch = (entries: AdvisoryEntryInput[]): void => {
     batch.mutate(entries);
   };
@@ -203,10 +192,7 @@ export default function PrincipalAssignPage() {
               <div className={assign.grid}>
                 {gradeSections.map((s) => {
                   const pending = pendingIds.has(s.id);
-                  // Claimed = teacher entered the advisory code and holds the
-                  // seat. Locked: no Change, no Delete.
-                  // Pending = principal listed a name + code, awaiting claim.
-                  // Empty = no adviser yet.
+
                   const claimed = !!s.adviserId;
                   const awaitingClaim = !claimed && !!s.adviserName;
                   const code = (s as { adviserCode?: string }).adviserCode ?? "";
@@ -217,9 +203,7 @@ export default function PrincipalAssignPage() {
                       <span className={assign.glowClip} aria-hidden>
                         <span className={assign.cardGlow} />
                       </span>
-                      {/* Primary tokens flip with the theme (near-black on light,
-                          near-white on dark) so the badge background always
-                          contrasts the card surface. */}
+
                       <Badge
                         variant="secondary"
                         className={`${assign.gradeBadge} ${assign.gradeFloat}`}

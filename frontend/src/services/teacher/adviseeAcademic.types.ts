@@ -1,4 +1,3 @@
-// Advisee academic-detail shapes. Pure types only.
 export interface AcademicGrade {
   subject: string;
   computedAverage: number | null;

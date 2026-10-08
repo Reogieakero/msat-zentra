@@ -1,4 +1,3 @@
-// ADM queue + consultation review for the guidance desk.
 import { apiClient } from "@/lib/api/client";
 import { asArray } from "@/lib/api/payload";
 import type {
@@ -22,11 +21,6 @@ export async function fetchGuidanceAdm(
   return data;
 }
 
-/* Consultation review on an ADM-purpose referral at the consultation stage:
-   endorse creates the referral forward to the coordinator's parent meeting,
-   reject closes the case without ADM action. An optional first session can
-   ride an endorsement (same pattern as the nurse ADM review) — standalone
-   booking while pending goes through the shared session endpoints. */
 export async function reviewAdmConsultation(
   referralId: string,
   input: {

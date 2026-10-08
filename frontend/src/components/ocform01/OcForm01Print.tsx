@@ -7,15 +7,6 @@ interface OcForm01PrintProps {
   detail: OcForm01Detail;
 }
 
-/**
- * Screen + print rendering of the official OCForm-01 anecdotal template
- * (labelled GCForm-01 inside, per the template file). Mirrors the .xlsx
- * export row-for-row: DepEd header with both logos, ANECDOTAL REPORT title
- * block, observer/observation box, ruled narrative blocks, academic-info
- * section, and the PREPARED BY signature footer with the adviser's printed
- * name on the signature line. Prints cleanly to A4 portrait via the
- * `.ocform01-print-sheet` print rules in the CSS module.
- */
 export function OcForm01Print({ detail }: OcForm01PrintProps) {
   return (
     <div className={`${styles.sheet} ocform01-print-sheet`}>

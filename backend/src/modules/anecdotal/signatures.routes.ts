@@ -21,9 +21,6 @@ function ctxOf(req: { user?: { id: string; role: string }; termScope?: { termId:
   };
 }
 
-// The teacher's one reusable drawn signature (GET/PUT /signature), stamped
-// onto records via POST /:id/apply-signature. Stored as a PNG data URL on
-// the staff profile — no storage bucket needed.
 router.get(
   "/signature",
   requireAuth,
@@ -53,8 +50,6 @@ router.put(
   }
 );
 
-// Stamp the teacher's saved signature onto one record (same signatory rule
-// as drawing directly). 409 when the teacher hasn't saved one yet.
 router.post(
   "/:id/apply-signature",
   requireAuth,
@@ -69,9 +64,6 @@ router.post(
   }
 );
 
-// Drawn-signature sign-off for one record. Only the signatory may sign: the
-// section adviser, or the observer when no adviser is assigned (same rule
-// that picks the printed name). Re-signing overwrites the previous mark.
 router.post(
   "/:id/sign",
   requireAuth,
@@ -91,7 +83,6 @@ router.post(
   }
 );
 
-// Remove a signature (same signatory rule). The form returns to unsigned.
 router.delete(
   "/:id/sign",
   requireAuth,

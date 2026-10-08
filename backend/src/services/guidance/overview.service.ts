@@ -9,28 +9,14 @@ import {
   ADM_LABEL,
   GRADE_LABELS,
   GRADE_ORDER,
-  type AdmStage,
 } from "../../modules/guidance/guidance.repository.js";
 import type { GuidanceContext } from "./guidance.types.js";
 
-// Guidance Counselor overview: every value computed live from the database —
-// no mocked data. Mirrors the principal overview's live risk recompute so the
-// numbers agree with the Risk board, but scoped to the guidance workflow:
-// referrals routed to guidance, interventions owned by guidance, and ADM
-// hand-offs that need counselor action.
-//
-// Access rule: guidance CANNOT browse raw anecdotal_records. An anecdotal
-// filing becomes visible to guidance only once an adviser refers it with
-// referredToRole = "guidance_counselor". Every anecdotal-derived figure below
-// (category breakdown, latest filings) is therefore computed from referrals
-// addressed to guidance — never from a direct anecdotal_records scan.
-// Aggregate risk counts (High/Moderate/Low, factor totals) stay status-only
-// and never expose write-up content.
 export async function getOverview(ctx: GuidanceContext) {
   const counselorId = ctx.userId;
   const schoolYearId = ctx.schoolYearId;
   const termId = ctx.termId;
-  // Independent preamble reads run in parallel — none depends on another.
+
   const [counselor, term] = await Promise.all([
     prisma.user.findUnique({
       where: { id: counselorId },
@@ -62,9 +48,7 @@ export async function getOverview(ctx: GuidanceContext) {
     rosterCohort,
     sectionPopulations,
   ] = await Promise.all([
-    // Referred to me = desk-scope referrals still needing action
-    // (pending), whatever the track — direct counseling referrals plus
-    // ADM-track cases picked for guidance as consultation reviewer.
+
     prisma.referral.count({
       where: {
         status: "pending",
@@ -83,14 +67,11 @@ export async function getOverview(ctx: GuidanceContext) {
         status: "pending",
         referredToRole: "guidance_counselor",
         ...(termId ? { termId } : {}),
-        // NULL escalatedTo fails a bare NOT in SQL three-valued logic,
-        // so un-escalated rows are matched explicitly.
+
         OR: [{ escalatedTo: null }, { NOT: { escalatedTo: "adm_coordinator" } }],
       },
     }),
-    // Pending ADM hand-offs = endorsed ADM cases (same rule as the
-    // Endorsed badge and the ADM menu Endorse count): ADM track and
-    // in progress, so the case now sits with the ADM coordinator.
+
     prisma.referral.count({
       where: {
         status: "in_progress",
@@ -109,7 +90,7 @@ export async function getOverview(ctx: GuidanceContext) {
         referredToRole: "guidance_counselor",
         ...(termId ? { termId } : {}),
       },
-      // Referral has no createdAt — newest filing = latest observation date.
+
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
       take: 5,
       select: {
@@ -180,11 +161,7 @@ export async function getOverview(ctx: GuidanceContext) {
         },
       },
     }),
-    // Referral-scoped view of anecdotal filings: every case on the
-    // guidance desk — direct counseling referrals PLUS ADM-track cases
-    // picked for guidance as consultation reviewer (same scope as the
-    // ADM / Counseling referrals pages). Term-scoped like every other
-    // desk queue: each term shows only transactions executed under it.
+
     prisma.referral.findMany({
       where: {
         ...(termId ? { termId } : {}),
@@ -245,9 +222,7 @@ export async function getOverview(ctx: GuidanceContext) {
         },
       },
     }),
-    // ADM-track referrals the coordinator hasn't built a learner profile
-    // for yet — without this, an adviser ADM referral is counted in the
-    // KPI but never listed anywhere on the page. Status-only, newest first.
+
     prisma.referral.findMany({
       where: {
         referredToRole: "adm_coordinator",
@@ -419,8 +394,7 @@ export async function getOverview(ctx: GuidanceContext) {
     let topCount = 0;
     let moderate = 0;
     let low = 0;
-    // Every section of the level rides in the row (at-risk only drives
-    // the top pick — same first-wins rule as before).
+
     const sectionsList: { name: string; atRisk: number }[] = [];
     for (const sec of secs) {
       const bucket = levelBySection.get(sec.id) ?? { high: 0, moderate: 0, low: 0 };
@@ -436,8 +410,7 @@ export async function getOverview(ctx: GuidanceContext) {
     sectionsList.sort((a, b) => b.atRisk - a.atRisk);
     const high = highByGrade.get(g) ?? 0;
     const atRisk = riskByGrade.get(g) ?? 0;
-    // Most common risk level among the grade's at-risk students —
-    // ties break toward the higher severity; null when none at risk.
+
     const mostLevel =
       atRisk === 0
         ? null
@@ -471,11 +444,6 @@ export async function getOverview(ctx: GuidanceContext) {
     };
   });
 
-  // Desk split by case type (same mapping as the ADM / Counseling
-  // referrals pages): ADM-bound when already escalated toward the ADM
-  // coordinator or arriving on the ADM track; everything else is
-  // Counseling. Guidance never sees unreferred filings, so this is
-  // NOT a school-wide census.
   let admCases = 0;
   let counselingCases = 0;
   for (const r of guidanceReferralsDetailed) {
@@ -514,9 +482,6 @@ export async function getOverview(ctx: GuidanceContext) {
     outcome: iv.outcomeStatus,
   }));
 
-  // Latest filings visible to guidance = latest referrals addressed to
-  // guidance, each carrying its linked anecdotal category + referrer.
-  // No raw anecdotal row is ever read directly here.
   const latestAlerts = guidanceReferralsDetailed.slice(0, 5).map((r) => ({
     id: r.id,
     student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
@@ -529,10 +494,6 @@ export async function getOverview(ctx: GuidanceContext) {
     date: r.anecdotalRecord.observationDatetime.toISOString().slice(0, 10),
   }));
 
-  // ADM hand-offs visible to guidance: tracked learner profiles (newest)
-  // plus ADM-track referrals with no profile yet, which sit at the
-  // consultation stage until the coordinator builds the profile. Profiles
-  // win on ties so the same learner never renders twice.
   const admProfileRows = admLatest.map((p) => ({
     id: p.id,
     student: p.student.user.fullName,

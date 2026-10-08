@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronDown, Loader2, MoreHorizontal, Search, X } from "lucide-react";
+import { Loader2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { CoordinatorReferralsSkeleton } from "./coordinator-referrals-skeleton";
+import { CoordinatorTableHeader as TableCardHeader } from "./coordinator-referrals-header";
+import { buildInterpretation, isBookableRow } from "./coordinator-referrals-interpretation";
 import {
   Table,
   TableBody,
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/table";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -39,16 +39,15 @@ import type {
   AdmCaseRow,
   AdmEligibility,
 } from "@/services/coordinator/coordinator.types";
-import { ELIG_OPTIONS } from "./coordinator-referrals-constants";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
 import styles from "./coordinator-referrals-table.module.css";
 
 interface CoordinatorReferralsTableProps {
   rows: AdmCaseRow[];
-  /** Initial load: no data yet — full page skeleton. */
+
   isInitialLoading: boolean;
-  /** Background refresh (search/filter/page/realtime): rows stay visible. */
+
   isSyncing: boolean;
   isError: boolean;
   isRefetching: boolean;
@@ -60,118 +59,13 @@ interface CoordinatorReferralsTableProps {
   eligMenuLabel: string;
   hasActiveFilters: boolean;
   onClear: () => void;
-  /** Row id currently being booked/rescheduled — only it disables. */
+
   bookPendingId: string | null;
-  /** Shared 30s clock from the hook — one interval per page, not per table. */
+
   now: number;
   onRetry: () => void;
   onHistory: (target: HistoryTarget) => void;
   onBook: (row: AdmCaseRow) => void;
-}
-
-/* Mirrors the backend booking guards (POST /:id/meetings and
-   POST /referral/:referralId/meetings both allow only pre-certification
-   stages): early referrals (no profile yet) can always book; profiles can
-   only book at the parent-meeting stage — profiles never sit at
-   anecdotal/consultation, and certification+ is locked. Rows that fail this
-   get no inline booking button (the backend 409 remains the backstop). */
-function isBookableRow(r: AdmCaseRow): boolean {
-  if (r.referralStatus === "dismissed" || r.referralStatus === "resolved") return false;
-  if (r.id.startsWith("referral:")) return true;
-  return r.stage === "meeting_parents";
-}
-
-/* Card header shared by the empty and data states: title + live total on
-   the left, search + eligibility filter + clear on the right (guidance
-   grade-table pattern — controls live inside the card). */
-function TableCardHeader({
-  total,
-  isSyncing,
-  query,
-  onQueryChange,
-  elig,
-  onEligChange,
-  eligMenuLabel,
-  hasActiveFilters,
-  onClear,
-}: {
-  total: number;
-  isSyncing: boolean;
-  query: string;
-  onQueryChange: (v: string) => void;
-  elig: "all" | AdmEligibility;
-  onEligChange: (v: "all" | AdmEligibility) => void;
-  eligMenuLabel: string;
-  hasActiveFilters: boolean;
-  onClear: () => void;
-}) {
-  return (
-    <CardHeader>
-      <div className={styles.headerRow}>
-        <div>
-          <CardTitle className={styles.sectionTitle}>Referrals</CardTitle>
-          <CardDescription className={styles.sectionDesc}>
-            Every student referred for Alternative Delivery Mode — {total} case
-            {total === 1 ? "" : "s"}.{isSyncing ? " Syncing…" : ""}
-          </CardDescription>
-        </div>
-        <div className={styles.headerActions}>
-          <div className={styles.searchWrap}>
-            <Search className={styles.searchIcon} aria-hidden />
-            <Input
-              style={{ height: "2rem", paddingLeft: "2rem" }}
-              placeholder="Search name, LRN, or case ID…"
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              aria-label="Search referrals"
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                style={{ height: "2rem" }}
-                aria-label={`Filter by status, currently: ${eligMenuLabel}`}
-              >
-                {elig === "all" ? "Status" : eligMenuLabel}
-                {elig !== "all" && (
-                  <span className={styles.filterDot} aria-hidden />
-                )}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {ELIG_OPTIONS.map((item) => (
-                <DropdownMenuCheckboxItem
-                  key={item.value}
-                  checked={elig === item.value}
-                  onCheckedChange={() => onEligChange(item.value)}
-                >
-                  {item.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={onClear}>
-              <X aria-hidden />
-              Show all
-            </Button>
-          )}
-        </div>
-      </div>
-    </CardHeader>
-  );
-}
-
-function buildInterpretation(rows: AdmCaseRow[]): string {  const atMeeting = rows.filter((r) => r.stage === "meeting_parents").length;
-  const unbooked = rows.filter((r) => !r.meeting && isBookableRow(r)).length;
-  return (
-    `${rows.length} case${rows.length === 1 ? "" : "s"} on this page` +
-    ` · ${atMeeting} at parent meeting` +
-    ` · ${unbooked} bookable without a meeting booked.`
-  );
 }
 
 export function CoordinatorReferralsTable({
@@ -196,9 +90,7 @@ export function CoordinatorReferralsTable({
 }: CoordinatorReferralsTableProps) {
   const router = useRouter();
   if (isInitialLoading) {
-    // Real filters header, rail, and pager stay mounted in the page around
-    // this — only the table card is skeletonized here (other mirrors would
-    // duplicate the live regions).
+
     return <CoordinatorReferralsSkeleton rows={10} layout="table" />;
   }
 
@@ -300,13 +192,9 @@ export function CoordinatorReferralsTable({
                );
               const rowDate = r.endorsedAt ?? r.datePrepared;
               const meeting = r.meeting ?? null;
-              // Only the row being booked disables — every other row stays
-              // usable while its mutation runs.
+
               const bookingThis = bookPendingId === r.id;
-              // Booking lives in the row ⋯ menu (never as an inline row
-              // button) and only where the backend accepts it; locked
-              // (post-meeting) cases keep the menu item disabled with the
-              // reason instead of failing on confirm.
+
               const bookable = isBookableRow(r);
               const closedRow = r.referralStatus === "dismissed" || r.referralStatus === "resolved";
               const needsReschedule = meeting !== null && !meeting.attended;
@@ -318,9 +206,7 @@ export function CoordinatorReferralsTable({
                       {r.lrn}
                     </p>
                   </TableCell>
-                  {/* Source phrase so the coordinator sees at a glance whether
-                      the case came straight to ADM or was endorsed by a desk
-                      (nurse / guidance / LRPC). Filed-by name on hover. */}
+
                   <TableCell>
                     <p
                       className={styles.cellMain}
@@ -387,10 +273,7 @@ export function CoordinatorReferralsTable({
                       </>
                     ) : (
                       (() => {
-                        // No audit trail for this case (legacy / unaudited
-                        // rows) — fall back to the row's own latest
-                        // timestamp so the column still reads the latest,
-                        // whatever the status.
+
                         const fb = latestActionFallback(r);
                         if (!fb) return <p className={styles.cellMain}>—</p>;
                         const ms = msSinceDate(fb.at, now);
@@ -431,9 +314,7 @@ export function CoordinatorReferralsTable({
                             >
                               Track case
                             </DropdownMenuItem>
-                        {/* An attended meeting is done — no follow-up booking
-                            is offered. Only unattended meetings reschedule
-                            and only meeting-less cases schedule. */}
+
                         {meeting !== null && meeting.attended ? null : (
                           <DropdownMenuItem
                             disabled={bookingThis || !bookable}

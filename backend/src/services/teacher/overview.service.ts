@@ -1,17 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
-import { AppError } from "../../lib/errors.js";
 import { sectionHeadcounts } from "../enrollment.js";
-import {
-  ATTENDANCE_RISK_CUTOFF,
-  subjectAverageAttendance,
-} from "../attendance.js";
-import {
-  computeRiskFactors,
-  levelFromFlags,
-} from "../risk.js";
+import { ATTENDANCE_RISK_CUTOFF, subjectAverageAttendance } from "../attendance.js";
+import { computeRiskFactors, levelFromFlags } from "../risk.js";
 import {
   ACTION_LABEL,
-  advisoryRoster,
   COMPONENT_TYPE_LABEL,
   EMPTY_RESPONSE,
   GRADE_LABELS,
@@ -20,23 +12,12 @@ import {
 import { isMasterTeacherEligible } from "./settings.service.js";
 import type { TeacherContext } from "./teacher.types.js";
 
-// Teacher / Adviser overview (TEACH-1). Live data only — no mocked rows.
-// Classes come from TeacherSubjectAssignment, the advisory section from
-// Section.adviserId, flags from AnecdotalRecord created by this teacher, and
-// recent activity from AuditLog rows for this user. Risk is recomputed live so
-// the overview agrees with the risk engine.
 export async function getOverview(
   ctx: TeacherContext,
   scopeParam: "critical" | "secondary" | "gradebook" | "full",
 ) {
   const teacherId = ctx.userId;
-  // Scope narrows the payload so first paint stays light:
-  // - `critical` skips assessments/standings/activity (heavy aggregations).
-  // - `secondary` skips the advisory risk engine (heavy per-student scans).
-  // - `gradebook` serves the grading landing in one round trip: classes +
-  //   assessments + standings only (no risk scans, no advisory engine,
-  //   no activity log).
-  // - absent scope returns the full legacy shape (backward compatible).
+
   const scope = scopeParam;
   const isCriticalOnly = scope === "critical";
   const isSecondaryOnly = scope === "secondary";
@@ -59,8 +40,7 @@ export async function getOverview(
       where: { adviserId: teacherId },
       select: { id: true, name: true, gradeLevel: true },
     }),
-    // Singleton holder (active teachers only, excluding self) so other
-    // teachers can hide the claim toggle while the seat is taken.
+
     prisma.user.findFirst({
       where: {
         id: { not: teacherId },
@@ -73,9 +53,7 @@ export async function getOverview(
 
   const isAdviser = advisorySections.length > 0;
   const advisorySection = advisorySections[0] ?? null;
-  // Master Teacher is a grades 7–10 designation: eligible when every
-  // known grade (classes + advisory) sits in that band — or when nothing
-  // is assigned yet (new teachers declare first, endpoint re-validates).
+
   const scopeGrades = [
     ...assignments.map((a) => a.section.gradeLevel),
     ...advisorySections.map((s) => s.gradeLevel),
@@ -83,9 +61,6 @@ export async function getOverview(
   const masterTeacherEligible = isMasterTeacherEligible(scopeGrades);
   const isMasterTeacher = user?.staffProfile?.isMasterTeacher ?? false;
 
-  // Classes linked to this login (what My Classes shows): distinct
-  // (subject, section) pairs from committed timetable slots. Logins
-  // with no linked code fall back to assignment rows.
   const linkedSlots = await prisma.sectionTimetableEntry.findMany({
     where: {
       termId,
@@ -103,9 +78,7 @@ export async function getOverview(
   const linkedPairs = [...new Map(
     linkedSlots.map((s) => [`${s.subjectId}|${s.sectionId}`, s]),
   ).values()];
-  // Handled sections: linked sections when linked, else assignment
-  // sections. Each section counts once no matter how many subjects
-  // the teacher handles in it.
+
   const handledSectionIds = Array.from(
     new Set(
       (linkedPairs.length > 0
@@ -131,8 +104,7 @@ export async function getOverview(
       },
     }),
     prisma.anecdotalRecord.count({ where: { observerId: teacherId, termId } }),
-    // Enlisted students without accounts — account status never hides
-    // anyone from a teacher's own class list.
+
     handledSectionIds.length > 0
       ? prisma.studentRoster.findMany({
           where: { sectionId: { in: handledSectionIds } },
@@ -153,7 +125,6 @@ export async function getOverview(
         }[]),
   ]);
 
-  // Roster-aware headcounts: enlisted students without accounts count too.
   const headcounts = await sectionHeadcounts(handledSectionIds);
   const countBySection = new Map(
     sectionCounts.map((s) => [s.sectionId, s._count._all])
@@ -163,9 +134,8 @@ export async function getOverview(
     sectionStudents.map((s) => [s.userId, s.sectionId])
   );
 
-  // subject -> section id(s) the teacher handles it in (internal lookup only).
   const subjectSectionIds = new Map<string, Set<string>>();
-  // subject id -> { subject name, section name } for labeling assessments.
+
   const classLookup = new Map<string, { subject: string; section: string }>();
   for (const a of assignments) {
     const subjectKey = a.subject.id;
@@ -178,8 +148,7 @@ export async function getOverview(
       });
     }
   }
-  // One row per linked (subject, section) pair — what My Classes shows.
-  // Falls back to one row per assignment for logins with no linked code.
+
   const classes = (linkedPairs.length > 0
     ? linkedPairs.map((s) => ({
         id: `${s.subjectId}|${s.sectionId}`,
@@ -195,20 +164,12 @@ export async function getOverview(
         section: a.section.name,
         studentCount: countBySection.get(a.section.id) ?? 0,
       })));
-  // One headcount per handled section — the same section taught for two
-  // subjects still counts its students once.
+
   const studentCount = handledSectionIds.reduce(
     (sum, id) => sum + (countBySection.get(id) ?? 0),
     0,
   );
 
-  // Every student in the teacher's own classes (subject assignments +
-  // linked timetable sections): registered profiles plus enlisted
-  // roster rows (LRN-deduped per section). This is what non-advisers see
-  // on the overview — their class subject-assignment datas — since they
-  // have no advisory section. Subjects are codes (one row in the UI).
-  // Risk is academic + attendance only over the handled subjects —
-  // regular teachers record no anecdotal, so no behavioral factor.
   const sectionSubjects = new Map<string, { name: string; subjects: string[] }>();
   for (const a of assignments) {
     const entry = sectionSubjects.get(a.section.id) ?? { name: a.section.name, subjects: [] as string[] };
@@ -262,13 +223,8 @@ export async function getOverview(
       })),
   ];
 
-  // At-risk per handled subject: academic (finals + raw means in the
-  // teacher's subjects) and attendance (takes in the teacher's subjects)
-  // only. enrolled: 0 forces the subject-era present/records rule so a
-  // student with no takes in these subjects is not falsely flagged.
   const classRiskByKey = new Map<string, { riskLevel: "Low" | "Moderate" | "High"; flags: ("academic" | "attendance")[] }>();
-  // Gradebook scope never reads classStudents — skip its three heavy
-  // scans (finals + raw scores + attendance takes) entirely.
+
   if (!isGradebookOnly && classStudentBases.length > 0 && handledSubjectIds.length > 0) {
     const profileIds = sectionStudents.map((p) => p.userId);
     const rosterIds = classRoster.map((r) => r.id);
@@ -362,8 +318,6 @@ export async function getOverview(
 
   const subjectIds = Array.from(new Set(assignments.map((a) => a.subject.id)));
 
-  // Secondary aggregations (assessments, standings, activity). Skipped
-  // entirely for `critical` scope so first paint only waits on primary data.
   let assessmentsPayload: {
     id: string;
     subject: string;
@@ -410,8 +364,7 @@ export async function getOverview(
       select: { id: true, sectionId: true },
     }),
   ]);
-  // Roster finals attribute to their enlistment section so encoded
-  // account-less students count in class standings too.
+
   const rosterSecById = new Map(rosterSections.map((s) => [`roster:${s.id}`, s.sectionId]));
 
   assessmentsPayload = assessments.map((as) => {
@@ -450,7 +403,6 @@ export async function getOverview(
     (a) => a.status !== "scores_locked"
   ).length;
 
-  // Class averages grouped by (subject, section).
   const aggMap = new Map<
     string,
     {
@@ -502,8 +454,7 @@ export async function getOverview(
     flag: "academic" | "attendance" | "behavioral" | "none";
     flags: ("academic" | "attendance" | "behavioral")[];
   }[] = [];
-  // Secondary + gradebook scopes skip the advisory risk engine
-  // (per-student scans) — they only need the aggregations above.
+
   if (!isSecondaryOnly && !isGradebookOnly && advisorySection) {
     const [advisees, rosterEntries] = await Promise.all([
       prisma.studentProfile.findMany({
@@ -518,8 +469,7 @@ export async function getOverview(
           _count: { select: { anecdotalRecords: { where: { termId } } } },
         },
       }),
-      // Enlisted students without accounts — account status never hides
-      // anyone from risk detection.
+
       prisma.studentRoster.findMany({
         where: { sectionId: advisorySection.id },
         select: { id: true, lrn: true, fullName: true },
@@ -530,8 +480,6 @@ export async function getOverview(
     const rosterIds = rosterOnly.map((r) => r.id);
     const profileIds = advisees.map((s) => s.userId);
 
-    // Raw assessment means per student per subject (unweighted) for the
-    // raw-grade academic check, plus roster finals/attendance/anecdotal.
     const [rawRows, rosterFinals, rosterAttendance, rosterAnecdotal] = await Promise.all([
       prisma.studentGrade.findMany({
         where: {
@@ -574,8 +522,6 @@ export async function getOverview(
         : Promise.resolve([]),
     ]);
 
-    // Per-student raw subject means: mean of recorded percentages per
-    // subject, then averaged across subjects by the engine.
     const rawBySubject = new Map<string, Map<string, { sum: number; count: number }>>();
     for (const row of rawRows) {
       const key = row.studentId ?? `roster:${row.rosterId}`;
@@ -623,13 +569,7 @@ export async function getOverview(
         anecdotalCount,
         enrolled,
       });
-      // Attendance at-risk follows the general average across all
-      // subjects (mean of per-subject present / elapsed rates — same
-      // definition as the advisory attendance display), never AM/PM
-      // sessions. An entry exists whenever elapsed meetups exist, so a
-      // student with no takes scores 0% and flags — matching the
-      // display. Only when nothing elapsed (no entry) is the legacy
-      // engine result kept.
+
       const subjAvg = subjectAvgs.get(key);
       if (subjAvg) {
         flags.attendanceFlag = subjAvg.average < ATTENDANCE_RISK_CUTOFF;
@@ -641,11 +581,6 @@ export async function getOverview(
       return { flags, activeFlags, flag: activeFlags[0] ?? ("none" as const) };
     };
 
-    // Advisory-section headcount for the legacy fallback (used only
-    // when nothing elapsed and subjectAvgs has no entry). The handled-
-    // sections map above may not contain the advisory section when the
-    // adviser teaches elsewhere, so fall back to a direct headcount
-    // instead of 0 — 0 would clear the flag for zero-record students.
     let enrolled = countBySection.get(advisorySection.id) ?? 0;
     if (!countBySection.has(advisorySection.id)) {
       enrolled =
@@ -704,13 +639,9 @@ export async function getOverview(
     attendance: advisoryStudents.filter((s) => s.flags.includes("attendance")).length,
     behavioral: advisoryStudents.filter((s) => s.flags.includes("behavioral")).length,
   };
-  // Unique at-risk advisees — the population share. Factor counts above
-  // can exceed this (one student may trip several factors) and must never
-  // be summed into a percentage.
+
   const atRiskStudents = advisoryStudents.filter((s) => s.flag !== "none").length;
 
-  // Gradebook scope serves the grading landing in one round trip:
-  // classes + assessments + standings, nothing else.
   if (isGradebookOnly) {
     return {
       classes,
@@ -719,9 +650,6 @@ export async function getOverview(
     };
   }
 
-  // Secondary scope serves the lazy widgets only (grading cards need
-  // assessments/standings; nothing renders kpi counters yet, but they are
-  // included so GradebookKpis can mount without a second round-trip).
   if (isSecondaryOnly) {
     return {
       assessments: assessmentsPayload,
@@ -737,17 +665,14 @@ export async function getOverview(
     isAdviser,
     isMasterTeacher,
     masterTeacherEligible,
-    // Singleton seat: other teachers hide the claim toggle while this is
-    // set. The holder's own payload reports taken=false so their switch
-    // stays actionable.
+
     masterTeacherTaken: !isMasterTeacher && masterHolder !== null,
     masterTeacherHolderName: masterHolder?.fullName ?? null,
     advisorySection: advisorySection
       ? {
           id: advisorySection.id,
           name: advisorySection.name,
-          // Raw grade code (G7, not "Grade 7") — clients key colors
-          // and format display labels from it.
+
           gradeLevel: advisorySection.gradeLevel,
         }
       : null,
@@ -762,410 +687,12 @@ export async function getOverview(
     classes,
     classStudents,
     advisory: { students: advisoryStudents },
-    // Critical scope omits the heavy aggregations — the grading desk loads
-    // them progressively via `secondary` scope. Full scope keeps them for
-    // backward compatibility.
+
     ...(isCriticalOnly
       ? {}
       : {
           recentActivity,
           subjectClasses: { assessments: assessmentsPayload, standings },
         }),
-  };
-}
-
-export interface StudentListQuery {
-  classId: string;
-  advisorySectionId: string;
-}
-
-// Student list for the Overview → Student List page (regular teachers AND
-// advisers, same display). Self-sufficient in one round-trip: it returns the
-// handled-class rail, the advisory rail, AND the active roster, so the page
-// never waits on the heavier overview payload first.
-//
-// Two roster modes share one student-row shape (name + LRN, attendance %,
-// academic grade):
-// - subject mode (`classId`: assignment id or `subjectId|sectionId`) — every
-//   student in the section with attendance % and grade for that specific
-//   subject (attendance-sheet basis: elapsed meetups with no take = absent).
-// - advisory mode (`advisorySectionId`) — the teacher's advisees with the
-//   per-subject-average attendance % (same definition as the advisory
-//   attendance display) and the general-average academic grade across the
-//   section's offered subjects.
-// Omitted ids serve the teacher's first advisory section (advisers) or first
-// handled class (regular teachers). Every id is verified against the
-// caller's assignments + committed timetable links + advised sections.
-export async function getStudentList(ctx: TeacherContext, query: StudentListQuery) {
-  const teacherId = ctx.userId;
-  const classIdParam = query.classId;
-  const advisorySectionParam = query.advisorySectionId;
-  const termId = ctx.termId;
-  if (!termId) {
-    return {
-      classes: [],
-      advisorySections: [],
-      class: null,
-      advisorySection: null,
-      students: [],
-    };
-  }
-
-  const [assignments, linkedSlots, advisedSections] = await Promise.all([
-    prisma.teacherSubjectAssignment.findMany({
-      where: { teacherId, termId },
-      select: {
-        id: true,
-        subjectId: true,
-        sectionId: true,
-        subject: { select: { id: true, name: true, code: true } },
-        section: { select: { id: true, name: true, gradeLevel: true } },
-      },
-      orderBy: [{ section: { name: "asc" } }, { subject: { name: "asc" } }],
-    }),
-    prisma.sectionTimetableEntry.findMany({
-      where: {
-        termId,
-        status: { in: ["APPROVED", "SUBMITTED"] },
-        teacherName: { userId: teacherId },
-      },
-      select: {
-        subjectId: true,
-        sectionId: true,
-        subject: { select: { name: true, code: true } },
-        section: { select: { name: true, gradeLevel: true } },
-      },
-      orderBy: [{ section: { name: "asc" } }, { subject: { name: "asc" } }],
-    }),
-    prisma.section.findMany({
-      where: { adviserId: teacherId },
-      select: { id: true, name: true, gradeLevel: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-  const linkedPairs = [...new Map(
-    linkedSlots.map((s) => [`${s.subjectId}|${s.sectionId}`, s]),
-  ).values()];
-  const handledSectionIds = Array.from(
-    new Set(
-      (linkedPairs.length > 0
-        ? linkedPairs.map((s) => s.sectionId)
-        : assignments.map((a) => a.sectionId)),
-    ),
-  );
-  const railSectionIds = Array.from(
-    new Set([...handledSectionIds, ...advisedSections.map((s) => s.id)]),
-  );
-  // No rails at all (same condition as the classes/advisorySections
-  // check below, but known before any roster work starts).
-  if (linkedPairs.length === 0 && assignments.length === 0 && advisedSections.length === 0) {
-    return {
-      classes: [],
-      advisorySections: [],
-      class: null,
-      advisorySection: null,
-      students: [],
-    };
-  }
-  // Rail headcounts and the active roster are independent — start both
-  // together so a section switch pays one round-trip chain instead of
-  // two. Pick validation below is sync (assignments + links + advised
-  // sections are already in hand); validation failures reject the same
-  // way through next(e).
-  const headcountsPromise = sectionHeadcounts(railSectionIds);
-  const advisedIds = new Set(advisedSections.map((s) => s.id));
-  const advisoryId =
-    advisorySectionParam ||
-    (!classIdParam && advisedSections.length > 0 ? advisedSections[0].id : "");
-  const rosterPromise = (async () => {
-    if (advisoryId) {
-      if (!advisedIds.has(advisoryId)) {
-        throw new AppError(404, "SECTION_NOT_FOUND", "Advisory section not found");
-      }
-      return {
-        kind: "advisory" as const,
-        students: await advisoryRoster(termId, advisoryId),
-      };
-    }
-    const resolvePair = (classId: string): { subjectId: string; sectionId: string } | null => {
-      const sep = classId.indexOf("|");
-      if (sep >= 0) {
-        return { subjectId: classId.slice(0, sep), sectionId: classId.slice(sep + 1) };
-      }
-      const match = assignments.find((a) => a.id === classId);
-      return match ? { subjectId: match.subjectId, sectionId: match.sectionId } : null;
-    };
-    // Default pick mirrors rail order: first linked pair, else first
-    // assignment (same ordering the rail rows use below).
-    const activeId =
-      classIdParam ||
-      (linkedPairs.length > 0
-        ? `${linkedPairs[0].subjectId}|${linkedPairs[0].sectionId}`
-        : (assignments[0]?.id ?? ""));
-    const pair = resolvePair(activeId);
-    const owns =
-      !!pair &&
-      (assignments.some(
-        (a) => a.subjectId === pair.subjectId && a.sectionId === pair.sectionId,
-      ) ||
-        linkedPairs.some(
-          (s) => s.subjectId === pair.subjectId && s.sectionId === pair.sectionId,
-        ));
-    if (!pair || !owns) {
-      throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
-    }
-    const [subject, section, profiles, rosterEntries] = await Promise.all([
-      prisma.subject.findUnique({
-        where: { id: pair.subjectId },
-        select: { id: true, name: true, code: true },
-      }),
-      prisma.section.findUnique({
-        where: { id: pair.sectionId },
-        select: { id: true, name: true, gradeLevel: true },
-      }),
-      prisma.studentProfile.findMany({
-        where: { sectionId: pair.sectionId },
-        select: {
-          userId: true,
-          lrn: true,
-          user: { select: { fullName: true } },
-        },
-        orderBy: { user: { fullName: "asc" } },
-      }),
-      prisma.studentRoster.findMany({
-        where: { sectionId: pair.sectionId },
-        select: { id: true, lrn: true, fullName: true },
-        orderBy: { fullName: "asc" },
-      }),
-    ]);
-    return {
-      kind: "subject" as const,
-      subjectId: pair.subjectId,
-      sectionId: pair.sectionId,
-      classId: activeId,
-      subject,
-      section,
-      profiles,
-      rosterEntries,
-    };
-  })();
-  const [headcounts, roster] = await Promise.all([headcountsPromise, rosterPromise]);
-  // Rail rows — same shape as the overview `classes` so the picker is
-  // consistent everywhere.
-  const classes = (linkedPairs.length > 0
-    ? linkedPairs.map((s) => ({
-        id: `${s.subjectId}|${s.sectionId}`,
-        subject: s.subject.name,
-        code: s.subject.code,
-        gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
-        section: s.section.name,
-        studentCount: headcounts.get(s.sectionId) ?? 0,
-      }))
-    : assignments.map((a) => ({
-        id: a.id,
-        subject: a.subject.name,
-        code: a.subject.code,
-        gradeLevel: GRADE_LABELS[a.section.gradeLevel] ?? a.section.gradeLevel,
-        section: a.section.name,
-        studentCount: headcounts.get(a.sectionId) ?? 0,
-      })));
-  const advisorySections = advisedSections.map((s) => ({
-    id: s.id,
-    name: s.name,
-    gradeLevel: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
-    studentCount: headcounts.get(s.id) ?? 0,
-  }));
-  if (classes.length === 0 && advisorySections.length === 0) {
-    return {
-      classes,
-      advisorySections,
-      class: null,
-      advisorySection: null,
-      students: [],
-    };
-  }
-
-  // Advisory mode: the teacher's advisees. Subject mode below stays
-  // untouched for regular teachers. Roster data arrived with headcounts
-  // above; this just branches on it.
-  if (roster.kind === "advisory") {
-    return {
-      classes,
-      advisorySections,
-      class: null,
-      advisorySection: advisorySections.find((s) => s.id === advisoryId) ?? null,
-      students: roster.students,
-    };
-  }
-
-  const { subject, section, profiles, rosterEntries, subjectId, sectionId, classId } = roster;
-  if (!subject || !section) {
-    throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
-  }
-
-  // Enlisted students without accounts join the list (LRN-deduped) so
-  // account status never hides anyone from the teacher's own class list.
-  const registeredLrns = new Set(profiles.map((p) => p.lrn));
-  const rosterOnly = rosterEntries.filter((r) => !registeredLrns.has(r.lrn));
-  const profileIds = profiles.map((p) => p.userId);
-  const rosterIds = rosterOnly.map((r) => r.id);
-  const orClauses = [
-    ...(profileIds.length > 0 ? [{ studentId: { in: profileIds } }] : []),
-    ...(rosterIds.length > 0 ? [{ rosterId: { in: rosterIds } }] : []),
-  ];
-
-  const [profileFinals, rosterFinals, attendance, entries, term] = await Promise.all([
-    profileIds.length > 0
-      ? prisma.finalGrade.findMany({
-          where: { subjectId, termId, studentId: { in: profileIds } },
-          select: {
-            studentId: true,
-            computedAverage: true,
-            transmutedGrade: true,
-          },
-        })
-      : Promise.resolve([] as { studentId: string | null; computedAverage: number | null; transmutedGrade: number | null }[]),
-    rosterIds.length > 0
-      ? prisma.finalGrade.findMany({
-          where: { subjectId, termId, rosterId: { in: rosterIds } },
-          select: {
-            rosterId: true,
-            computedAverage: true,
-            transmutedGrade: true,
-          },
-        })
-      : Promise.resolve([] as { rosterId: string | null; computedAverage: number | null; transmutedGrade: number | null }[]),
-    prisma.attendanceRecord.findMany({
-      where: { termId, sectionId, subjectId },
-      select: { studentId: true, rosterId: true, status: true, date: true },
-    }),
-    // Committed meetups for this subject × section — the attendance
-    // sheet's denominator (see below).
-    prisma.sectionTimetableEntry.findMany({
-      where: {
-        sectionId,
-        subjectId,
-        termId,
-        status: { in: ["APPROVED", "SUBMITTED"] },
-      },
-      select: { day: true },
-    }),
-    prisma.term.findUnique({
-      where: { id: termId },
-      select: { startDate: true, endDate: true },
-    }),
-  ]);
-
-  const finalByKey = new Map<
-    string,
-    { computedAverage: number | null; transmutedGrade: number | null }
-  >();
-  for (const f of profileFinals) {
-    if (f.studentId) {
-      finalByKey.set(f.studentId, {
-        computedAverage: f.computedAverage,
-        transmutedGrade: f.transmutedGrade,
-      });
-    }
-  }
-  for (const f of rosterFinals) {
-    if (f.rosterId) {
-      finalByKey.set(`roster:${f.rosterId}`, {
-        computedAverage: f.computedAverage,
-        transmutedGrade: f.transmutedGrade,
-      });
-    }
-  }
-
-  // Attendance percentage on the ATTENDANCE SHEET basis so both pages
-  // always agree: present elapsed meetups ÷ elapsed meetups for this
-  // subject × section × term. An elapsed meetup with no take counts as
-  // absent (a student with no takes shows 0%, never blank); nothing
-  // elapsed yet renders null (blank), exactly like the sheet. A day
-  // counts present only when every take that day is present
-  // (worst-status-wins, same as the sheet's blocks view).
-  const meetupDays = [...new Set(entries.map((e) => e.day))];
-  const elapsed = new Set<string>();
-  const startStr = term?.startDate?.toISOString().slice(0, 10) ?? null;
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const termEndStr = term?.endDate?.toISOString().slice(0, 10) ?? null;
-  const endStr = termEndStr && termEndStr < todayStr ? termEndStr : todayStr;
-  if (startStr && startStr <= endStr) {
-    for (
-      let d = new Date(`${startStr}T00:00:00Z`);
-      d.toISOString().slice(0, 10) <= endStr;
-      d = new Date(d.getTime() + 86_400_000)
-    ) {
-      const dow = d.getUTCDay();
-      const day = dow === 0 ? 7 : dow;
-      if (meetupDays.includes(day)) elapsed.add(d.toISOString().slice(0, 10));
-    }
-  }
-  const DAY_RANK: Record<string, number> = { present: 0, excused: 1, late: 2, absent: 3 };
-  const worstByStudent = new Map<string, Map<string, number>>();
-  for (const r of attendance) {
-    const key = r.studentId ?? (r.rosterId ? `roster:${r.rosterId}` : null);
-    if (!key) continue;
-    const dayKey = r.date.toISOString().slice(0, 10);
-    if (!elapsed.has(dayKey)) continue;
-    let perDay = worstByStudent.get(key);
-    if (!perDay) {
-      perDay = new Map<string, number>();
-      worstByStudent.set(key, perDay);
-    }
-    const rank = DAY_RANK[r.status] ?? 3;
-    perDay.set(dayKey, Math.max(perDay.get(dayKey) ?? -1, rank));
-  }
-  const presentMeetupsOf = (studentKey: string): number => {
-    let n = 0;
-    for (const rank of worstByStudent.get(studentKey)?.values() ?? []) {
-      if (rank === 0) n += 1;
-    }
-    return n;
-  };
-
-  const students = [
-    ...profiles.map((p) => ({
-      studentId: p.userId,
-      name: p.user.fullName,
-      lrn: p.lrn,
-      hasAccount: true as const,
-    })),
-    ...rosterOnly.map((r) => ({
-      studentId: `roster:${r.id}`,
-      name: r.fullName,
-      lrn: r.lrn,
-      hasAccount: false as const,
-    })),
-  ]
-    .map((s) => {
-      const present = presentMeetupsOf(s.studentId);
-      const final = finalByKey.get(s.studentId) ?? null;
-      return {
-        ...s,
-        attendancePresent: present,
-        attendanceTotal: elapsed.size,
-        attendancePercentage:
-          elapsed.size > 0 ? Math.round((present / elapsed.size) * 1000) / 10 : null,
-        computedAverage: final?.computedAverage ?? null,
-        academicGrade: final?.transmutedGrade ?? null,
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  return {
-    classes,
-    advisorySections,
-    class: {
-      id: classId,
-      subjectId,
-      subjectName: subject.name,
-      subjectCode: subject.code,
-      sectionId,
-      sectionName: section.name,
-      gradeLevel: GRADE_LABELS[section.gradeLevel] ?? section.gradeLevel,
-    },
-    advisorySection: null,
-    students,
   };
 }

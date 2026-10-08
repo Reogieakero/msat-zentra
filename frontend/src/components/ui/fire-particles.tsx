@@ -4,18 +4,10 @@ import * as React from "react";
 import styles from "./fire-particles.module.css";
 
 interface FireParticlesProps {
-  /** Number of ember dots. CardModal-scale overlays use ~48; small
-   *  banner cards use ~12 so text stays readable. */
   count?: number;
   className?: string;
 }
 
-/* Fire particles rising bottom → top, tinted by the user's primary
- * palette. Deterministic per index (same formula as the original
- * CardModal particles) and stable per mount so they never reshuffle on
- * parent renders. Rise distance inherits --p-rise from the wrapper
- * (fullscreen overlays leave the -100vh default; small cards set a
- * pixel value like -320px). Hidden under prefers-reduced-motion. */
 export function FireParticles({ count = 12, className }: FireParticlesProps) {
   const particles = React.useMemo(
     () =>

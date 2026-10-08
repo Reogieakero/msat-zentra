@@ -12,7 +12,6 @@ export interface RiskHotspotData {
   deskTotal: number;
 }
 
-/** Busiest section × category cell, or null when there is nothing to show. */
 export function findHotspot(
   matrix: SectionMatrixRow[],
   categories: string[],
@@ -36,10 +35,6 @@ export function findHotspot(
   };
 }
 
-/**
- * Hotspot spotlight — the single busiest section + category in plain
- * words. One focused card: where to start check-ins today.
- */
 export function RiskHotspot({ hotspot }: { hotspot: RiskHotspotData | null }) {
   return (
     <Card className={`${styles.card} ${styles.glow}`} aria-label="Busiest spot">

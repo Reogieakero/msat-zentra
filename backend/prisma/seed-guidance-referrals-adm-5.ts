@@ -4,12 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 guidance-desk referrals of ADM type for /guidance/referrals:
-//   referredToRole = "guidance_counselor", escalatedTo = "adm_coordinator",
-//   status = "escalated" (type badge reads ADM).
-// Just referred + sent toward ADM — no sessions, no resolution.
-// Idempotent: skips roster entries that already have a guidance referral.
-
 const CASES = [
   {
     observationDaysAgo: 1,

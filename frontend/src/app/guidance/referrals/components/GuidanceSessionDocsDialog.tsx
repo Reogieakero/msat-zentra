@@ -27,13 +27,6 @@ import styles from "./GuidanceReferralDialogs.module.css";
 
 import { useActiveNowTick } from "@/lib/clock";
 
-/**
- * Optional documentation on one counseling session: view filed photos,
- * attach more, or remove a wrong upload. Same logic as the nurse booked
- * sessions — filing unlocks once the session time arrives (viewing stays
- * allowed), and docs never gate Done. Available on open cases from the
- * session list ("Docs" button).
- */
 export function SessionDocsDialog({
   referralId,
   session,
@@ -87,8 +80,6 @@ export function SessionDocsDialog({
 
   if (!open) return null;
 
-  // Documentation unlocks once the session time arrives — viewing stays
-  // allowed, but new uploads wait for an ongoing/completed session.
   const docsLocked =
     session.status === "scheduled" &&
     new Date(session.scheduledAt).getTime() > now;

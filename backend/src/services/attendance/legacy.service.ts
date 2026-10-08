@@ -6,9 +6,6 @@ export interface LegacyDaysQuery {
   limit: number;
 }
 
-// Frozen AM/PM archive reads (AttendanceRecordLegacy — never written by the
-// app). Keeps historical dashboards working after the subject cutover without
-// inventing subject information.
 export async function getLegacyDays(query: LegacyDaysQuery) {
   const { sectionId, session, limit } = query;
   const rows = await prisma.attendanceRecordLegacy.findMany({

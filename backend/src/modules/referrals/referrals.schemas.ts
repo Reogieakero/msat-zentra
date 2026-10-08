@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-// Request validation for the referral pipeline (POST/PATCH bodies).
-// Business-rule validation (desk routing, term guards, resolve gates)
-// lives in src/services/referrals/*.service.ts; these schemas only check
-// request shape.
-
 export const statusSchema = z.object({
   status: z.enum(["pending", "in_progress", "resolved", "escalated", "info_requested", "dismissed", "follow_up"]),
   resolutionSummary: z.string().trim().min(1).max(2000).optional(),
@@ -40,8 +35,6 @@ export const admSchema = z.object({
   reason: z.string().min(1).max(500),
 });
 
-// Accept a case WITH intake: priority triage, first impressions, and an
-// optional first counseling session booked on the spot.
 export const acceptSchema = z.object({
   priority: z.enum(["low", "normal", "high"]),
   intakeNotes: z.string().trim().max(2000).optional(),
@@ -54,9 +47,6 @@ export const acceptSchema = z.object({
     .optional(),
 });
 
-// Nurse intake: accept a case on the clinic's desk WITH first impressions
-// and an optional first clinic session booked on the spot — one atomic
-// call so a case is never half-accepted.
 export const nurseAcceptSchema = z.object({
   intakeNotes: z.string().trim().max(2000).optional(),
   clinicSession: z
@@ -87,15 +77,10 @@ export const nurseAdmReviewSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
   outcome: z.enum(["endorse", "reject"]),
   clinicSession: clinicSessionSchema,
-  // Kept for backward compatibility — new flows save the form first via
-  // nurse-referral-form and forward via nurse-adm-forward.
+
   referralForm: referralFormSchema,
 });
 
-// Save the nurse's referral form (GCForm-03 fill-up) on an ADM consultation
-// case. Confirming the form writes one endorse-style internal note and sets
-// referralFormReady — the UI forwards (endorses) to the ADM coordinator
-// right away, so the note reads as the endorsement.
 export const nurseReferralFormSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
   referralForm: referralFormSchema,
@@ -128,15 +113,10 @@ export const cancelSessionSchema = z.object({
   cancelReason: z.string().trim().max(500).optional(),
 });
 
-// Adviser-initiated cancel: the teacher who filed the referral withdraws it
-// at any time while the case is still open (any non-terminal status).
 export const adviserCancelSchema = z.object({
   reason: z.string().trim().min(1).max(500),
 });
 
-// Adviser reopen: re-submit the teacher's own cancelled (dismissed)
-// referral. An optional new destination (type) may be picked: omitted keeps
-// the original desk.
 export const reopenSchema = z.object({
   referredToRole: z.enum(["nurse", "guidance_counselor", "adm_coordinator", "principal"]).optional(),
   consultReviewer: z.enum(["nurse", "guidance_counselor", "lrpc"]).optional(),

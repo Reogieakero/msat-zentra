@@ -4,7 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Row counts for every transaction table (config/identity tables excluded).
 const COUNTERS: Record<string, () => Promise<number>> = {
   StudentGrade: () => prisma.studentGrade.count(),
   FinalGrade: () => prisma.finalGrade.count(),

@@ -70,10 +70,6 @@ export default function FinalGradeApprovalsPage() {
   const [page, setPage] = React.useState(1);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
-  // Server-paginated + server-searched (strict-15): `total` drives the pager
-  // (filtered count); `complete`/`ready` stay global for the tiles.
-  // keepPreviousData keeps the current rows on screen while the next page
-  // loads — page turns never flash skeletons.
   const { data, isPending, isError } = useQuery<GradesResponse>({
     queryKey: ["registrar-final-grades", page, debouncedQuery],
     queryFn: ({ signal }) =>
@@ -96,9 +92,7 @@ export default function FinalGradeApprovalsPage() {
   const filteredTotal = data?.total ?? pageRows.length;
 
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
-  // Derived (never stored): if the list shrinks under us the backend clamps
-  // the requested page and every control below reads safePage, so the view
-  // self-heals on the next navigation without an effect.
+
   const safePage = Math.min(page, totalPages);
   const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, filteredTotal);

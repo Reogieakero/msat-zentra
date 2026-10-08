@@ -1,28 +1,16 @@
-// School-day shape for the master-teacher setup timetable. Everything flows
-// sequentially from the class start time: 8 subject periods with a lunch row
-// after one of them and optional recess rows after theirs. Clock times are
-// derived — the table re-renders from whatever is configured here. When a
-// recess shares its period with lunch, lunch renders first.
-
 export interface RecessConfig {
   enabled: boolean;
-  /** 1-based period the recess follows (1–4 morning, 5–8 afternoon). */
   afterPeriod: number;
-  /** Break length in minutes. */
   mins: number;
 }
 
 export interface LunchConfig {
-  /** 1-based period lunch follows (1–8). */
   afterPeriod: number;
-  /** Lunch length in minutes. */
   mins: number;
 }
 
 export interface DayConfig {
-  /** "HH:MM" 24h — real start of classes. */
   startTime: string;
-  /** Minutes per subject period. */
   periodMins: number;
   lunch: LunchConfig;
   morningRecess: RecessConfig;

@@ -1,6 +1,5 @@
 "use client";
 
-// Certification board shapes for the coordinator desk. Pure types only.
 import type { AdmEligibility } from "./coordinator.types";
 
 export type CertStatus =

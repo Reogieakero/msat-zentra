@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import {
@@ -22,19 +21,16 @@ export interface CoordinatorBookInitial {
   datetime: string;
   venue: string;
   logbook?: string | null;
-  /** Current invitees for reschedule prefill — full profiles from the
-      meetings query, or id-only stubs from the table row snapshot (the
-      picker resolves names from the staff directory either way). */
+
   invitees?: { id: string; fullName?: string; role?: string }[];
 }
 
 interface CoordinatorReferralsBookDialogProps {
   open: boolean;
   selected: AdmCaseRow | null;
-  /** Set when the case already has a booked (unattended) meeting — the
-      dialog reschedules it instead of creating a second booking. */
+
   rescheduleMeeting?: CoordinatorBookInitial | null;
-  /** Fresh-booking venue preset (home-visit follow-up after a no-show). */
+
   venuePreset?: "school" | "home" | null;
   pending: boolean;
   serverError?: string | null;
@@ -52,16 +48,6 @@ function splitDatetime(iso: string): { date: string; time: string } {
   };
 }
 
-/**
- * Thin wrapper around the shared book-session modal — the same dialog as
- * the nurse clinic desk and the guidance desks. The kind dropdown picks
- * the venue (In school / Home visitation) and the free-text box takes the
- * attendance logbook ref. No student or parent account is ever asked for.
- *
- * When `rescheduleMeeting` is set the dialog prefills from the booked
- * meeting and saves as a reschedule — a booked case can never gain a
- * second booking this way.
- */
 export function CoordinatorReferralsBookDialog({
   open,
   selected,
@@ -72,10 +58,7 @@ export function CoordinatorReferralsBookDialog({
   onClose,
   onSubmit,
 }: CoordinatorReferralsBookDialogProps) {
-  // Invitable staff for the invite picker — loaded only while the dialog is
-  // open, scoped to the case so the adviser group holds just the student's
-  // own adviser (early `referral:<id>` rows pass referralId, profile rows
-  // pass profileId).
+
   const caseParams =
     selected && selected.id.startsWith("referral:")
       ? { referralId: selected.id.slice("referral:".length) }
@@ -93,8 +76,7 @@ export function CoordinatorReferralsBookDialog({
     staleTime: 1000 * 60 * 5,
   });
   const scopedAdviserId = staffQuery.data?.sectionAdviserId ?? null;
-  // Scoped to a case but its section names no adviser: say so plainly
-  // instead of rendering a silently adviser-less picker.
+
   const adviserRow = (staffQuery.data?.staff ?? []).find(
     (s) => s.role === "adviser" || (scopedAdviserId !== null && s.id === scopedAdviserId),
   );

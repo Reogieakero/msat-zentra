@@ -34,15 +34,6 @@ export interface DialogProps {
   onChanged: () => void;
 }
 
-/**
- * Book a clinic session on a clinic matter (the referrals page had no way
- * to create one — only finish/move/cancel/delete once booked). Same
- * one-active-session rule as the guidance "Book session" flow; the server
- * enforces it too, this is just the friendly early message.
- *
- * Thin wrapper around the shared book-session modal so the clinic desk and
- * the guidance interventions desk book sessions through identical UI.
- */
 export function ScheduleSessionDialog({
   row,
   open,
@@ -63,8 +54,7 @@ export function ScheduleSessionDialog({
     onSuccessExtra: () => {
       onClose();
       onChanged();
-      // Instant reminder: re-evaluate the inbox now instead of waiting for
-      // the next poll tick, so the booking card drops immediately.
+
       refreshBookingReminders();
     },
   });
@@ -112,9 +102,7 @@ export function FinishSessionDialog({
       outcome?: string;
       followUpSession?: { scheduledAt: string };
     }) => {
-      // Step 1 — mark the session done (required). Step 2 — file the
-      // optional photos (docs never block Done; a failed upload keeps the
-      // dialog open so the nurse can retry or close anyway).
+
       await completeClinicSession(referralId, session.id, {
         sessionNotes: fields.sessionNotes,
         ...(fields.outcome ? { outcome: fields.outcome } : {}),
@@ -153,9 +141,6 @@ export function FinishSessionDialog({
 
   if (!open) return null;
 
-  // A still-upcoming session cannot be marked done — it unlocks once the
-  // scheduled time arrives. The card disables the button too; this is the
-  // in-dialog guard for stale views and direct calls.
   const notStarted = new Date(session.scheduledAt).getTime() > now;
 
   function onPickFiles(list: FileList | null) {

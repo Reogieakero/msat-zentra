@@ -1,4 +1,3 @@
-import * as React from "react";
 import styles from "./donut.module.css";
 
 type Props = {
@@ -6,8 +5,6 @@ type Props = {
   pending: number;
 };
 
-// Primary-tinted ramp that follows the saved workspace palette
-// (RecordKeeperPaletteGate paints var(--primary) desk-wide).
 const COLORS = {
   withAccount: "var(--primary)",
   pending: "color-mix(in oklch, var(--primary) 65%, var(--card))",

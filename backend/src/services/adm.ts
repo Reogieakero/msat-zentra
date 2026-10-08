@@ -1,17 +1,5 @@
 import { AppError } from "../lib/errors.js";
 
-// PLAN.md §6.4 — ADM referral state machine, the 8-stage ADM Case Pipeline:
-//   1. anecdotal            — Adviser files a behavioral/academic record
-//   2. consultation         — Guidance Counselor / School Nurse / LRPC review
-//   3. meeting_parents      — Meeting with Parents/Guardians (ADM Coordinator & Teachers)
-//   4. home_visitation      — Home Visitation if parents did not attend (Guidance)
-//   5. certification        — ADM Coordinator records recommendation + ADM Certification
-//   6. principal_approval   — Principal (School Head) final-signs the certification
-//   7. enrollment_monitoring— Student completes modules; Coordinator/Teacher track
-//   8. completion           — Device return recorded; case closed
-// Linear stages; illegal transitions are rejected with 409 (role gating in routes).
-// IMPORTANT: a case may only be principal-approved AFTER it reaches certification.
-
 export type AdmStage =
   | "anecdotal"
   | "consultation"
@@ -51,7 +39,7 @@ export interface AdmStageMeta {
   order: number;
   label: string;
   owner: AdmRole;
-  /** True when this stage is an action owned by the Principal. */
+
   principalAction: boolean;
   description: string;
 }
@@ -137,21 +125,10 @@ export function assertTransition(from: AdmStage, to: AdmStage) {
   }
 }
 
-// Parent meeting branch: attended → minutes + logbook; else → home visitation.
 export function requireHomeVisitation(attended: boolean): boolean {
   return !attended;
 }
 
-// PLAN.md §6.4 — eligibility is DERIVED, never free-typed. A learner is
-// certified eligible only when the ADM Coordinator has assembled the full
-// documented evidence chain at the certification stage:
-//   - referral form filed
-//   - anecdotal report filed
-//   - ADM certification form VERIFIED (the recommendation itself)
-//   - parent engagement: a meeting attended (minutes logged) OR a home
-//     visitation form filed when the parents did not attend
-// Anything at/after certification missing that evidence is "ineligible";
-// cases not yet at certification stay "pending" until the coordinator acts.
 export type AdmEligibilityInput = {
   stage: AdmStage;
   forms: { formType: string; status?: string }[];
@@ -172,12 +149,9 @@ export function evaluateAdmEligibility(input: AdmEligibilityInput): "pending" | 
   const meetingAttended = parentMeetings.some((m) => m.attended) || has("MINUTES_OF_MEETING");
   const homeVisit = has("HV_FORM");
 
-  // A meeting attended satisfies parent engagement; otherwise a home
-  // visitation form is required.
   const parentEngagement = meetingAttended || homeVisit;
 
   if (referral && anecdotal && certification && parentEngagement) return "eligible";
-  // At certification stage but the evidence chain is incomplete → ineligible.
+
   return "ineligible";
 }
-

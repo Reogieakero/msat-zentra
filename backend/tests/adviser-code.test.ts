@@ -18,7 +18,6 @@ describe("Adviser code mint + verify", () => {
 
   it("mints unique codes across a batch-sized run", () => {
     const codes = new Set(Array.from({ length: 20 }, () => mintAdviserCode()));
-    // 32^5 space — 20 mints must not collide in practice.
     expect(codes.size).toBe(20);
   });
 

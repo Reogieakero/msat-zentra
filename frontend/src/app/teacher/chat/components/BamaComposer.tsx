@@ -33,7 +33,6 @@ export function BamaComposer({
   composerRef,
   activeId,
 }: BamaComposerProps) {
-  // Auto-extend the ask box with its content instead of scrolling it.
   useEffect(() => {
     const el = composerRef.current;
     if (!el) return;

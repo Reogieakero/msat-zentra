@@ -12,7 +12,7 @@ import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { Inbox, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
-// Section cards share one component with the principal schedule grid.
+
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { SectionScheduleCard } from "@/components/schedule/SectionScheduleCard";
 import styles from "./schedule-empty.module.css";
@@ -101,8 +101,7 @@ export default function TeacherSchedulePage() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const session = useSession();
   const overview = useTeacherOverview();
-  // First-frame value from the per-teacher cache — on a hard refresh the gate
-  // must not flash "enable Master Teacher" for someone who already has it.
+
   const cachedMaster = useCachedMasterTeacher(session?.sub);
   const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
@@ -149,10 +148,6 @@ export default function TeacherSchedulePage() {
     },
   });
 
-  // Overview still unknown: paint the skeleton, never the "enable it" gate —
-  // that text must not flash for a teacher who already enabled the toggle.
-  // (Branching on `session` here would reintroduce the mismatch: it is null
-  // on the server but present on the hydrated client.)
   if (overview.isPending) {
     return (
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
@@ -194,10 +189,7 @@ export default function TeacherSchedulePage() {
   }
 
   const sections = schedData.sections;
-  // Every principal-added section shows here — scheduled or not — so a newly
-  // added section is never unreachable. Clicking a card opens its weekly
-  // template at its own URL (empty for unscheduled sections). Sorted by
-  // grade, then name.
+
   const gradeNumber = (g: string) => Number(g.replace("G", "")) || 0;
   const orderedSections = [...sections].sort(
     (a, b) => gradeNumber(a.gradeLevel) - gradeNumber(b.gradeLevel) || a.name.localeCompare(b.name),

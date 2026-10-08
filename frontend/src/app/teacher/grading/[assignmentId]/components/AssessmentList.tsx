@@ -31,10 +31,6 @@ type Props = {
   onDeleted: (assessmentId: string) => void;
 };
 
-/* Assessment picker: every assessment the teacher added, grouped by
-   category. Labels the list, tiles each assessment pro-style (max score
-   right, added date below the title), and offers per-row delete.
-   Selecting a tile opens the encode table; nothing encodes here. */
 export function AssessmentList({ students, components, onSelect, onDeleted }: Props) {
   const [pendingDelete, setPendingDelete] = React.useState<ClassAssessment | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
@@ -53,8 +49,6 @@ export function AssessmentList({ students, components, onSelect, onDeleted }: Pr
   const total = groups.reduce((n, g) => n + g.assessments.length, 0);
   const unfilteredTotal = components.reduce((n, c) => n + c.assessments.length, 0);
 
-  // Floating scroll hint: visible only when the list overflows and the
-  // user is not at the bottom yet.
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [canScrollDown, setCanScrollDown] = React.useState(false);
   const updateScrollHint = React.useCallback(() => {

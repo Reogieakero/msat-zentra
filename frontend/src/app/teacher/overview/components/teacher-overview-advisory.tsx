@@ -200,10 +200,6 @@ interface TeacherOverviewAdvisoryProps {
   students: AdvisoryStatusRow[];
 }
 
-/* Advisory-students card as a data table (data-table5 pattern: sortable +
-   draggable columns, name/status filters, column visibility, row
-   selection, pagination). Header keeps the title, privacy note, and the
-   status count. */
 export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -272,7 +268,6 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
     },
   });
 
-  // Keep the status dropdown and the table column filter in sync.
   const setStatusFilter = (next: StatusFilter) => {
     setStatus(next);
     table.getColumn("riskLevel")?.setFilterValue(next === "" ? undefined : next);

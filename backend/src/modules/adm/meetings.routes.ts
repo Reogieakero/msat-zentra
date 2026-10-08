@@ -21,9 +21,6 @@ import {
 
 const router = Router();
 
-// Meeting documentation uploads: photos filed on a parent meeting (signed
-// logbook, venue, agreements…). Images only, 5 MB each, max 5 per request,
-// 10 per meeting — mirrors the clinic session documentation flow.
 const meetingUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 5 },
@@ -38,11 +35,6 @@ const meetingUpload = multer({
 
 const ADM_TAG_GROUP = ["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"];
 
-// Parent/guardian meetings booked by the coordinator once a case is
-// referred to ADM — in school ("school") or at home ("home", home
-// visitation). Booking is allowed for any unsigned profile at a
-// pre-certification stage; recording the outcome later drives the
-// meeting_parents → certification | home_visitation branch.
 router.post(
   "/:id/meetings",
   requireAuth,
@@ -69,10 +61,6 @@ router.post(
   }
 );
 
-// Pre-profile booking: schedule the parent meeting directly on a referral.
-// Needs NO student account and NO learner profile — roster enlistments work.
-// If a profile already exists for the referral, the meeting lands on it;
-// otherwise it attaches to the referral and transfers on profile creation.
 router.post(
   "/referral/:referralId/meetings",
   requireAuth,
@@ -99,9 +87,6 @@ router.post(
   }
 );
 
-// Reschedule a still-booked (unattended) parent meeting — new date/time
-// and/or venue. Attended meetings keep their history and cannot move; book
-// a fresh meeting instead. Locked (certified/signed) cases reject too.
 router.patch(
   "/meetings/:meetingId/reschedule",
   requireAuth,

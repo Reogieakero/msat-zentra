@@ -23,17 +23,10 @@ import { GuidanceAdmReports } from "./components/guidance-adm-reports";
 import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
-/**
- * Referrals Report — insights and reports over every case referred to
- * guidance (ADM + Counseling). Same contents as the nurse Referrals Report,
- * over the guidance referrals basis. Case work itself lives on the ADM Cases
- * and Counseling Cases timelines, linked from the recommendations below.
- */
 export default function GuidanceAdmPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Aggregate insights view: bounded desk walks feed the client-side
-  // insights (nested under ["guidance-adm"] so desk invalidation reaches it).
+
   const { data: referrals, isPending, isError, refetch, isFetching } =
     useQuery<GuidanceReferralItem[]>({
       queryKey: ["guidance-adm", "report", termKey],
@@ -42,17 +35,12 @@ export default function GuidanceAdmPage() {
       staleTime: 60_000,
     });
 
-  // All-status case list (pending through dismissed) — insights, reports,
-  // and queue always reflect the current referrals whatever their status.
   const data = React.useMemo(
     () =>
       Array.isArray(referrals) ? buildGuidanceAdmReferrals(referrals) : null,
     [referrals]
   );
 
-  // Live rule-based risk level per student behind these cases (account
-  // id or roster id — the endpoint serves both). Desk-wide so the
-  // high-risk recommendation sees counseling cases too.
   const studentIds = React.useMemo(
     () =>
       [
@@ -77,9 +65,6 @@ export default function GuidanceAdmPage() {
     enabled: studentIds.length > 0,
   });
 
-  // Referral insights derive from the same desk list the reports read
-  // (ADM + counseling), so every number repaints live with the desk — no
-  // extra fetch.
   const insights = React.useMemo(
     () => (data ? buildGuidanceAdmInsights(data.desk, riskByStudent ?? {}) : null),
     [data, riskByStudent]
@@ -117,7 +102,7 @@ export default function GuidanceAdmPage() {
             <CardContent>
               <Skeleton style={{ width: "45%", height: "0.9375rem" }} />
               <Skeleton style={{ width: "75%", height: "0.8125rem", marginTop: "0.125rem" }} />
-              {/* Trend chart is 200px with axes, not 168px like the donut. */}
+
               <Skeleton style={{ width: "100%", height: "200px", marginTop: "0.75rem" }} />
               <Skeleton style={{ width: "100%", height: "2.25rem", marginTop: "0.625rem", paddingLeft: "0.625rem" }} />
             </CardContent>

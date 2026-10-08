@@ -1,4 +1,3 @@
-// Dashboard fetch for the guidance overview page.
 import { apiClient } from "@/lib/api/client";
 import type { GuidanceOverviewData } from "./overview.types";
 

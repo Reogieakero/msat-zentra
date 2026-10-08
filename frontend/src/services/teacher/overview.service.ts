@@ -11,11 +11,6 @@ import type {
   TeacherOverviewSecondary,
 } from "./overview.types";
 
-// Cache lifetime mirrors the global QueryClient defaults (stale 30s, gc 5min)
-// explicitly so the overview's instant-back-navigation contract survives
-// future default changes. Prefix invalidations on ["teacher-overview"] still
-// match these scoped keys (exact: false), so realtime + mutation refresh
-// keeps working unchanged.
 const OVERVIEW_STALE_MS = 30_000;
 const OVERVIEW_GC_MS = 5 * 60_000;
 
@@ -40,8 +35,6 @@ export async function fetchTeacherOverviewGradebook(): Promise<TeacherOverviewGr
   return data;
 }
 
-/** Teacher + term scoped key — two teachers must never share cached
-    private data, and term switches refetch instead of serving stale data. */
 export function teacherOverviewKey(
   teacherId: string | null | undefined,
   termKey = ""
@@ -63,8 +56,6 @@ export function teacherOverviewGradebookKey(
   return ["teacher-overview-gradebook", teacherId ?? "anon", termKey] as const;
 }
 
-/** Critical payload (identity + classes + advisory). Shared by overview,
- *  gradebook, and advisory-students so one fetch serves all three pages. */
 export function useTeacherOverview() {
   const session = useSession();
   const { activeTerm } = useTerm();
@@ -84,7 +75,6 @@ export function useTeacherOverview() {
   });
 }
 
-/** Lean gradebook payload (classes + assessments + standings, one request). */
 export function useTeacherOverviewGradebook() {
   const session = useSession();
   const { activeTerm } = useTerm();
@@ -100,7 +90,6 @@ export function useTeacherOverviewGradebook() {
   });
 }
 
-/** Lazy secondary payload (assessments + standings + activity). */
 export function useTeacherOverviewSecondary(enabled: boolean) {
   const session = useSession();
   const { activeTerm } = useTerm();

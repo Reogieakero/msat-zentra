@@ -31,8 +31,6 @@ import type {
 import tableScroll from "./advisory-grades-table.module.css";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
-/** Live realtime grade for a subject: unweighted mean of recorded scores,
- *  regardless of lock / finalization status. */
 function gradeOf(student: AdviseeRow, subject: string): number | null {
   const g = (student.liveGrades ?? []).find((x) => x.subject === subject);
   return g ? g.average : null;
@@ -46,11 +44,6 @@ function riskBadge(level: AdviseeRow["riskLevel"]): {
   return { variant: "green" };
 }
 
-/** Academic risk straight from the engine rule (risk.ts academicFlag): the
- *  total average of the student's live subject grades, compared at 75. One
- *  tripped factor reads Moderate, a clear average reads Low — and with no
- *  live grades yet there is no academic risk status at all (null → "—"),
- *  never a default Low. */
 function academicRiskOf(
   student: AdviseeRow,
   subjects: { name: string }[],
@@ -65,9 +58,6 @@ function academicRiskOf(
   return average < 75 ? "Moderate" : "Low";
 }
 
-/** General average: mean of the student's graded live subject averages.
- *  Ungraded subjects are excluded (never divide by the offered total).
- *  Null when nothing is graded yet (renders "—", like Risk). */
 function generalAverageOf(
   student: AdviseeRow,
   subjects: { name: string }[],
@@ -87,19 +77,12 @@ interface AdvisoryGradesTableProps {
   offeredSubjects: { name: string; code: string }[];
 }
 
-// Roster-wide per-subject grades as a data-table5-style table: one row per
-// advisee, one live grade column per offered subject code. Cells always show
-// the realtime mean of recorded scores (lock-agnostic) — no computation
-// switch.
 export function AdvisoryGradesTable({ students, sections, offeredSubjects }: AdvisoryGradesTableProps) {
   const [sectionId, setSectionId] = React.useState<string>("all");
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [showLegend, setShowLegend] = React.useState(true);
 
-  // Subject-code columns = offered subjects (assignments + timetable), so
-  // headers render even before any grade is encoded. Ungraded cells read as
-  // Not connected.
   const subjects = React.useMemo(
     () =>
       [...offeredSubjects].sort((a, b) => a.name.localeCompare(b.name)),
@@ -166,8 +149,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         ),
       },
       {
-        // Academic-only risk (total average vs 75); unconnected students
-        // carry no status. Ranks null < Low < Moderate for sorting.
+
         id: "risk",
         accessorFn: (row) => {
           const r = academicRiskOf(row, subjects);
@@ -191,8 +173,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         },
       },
       {
-        // General average (mean of graded live subject averages).
-        // Ungraded students carry no average. Ranks null lowest for sorting.
+
         id: "general-average",
         accessorFn: (row) => generalAverageOf(row, subjects) ?? -1,
         header: "General Average",

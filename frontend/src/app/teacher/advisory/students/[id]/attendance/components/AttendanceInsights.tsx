@@ -33,7 +33,7 @@ function buildInterpretation(
 ): string[] {
   const lines: string[] = [];
   const pct = Math.round(summary.rate * 100);
-  // Guard against stale payloads that predate the schoolDays field.
+
   const dayCount = summary.schoolDays ?? days.length;
 
   if (summary.total === 0 && !subjectSummary) {
@@ -83,8 +83,6 @@ function buildInterpretation(
     lines.push("No absences, lates, or excuses on record — clean sheet outside presences.");
   }
 
-  // Recent trend: last 10 school days vs the term average (subject marks
-  // and legacy AM/PM sessions pooled).
   const recent = days.slice(0, 10);
   const recentSessions = recent.flatMap((d) => [
     ...Object.values(d.sessions),
@@ -109,8 +107,7 @@ function buildInterpretation(
 }
 
 export function AttendanceInsights({ summary, subjectSummary, days, loading }: AttendanceInsightsProps) {
-  // Subject-era students see the subject donut; legacy-only students keep the
-  // AM/PM sessions donut. Never mix the two denominators in one chart.
+
   const shown = subjectSummary ?? summary;
   const series = useMemo(() => {
     if (!shown) return [];
@@ -121,7 +118,7 @@ export function AttendanceInsights({ summary, subjectSummary, days, loading }: A
     () => (summary ? buildInterpretation(summary, subjectSummary, days) : []),
     [summary, subjectSummary, days]
   );
-  // The status verdict is always the last line — render it as a badge.
+
   const hasStatusBadge = shown !== null && shown.total > 0 && lines.length > 0;
   const bodyLines = hasStatusBadge ? lines.slice(0, -1) : lines;
   const statusLine = hasStatusBadge ? lines[lines.length - 1] : null;

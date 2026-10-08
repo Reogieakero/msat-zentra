@@ -1,7 +1,7 @@
 import multer from "multer";
 
 const ALLOWED = ["application/pdf", "image/jpeg", "image/png"] as const;
-export const MAX_SF10_BYTES = 5 * 1024 * 1024; // 5 MB
+export const MAX_SF10_BYTES = 5 * 1024 * 1024;
 
 export const sf10Upload = multer({
   storage: multer.memoryStorage(),

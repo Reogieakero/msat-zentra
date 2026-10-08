@@ -13,12 +13,6 @@ function schoolYearOf(req: { termScope?: { schoolYearId: string } | null }) {
   return req.termScope?.schoolYearId ?? null;
 }
 
-// Every student under 80% of current (display-term) attendance, school-wide.
-// Strict per-day basis: present = days present in EVERY offered subject that
-// weekday (late/absent/excused/unrecorded break the day). Flat worst-first
-// list for the Needs Attention tab. Zero-record students count as 0%.
-// `session` is accepted but ignored on the strict path; it only applies to
-// the legacy fallback when the term holds zero subject-era rows.
 router.get(
   "/at-risk-students",
   requireAuth,
@@ -57,9 +51,6 @@ router.get(
   }
 );
 
-// Per-subject rate for one student (+ daily view derived from subject marks).
-// :id accepts a profile uuid or `roster:<uuid>`. Omit ?subjectId= for the
-// pooled overall rate across all subjects.
 router.get(
   "/students/:id/subject-rate",
   requireAuth,

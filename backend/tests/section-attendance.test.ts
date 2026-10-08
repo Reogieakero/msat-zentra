@@ -6,7 +6,6 @@ import {
   type SectionSubjectTake,
 } from "../src/services/attendance.js";
 
-// Monday 2026-01-05: offerings MATH + ENG for section "s1".
 const MON = new Date("2026-01-05T00:00:00Z");
 const OFFERED = buildOfferedMap([
   { sectionId: "s1", subjectId: "math", day: 1 },
@@ -114,7 +113,6 @@ describe("studentDayOutcomes", () => {
     ]);
     expect(out.get("u1")).toEqual({ present: 1, late: 0, excused: 0, absent: 1 });
     expect(out.get("u2")).toEqual({ present: 0, late: 1, excused: 0, absent: 1 });
-    // Zero takes all term → 0% (same rule as the legacy per-student view).
     expect(out.get("u3")).toEqual({ present: 0, late: 0, excused: 0, absent: 2 });
     for (const row of out.values()) {
       expect(row.present + row.late + row.excused + row.absent).toBe(2);

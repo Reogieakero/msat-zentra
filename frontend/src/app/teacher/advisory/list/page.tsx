@@ -51,8 +51,6 @@ import assign from "@/app/principal/academics/assign/components/section-assignme
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import listStyles from "./components/advisory-list.module.css";
 
-// Factor badges — same mapping as the overview At-Risk Advisees table:
-// academic amber, attendance green, behavioral blue.
 const FACTOR_BADGE: Record<AdviseeRiskFlag, { variant: "amber" | "green" | "blue"; label: string }> = {
   academic: { variant: "amber", label: "Academic" },
   attendance: { variant: "green", label: "Attendance" },
@@ -81,10 +79,6 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-/* Advisory List — the adviser's own student roster as a data table, same
-   layout as the overview At-Risk Advisees table: section card, title + count
-   header with the filter on the right, fixed table, count + pager footer.
-   Names link to each advisee's academic record. */
 export default function TeacherAdvisoryListPage() {
   const rosterQuery = useAdvisoryRoster();
   const invalidateTeacher = useTeacherInvalidate();
@@ -187,8 +181,6 @@ export default function TeacherAdvisoryListPage() {
     setAddOpen(true);
   }
 
-  // Pessimistic enlist: the dialog stays locked with its spinner until
-  // the server confirms; only the settled refetch adds the new row.
   const enlistMutation = useMutation({
     mutationFn: async (payload: { fullName: string; lrn: string; sectionId?: string }) => {
       const { data } = await apiClient.post<{ studentId?: string }>("/api/teacher/advisory/roster", payload);
@@ -200,8 +192,7 @@ export default function TeacherAdvisoryListPage() {
       toast.error({ title: "Could not enlist student", description: message });
     },
     onSuccess: (data, payload) => {
-      // Suppress the channel echo (success toast already fired) — the bell
-      // row still lands for badge + instant list sync everywhere.
+
       const rosterId = data?.studentId?.startsWith("roster:")
         ? data.studentId.slice("roster:".length)
         : undefined;
@@ -227,8 +218,7 @@ export default function TeacherAdvisoryListPage() {
       return;
     }
     setAddError(null);
-    // Close at once — the optimistic row is already in the table; the
-    // server confirmation (or rollback + error toast) follows behind.
+
     setAddOpen(false);
     enlistMutation.mutate({
       fullName,
@@ -237,9 +227,6 @@ export default function TeacherAdvisoryListPage() {
     });
   }
 
-  // Geometry-matched skeleton: same card, header + filter widths, four
-  // table columns (Student 220 / Risk 130 / Factors 180 / Section 140),
-  // 8 two-line rows, and pager footer as the loaded table.
   if (rosterQuery.isPending) {
     return (
       <section aria-label="Advisory list" className="flex min-w-0 flex-col gap-3">

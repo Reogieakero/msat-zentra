@@ -26,7 +26,6 @@ const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   health: 5,
 };
 
-// Folder body color per anecdotal category (matches the repository).
 const CATEGORY_COLORS: Record<string, string> = {
   behavioral: "#f59e0b",
   bullying: "#ef4444",
@@ -48,9 +47,6 @@ function recordDate(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/* Advisory anecdotal records — category only, never the private write-up.
-   Advisers see records about students in their sections; subject teachers
-   see their own filings. */
 export function TeacherOverviewAnecdotes() {
   const anecdotesQuery = useQuery({
     queryKey: ["teacher-anecdotes"],

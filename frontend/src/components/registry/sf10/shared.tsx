@@ -1,6 +1,3 @@
-// Shared SF10 display helpers (registrar + record-keeper desks — the two
-// copies were byte-identical).
-import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import type { Sf10Status } from "@/services/registry/sf10.types";
 

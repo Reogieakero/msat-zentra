@@ -1,5 +1,3 @@
-// GCForm-03 referral form shapes + vocabulary. Pure types plus the
-// template-exact concern labels.
 export interface GcForm03Source {
   student: string;
   grade: string;
@@ -63,13 +61,6 @@ export const CONCERN_OPTIONS: { key: keyof Omit<GcForm03Concerns, "othersText">;
   { key: "others", label: "Others" },
 ];
 
-/**
- * Concern labels EXACTLY as printed in the official template
- * (`public/referral forms/Referral Form - GCForm-03 v11.xlsx`, rows 13-14).
- * The on-screen question form above may use friendlier wording, but both
- * the modal preview and the .xlsx fill must use these so the two outputs
- * match the template — and each other — word for word.
- */
 export const TEMPLATE_CONCERN_LABELS = {
   absences: { label: "Absences/Tardiness/Cutting classes", doubleSpace: true },
   academic: { label: "Academic Problems", doubleSpace: true },

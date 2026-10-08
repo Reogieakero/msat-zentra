@@ -27,11 +27,7 @@ import { useNurseMutation } from "../../overview/components/use-nurse-mutation";
 import { useActiveNowTick } from "@/lib/clock";
 import type { DialogProps } from "./NurseSessionDialogs";
 import styles from "./NurseReferralDialogs.module.css";
-/**
- * Optional documentation on one clinic session: view filed photos, attach
- * more, or remove a wrong upload. Never gates Done — purely the evidence
- * trail. Available on open cases from the session list ("Docs" button).
- */
+
 export function SessionDocsDialog({
   referralId,
   session,
@@ -42,8 +38,7 @@ export function SessionDocsDialog({
   const [docs, setDocs] = React.useState<ClinicAttachment[]>(session.attachments ?? []);
   const [error, setError] = React.useState<string | null>(null);
   const uploadController = React.useRef<AbortController | null>(null);
-  // Abort an in-flight upload if the dialog unmounts — the spinner always
-  // settles instead of hanging forever.
+
   React.useEffect(() => {
     return () => uploadController.current?.abort();
   }, []);
@@ -91,8 +86,6 @@ export function SessionDocsDialog({
 
   if (!open) return null;
 
-  // Documentation unlocks once the session time arrives — viewing stays
-  // allowed, but new uploads wait for an ongoing/completed session.
   const docsLocked =
     session.status === "scheduled" &&
     new Date(session.scheduledAt).getTime() > now;

@@ -25,8 +25,6 @@ import styles from "./adviser-access.module.css";
 
 type RequestsResponse = { requests: AdviserAccessRequest[] };
 
-// Role-scoped key — the record-keeper desk fetches a different endpoint
-// under its own key, so switching desks never serves the other's cache.
 const QUERY_KEY = ["registrar-adviser-access"];
 
 async function fetchRequests() {
@@ -51,9 +49,7 @@ export default function AdviserAccessPage() {
         `/api/registrar/adviser-access-requests/${id}/${approved(approve)}`,
         approve ? {} : { reason: reason ?? "Denied by registrar" }
       ),
-    // Pessimistic: the request stays Pending (with its spinner) until the
-    // server confirms — the settled refetch below is what moves it to
-    // history. No optimistic flip: the UI must never outrun the processing.
+
     onError: (err) => {
       const message =
         (err as { response?: { data?: { error?: { message?: string } } } })?.response
@@ -61,10 +57,9 @@ export default function AdviserAccessPage() {
       toast.error({ title: "Action failed", description: message });
     },
     onSuccess: (_data, { id, approve }) => {
-      // Self-receipt lands in our own bell (badge bumps live); suppress its
-      // echo toast — the toast below already confirmed the action.
+
       markSelfNotified(id);
-      // Names from the still-present cache (row moves only via refetch).
+
       const target = qc
         .getQueriesData<RequestsResponse>({ queryKey: QUERY_KEY })
         .flatMap(([, d]) => d?.requests ?? [])

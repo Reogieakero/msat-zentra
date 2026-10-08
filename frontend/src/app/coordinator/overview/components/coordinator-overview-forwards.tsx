@@ -44,7 +44,6 @@ interface CoordinatorOverviewForwardsProps {
   onHistory: (target: HistoryTarget) => void;
 }
 
-/* Overview preview pager — matches the referrals list size (15). */
 const PAGE_SIZE = 15;
 
 function buildInterpretation(rows: AdmCaseRow[], now: number): string {
@@ -79,9 +78,7 @@ export function CoordinatorOverviewForwards({
   onRetry,
   onHistory,
 }: CoordinatorOverviewForwardsProps) {
-  // Client-side preview pagination at the list size. The query fetches the
-  // consultation queue preview (same fetcher + backend order as the list)
-  // so paging never needs a round-trip.
+
   const [page, setPage] = React.useState(1);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -167,8 +164,7 @@ export function CoordinatorOverviewForwards({
                 </TableHeader>
                 <TableBody>
                   {pageRows.map((r) => {
-                  // Elapsed runs from the guidance/nurse hand-off, falling
-                  // back to the observation date only for legacy rows.
+
                   const elapsed = msSinceDate(r.endorsedAt ?? r.datePrepared, now);
                    const caseStatus = deriveAdmCaseStatus(
                      r.stage,
@@ -226,9 +222,7 @@ export function CoordinatorOverviewForwards({
                           </>
                         ) : (
                           (() => {
-                            // Same rule as the referrals queue: no audit
-                            // trail still reads the row's own latest
-                            // timestamp, whatever the status.
+
                             const fb = latestActionFallback(r);
                             if (!fb) return <p className={styles.cellMain}>—</p>;
                             const ms = msSinceDate(fb.at, now);

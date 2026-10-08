@@ -4,8 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// For each assessment: expected = roster students in sections of the
-// subject's grade; actual = graded rows. Prints gaps.
 async function main() {
   const assessments = await prisma.assessment.findMany({
     select: {

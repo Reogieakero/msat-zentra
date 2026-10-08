@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck, ShieldAlert, ShieldX, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
@@ -14,9 +13,6 @@ export function LrnVerification({ lrn, name }: Props) {
   const trimmed = lrn.trim();
   const hasLrn = trimmed !== "" && trimmed !== "—";
 
-  // Cached per LRN+name so selecting back and forth never refetches within
-  // the window; manual Re-check forces a fresh read. No placeholder data —
-  // a previous student's verdict must never render under a new name.
   const verificationQuery = useQuery({
     queryKey: ["lrn-verification", trimmed, name],
     queryFn: ({ signal }) =>

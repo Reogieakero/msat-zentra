@@ -1,9 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
 
-// Shared grade-flag data-access: row shape, serialization, teacher scope,
-// and the list include. Endpoint orchestration lives in
-// src/services/teacher/gradeFlags.service.ts.
-
 export interface FlagRow {
   id: string;
   reason: string;
@@ -56,7 +52,6 @@ export function flagInclude() {
   } as const;
 }
 
-// Sections this teacher owns (assignments) + advises (adviser link).
 export async function teacherScope(teacherId: string) {
   const [assignments, advised] = await Promise.all([
     prisma.teacherSubjectAssignment.findMany({

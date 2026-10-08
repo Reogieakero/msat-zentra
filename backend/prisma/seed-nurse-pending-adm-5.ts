@@ -4,14 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 anecdotal records referred for ADM with the school nurse as
-// consultation reviewer:
-//   referredToRole = "adm_coordinator", consultReviewer = "nurse",
-//   status = "pending".
-// Just referred — no action done by the nurse (no review, no session).
-// These surface on /nurse/referrals (Referrals to me) as type ADM.
-// Idempotent: skips roster entries that already have any nurse referral.
-
 const CASES = [
   {
     observationDaysAgo: 0,
@@ -98,7 +90,6 @@ async function main() {
   );
 
   let created = 0;
-  // SEED_COUNT caps how many of CASES to create (default: all).
   const limit = Math.max(0, Number(process.env.SEED_COUNT) || CASES.length);
   for (const c of CASES.slice(0, limit)) {
     const target = candidates[created];

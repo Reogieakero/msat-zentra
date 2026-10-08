@@ -16,11 +16,6 @@ import type { NurseBreakdownRow } from "@/services/nurse/nurse.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
-/** Primary-palette scale — follows the nurse's workspace palette
- *  (--primary, same source as the heat-map scale in globals.css), so the
- *  charts re-tint the moment the palette is previewed or saved. Strongest
- *  slice always marks the leading segment. Falls back to the monochrome
- *  brand when no custom palette is set. */
 const SHADES = [
   "var(--primary)",
   "color-mix(in oklch, var(--primary), transparent 25%)",
@@ -47,8 +42,6 @@ function buildSlices(rows: NurseBreakdownRow[]): { slices: Slice[]; total: numbe
   return { slices, total };
 }
 
-/* Horizontal bars for the per-type cards — same primary scale and legend
-   as the donut, but counts are directly comparable across the two cards. */
 function BarPanel({
   title,
   description,

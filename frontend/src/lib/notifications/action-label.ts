@@ -1,10 +1,3 @@
-/* Actor-attributed action labels — one wording shared by the nurse alerts
-   timeline, the guidance timelines, the teacher toasts/bell, and the
-   adviser tracking stages. Every label names WHO acted (actor-first):
-   "Cancelled by adviser", "Session booked by School Nurse", ...
-   Unknown/absent actors fall back to the caller's legacy text so legacy
-   rows never go blank. */
-
 export type ActionScope = "nurse" | "guidance" | "teacher";
 
 const DESK_NAMES: Record<string, string> = {
@@ -25,15 +18,10 @@ function deskName(role: string | null | undefined): string | null {
   return DESK_NAMES[role] ?? null;
 }
 
-/** Owning desk of the scope — the actor for every non-withdrawal action
- *  the desk performs on its own timeline (route scoping guarantees it). */
 function scopeDesk(scope: ActionScope): "nurse" | "guidance_counselor" {
   return scope === "nurse" ? "nurse" : "guidance_counselor";
 }
 
-/** Which desk ran a session event described by a teacher-facing message
- *  ("Clinic booked a session …" vs "Guidance booked …" vs intervention
- *  follow-ups, which are always guidance-run). Null when unknowable. */
 export function deskFromSessionMessage(
   message: string | null | undefined
 ): "nurse" | "guidance_counselor" | null {
@@ -53,22 +41,14 @@ export function deskFromSessionMessage(
 
 export interface ActorActionInput {
   scope: ActionScope;
-  /** Raw audit action (referral_dismissed, session_scheduled, …). */
   action: string;
-  /** Actor role behind the action (audit). Null when unknown. */
   byRole?: string | null;
-  /** Referral dismissal performed by the filing teacher. */
   withdrawn?: boolean;
-  /** Role behind a session cancel (exact audit role, incl. the adviser
-   *  withdrawal cascade). Null when never cancelled / unknown. */
   cancelledByRole?: string | null;
-  /** Original message for teacher-scope desk derivation. */
   message?: string;
-  /** Fallback when the action maps to nothing (alert title, status text). */
   fallback: string;
 }
 
-/** Full actor-first label for one audit action. */
 export function actorActionLabel(input: ActorActionInput): string {
   const { scope, action } = input;
   const desk = scopeDesk(scope);
@@ -80,8 +60,6 @@ export function actorActionLabel(input: ActorActionInput): string {
   };
   const withActor = (text: string, actor: string | null): string =>
     actor ? `${text} by ${actor}` : input.fallback;
-  // Explicit audit actor wins everywhere (tracker entries carry it; desk
-  // timelines infer it from scope when absent).
   const explicit = by(input.byRole, false);
 
   switch (action) {

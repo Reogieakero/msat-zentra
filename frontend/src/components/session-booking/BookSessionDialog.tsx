@@ -18,11 +18,10 @@ export interface BookSessionFields {
   scheduledAt: string;
   sessionType: string;
   venue: string;
-  /** Invited staff user ids — present only when the invite picker is shown. */
+
   inviteeIds?: string[];
 }
 
-/* One invitable staff member for the meeting-invite picker. */
 export interface InviteStaffOption {
   id: string;
   fullName: string;
@@ -43,26 +42,24 @@ interface BookSessionDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (fields: BookSessionFields) => void;
-  /** "Book a clinic session for Maria." */
+
   description: string;
-  /** Shown under the venue field, e.g. where the session is held. */
+
   venueHint?: string;
-  /** Label for the free-text venue box — defaults to "Venue (optional)".
-      The ADM coordinator reuses it as the logbook-ref field. */
+
   venueLabel?: string;
   venuePlaceholder?: string;
-  /** Counseling desks pick a kind; the clinic desk books one-on-one only. */
+
   showSessionType?: boolean;
-  /** Label for the kind dropdown — defaults to "Session kind". The ADM
-      coordinator reuses it as the venue picker ("Venue"). */
+
   sessionTypeLabel?: string;
   sessionTypeOptions?: { value: string; label: string }[];
   defaultSessionType?: string;
-  /** One-active-session rule: set when a session is already booked. */
+
   hasActiveSession?: boolean;
   activeSessionMessage?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call (shown under validation errors). */
+
   serverError?: string | null;
   submitLabel?: string;
   busyLabel?: string;
@@ -72,13 +69,11 @@ interface BookSessionDialogProps {
   initialVenue?: string;
   initialSessionType?: string;
   idPrefix?: string;
-  /** Invite picker (ADM coordinator parent meetings only) — omitted everywhere
-      else, so the nurse/guidance dialogs render exactly as before. */
+
   inviteStaff?: InviteStaffOption[];
   initialInviteIds?: string[];
   inviteHint?: string;
-  /** The case's section adviser: grouped under Adviser even when their login
-      role is subject_teacher. Omitted everywhere else. */
+
   sectionAdviserId?: string | null;
 }
 
@@ -93,13 +88,6 @@ function toScheduledAt(date: string, time: string): string | null {
   return `${date}T${time}:00`;
 }
 
-/**
- * Shared book-session modal — the same dialog on the nurse clinic desk, the
- * guidance desks, and the ADM coordinator referrals desk. Date + time
- * pickers, optional venue, and an optional session-kind dropdown, with the
- * future-date and one-active-session guards built in. The caller performs
- * the save.
- */
 export function BookSessionDialog({
   open,
   onClose,
@@ -137,13 +125,9 @@ export function BookSessionDialog({
   );
   const [invites, setInvites] = React.useState<string[]>(initialInviteIds);
   const [error, setError] = React.useState<string | null>(null);
-  // Stepper (invite picker present only): step 1 captures schedule +
-  // details, step 2 picks attendees — one short screen at a time so the
-  // modal never overflows the viewport. Always restarts at step 1 on open.
+
   const [step, setStep] = React.useState(1);
 
-  // Fresh form every time the modal opens — synced during render, never
-  // in an effect. Reschedule opens prefill from the booked meeting.
   const inviteKey = [...initialInviteIds].sort().join(",");
   const openKey = open
     ? `${defaultSessionType}|${initialDate}|${initialTime}|${initialVenue}|${initialSessionType ?? ""}|${inviteKey}`
@@ -166,8 +150,7 @@ export function BookSessionDialog({
     const order = ["guidance_counselor", "nurse", "adviser"];
     const groups = new Map<string, InviteStaffOption[]>();
     for (const s of inviteStaff) {
-      // The section adviser belongs to the Adviser group by function, even
-      // when their login role is subject_teacher.
+
       const key = sectionAdviserId && s.id === sectionAdviserId ? "adviser" : s.role;
       const list = groups.get(key) ?? [];
       list.push(s);
@@ -188,9 +171,6 @@ export function BookSessionDialog({
 
   const isStepped = showInvites;
 
-  // Step 1 → 2 gate: schedule must be complete and future-dated before
-  // attendees can be picked. The one-active-session and submit guards stay
-  // on the final save.
   function goToInvites() {
     const scheduledAt = toScheduledAt(date, time);
     if (!scheduledAt) {
@@ -232,8 +212,7 @@ export function BookSessionDialog({
     <CardModal
       open
       onClose={() => {
-        // Locked while the booking is in flight — closes only on server
-        // confirmation, never early.
+
         if (!busy) {
           onClose();
           setError(null);

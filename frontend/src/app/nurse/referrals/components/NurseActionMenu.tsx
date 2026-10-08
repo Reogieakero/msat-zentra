@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { ListFilter } from "lucide-react";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import {
@@ -12,9 +11,6 @@ import {
 } from "./nurse-referrals-format";
 import styles from "./NurseActionMenu.module.css";
 
-/* Right sidebar — per-type action menus. ADM and Clinic each get their
-   own group; each link filters the timeline to that type + action and
-   carries its count on the right. */
 export function NurseActionMenu({
   actionFilter,
   counts,

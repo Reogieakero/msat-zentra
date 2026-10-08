@@ -31,18 +31,13 @@ function hasDocsCheck(record: { sessionDocs?: { files: { mimeType: string }[] }[
   );
 }
 
-/**
- * Guidance session documents — filed images from done counseling sessions,
- * split out from the Anecdotal Records page (which now holds GCForm-01 case
- * files only). Same privacy gates as the case files.
- */
 export default function GuidanceSessionDocumentsPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
   const [type, setType] = React.useState<TypeFilter>("");
   const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+
   const query = useDebouncedValue(queryInput.trim(), 300);
 
   const handleQueryInputChange = (value: string) => {
@@ -68,8 +63,6 @@ export default function GuidanceSessionDocumentsPage() {
       placeholderData: keepPreviousData,
     });
 
-  // The endpoint already serves only filings with filed images (docs=1);
-  // the client check stays as a safety net on the served page rows.
   const docsRecords = React.useMemo(
     () =>
       (Array.isArray(data?.records) ? data.records : []).filter(hasDocsCheck),
@@ -81,7 +74,6 @@ export default function GuidanceSessionDocumentsPage() {
     [docsRecords]
   );
 
-  // Derived, never setState-in-effect.
   const total = data?.total ?? docsRecords.length;
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);

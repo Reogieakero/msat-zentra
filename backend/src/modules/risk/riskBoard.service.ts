@@ -29,10 +29,6 @@ export interface RiskBoardResult {
   }[];
 }
 
-// PLAN.md §6.3 — principal board overview (O4). Aggregates the session's
-// active school year student risk state plus per-term snapshots for the trend
-// line. `gradeMode` selects whether the academic factor uses final
-// (transmuted) or raw computed averages.
 export async function getRiskBoard(
   gradeMode: GradeMode = "final",
   scope?: TermScopeInput,
@@ -58,8 +54,6 @@ export async function getRiskBoard(
       })
     : [];
 
-  // Live risk recompute uses the session's active term (same source of
-  // truth as the heatmap/students endpoints) so the board never drifts.
   const activeTermId = scope?.termId ?? (await resolveActiveTermId());
 
   const [profileStudents, rosterStudents] = await Promise.all([
@@ -74,14 +68,13 @@ export async function getRiskBoard(
         },
         attendanceRecords: {
           where: { termId: activeTermId ?? undefined },
-          // subjectId drives the engine's dual-mode attendance rule
-          // (subject-era rows vs legacy AM/PM rows).
+
           select: { status: true, subjectId: true },
         },
         anecdotalRecords: { where: { termId: activeTermId ?? undefined }, select: { id: true } },
       },
     }),
-    // Enlisted students without accounts count on equal footing.
+
     prisma.studentRoster.findMany({
       where: schoolYearId ? { schoolYearId } : undefined,
       select: {
@@ -112,10 +105,6 @@ export async function getRiskBoard(
     ),
   );
 
-  // Level distribution + factor totals are derived live from the shared
-  // engine (risk.ts) — the same source of truth as the students list,
-  // overview, and teacher advisory paths — and never trust stale stored
-  // riskLevel columns.
   let academic = 0;
   let attendance = 0;
   let behavioral = 0;
@@ -156,7 +145,6 @@ export async function getRiskBoard(
     else low++;
   }
 
-  // Total at-risk flags = sum of triggered factors across all students.
   const totalAtRiskFlags = academic + attendance + behavioral;
 
   const trend = await Promise.all(
@@ -218,10 +206,6 @@ export interface RiskTrendResult {
   trend: { date: string; term: string; high: number; moderate: number; low: number }[];
 }
 
-// School-year/term-scoped risk trend for the Risk Trend chart. When no
-// schoolYearId is given it defaults to the active year. When a specific term
-// is selected the trend is day-by-day (snapshots grouped by date within that
-// term); otherwise it's one point per term across the school year.
 export async function getRiskTrend(
   schoolYearId?: string,
   termId?: string
@@ -277,9 +261,6 @@ export async function getRiskTrend(
         end = new Date(`${keys[keys.length - 1]}T00:00:00`);
       }
 
-      // A term's schedule can extend into the future; the daily series must
-      // stop at "today" so we never emit zero-filled future days (which made
-      // the trailing "Last 7 days" bucket land on empty days).
       if (end.getTime() > nowMs) end = new Date(nowMs);
 
       const trend: {
@@ -349,7 +330,6 @@ export async function getRiskTrend(
   };
 }
 
-// List of school years (with their terms) for the Risk Trend filters.
 export async function getSchoolsForRisk() {
   const now = Date.now();
   const years = await prisma.schoolYear.findMany({
@@ -366,9 +346,7 @@ export async function getSchoolsForRisk() {
       },
     },
   });
-  // isCurrent = the school year whose span contains the current date, so the
-  // Risk Trend front-end defaults to the year matching today regardless of the
-  // isActive flag.
+
   return years.map((y) => ({
     id: y.id,
     name: y.name,

@@ -23,12 +23,6 @@ export interface AdmTrackCase {
   reason?: string | null;
 }
 
-/**
- * Track ADM referral — read-only timeline from the very start of the case:
- * the adviser filing the anecdotal report, the referral to the picked
- * consultation reviewer (nurse or guidance), then every backend ADM
- * pipeline stage through completion. Status-only; no clinical detail.
- */
 export function AdmTrackDialog({
   open,
   onClose,
@@ -45,9 +39,6 @@ export function AdmTrackDialog({
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const [showScrollDown, setShowScrollDown] = React.useState(false);
 
-  // Labeled scroll-down pill (same as the guidance interventions sheets):
-  // visible only while more stages sit below the fold. Re-measured on
-  // open, on scroll, on resize, and whenever the viewport itself resizes.
   const updateScrollBtn = React.useCallback(() => {
     const el = scrollRef.current;
     if (!el) {

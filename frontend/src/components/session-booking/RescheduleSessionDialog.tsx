@@ -23,7 +23,6 @@ interface RescheduleSessionDialogProps {
   onSubmit: (scheduledAt: string) => void;
   description?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call (shown under validation errors). */
   serverError?: string | null;
   submitLabel?: string;
   keepLabel?: string;
@@ -41,10 +40,6 @@ function toScheduledAt(date: string, time: string): string | null {
   return `${date}T${time}:00`;
 }
 
-/**
- * Shared move-session modal — picks the new date and time. The caller
- * performs the save.
- */
 export function RescheduleSessionDialog({
   open,
   onClose,
@@ -60,8 +55,6 @@ export function RescheduleSessionDialog({
   const [time, setTime] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh form every time the modal opens — synced during render, never
-  // in an effect.
   const openKey = open ? idPrefix : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -87,7 +80,6 @@ export function RescheduleSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        // Locked while the move is in flight.
         if (!next && !busy) {
           onClose();
           setError(null);

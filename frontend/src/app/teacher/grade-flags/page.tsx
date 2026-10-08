@@ -10,8 +10,7 @@ import styles from "./components/grade-flags.module.css";
 
 export default function TeacherGradeFlagsPage() {
   const [view, setView] = useState<"compose" | "history">("compose");
-  // Advisers don't raise grade flags — resolve first so the composer never
-  // flashes for them. Errors fail open to the page (previous behavior).
+
   const overview = useTeacherOverview();
   if (overview.isPending) return null;
   const isAdviser = !!overview.data?.advisorySection;

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
@@ -11,8 +10,6 @@ import styles from "./RiskLevelBreakdown.module.css";
 
 const LEVELS: RiskLevelKey[] = ["High", "Moderate", "Low"];
 
-// Primary-tinted level ramp, identical in light and dark mode (same as
-// the overview risk charts and the donut beside this card).
 const LEVEL_FILL: Record<RiskLevelKey, string> = {
   High: "var(--primary)",
   Moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",

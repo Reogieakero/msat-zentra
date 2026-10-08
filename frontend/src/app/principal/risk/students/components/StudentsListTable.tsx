@@ -43,18 +43,10 @@ import {
 import { FACTOR_LABELS, type BackendStudent, type RiskFactor, type RiskLevelKey } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentsListTable.module.css";
-
-const gradeNum = (name: string) => {
-  const m = String(name).match(/(\d+)/);
-  if (!m) return 0;
-  const n = parseInt(m[1], 10);
-  return Number.isNaN(n) ? 0 : n;
-};
+import { gradeNum, groupSectionsByGrade } from "../../components/risk-section-utils";
 
 const PAGE_SIZE = 20;
 
-// Explicit variants (theme tokens are monochrome ink) — same as the
-// guidance interventions desk.
 const RISK_VARIANT: Record<RiskLevelKey, "red" | "amber" | "green"> = {
   High: "red",
   Moderate: "amber",
@@ -109,15 +101,7 @@ export function StudentsListTable({
     );
   }, [students]);
 
-  const gradeGroups = React.useMemo(() => {
-    const map = new Map<number, string[]>();
-    for (const s of sections) {
-      const g = gradeNum(s);
-      if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(s);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
-  }, [sections]);
+  const gradeGroups = React.useMemo(() => groupSectionsByGrade(sections), [sections]);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();

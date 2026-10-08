@@ -20,7 +20,7 @@ export default function StudentAcademicPage() {
     queryFn: () => fetchStudentAcademic(studentId),
     placeholderData: keepPreviousData,
     retry: false,
-    // Academic data must read live on every visit — grades change constantly.
+
     staleTime: 0,
     refetchOnMount: "always",
   });

@@ -1,11 +1,5 @@
-// Pure display helpers for advisory ADM cases: pipeline vocabulary,
-// grade/initials formatting, avatar tones, per-stage status + headlines.
-// No API calls. Note: `gradeLabel` ("G7" → "Grade 7") and `initialsOf`
-// intentionally differ from the gradebook/sheet twins (different call
-// sites, different contracts) — kept local, not centralized.
 import type { AdmCase } from "./admCases.types";
 
-/** Official 8-stage ADM pipeline (mirrors backend adm.ts + principal board). */
 export const ADM_STAGES: {
   stage: string;
   order: number;
@@ -102,7 +96,6 @@ export function initialsOf(name: string): string {
   return `${(parts[0] ?? "S").charAt(0)}${(parts[1] ?? "").charAt(0)}`.toUpperCase();
 }
 
-/** Deterministic avatar tone (1–5) per student so cards feel distinct. */
 export function toneOf(key: string): 1 | 2 | 3 | 4 | 5 {
   let hash = 0;
   for (let i = 0; i < key.length; i += 1) hash = (hash * 31 + key.charCodeAt(i)) | 0;
@@ -144,11 +137,6 @@ export function stageStatus(caseData: AdmCase, stage: string): string {
   }
 }
 
-/**
- * Headline status message in the same voice as the referrals workflow
- * ("done X — now waiting on Y"): what is finished and who the case is
- * waiting on. Status-only, derived from stage + evidence flags.
- */
 export function caseHeadline(caseData: AdmCase): string {
   if (caseData.referralStatus === "resolved" || caseData.stage === "completion") {
     return "Case closed — the ADM process is complete.";

@@ -3,23 +3,6 @@ import { logger } from "../lib/pino.js";
 import { invalidateTags } from "../lib/cache.js";
 import { recomputeRisk, recomputeRosterRisk } from "./risk.js";
 
-// Auto-absent sweeper: a subject meetup whose time passed with the teacher
-// recording nothing means every student was absent. Materializes those
-// absent rows so the engine, heatmaps, and details read real records
-// instead of derived absence.
-//
-// Rules:
-// - Subject-era meetups only (committed APPROVED/SUBMITTED timetable
-//   slots). Legacy AM/PM taking is untouched.
-// - Strictly past dates (yesterday and back, 14-day window) — never
-//   today's classes, so teachers mid-taking are never clobbered.
-// - Only meetups with ZERO takes: any teacher-recorded row means the
-//   teacher handled it (even partially) and the sweeper stays out.
-// - Idempotent by unique key (student|roster, subjectId, date, slot):
-//   `skipDuplicates` makes re-runs no-ops.
-// - Silent backfill: no parent fanout, no per-row audit (one pino summary
-//   per run). Lists refresh through tag invalidation + risk recompute.
-
 const RECORDED_BY = "system:auto-absent";
 const LOOKBACK_DAYS = 14;
 
@@ -49,8 +32,8 @@ export async function sweepAutoAbsent(
 
   let meetups = 0;
   let rows = 0;
-  const touchedProfiles = new Map<string, string>(); // studentId -> termId
-  const touchedRosters = new Map<string, string>(); // rosterId -> termId
+  const touchedProfiles = new Map<string, string>();
+  const touchedRosters = new Map<string, string>();
 
   for (const term of terms) {
     if (!term.startDate) continue;
@@ -106,7 +89,6 @@ export async function sweepAutoAbsent(
       rostersBySection.set(r.sectionId, arr);
     }
 
-    // (section|subject|date|slot) meetups in the window with zero takes.
     const missing: {
       sectionId: string;
       subjectId: string;
@@ -184,8 +166,6 @@ export async function sweepAutoAbsent(
     rows += created.count;
   }
 
-  // Engine freshness for touched students only (same recompute the take
-  // flow runs — snapshots + auto-interventions follow naturally).
   for (const [studentId, termId] of touchedProfiles) {
     try {
       await recomputeRisk(studentId, termId);

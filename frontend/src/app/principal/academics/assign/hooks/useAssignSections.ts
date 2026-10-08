@@ -34,7 +34,6 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-/** Sections + teachers for the active school year. No manual refetch needed. */
 export function useAssignSectionsData(schoolYearId: string) {
   const sectionsQuery = useQuery({
     queryKey: assignSectionsKey(schoolYearId),
@@ -54,15 +53,6 @@ export function useAssignSectionsData(schoolYearId: string) {
 
 type SectionsCache = Section[] | undefined;
 
-/**
- * Advisory mutations with optimistic UI + rollback.
- *
- * - onMutate: snapshot cache, instantly show intended advisers, mark rows
- *   pending (per-section granular loading — never a page-wide spinner).
- * - onError: restore snapshot (rollback) + error toast.
- * - onSuccess: confirm with server truth + success toast (never before).
- * - onSettled: clear pending flags for the involved sections only.
- */
 export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) {
   const queryClient = useQueryClient();
   const key = assignSectionsKey(schoolYearId);
@@ -105,16 +95,9 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
     [queryClient, key],
   );
 
-  // Atomic batch (modal): ONE request for all rows.
-  // Entries carry raw typed names. Orchestration per submit:
-  //  1. Auto-create sections missing from the cache (parallel POSTs).
-  //  2. ONE batch PATCH assigns every row (atomic server-side). Teacher names
-  //     NEVER gate the flow — unknown names are stored as free-text labels.
   const batch = useMutation({
     mutationFn: async (entries: AdvisoryEntryInput[]) => {
-      // Ignore provisional optimistic cards (__temp- ids): they are not real
-      // records. Treating them as known would send bogus ids to the server
-      // ("One or more sections were not found") and skip creation entirely.
+
       const sections = (queryClient.getQueryData<SectionsCache>(key) ?? []).filter(
         (s) => !s.id.startsWith("__temp-"),
       );
@@ -130,9 +113,7 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
       const created: Section[] = await Promise.all(
         missing.map((e) => createSection({ name: e.sectionName.trim(), gradeLevel: e.gradeLevel })),
       ).catch((err) => {
-        // A 409 here means the cache was stale (the section already exists
-        // server-side). Refresh so a retry resolves it instead of failing
-        // the same way.
+
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 409) void queryClient.invalidateQueries({ queryKey: key });
         throw err;
@@ -158,11 +139,7 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
       const previous = queryClient.getQueryData<SectionsCache>(key);
       const sections = previous ?? [];
       const norm = (v: string) => v.trim().toLowerCase();
-      // Optimistic: paint the typed adviser name on known sections instantly,
-      // and insert provisional cards for brand-new sections so the UI reacts
-      // in the same tick the user submits — no waiting on the server. Codes
-      // arrive with the server truth (minted there), so optimistic rows keep
-      // the previous code until confirmed.
+
       const optimistic: {
         id: string;
         adviserId: string;
@@ -223,9 +200,7 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
       });
     },
     onSuccess: ({ fragments, created }) => {
-      // Swap provisional temp cards for the real server-confirmed rows.
-      // A realtime INSERT for our own section can land before the echo guard
-      // is marked, so skip created rows already present — never duplicate.
+
       queryClient.setQueryData<SectionsCache>(key, (prev) => {
         const withoutTemp = (prev ?? []).filter((s) => !s.id.startsWith("__temp-"));
         const have = new Set(withoutTemp.map((s) => s.id));
@@ -251,10 +226,7 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
       });
     },
     onSettled: (data, _err, _entries, context) => {
-      // Clear pending for every involved row on BOTH success and failure.
-      // On failure `data` is undefined, so the optimistic ids snapshotted in
-      // onMutate context are the source of truth — otherwise rows stay stuck
-      // in pending and Assign buttons stay disabled forever.
+
       const ids = new Set<string>([
         ...(context?.pendingIds ?? []),
         ...((data?.fragments ?? []).map((f) => f.id)),
@@ -263,7 +235,6 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
     },
   });
 
-  // Single-row clear (Remove action).
   const clear = useMutation({
     mutationFn: (sectionId: string) => assignAdviser(sectionId, null),
     onMutate: async (sectionId) => {
@@ -290,7 +261,6 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
     },
   });
 
-  // Regenerate a lost advisory code for a pending (listed, unclaimed) seat.
   const regenerateCode = useMutation({
     mutationFn: (sectionId: string) => regenerateAdviserCode(sectionId),
     onMutate: async (sectionId) => {
@@ -319,8 +289,6 @@ export function useAssignAdvisers(schoolYearId: string, schoolYearName: string) 
     },
   });
 
-  // True section delete: the card vanishes in the same tick (instant feedback)
-  // and is restored only if the server rejects the delete.
   const removeSection = useMutation({
     mutationFn: (sectionId: string) => deleteSection(sectionId),
     onMutate: async (sectionId) => {

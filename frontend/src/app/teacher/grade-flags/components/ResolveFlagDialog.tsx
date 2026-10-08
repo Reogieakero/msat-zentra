@@ -57,7 +57,7 @@ export function ResolveFlagDialog({ flag, onClose, onResolved }: ResolveFlagDial
     <CardModal
       open={flag !== null}
       onClose={() => {
-        // Locked while resolving — closes only on server confirmation.
+
         if (submitting) return;
         close();
       }}

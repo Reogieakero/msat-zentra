@@ -1,5 +1,3 @@
-// Pure derivation for the nurse desk: status vocabulary, scope filter,
-// row builders, and the overview aggregation. No API calls, no hooks.
 import { formatGrade, formatSection } from "@/lib/utils";
 import type {
   NurseBreakdownRow,
@@ -48,9 +46,6 @@ function titleCase(raw: string): string {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
-/** Derive the action-based status key and label from referral fields —
- *  the same vocabulary the Needs-review table uses, so charts and the
- *  table always agree. */
 export function deriveActionStatus(
   type: string,
   status: string,
@@ -71,17 +66,6 @@ export function deriveActionStatus(
   return { key: status, label: NURSE_STATUS_LABELS[status] ?? titleCase(status) };
 }
 
-/**
- * Menu-aligned chart bucket for one referral — the same priority the
- * timeline watermarks use, collapsed onto the ADM / Clinic action-menu
- * vocabulary so the overview charts ("Caseload by status", "Clinic
- * matters caseload", "ADM cases caseload") only ever show labels that
- * exist in those menus. Every status lands in exactly one bucket:
- * dismissed → Rejected, resolved → Done, endorsed ADM → Endorsed,
- * follow-up → Follow-up, scheduled session → Booked session, finished
- * session → Done, anything awaiting action (pending, escalated,
- * info-requested, bare in-progress) → Needs review.
- */
 export function chartBucketFor(
   type: string,
   status: string,
@@ -101,12 +85,6 @@ export function chartBucketFor(
   return { key: "needs_review", label: "Needs review" };
 }
 
-// A referral belongs on the nurse's desk when:
-//  - it was routed to the nurse role, or
-//  - another role escalated it specifically to the nurse, or
-//  - it is an ADM-track referral the adviser sent to the nurse as the
-//    consultation reviewer (guidance is locked out of these server-side,
-//    so the nurse is their only owner at the consultation stage).
 export function isNurseScope(r: RawReferral): boolean {
   if (r.referredToRole === "nurse") return true;
   if (r.status === "escalated" && r.escalatedTo === "nurse") return true;
@@ -161,8 +139,7 @@ export function toSessionItem(s: RawSession): NurseSessionItem {
 
 export function toQueueRow(r: RawReferral): NurseQueueRow {
   const identity = identityOf(r);
-  // Waiting counts from when the case was referred, not when the incident
-  // was observed — a case filed weeks ago but referred today waits 0 days.
+
   const referred = parseDate(r.referredAt) ?? parseDate(r.anecdotalRecord?.observationDatetime);
   const anec = r.anecdotalRecord ?? null;
   const observed = parseDate(anec?.observationDatetime);
@@ -203,8 +180,6 @@ export function toQueueRow(r: RawReferral): NurseQueueRow {
   };
 }
 
-// Pure aggregation over the referrals list. Kept side-effect free so the
-// numbers on this page always derive from one fetch, one filter, one pass.
 export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData {
   const scoped = referrals.filter(isNurseScope);
 
@@ -250,9 +225,6 @@ export function buildNurseOverview(referrals: RawReferral[]): NurseOverviewData 
   const clinicStatusBreakdown = actionStatusBreakdown(scoped.filter((r) => !r.consultReviewer));
   const admStatusBreakdown = actionStatusBreakdown(scoped.filter((r) => r.consultReviewer));
 
-  // Trailing 14-day case-load series (referred time → now), split by
-  // type — drives the overview "Case load" line graph. Rows without a
-  // parseable referred time land outside the window and are skipped.
   const nowMs = Date.now();
   const dailyTrend: NurseTrendPoint[] = [];
   const trendIndex = new Map<string, number>();

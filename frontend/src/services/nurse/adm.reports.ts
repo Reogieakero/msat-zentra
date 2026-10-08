@@ -1,8 +1,3 @@
-// Referrals Report + insights derivation for the nurse desk — same
-// contents as the guidance Referrals Report, but over the nurse referrals
-// scope (clinic + ADM) instead of the guidance scope (ADM + Counseling).
-// Pure derivation from the desk-wide alert list. Moved verbatim from the
-// nurse adm folder.
 import { deriveActionStatus } from "./labels";
 import type {
   NurseAlertItem,
@@ -25,21 +20,15 @@ export interface NurseAdmReferralsData {
   total: number;
   actions: NurseAdmActionCount[];
   trend: NurseAdmTrendWeek[];
-  /* Latest ADM cases referred to the nurse, newest referred first —
-     every state, so the queue always reflects the desk. Alerts (not
-     bare rows) so the table can read latest actions and risk ids. */
+
   queue: NurseAlertItem[];
-  /* Every referral on the nurse's desk (clinic + ADM), newest referred
-     first, every status — reports and insights read this so the whole
-     desk is counted, not just the ADM review queue. */
+
   desk: NurseAlertItem[];
 }
 
 const DAY_MS = 86_400_000;
 const TREND_WEEKS = 12;
 
-/* Known action states first (same order as the overview charts), anything
-   else after — so the donut legend never jumps around. */
 const ACTION_ORDER = [
   "needs_review",
   "endorsed",
@@ -66,16 +55,6 @@ function shortLabel(date: Date): string {
   return `${month}/${day}`;
 }
 
-/**
- * Referrals report for the nurse's desk — derived from the desk-wide case
- * list (clinic + ADM, every status: pending through dismissed), NOT the
- * action-scoped alerts feed, so terminal rows are counted too and reports
- * always reflect the current referrals whatever their status. The review
- * `queue` stays ADM-only (its endorse/forward actions are ADM-specific);
- * actions, trend, and `desk` cover the whole desk. Mirrors the guidance
- * ADM referrals shape (action breakdown + trend + review queue) with the
- * nurse action vocabulary.
- */
 export function buildNurseAdmReferrals(items: NurseAlertItem[]): NurseAdmReferralsData {
   const seen = new Map<string, NurseAlertItem>();
   const seenAdm = new Map<string, NurseAlertItem>();
@@ -93,8 +72,7 @@ export function buildNurseAdmReferrals(items: NurseAlertItem[]): NurseAdmReferra
   const counts = new Map<string, { label: string; count: number }>();
   for (const row of rows) {
     const action = deriveActionStatus(row.type, row.status, row.sessions);
-    // Finished clinic sessions read as Done — same bucket the overview
-    // charts use.
+
     const key = action.key === "done_session" ? "done" : action.key;
     const label = key === "done" ? "Done" : action.label;
     const existing = counts.get(key);
@@ -108,7 +86,6 @@ export function buildNurseAdmReferrals(items: NurseAlertItem[]): NurseAdmReferra
         actionRank(a.action) - actionRank(b.action) || b.count - a.count
     );
 
-  // Weekly referral trend over the trailing 12 weeks, oldest first.
   const nowMs = Date.now();
   const trend: NurseAdmTrendWeek[] = [];
   const trendIndex = new Map<string, number>();
@@ -130,9 +107,6 @@ export function buildNurseAdmReferrals(items: NurseAlertItem[]): NurseAdmReferra
     if (idx >= 0 && idx < trend.length) trend[idx].count += 1;
   }
 
-  // Latest cases per surface, newest referred first — every state
-  // (pending, endorsed, follow-up, done), so each section always reflects
-  // the desk.
   return { total: rows.length, actions, trend, queue, desk };
 }
 
@@ -168,11 +142,11 @@ export interface NurseAdmRecommendation {
 }
 
 export interface NurseAdmResponseStats {
-  /** Longest nurse response across measured cases, in days. */
+
   longestDays: number | null;
-  /** Mean nurse response across measured cases, in days. */
+
   avgDays: number | null;
-  /** Cases with a measurable first handling action. */
+
   measured: number;
 }
 
@@ -189,11 +163,6 @@ function capitalize(word: string): string {
   return word.length === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-/* First nurse handling per case, in ms after referral — earliest booked
-   session wins (booking is handling); otherwise the latest recorded action
-   when the case visibly moved. Untouched pendings and dismissed cases with
-   no session trail measure nothing (an adviser withdrawal looks identical
-   to a nurse rejection in this payload), so they stay out of the average. */
 function firstHandlingMs(row: {
   referredAt: string;
   status: string;
@@ -216,13 +185,6 @@ function firstHandlingMs(row: {
 const BOTTLENECK_DAYS = 7;
 const BOTTLENECK_TOP = 5;
 
-/**
- * Referral insights over the nurse's whole desk (clinic + ADM) — key
- * findings, category mix, waiting bottlenecks, and rule-based
- * recommendations. Pure derivation from the same desk list the reports
- * read, so insights, charts, and rows can never disagree. Counts derive
- * from live rows only, never mocks.
- */
 export function buildNurseAdmInsights(
   items: NurseAlertItem[],
   riskByStudent: Record<string, NurseRiskLevel> = {},
@@ -317,10 +279,6 @@ export function buildNurseAdmInsights(
       reason: r.reason || "",
     }));
 
-  // Every count below is track-split so it links to the list that shows
-  // exactly those rows (ADM → review queue anchor, clinic → clinic
-  // timeline). The referral form exists only on the ADM track — clinic
-  // pendings must never count as form-blocked.
   const isAdm = (r: { type: string }) => r.type === "ADM";
   const formBlocked = pending.filter((r) => isAdm(r) && !r.referralReady).length;
   const bookedAdm = rows.filter(

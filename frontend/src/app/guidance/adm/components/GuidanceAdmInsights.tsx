@@ -7,8 +7,6 @@ import type {
 import { PRIMARY_STEPS } from "./guidance-adm-reports";
 import styles from "./guidance-adm.module.css";
 
-/* Glow wrapper shared by every insight card — the blurred accent sits
-   behind the content and never intercepts clicks. */
 function InsightCard({
   label,
   children,
@@ -40,7 +38,6 @@ function Findings({ data }: { data: GuidanceAdmInsightsData }) {
   );
 }
 
-/* Primary palette steps shared with the reports donut. */
 const CATEGORY_COLORS = PRIMARY_STEPS;
 
 function Categories({ data }: { data: GuidanceAdmInsightsData }) {
@@ -205,12 +202,6 @@ function Recommendations({ data }: { data: GuidanceAdmInsightsData }) {
   );
 }
 
-/**
- * Referral insights for the guidance desk — key findings, category mix,
- * waiting bottlenecks, and recommended actions. Pure reads of the same
- * desk list the reports use, so every number repaints live with the desk
- * and no manual refresh is ever needed.
- */
 export function GuidanceAdmInsights({ data }: { data: GuidanceAdmInsightsData }) {
   return (
     <div className={styles.insights}>

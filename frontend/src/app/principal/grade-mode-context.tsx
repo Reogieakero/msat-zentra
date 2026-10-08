@@ -16,8 +16,6 @@ const GradeModeContext = React.createContext<GradeModeContextValue | null>(null)
 export function GradeModeProvider({ children }: { children: React.ReactNode }) {
   const [gradeMode, setGradeModeState] = React.useState<GradeMode>("final");
 
-  // Restore the persisted basis after mount without a synchronous state update
-  // in the effect body (avoids cascading renders during hydration).
   React.useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (saved === "raw" || saved === "final") {

@@ -1,5 +1,3 @@
-// Page-level fetchers for the ADM Coordinator desk: dashboard, referral
-// queue, approvals, device ledger.
 import { apiClient } from "@/lib/api/client";
 import type {
   AdmApprovalsPage,
@@ -27,8 +25,7 @@ export async function fetchCoordinatorReferrals(
   const res = await apiClient.get<AdmReferralsPage>("/api/adm/referrals/all", {
     params: {
       page,
-      // Send both `pageSize` (new standard) and `limit` (legacy) so the
-      // backend clamps identically either way.
+
       ...(opts?.limit && opts.limit > 0
         ? { pageSize: opts.limit, limit: opts.limit }
         : {}),
@@ -41,7 +38,7 @@ export async function fetchCoordinatorReferrals(
     signal: opts?.signal,
   });
   const data = res.data as AdmReferralsPage & { rows?: unknown };
-  // Defensive: non-array payloads (cached/error shapes) never crash callers.
+
   if (!Array.isArray(data?.rows)) return { ...data, rows: [] };
   return data;
 }

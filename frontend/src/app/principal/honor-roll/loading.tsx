@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./honor-roll.module.css";
 
-/* Mirrors honor-roll/page.tsx: hero + toolbar + candidate table with
-   per-subject grade grid columns (not generic bars). */
 export default function PrincipalHonorRollLoading() {
   return (
     <section className={styles.page} aria-label="Loading honor roll" aria-busy="true">

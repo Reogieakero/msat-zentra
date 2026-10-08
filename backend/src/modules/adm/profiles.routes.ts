@@ -36,7 +36,7 @@ router.post(
         },
       );
       res.status(201).json(provisioned ? { ...profile, provisioned: true } : profile);
-      // Cache purges are non-critical — never delay the confirmed response.
+
       void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
       if (provisioned) {
         void invalidateTags(["registrar", "record-keeper"]);
@@ -58,7 +58,7 @@ router.post(
         String(req.params.id),
       );
       res.json(updated);
-      // Cache purge is non-critical — never delay the confirmed response.
+
       void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
@@ -77,7 +77,7 @@ router.post(
         String(req.params.id),
       );
       res.json(updated);
-      // Cache purge is non-critical — never delay the confirmed response.
+
       void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
@@ -97,7 +97,7 @@ router.patch(
         req.body.stage as AdmStage,
       );
       res.json(updated);
-      // Cache purge is non-critical — never delay the confirmed response.
+
       void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
@@ -105,14 +105,6 @@ router.patch(
   }
 );
 
-// The ADM Coordinator's recommendation + certification, filled up right
-// after the parent meeting is attended: records the recommendation and
-// passes the case straight to the Principal for signature in one click.
-// Accepts any pre-certification stage — early referral bookings often
-// leave the stage column lagging behind the attended meeting — but always
-// requires an attended parent meeting (no home-visitation path needed).
-// Eligibility recomputes from the evidence chain exactly like the stage
-// route, so the principal gate always reads a computed value.
 router.post(
   "/:id/certification",
   requireAuth,
@@ -126,7 +118,7 @@ router.post(
         req.body.recommendation as string,
       );
       res.json(updated);
-      // Cache purge is non-critical — never delay the confirmed response.
+
       void invalidateTags(["adm", "adm-overview", "adm-referrals", "adm-meetings", "adm-certifications", "adm-approvals", "adm-devices", "adm-case", "overview", "principal"]);
     } catch (e) {
       next(e);
@@ -134,12 +126,6 @@ router.post(
   }
 );
 
-// Dedicated case file for the coordinator's "Open case" new-tab page.
-// Accepts either a learner-profile id or a `referral:<id>` row id (early
-// referrals without a profile yet). Returns the student header, the
-// adviser's anecdotal write-up + recommendations, the GCForm-03 referral
-// form state, the ADM evidence chain (forms), and parent meetings —
-// everything the new-tab page renders without extra round-trips.
 router.get(
   "/case/:id",
   requireAuth,

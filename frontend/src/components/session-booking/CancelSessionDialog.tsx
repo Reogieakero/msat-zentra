@@ -26,15 +26,10 @@ interface CancelSessionDialogProps {
   keepLabel?: string;
   submitLabel?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call. */
   serverError?: string | null;
   idPrefix?: string;
 }
 
-/**
- * Shared cancel-session modal — optional reason, solid-red confirm. The
- * caller performs the save.
- */
 export function CancelSessionDialog({
   open,
   onClose,
@@ -52,8 +47,6 @@ export function CancelSessionDialog({
   const [reason, setReason] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh form every time the modal opens — synced during render, never
-  // in an effect.
   const openKey = open ? idPrefix : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -68,7 +61,6 @@ export function CancelSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        // Locked while the cancel is in flight.
         if (!next && !busy) {
           onClose();
           setError(null);

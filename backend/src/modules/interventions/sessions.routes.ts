@@ -24,9 +24,6 @@ import {
 
 const router = Router();
 
-// Session documentary uploads — same rules as the clinic desk: images only,
-// 5 MB each, max 5 per request. Filing never gates Done; it only builds the
-// evidence trail for sessions that already started (or are finished).
 const sessionDocsUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 5 },
@@ -140,12 +137,6 @@ router.post(
   }
 );
 
-// Session documentary: list / upload / remove image attachments on one
-// counseling session. Filing is optional — these endpoints never gate Done,
-// they only build the evidence trail. Uploads are allowed on open cases (any
-// session status except a closed follow-up) so documentation can be filed
-// after marking a session done — but a still-upcoming session unlocks only
-// once its scheduled time arrives.
 router.get(
   "/:id/sessions/:sessionId/attachments",
   requireAuth,
@@ -183,8 +174,6 @@ router.post(
   }
 );
 
-// Session list for one follow-up — powers the booking-reminder liveness
-// check (card drops only while a scheduled session still exists).
 router.get(
   "/:id/sessions",
   requireAuth,

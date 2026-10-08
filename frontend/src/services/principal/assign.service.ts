@@ -1,6 +1,3 @@
-// Principal assigning client — school-wide (G7–G12).
-// Mirrors the registrar assign client but targets the principal-scoped
-// /api/academics/assign/* routes (requireRole("principal")).
 import { apiClient } from "@/lib/api/client";
 import type { AxiosError } from "axios";
 import { isCancel } from "axios";
@@ -20,7 +17,7 @@ function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => {
-      // never resolve/reject — let the in-flight request die silently
+
     };
     if (signal.aborted) return;
     signal.addEventListener("abort", onAbort, { once: true });
@@ -32,12 +29,12 @@ function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
         },
         (err: AxiosError) => {
           signal.removeEventListener("abort", onAbort);
-          if (isCancel(err)) return; // swallow cancel
+          if (isCancel(err)) return;
           reject(err);
         },
       )
       .catch(() => {
-        /* unreachable, kept for clarity */
+
       });
   });
 }
@@ -113,9 +110,6 @@ export async function removeAssignment(id: string): Promise<{ id: string; delete
   return res.data;
 }
 
-// Principal advisory — assign (or clear with null/empty) the section adviser.
-// Assigning files label + a fresh claim code (adviserId stays empty until the
-// teacher claims with the code); clearing wipes all three.
 export async function assignAdviser(
   sectionId: string,
   adviserId: string | null,
@@ -128,8 +122,6 @@ export async function assignAdviser(
   return res.data;
 }
 
-// Mint a replacement code for a pending (listed, unclaimed) assignment —
-// used when the original code is lost. Rejected for claimed or empty seats.
 export async function regenerateAdviserCode(sectionId: string): Promise<SectionAdviserResult> {
   const res = await apiClient.post<SectionAdviserResult>(
     `/api/academics/assign/sections/${sectionId}/adviser-code/regenerate`,
@@ -137,10 +129,6 @@ export async function regenerateAdviserCode(sectionId: string): Promise<SectionA
   return res.data;
 }
 
-// Atomic batch: ONE request assigns every row (all-or-nothing transaction
-// server-side). Rows may carry ids (when the client already knows the record)
-// or typed names + grade — the server resolves names against the database,
-// so a stale/empty client cache can never cause a false "not found".
 export async function assignAdvisersBatch(
   assignments: AdviserBatchInput[],
 ): Promise<SectionAdviserResult[]> {
@@ -151,8 +139,6 @@ export async function assignAdvisersBatch(
   return res.data.updated;
 }
 
-// Principal section deletion — hard delete guarded server-side: sections with
-// linked students, roster entries, assignments, or records are rejected.
 export async function deleteSection(sectionId: string): Promise<{ id: string; deleted: boolean }> {
   const res = await apiClient.delete<{ id: string; deleted: boolean }>(
     `/api/academics/assign/sections/${sectionId}`,
@@ -160,8 +146,6 @@ export async function deleteSection(sectionId: string): Promise<{ id: string; de
   return res.data;
 }
 
-// Principal section creation — the principal (not the registrar) owns this
-// step. Filed under the active school year automatically.
 export async function createSection(input: {
   name: string;
   gradeLevel: GradeLevel;

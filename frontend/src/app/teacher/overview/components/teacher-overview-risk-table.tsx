@@ -29,7 +29,6 @@ import type { AdvisoryStatusRow } from "@/services/teacher/overview.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./teacher-overview-advisory.module.css";
 
-// Factor badges: academic amber, attendance green, behavioral blue.
 const FACTOR_BADGE: Record<string, { variant: "amber" | "green" | "blue"; label: string }> = {
   academic: { variant: "amber", label: "Academic" },
   attendance: { variant: "green", label: "Attendance" },
@@ -50,9 +49,6 @@ function FactorBadges({ flags }: { flags?: AdvisoryStatusRow["flags"] }) {
   );
 }
 
-/* At-risk advisees as a data table: only advisees the system flagged
-   (flag !== "none"). Plain icon-free headers with fixed widths, the filter
-   on the right, and the table in the section card style. */
 interface TeacherOverviewRiskTableProps {
   students: AdvisoryStatusRow[];
 }

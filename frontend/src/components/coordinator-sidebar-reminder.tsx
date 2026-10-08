@@ -6,13 +6,6 @@ import { CalendarClock } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import styles from "./coordinator-sidebar-reminder.module.css";
 
-/* Persistent live parent-meeting reminder card for the coordinator left
-   rail. Deliberately INDEPENDENT from the top-center BookingReminderStack
-   handled store: dismissing the floating toast or clicking through must
-   NOT hide this card. It polls the live session list itself and stays
-   mounted until the backend stops reporting the session as scheduled
-   (i.e. the outcome is recorded) — it never writes to
-   `zentra.booking-reminders-handled`. */
 const UPCOMING_WINDOW_MS = 5 * 60 * 1000;
 
 interface DeskSession {
@@ -70,8 +63,9 @@ function sessionMessage(s: DeskSession, now: number): string {
   return `${s.student} — overdue ${kind} meetup, ${day} at ${time}${venue} — still unattended`;
 }
 
-function useLiveSidebarSessions(): DeskSession[] {
+function useLiveSidebarSessions(): { sessions: DeskSession[]; now: number } {
   const [sessions, setSessions] = React.useState<DeskSession[]>([]);
+  const [now, setNow] = React.useState(() => Date.now());
 
   React.useEffect(() => {
     let cancelled = false;
@@ -85,6 +79,7 @@ function useLiveSidebarSessions(): DeskSession[] {
             .filter((s) => sessionDue(s, now))
             .sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1));
           setSessions(due);
+          setNow(now);
         })
         .catch(() => undefined);
     };
@@ -98,13 +93,12 @@ function useLiveSidebarSessions(): DeskSession[] {
     };
   }, []);
 
-  return sessions;
+  return { sessions, now };
 }
 
 export function CoordinatorSidebarReminder() {
   const router = useRouter();
-  const sessions = useLiveSidebarSessions();
-  const now = Date.now();
+  const { sessions, now } = useLiveSidebarSessions();
 
   const current = sessions[0] ?? null;
   const extraCount = sessions.length > 1 ? sessions.length - 1 : 0;
@@ -116,8 +110,6 @@ export function CoordinatorSidebarReminder() {
   const eyebrow = isOverdue ? "Meeting overdue" : "Live parent meeting";
   const href = hrefForSession(current);
 
-  // Navigate WITHOUT dismissing: the card stays until the session itself
-  // is done (no longer scheduled), even after View case.
   const handleView = () => {
     if (href) router.push(href);
   };

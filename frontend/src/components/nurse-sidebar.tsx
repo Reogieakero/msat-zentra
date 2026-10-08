@@ -31,15 +31,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// School Nurse nav — Referrals are split into two dedicated pages (ADM
-// Cases and Clinic Matters) so the reader never needs the old case-type
-// filter; each page locks to its own type. Referrals Report covers the
-// whole desk (clinic + ADM insights and reports) with the ADM review
-// queue below.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
-// Risk Dashboard=Flame. Referrals Report=Send lives under Insights.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -100,8 +91,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// Sidebar rail (same pattern as the teacher desk): a branched left rail on
-// desktop plus the flattened tab bar for small screens. No top navbar.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {

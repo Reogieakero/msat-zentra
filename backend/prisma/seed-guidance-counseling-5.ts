@@ -4,12 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 anecdotal records referred to the guidance counselor for
-// NON-ADM matters (guidance counseling track):
-//   referredToRole = "guidance_counselor", consultReviewer = null.
-// These surface on /guidance/referrals (Referrals to me) as type Counseling.
-// Idempotent: skips roster entries that already have any referral.
-
 const CASES = [
   {
     observationDaysAgo: 0,
@@ -132,8 +126,6 @@ async function main() {
       },
     });
 
-    // Referral time on the guidance pages = earliest audit entry; mirror
-    // what POST /api/anecdotal/:id/refer writes so sorting works.
     await prisma.auditLog.create({
       data: {
         userId: observerId,

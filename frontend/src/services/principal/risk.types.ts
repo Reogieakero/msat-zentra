@@ -1,6 +1,3 @@
-// Principal risk-board shapes. Pure types only. Note: risk/students/api
-// carries its own Backend* duplicates of several of these (different
-// pages, slightly different projections) — pre-existing, kept separate.
 export type RiskLevelKey = "High" | "Moderate" | "Low";
 
 export const RISK_LEVEL_COLORS: Record<RiskLevelKey, string> = {

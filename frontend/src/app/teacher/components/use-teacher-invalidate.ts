@@ -2,14 +2,6 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 
-/**
- * Shared teacher-desk invalidation prefixes.
- *
- * Centralizing the keys here prevents drift: every teacher mutation
- * refreshes exactly the teacher queries and nothing else — no whole-app
- * refetch, no stale desk after a write. Always includes
- * ["teacher-notifications"] so the bell badge bumps with every write.
- */
 export const TEACHER_QUERY_KEYS = [
   ["teacher-overview"],
   ["teacher-overview-secondary"],
@@ -40,11 +32,6 @@ export const TEACHER_QUERY_KEYS = [
   ["offered-subjects"],
 ] as const;
 
-/**
- * Scoped invalidation groups — one attendance save must NOT refetch the
- * schedule board, gradebook, and overview. Each mutation calls only its
- * scope (plus the bell badge), keeping refetches targeted.
- */
 export const TEACHER_SCOPE_KEYS = {
   marks: [
     ["attendance-sheet-marks"],
@@ -102,7 +89,6 @@ export function invalidateTeacherScope(
 }
 
 export interface TeacherInvalidator {
-  /** Full-desk invalidate — only for logout-type resets; prefer a scope. */
   all: () => void;
   marks: () => void;
   grading: () => void;
@@ -120,8 +106,6 @@ export function useTeacherInvalidate(): TeacherInvalidator {
   const queryClient = useQueryClient();
   const run = (scope: TeacherInvalidateScope) =>
     invalidateTeacherScope(queryClient, scope);
-  // Plain object (never mutated after creation) so the React Compiler
-  // immutability lint stays green.
   return {
     all: () => {
       for (const key of TEACHER_QUERY_KEYS) {

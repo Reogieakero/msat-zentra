@@ -3,9 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Check, ClipboardCheck, Clock, Inbox, Info } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-// Section cards share one component with the teacher schedule grid —
-// teacher/schedule and principal/academics/schedule render the identical
-// design from `SectionScheduleCard`.
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
 import { AuroraBanner } from "../../overview/components/AuroraBanner";
@@ -44,11 +41,6 @@ function statusHint(s: Submission): string {
   return `${n} slot${n === 1 ? "" : "s"} · ${label} — tap to view`;
 }
 
-// Section grid — the shared `SectionScheduleCard`, one design with the
-// teacher workspace. Each card links to its own review page at
-// /principal/academics/schedule/[sectionId], mirroring
-// teacher/schedule → teacher/schedule/[sectionId]. Every grades 7–10
-// section always shows a card, whatever its schedule status.
 export default function PrincipalSchedulePage() {
   const sectionsQuery = useQuery<{ sections: Submission[] }>({
     queryKey: ["principal-schedule-sections"],
@@ -61,7 +53,6 @@ export default function PrincipalSchedulePage() {
   });
 
   const sections = sectionsQuery.data?.sections ?? [];
-  // Same ordering as the teacher workspace: grade, then name.
   const gradeNumber = (g: string) => Number(g.replace("G", "")) || 0;
   const orderedSections = [...sections].sort(
     (a, b) => gradeNumber(a.gradeLevel) - gradeNumber(b.gradeLevel) || a.name.localeCompare(b.name),
@@ -71,8 +62,6 @@ export default function PrincipalSchedulePage() {
     0,
   );
 
-  // Rail status — the section/slot counts live here, same rail pattern as
-  // the teacher schedule workspace.
   const railVariant = awaitingTotal > 0 ? "blue" : sections.length > 0 ? "green" : "gray";
   const railMeta = {
     blue: {

@@ -6,23 +6,6 @@ import {
   templateOthersLabel,
 } from "@/services/guidance/gcform03.service";
 
-/**
- * Fill engine for the official GCForm-03 Referral Form template
- * (`public/referral forms/Referral Form - GCForm-03 v11.xlsx`).
- *
- * The workbook is loaded from the public folder and ONLY answer cells get
- * new values — every font, border, fill, merge, image, print setting, and
- * static label stays exactly as the template ships it. No rebuild, no
- * restyle. Dates, received-by, and both signature names are always centered
- * in the file.
- *
- * NOTE on ExcelJS style sharing: cells read from a file share their style
- * objects, so per-property setters (`cell.font = …`, `cell.alignment = …`)
- * leak onto every identically-formatted cell. Every style edit here
- * replaces the whole style object (`cell.style = { … }`) which stays
- * local to the addressed cell — verified leak-free by save/reload audit.
- */
-
 const TEMPLATE_URL = encodeURI(
   "/referral forms/Referral Form - GCForm-03 v11.xlsx"
 );
@@ -38,16 +21,10 @@ async function loadExcelJS(): Promise<{ Workbook: new () => Workbook }> {
   return mod.default ?? mod;
 }
 
-/** Write a value without touching fonts/borders/fills/merges. */
 function setValue(ws: Worksheet, address: string, value: string): void {
   ws.getCell(address).value = value ?? "";
 }
 
-/**
- * Write a paragraph cell and allow wrapping so multi-line answers stay
- * readable. Replaces the whole style object (never mutates the shared one)
- * — fonts, borders, and fills are carried over untouched.
- */
 function setPara(ws: Worksheet, address: string, value: string): void {
   const cell = ws.getCell(address);
   cell.value = value ?? "";
@@ -58,7 +35,6 @@ function setPara(ws: Worksheet, address: string, value: string): void {
   };
 }
 
-/** Center an answer in its placeholder cell (leak-safe full style replace). */
 function centerCell(ws: Worksheet, address: string): void {
   const cell = ws.getCell(address);
   const current = toRecord(cell.alignment);
@@ -74,7 +50,6 @@ function toRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-/** Grow the last row of a paragraph block so wrapped text stays visible. */
 function fitBlock(
   ws: Worksheet,
   lastRow: number,
@@ -94,7 +69,6 @@ function fitBlock(
   }
 }
 
-/** Load the public-folder template workbook (design as shipped). */
 export async function loadGcForm03Template(): Promise<{
   wb: Workbook;
   ws: Worksheet;
@@ -113,18 +87,11 @@ export async function loadGcForm03Template(): Promise<{
   return { wb, ws };
 }
 
-/**
- * Fill ONLY the answer cells of a loaded template sheet. Static labels,
- * captions, logos, borders, merges, and print settings are never altered;
- * dates, received-by, and both signature names are always centered in
- * the file.
- */
 export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
-  /* ---- Identity (underline inputs; masters of merged ranges) ---- */
+
   setValue(ws, "C11", data.studentName);
   setValue(ws, "I11", data.gradeSection);
 
-  /* ---- Concerns (flip box/ballot-box, keep every label word as shipped) ---- */
   setValue(ws, "A13", templateConcernLabel("absences", data.concerns.absences));
   setValue(ws, "E13", templateConcernLabel("academic", data.concerns.academic));
   setValue(ws, "H13", templateConcernLabel("personal", data.concerns.personal));
@@ -133,7 +100,6 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   setValue(ws, "H14", templateOthersLabel(data.concerns.others));
   setValue(ws, "I14", data.concerns.others ? data.concerns.othersText : "");
 
-  /* ---- Details of Concern (full-row block, rows 16-18) ---- */
   const detailsBase = ws.getRow(18).height ?? 26;
   const detailRows = splitGcForm03Block(data.detailsOfConcern, 3, 120);
   setPara(ws, "A16", detailRows[0]);
@@ -141,7 +107,6 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   setPara(ws, "A18", detailRows[2]);
   fitBlock(ws, 18, detailsBase, detailRows[2], 120);
 
-  /* ---- A. Action/s Taken — 5 fixed numbered rows (B = action, H = date) ---- */
   const actions = [...data.referrerActions].slice(0, 5);
   while (actions.length < 5) actions.push({ date: "", action: "" });
   actions.forEach((row, i) => {
@@ -151,24 +116,20 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
     centerCell(ws, `H${excelRow}`);
   });
 
-  /* ---- B. Recommendations (referrer block, rows 26-27) ---- */
   const recBase = ws.getRow(27).height ?? 28;
   const recRows = splitGcForm03Block(data.referrerRecommendations, 2, 120);
   setPara(ws, "A26", recRows[0]);
   setPara(ws, "A27", recRows[1]);
   fitBlock(ws, 27, recBase, recRows[1], 120);
 
-  /* ---- Referrer signature line (name only; role captions stay as printed) ---- */
   setValue(ws, "F28", data.referredByName);
   centerCell(ws, "F28");
 
-  /* ---- Received by / Date (always centered in the file) ---- */
   setValue(ws, "C31", data.receivedBy);
   centerCell(ws, "C31");
   setValue(ws, "G31", data.receivedDate);
   centerCell(ws, "G31");
 
-  /* ---- Guidance calls: C = box, D = date, F = subject/time, H = remarks ---- */
   const callRows = [36, 37, 38];
   data.guidanceCalls.slice(0, 3).forEach((call, i) => {
     const r = callRows[i];
@@ -179,7 +140,6 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
     setPara(ws, `H${r}`, call.remarks);
   });
 
-  /* ---- Guidance recommendations (C39 + continuation A40/A41) ---- */
   const gRecBase = ws.getRow(41).height ?? 28;
   const gRecRows = splitGcForm03Block(data.guidanceRecommendations, 3, 100);
   setPara(ws, "C39", gRecRows[0]);
@@ -187,7 +147,6 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   setPara(ws, "A41", gRecRows[2]);
   fitBlock(ws, 41, gRecBase, gRecRows[2], 100);
 
-  /* ---- Follow up (C42 + continuation A43/A44) ---- */
   const followBase = ws.getRow(44).height ?? 28;
   const followRows = splitGcForm03Block(data.followUp, 3, 100);
   setPara(ws, "C42", followRows[0]);
@@ -195,14 +154,12 @@ export function fillGcForm03Sheet(ws: Worksheet, data: GcForm03Data): void {
   setPara(ws, "A44", followRows[2]);
   fitBlock(ws, 44, followBase, followRows[2], 100);
 
-  /* ---- Counselor sign-off (names + date always centered in the file) ---- */
   setValue(ws, "A46", data.counselorName);
   centerCell(ws, "A46");
   setValue(ws, "G46", data.counselorDate);
   centerCell(ws, "G46");
 }
 
-/** Load the template, fill it, and return the filled workbook. */
 export async function buildFilledGcForm03Workbook(
   data: GcForm03Data
 ): Promise<Workbook> {
@@ -222,11 +179,6 @@ function filenameFor(studentName: string): string {
   return `GCForm-03_${safe}_${date}.xlsx`;
 }
 
-/**
- * Load the public-folder template, fill ONLY the answer cells from the
- * referral form data, and download the result. The template design
- * (labels, captions, logos, borders, merges, print area) is never altered.
- */
 export async function downloadGcForm03(data: GcForm03Data): Promise<void> {
   const wb = await buildFilledGcForm03Workbook(data);
   const out = (await wb.xlsx.writeBuffer()) as ArrayBuffer;

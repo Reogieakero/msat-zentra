@@ -4,11 +4,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./case-page.module.css";
 import skel from "./case-skeleton.module.css";
 
-/* Detail loading state that mirrors the wizard layout 1:1 — back
-   button, header card, then the tab bar + instructing card + active
-   section card beside the sticky eligibility checklist — so skeleton →
-   content swaps with minimal layout shift. Titles stay readable; only
-   values shimmer. */
 export function CoordinatorCaseSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading case file">

@@ -115,9 +115,7 @@ router.post(
         reason: body.reason,
         consultReviewer: body.consultReviewer,
       }, termId);
-      // A new referral must surface on the ADM board + teacher cases +
-      // guidance overview at once (otherwise the guidance page serves a stale
-      // cached empty response right after an adviser refers).
+
       await invalidateTags(["adm", "teacher", "guidance", "overview", "referrals", "alerts", "nurse", "nurse-overview", "nurse-alerts", "nurse-referrals", "nurse-clinic", "nurse-adm", "nurse-risk"]);
       res.status(201).json(referral);
     } catch (e) {
@@ -126,13 +124,6 @@ router.post(
   }
 );
 
-// Principal: records heatmap source — every section with its students that have
-// anecdotal records, including each record's category/severity/follow-up. The
-// categories returned here are the canonical backend AnecdotalCategory enum, so
-// the heatmap legend and block colors stay wired to the backend. Records filed
-// for students with no current account/section slot (transferred out,
-// deactivated, or otherwise unenrolled) are included too, grouped under
-// per-grade "Unassigned" sections instead of being silently dropped.
 router.get(
   "/records",
   requireAuth,
@@ -167,8 +158,6 @@ router.get(
   }
 );
 
-// The teacher's own filed records (any term) — backs the folder pages and
-// the filing chat's folder picker. Own rows only, so no advisee gate needed.
 router.get(
   "/mine",
   requireAuth,
@@ -182,11 +171,6 @@ router.get(
   }
 );
 
-// All eligible anecdotal records for the referrals composer, grouped by the
-// frontend into one folder per student. Each record carries hasReferral so
-// already-referred reports render disabled instead of disappearing. For
-// advisers, includes records created by subject teachers about students in
-// the adviser's sections. Subject teachers only see their own records.
 router.get(
   "/referable",
   requireAuth,
@@ -206,8 +190,6 @@ router.get(
   }
 );
 
-// File one of your records into (or out of) your folders. Allowed for the
-// observer and the section adviser (the form's signatory).
 router.patch(
   "/:id/folder",
   requireAuth,
@@ -226,7 +208,6 @@ router.patch(
   }
 );
 
-// JSON payload backing the frontend printable OCForm-01 sheet.
 router.get(
   "/:id/detail",
   requireAuth,
@@ -240,7 +221,6 @@ router.get(
   }
 );
 
-// Official .xlsx export byte-matching the OCForm-01 template layout.
 router.get(
   "/:id/export",
   requireAuth,

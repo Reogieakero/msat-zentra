@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import {
   COMPONENT_NAMES,
   COMPONENT_ORDER,

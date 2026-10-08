@@ -59,8 +59,6 @@ export function Sf10AttachFeed({ desk }: { desk: RegistryDesk }) {
     return () => ro?.disconnect();
   }, [isPending]);
 
-  // No fixed count: the number of columns comes from the container width, so the
-  // feed adapts to mobile while always filling exactly two complete rows.
   const visible = React.useMemo(() => {
     if (rowWidth <= 0) return feed.slice(0, 2);
     const columns = Math.max(

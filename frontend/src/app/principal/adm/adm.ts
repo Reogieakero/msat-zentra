@@ -14,7 +14,7 @@ export type AdmCase = {
   lrn: string;
   grade: string;
   section: string;
-  /** Current stage in the 8-step ADM pipeline. */
+
   stage: AdmPipelineStage;
   eligibilityStatus: "pending" | "eligible" | "ineligible";
   meetingAttended: boolean;
@@ -117,13 +117,10 @@ export function isAwaitingSignature(c: AdmCase): boolean {
   );
 }
 
-/** A signed case is final — return for revision is only offered before
- *  signing (unsigned cases go back to the ADM Coordinator). */
 export function canReturn(c: AdmCase): boolean {
   return c.approvedBy === null;
 }
 
-/** Human-readable, title-cased label for a pipeline stage (no underscores). */
 export function stageLabel(stage: AdmPipelineStage): string {
   return (
     ADM_PIPELINE.find((s) => s.stage === stage)?.label ??
@@ -131,7 +128,6 @@ export function stageLabel(stage: AdmPipelineStage): string {
   );
 }
 
-/** Monochrome dot colors for each ADM pipeline stage, used in legends. */
 export const STAGE_COLORS: Record<AdmPipelineStage, string> = {
   anecdotal: "#d4d4d4",
   consultation: "#a3a3a3",
@@ -147,12 +143,11 @@ export type AdmDocument = {
   name: string;
   type: string;
   size: string;
-  /** File slot color, mirrors the Uiverse folder-card file palette. */
+
   color: string;
   icon: "image" | "video" | "code" | "pdf" | "ppt";
 };
 
-/** Representative ADM documents bundled per approved learner profile. */
 export const ADM_DOCUMENTS: AdmDocument[] = [
   {
     name: "Referral_Form.pdf",

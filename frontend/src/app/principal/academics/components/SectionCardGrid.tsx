@@ -14,11 +14,6 @@ interface SectionCardGridProps {
   onSelectSection: (id: string | null) => void;
 }
 
-/* Section card grid — the primary navigation for the academics desk.
-   Cards are ordered by grade level (Grade 7 → 12), then section name,
-   so grades never look scrambled. Clicking a card selects it (click
-   again to deselect); the students table renders only for the selected
-   section. */
 export function SectionCardGrid({
   sections,
   loading,

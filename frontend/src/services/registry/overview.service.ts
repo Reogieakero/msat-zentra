@@ -1,5 +1,3 @@
-// Registry overview fetch (registrar + record-keeper desks hit their own
-// role-scoped endpoint serving the same projection).
 import { apiClient } from "@/lib/api/client";
 import type {
   RecordKeeperOverviewData,

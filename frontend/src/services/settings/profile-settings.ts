@@ -5,10 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
 
-// Merged from the seven role-scoped `profile-settings-data` copies (one per
-// desk shell). They were byte-identical apart from the desk name — a single
-// parameterized module removes the drift risk. The coordinator desk is served
-// by the ADM backend surface, hence the explicit endpoint map below.
 export type SettingsDesk =
   | "teacher"
   | "coordinator"
@@ -35,7 +31,6 @@ export interface ProfileSettings {
   secondaryColor: string | null;
 }
 
-/** Desk-scoped key — palettes must never leak across sessions. */
 export function profileSettingsKey(
   desk: SettingsDesk,
   userId: string | null | undefined,
@@ -76,12 +71,10 @@ function luminance(hex: string): number {
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 }
 
-/** Readable foreground for a brand background (dark text on light colors). */
 export function contrastForeground(hex: string): string {
   return luminance(hex) > 0.4 ? "#18181b" : "#fafafa";
 }
 
-/** Paint the workspace brand vars. Nulls fall back to the theme default. */
 export function applyPalette(primary: string | null, secondary: string | null) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
@@ -101,8 +94,6 @@ export function applyPalette(primary: string | null, secondary: string | null) {
   }
 }
 
-/** Mount once per desk shell: the saved palette paints every page, and a
- *  user without one (or after logout cache clear) resets to the theme. */
 export function PaletteGate({ desk }: { desk: SettingsDesk }) {
   const { data } = useProfileSettings(desk);
   const signature = data
@@ -118,12 +109,6 @@ export function PaletteGate({ desk }: { desk: SettingsDesk }) {
   }, [signature]);
   return null;
 }
-
-// ---------------------------------------------------------------------------
-// Per-desk aliases. These preserve every export name the seven original
-// copies exposed, so existing importers keep working with only the import
-// path changed to `@/services/settings/profile-settings`.
-// ---------------------------------------------------------------------------
 
 export type TeacherProfileSettings = ProfileSettings;
 export function teacherProfileSettingsKey(

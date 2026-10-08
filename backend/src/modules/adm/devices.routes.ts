@@ -28,7 +28,7 @@ router.post(
         },
       );
       res.status(201).json(device);
-      // Non-critical work stays off the response path.
+
       void invalidateTags(ADM_TAG_GROUP);
     } catch (e) {
       next(e);
@@ -49,7 +49,7 @@ router.post(
         req.body.returnedDate as string | undefined,
       );
       res.json(updated);
-      // Non-critical work stays off the response path.
+
       void invalidateTags(ADM_TAG_GROUP);
     } catch (e) {
       next(e);
@@ -57,9 +57,6 @@ router.post(
   }
 );
 
-// Device ledger for the ADM Coordinator Devices page. Read-only join of
-// every issued device with its learner profile + student. Status is derived
-// (returnedDate != null → returned) — never stored.
 router.get(
   "/devices",
   requireAuth,
@@ -75,9 +72,7 @@ router.get(
         typeof req.query.status === "string" && req.query.status.trim()
           ? req.query.status.trim()
           : "";
-      // Overview preview pages at the same list size; the Devices page sends
-      // `?page=&pageSize=` (legacy `?limit=` still accepted). `limit=0`
-      // preserves the legacy unbounded read.
+
       const hasPaging =
         typeof req.query.page !== "undefined" ||
         typeof req.query.pageSize !== "undefined" ||

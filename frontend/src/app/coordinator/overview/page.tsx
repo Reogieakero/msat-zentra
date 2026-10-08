@@ -24,8 +24,6 @@ export default function CoordinatorOverviewPage() {
   const [attentionOpen, setAttentionOpen] = React.useState(false);
   const overview = useCoordinatorOverview();
 
-  // Saved settings hex — the stage donut builds its scale straight from it,
-  // so slices always wear the coordinator's primary.
   const profile = useCoordinatorProfileSettings();
   const primary = profile.data?.primaryColor ?? null;
 

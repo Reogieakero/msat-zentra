@@ -27,9 +27,6 @@ function ctxOf(req: { user?: { id: string; role: string }; termScope?: { termId:
   };
 }
 
-// Start a follow-up for a live at-risk student who has no open one yet —
-// same intake as accepting a referral: urgency, first impressions, and an
-// optional first counseling session booked on the spot.
 router.post(
   "/start",
   requireAuth,

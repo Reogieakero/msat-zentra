@@ -1,7 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/* Mirrors referrals/all: header + search row + 7-col table (10 rows at real
-   row height) + pager footer. */
 export default function PrincipalAdmReferralsLoading() {
   return (
     <section aria-label="Loading referrals" aria-busy="true" className="flex min-w-0 flex-col gap-3">

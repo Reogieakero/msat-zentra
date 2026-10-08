@@ -45,8 +45,6 @@ function buildWhere(query: Omit<AuditListQuery, "page" | "pageSize">) {
   return where;
 }
 
-// School-wide audit log for the Principal. Supports filtering, search, and
-// pagination. actorRole is derived from the acting user's role.
 export async function listAudit(query: AuditListQuery) {
   const { page = "1", pageSize = "20" } = query;
   const where = buildWhere(query);
@@ -78,7 +76,6 @@ export async function listAudit(query: AuditListQuery) {
     newValue: r.newValue as Record<string, unknown> | null,
   }));
 
-  // Batched: ~3-5 queries per page instead of ~40 (N+1).
   const labelMap = await resolveSourceLabels(
     baseEntries.map((e) => ({ sourceTable: e.sourceTable, sourceId: e.sourceId })),
   );
@@ -92,7 +89,6 @@ export async function listAudit(query: AuditListQuery) {
   return { entries, total, page: Math.max(parseInt(page, 10) || 1, 1), pageSize: take };
 }
 
-// CSV export of the (filtered) audit log.
 export async function exportAuditCsv(query: Omit<AuditListQuery, "page" | "pageSize">) {
   const where = buildWhere(query);
 
@@ -129,8 +125,6 @@ export async function exportAuditCsv(query: Omit<AuditListQuery, "page" | "pageS
   return [header.join(","), ...lines].join("\n");
 }
 
-// Status-only projection of the record an audit entry points at. Confidential
-// clinical detail columns are NEVER returned.
 export async function getSourceProjection(logId: string) {
   const log = await prisma.auditLog.findUnique({
     where: { id: logId },

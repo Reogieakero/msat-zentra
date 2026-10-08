@@ -2,11 +2,6 @@
 
 import * as React from "react";
 
-/**
- * Adds `data-revealed="true"` to the returned ref element the first time it
- * scrolls into view. CSS keys the entrance animation off that attribute, so
- * `prefers-reduced-motion` can disable it in one place.
- */
 export function useReveal<T extends HTMLElement = HTMLDivElement>(
   options?: IntersectionObserverInit
 ) {

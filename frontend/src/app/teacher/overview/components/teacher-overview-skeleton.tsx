@@ -10,8 +10,6 @@ import layout from "./teacher-overview.module.css";
 import header from "./teacher-overview-header.module.css";
 import skel from "./teacher-overview-skeleton.module.css";
 
-/* Profile card placeholder — same section-card shell (glow, avatar,
-   title, 2-stat row) as TeacherOverviewHeader's profile. */
 function ProfileSkeleton() {
   return (
     <article
@@ -45,8 +43,6 @@ function ProfileSkeleton() {
   );
 }
 
-/* At-risk card placeholder — reserves the 140x140 radial and the 3-row
-   legend the real chart card renders. */
 function RiskChartSkeleton() {
   return (
     <div
@@ -89,9 +85,6 @@ interface TeacherOverviewSkeletonProps {
   actions: QuickAction[];
 }
 
-/* Full-page placeholder mirroring the loaded overview: class grid cards
-   on the left; profile, up-next, risk chart, and the REAL static quick
-   actions (which need no data) in the right rail. */
 export function TeacherOverviewSkeleton({ actions }: TeacherOverviewSkeletonProps) {
   return (
     <section

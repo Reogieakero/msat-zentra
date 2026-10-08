@@ -11,7 +11,6 @@ import {
 } from "./documentaries-utils";
 import styles from "./StudentHealthFolders.module.css";
 
-/* Mini-file tone per case type (same 1–5 theme tones the repository uses). */
 const TYPE_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   ADM: 3,
   Clinic: 2,
@@ -29,11 +28,6 @@ function folderFiles(folder: StudentHealthFolder): FolderFile[] {
   }));
 }
 
-/**
- * Per-student health folders — one FolderCard per student with finished
- * transactions. Opening a folder shows that student's cases in the details
- * dialog (newest first, with prev/next through their cases).
- */
 export function StudentHealthFolders({
   folders,
   onOpenCase,

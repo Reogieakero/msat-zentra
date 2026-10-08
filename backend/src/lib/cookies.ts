@@ -1,12 +1,5 @@
-// Refresh-token transport: httpOnly cookie (never localStorage, so page
-// JavaScript — including any injected script — cannot read it).
-// The access token stays a short-lived Bearer token in memory/localStorage;
-// the long-lived refresh token lives here: httpOnly, SameSite=Lax, Secure in
-// production, scoped to the refresh/logout paths only.
 export const REFRESH_COOKIE_NAME = "zentra.refresh";
 
-// Matches the default JWT_REFRESH_TTL ("7d"). The cookie is a transport
-// envelope — the JWT expiry inside remains authoritative.
 export const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
 export interface CookieOptions {

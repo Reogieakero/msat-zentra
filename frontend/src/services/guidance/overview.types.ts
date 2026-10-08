@@ -1,4 +1,3 @@
-// Dashboard shapes for the guidance overview page. Pure types only.
 export interface GuidanceKpis {
   referredToMe: number;
   pendingAdm: number;
@@ -23,7 +22,7 @@ export interface GuidanceGradeAttentionRow {
   moderate: number;
   low: number;
   atRisk: number;
-  /** Most common level among the grade's at-risk students; null when none. */
+
   mostLevel: "High" | "Moderate" | "Low" | null;
   topSection: string;
   topCount: number;
@@ -69,8 +68,7 @@ export interface GuidanceInterventionRow {
 }
 
 export interface GuidanceAlertRow {
-  // Referral id (not the raw anecdotal id): guidance only sees a filing
-  // once an adviser refers it with referredToRole = "guidance_counselor".
+
   id: string;
   student: string;
   lrn: string;

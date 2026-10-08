@@ -50,9 +50,7 @@ interface GradeRow {
 function fetchBreakdown(desk: RegistryDesk): Promise<{ data: BreakdownGroup[] }> {
   return apiClient
     .get<{ data: BreakdownGroup[] }>(`/api/${desk}/account-breakdown`)
-    // The breakdown endpoint has returned non-array payloads in the wild
-    // (cached/error shapes) — normalize to { data: [] } and never crash.
-    // Object shape matches AccountBreakdown: both share this query key.
+
     .then((res) => ({ data: Array.isArray(res.data?.data) ? res.data.data : [] }));
 }
 
@@ -62,8 +60,7 @@ function formatGrade(grade: string) {
 
 export function OverviewGradeChart({ desk }: { desk: RegistryDesk }) {
   const { data, isPending, isError } = useQuery({
-    // Same dedicated overview key as AccountBreakdown above (shared cache,
-    // same array payload) — never the accounts-page key.
+
     queryKey:
       desk === "registrar"
         ? ["registrar-account-breakdown"]

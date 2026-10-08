@@ -9,9 +9,6 @@ import type { BackendStudent } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./RiskLevelDistribution.module.css";
 
-// Primary-tinted level ramp, identical in light and dark mode (same as
-// the board donut and overview charts). Applied through style fills so
-// the CSS vars resolve inside recharts SVG.
 const LEVEL_FILL: Record<"High" | "Moderate" | "Low", string> = {
   High: "var(--primary)",
   Moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",

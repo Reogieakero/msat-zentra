@@ -1,4 +1,3 @@
-// Shared shapes for the teacher gradebook workspace. Pure types only.
 export type ComponentType = "WRITTEN_WORK" | "PERFORMANCE_TASK" | "EXAM";
 
 export interface ClassAssignment {

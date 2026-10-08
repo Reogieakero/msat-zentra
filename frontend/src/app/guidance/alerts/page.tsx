@@ -21,19 +21,16 @@ import styles from "./components/guidance-alerts.module.css";
 export default function GuidanceAlertsPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Merged action feed (referrals + interventions): bounded desk walks feed
-  // the client-side merge; the table paginates the merged list at 15.
+
   const referralsQuery = useQuery<GuidanceReferralItem[]>({
-    // Nested under ["guidance-alerts"] so realtime + mutation invalidation
-    // on the prefix refreshes this page (a flat "guidance-alerts-referrals"
-    // first element would never prefix-match).
+
     queryKey: ["guidance-alerts", "referrals", termKey],
     queryFn: () => fetchAllGuidanceReferrals(),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
   const interventionsQuery = useQuery<AtRiskStudentItem[]>({
-    // See above — nested so ["guidance-alerts"] invalidation reaches it.
+
     queryKey: ["guidance-alerts", "interventions", termKey],
     queryFn: fetchAllGuidanceInterventions,
     placeholderData: keepPreviousData,
@@ -43,7 +40,7 @@ export default function GuidanceAlertsPage() {
   const isPending = referralsQuery.isPending || interventionsQuery.isPending;
   const isError = referralsQuery.isError || interventionsQuery.isError;
   const isFetching = referralsQuery.isFetching || interventionsQuery.isFetching;
-  // Stable references so downstream memos don't recompute every render.
+
   const referrals = React.useMemo(
     () => (Array.isArray(referralsQuery.data) ? referralsQuery.data : []),
     [referralsQuery.data]
@@ -53,9 +50,6 @@ export default function GuidanceAlertsPage() {
     [interventionsQuery.data]
   );
 
-  // Live rule-based risk level per referred student (account id or roster
-  // id — the endpoint serves both). Intervention rows carry their level
-  // directly, so only referrals need the lookup.
   const studentIds = React.useMemo(
     () =>
       [

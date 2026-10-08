@@ -31,16 +31,8 @@ import {
 import { useGuidanceProfileSettings } from "@/services/settings/profile-settings";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
 
-/**
- * Guidance risk dashboard — desk-scoped categories, levels, and heatmaps.
- * Same contents and layout as the nurse risk board, over the guidance
- * desk's own referrals plus the per-student risk-level projection the
- * guidance role may read. Counts and levels only; confidential notes from
- * other roles never appear here.
- */
 export default function GuidanceRiskPage() {
-  // Slice fills resolve per mode (SVG attributes can't read CSS vars), so
-  // the dashboard rebuilds its palette whenever the theme flips.
+
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
@@ -54,8 +46,6 @@ export default function GuidanceRiskPage() {
     staleTime: 60_000,
   });
 
-  // Saved settings hex — charts build their scale straight from it, so the
-  // lines, donut, and bars always wear the user's chosen primary.
   const profile = useGuidanceProfileSettings();
   const primary = profile.data?.primaryColor ?? null;
 
@@ -85,8 +75,6 @@ export default function GuidanceRiskPage() {
     [riskQuery.data, levelsQuery.data, isDark]
   );
 
-  // Factor flags behind the watch card — same students, so drivers repaint
-  // with levels and the desk.
   const factorsQuery = useQuery({
     queryKey: ["guidance-risk-alert-factors", termKey],
     queryFn: fetchAllGuidanceAlertFactors,
@@ -94,7 +82,6 @@ export default function GuidanceRiskPage() {
     staleTime: 300_000,
   });
 
-  // Plain-words watch over the same desk rows the dashboard reads.
   const watch = React.useMemo(
     () =>
       riskQuery.data
@@ -117,8 +104,6 @@ export default function GuidanceRiskPage() {
     [dashboard]
   );
 
-  // Weekly category lines for the main panel — same desk rows, mapped to
-  // the shared trend input (category + referred date).
   const trend = React.useMemo(
     () =>
       riskQuery.data
@@ -135,9 +120,7 @@ export default function GuidanceRiskPage() {
   const levelsPending = studentIds.length > 0 && levelsQuery.isPending;
 
   if (riskQuery.isPending || levelsPending) {
-    // Skeleton mirrors the real layout one-to-one (trend-lines panel,
-    // levels + categories duo, side rail) so nothing shifts when data
-    // arrives.
+
     return (
       <section className={styles.page} aria-busy="true">
         <div className={styles.mainGridFlipped}>

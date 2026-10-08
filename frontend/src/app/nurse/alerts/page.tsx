@@ -27,7 +27,7 @@ export default function NurseAlertsPage() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+
   const debounced = useDebouncedValue(query.trim(), 300);
 
   const { data, isPending, isError, refetch, isFetching } =
@@ -40,18 +40,14 @@ export default function NurseAlertsPage() {
           pageSize: NURSE_ALERTS_PAGE_SIZE,
           signal,
         }),
-      // Page turns reuse the previous page so they never flash skeletons.
+
       placeholderData: keepPreviousData,
       staleTime: 60_000,
     });
 
-  // Derived, never setState-in-effect: the server clamps too, this keeps
-  // the pager truthful while a filter shrinks the list under the cursor.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(page, totalPages);
 
-  // Live rule-based risk level per student behind these cases (account id
-  // or roster id — the endpoint serves both).
   const studentIds = React.useMemo(
     () => [
       ...new Set(
@@ -137,14 +133,11 @@ export default function NurseAlertsPage() {
     );
   }
 
-  // Background refetch: keep data visible, show a subtle indicator.
-  // Risk levels load independently — the table renders with "—" shimmer
-  // state instead of blocking, and surfaces retry on failure.
   const refreshing = isFetching && !isPending;
 
   return (
     <section className={styles.page} aria-busy={refreshing}>
-      {/* Floating pill — never shifts the table. */}
+
       {refreshing ? <NurseRefreshBadge label="Refreshing cases…" /> : null}
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>

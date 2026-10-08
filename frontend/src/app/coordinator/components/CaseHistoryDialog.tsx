@@ -22,7 +22,7 @@ import type {
   AdmCaseRow,
   AdmHistoryEvent,
 } from "@/services/coordinator/coordinator.types";
-import { stageOrder } from "@/services/teacher/admCases.labels";
+import { stageOrder } from "@/lib/labels/adm-pipeline";
 import trackStyles from "@/app/teacher/advisory/adm-cases/components/AdmCaseDialog.module.css";
 
 export interface HistoryTarget {
@@ -39,9 +39,6 @@ export function historyTargetFor(row: AdmCaseRow): HistoryTarget {
   return { title: row.student, profileId: row.id, row };
 }
 
-/* Coordinator timeline events → the shared tracker entry shape. Audit
-   action types map onto pipeline stages inside the tracker; unknown
-   sources fall through to the generic case bucket. */
 function toTrackEntries(events: AdmHistoryEvent[]): StageTimelineEntry[] {
   return events
     .filter((e) => e && e.at)
@@ -62,14 +59,9 @@ function toTrackEntries(events: AdmHistoryEvent[]): StageTimelineEntry[] {
     }));
 }
 
-/* Coordinator row + its audit timeline → the shared tracker input (same
-   contents the teacher adm-cases rail renders). Row evidence fills what the
-   row carries; anything the row lacks (modules, devices, home-visit proof)
-   renders as static detail lines. */
 function trackInputFor(row: AdmCaseRow, events: AdmHistoryEvent[]): TrackerCaseInput {
   const timeline = toTrackEntries(events);
-  // Synthesized pipeline entries (same as the teacher my-cases builder):
-  // the current stage plus the principal signature when present.
+
   if (row.datePrepared) {
     timeline.push({
       label: `Moved to the ${stageLabel(row.stage)} stage.`,
@@ -112,12 +104,6 @@ function trackInputFor(row: AdmCaseRow, events: AdmHistoryEvent[]): TrackerCaseI
   };
 }
 
-/**
- * Track case — read-only case tracking in the teacher adm-cases design:
- * glow card, student header, Stage-N-of-8 progress, and the shared 8-stage
- * pipeline timeline with per-stage latest actions. Status-only; no
- * clinical detail ever renders here.
- */
 export function CaseHistoryDialog({
   target,
   onClose,
@@ -166,7 +152,7 @@ export function CaseHistoryDialog({
       ]}
     >
       {target && row ? (
-        /* Single frame — content sits directly in the CardModal body. */
+
         <div
           className="flex min-w-0 flex-col gap-3"
           aria-label={`Track ADM case for ${row.student}`}

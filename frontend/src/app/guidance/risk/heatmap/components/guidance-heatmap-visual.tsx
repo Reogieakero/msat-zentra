@@ -19,10 +19,6 @@ const LEVELS = [
 type FactorKey = (typeof FACTORS)[number]["key"];
 type LevelKey = (typeof LEVELS)[number]["key"];
 
-/**
- * Absolute intensity buckets — shared with the principal risk board so the
- * two views agree on what "dark" means. Status-only counts, no identities.
- */
 function cellColor(count: number): string {
   if (count <= 0) return "var(--hm-0)";
   if (count <= 3) return "var(--hm-1)";

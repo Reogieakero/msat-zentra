@@ -1,34 +1,25 @@
-// Shared shapes for the nurse desk. Pure types only — no runtime imports,
-// so UI files can `import type` without pulling in fetch logic.
 export interface RawReferral {
   id: string;
   referredToRole?: string | null;
   reason?: string | null;
   status?: string | null;
   escalatedTo?: string | null;
-  // Set only on ADM-track referrals (the picked consultation reviewer).
+
   consultReviewer?: string | null;
-  // True once the nurse completes the referral form on the dedicated form
-  // page — only then may the case be forwarded to the ADM coordinator.
+
   referralFormReady?: boolean | null;
   followUpDate?: string | null;
   resolvedAt?: string | null;
-  // Free-text fields the timeline surfaces (callouts). Present at runtime
-  // (the endpoint spreads the full referral row); defaulted when absent.
+
   intakeNotes?: string | null;
   notes?: string | null;
   escalationReason?: string | null;
-  // When the case was actually referred (earliest audit entry; falls back
-  // to the observation date for legacy rows). Drives the "waiting" clock.
+
   referredAt?: string | null;
-  // Latest execution across the referral + its sessions (backend audit).
-  // This is the wall-clock time the last action ran — use it for display,
-  // never the future appointment time.
+
   lastActionAt?: string | null;
   lastActionType?: string | null;
-  // Role behind the latest dismissal audit (backend audit trail) — drives
-  // the watermark ("Cancelled" for adviser withdrawals vs "Reject" for
-  // desk decisions). Null when never dismissed.
+
   dismissedByRole?: string | null;
   anecdotalRecord?: RawAnecdotal | null;
   student?: RawStudent | null;
@@ -36,9 +27,6 @@ export interface RawReferral {
   counselingSessions?: RawSession[] | null;
 }
 
-// Raw shapes returned by GET /api/referrals/ (nurse role is allowed).
-// DateTime fields arrive as ISO strings. Only the fields the overview
-// reads are typed; the endpoint includes full related records.
 export interface RawAnecdotal {
   id: string;
   observationDatetime: string;
@@ -83,12 +71,9 @@ export interface RawSession {
   sessionNotes?: string | null;
   outcome?: string | null;
   cancelReason?: string | null;
-  // Role behind the latest session_cancelled audit, when cancelled
-  // (backend audit trail). Adviser/subject-teacher = the withdrawal
-  // auto-cancel cascade; a desk role = that desk cancelled it.
+
   cancelledByRole?: string | null;
-  // Execution times (backend): createdAt = when booked, completedAt = when
-  // marked done. Never display the future appointment as the action time.
+
   createdAt?: string | null;
   completedAt?: string | null;
   attachments?: RawAttachment[] | null;
@@ -113,14 +98,12 @@ export interface NurseSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
-  // Role behind the latest session_cancelled audit, when cancelled.
+
   cancelledByRole?: string | null;
-  // When the session was booked (execution time). Falls back to
-  // scheduledAt for legacy rows without it.
+
   createdAt: string;
   completedAt: string;
-  // Optional documentation filed on the session (photos). Empty when the
-  // nurse closes the case without filing — docs never gate Done.
+
   attachments: ClinicAttachment[];
 }
 
@@ -139,33 +122,27 @@ export interface NurseQueueRow {
   lrn: string;
   section: string;
   grade: string;
-  // "ADM" when a teacher picked an ADM consultation reviewer for this case
-  // (consultReviewer is only set on ADM-track referrals); otherwise a
-  // regular clinic matter.
+
   type: string;
-  // Teacher-picked ADM consultation reviewer (nurse on this desk).
+
   consultReviewer?: string | null;
-  // True once the referral form is completed — the alerts page then shows
-  // the explicit Endorse & forward button for the case.
+
   referralReady: boolean;
   category: string;
   reason: string;
   status: string;
   date: string;
   waitingDays: number | null;
-  // Full referred timestamp (ISO) — drives the live "Waiting" elapsed
-  // clock (referred time → now). Empty when unknown (legacy rows).
+
   referredAt: string;
-  // Optional context lines for the timeline view ("" when unset).
+
   followUpDate: string;
   intakeNotes: string;
   notes: string;
   escalationReason: string;
-  // Underlying anecdotal record — needed for follow-up notes. Null for
-  // legacy rows without one.
+
   anecdotalId: string | null;
-  // The anecdotal write-up for review (ADM consultation). Null when the
-  // referral carries no record.
+
   anecdotal: {
     observedAt: string;
     category: string;
@@ -175,17 +152,13 @@ export interface NurseQueueRow {
     attendanceSummary: string;
     notes: string;
   } | null;
-  // Clinic sessions booked on the case, oldest first (same counseling-plan
-  // workflow as the guidance referrals page).
+
   sessions: NurseSessionItem[];
   completedSessions: number;
-  // Latest execution across referral + sessions (backend audit, ISO).
-  // Empty when no audit trail exists (legacy rows) — callers fall back.
+
   lastActionAt: string;
   lastActionType: string;
-  // Role behind the dismissal, when dismissed (backend audit trail).
-  // Adviser/subject-teacher withdrawals read "Cancelled", desk decisions
-  // read "Reject". Empty otherwise.
+
   dismissedByRole: string;
 }
 
@@ -224,15 +197,12 @@ export type NurseReferralStatus =
   | "dismissed"
   | "escalated";
 
-// Clinic intake: accept the case with first impressions and an optional
-// first clinic session booked on the spot (POST /api/referrals/:id/nurse-accept).
 export interface NurseAcceptInput {
   intakeNotes?: string;
   scheduledAt?: string;
   venue?: string;
 }
 
-// ADM consultation review by the nurse (POST /api/referrals/:id/nurse-adm-review).
 export interface NurseAdmReferralForm {
   concerns?: string[];
   detailsOfConcern?: string;
@@ -248,15 +218,11 @@ export interface SavedNurseAdmForm {
   followUp: string;
 }
 
-// Clinic sessions on one referral — the same schedule / complete / move /
-// cancel workflow as the guidance referrals page.
 export interface NurseScheduleSessionInput {
   scheduledAt: string;
   venue?: string;
 }
 
-// Stash passed from the Review ADM dialog to the dedicated referral form
-// page (/nurse/adm/referral/[referralId]).
 export interface NurseReferralDraft {
   recommendation: string;
   scheduledAt?: string;
@@ -264,9 +230,6 @@ export interface NurseReferralDraft {
 
 export type NurseAlertSeverity = "urgent" | "new" | "info" | "done";
 
-// Live rule-based risk level from the risk engine (High/Moderate/Low).
-// Null when the student has no account-backed profile (roster-only) or the
-// lookup failed — the table renders "—" for those rows.
 export type NurseRiskLevel = "High" | "Moderate" | "Low";
 
 export interface NurseAlertItem {
@@ -274,13 +237,11 @@ export interface NurseAlertItem {
   severity: NurseAlertSeverity;
   title: string;
   detail: string;
-  // One-line waiting / due / resolved line for the card bullets.
+
   waiting: string;
   date: string;
   sortTime: number;
-  // Account userId (or roster id for enlisted students without accounts)
-  // for the live risk lookup. The endpoint serves both, so every referred
-  // student resolves a level instead of "—".
+
   studentId: string | null;
   row: NurseQueueRow;
 }
@@ -305,10 +266,7 @@ export interface NurseAlertsSummary {
 export interface NurseAlertsData {
   summary: NurseAlertsSummary;
   alerts: NurseAlertItem[];
-  // Every nurse-scope referral in EVERY status (pending through dismissed),
-  // one item per case — desk-wide insights read this list. The `alerts`
-  // feed carries the same rows with action-oriented titles, so nothing
-  // ever disappears from the desk unless the nurse deletes the case.
+
   cases: NurseAlertItem[];
   notifications: NurseNotificationItem[];
   unread: number;
@@ -324,17 +282,15 @@ export interface NurseAlertsPageParams {
 }
 
 export interface NurseAlertsPage extends NurseAlertsData {
-  /** Filtered pager count (shrinks on search). */
+
   total: number;
-  /** UNFILTERED desk total — tile stats never shrink on search. */
+
   unfilteredTotal: number;
   page: number;
   totalPages: number;
   pageSize: number;
 }
 
-// Status-only factor flags per student (same posture as levels — no
-// confidential fields). Lets desks explain *why* in plain words.
 export type NurseRiskFactors = {
   Academic: boolean;
   Attendance: boolean;

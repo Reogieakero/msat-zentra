@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { FluidHue } from "@/components/auth/FluidBackground";
 import styles from "./FluidColorPicker.module.css";

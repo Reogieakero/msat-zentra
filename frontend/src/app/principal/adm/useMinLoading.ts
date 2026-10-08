@@ -1,17 +1,10 @@
 import * as React from "react";
 
-/**
- * Keeps a loading flag true for at least `ms` after it was last set true,
- * so skeleton UIs are perceivable even when the underlying fetch resolves
- * (or fails) near-instantly.
- */
 export function useMinLoading(ms = 600) {
   const [loading, setLoading] = React.useState(true);
   const startRef = React.useRef<number>(0);
   const timerRef = React.useRef<number | null>(null);
 
-  // Record the initial load start time after mount (avoids calling
-  // Date.now() during render, which violates the Rules of Hooks).
   React.useEffect(() => {
     startRef.current = Date.now();
   }, []);

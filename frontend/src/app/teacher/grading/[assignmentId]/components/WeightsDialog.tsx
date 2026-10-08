@@ -31,7 +31,6 @@ type Props = {
   onSaved: () => void;
 };
 
-/** View-first weights modal: displays the DepEd split, edits behind Edit. */
 export function WeightsDialog({ detail, onClose, onSaved }: Props) {
   const { assignment } = detail;
   const [editing, setEditing] = React.useState(false);

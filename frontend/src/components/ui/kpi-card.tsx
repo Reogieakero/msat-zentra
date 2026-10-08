@@ -13,7 +13,7 @@ export type KpiCardProps = {
   description?: string;
   href?: string;
   loading?: boolean;
-  /** Animated background variant behind the content. */
+
   background?: "none" | "molten" | "gradientWaves" | "liquidEther";
   moltenProps?: MoltenMetalProps;
   gradientWavesProps?: GradientWavesProps;

@@ -1,5 +1,3 @@
-// Advisee attendance-detail fetch + day display helpers. Note: `humanize`
-// here null-guards with "—", unlike the advisory twin — kept local.
 import { apiClient } from "@/lib/api/client";
 import type { StudentAttendance } from "./adviseeAttendance.types";
 

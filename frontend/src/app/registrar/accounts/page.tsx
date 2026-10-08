@@ -53,13 +53,6 @@ export default function AccountApprovalsPage() {
   const [page, setPage] = React.useState(1);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
-  // Server-paginated + server-searched (strict-15): the pager reads the
-  // filtered total, the tiles read the unfiltered total. keepPreviousData
-  // keeps the current rows on screen while the next page loads.
-  // NOTE: `page` is the requested page; `safePage` (derived, never stored)
-  // clamps it to the latest known range so a list that shrinks under us
-  // (approval elsewhere, realtime refresh) never strands us on an empty
-  // page — no effect needed, everything below reads safePage.
   const { data, isPending, isError } = useQuery({
     queryKey: ["pending-students", page, debouncedQuery],
     queryFn: ({ signal }) => fetchPendingStudents(page, debouncedQuery, signal),
@@ -71,7 +64,7 @@ export default function AccountApprovalsPage() {
     queryFn: (): Promise<AccountBreakdown[]> =>
       apiClient
         .get<{ data: AccountBreakdown[] }>("/api/registrar/account-breakdown")
-        // Same non-array-payload guard as the overview charts.
+
         .then((res) => (Array.isArray(res.data?.data) ? res.data.data : [])),
     staleTime: 30_000,
   });
@@ -86,9 +79,7 @@ export default function AccountApprovalsPage() {
         approve ? `/api/auth/approve/${id}` : `/api/auth/reject/${id}`,
         approve ? {} : { reason: "Rejected by registrar" }
       ),
-    // Pessimistic: the row stays put (with its spinner) until the server
-    // confirms — the settled refetch below is what removes it. No optimistic
-    // removal: the UI must never outrun the processing.
+
     onError: (err) => {
       const message =
         (err as { response?: { data?: { error?: { message?: string } } } })?.response
@@ -96,11 +87,9 @@ export default function AccountApprovalsPage() {
       toast.error({ title: "Action failed", description: message });
     },
     onSuccess: (_data, { id, approve }) => {
-      // Self-receipt lands in our own bell (badge bumps live); suppress its
-      // echo toast — the toast below already confirmed the action.
+
       markSelfNotified(id);
-      // Name lookup from the still-present cache (row is removed only by the
-      // refetch below, after confirm).
+
       const name =
         qc
           .getQueriesData<PendingStudentsResponse>({ queryKey: ["pending-students"] })
@@ -121,12 +110,9 @@ export default function AccountApprovalsPage() {
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
-  // Derived (never stored): if the list shrinks under us the backend clamps
-  // the requested page and every control below reads safePage, so the view
-  // self-heals on the next navigation without an effect.
+
   const safePage = Math.min(page, totalPages);
-  // Row currently being approved/rejected (mutation variables persist after
-  // settle, so gate on isPending): drives the per-row spinner + ing labels.
+
   const actingVars = act.isPending
     ? (act.variables as { id: string; approve: boolean } | undefined)
     : undefined;

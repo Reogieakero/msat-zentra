@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-// Request validation for the teacher workspace (POST/PATCH bodies).
-// Business-rule validation (master-teacher gates, grade bands, locks)
-// lives in src/services/teacher/*.service.ts; these schemas only check
-// request shape.
-
 export const masterTeacherSchema = z.object({ isMasterTeacher: z.boolean() });
 
 export const HEX_COLOR = z

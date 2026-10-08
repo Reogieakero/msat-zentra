@@ -42,9 +42,6 @@ export default function AccountApprovalsPage() {
   const [page, setPage] = React.useState(1);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
-  // Server-paginated + server-searched (registrar precedent): the pager
-  // reads the filtered total, the tiles read the unfiltered total.
-  // keepPreviousData keeps rows on screen while the next page loads.
   const { data, isPending, isError, isFetching } = useQuery({
     queryKey: ["record-keeper-pending-students", page, debouncedQuery],
     queryFn: ({ signal }) => fetchPendingStudents(page, debouncedQuery, signal),
@@ -73,8 +70,7 @@ export default function AccountApprovalsPage() {
         approve ? {} : { reason: "Rejected by record keeper" }
       ),
     onSuccess: (_data, { id, approve }) => {
-      // Self-receipt lands in our own bell (badge bumps live); suppress its
-      // echo toast — the toast below already confirmed the action.
+
       markSelfNotified(id);
       toast.success({
         title: approve ? "Approved" : "Rejected",
@@ -94,8 +90,7 @@ export default function AccountApprovalsPage() {
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
-  // Derived (never stored): the backend clamps the requested page and every
-  // control below reads safePage, so the view self-heals without an effect.
+
   const safePage = Math.min(page, totalPages);
   const pageRows = students;
   const start = filteredTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;

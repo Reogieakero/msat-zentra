@@ -3,21 +3,6 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 import argon2 from "argon2";
 
-/**
- * Top-up seeder: brings every transaction table to a minimum of 50 rows.
- * - Tops up the EXISTING database (no reset, no deletes).
- * - Idempotent: deterministic `topup50_*` ids + skipDuplicates, safe to rerun.
- * - Usage: `npx tsx prisma/seed-topup-50.ts [--dry-run]`
- *
- * Known caps (documented, not errors):
- * - ScheduleConfig: termId is @unique and only 3 terms exist -> max 3 rows.
- * - TeacherTermGrant: unique (userId, termId); script adds 5 teacher accounts
- *   so 17 teachers x 3 terms = 51 slots >= 50.
- * - Sf10Record / registered-only tables need StudentProfiles; the script
- *   registers roster entries (creates User + StudentProfile, mirroring
- *   seed.ts) until 50 profiles exist.
- */
-
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 const DRY = process.argv.includes("--dry-run");
 const MIN = 50;
@@ -52,7 +37,6 @@ async function main() {
     plan.push({ table, have, add });
   };
 
-  // ---- Context: active term, staff, sections, roster ----
   const term =
     (await prisma.term.findFirst({
       where: { schoolYear: { isActive: true } },
@@ -70,15 +54,11 @@ async function main() {
   let teachers = await prisma.user.findMany({ where: { role: "subject_teacher" } });
   const sections = await prisma.section.findMany();
   const subjects = await prisma.subject.findMany();
-  // Any term's components (assessments only need a valid component id).
   const components = await prisma.gradeComponent.findMany({ select: { id: true }, take: 50 });
   const roster = await prisma.studentRoster.findMany({
     select: { id: true, lrn: true, fullName: true, sectionId: true, gradeLevel: true },
   });
 
-  // ---- 0. Extra teacher accounts so TeacherTermGrant can reach 50 ----
-  // unique(userId, termId): advisers tap through too, so the eligible pool is
-  // teachers + advisers; need >= 17 staff x 3 terms = 51 slots.
   const teacherNeed = Math.max(0, 17 - (teachers.length + advisers.length));
   if (!DRY && teacherNeed > 0) {
     const hash = await argon2.hash("Zentra2025!");
@@ -106,7 +86,6 @@ async function main() {
   }
   await note("User(teacher topup)", teachers.length, DRY ? teacherNeed : 0);
 
-  // ---- 1. Register roster entries -> 50 StudentProfiles ----
   const profiles = await prisma.studentProfile.findMany({ select: { userId: true, lrn: true } });
   const profileLrns = new Set(profiles.map((p) => p.lrn));
   const unregistered = roster.filter((r) => !profileLrns.has(r.lrn));
@@ -148,7 +127,6 @@ async function main() {
   let seq = 0;
   const i0 = () => seq++;
 
-  // ---- 2. AnecdotalRecord (roster-based) ----
   {
     const have = await prisma.anecdotalRecord.count();
     const need = Math.max(0, MIN - have);
@@ -178,7 +156,6 @@ async function main() {
     select: { id: true, observerId: true, studentId: true, rosterId: true },
   });
 
-  // ---- 3. AnecdotalFolder ----
   {
     const have = await prisma.anecdotalFolder.count();
     const need = Math.max(0, MIN - have);
@@ -194,7 +171,6 @@ async function main() {
     await note("AnecdotalFolder", have, need);
   }
 
-  // ---- 4. AnecdotalRecordFollowup ----
   {
     const have = await prisma.anecdotalRecordFollowup.count();
     const need = Math.max(0, MIN - have);
@@ -214,7 +190,6 @@ async function main() {
     await note("AnecdotalRecordFollowup", have, need);
   }
 
-  // ---- 5. Referral ----
   {
     const have = await prisma.referral.count();
     const need = Math.max(0, MIN - have);
@@ -243,7 +218,6 @@ async function main() {
   }
   const referrals = await prisma.referral.findMany({ select: { id: true } });
 
-  // ---- 6. AdmLearnerProfile (+ nested meeting/module/device/form) ----
   {
     const have = await prisma.admLearnerProfile.count();
     const need = Math.max(0, MIN - have);
@@ -318,7 +292,6 @@ async function main() {
   const profiles50 = await prisma.admLearnerProfile.findMany({ select: { id: true } });
   const meetings = await prisma.admParentMeeting.findMany({ select: { id: true } });
 
-  // ---- 7. AdmParentMeeting (referral bookings to reach 50) ----
   {
     const have = meetings.length;
     const need = Math.max(0, MIN - have);
@@ -337,7 +310,6 @@ async function main() {
   }
   const meetings50 = await prisma.admParentMeeting.findMany({ select: { id: true } });
 
-  // ---- 8. AdmMeetingInvitee ----
   {
     const have = await prisma.admMeetingInvitee.count();
     const need = Math.max(0, MIN - have);
@@ -358,7 +330,6 @@ async function main() {
     await note("AdmMeetingInvitee", have, need);
   }
 
-  // ---- 9. AdmMeetingAttachment ----
   {
     const have = await prisma.admMeetingAttachment.count();
     const need = Math.max(0, MIN - have);
@@ -377,7 +348,6 @@ async function main() {
     await note("AdmMeetingAttachment", have, need);
   }
 
-  // ---- 10. AdmModule / AdmDevice / AdmForm standalone ----
   {
     const mHave = await prisma.admModule.count();
     const mNeed = Math.max(0, MIN - mHave);
@@ -428,7 +398,6 @@ async function main() {
     await note("AdmForm", fHave, fNeed);
   }
 
-  // ---- 11. HealthRecord / HomeVisitationRecord (registered students) ----
   {
     const hHave = await prisma.healthRecord.count();
     const hNeed = Math.max(0, MIN - hHave);
@@ -474,7 +443,6 @@ async function main() {
     await note("HomeVisitationRecord", vHave, vNeed);
   }
 
-  // ---- 12. CounselingSession ----
   {
     const have = await prisma.counselingSession.count();
     const need = Math.max(0, MIN - have);
@@ -496,7 +464,6 @@ async function main() {
   }
   const sessions = await prisma.counselingSession.findMany({ select: { id: true } });
 
-  // ---- 13. ClinicSessionAttachment ----
   {
     const have = await prisma.clinicSessionAttachment.count();
     const need = Math.max(0, MIN - have);
@@ -515,7 +482,6 @@ async function main() {
     await note("ClinicSessionAttachment", have, need);
   }
 
-  // ---- 14. Assessment ----
   {
     const have = await prisma.assessment.count();
     const need = Math.max(0, MIN - have);
@@ -535,13 +501,10 @@ async function main() {
   }
   const assessments = await prisma.assessment.findMany({ select: { id: true, maxScore: true } });
 
-  // ---- 15. StudentGrade ----
   {
     const have = await prisma.studentGrade.count();
     const need = Math.max(0, MIN - have);
     if (!DRY && need > 0 && assessments.length > 0 && roster.length > 0) {
-      // Skip pairs that already exist (unique assessmentId+rosterId) so every
-      // attempted row is fresh — skipDuplicates alone can't fill the deficit.
       const existingPairs = new Set(
         (await prisma.studentGrade.findMany({ select: { assessmentId: true, rosterId: true } })).map(
           (e) => `${e.assessmentId}::${e.rosterId}`,
@@ -556,7 +519,6 @@ async function main() {
         if (!existingPairs.has(`${a.id}::${r.id}`)) {
           existingPairs.add(`${a.id}::${r.id}`);
           rows.push({
-            // Short id: keyId() 60-char truncation of two uuids collides.
             id: `topup50_sg2_${have}_${k}`,
             assessmentId: a.id,
             rosterId: r.id,
@@ -572,7 +534,6 @@ async function main() {
     await note("StudentGrade", have, need);
   }
 
-  // ---- 16. FinalGrade ----
   {
     const have = await prisma.finalGrade.count();
     const need = Math.max(0, MIN - have);
@@ -599,7 +560,6 @@ async function main() {
     await note("FinalGrade", have, need);
   }
 
-  // ---- 17. GradeFlag ----
   {
     const have = await prisma.gradeFlag.count();
     const need = Math.max(0, MIN - have);
@@ -625,7 +585,6 @@ async function main() {
     await note("GradeFlag", have, need);
   }
 
-  // ---- 18. Sf10Record + Sf10RecordVersion ----
   {
     const have = await prisma.sf10Record.count();
     const need = Math.max(0, MIN - have);
@@ -638,12 +597,9 @@ async function main() {
           source: "manual" as const,
         };
       });
-      // studentId is @unique: skip profiles that already have one.
       const existing = await prisma.sf10Record.findMany({ select: { studentId: true } });
       const taken = new Set(existing.map((e) => e.studentId));
       const fresh = rows.filter((r) => !taken.has(r.studentId));
-      // If profiles run out, register is already at 50; leftover need stays 0
-      // because need <= profiles available by construction.
       await prisma.sf10Record.createMany({ data: fresh.slice(0, need), skipDuplicates: true });
     }
     await note("Sf10Record", have, need);
@@ -666,7 +622,6 @@ async function main() {
     await note("Sf10RecordVersion", have, need);
   }
 
-  // ---- 19. AdviserSf10AccessRequest ----
   {
     const have = await prisma.adviserSf10AccessRequest.count();
     const need = Math.max(0, MIN - have);
@@ -691,7 +646,6 @@ async function main() {
     await note("AdviserSf10AccessRequest", have, need);
   }
 
-  // ---- 20. AdviserArchivedStudent ----
   {
     const have = await prisma.adviserArchivedStudent.count();
     const need = Math.max(0, MIN - have);
@@ -713,13 +667,11 @@ async function main() {
     await note("AdviserArchivedStudent", have, need);
   }
 
-  // ---- 21. TeacherTermGrant ----
   {
     const have = await prisma.teacherTermGrant.count();
     const need = Math.max(0, MIN - have);
     const grantPool = [...teachers, ...advisers];
     if (!DRY && need > 0 && grantPool.length > 0 && terms.length > 0) {
-      // Skip pairs that already exist (unique userId+termId).
       const existingPairs = new Set(
         (await prisma.teacherTermGrant.findMany({ select: { userId: true, termId: true } })).map(
           (e) => `${e.userId}::${e.termId}`,
@@ -746,7 +698,6 @@ async function main() {
     await note("TeacherTermGrant", have, need);
   }
 
-  // ---- 22. TeacherName ----
   {
     const have = await prisma.teacherName.count();
     const need = Math.max(0, MIN - have);
@@ -761,7 +712,6 @@ async function main() {
     await note("TeacherName", have, need);
   }
 
-  // ---- 23. ReportSnapshot ----
   {
     const have = await prisma.reportSnapshot.count();
     const need = Math.max(0, MIN - have);
@@ -780,7 +730,6 @@ async function main() {
     await note("ReportSnapshot", have, need);
   }
 
-  // ---- 24. AttendanceRecordLegacy ----
   {
     const have = await prisma.attendanceRecordLegacy.count();
     const need = Math.max(0, MIN - have);
@@ -808,7 +757,6 @@ async function main() {
     await note("AttendanceRecordLegacy", have, need);
   }
 
-  // ---- 24b. ScheduleConfig (capped: termId @unique, 3 terms -> max 3) ----
   {
     const have = await prisma.scheduleConfig.count();
     if (!DRY) {
@@ -824,7 +772,6 @@ async function main() {
     await note("ScheduleConfig(capped@terms)", have, after - have);
   }
 
-  // ---- 25. Intervention (2 more) ----
   {
     const have = await prisma.intervention.count();
     const need = Math.max(0, MIN - have);

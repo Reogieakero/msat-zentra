@@ -14,8 +14,6 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Nurse settings sections — preferences only. Teacher-only entries
-   (Adviser, Master Teacher) are intentionally excluded. */
 export function nurseSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },

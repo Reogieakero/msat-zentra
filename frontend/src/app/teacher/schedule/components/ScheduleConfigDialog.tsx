@@ -37,9 +37,6 @@ const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "
 
 const inputClass = "rounded-md border border-input bg-transparent px-2 py-1 text-sm";
 
-// Shadcn-style time picker built on the shared dropdown UI component (not a
-// native time input): hour / minute / AM-PM dropdowns. Value stays a 24h
-// "HH:MM" string.
 function TimePicker({
   value,
   onChange,
@@ -113,11 +110,6 @@ function AfterSelect({
   );
 }
 
-// Day-shape setup overlay: recess on/off per session with duration and
-// position dropdowns, lunch length + position, the real class start time
-// (dropdown time picker) and the per-subject duration. Break times and the
-// end of the day preview live from the draft — Apply commits, and the
-// timetable re-renders from the new config.
 export function ScheduleConfigDialog({ config, onClose, onApply, saving }: Props) {
   const [draft, setDraft] = useState<DayConfig>(config);
 

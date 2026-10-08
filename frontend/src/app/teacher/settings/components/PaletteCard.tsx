@@ -129,9 +129,6 @@ function SwatchRow({
   );
 }
 
-/* Workspace palette: primary + secondary brand colors. Picks preview live
-   across the site; Save persists them to the teacher's StaffProfile row and
-   Reset returns to the theme default. */
 export function PaletteCard() {
   const invalidateTeacher = useTeacherInvalidate();
   const profile = useTeacherProfileSettings();
@@ -143,9 +140,6 @@ export function PaletteCard() {
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
-  // Sync picked colors from the saved profile during render, never in an
-  // effect — same behavior (server values win on load + after save) with no
-  // cascading renders.
   const [prevSaved, setPrevSaved] = React.useState<{
     primary: string | null;
     secondary: string | null;
@@ -160,7 +154,6 @@ export function PaletteCard() {
     setSecondary(savedSecondary);
   }
 
-  // Live preview across the site as colors are picked.
   React.useEffect(() => {
     if (profile.data) applyPalette(primary, secondary);
   }, [primary, secondary, profile.data]);

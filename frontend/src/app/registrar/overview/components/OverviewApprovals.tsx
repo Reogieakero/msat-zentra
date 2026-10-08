@@ -30,8 +30,6 @@ import { fetchRegistrarOverview } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/components/registry/overview/OverviewApprovals.module.css";
 
-// Overview preview pager: 10 rows per page (registrar overview standard).
-// The full queue with server search lives on the Accounts page.
 const PAGE_SIZE = 10;
 
 export function OverviewApprovals() {

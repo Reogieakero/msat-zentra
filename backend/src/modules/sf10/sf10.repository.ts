@@ -1,16 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { GRADE_BAND_11_12, GRADE_BAND_7_10 } from "../../lib/roles.js";
+import { GRADE_LABELS, GRADE_ORDER as ORDER } from "../../lib/grades.js";
 
-// Shared SF10 data-access: grade-band policy and the grade-scoped record
-// gate. Endpoint orchestration lives in src/services/sf10/sf10.service.ts.
-
-// Registrar = senior high (11–12), Record Keeper = junior high (7–10). These
-// bands are fixed by PLAN.md §4.1 and must apply even when a staffProfile row
-// is missing (e.g. seeded registrar has no handledGradeLevels). Advisers/teachers
-// fall back to their staffProfile.handledGradeLevels when present.
 export const ROLE_GRADE_BAND: Record<string, string[]> = {
-  registrar: ["G11", "G12"],
-  record_keeper: ["G7", "G8", "G9", "G10"],
+  registrar: [...GRADE_BAND_11_12],
+  record_keeper: [...GRADE_BAND_7_10],
 };
 
 export async function resolveGradeBand(role: string, userId: string): Promise<string[]> {
@@ -22,15 +17,8 @@ export async function resolveGradeBand(role: string, userId: string): Promise<st
   return staff?.handledGradeLevels ?? [];
 }
 
-export const GRADE_ORDER = ["G7", "G8", "G9", "G10", "G11", "G12"] as const;
-export const GRADE_LABEL: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
+export const GRADE_ORDER = ORDER;
+export const GRADE_LABEL = GRADE_LABELS;
 
 export async function assertHandlesGrade(recordId: string, user: { userId: string; role: string }) {
   const record = await prisma.sf10Record.findUnique({

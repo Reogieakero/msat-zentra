@@ -22,8 +22,6 @@ import {
 } from "@/app/guidance/anecdotal/components/guidance-anecdotal-filters";
 import styles from "./guidance-session-documents-folders.module.css";
 
-/* Session-type wording + color coding for documentation slips (matches
-   the folder slip palette). */
 const SESSION_KIND_LABEL: Record<string, string> = {
   individual: "One-on-one",
   parent_conference: "Parent conference",
@@ -98,7 +96,6 @@ export interface DocEntry {
   image: { id: string; fileUrl: string; fileName: string };
 }
 
-/** Flatten a record's filed session images (oldest first) into folder slips. */
 export function docSlipsFor(record: GuidanceAnecdotalRecord, cap = 5): DocEntry[] {
   const docs: DocEntry[] = [];
   for (const s of record.sessionDocs ?? []) {
@@ -137,11 +134,6 @@ interface GuidanceSessionDocumentsFoldersProps {
   isNavigating?: boolean;
 }
 
-/**
- * Session documentation — one folder per referred case that has filed
- * images from done counseling sessions. GCForm-01 reports stay on the
- * Anecdotal Records page; this page is images only.
- */
 export function GuidanceSessionDocumentsFolders({
   records,
   page,
@@ -228,16 +220,14 @@ export function GuidanceSessionDocumentsFolders({
                   const docs = docSlipsFor(record);
                   return (
                     <div key={record.referralId} className={styles.studentBlock}>
-                      {/* Plain div (not <button>) so the inner slip <button>s
-                          from FolderCard never nest inside another button. */}
+
                       <div
                         role="button"
                         tabIndex={0}
                         className={styles.studentFolderBtn}
                         onClick={() => openGallery(record, 0)}
                         onKeyDown={(e) => {
-                          // Ignore key events bubbling up from the inner slip
-                          // <button>s — they have their own keyboard handling.
+
                           if (e.target !== e.currentTarget) return;
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();

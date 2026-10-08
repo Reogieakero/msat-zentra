@@ -12,7 +12,7 @@ export type LrnMatchResult = {
     section: string | null;
   };
   lrnMatch: boolean;
-  nameSimilarity: number; // 0..1
+  nameSimilarity: number;
   nameMatch: boolean;
   verdict: LrnVerdict;
 };
@@ -52,8 +52,6 @@ function similarity(a: string, b: string): number {
   return maxLen === 0 ? 1 : 1 - dist / maxLen;
 }
 
-// Compares a sign-up applicant's claimed LRN + name against the official
-// StudentRoster so the registrar can verify identity before approving.
 export async function matchLrn(claimedLrn: string, claimedName: string): Promise<LrnMatchResult> {
   const lrn = claimedLrn.trim();
   const roster = await prisma.studentRoster.findFirst({

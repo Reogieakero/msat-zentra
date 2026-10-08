@@ -1,10 +1,3 @@
-// Shared ADM referral tracker — mirrors the backend 8-stage ADM Case
-// Pipeline in backend/src/services/adm.ts (ADM_STAGE_FLOW). Both the
-// guidance (/guidance/adm) and nurse (/nurse/adm) "Latest referred ADM
-// cases" tables map their rows onto AdmTrackInput so the timeline always
-// starts from the adviser's anecdotal filing and routes through the picked
-// consultation reviewer (nurse / guidance / LRPC).
-
 export type AdmTrackStageKey =
   | "anecdotal"
   | "consultation"
@@ -95,17 +88,11 @@ export const CONSULT_REVIEWER_LABELS: Record<string, string> = {
 };
 
 export interface AdmTrackInput {
-  /** Backend pipeline stage (defaults to "consultation" for early referrals). */
   stage?: string | null;
-  /** Raw referral status: pending | in_progress | dismissed | resolved | … */
   referralStatus?: string | null;
-  /** Teacher-picked consultation reviewer (nurse | guidance_counselor | lrpc). */
   consultReviewer?: string | null;
-  /** Adviser who filed the anecdotal report. */
   referredBy?: string | null;
-  /** Observation date of the anecdotal report (YYYY-MM-DD or ISO). */
   anecdotalDate?: string | null;
-  /** When the case was referred onward (YYYY-MM-DD or ISO). */
   referredDate?: string | null;
   meetingAttended?: boolean | null;
   hasHomeVisit?: boolean;
@@ -117,7 +104,6 @@ export type AdmTrackState = "done" | "current" | "todo";
 
 export interface AdmTrackStep extends AdmTrackPipelineMeta {
   state: AdmTrackState;
-  /** One-line truthful status for this step (who + what happened). */
   detail: string;
 }
 
@@ -148,15 +134,6 @@ function shortDate(value?: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/**
- * Build the 8-step tracker from a queue row. Rules:
- * - Anecdotal is always done: the case starts with the adviser filing it.
- * - Early referrals (no learner profile yet) sit at consultation.
- * - Endorsed (in_progress) means consultation is done and the case is with
- *   the coordinator for the parent meeting.
- * - Dismissed closes at consultation with a rejected marker; later steps
- *   stay todo. Resolved/completion marks every step done.
- */
 export function buildAdmTrackSteps(input: AdmTrackInput): AdmTrackStep[] {
   const status = (input.referralStatus ?? "").toLowerCase();
   const dismissed = status === "dismissed";
@@ -164,17 +141,12 @@ export function buildAdmTrackSteps(input: AdmTrackInput): AdmTrackStep[] {
   const endorsed = status === "in_progress";
 
   let stage = normalizeStage(input.stage);
-  // Nurse / early rows carry no profile stage yet: derive it from status.
   if (!input.stage) {
     if (resolved) stage = "completion";
     else if (endorsed) stage = "meeting_parents";
     else stage = "consultation";
   }
   if (resolved) stage = "completion";
-  // Endorsed (in_progress) means consultation is done even when the row
-  // still carries the explicit "consultation" stage (early guidance/nurse
-  // queue rows) — advance to the parent meeting so step 2 checks off and
-  // step 3 becomes current. Never drags later profile stages backwards.
   if (endorsed && ADM_TRACK_ORDER.indexOf(stage) < ADM_TRACK_ORDER.indexOf("meeting_parents")) {
     stage = "meeting_parents";
   }
@@ -234,8 +206,6 @@ export function buildAdmTrackSteps(input: AdmTrackInput): AdmTrackStep[] {
 
   return ADM_TRACK_PIPELINE.map((meta, idx) => ({
     ...meta,
-    // Consultation shows the picked reviewer as the owner so it is clear
-    // the case went to the nurse or to guidance — never both.
     owner: meta.stage === "consultation" ? reviewer : meta.owner,
     state: stateAt(idx),
     detail: details[meta.stage],

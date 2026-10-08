@@ -5,9 +5,7 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const TABLES = [
-  // Quoted Postgres table names (Prisma default = model name, PascalCase).
-  // Complete list of 35 models from schema.prisma — TRUNCATE CASCADE makes
-  // order irrelevant and handles all FK cycles.
+
   '"RefreshToken"',
   '"Notification"',
   '"AuditLog"',
@@ -48,8 +46,7 @@ const TABLES = [
 ];
 
 async function main() {
-  // Single TRUNCATE ... CASCADE wipes everything regardless of FK order.
-  // RESTART IDENTITY is harmless (uuid PKs) and resets any sequences.
+
   const sql = `TRUNCATE TABLE ${TABLES.join(", ")} RESTART IDENTITY CASCADE;`;
   await prisma.$executeRawUnsafe(sql);
   console.log("All tables cleared.");

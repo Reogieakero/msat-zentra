@@ -40,13 +40,6 @@ function referredMs(row: NurseQueueRow): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-/**
- * Plain-words risk watch over the nurse's desk students — level mix, the
- * High watchlist with driving concerns, and the top flagged concern.
- * Students with no level stay out of the mix (never assumed okay). Links
- * land on each student's newest timeline case. Pure derivation from live
- * rows, so it repaints with the desk.
- */
 export function buildRiskWatch(
   rows: NurseQueueRow[],
   referralToStudent: Record<string, string>,

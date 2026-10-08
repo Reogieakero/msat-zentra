@@ -14,9 +14,6 @@ import {
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import styles from "@/app/teacher/attendance/components/attendance-sheet.module.css";
 
-/* Advisory attendance — a page of its own, separate from the workspace
-   attendance sheet. One section picker (when several are advised) and the
-   roster table take up the main column. */
 export default function AdvisoryAttendancePage() {
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
   const [filter, setFilter] = useState("");

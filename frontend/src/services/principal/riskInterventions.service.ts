@@ -1,5 +1,3 @@
-// Principal risk-interventions reads + counselor nudge. (StudentFilters /
-// InterventionStudentsResult shapes stay in the colocated ./types file.)
 import { apiClient } from "@/lib/api/client";
 import type { InterventionStudentsResult, StudentFilters } from "@/app/principal/risk/interventions/types";
 
@@ -36,8 +34,6 @@ export async function fetchInterventionStats(): Promise<InterventionStats> {
   return data;
 }
 
-// Principal-only: nudge every active guidance counselor about an at-risk
-// student with no intervention action yet.
 export async function alertGuidance(studentId: string, note?: string): Promise<void> {
   await apiClient.post(
     `/api/risk/interventions/${encodeURIComponent(studentId)}/alert`,

@@ -41,8 +41,6 @@ function rateRing(rate: number): string {
   return "ring-red-500";
 }
 
-// Card wash for the selected card: the whole card turns to the student's
-// attendance color (green / amber / red).
 function rateWash(rate: number): { from: string; to: string } {
   if (rate >= 0.9) return { from: "#22c55e", to: "#16a34a" };
   if (rate >= 0.75) return { from: "#f59e0b", to: "#d9770f" };
@@ -55,7 +53,6 @@ function rateBar(rate: number): string {
   return "bg-red-500";
 }
 
-// Profile initials from the student name ("Ana Flores" → "AF").
 function studentInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -65,9 +62,6 @@ function studentInitials(name: string): string {
   return `${first}${second}`.toUpperCase();
 }
 
-// Overall attendance: sum of the student's per-subject present rates ÷ the
-// number of subjects. A done meetup with no take counts as absent, so every
-// subject always carries a percentage — never "no record".
 function overallRate(rates: Record<string, number | null>, subjectCount: number): number {
   if (subjectCount === 0) return 0;
   const sum: number = Object.values(rates).reduce<number>(
@@ -77,13 +71,6 @@ function overallRate(rates: Record<string, number | null>, subjectCount: number)
   return sum / subjectCount;
 }
 
-/* Advisory attendance grid: one section-styled card per advisee with the
-   attachment composition inside — the media shows the student's profile
-   initials, the done value is their average present percentage across
-   subjects. Expanding a card reveals the per-subject breakdown. Read-only —
-   the workspace sheet handles takes. */
-
-// Narrower cards than the section grid: 5 per row on wide screens.
 const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 export function AdvisoryAttendanceList({
   sectionId,

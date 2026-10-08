@@ -6,10 +6,9 @@ import {
   ocForm01Filename,
   parseSignatureDataUrl,
 } from "./ocform01.service.js";
+import { GRADE_LABELS as GRADE_LABEL_OC } from "../../lib/grades.js";
 
-// Shared anecdotal data-access: filer roles, labels, folder guards, and the
-// OCForm-01 access loader with its confidentiality gates. Endpoint
-// orchestration lives in src/services/anecdotal/*.service.ts.
+export { GRADE_LABEL_OC, buildOcForm01Buffer, ocForm01Filename, parseSignatureDataUrl };
 
 export const FILER_ROLES = ["adviser", "subject_teacher"] as const;
 
@@ -34,18 +33,6 @@ export const CATEGORY_META: Record<
   health: { label: "Health", color: "#7c3aed" },
 };
 
-export const GRADE_LABEL_OC: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
-
-/* Display name of the acting user for handoff messages — one lookup per
-   call site, "Someone" fallback so a deleted/renamed account never blanks
-   the notification. */
 export async function actorName(userId: string): Promise<string> {
   const u = await prisma.user.findUnique({
     where: { id: userId },
@@ -65,17 +52,6 @@ export async function assertOwnFolder(folderId: string, ownerId: string) {
   return folder;
 }
 
-// Full write-up access for the official OCForm-01 print/export. The observer
-// always qualifies; the section adviser qualifies as the required signatory
-// ("ADVISER'S SIGNATURE OVER PRINTED NAME"); the principal owns every case
-// file. The ADM coordinator qualifies ONLY for cases referred to ADM.
-// Guidance qualifies ONLY for cases an adviser referred to guidance —
-// unreferred filings stay invisible to guidance even by direct id — PLUS
-// ADM-purpose referrals sitting at the guidance-owned consultation stage
-// (referredToRole = "adm_coordinator" with no learner profile yet), which the
-// counselor must review before the case moves on. Anyone
-// else (e.g. a non-observing subject teacher) gets 403 — mirroring the
-// metadata-only rule on the advisory anecdotal list.
 export async function loadOcForm01Data(recordId: string, requesterId: string, requesterRole: string): Promise<{
   data: OcForm01Data;
   filename: string;
@@ -138,10 +114,7 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
       throw new AppError(403, "FORBIDDEN", "Only cases referred to guidance may be opened by the guidance counselor");
     }
   }
-  // Same bargain as guidance: the nurse opens only cases routed to the
-  // clinic — direct referrals, escalations to the nurse, or ADM cases
-  // awaiting the nurse's consultation review. Unreferred filings stay
-  // invisible to the nurse even by direct id.
+
   if (isNurse && !isObserver && !isSectionAdviser) {
     const referral = await prisma.referral.findFirst({
       where: {
@@ -162,12 +135,7 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
       throw new AppError(403, "FORBIDDEN", "Only cases referred to the clinic may be opened by the school nurse");
     }
   }
-  // Same bargain as the other consultation desks: the ADM coordinator
-  // opens only cases routed to ADM (referredToRole = "adm_coordinator") —
-  // at any stage, since endorsed cases already carry a learner profile.
-  // Unreferred filings stay invisible to the coordinator even by direct
-  // id. Without this, every coordinator preview 403s with "could not be
-  // loaded" even though the role gate above lets the request through.
+
   if (isAdmCoordinator && !isObserver && !isSectionAdviser) {
     const referral = await prisma.referral.findFirst({
       where: {
@@ -224,8 +192,7 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
     adviserName: record.section.adviser?.fullName ?? record.observer.fullName,
     signatureImage,
   };
-  // Only the signatory may (re)sign: the section adviser, or the observer
-  // when no adviser is assigned.
+
   const canSign =
     isSectionAdviser || (!record.section.adviserId && isObserver);
   return {
@@ -237,7 +204,6 @@ export async function loadOcForm01Data(recordId: string, requesterId: string, re
   };
 }
 
-/** Fetch stored signature bytes for .xlsx embedding; undefined on any failure. */
 export async function loadSignatureBytes(imageUrl: string): Promise<Uint8Array | undefined> {
   try {
     if (imageUrl.startsWith("data:")) {
@@ -252,5 +218,3 @@ export async function loadSignatureBytes(imageUrl: string): Promise<Uint8Array |
     return undefined;
   }
 }
-
-export { buildOcForm01Buffer, ocForm01Filename, parseSignatureDataUrl };

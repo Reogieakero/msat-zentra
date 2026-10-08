@@ -23,12 +23,6 @@ import {
 } from "./documentaries-utils";
 import styles from "./NurseDocumentariesList.module.css";
 
-/**
- * Student health-records repository — one folder per student, same layout
- * as the anecdotal repository (folder grid + right insights rail).
- * Opening a folder reads that student's cases in the details dialog with
- * prev/next through their cases; files open in the image viewer.
- */
 export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] }) {
   const [selected, setSelected] = React.useState<{
     folder: StudentHealthFolder;
@@ -61,8 +55,6 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
     [alerts],
   );
 
-  // No records: hide the folder grid and the right rail entirely — the
-  // message sits in a centered glow card, same as registrar adviser-access.
   if (folders.length === 0) {
     return (
       <div className={styles.emptyWrap}>

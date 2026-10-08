@@ -12,8 +12,6 @@ import type {
   WeightPreset,
 } from "./grading.types";
 
-/** Invalidate every academic read so scores/locks surface everywhere at once:
- *  advisee records, advisory lists, and teacher overviews. */
 export function useRefreshAcademic(): () => void {
   const queryClient = useQueryClient();
   return React.useCallback(() => {
@@ -29,9 +27,6 @@ export async function fetchClassDetail(assignmentId: string): Promise<ClassDetai
   return data;
 }
 
-/** Teacher-scoped class key — one teacher's class detail must never leak to
- *  another teacher's session. Prefix invalidations on
- *  ["teacher-grading-class"] still match. */
 export function classDetailKey(
   teacherId: string | null | undefined,
   assignmentId: string,
@@ -39,8 +34,6 @@ export function classDetailKey(
   return ["teacher-grading-class", teacherId ?? "anon", assignmentId] as const;
 }
 
-/** Class workspace detail. Keeps the previous class on screen while the next
- *  one loads so switching classes never flashes a full-page skeleton. */
 export function useClassDetail(assignmentId: string) {
   const session = useSession();
   const teacherId = session?.sub ?? null;
@@ -48,11 +41,9 @@ export function useClassDetail(assignmentId: string) {
     queryKey: classDetailKey(teacherId, assignmentId),
     queryFn: () => fetchClassDetail(assignmentId),
     enabled: !!teacherId && !!assignmentId,
-    // Fail fast like every other query — no backoff retries before the
-    // error state. Keeps previous data visible via placeholderData below.
+
     retry: false,
-    // Keep the previous class on screen while the next one loads so
-    // switching classes never flashes a full-page skeleton.
+
     placeholderData: (previous) => previous,
     staleTime: 15_000,
   });

@@ -59,9 +59,6 @@ export function BamaChat() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const replyTimer = useRef<number | null>(null);
 
-  // Load persisted chats once (client only). Post-mount storage hydration
-  // is the documented exception — reading localStorage during render would
-  // hydrate different HTML than the server sent.
   /* eslint-disable react-hooks/set-state-in-effect -- client-only store hydration */
   useEffect(() => {
     const store = loadBamaStore();
@@ -72,7 +69,6 @@ export function BamaChat() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Persist chats on change (after hydration).
   useEffect(() => {
     if (hydrated) saveBamaStore({ conversations, activeId });
   }, [conversations, activeId, hydrated]);
@@ -95,12 +91,10 @@ export function BamaChat() {
     setDraft,
   });
 
-  // ---- Free chat (grade-flag threads) ----
   function handleFreeSend() {
     const text = draft.trim();
     if (!text || sending) return;
     if (!active) {
-      // No open chat — start one and keep the typed message in the box.
       startChat("anecdotal", true);
       composerRef.current?.focus();
       return;
@@ -160,12 +154,7 @@ export function BamaChat() {
     composerRef.current?.focus();
   }
 
-  // Deep link (e.g. "?new" from the repo's New record button): land fresh
-  // with no active thread, so the user picks the chat type
-  // (grade flag or anecdotal) from the welcome cards first — nothing is
-  // auto-created and no greeting is auto-sent.
   const newParamHandled = useRef(false);
-  // One-shot deep-link reset after hydration (param-driven, runs once).
   /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep-link reset */
   useEffect(() => {
     if (!hydrated || newParamHandled.current) return;
@@ -180,8 +169,6 @@ export function BamaChat() {
   }, [hydrated, searchParams, router]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // New chat goes back to a fresh start: no active thread, so the user
-  // picks grade flag or anecdotal from the welcome cards first.
   function handleNewChat() {
     flow.resetFlowStates();
     setActiveId(null);

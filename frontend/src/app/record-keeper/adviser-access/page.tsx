@@ -25,8 +25,6 @@ import styles from "./adviser-access.module.css";
 
 type RequestsResponse = { requests: AdviserAccessRequest[] };
 
-// Role-scoped key — the registrar desk fetches a different endpoint under
-// its own key, so switching desks never serves the other's cache.
 const QUERY_KEY = ["record-keeper-adviser-access"];
 
 async function fetchRequests() {
@@ -52,8 +50,7 @@ export default function AdviserAccessPage() {
         approve ? {} : { reason: reason ?? "Denied by record keeper" }
       ),
     onSuccess: (_data, { id, approve }) => {
-      // Self-receipt lands in our own bell (badge bumps live); suppress its
-      // echo toast — the toast below already confirmed the action.
+
       markSelfNotified(id);
       toast.success({
         title: approve ? "Access granted" : "Access denied",

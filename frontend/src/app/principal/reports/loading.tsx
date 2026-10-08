@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./page.module.css";
 
-/* Mirrors reports/page.tsx: head (title + toolbar) + KPI row + panel rows
-   with per-frame chart rects (not one generic block). */
 export default function PrincipalReportsLoading() {
   return (
     <section className={styles.page} aria-label="Loading reports" aria-busy="true">

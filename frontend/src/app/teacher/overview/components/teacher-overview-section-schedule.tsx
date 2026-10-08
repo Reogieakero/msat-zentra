@@ -26,15 +26,12 @@ interface ScheduleSectionRow {
   timetableEntries: ScheduleEntry[];
 }
 
-/* Class schedule for the adviser's own section: the published weekly grid
-   (committed slots only) in the shared week-grid framing, with a live
-   current-time line highlighting the ongoing class. Read-only. */
 export function AdvisorySectionSchedule() {
   const overview = useTeacherOverview();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const section = overview.data?.advisorySection ?? null;
-  // Live clock (Manila) — re-evaluates the current class every 30s.
+
   const [nowTick, setNowTick] = React.useState(() => Date.now());
   React.useEffect(() => {
     const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
@@ -77,11 +74,9 @@ export function AdvisorySectionSchedule() {
     }));
   const config = configQuery.data?.config ?? null;
 
-  // Current-time key ("day:period") from the Manila clock + day shape, so
-  // the ongoing class draws the live line. Null off-hours and weekends.
   const nowKey = React.useMemo(() => {
     if (!config) return null;
-    // nowTick re-runs this every 30s; value itself is unread.
+
     void nowTick;
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Manila",

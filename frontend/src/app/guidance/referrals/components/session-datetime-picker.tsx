@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/popover";
 import { FormDropdown } from "./form-dropdown";
 import { cn } from "@/lib/utils";
-/* Half-hour slots across the school day, stored as "HH:MM". */
 const TIME_SLOTS: string[] = (() => {
   const slots: string[] = [];
   for (let hour = 7; hour <= 18; hour += 1) {
@@ -43,12 +42,10 @@ function parseDateInput(value: string): Date | undefined {
 interface SessionDatePickerProps {
   id: string;
   label: string;
-  /** "YYYY-MM-DD" ("" when unset). */
   value: string;
   onChange: (value: string) => void;
 }
 
-/** shadcn calendar-in-popover date picker speaking "YYYY-MM-DD". */
 export function SessionDatePicker({
   id,
   label,
@@ -97,12 +94,10 @@ export function SessionDatePicker({
 interface SessionTimePickerProps {
   id: string;
   label: string;
-  /** "HH:MM" 24-hour ("" when unset). */
   value: string;
   onChange: (value: string) => void;
 }
 
-/** Readable time-slot dropdown ("2:30 PM") instead of a typed time input. */
 export function SessionTimePicker({
   id,
   label,

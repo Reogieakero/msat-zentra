@@ -23,7 +23,7 @@ export function HonorRollTable({
   loading,
   onClose,
 }: Props) {
-  // DO 15, s. 2026: awardees listed alphabetically.
+
   const rows = React.useMemo(
     () => [...candidates].sort((a, b) => a.name.localeCompare(b.name)),
     [candidates]

@@ -10,12 +10,6 @@ import {
 
 const router = Router();
 
-// Guidance at-risk engine queue: LIVE high-risk students for the active term,
-// each carrying the risk factors that tripped plus their current follow-up
-// (if the engine — or guidance — already opened one). Defaults to High;
-// Moderate/All and per-factor views are one filter away. Everything is
-// recomputed from current grades, attendance, and behavior filings — stored
-// snapshot levels are never trusted directly.
 router.get(
   "/",
   requireAuth,
@@ -72,9 +66,6 @@ router.get(
   }
 );
 
-// Staff directory for intervention assignment — the people guidance can hand
-// a follow-up to (advisers, subject teachers, nurse, ADM coordinator, fellow
-// counselors). Status-only directory: id, name, role. No student data.
 router.get(
   "/staff",
   requireAuth,
@@ -89,9 +80,6 @@ router.get(
   }
 );
 
-// Live engine breakdown for one student — powers the See-details risk
-// panel (factors with real values, live vs stored vs flagged levels).
-// Read-only; never writes snapshots or interventions.
 router.get(
   "/engine",
   requireAuth,

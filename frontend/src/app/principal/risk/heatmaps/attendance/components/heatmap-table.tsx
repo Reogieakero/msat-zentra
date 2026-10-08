@@ -3,8 +3,6 @@
 import { Button } from "@/components/ui/button";
 import common from "./heatmap-table.module.css";
 
-/** Sortable column header — text-only button (no direction icon); the
- *  aria-label carries the current direction for assistive tech. */
 export function SortTh({
   label,
   sorted,

@@ -46,7 +46,6 @@ interface CompactFilterProps {
   onChange: (value: string) => void;
 }
 
-/* Same compact dropdown design as the referrals status filter. */
 function CompactFilter({
   buttonLabel,
   active,

@@ -3,8 +3,6 @@ import { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { createPrismaAdapter } from "./prismaAdapter.js";
 import { logger } from "./pino.js";
 
-// Prisma error codes that mean "the connection died beneath us" rather than
-// "the query was wrong" — safe to retry once. Writes are never retried.
 const RETRYABLE_CODES = new Set(["P1001", "P1002", "P1017", "P2024"]);
 const READ_OPERATIONS = new Set([
   "findMany",
@@ -18,10 +16,7 @@ const READ_OPERATIONS = new Set([
 ]);
 
 function extendClient(client: PrismaClient) {
-  // Supabase's pooler closes idle sockets server-side without warning; a read
-  // that reuses the dead socket fails with P1017 ("Server has closed the
-  // connection"). The pool replaces the dead client automatically, so a single
-  // immediate retry on connection errors is transparent and safe for reads.
+
   return client.$extends({
     query: {
       $allModels: {

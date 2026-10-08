@@ -1,9 +1,5 @@
 import { prisma } from "./prisma.js";
 
-// Who cancelled each session — latest `session_cancelled` audit wins.
-// Covers desk cancels and the adviser-withdrawal auto-cancel cascade
-// (whose audit actor is the filing teacher). Sessions never cancelled
-// stay absent from the map. One batched query regardless of N.
 export async function sessionCancelledByRole(
   sessionIds: string[]
 ): Promise<Map<string, string>> {

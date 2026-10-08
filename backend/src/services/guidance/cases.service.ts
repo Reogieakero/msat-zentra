@@ -24,10 +24,6 @@ export interface CasesQuery {
   highlight: string;
 }
 
-// Guidance Counselor referrals: every behavior / incident report an adviser
-// routed to guidance_counselor, newest filing first. Status-only plus the
-// referrer's reason and the linked anecdotal category/date — the full
-// write-up itself is opened through the case file, never listed here.
 export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
   const {
     statusFilter,
@@ -40,15 +36,9 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     pageSize,
     highlight,
   } = query;
-  // Term-scoped: prior-term cases never leak into the active term queue.
+
   const scopeTermId = ctx.termId;
 
-  // Push the exact-match filters into the database so the transfer —
-  // and every downstream audit fan-out — scales with the filtered
-  // queue, not the whole desk. Session-gated filters (booked /
-  // completed / open), free-text search, and highlight landing stay
-  // in memory below because they derive from sessions or joined
-  // names; their predicates are unchanged.
   const dbClauses: any[] = [];
   if (statusFilter) dbClauses.push({ status: statusFilter });
   if (typeFilter === "adm") {
@@ -59,9 +49,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
       ],
     });
   } else if (typeFilter === "counseling") {
-    // NOTE: `escalatedTo` is nullable — a bare `{ not: … }` would
-    // drop every never-escalated case (SQL NULL semantics), so NULL
-    // is matched explicitly here.
+
     dbClauses.push({
       AND: [
         {
@@ -76,11 +64,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
   }
 
   const rows = await prisma.referral.findMany({
-    // The desk receives direct counseling referrals PLUS ADM-track
-    // cases picked for the guidance counselor as consultation
-    // reviewer (same receiver scoping as the ADM page — nurse/LRPC
-    // picks never land here). Both tracks render on the referrals
-    // page; the mapped `type` below keeps them separable.
+
     where: {
       ...(scopeTermId ? { termId: scopeTermId } : {}),
       OR: [
@@ -174,12 +158,9 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
     section: r.student?.section?.name ?? r.roster?.section?.name ?? "—",
     grade: GRADE_LABELS[r.student?.gradeLevel ?? r.roster?.gradeLevel ?? ""] ?? "",
-    // Account userId (or roster id for enlisted students without
-    // accounts) for the live risk lookup — the endpoint serves both.
+
     studentId: r.student?.userId ?? r.roster?.id ?? null,
-    // Action track: ADM-bound when already escalated toward the ADM
-    // coordinator or arriving on the ADM track picked for guidance,
-    // otherwise regular guidance counseling.
+
     type:
       r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
         ? "ADM"
@@ -227,9 +208,6 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     completedSessions: r.counselingSessions.filter((s) => s.status === "completed").length,
   }));
 
-  // Who dismissed it — adviser withdrawal ("Cancelled" watermark) vs
-  // desk rejection ("Reject"). Latest dismissal audit wins; rows never
-  // dismissed stay null.
   const refIds = mapped.map((r) => r.id);
   const dismissedByRole = new Map<string, string>();
   if (refIds.length > 0) {
@@ -249,8 +227,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     }
   }
   const sessIds = mapped.flatMap((r) => r.sessions.map((s) => s.id));
-  // Who cancelled each session — desk cancel vs adviser-withdrawal
-  // auto-cancel cascade. Latest session_cancelled audit wins.
+
   const cancelledByRole = await sessionCancelledByRole(sessIds);
   for (const r of mapped) {
     for (const s of r.sessions as { id: string; cancelledByRole?: string | null }[]) {
@@ -311,8 +288,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  // Deep-link landing (?highlight=<id>): serve the page containing the
-  // case so bell links land with highlight, no extra round-trip.
+
   let safePage = Math.min(page, totalPages);
   if (highlight) {
     const idx = filtered.findIndex(
@@ -322,14 +298,11 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
   }
   const referrals = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  // Adviser/subject-teacher withdrawals ("Cancelled") vs desk
-  // dismissals ("Reject") — subset of dismissed, resolved from the
-  // dismissal audit above. Unknown actors count as desk decisions.
   const isCancelled = (r: { status: string; id: string }) =>
     r.status === "dismissed" &&
     (dismissedByRole.get(r.id) === "adviser" ||
       dismissedByRole.get(r.id) === "subject_teacher");
-  // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+
   const unfilteredTotal = mapped.length;
 
   return {
@@ -342,9 +315,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
       infoRequested: mapped.filter((r) => r.status === "info_requested").length,
       dismissed: mapped.filter((r) => r.status === "dismissed").length,
       followUp: mapped.filter((r) => r.status === "follow_up").length,
-      // Per-track totals for the sidebar's separate ADM vs Counseling
-      // menus — same statuses, counted only within each type, plus the
-      // session/open gates the menus filter on.
+
       byType: (["Counseling", "ADM"] as const).reduce(
         (acc, type) => {
           const scoped = mapped.filter((r) => r.type === type);

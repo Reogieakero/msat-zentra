@@ -4,10 +4,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import assign from "./section-assignments.module.css";
 import page from "../assign.module.css";
 
-// Mirrors the loaded layout one-to-one: header row (title + subtitle +
-// action button), filter row (card title + count + grade filter), then section
-// cards in the same responsive grid as the real cards (title block | adviser
-// line | 3-action footer) with approximated widths.
 const SKELETON_ROWS = 6;
 
 export function AssignSkeleton() {

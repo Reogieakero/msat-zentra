@@ -6,9 +6,7 @@ import { GradebookCards } from "./components/GradebookCards";
 import styles from "./components/gradebook.module.css";
 
 export default function TeacherGradebookPage() {
-  // Lean gradebook scope: classes + assessments + standings in one request
-  // (no risk scans, no advisory engine), so the cards paint from a single
-  // round trip instead of waiting on critical + secondary.
+
   const gradebook = useTeacherOverviewGradebook();
 
   if (gradebook.isPending) {

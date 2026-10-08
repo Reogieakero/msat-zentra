@@ -8,10 +8,6 @@ interface NoTermRecordsPanelProps {
   teacherName: string;
 }
 
-/* Shared "no records for this term" empty panel — identical design and
-   message on My Classes and Attendance. Shown only when the login is
-   linked but nothing is scheduled for it this term; never beside a code
-   input (unlinked logins get the claim card, entered terms need no code). */
 export function NoTermRecordsPanel({
   termLabel,
   isMasterTeacher,

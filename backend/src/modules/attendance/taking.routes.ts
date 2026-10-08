@@ -28,8 +28,7 @@ router.post(
           session?: "AM" | "PM";
           records: { studentId: string; status: "present" | "absent" | "late" | "excused" }[];
         };
-      // Transactions are always saved under the session's active term —
-      // the client never picks a term per action.
+
       const termId = req.termScope?.termId ?? bodyTermId;
       const ctx = {
         userId: req.user!.id,
@@ -38,7 +37,6 @@ router.post(
         schoolYearId: req.termScope?.schoolYearId ?? null,
       };
 
-      // Subject path (new model) vs legacy AM/PM path (frozen behavior).
       if (subjectId) {
         const result = await submitSubjectBulk(ctx, {
           sectionId,
@@ -49,8 +47,7 @@ router.post(
           date,
           records,
         });
-        // Attendance stats feed cached overview/teacher pages; recomputes
-        // above can open guidance interventions + risk levels.
+
         await invalidateTags(["overview", "principal", "teacher", "risk", "reports", "guidance"]);
 
         res.status(201).json({ count: result.count, subjectId, slot: slot ?? 1 });
@@ -63,8 +60,7 @@ router.post(
             message: ping.message,
           });
         }
-        // The section adviser learns in realtime (toast + bell) that per-subject
-        // attendance landed — best-effort, never delays this response.
+
         void (async () => {
           try {
             const section = await prisma.section.findUnique({
@@ -81,13 +77,12 @@ router.post(
               });
             }
           } catch {
-            // Logged inside fanoutNotification; never throws outward.
+
           }
         })();
         return;
       }
 
-      // ---- Legacy AM/PM path (adviser-only, unchanged) ----
       const result = await submitLegacyBulk(ctx, {
         sectionId,
         termId,
@@ -95,8 +90,7 @@ router.post(
         session,
         records,
       });
-      // Attendance stats feed cached overview/teacher pages; recomputes
-      // above can open guidance interventions + risk levels.
+
       await invalidateTags(["overview", "principal", "teacher", "risk", "guidance", "reports"]);
 
       res.status(201).json({ count: result.count });
@@ -115,9 +109,6 @@ router.post(
   }
 );
 
-// Manual auto-absent sweep: materialize absent rows for elapsed subject
-// meetups the teacher never took (same run the hourly job performs).
-// Principal-gated; idempotent — re-runs create nothing new.
 router.post(
   "/sweep-absent",
   requireAuth,

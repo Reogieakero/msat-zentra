@@ -1,4 +1,3 @@
-// Advisee attendance-detail shapes. Pure types only.
 export interface SubjectMark {
   status: string;
   slot: number;
@@ -51,7 +50,7 @@ export interface StudentAttendance {
     section: string;
   };
   summary: AttendanceSummary;
-  /** Null until the student has subject-era rows — legacy AM/PM only. */
+
   subjectSummary: SubjectAttendanceSummary | null;
   termStart: string | null;
   days: AttendanceDay[];

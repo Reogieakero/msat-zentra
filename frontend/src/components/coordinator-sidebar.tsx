@@ -30,14 +30,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// ADM Coordinator nav — branched left rail on desktop (same as the
-// guidance/nurse/teacher desks), flattened tab bar on small screens.
-// Five desk tabs (see ADM_COORDINATOR_REPORT.md §5) + General Settings.
-// Approval tracking lives as sub-tabs inside Certifications, not as its own
-// nav item, to avoid the guidance duplicate-ADM-entry problem.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, ADM Cases=Inbox.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -76,8 +68,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// GitHub-style tab bar: every section flattened into one row on small
-// screens. Groups only group the source data, not the rendered tabs.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {

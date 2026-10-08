@@ -15,12 +15,6 @@ export interface MyWeekSlot {
   section: { id: string; name: string; gradeLevel: string };
 }
 
-/* Personal weekly grid — the same table framing as the master-teacher setup
-   view (teacher/schedule/[sectionId]): time gutter + Mon–Fri columns,
-   lunch/recess rows, filled cells with subject + section and a status dot.
-   Read-only: this is the teacher's own attached timetable. Pass nowKey
-   ("day:period") to draw the current-time line: the gutter dot pulses and
-   the live cell highlights. */
 export function MyWeekGrid({
   slots,
   config,

@@ -19,13 +19,6 @@ import { GuidanceHeatmapVisual } from "./components/guidance-heatmap-visual";
 import { GuidanceSectionCards } from "./components/guidance-section-cards";
 import styles from "../../pages.module.css";
 
-/**
- * Guidance heatmap detail — fully live. Level buckets (High / Moderate /
- * Low) come from `/api/guidance/overview` across the full enrolled cohort;
- * factor columns (Academic / Attendance / Behavioral) aggregate the
- * system-flagged at-risk queue (`/api/guidance/alerts`). Cells aggregate
- * counts only — no confidential text is shown at this grain.
- */
 export default function GuidanceHeatmapPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
@@ -51,7 +44,7 @@ export default function GuidanceHeatmapPage() {
           <Skeleton style={{ width: "11rem", height: "2rem" }} />
           <Skeleton style={{ width: "7rem", height: "2rem" }} />
         </div>
-        {/* Heatmap matrices mirror — two matrix blocks with cell grids. */}
+
         <Card className={styles.card} aria-hidden="true">
           <CardHeader>
             <CardTitle className={styles.sectionTitle}>
@@ -75,7 +68,7 @@ export default function GuidanceHeatmapPage() {
             ))}
           </CardContent>
         </Card>
-        {/* Section cards mirror — one card per section. */}
+
         <Card className={styles.card} aria-hidden="true">
           <CardHeader>
             <CardTitle className={styles.sectionTitle}>

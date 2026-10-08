@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-// Request validation for the teacher gradebook (POST/PATCH bodies).
-// Business-rule validation (assignment ownership, grade bands, locks)
-// lives in src/services/teacher/grading.service.ts; these schemas only
-// check request shape.
-
 export const COMPONENT_TYPES = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"] as const;
 
 export const componentSchema = z.object({

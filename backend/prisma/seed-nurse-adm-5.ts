@@ -4,13 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed exactly 5 anecdotal records, each referred as an ADM-track case with
-// the school nurse as consultation reviewer:
-//   referredToRole = "adm_coordinator", consultReviewer = "nurse", status = "pending"
-// These surface on /nurse/alerts + /nurse/overview via GET /api/referrals/
-// (nurse scope) and open through the nurse ADM review dialog.
-// Idempotent: re-runs skip roster LRNs that already have a nurse-ADM referral.
-
 const CASES = [
   {
     lrn: "20139272114",
@@ -153,8 +146,6 @@ async function main() {
       },
     });
 
-    // Referral time on /nurse/alerts = earliest audit entry; mirror what
-    // POST /api/anecdotal/:id/refer writes so "waiting" counts correctly.
     await prisma.auditLog.create({
       data: {
         userId: observerId,

@@ -25,15 +25,10 @@ interface AttendanceRosterRailProps {
   date: string;
   subjectId: string | undefined;
   slot: number;
-  /** Explicit section roster (code-claimed flow). When provided, the rail
-   *  reads from it instead of the advisory context. */
+
   roster?: { ctx: SheetContext | null; pending: boolean; error: boolean };
 }
 
-/* Narrow roster rail for the attendance sheet: section summary plus a
-   clickable class list that scrolls to the student's marking row and
-   flashes it. Reads the same cached queries as the sheet, so it never
-   fires duplicate requests. Status dots reflect submitted marks. */
 export function AttendanceRosterRail({
   date,
   subjectId,
@@ -59,7 +54,7 @@ export function AttendanceRosterRail({
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     el.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" });
     el.classList.remove(sheetStyles.rowFlash);
-    // Force reflow so repeat clicks retrigger the flash animation.
+
     void el.offsetWidth;
     el.classList.add(sheetStyles.rowFlash);
     window.setTimeout(() => el.classList.remove(sheetStyles.rowFlash), 1600);

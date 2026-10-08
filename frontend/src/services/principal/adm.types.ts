@@ -1,4 +1,3 @@
-// Principal ADM overview shapes. Pure types only.
 export interface AdmDashboardKpis {
   pendingSignature: number;
   signed: number;

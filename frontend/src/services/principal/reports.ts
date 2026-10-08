@@ -1,6 +1,3 @@
-// Principal Reports & Analytics command center: types, UI registry, and
-// heatmap helpers. Pure — all values are fetched live from GET
-// /api/reports by the page. No mock data.
 export type ReportType = "trends" | "intervention_success" | "heat_map" | "honor_roll";
 export type ReportScope = "school" | "grade" | "section";
 
@@ -68,7 +65,6 @@ export const HEATMAP_SCALE = [
   "var(--hm-4)",
 ];
 
-/* ---- Command-center panel registry ---- */
 export type PanelId =
   | "trends"
   | "honor_roll"
@@ -86,15 +82,12 @@ export type PanelDef = {
   title: string;
   hint: string;
   kind: "line" | "bar" | "stat" | "list" | "cards";
-  /** column width within its row: 1 = single, 2 = double, 3 = full width */
+
   cols: 1 | 2 | 3;
 };
 
 export type PanelRow = PanelDef[];
 
-/* Explicit row framing. Each inner array is one horizontal row; the `cols`
- * values sum to the row's column count (e.g. [2,1] = one wide + one narrow,
- * [1,1,1] = three equal). */
 export const PANEL_ROWS: PanelRow[] = [
   [
     { id: "trends", title: "Performance Trends", hint: "Avg transmuted grade by term", kind: "line", cols: 2 },

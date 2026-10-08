@@ -67,7 +67,6 @@ export function TermSelectOverlay() {
     !HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p)) &&
     (promptRequired || (!isLoading && !activeTerm && schoolYears.length > 0));
 
-  // Preselect stored term (if still valid) or the sensible default.
   React.useEffect(() => {
     if (!mustShow || schoolYears.length === 0) return;
     const valid =

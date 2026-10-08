@@ -17,8 +17,6 @@ import styles from "./AnecdotalChat.module.css";
 
 const PAGE_SIZE = 10;
 
-/** Student picker: search + paged table inside a popover. Owns its
- *  query/page state — the parent only learns the picked student id. */
 export function StudentPicker({
   open,
   onOpenChange,
@@ -190,7 +188,6 @@ export function StudentPicker({
   );
 }
 
-/** Class picker: the picked student's subjects, same popover pattern. */
 export function ClassPicker({
   open,
   onOpenChange,

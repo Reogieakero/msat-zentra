@@ -5,8 +5,6 @@ import {
   type AnecdotalTier,
 } from "@/services/anecdotal/anecdotal.types";
 
-/** Guided filing flow constants + per-conversation progress persistence. */
-
 export type TextQuestion = "incident" | "location" | "notes" | "classPerformance" | "attendance";
 
 export const TEXT_QUESTION_LABELS: Record<TextQuestion, string> = {
@@ -44,8 +42,6 @@ export const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   health: 5,
 };
 
-// Simulated filing stages shown on the progress bar while the record +
-// GCForm autofill request is in flight.
 export function filingStageFor(progress: number): string {
   if (progress < 30) return "Validating answers…";
   if (progress < 65) return "Filing anecdotal record…";
@@ -56,7 +52,6 @@ export function filingStageFor(progress: number): string {
 export const HOURS_12 = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 export const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
-// Custom (non-native) time parts around the "HH:MM" 24h value the flow stores.
 export function splitTime(value: string): { hour: string; minute: string; ampm: string } | null {
   const match = /^(\d{2}):(\d{2})$/.exec(value);
   if (!match) return null;
@@ -69,9 +64,6 @@ export function splitTime(value: string): { hour: string; minute: string; ampm: 
   };
 }
 
-// Per-conversation filing progress (student → category → tier → date →
-// answers → preview). Persisted alongside chats so switching threads or
-// reloading never strands the flow.
 export interface FlowSnapshot {
   studentId: string;
   classKey: string;
@@ -129,6 +121,6 @@ export function saveFlowStore(flows: Record<string, FlowSnapshot>): void {
   try {
     window.localStorage.setItem(FLOW_KEY, JSON.stringify(flows));
   } catch {
-    // Storage unavailable — progress simply won't persist.
+
   }
 }

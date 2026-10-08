@@ -1,7 +1,5 @@
 "use client";
 
-// Certification board derivation + wide summary reads for the coordinator
-// desk: merge stage + approval rows, summarize, serve the folder grid.
 import {
   fetchCoordinatorApprovals,
   fetchCoordinatorReferrals,
@@ -28,12 +26,6 @@ export const CERT_STATUS_META: Record<
   approved: { label: "Approved", color: "#4ade80" },
 };
 
-/* A case at the certification stage is a prepared recommendation waiting
-   for the coordinator to endorse. At principal_approval an eligible,
-   unsigned case is locked awaiting the Principal's signature; an unsigned
-   case that is not cleanly eligible needs revision (covers Principal
-   returns, which reset eligibility to pending, and premature forwards).
-   Anything the Principal signed is approved. */
 export function deriveCertStatus(row: {
   stage?: string;
   eligibilityStatus: AdmEligibility;
@@ -95,7 +87,7 @@ export function mergeCertRecords(
     seen.add(r.id);
     out.push(fromApprovalRow(r));
   }
-  // Newest first so the folder grid reads like a recent-files shelf.
+
   out.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   return out;
 }
@@ -131,10 +123,6 @@ export function summarizeCertRecords(rows: CertRecord[]): CertSummary {
   };
 }
 
-/* Summary reads are wide (limit 200) single requests — the backend pages
-   in the database, so one round-trip per source replaces the old
-   page-1-then-maybe-page-2 fan-out. The folder grid still paginates
-   client-side (PAGE_SIZE) over the merged records. */
 const CERT_SUMMARY_LIMIT = 200;
 
 export async function fetchCertStageRows(
@@ -148,7 +136,7 @@ export async function fetchCertStageRows(
     limit: CERT_SUMMARY_LIMIT,
     signal,
   });
-  // Non-array payloads (cached/error shapes) must never crash the merge.
+
   return Array.isArray(page?.rows) ? page.rows : [];
 }
 

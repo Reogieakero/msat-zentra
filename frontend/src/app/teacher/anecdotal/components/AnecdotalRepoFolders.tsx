@@ -21,9 +21,6 @@ const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   health: 5,
 };
 
-// Folder body color per anecdotal category lives in the side rail module
-// (single source of truth, shared with the legend).
-
 function humanize(value: string): string {
   return value
     .split("_")
@@ -50,11 +47,6 @@ function recordDate(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/**
- * The adviser's filed-records repository — one folder per filed anecdotal
- * record. Opening a folder overlays that record's GCForm-01 (the adviser
- * filed it, so the full write-up is theirs to open).
- */
 export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[] }) {
   const router = useRouter();
   const [page, setPage] = React.useState(1);

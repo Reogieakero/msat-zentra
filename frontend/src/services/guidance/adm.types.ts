@@ -1,4 +1,3 @@
-// ADM queue shapes for the guidance desk. Pure types only.
 export type GuidanceAdmStageFilter =
   | ""
   | "consultation"
@@ -28,22 +27,18 @@ export interface GuidanceAdmCase {
   hasHomeVisit: boolean;
   approved: boolean;
   approvedAt: string | null;
-  /* Consultation-review context (early ADM referrals only): the linked
-     anecdotal id so the counselor can open the official report, plus whether
-     this case was already decided out of the consultation stage. */
+
   anecdotalId?: string;
-  /* Latest engine risk level for the student (null when never flagged). */
+
   riskLevel?: string | null;
-  /* Teacher-picked consultation reviewer — this queue only ever carries
-     guidance-picked (or legacy unpicked) cases. */
+
   consultReviewer?: string;
   category?: string;
   anecdotalExcerpt?: string;
   location?: string;
   recommendations?: string;
   reviewed?: boolean;
-  /* Raw review note (`[ADM consult] ...`) for rebuilding the GCForm-03
-     guidance-recommendations line in the referral-form viewer. */
+
   consultNote?: string | null;
 }
 
@@ -81,8 +76,7 @@ export interface GuidanceAdmSummary {
   needsHomeVisit: number;
   awaitingReview: number;
   consultationAction: number;
-  // Reports breakdowns (optional for backward-compat with cached responses).
-  // Guidance ADM only — never the school-wide tracker counts.
+
   reviewed?: number;
   scopedTotal?: number;
   byStage?: GuidanceAdmStageCount[];
@@ -91,8 +85,6 @@ export interface GuidanceAdmSummary {
   referralTrend?: GuidanceAdmTrendWeek[];
 }
 
-/* One open guidance referral waiting on the counselor's consultation action.
-   Counsel here first — handing off moves it to the ADM coordinator. */
 export interface GuidanceAdmConsultationCase {
   id: string;
   student: string;
@@ -113,7 +105,7 @@ export interface GuidanceAdmData {
   summary: GuidanceAdmSummary;
   counselorName: string;
   consultationQueue: GuidanceAdmConsultationCase[];
-  /* Latest ADM cases referred to guidance still needing review (top section). */
+
   reviewQueue: GuidanceAdmCase[];
   cases: GuidanceAdmCase[];
   page: number;
@@ -129,10 +121,6 @@ export interface GuidanceAdmParams {
   pageSize?: number;
 }
 
-/* Counseling sessions on one ADM consultation (booked from the review
-   dialog without deciding, or with the endorsement). Shared session
-   endpoints — completing, moving, cancelling, and deleting go through
-   the referrals sessions service, same as the referrals page. */
 export interface AdmConsultationSession {
   id: string;
   sessionType: string;

@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./risk.module.css";
 
-/* Mirrors risk/page.tsx: topSummary (donut 340px + breakdown) + table +
-   divider + distribution + divider + trend + divider + interventions. */
 export default function PrincipalRiskLoading() {
   return (
     <section className={styles.page} aria-label="Loading risk board" aria-busy="true">

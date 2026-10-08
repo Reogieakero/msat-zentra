@@ -1,14 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 
-// Shared referral data-access: desk pagination, notification card helpers,
-// term guards, role-aware referral getters, and session guards/formatters
-// used by more than one service. Endpoint-specific orchestration lives in
-// src/services/referrals/*.service.ts.
-
-/* Desk-level pagination standard: full list pages = 15, overview previews
-   page at same list size (or 10). Backend accepts both `pageSize` (new) and
-   `limit` (legacy). */
 export const NURSE_QUEUE_PAGE_SIZE = 15;
 export const NURSE_QUEUE_MAX_PAGE_SIZE = 100;
 
@@ -30,8 +22,6 @@ export function resolveQueuePageSize(req: { query: unknown }): number {
   return Math.min(Math.floor(raw), NURSE_QUEUE_MAX_PAGE_SIZE);
 }
 
-// Cache tags purged after any referral write, so every desk
-// (guidance/nurse/teacher/ADM/overview) re-reads fresh queue state.
 export const REFERRAL_WRITE_TAGS = [
   "guidance",
   "overview",
@@ -48,10 +38,6 @@ export const REFERRAL_WRITE_TAGS = [
   "nurse-risk",
 ];
 
-// Detailed notification cards: every referral fanout names the student +
-// section (+ session when/venue or reason snippet where relevant) instead of
-// a bare "your referral was updated". Key phrases stay contiguous so the
-// frontend `toastTitleFor` matchers keep matching (details ride at the end).
 export function truncate(text: string | null | undefined, max = 100): string | null {
   const t = (text ?? "").trim();
   if (!t) return null;
@@ -74,7 +60,7 @@ export function formatWhen(d: Date): string {
 }
 
 export interface ReferralCard {
-  /** e.g. "Maria Santos (G7 – Ruby)" or "Maria Santos" when section is unknown. */
+
   who: string;
   studentName: string;
   sectionName: string;
@@ -86,8 +72,7 @@ export async function referralCard(referral: {
   rosterId: string | null;
   referredBy: string | null;
 }): Promise<ReferralCard> {
-  // Note: referral.studentId is a User id (registered students file under
-  // their account), so names resolve through User, not StudentProfile.
+
   const [account, roster, filer] = await Promise.all([
     referral.studentId
       ? prisma.user.findUnique({
@@ -122,9 +107,6 @@ export async function referralCard(referral: {
   };
 }
 
-/* Display name of the acting user for handoff messages — one lookup per
-   call site, "Someone" fallback so a deleted/renamed account never blanks
-   the notification. */
 export async function actorName(userId: string): Promise<string> {
   const u = await prisma.user.findUnique({
     where: { id: userId },
@@ -134,8 +116,7 @@ export async function actorName(userId: string): Promise<string> {
 }
 
 export function assertActiveTerm(referral: { termId: string }, scopeTermId: string | null) {
-  // Prior-term cases are read-only history — session reads/writes stay in
-  // the active term so the desk never leaks cases across terms.
+
   if (scopeTermId && referral.termId !== scopeTermId) {
     throw new AppError(404, "NOT_FOUND", "Referral not found in the active term");
   }
@@ -158,10 +139,6 @@ export async function getGuidanceReferral(id: string, scopeTermId?: string | nul
   return referral;
 }
 
-// Clinic cases on the nurse's own desk (direct referrals + escalations to
-// the nurse). Session management below accepts these exactly like guidance
-// cases, so the nurse referrals page runs the same accept → sessions →
-// close workflow.
 export async function getNurseClinicReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (!referral) throw new AppError(404, "NOT_FOUND", "Referral not found");
@@ -175,12 +152,9 @@ export async function getNurseClinicReferral(id: string, scopeTermId?: string | 
   return referral;
 }
 
-// Role-aware referral getter for the shared session endpoints.
 export async function getSessionReferral(id: string, role: string, scopeTermId?: string | null) {
   if (role === "nurse") {
-    // Clinic desk first; ADM consultations picked for the nurse may also
-    // carry standalone clinic sessions (booked from the review dialog
-    // without deciding the case), so they fall through to the ADM getter.
+
     try {
       return await getNurseClinicReferral(id, scopeTermId);
     } catch {
@@ -188,9 +162,7 @@ export async function getSessionReferral(id: string, role: string, scopeTermId?:
     }
   }
   if (role === "guidance_counselor") {
-    // Guidance desk first; ADM consultations picked for (or left with)
-    // guidance may also carry sessions booked from the ADM review, so
-    // they fall through to the ADM getter the same way the nurse desk does.
+
     try {
       return await getGuidanceReferral(id, scopeTermId);
     } catch {
@@ -200,11 +172,6 @@ export async function getSessionReferral(id: string, role: string, scopeTermId?:
   return getGuidanceReferral(id, scopeTermId);
 }
 
-// Session scope for nurse ADM consultations: the case must be ADM-track and
-// picked for the nurse. No consultation-stage or status gate here —
-// standalone sessions can be booked while pending (pre-confirm) and stay
-// visible afterwards; closing the case itself still blocks changes via
-// ensureOpen at each endpoint.
 export async function getNurseAdmSessionsReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (
@@ -218,11 +185,6 @@ export async function getNurseAdmSessionsReferral(id: string, scopeTermId?: stri
   return referral;
 }
 
-// Session scope for guidance ADM consultations: the case must be ADM-track
-// and picked for (or left with) guidance — same receiver rule as the
-// consultation review endpoint. Standalone sessions can be booked while
-// pending (pre-decision) and stay visible afterwards; closing the case
-// itself still blocks changes via ensureOpen at each endpoint.
 export async function getGuidanceAdmSessionsReferral(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (
@@ -238,10 +200,6 @@ export async function getGuidanceAdmSessionsReferral(id: string, scopeTermId?: s
   return referral;
 }
 
-// Shared guards for every nurse ADM-consultation action: the case must be
-// an ADM-track referral at the consultation stage picked for the nurse.
-// Receiver enforcement lives here so a case picked for guidance or LRPC
-// cannot be decided from the clinic queue, even if its id is known.
 export async function getNurseAdmConsultation(id: string, scopeTermId?: string | null) {
   const referral = await prisma.referral.findUnique({ where: { id } });
   if (
@@ -344,10 +302,6 @@ export function ensureOpen(referral: { status: string }) {
   }
 }
 
-// One active session per referral: booking is blocked while the referral
-// still has a session that is not done yet (status === "scheduled").
-// Pass exceptSessionId when the caller is completing that session and
-// booking its follow-up in the same request.
 export async function ensureNoActiveSession(referralId: string, exceptSessionId?: string) {
   const active = await prisma.counselingSession.count({
     where: {
@@ -365,9 +319,6 @@ export async function ensureNoActiveSession(referralId: string, exceptSessionId?
   }
 }
 
-// Clinic/counseling sessions unlock only once their scheduled time arrives:
-// a still-upcoming session can be moved or cancelled, but it cannot be
-// marked done and cannot take documentation yet.
 export function ensureSessionStarted(session: { scheduledAt: Date }) {
   if (session.scheduledAt.getTime() > Date.now()) {
     throw new AppError(

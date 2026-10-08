@@ -32,7 +32,7 @@ interface GuidanceOverviewRiskChartsProps {
   riskByLevel: { high: number; moderate: number; low: number };
   factorTotals: { attendance: number; grades: number; behavior: number };
   riskByGrade: GuidanceRiskByGradeRow[];
-  /** Saved settings hex — wins over the probed runtime palette. */
+
   primary?: string | null;
 }
 
@@ -54,8 +54,7 @@ export function GuidanceOverviewRiskCharts({
   riskByGrade,
   primary,
 }: GuidanceOverviewRiskChartsProps) {
-  // Live primary-ink steps — donut follows High/Moderate/Low order, both
-  // bar charts wear the solid primary.
+
   const scale = usePrimaryScale(3, primary);
   const LEVEL_COLORS: Record<string, string> = {
     High: scale[0],

@@ -1,40 +1,18 @@
 "use client";
-
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FormDropdown } from "../../referrals/components/form-dropdown";
-import {
-  SessionDatePicker,
-  SessionTimePicker,
-} from "../../referrals/components/session-datetime-picker";
-import { SESSION_KIND_OPTIONS } from "../../referrals/components/guidance-referrals-table";
-import { formatActionTime } from "../../referrals/components/guidance-referrals-format";
-import {
-  BookSessionDialog,
-  type BookSessionFields,
-} from "@/components/session-booking/BookSessionDialog";
+import type { BookSessionFields } from "@/components/session-booking/BookSessionDialog";
 import type { FinishSessionFields } from "@/components/session-booking/FinishSessionDialog";
-import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/session-booking/FinishSessionDialog";
-import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
-import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
 import type {
   AtRiskStudentItem,
   CounselingSessionItem,
   InterventionOutcome,
 } from "@/services/guidance/interventions.types";
-import { Busy } from "./busy";
-import styles from "./intervention-dialogs.module.css";
-
+import { InterventionStartDialog } from "./intervention-start-dialog";
+import { InterventionChangeDialog } from "./intervention-change-dialog";
+import { InterventionOutcomeDialog } from "./intervention-outcome-dialog";
+import { InterventionScheduleDialog } from "./intervention-schedule-dialog";
+import { InterventionFinishDialog } from "./intervention-finish-dialog";
+import { InterventionMoveDialog } from "./intervention-move-dialog";
+import { InterventionCancelDialog } from "./intervention-cancel-dialog";
 export type InterventionDialogKey =
   | "start"
   | "change"
@@ -43,7 +21,6 @@ export type InterventionDialogKey =
   | "finish"
   | "move"
   | "cancelSess";
-
 interface InterventionDialogsProps {
   open: Record<InterventionDialogKey, boolean>;
   onClose: (dialog: InterventionDialogKey) => void;
@@ -68,8 +45,6 @@ interface InterventionDialogsProps {
   outcomeNotes: string;
   onOutcomeNotes: (value: string) => void;
   isActionPending: boolean;
-  // Live clock from the table (ticks every 30s) — used instead of Date.now()
-  // so render stays pure.
   now: number;
   onSubmitStart: () => void;
   onSubmitChange: () => void;
@@ -82,7 +57,6 @@ interface InterventionDialogsProps {
   canSubmitChange: boolean;
   canSubmitOutcome: boolean;
 }
-
 export function InterventionDialogs({
   open,
   onClose,
@@ -120,308 +94,84 @@ export function InterventionDialogs({
   canSubmitOutcome,
 }: InterventionDialogsProps) {
   const followUp = activeRow?.intervention ?? null;
-
   return (
     <>
-      <Dialog open={open.start} onOpenChange={(n) => { if (!n && !isActionPending) onClose("start") }}>
-        <DialogContent aria-busy={isActionPending || undefined}>
-          <DialogHeader>
-            <DialogTitle>
-              Start a follow-up{activeRow ? ` — ${activeRow.student}` : ""}
-            </DialogTitle>
-            <DialogDescription>
-              Set the urgency, record your first impressions, and book the
-              first counseling session. It starts assigned to you.
-            </DialogDescription>
-          </DialogHeader>
-          <div className={styles.formGrid}>
-            <div className={styles.formFull}>
-              <Label htmlFor="startAction">What will you do?</Label>
-              <Textarea
-                id="startAction"
-                value={actionText}
-                onChange={(e) => onActionText(e.target.value)}
-                placeholder="e.g. Weekly one-on-one every Friday, call parents about attendance…"
-                maxLength={2000}
-              />
-            </div>
-            <FormDropdown
-              id="startPriority"
-              label="How urgent is this?"
-              value={priority}
-              onChange={onPriority}
-              placeholder="Pick urgency"
-              options={[
-                { value: "high", label: "High — act right away" },
-                { value: "normal", label: "Normal" },
-                { value: "low", label: "Low — monitor for now" },
-              ]}
-            />
-            <div className={styles.formFull}>
-              <Label htmlFor="startIntake">First impressions (optional)</Label>
-              <Textarea
-                id="startIntake"
-                value={intakeNotes}
-                onChange={(e) => onIntakeNotes(e.target.value)}
-                placeholder="What stands out? Anything the next reader should know…"
-                maxLength={2000}
-              />
-            </div>
-            <div className={styles.formFull}>
-              <p className={styles.formSectionLabel}>First session (optional)</p>
-            </div>
-            <SessionDatePicker
-              id="startSessDate"
-              label="Date"
-              value={sessDate}
-              onChange={onSessDate}
-            />
-            <SessionTimePicker
-              id="startSessTime"
-              label="Time"
-              value={sessTime}
-              onChange={onSessTime}
-            />
-            <FormDropdown
-              id="startSessType"
-              label="Session kind"
-              value={sessType}
-              onChange={onSessType}
-              placeholder="Pick a kind"
-              options={SESSION_KIND_OPTIONS}
-            />
-            <div>
-              <Label htmlFor="startSessVenue">Venue (optional)</Label>
-              <Input
-                id="startSessVenue"
-                value={sessVenue}
-                onChange={(e) => onSessVenue(e.target.value)}
-                placeholder="e.g. Guidance office"
-                maxLength={200}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onClose("start")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button disabled={!canSubmitStart} onClick={onSubmitStart}>
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Starting…" : "Start follow-up"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={open.change} onOpenChange={(n) => { if (!n && !isActionPending) onClose("change") }}>
-        <DialogContent aria-busy={isActionPending || undefined}>
-          <DialogHeader>
-            <DialogTitle>Change the follow-up plan</DialogTitle>
-            <DialogDescription>
-              {activeRow
-                ? `Adjust what should happen for ${activeRow.student}. This counts as your review.`
-                : "Adjust the recommended action."}
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="changedAction">Adjusted action</Label>
-            <Textarea
-              id="changedAction"
-              value={actionText}
-              onChange={(e) => onActionText(e.target.value)}
-              placeholder="Write what should happen instead…"
-              maxLength={2000}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onClose("change")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button disabled={!canSubmitChange} onClick={onSubmitChange}>
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Saving…" : "Save change"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+      <InterventionStartDialog
+        open={open.start}
+        onClose={() => onClose("start")}
+        activeStudent={activeRow?.student ?? null}
+        actionText={actionText}
+        onActionText={onActionText}
+        priority={priority}
+        onPriority={onPriority}
+        intakeNotes={intakeNotes}
+        onIntakeNotes={onIntakeNotes}
+        sessDate={sessDate}
+        onSessDate={onSessDate}
+        sessTime={sessTime}
+        onSessTime={onSessTime}
+        sessType={sessType}
+        onSessType={onSessType}
+        sessVenue={sessVenue}
+        onSessVenue={onSessVenue}
+        isActionPending={isActionPending}
+        onSubmit={onSubmitStart}
+        canSubmit={canSubmitStart}
+      />
+      <InterventionChangeDialog
+        open={open.change}
+        onClose={() => onClose("change")}
+        activeStudent={activeRow?.student ?? null}
+        actionText={actionText}
+        onActionText={onActionText}
+        isActionPending={isActionPending}
+        onSubmit={onSubmitChange}
+        canSubmit={canSubmitChange}
+      />
+      <InterventionOutcomeDialog
         open={open.outcome}
-        onOpenChange={(n) => { if (!n && !isActionPending) onClose("outcome") }}
-      >
-        <DialogContent aria-busy={isActionPending || undefined}>
-          <DialogHeader>
-            <DialogTitle>Record the outcome</DialogTitle>
-            <DialogDescription>
-              Closing needs two things: at least one finished session and a
-              closing note — unless the student is no longer at risk, which
-              can be discontinued with a closing note alone.
-            </DialogDescription>
-          </DialogHeader>
-          <p className={styles.resolveProgress} aria-live="polite">
-            {followUp
-              ? `${followUp.completedSessions} of ${followUp.sessions.length} session${followUp.sessions.length === 1 ? "" : "s"} finished`
-              : "No follow-up selected"}
-          </p>
-          {followUp &&
-          followUp.completedSessions === 0 &&
-          !(
-            activeRow?.riskLevel === "Low" &&
-            followUp.approvalStatus !== "pending"
-          ) ? (
-            <p className={styles.blocker} role="note">
-              Finish at least one session first — schedule one in the
-              counseling plan above, then mark it done.
-            </p>
-          ) : null}
-          {followUp &&
-          followUp.completedSessions === 0 &&
-          activeRow?.riskLevel === "Low" &&
-          followUp.approvalStatus !== "pending" ? (
-            <p className={styles.blocker} role="note">
-              No sessions finished — but this student is no longer at risk,
-              so you can close this as “Closed — not resolved” with a closing
-              note.
-            </p>
-          ) : null}
-          {followUp?.approvalStatus === "pending" ? (
-            <p className={styles.blocker} role="note">
-              Review this follow-up first — it can only be closed after
-              approval. You can still save a progress note as “Still ongoing”.
-            </p>
-          ) : null}
-          {activeRow?.intervention?.outcomeStatus === "resolved" ? (
-            <p className={styles.blocker} role="note">
-              This follow-up is closed — you can still update the closing
-              notes below. The status stays resolved.
-            </p>
-          ) : null}
-          <div className={styles.formGrid}>
-            <FormDropdown
-              id="outcomeStatus"
-              label="Where does this stand?"
-              value={outcomeStatus}
-              onChange={(v) => onOutcomeStatus(v as InterventionOutcome)}
-              placeholder="Pick a status"
-              options={[
-                { value: "ongoing", label: "Still ongoing" },
-                { value: "resolved", label: "Resolved — goal met" },
-                { value: "unresolved", label: "Closed — not resolved" },
-              ]}
-              disabled={activeRow?.intervention?.outcomeStatus === "resolved"}
-            />
-            <div className={styles.formFull}>
-              <Label htmlFor="outcomeNotes">
-                Progress note (required when closing)
-              </Label>
-              <Textarea
-                id="outcomeNotes"
-                value={outcomeNotes}
-                onChange={(e) => onOutcomeNotes(e.target.value)}
-                placeholder="What changed for the student? What was the final outcome…"
-                maxLength={2000}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onClose("outcome")}
-              disabled={isActionPending}
-            >
-              Cancel
-            </Button>
-            <Button disabled={!canSubmitOutcome} onClick={onSubmitOutcome}>
-              <Busy busy={isActionPending} />
-              {isActionPending ? "Saving…" : "Save outcome"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {open.schedule && (
-        <BookSessionDialog
-          open
-          onClose={() => onClose("schedule")}
-          onSubmit={(fields) => onSubmitSchedule(fields)}
-          description={
-            activeRow
-              ? `Book a counseling session for ${activeRow.student}.`
-              : "Book a counseling session."
-          }
-          venueHint="Held at the guidance office unless another venue is given."
-          venuePlaceholder="e.g. Guidance office"
-          showSessionType
-          sessionTypeOptions={SESSION_KIND_OPTIONS}
-          hasActiveSession={
-            !!activeRow?.intervention?.sessions.some((s) => s.status === "scheduled")
-          }
-          busy={isActionPending}
-          idPrefix="iv-sess"
-        />
-      )}
-
-      {open.finish && (
-        <SharedFinishSessionDialog
-          open
-          onClose={() => onClose("finish")}
-          onSubmit={(fields) => onSubmitFinish(fields)}
-          notStarted={
-            !!activeSession &&
-            activeSession.status === "scheduled" &&
-            new Date(activeSession.scheduledAt).getTime() > now
-          }
-          description={
-            activeSession
-              ? "Record what happened. If another talk is needed, book the follow-up below — otherwise, if this is the last open session, the follow-up closes on its own."
-              : "Record what happened in this session."
-          }
-          followUpTitle="Book a follow-up session (optional)"
-          followUpHint="If this needs another talk, book it now so it stays on the plan."
-          followUpDateLabel="Follow-up date"
-          followUpTimeLabel="Follow-up time"
-          venuePlaceholder="e.g. Guidance office"
-          showSessionType
-          sessionTypeOptions={SESSION_KIND_OPTIONS}
-          busy={isActionPending}
-          idPrefix="iv-done"
-        />
-      )}
-
-      {open.move && (
-        <SharedRescheduleSessionDialog
-          open
-          onClose={() => onClose("move")}
-          onSubmit={(scheduledAt) => onSubmitMove(scheduledAt)}
-          description={
-            activeSession
-              ? `Currently ${formatActionTime(activeSession.scheduledAt)}. Pick the new date and time.`
-              : "Pick the new date and time."
-          }
-          busy={isActionPending}
-          idPrefix="iv-move"
-        />
-      )}
-
-      {open.cancelSess && (
-        <SharedCancelSessionDialog
-          open
-          onClose={() => onClose("cancelSess")}
-          onSubmit={(reason) => onSubmitCancelSess(reason)}
-          description="This session will be cancelled."
-          keepLabel="Keep session"
-          busy={isActionPending}
-          idPrefix="iv-cancel"
-        />
-      )}
+        onClose={() => onClose("outcome")}
+        activeRow={activeRow}
+        followUp={followUp}
+        outcomeStatus={outcomeStatus}
+        onOutcomeStatus={onOutcomeStatus}
+        outcomeNotes={outcomeNotes}
+        onOutcomeNotes={onOutcomeNotes}
+        isActionPending={isActionPending}
+        onSubmit={onSubmitOutcome}
+        canSubmit={canSubmitOutcome}
+      />
+      <InterventionScheduleDialog
+        open={open.schedule}
+        onClose={() => onClose("schedule")}
+        activeStudent={activeRow?.student ?? null}
+        hasActiveSession={
+          !!activeRow?.intervention?.sessions.some((s) => s.status === "scheduled")
+        }
+        isActionPending={isActionPending}
+        onSubmit={onSubmitSchedule}
+      />
+      <InterventionFinishDialog
+        open={open.finish}
+        onClose={() => onClose("finish")}
+        activeSession={activeSession}
+        now={now}
+        isActionPending={isActionPending}
+        onSubmit={onSubmitFinish}
+      />
+      <InterventionMoveDialog
+        open={open.move}
+        onClose={() => onClose("move")}
+        activeSession={activeSession}
+        isActionPending={isActionPending}
+        onSubmit={onSubmitMove}
+      />
+      <InterventionCancelDialog
+        open={open.cancelSess}
+        onClose={() => onClose("cancelSess")}
+        isActionPending={isActionPending}
+        onSubmit={onSubmitCancelSess}
+      />
     </>
   );
 }

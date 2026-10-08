@@ -2,8 +2,6 @@
 
 import { AdvisorySectionSchedule } from "@/app/teacher/overview/components/teacher-overview-section-schedule";
 
-/* Advisory class schedule: the published weekly timetable for the section
-   this adviser handles. Read-only. */
 export default function AdvisorySchedulePage() {
   return (
     <section className="flex w-full min-w-0 flex-1 flex-col gap-4">

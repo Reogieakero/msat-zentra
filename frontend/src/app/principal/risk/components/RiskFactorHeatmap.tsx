@@ -43,7 +43,6 @@ export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" |
     return () => clearTimeout(id);
   }, [selected, open]);
 
-  // Fetch the per-cell student list whenever a new cell is opened.
   React.useEffect(() => {
     if (!selected || !data?.termId) {
       return;

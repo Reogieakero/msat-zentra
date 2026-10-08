@@ -8,8 +8,6 @@ import {
 
 const router = Router();
 
-// School-wide audit log for the Principal. Supports filtering, search, and
-// pagination. actorRole is derived from the acting user's role.
 router.get(
   "/",
   requireAuth,
@@ -46,7 +44,6 @@ router.get(
   },
 );
 
-// CSV export of the (filtered) audit log.
 router.get(
   "/export",
   requireAuth,
@@ -73,8 +70,6 @@ router.get(
   },
 );
 
-// Status-only projection of the record an audit entry points at. Confidential
-// clinical detail columns are NEVER returned.
 router.get(
   "/:id/source",
   requireAuth,

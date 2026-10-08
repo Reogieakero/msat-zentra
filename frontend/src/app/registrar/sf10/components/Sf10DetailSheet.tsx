@@ -33,8 +33,6 @@ export function Sf10DetailSheet({
   const [acting, setActing] = React.useState<"validate" | "release" | null>(null);
   const queryClient = useQueryClient();
 
-  // Version history loads only while the sheet is open — the list query no
-  // longer embeds versions per row. Cached per record for instant reopen.
   const versionsQuery = useQuery({
     queryKey: ["sf10-versions", record?.id ?? null],
     queryFn: ({ signal }) => fetchSf10Versions(record!.id, signal),
@@ -52,10 +50,6 @@ export function Sf10DetailSheet({
     }
   };
 
-  // Pessimistic: the list behind the sheet repaints only via onChanged's
-  // refetch after the server confirms. No optimistic flip: the UI must never
-  // outrun the processing. markSelfNotified suppresses the self-receipt echo
-  // toast (the toasts below already confirmed the action).
   const handleValidate = async () => {
     setActing("validate");
     try {

@@ -83,10 +83,6 @@ function FriendlyDiff({ entry }: { entry: AuditEntry }) {
   );
 }
 
-/* Audit entries as a data table in the At-Risk Advisees pattern: fixed-width
-   sortable columns, bordered wrapper, click a row to expand its before/after
-   diff inline. There is no detail sheet on this desk — the expanded diff is
-   the full inspection. Sorting applies to the loaded server page. */
 export function AuditTable({ entries }: { entries: AuditEntry[] }) {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);

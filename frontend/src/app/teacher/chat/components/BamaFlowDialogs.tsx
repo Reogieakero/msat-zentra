@@ -17,8 +17,6 @@ interface BamaFlowDialogsProps {
 export function BamaFlowDialogs({ flow, active }: BamaFlowDialogsProps) {
   const reviewPreview = active?.messages.find((m) => m.preview)?.preview ?? null;
 
-  // Class / category / tier / datetime pickers render inline in the thread
-  // (no overlay modals) — only the filing confirmation stays a dialog.
   return (
     <>
       <CardModal

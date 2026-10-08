@@ -9,8 +9,6 @@ import dialog from "../../../adm/components/admDialog.module.css";
 import styles from "./all.module.css";
 import formStyles from "../../../academics/assign/components/form.module.css";
 
-/** Sign/return confirmation for an endorsed ADM case. Pure render — the
- *  parent owns the pending target, the in-flight id, and the submit. */
 export function SignReturnConfirmDialog({
   pendingAction,
   busyActionId,

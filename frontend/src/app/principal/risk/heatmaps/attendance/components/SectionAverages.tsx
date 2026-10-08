@@ -79,7 +79,6 @@ export function SectionAverages({
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
   });
-  // Worst first — sections furthest below the 80% mark float to the top.
   const sections = React.useMemo(
     () => [...(data?.sections ?? [])].sort((a, b) => a.rate - b.rate),
     [data]

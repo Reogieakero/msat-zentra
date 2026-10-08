@@ -32,11 +32,6 @@ function apiMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-/**
- * Session documentary: view filed photos, attach more, or remove a wrong
- * upload. Never gates Done — purely the evidence trail. Filing unlocks once
- * the session time arrives (server enforces this too).
- */
 export function InterventionSessionDocsDialog({
   followUpId,
   session,
@@ -91,8 +86,6 @@ export function InterventionSessionDocsDialog({
   const mutationError = uploadMutation.error ?? removeMutation.error;
   const displayError = error ?? (mutationError ? mutationError.message : null);
 
-  // Fresh list state every time the dialog opens or retargets — synced
-  // during render, never in an effect. The fetch below only reads.
   const docsKey = open ? `${followUpId}:${session.id}` : null;
   const [prevDocsKey, setPrevDocsKey] = React.useState<string | null>(null);
   if (docsKey !== prevDocsKey) {

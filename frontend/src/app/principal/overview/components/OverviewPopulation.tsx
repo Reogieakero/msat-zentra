@@ -29,9 +29,6 @@ const chartConfig = {
 
 const GRADE_ORDER = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 
-// Primary-tinted steps, identical in light and dark mode: the principal's
-// saved palette paints var(--primary) desk-wide, and mixing toward
-// var(--card) keeps slices distinct on either surface.
 const POPULATION_MIX = [100, 70, 45, 25];
 
 function colorFor(index: number): string {
@@ -101,9 +98,6 @@ export function OverviewPopulation() {
     [data]
   );
 
-  // Grade-connected action banners: the grade carrying the heaviest at-risk
-  // load, plus this term's Honor Roll qualifier count. Same ["overview"]
-  // query as everything else on the page — no extra fetches.
   const spotlight = React.useMemo(() => {
     const rows = [...(data?.riskByGrade ?? [])].sort((a, b) => b.count - a.count);
     return rows.length > 0 && rows[0].count > 0 ? rows[0] : null;

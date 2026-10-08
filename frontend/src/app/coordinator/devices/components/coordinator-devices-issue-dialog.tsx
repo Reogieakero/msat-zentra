@@ -24,20 +24,14 @@ const DEVICE_TYPE_OPTIONS = ["Tablet", "Phone", "Laptop", "Chromebook"] as const
 
 interface CoordinatorDevicesIssueDialogProps {
   open: boolean;
-  /** Principal-approved cases with no device issued yet. */
+
   candidates: AdmApprovalRow[];
   candidatesPending: boolean;
   onClose: () => void;
-  /** Fired after a successful issue so the page refreshes the ledger
-      and drops the case off the needs-device list. */
+
   onIssued: () => void;
 }
 
-/**
- * Issue device — scoped to principal-approved ADM cases that still have
- * no device. The learner picker only offers those cases (searchable),
- * each labeled with its approval date.
- */
 export function CoordinatorDevicesIssueDialog({
   open,
   candidates,
@@ -153,9 +147,7 @@ export function CoordinatorDevicesIssueDialog({
                     style={{ height: "2rem", fontSize: "0.8125rem" }}
                   />
                 </div>
-                {/* Options sit on the same text column as the search input:
-                    wrapper side padding (0.625rem) + item padding (0.5rem)
-                    equals search inset (0.375rem) + input padding (0.75rem). */}
+
                 <div style={{ padding: "0 0.625rem 0.375rem" }}>
                   {candidatesPending && filtered.length === 0 ? (
                     <DropdownMenuItem disabled>Loading cases…</DropdownMenuItem>

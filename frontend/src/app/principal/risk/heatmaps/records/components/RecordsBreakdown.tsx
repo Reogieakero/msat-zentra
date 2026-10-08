@@ -42,8 +42,6 @@ interface Kpi {
   tone: "default" | "good" | "warn";
 }
 
-// Theme-safe tooltip shell (same tokens as the other heatmap tooltips —
-// tracks light/dark and user recolors automatically).
 const TOOLTIP_STYLE: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--border)",
@@ -126,8 +124,6 @@ export function RecordsBreakdown() {
 
   const categoryTotal = categoryRows.reduce((s, r) => s + r.value, 0);
 
-  // Donut slices wear the viewer's own primary (shades, darkest first) —
-  // one family, matching the attendance trend chart.
   const profile = usePrincipalProfileSettings();
   const scale = usePrimaryScale(
     Math.max(categoryRows.length, 1),

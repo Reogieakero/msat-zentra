@@ -7,8 +7,6 @@ import assign from "@/app/principal/academics/assign/components/section-assignme
 import emptyStyles from "@/app/teacher/schedule/schedule-empty.module.css";
 import styles from "./attendance-sheet.module.css";
 
-/** Term entry gate: each term asks first (adviser tap-through or link-code
- *  re-entry). Pure render — all flow state arrives as props. */
 export function AttendanceTermGate({
   termLabel,
   isAdviser,

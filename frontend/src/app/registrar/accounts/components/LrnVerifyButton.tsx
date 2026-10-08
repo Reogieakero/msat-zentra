@@ -206,7 +206,6 @@ function Result({
         <span>{verdictLabel}</span>
       </div>
 
-      {/* Cross-verification comparison */}
       <section>
         <h3 className={styles.sectionLabel}>Cross-verification</h3>
         <div className={styles.compareCard}>
@@ -251,9 +250,6 @@ function Result({
             disabled={approving}
             aria-busy={approving || undefined}
             onClick={() => {
-              // Await the server confirm before closing: the dialog must
-              // never vanish while the approval is still processing. On
-              // failure the promise rejects and we stay open.
               void (async () => {
                 await onApprove();
                 onDone();

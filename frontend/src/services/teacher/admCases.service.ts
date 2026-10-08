@@ -1,4 +1,3 @@
-// Advisory ADM-case queue fetch for teachers.
 import { apiClient } from "@/lib/api/client";
 import { pickList } from "@/lib/api/payload";
 import type { AdmCase, MyAdmCasesPage } from "./admCases.types";
@@ -16,7 +15,7 @@ export async function fetchMyAdmCases(
   >(`/api/adm/my-cases${search.toString() ? `?${search.toString()}` : ""}`, {
     signal: params.signal,
   });
-  // Defensive: the endpoint has served bare arrays and {cases} shapes.
+
   if (Array.isArray(data)) {
     return {
       cases: data,

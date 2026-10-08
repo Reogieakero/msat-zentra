@@ -1,6 +1,3 @@
-// WebGL Fluid Background — adapted from PavelDoGreat / tkabalin (MIT License).
-// Refactored to accept a canvas + config instead of reading globals / fetching a file.
-
 export interface FluidConfig {
   SIM_RESOLUTION: number;
   DYE_RESOLUTION: number;
@@ -961,7 +958,7 @@ export function startFluidBackground(
     const dt = calcDeltaTime();
     if (resizeCanvas()) initFramebuffers();
     updateColors(dt);
-    // Ambient "breathing": periodic gentle splats near center, independent of cursor
+
     ambientTimer += dt;
     if (ambientTimer >= 1.1) {
       ambientTimer = 0;
@@ -1270,8 +1267,7 @@ export function startFluidBackground(
       c.b *= 0.15;
       return c;
     } else {
-      // Monochrome theme: zero saturation so splats render as neutral
-      // white/gray smoke regardless of the selected hue.
+
       const c = HSVtoRGB(config.SPLAT_HUE, 0, 1.0);
       c.r *= 0.6;
       c.g *= 0.6;
@@ -1333,7 +1329,6 @@ export function startFluidBackground(
 
   let ditheringTexture: any = null;
 
-  // Mouse / touch interaction
   const onMouseMove = (e: MouseEvent) => {
     let pointer = pointers[0];
     const rect = canvas.getBoundingClientRect();

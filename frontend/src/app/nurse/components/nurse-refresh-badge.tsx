@@ -2,13 +2,6 @@
 
 import { Loader2 } from "lucide-react";
 
-/**
- * Non-blocking background-refresh indicator for the nurse desk.
- * Rendered only when the page already shows data (`!isPending && isFetching`).
- * Floats above the content (fixed pill) so appearing/disappearing never
- * shifts the layout — the table keeps its exact 16px gap from the navbar.
- * Never replaces content — keeps layout stable and announces politely.
- */
 export function NurseRefreshBadge({ label = "Refreshing…" }: { label?: string }) {
   return (
     <div

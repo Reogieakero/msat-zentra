@@ -42,8 +42,7 @@ interface AttendanceSheetProps {
   slot: number;
   subjectLabel: string;
   editable: boolean;
-  /** Explicit section roster (code-claimed flow). When provided, the sheet
-   *  reads students + section/term from it instead of the advisory context. */
+
   roster?: { ctx: SheetContext | null; pending: boolean; error: boolean };
 }
 
@@ -67,8 +66,6 @@ export function AttendanceSheet({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // A different date/subject/period is a different sheet — drop local state.
-  // (Render-phase reset: allowed because it is conditional on prop change.)
   if (sheetKey !== `${date}|${subjectId ?? "none"}|${slot}`) {
     setSheetKey(`${date}|${subjectId ?? "none"}|${slot}`);
     setMarks({});
@@ -88,8 +85,7 @@ export function AttendanceSheet({
   const serverMarks = useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
   const loading = (roster ? roster.pending : contextQuery.isPending) || marksQuery.isPending;
   const loadError = (roster ? roster.error : contextQuery.isError) || marksQuery.isError;
-  // Done persists across refresh: submitted sheets have server-side marks,
-  // so a sheet with existing marks opens on the done panel until edited.
+
   const serverSubmitted = Object.keys(serverMarks).length > 0;
   const showDone = !loading && (submitted || serverSubmitted) && !editing;
 

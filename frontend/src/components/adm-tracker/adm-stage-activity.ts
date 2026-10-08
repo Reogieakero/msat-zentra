@@ -1,14 +1,6 @@
 import type { AdmTrackStageKey } from "./adm-track-data";
 import { actorActionLabel } from "@/lib/notifications/action-label";
 
-/* Per-stage latest actions for the adviser tracking surfaces (adm-cases
-   rail + referrals track dialog share this, so both pages tell the same
-   story). Every audit/session/meeting event maps to exactly one of the 8
-   pipeline stages; row evidence (meetings, modules, devices, approval)
-   fills stages the audit trail never touches. */
-
-// Raw timeline entry shape from referrals/mine + adm/my-cases (additive
-// fields over the legacy {label, detail, date} the dialogs already render).
 export interface StageTimelineEntry {
   label: string;
   detail?: string | null;
@@ -21,8 +13,6 @@ export interface StageTimelineEntry {
   homeVisit?: boolean;
 }
 
-// Everything the tracker needs, normalized from either teacher endpoint
-// (AdmCase from adm/my-cases, TrackableReferral from referrals/mine).
 export interface TrackerCaseInput {
   stage?: string | null;
   referralStatus?: string | null;
@@ -46,11 +36,9 @@ export interface TrackerCaseInput {
 }
 
 export interface StageActionLine {
-  /** Who acted ("You" for the reader's own filings, desk names otherwise). */
   actor: string | null;
   text: string;
   detail?: string | null;
-  /** Full ISO, or null when the fact has no timestamp. */
   at: string | null;
 }
 
@@ -74,10 +62,6 @@ export function actorLabel(
   return ROLE_LABELS[byRole] ?? "Staff";
 }
 
-/* Which pipeline stage an audit entry belongs to. Referral lifecycle +
-   sessions resolve at consultation (decisions and pre-confirm bookings
-   happen there); meetings split by venue/miss onto the meeting vs
-   home-visit path; synthesized entries carry their stage outright. */
 export function stageForEntry(entry: Pick<StageTimelineEntry, "action" | "source" | "stage" | "homeVisit" | "label">): AdmTrackStageKey | null {
   if (entry.action === "adm_stage") {
     const key = (entry.stage ?? "") as AdmTrackStageKey;
@@ -113,10 +97,6 @@ function entryLine(
   entry: StageTimelineEntry,
   reader: "teacher" | "coordinator" = "teacher",
 ): StageActionLine {
-  // Same actor-first wording as the desk alerts timelines ("Cancelled by
-  // adviser", "Session booked by School Nurse", ...) — the reader here is
-  // the filing teacher, so the mapper's teacher scope applies. Unknown
-  // actions keep their friendly sentence with the actor prefix when known.
   const label = actorActionLabel({
     scope: "teacher",
     action: entry.action,
@@ -133,11 +113,6 @@ function entryLine(
   };
 }
 
-/* Latest action per stage: newest audit-mapped entry wins; row evidence
-   fills stages the audit trail never touches (meetings, home visits,
-   certification, approvals, modules, closure). Null = static detail line.
-   `reader` controls the actor voice ("You" for the filing teacher,
-   "Adviser" for the coordinator desk). */
 export function latestActionByStage(
   input: TrackerCaseInput,
   reader: "teacher" | "coordinator" = "teacher",
@@ -168,7 +143,6 @@ export function latestActionByStage(
     out[stage] = entryLine(latest, reader);
   }
 
-  // Row-evidence fallbacks (actor implied by route guards that wrote them).
   if (!out.meeting_parents && input.meetingAttended !== null && input.meetingAttended !== undefined) {
     out.meeting_parents = {
       actor: "ADM Coordinator",
@@ -207,8 +181,6 @@ export function latestActionByStage(
   return out;
 }
 
-/* Reader-local full timestamp ("Oct 1, 2026 · 2:30 PM"), same clock for
-   date and time — never UTC. Dependency-free (shared file). */
 export function formatActionTime(value: string | null | undefined): string {
   if (!value || value === "—") return "—";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatActionDate(value);

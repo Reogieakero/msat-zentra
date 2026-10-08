@@ -24,11 +24,6 @@ interface OcForm01PreviewDialogProps {
   onClose: () => void;
 }
 
-/**
- * Shared OCForm-01 preview overlay: official A4 sheet with Print/Download
- * plus the per-record drawn-signature flow (sign on the pad, remove with
- * confirm), used wherever a record opens as a preview.
- */
 export function OcForm01PreviewDialog({
   recordId,
   onClose,
@@ -56,7 +51,7 @@ export function OcForm01PreviewDialog({
           const sig = await fetchMySignature();
           setMySignatureUrl(sig.imageUrl);
         } catch {
-          // The pad stays available — saving a signature fixes this too.
+
         } finally {
           setMySigLoading(false);
         }

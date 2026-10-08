@@ -194,4 +194,3 @@ function SidebarShell() {
 export function StaffSidebar() {
   return <SidebarShell />;
 }
-

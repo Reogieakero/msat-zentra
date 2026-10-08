@@ -1,22 +1,18 @@
-// Shared schedule-grid constants for the teacher/principal class and
-// attendance views (week labels, timeline, lunch window, demo agenda +
-// week schedule). Moved verbatim from the teacher classes folder — no
-// API calls, display config only.
 export interface ScheduleBlock {
   subject: string;
   section: string;
   room: string;
-  day: number; // 1 = Mon ... 5 = Fri
-  startMin: number; // minutes from SCHOOL_START (7:30 AM)
-  endMin: number; // minutes from SCHOOL_START (7:30 AM)
+  day: number;
+  startMin: number;
+  endMin: number;
   color: string;
-  activity: string; // e.g. Quiz, Lecture, Seatwork
-  topic: string; // e.g. Quiz: Algebraic Expressions
+  activity: string;
+  topic: string;
 }
 
 export interface TimelineSlot {
-  offset: number; // minutes from SCHOOL_START
-  label: string; // e.g. "8:30 AM"
+  offset: number;
+  label: string;
 }
 
 export const WEEK_LABELS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -35,13 +31,10 @@ export const WEEK_DATES = [
   "Sep 11, 2026",
 ];
 
-// School day: morning session 7:30 AM – 11:30 AM, lunch break 11:30 AM – 1:00 PM,
-// afternoon session 1:00 PM – 5:00 PM.
-export const SCHOOL_START = 7 * 60 + 30; // 7:30 AM
-export const SCHOOL_END = 17 * 60; // 5:00 PM
-export const HOUR_HEIGHT = 72; // px per hour
+export const SCHOOL_START = 7 * 60 + 30;
+export const SCHOOL_END = 17 * 60;
+export const HOUR_HEIGHT = 72;
 
-// Time labels: hourly from 7:30 through 11:30 (morning), then 1:00–5:00 (afternoon).
 export const TIMELINE: TimelineSlot[] = [
   { offset: 0, label: "7:30 AM" },
   { offset: 60, label: "8:30 AM" },
@@ -55,7 +48,6 @@ export const TIMELINE: TimelineSlot[] = [
   { offset: 570, label: "5:00 PM" },
 ];
 
-// Lunch break spans 11:30 AM (240) to 1:00 PM (330).
 export const LUNCH_START = 240;
 export const LUNCH_END = 330;
 
@@ -72,7 +64,6 @@ export function formatBlockTime(startMin: number, endMin: number): string {
   return `${fmtWall(startMin)} – ${fmtWall(endMin)}`;
 }
 
-// Agenda template per activity type (mock only).
 export const ACTIVITY_AGENDA: Record<string, string[]> = {
   Quiz: [
     "Attendance & quiz instructions (5 min)",
@@ -133,7 +124,7 @@ export const ACTIVITY_AGENDA: Record<string, string[]> = {
 };
 
 export const WEEK_SCHEDULE: ScheduleBlock[] = [
-  // Monday
+
   { subject: "Math 7", section: "G7-A", room: "Rm 201", day: 1, startMin: 0, endMin: 60, color: "#1f2937", activity: "Quiz", topic: "Quiz: Algebraic Expressions" },
   { subject: "English 7", section: "G7-A", room: "Rm 204", day: 1, startMin: 60, endMin: 120, color: "#374151", activity: "Lecture", topic: "Subject-Verb Agreement" },
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 1, startMin: 120, endMin: 180, color: "#4b5563", activity: "Lab Work", topic: "Parts of the Microscope" },
@@ -143,7 +134,6 @@ export const WEEK_SCHEDULE: ScheduleBlock[] = [
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 1, startMin: 450, endMin: 510, color: "#4b5563", activity: "Review", topic: "Matter & Its States Review" },
   { subject: "Arts 7", section: "G7-A", room: "Rm 210", day: 1, startMin: 510, endMin: 570, color: "#9ca3af", activity: "Hands-on", topic: "Color Theory & Mixing" },
 
-  // Tuesday
   { subject: "English 7", section: "G7-A", room: "Rm 204", day: 2, startMin: 0, endMin: 60, color: "#374151", activity: "Recitation", topic: "Vocabulary Recitation" },
   { subject: "Math 7", section: "G7-A", room: "Rm 201", day: 2, startMin: 60, endMin: 120, color: "#1f2937", activity: "Lecture", topic: "Integers & the Number Line" },
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 2, startMin: 120, endMin: 180, color: "#4b5563", activity: "Lecture", topic: "Ecosystems & Food Chains" },
@@ -153,7 +143,6 @@ export const WEEK_SCHEDULE: ScheduleBlock[] = [
   { subject: "English 7", section: "G7-A", room: "Rm 204", day: 2, startMin: 450, endMin: 510, color: "#374151", activity: "Seatwork", topic: "Grammar Worksheet" },
   { subject: "PE 7", section: "G7-A", room: "Gym", day: 2, startMin: 510, endMin: 570, color: "#6b7280", activity: "Hands-on", topic: "Volleyball Basics" },
 
-  // Wednesday
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 3, startMin: 0, endMin: 60, color: "#4b5563", activity: "Lecture", topic: "The Water Cycle" },
   { subject: "Math 7", section: "G7-A", room: "Rm 201", day: 3, startMin: 60, endMin: 120, color: "#1f2937", activity: "Quiz", topic: "Quiz: Ratios & Proportions" },
   { subject: "English 7", section: "G7-A", room: "Rm 204", day: 3, startMin: 120, endMin: 180, color: "#374151", activity: "Lecture", topic: "Essay Writing: Introductions" },
@@ -163,7 +152,6 @@ export const WEEK_SCHEDULE: ScheduleBlock[] = [
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 3, startMin: 450, endMin: 510, color: "#4b5563", activity: "Lab Work", topic: "Simple Experiments: Density" },
   { subject: "Music 7", section: "G7-A", room: "Music Rm", day: 3, startMin: 510, endMin: 570, color: "#d1d5db", activity: "Recitation", topic: "Note Reading Recitation" },
 
-  // Thursday
   { subject: "Math 7", section: "G7-A", room: "Rm 201", day: 4, startMin: 0, endMin: 60, color: "#1f2937", activity: "Lecture", topic: "Geometry: Angles" },
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 4, startMin: 60, endMin: 120, color: "#4b5563", activity: "Group Activity", topic: "Energy Sources Group Work" },
   { subject: "English 7", section: "G7-A", room: "Rm 204", day: 4, startMin: 120, endMin: 180, color: "#374151", activity: "Quiz", topic: "Quiz: Spelling & Vocabulary" },
@@ -173,7 +161,6 @@ export const WEEK_SCHEDULE: ScheduleBlock[] = [
   { subject: "Math 7", section: "G7-A", room: "Rm 201", day: 4, startMin: 450, endMin: 510, color: "#1f2937", activity: "Hands-on", topic: "Measuring Angles Activity" },
   { subject: "Arts 7", section: "G7-A", room: "Rm 210", day: 4, startMin: 510, endMin: 570, color: "#9ca3af", activity: "Presentation", topic: "Art Portfolio Sharing" },
 
-  // Friday
   { subject: "English 7", section: "G7-A", room: "Rm 204", day: 5, startMin: 0, endMin: 60, color: "#374151", activity: "Review", topic: "Weekly Grammar Review" },
   { subject: "Science 7", section: "G7-A", room: "Science Lab", day: 5, startMin: 60, endMin: 120, color: "#4b5563", activity: "Quiz", topic: "Quiz: Cells & Organelles" },
   { subject: "Math 7", section: "G7-A", room: "Rm 201", day: 5, startMin: 120, endMin: 180, color: "#1f2937", activity: "Lecture", topic: "Word Problems" },

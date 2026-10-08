@@ -63,9 +63,6 @@ function formatDateTime(iso: string): string {
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${d.toTimeString().slice(0, 5)}`;
 }
 
-/* Read-only tracking card: where the referred case stands — status and type
-   badges, the filing reason in sentence form, and the case history as a
-   vertical stepper with one friendly sentence per step. */
 export function ReferralTrackDialog({
   referral,
   onClose,
@@ -73,12 +70,8 @@ export function ReferralTrackDialog({
   referral: TrackableReferral | null;
   onClose: () => void;
 }) {
-  // The history list hides its scrollbar — the shared hint surfaces only
-  // while there is more below.
   const listRef = React.useRef<HTMLOListElement | null>(null);
   const isAdmTrack = referral?.track === "adm";
-  // Same shared tracker input as the adm-cases rail — one output on both
-  // pages. The referral stays the source of truth for filing identity.
   const trackInput: TrackerCaseInput | null =
     referral && isAdmTrack
       ? {

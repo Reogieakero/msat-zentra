@@ -33,9 +33,7 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { allowed } = useRoleGuard(["guidance_counselor"]);
-  // Cross-user sync: another counselor's decision invalidates this desk's
-  // lists without manual refresh. Single channel, cleaned up on unmount.
-  // Only subscribe once the role check passes.
+
   useGuidanceRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = React.useState("");
@@ -43,11 +41,9 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
-    // Terminate the server refresh session (clears the httpOnly cookie) —
-    // best-effort; the local wipe below runs regardless.
+
     void logout();
-    // Drop all cached queries so the next account on this device never sees
-    // the previous counselor's student data (QueryClient outlives SPA logout).
+
     queryClient.clear();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
@@ -55,8 +51,6 @@ function GuidanceShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  // Block sensitive desk content until the role check passes (see nurse
-  // shell — backend stays authoritative).
   if (!allowed) {
     return (
       <div className={styles.wrapper}>

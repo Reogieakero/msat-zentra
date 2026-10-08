@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { apiClient } from "@/lib/api/client";
@@ -10,9 +9,6 @@ import type { RiskBoardData, RiskLevelKey } from "@/services/principal/risk.type
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./RiskLevelDonutCard.module.css";
 
-// Primary-tinted donut ramp, identical in light and dark mode (same as
-// the overview risk charts). Applied through style fills so the CSS vars
-// resolve inside recharts SVG.
 const LEVEL_FILL: Record<RiskLevelKey, string> = {
   High: "var(--primary)",
   Moderate: "color-mix(in oklch, var(--primary) 60%, var(--card))",

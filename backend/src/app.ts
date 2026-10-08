@@ -45,22 +45,18 @@ export function createApp() {
     app.use(
       pinoHttp({
         logger,
-        // Health probes hit every few seconds — keep them out of the log.
+
         autoLogging: { ignore: (req) => req.url === "/health" },
       })
     );
   }
-  // Authenticated API responses carry user-/role-scoped (often sensitive)
-  // data. Never allow shared/public HTTP caching of them; freshness is
-  // managed by the database + client query invalidation instead.
+
   app.use("/api", (_req, res, next) => {
     res.setHeader("Cache-Control", "private, no-store");
     next();
   });
   app.use(express.json({ limit: "1mb" }));
 
-  // Liveness: process is up. Readiness: DB reachable — 503 when not, so
-  // orchestrators/monitors stop routing before queries start failing.
   app.get("/health", async (_req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -69,10 +65,9 @@ export function createApp() {
       res.status(503).json({ status: "degraded" });
     }
   });
-  // Brute-force guard for credential endpoints only.
+
   app.use("/api/auth", authLimiter, authRoutes);
-  // Global active School Year + Term (Login → select → session scope).
-  // Resolves headers/query into req.termScope for every data route below.
+
   app.use("/api", attachTermScope);
   app.use("/api/grades", gradesRoutes);
   app.use("/api/attendance", attendanceRoutes);

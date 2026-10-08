@@ -21,11 +21,6 @@ import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
 import styles from "./nurse-overview.module.css";
 
-/**
- * Clinic intake dialog: review first, record opening notes, book the first
- * clinic session, then accept — one atomic call so a case is never
- * half-accepted. Clinic matters only (ADM cases use the review dialog).
- */
 export function NurseStartHandlingDialog({
   row,
   open,
@@ -74,9 +69,7 @@ export function NurseStartHandlingDialog({
   }
 
   function handleStart() {
-    // Real-world intake in one atomic call: review first, record opening
-    // notes, book the first clinic session, then accept. Either everything
-    // lands or the dialog stays open with the server's message.
+
     setDialogError(null);
     acceptMutation.reset();
     let scheduledAt: string | undefined;
@@ -108,8 +101,7 @@ export function NurseStartHandlingDialog({
     <Dialog
       open
       onOpenChange={(isOpen) => {
-        // Locked while the accept is in flight — the dialog only closes on
-        // server confirmation (onSuccessExtra), never early.
+
         if (!isOpen && !acting) {
           onClose();
           setDialogError(null);

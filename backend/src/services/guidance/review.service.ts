@@ -11,21 +11,12 @@ export interface ConsultReviewInput {
   clinicSession?: { scheduledAt?: unknown; sessionType?: unknown; venue?: unknown };
 }
 
-// Guidance consultation review on an ADM-purpose referral sitting at the
-// consultation stage with no learner profile yet. Per the ADM pipeline the
-// consultation stage is owned by guidance — the counselor opens the official
-// anecdotal report and decides the next step:
-//   - endorse ("Create referral"): consultation done, case stays with the ADM
-//     coordinator for the parent meeting (status → in_progress).
-//   - reject: the filing doesn't warrant ADM, case is closed without further
-//     action (status → dismissed).
 export async function reviewConsultation(
   ctx: GuidanceContext,
   referralId: string,
   input: ConsultReviewInput,
 ) {
-  // Independent reads run in parallel — the profile count only needs
-  // the param id, not the referral row.
+
   const [referral, profileCount] = await Promise.all([
     prisma.referral.findUnique({
       where: { id: referralId },
@@ -45,9 +36,7 @@ export async function reviewConsultation(
       "Only an ADM referral awaiting consultation review can be reviewed here"
     );
   }
-  // Parity with the nurse consultation review: only pending cases can
-  // be decided — re-POSTs after a decision get a clean 400, and the
-  // atomic updateMany below makes double-submits a no-op.
+
   if (referral.status !== "pending") {
     throw new AppError(
       400,
@@ -55,8 +44,7 @@ export async function reviewConsultation(
       "This case has already been decided"
     );
   }
-  // Receiver enforcement: a case picked for the nurse or LRPC cannot be
-  // decided from the guidance queue, even if its id is known.
+
   if (
     referral.consultReviewer &&
     referral.consultReviewer !== "guidance_counselor"
@@ -67,14 +55,12 @@ export async function reviewConsultation(
       "This case was routed to another consultation reviewer"
     );
   }
-  // Prior-term cases are read-only history — consultation review stays
-  // in the active term.
+
   if (ctx.termId && referral.termId !== ctx.termId) {
     throw new AppError(404, "NOT_FOUND", "Referral not found in the active term");
   }
   const { recommendation, outcome } = input;
-  // Endorsing is blocked while a session is still upcoming — finish
-  // or cancel it first (covers booked sessions and booked follow-ups).
+
   if (outcome === "endorse") {
     const active = await prisma.counselingSession.count({
       where: { referralId: referral.id, status: "scheduled" },
@@ -87,9 +73,7 @@ export async function reviewConsultation(
       );
     }
   }
-  // Optional session booked with the endorsement (stays pending-free:
-  // the case moves on; the session is worked from the ADM review).
-  // Rejects close the case, so a session only ever rides an endorse.
+
   let sessionAt: Date | null = null;
   let sessionType = "individual";
   let sessionVenue: string | null = null;
@@ -113,9 +97,7 @@ export async function reviewConsultation(
         : null;
   }
   const note = `[ADM consult] ${recommendation.trim()}`;
-  // Atomic single-submit guard: the update only applies while the case
-  // is still pending, so a rapid double-POST can't append duplicate
-  // notes or re-audit. updateMany returns count 0 when already decided.
+
   const applied = await prisma.referral.updateMany({
     where: { id: referral.id, status: "pending" },
     data:
@@ -149,8 +131,7 @@ export async function reviewConsultation(
       oldValue: { status: referral.status },
       newValue: { status: "in_progress" },
     });
-    // Notify ADM coordinators (bounded) instead of the actor — the
-    // endorsed case now sits with them for the parent meeting.
+
     try {
       const coordinators = await prisma.user.findMany({
         where: { role: "adm_coordinator", status: "active" },
@@ -171,7 +152,7 @@ export async function reviewConsultation(
           )
       );
     } catch {
-      // Notifications are best-effort; the decision already committed.
+
     }
   } else {
     await writeAudit({
@@ -205,10 +186,7 @@ export async function reviewConsultation(
       newValue: { sessionType: created.sessionType, scheduledAt: created.scheduledAt },
     });
   }
-  // Realtime handoff (background, off the critical path): the filing
-  // adviser learns the consultation outcome, and the acting counselor
-  // gets a bell receipt (no second sileo — the success toast already
-  // showed). Best-effort — never delays the response.
+
   if (outcome === "endorse") {
     if (referral.referredBy && referral.referredBy !== ctx.userId) {
       void fanoutNotification({

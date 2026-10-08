@@ -1,20 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { fanoutNotification } from "../../lib/notify.js";
+import { GRADE_LABELS } from "../../lib/grades.js";
 
-// Shared intervention data-access: labels, cache tags, session guards and
-// formatters, intervention getters, and the adviser handoff used by every
-// follow-up mutation. Endpoint orchestration lives in
-// src/services/interventions/*.service.ts.
-
-export const GRADE_LABELS: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
+export { GRADE_LABELS };
 
 export const INTERVENTION_WRITE_TAGS = [
   "guidance",
@@ -94,8 +83,6 @@ export function formatSessionDoc(row: {
   };
 }
 
-/* "Oct 1, 2026, 9:30 AM" in Asia/Manila — same clock as the referral
-   desk fanouts so session times read identically everywhere. */
 export function formatWhen(d: Date): string {
   try {
     return new Intl.DateTimeFormat("en-PH", {
@@ -123,17 +110,13 @@ export async function getIntervention(id: string, scopeTermId?: string | null) {
     include: { assignee: { select: { id: true, fullName: true } } },
   });
   if (!row) throw new AppError(404, "NOT_FOUND", "Intervention not found");
-  // Prior-term follow-ups are read-only history — reads/writes stay in the
-  // active term so the desk never leaks cases across terms.
+
   if (scopeTermId && row.termId !== scopeTermId) {
     throw new AppError(404, "NOT_FOUND", "Intervention not found in the active term");
   }
   return row;
 }
 
-/* Section adviser behind an intervention — same resolution as the engine
-   detection handoff (student/roster section). Used so every follow-up
-   action reaches the adviser live, not just the case owner. */
 export async function adviserOf(row: {
   studentId: string | null;
   rosterId: string | null;
@@ -160,11 +143,6 @@ export async function adviserOf(row: {
   return { adviserId: null, studentName: "the student" };
 }
 
-/* Adviser handoff for every follow-up mutation (background, off the
-   critical path): the section adviser learns live via sileo + bell + badge
-   on their desk's realtime channel. Skipped when there is no adviser, the
-   adviser acted themselves, or they already got the owner fanout — never a
-   double row. Best-effort, never throws. */
 export function notifyInterventionAdviser(
   row: { id: string; studentId: string | null; rosterId: string | null; assignedTo: string | null },
   actorId: string,
@@ -182,7 +160,7 @@ export function notifyInterventionAdviser(
         sourceId: row.id,
       });
     } catch {
-      // Best-effort — the confirmed response already went out.
+
     }
   })();
 }
@@ -204,8 +182,6 @@ export async function getInterventionSession(interventionId: string, sessionId: 
   return session;
 }
 
-// Documentation unlocks once the session time arrives — upcoming sessions
-// can still be viewed but cannot take new files yet.
 export function ensureDocsUnlocked(session: { status: string; scheduledAt: Date }) {
   if (session.status === "scheduled" && session.scheduledAt.getTime() > Date.now()) {
     throw new AppError(

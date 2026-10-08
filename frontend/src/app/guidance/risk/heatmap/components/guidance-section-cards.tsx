@@ -7,11 +7,6 @@ interface GuidanceSectionCardsProps {
   rows: GuidanceRiskFactorRow[];
 }
 
-/**
- * Per-section cards — same live aggregates as the heatmap matrices, one card
- * per section: factor flags, risk levels, and follow-up state. Status-only
- * counts; detail lives in the at-risk queue and interventions pages.
- */
 export function GuidanceSectionCards({ rows }: GuidanceSectionCardsProps) {
   if (rows.length === 0) return null;
 

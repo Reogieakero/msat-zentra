@@ -1,11 +1,6 @@
-// Principal at-risk-students list shapes. Pure types only. Note: these
-// Backend* shapes overlap the risk-board projections (same endpoints,
-// slightly different fields per page) — pre-existing, kept separate.
 export type RiskLevelKey = "High" | "Moderate" | "Low";
 export type RiskFactor = "Academic" | "Attendance" | "Behavioral";
 
-// Cross-desk factor hues (same as the teacher risk table): Academic
-// amber, Attendance green, Behavioral blue.
 export const FACTOR_CHIP: Record<RiskFactor, string> = {
   Academic: "#f59e0b",
   Attendance: "#22c55e",

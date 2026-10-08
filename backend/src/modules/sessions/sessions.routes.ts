@@ -25,10 +25,6 @@ const SESSION_SELECT = {
   status: true,
 } as const;
 
-// ADM parent meeting with both linkage sides resolved for card text —
-// pre-profile referral bookings (student or roster names) and learner-profile
-// bookings. Emitted as "scheduled" so the shared due-window logic (5 minutes
-// ahead + overdue) applies unchanged.
 const ADM_MEETING_SELECT = {
   id: true,
   meetingDatetime: true,
@@ -128,12 +124,6 @@ function pushAdmMeeting(m: AdmMeetingRow, out: UpcomingSessionRow[]): void {
   }
 }
 
-// Status-only upcoming sessions connected to the signed-in user — the
-// reminder card's data source (sileo + bell stay notification-driven).
-// Times + venues only: no session notes, outcomes, reasons, or
-// documentation ever leave this endpoint, so adviser visibility is safe.
-// No term scoping: a scheduled session is inherently current, whatever
-// term filed it.
 router.get("/upcoming", requireAuth, async (req, res, next) => {
   try {
     const me = req.user!.id;
@@ -306,11 +296,6 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
         }
       }
     } else if (role === "adm_coordinator") {
-      // Unattended ADM parent meetings that belong to the coordinator's queue —
-      // same stage + routing filters as /api/adm/referrals/all so the sidebar
-      // reminder never shows a case the ADM Cases list filters out.
-      // Profile-side: only stages in the default queue view.
-      // Referral-side (early, pre-profile): ADM-directed, not pending-with-reviewer.
       const meetings = await prisma.admParentMeeting.findMany({
         where: {
           attended: false,
@@ -337,10 +322,6 @@ router.get("/upcoming", requireAuth, async (req, res, next) => {
       for (const m of meetings) pushAdmMeeting(m, out);
     }
 
-    // Invited staff see their ADM parent meetings on their own desk —
-    // desk-agnostic (an invited nurse on a guidance-reviewed case matches
-    // none of the role branches above). Skipped for the coordinator, whose
-    // branch already covers every meeting. Session-key dedup guards overlap.
     if (role !== "adm_coordinator") {
       const seen = new Set(out.map((s) => s.sessionId));
       const invited = await prisma.admMeetingInvitee.findMany({

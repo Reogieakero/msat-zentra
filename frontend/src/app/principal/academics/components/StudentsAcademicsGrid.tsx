@@ -12,9 +12,6 @@ import type { AcademicsMock } from "@/services/principal/academics";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./StudentsAcademicsGrid.module.css";
 
-/* Academics desk: a section card grid on top; the students data table
-   (teacher At-Risk Advisees pattern) renders only once a section card
-   is clicked/selected. */
 export function StudentsAcademicsGrid() {
   const { gradeMode } = useGradeMode();
   const [selectedSectionId, setSelectedSectionId] = React.useState<string | null>(null);
@@ -27,8 +24,7 @@ export function StudentsAcademicsGrid() {
     isPending,
     error: queryError,
   } = useQuery({
-    // Term-scoped shared summary (heatmaps/honor-roll select from their own
-    // keys; backend caches per term). No polling — realtime invalidates.
+
     queryKey: ["academics", termId, gradeMode],
     queryFn: async () =>
       (await apiClient.get<AcademicsMock>("/api/academics", { params: { mode: gradeMode } })).data,
@@ -53,7 +49,6 @@ export function StudentsAcademicsGrid() {
     [sections, selectedSectionId],
   );
 
-  // Reveal the table below the grid when a card is picked.
   React.useEffect(() => {
     if (!selectedSectionId || !tableRef.current) return;
     const smooth =

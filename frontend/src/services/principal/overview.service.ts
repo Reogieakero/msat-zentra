@@ -1,4 +1,3 @@
-// Principal overview dashboard fetch.
 import { apiClient } from "@/lib/api/client";
 import type { OverviewData } from "./overview.types";
 

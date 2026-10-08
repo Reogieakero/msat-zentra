@@ -1,6 +1,3 @@
-// Pure display helpers for the ADM Coordinator desk: enum labels, friendly
-// audit text, status derivation, Manila date/time, meeting readouts. No API
-// calls, no hooks — safe to import from any component.
 import type {
   AdmCaseRow,
   AdmEligibility,
@@ -21,16 +18,12 @@ export function consultReviewerLabel(value: string | null | undefined): string {
   return CONSULT_REVIEWER_LABELS[value] ?? friendlyWords(value);
 }
 
-/* Plain-words fallback for any snake_case enum that reaches the UI —
-   never show raw values like "guidance_counselor" to users. */
 export function friendlyWords(value: string): string {
   const words = value.replace(/_/g, " ").trim();
   if (!words) return value;
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/* Friendly audit action labels for the case history timeline. Falls back
-   to plain words so raw action types never leak into the UI. */
 const HISTORY_ACTION_LABELS: Record<string, string> = {
   anecdotal_edit: "Anecdotal record",
   referral_status_change: "Referral update",
@@ -63,14 +56,9 @@ const ROLE_TOKEN_LABELS: Record<string, string> = {
   lrpc: "LRPC",
 };
 
-/* Plain-words audit reasons for the case history timeline. The stored
-   audit text uses backend vocabulary ("Referred to adm_coordinator",
-   "ADM stage advanced to meeting_parents") — this rewrites the known
-   patterns so users read natural language instead. */
 export function friendlyReason(reason: string | null, actionType: string): string {
   if (!reason) return friendlyActionType(actionType);
-  // "Referred to adm_coordinator (consult reviewer: guidance_counselor)"
-  // → "Anecdotal referred for the ADM case — Guidance Counselor review"
+
   const referred = reason.match(/^Referred to (\S+?)(?: \(consult reviewer: ([^)]+)\))?$/);
   if (referred) {
     const target = referred[1];
@@ -83,10 +71,10 @@ export function friendlyReason(reason: string | null, actionType: string): strin
       ? `${base} — ${CONSULT_REVIEWER_LABELS[reviewer] ?? friendlyWords(reviewer)} review`
       : base;
   }
-  // "ADM stage advanced to meeting_parents" → friendly stage name
+
   const advanced = reason.match(/^ADM stage advanced to (\w+)$/);
   if (advanced) return `ADM stage advanced to ${stageLabel(advanced[1])}`;
-  // Generic fallback: swap any leftover role tokens for proper names.
+
   let text = reason;
   for (const [token, label] of Object.entries(ROLE_TOKEN_LABELS)) {
     text = text.split(token).join(label);
@@ -184,14 +172,6 @@ function parseActionTime(value: string | null | undefined): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
-/* Latest-action fallback — guarantees the Latest action column reads the
-   most recent known event for EVERY row, whatever the status (approved,
-   cancelled, resolved, anything). Audit data wins whenever present —
-   callers check lastActionType first and only call this when it is
-   missing. Otherwise the latest timestamp among the row's own fields
-   supplies a plain-words label (same status-only vocabulary as the
-   timeline — never clinical detail). Null only when the row carries no
-   usable timestamps at all, in which case the cell keeps "—". */
 export function latestActionFallback(
   row: Pick<
     AdmCaseRow,
@@ -219,8 +199,6 @@ export function latestActionFallback(
   return { label: winner.label, at: winner.at };
 }
 
-/* Referral-status badge variant — same vocabulary as the nurse/guidance
-   alerts queues so every surface agrees. */
 export function referralStatusVariant(
   status: string | undefined,
 ): "amber" | "default" | "secondary" | "outline" | "destructive" | "success" {
@@ -259,9 +237,6 @@ export function venueLabel(venue: string): string {
   return venue === "home" ? "Home visit" : "In school";
 }
 
-/* Staff-login role → attendance role for invitee checklist entries. The
-   attendance set has no plain "adviser", so section advisers (adviser or
-   subject_teacher logins) file as teachers. */
 const INVITEE_ATTENDEE_ROLES: Record<string, MeetingAttendeeRole> = {
   guidance_counselor: "guidance_counselor",
   nurse: "nurse",
@@ -298,8 +273,6 @@ const ATTENDEE_ROLES = new Set<string>(
   Object.keys(MEETING_ATTENDEE_ROLE_LABELS),
 );
 
-/* Defensive parse — the column is schemaless JSON, so coerce anything
-   unexpected into a clean list instead of crashing the card. */
 export function parseMeetingAttendees(value: unknown): MeetingAttendee[] {
   if (!Array.isArray(value)) return [];
   const out: MeetingAttendee[] = [];
@@ -325,10 +298,6 @@ export function attendeeLabel(a: MeetingAttendee): string {
   return `${a.name} · ${MEETING_ATTENDEE_ROLE_LABELS[a.role]}`;
 }
 
-/* System-generated attendance logbook ref — a numeric code, stable per
-   meeting: <Manila YYYYMMDD>-<4 digits hashed from the meeting id>,
-   e.g. 20260924-4821. Deterministic so reopening the dialog never mints
-   a duplicate. */
 export function generateLogbookRef(
   meetingDatetime: string,
   meetingId: string,
@@ -340,10 +309,6 @@ export function generateLogbookRef(
   return `${date}-${`${hash}`.padStart(4, "0").slice(-4)}`;
 }
 
-/* Meeting readouts in Philippine time. Bookings are stored as UTC ISO
-   strings, so slicing the raw string shows the UTC hour (e.g. an 8am
-   Manila booking renders as the small hours). Always format through
-   Asia/Manila — the same zone the backend uses for official forms. */
 const MANILA_TZ = "Asia/Manila";
 
 export function formatManilaDate(iso: string): string {
@@ -357,8 +322,6 @@ export function formatManilaDate(iso: string): string {
   }).format(d);
 }
 
-/* Formal long date for display ("Sep 29, 2026") — sheet lines, table date
-   cells, and details facts. Falls back to the raw YYYY-MM-DD slice. */
 export function formatManilaDateLong(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return iso.slice(0, 10);
@@ -381,8 +344,6 @@ export function formatManilaTime(iso: string): string {
   }).format(d);
 }
 
-/* "Parent meeting — Booked on 2026-09-25 at 08:00 AM · In school" — the
-   full hover readout: meeting type + status + Manila schedule + venue. */
 export function meetingTooltip(
   meeting: { datetime: string; venue: string; attended: boolean },
 ): string {
@@ -394,11 +355,6 @@ const ENDORSED_PREFIX = "[ADM endorsed]";
 const CONSULT_PREFIX = "[ADM consult]";
 const FORM_PART_KEYS = ["Concerns:", "Details:", "Actions taken:", "Follow-up:"];
 
-/* Endorsement recommendation filed by the desk that sent the case to the
-   ADM coordinator (nurse or guidance counselor). Prefers the latest
-   `[ADM endorsed] <recommendation> | <form parts>` line, falling back to
-   the legacy `[ADM consult] <recommendation>` line. Null when the case
-   came straight from the adviser with no consultation review. */
 export function endorsementRecommendation(
   notes: string | null | undefined,
 ): string | null {
@@ -412,9 +368,7 @@ export function endorsementRecommendation(
     .find((l) => l.startsWith(ENDORSED_PREFIX));
   if (endorsed) {
     const body = endorsed.slice(ENDORSED_PREFIX.length).trim();
-    // The recommendation leads; the GCForm-03 answers follow as
-    // " | "-joined parts starting at a known keyword. A recommendation
-    // containing " | " rejoins, so only cut at a keyword boundary.
+
     const segments = body.split(" | ").map((s) => s.trim());
     const kept: string[] = [];
     for (const seg of segments) {

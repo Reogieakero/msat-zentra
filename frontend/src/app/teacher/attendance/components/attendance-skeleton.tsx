@@ -8,9 +8,6 @@ import skel from "./attendance-skeleton.module.css";
 const RAIL_SKELETON_ROWS = 10;
 const SHEET_SKELETON_ROWS = 8;
 
-/* Roster-rail placeholders — same .summary / .list / .skelItem structure as
-   the loaded rail, including the attendance-rate and status-dot slots real
-   rows render. The search input stays live above the list. */
 export function RosterRailSummarySkeleton() {
   return (
     <div className={railStyles.summary} aria-hidden="true">
@@ -35,10 +32,6 @@ export function RosterRailListSkeleton({ rows = RAIL_SKELETON_ROWS }: { rows?: n
   );
 }
 
-/* Sheet-row placeholders — same .rows / .row / .identity / .segTabs
-   structure as loaded rows, with per-status segment widths matching the
-   real Present / Absent / Late / Excused buttons. Header, footer, and
-   search stay live above and below this. */
 export function SheetRowsSkeleton({ rows = SHEET_SKELETON_ROWS }: { rows?: number }) {
   return (
     <ul className={sheetStyles.rows} aria-busy="true" aria-label="Loading roster">

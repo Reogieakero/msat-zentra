@@ -1,6 +1,3 @@
-// Advisee academic-detail fetch + display helper. Note: `humanize` here
-// duplicates the advisory twin verbatim — kept local to avoid
-// cross-service coupling.
 import { apiClient } from "@/lib/api/client";
 import type { StudentAcademic } from "./adviseeAcademic.types";
 

@@ -39,11 +39,6 @@ type BarShapeProps = {
   payload?: { moderate?: number };
 };
 
-/* High segment of the stacked section bars: square on the left (axis /
-   stack junction), rounded top-right + bottom-right only when it is the
-   visible bar end — i.e. the row stacks no moderate segment after it.
-   The moderate segment keeps radius={[0, 4, 4, 0]}, so the bar's right
-   end is always rounded and the junction never is. */
 function HighBarShape(props: BarShapeProps) {
   const { x = 0, y = 0, width = 0, height = 0, fill, payload } = props;
   if (width <= 0 || height <= 0) return null;
@@ -70,7 +65,7 @@ function HighBarShape(props: BarShapeProps) {
 interface GuidanceOverviewCaseloadChartsProps {
   referralsByType: GuidanceReferralTypeRow[];
   sectionHeat: GuidanceSectionHeatRow[];
-  /** Saved settings hex — wins over the probed runtime palette. */
+
   primary?: string | null;
 }
 
@@ -87,8 +82,7 @@ export function GuidanceOverviewCaseloadCharts({
   sectionHeat,
   primary,
 }: GuidanceOverviewCaseloadChartsProps) {
-  // Live primary-ink steps — ADM/type donut and stacked section bars wear
-  // the counselor's palette instead of fixed chart hues.
+
   const scale = usePrimaryScale(2, primary);
   const TYPE_COLORS: Record<string, string> = {
     ADM: scale[0],

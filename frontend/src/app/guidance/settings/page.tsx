@@ -15,8 +15,6 @@ import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
 function getErrorMessage(err: unknown, fallback: string): string {
-  // The backend envelopes errors as { error: { code, message } } — read that
-  // first so users see the real reason instead of axios's raw status text.
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
   if (typeof message === "string" && message) return message;

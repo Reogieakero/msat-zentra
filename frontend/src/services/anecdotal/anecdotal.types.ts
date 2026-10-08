@@ -1,5 +1,3 @@
-// Shared shapes for filing anecdotal records (teacher filing chat +
-// Bama chat flow). Pure types plus the category/tier vocabulary consts.
 export type AnecdotalCategory =
   | "behavioral"
   | "bullying"
@@ -59,13 +57,11 @@ export interface AnecdotalPayload {
   confidentialityLevel: AnecdotalTier;
 }
 
-/** Backend returns the created row (including its id) on POST /api/anecdotal. */
 export interface CreatedAnecdotalRecord extends AnecdotalPayload {
   id: string;
   folderId: string | null;
 }
 
-/** Filed-record card shown by the filing chat engine. */
 export interface FiledDetail {
   recordId: string;
   folderId?: string | null;
@@ -83,7 +79,6 @@ export interface FiledDetail {
   filedOn: string;
 }
 
-/** Pre-filing review card (no record id exists yet). */
 export interface PreviewDetail {
   studentName: string;
   lrn: string;
@@ -99,7 +94,6 @@ export interface PreviewDetail {
   filedOn: string;
 }
 
-/** One chat-engine message. Plain data only — persisted per conversation. */
 export interface ChatMessage {
   id: number;
   from: "assistant" | "user";

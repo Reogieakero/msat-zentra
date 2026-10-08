@@ -33,8 +33,6 @@ export interface BellNotice {
   createdAt: string;
 }
 
-// The dropdown never scrolls: only the latest few show, anything beyond
-// opens the "View all" overlay instead.
 const VISIBLE_COUNT = 5;
 
 function bellApiErrorMessage(err: unknown, fallback: string): string {
@@ -53,22 +51,16 @@ async function fetchBellNotices(signal?: AbortSignal): Promise<BellNotice[]> {
 }
 
 interface NotificationsBellProps {
-  /** React Query key backing the inbox (e.g. ["teacher-notifications"]). */
+
   queryKey: string[];
-  /** Every key invalidated after a read (defaults to [queryKey]). */
+
   refreshKeys?: string[][];
-  /** Role-scoped deep link for an item (schedule verdict → section page). */
+
   resolveTarget: (n: BellNotice) => BellNotificationTarget;
-  /** Role-scoped inbox title per item. Defaults to the prettified type
-      ("Referral Status Change") — pass a mapper for specific titles that
-      name the event instead of the generic type. */
+
   titleFor?: (n: BellNotice) => string;
 }
 
-/* Shared notification bell — one icon, badge, dropdown, and view-all
-   overlay used by the teacher and principal desks. Missed sileo toasts stay
-   here with an unread badge; realtime invalidation keeps the count live
-   without manual refresh. */
 export function NotificationsBell({ queryKey, refreshKeys, resolveTarget, titleFor }: NotificationsBellProps) {
   const titleOf = titleFor ?? ((n: BellNotice) => prettifyNotificationType(n.type));
   const router = useRouter();

@@ -22,13 +22,6 @@ router.get(
   }
 );
 
-// Staff directory for parent-meeting invites — active guidance counselors,
-// nurses, and advisers the coordinator can invite by name.
-// Status-only directory: id, name, role. No student data.
-// The adviser group is scoped to the case: pass referralId (pre-profile) or
-// profileId and only that student's section adviser is listed — the whole
-// adviser roster never crowds the picker. Without a case context, all active
-// advisers are returned (fallback).
 router.get(
   "/staff",
   requireAuth,
@@ -50,7 +43,6 @@ router.get(
   }
 );
 
-// GET /api/adm/settings/profile — own display name, photo, palette.
 router.get(
   "/settings/profile",
   requireAuth,
@@ -64,9 +56,6 @@ router.get(
   }
 );
 
-// PATCH /api/adm/settings/profile — display name + workspace palette.
-// Mirrors the nurse/guidance endpoints; adviser / master-teacher fields are
-// intentionally absent for the coordinator desk.
 router.patch(
   "/settings/profile",
   requireAuth,
@@ -95,8 +84,6 @@ router.patch(
   }
 );
 
-// POST /api/adm/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

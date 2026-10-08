@@ -25,9 +25,6 @@ import {
 
 const router = Router();
 
-// Clinic documentation uploads: photos filed on a session (wound, slip,
-// lab result…). Images only, 5 MB each, max 5 per request — filing is
-// optional before closing a clinic case, so uploads never gate resolve.
 const clinicUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 5 },
@@ -148,10 +145,6 @@ router.post(
   }
 );
 
-// Permanently remove a cancelled clinic/counseling session (its filed
-// documentation goes with it via cascade). Only cancelled sessions can be
-// deleted — scheduled sessions must be finished or cancelled first, and
-// completed sessions stay as the case history.
 router.delete(
   "/:id/sessions/:sessionId",
   requireAuth,
@@ -167,13 +160,6 @@ router.delete(
   }
 );
 
-// Clinic documentation on one session: list / upload / remove image
-// attachments. Filing is optional before closing a clinic case — these
-// endpoints never gate resolve, they only build the evidence trail.
-// Uploads are allowed on open cases (any session status except when the
-// case itself is closed) so the nurse can file a photo after marking a
-// session done — but a still-upcoming session unlocks only once its
-// scheduled time arrives.
 router.get(
   "/:id/sessions/:sessionId/attachments",
   requireAuth,

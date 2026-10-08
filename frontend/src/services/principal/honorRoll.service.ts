@@ -1,5 +1,3 @@
-// Live-general-average honor-roll fetch + award-list derivation for the
-// Principal Honor Roll & Awards page.
 import { apiClient } from "@/lib/api/client";
 import { descriptorBand } from "./academics";
 import type {
@@ -29,11 +27,6 @@ function codeFor(subject: string): string {
   return SUBJECT_CODES[subject] ?? subject.slice(0, 4).toUpperCase();
 }
 
-/**
- * Build the award list from the live honor-roll payload: qualifiers only
- * (live general average >= 90, no subject below 80, not High risk).
- * Sorted by general average, highest first.
- */
 export function deriveHonorRoll(payload: LiveHonorPayload): {
   candidates: HonorRollCandidate[];
   termLabel: string;

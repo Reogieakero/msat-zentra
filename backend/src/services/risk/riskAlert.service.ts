@@ -7,9 +7,6 @@ export interface AlertGuidanceResult {
   message?: string;
 }
 
-// Principal: alert guidance counselors about an at-risk student with no
-// intervention action yet. Read-only tracking otherwise — the principal never
-// edits interventions. Fans out to every active guidance counselor.
 export async function alertGuidance(
   ctx: { userId: string },
   rawId: string,
@@ -65,7 +62,6 @@ export async function alertGuidance(
     `Principal flagged ${name}${lrn ? ` (LRN ${lrn})` : ""}${section ? ` of ${section}` : ""} — no intervention action yet.` +
     (trimmedNote ? ` Note: ${trimmedNote}` : "");
 
-  // Best-effort fanout after responding (never delays the response).
   void fanoutToRole("guidance_counselor", {
     sourceTable: "interventions",
     action: "principal_alert",

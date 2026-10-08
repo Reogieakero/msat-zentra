@@ -8,19 +8,12 @@ import {
 } from "../../services/grading.js";
 import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 
-// Shared gradebook data-access: labels, ownership gates, and the
-// finals/risk refresh that follows every gradebook mutation. Endpoint
-// orchestration lives in src/services/teacher/grading.service.ts.
-
 export const COMPONENT_LABELS: Record<string, string> = {
   WRITTEN_WORK: "WW",
   PERFORMANCE_TASK: "PT",
   EXAM: "E",
 };
 
-// Recompute finals for the given students (or every holder when keys are
-// omitted) and refresh their risk rows. Keeps every downstream view —
-// workspace finals, academic records, pipelines — live on each mutation.
 export async function refreshFinals(
   subjectId: string,
   termId: string,
@@ -39,13 +32,10 @@ export async function refreshFinals(
 }
 
 export async function invalidateGradingCaches(): Promise<void> {
-  // Recomputes above can open guidance interventions + risk levels.
+
   await invalidateTags(["teacher", "registrar", "academics", "overview", "principal", "risk", "guidance"]);
 }
 
-// Grade components are school-wide per (subject, term), so ownership for
-// component/assessment management means: the caller must hold at least one
-// TeacherSubjectAssignment for that subject + term (any section).
 export async function assertSubjectAccess(teacherId: string, subjectId: string, termId: string) {
   const assignment = await prisma.teacherSubjectAssignment.findFirst({
     where: { teacherId, subjectId, termId },
@@ -57,10 +47,6 @@ export async function assertSubjectAccess(teacherId: string, subjectId: string, 
   return assignment;
 }
 
-// A class is one TeacherSubjectAssignment row (subject × section × term) that
-// must belong to the caller — 404 otherwise (uniform, no probing). Linked
-// timetable classes address it as `subjectId|sectionId`; those resolve to the
-// caller's assignment row for the given term.
 export async function assertAssignment(teacherId: string, assignmentId: string, termId: string) {
   const include = {
     subject: { select: { id: true, code: true, name: true, gradeLevel: true, category: true } },
@@ -83,13 +69,7 @@ export async function assertAssignment(teacherId: string, assignmentId: string, 
       include,
     });
     if (assignment) return assignment;
-    // Code-linked teachers (My Classes / Attendance link code) often have no
-    // assignment row — their classes come from committed timetable slots
-    // attached to their linked teacher-list name. Resolve the same
-    // (subject, section) through that link so the workspace opens instead of
-    // 404ing. The composite id is kept as `id` so every later call under
-    // /classes/:assignmentId (weights, presets, assessments) resolves the
-    // same way; grade components are keyed by subject + term, shared.
+
     const linked = await prisma.sectionTimetableEntry.findFirst({
       where: {
         termId,

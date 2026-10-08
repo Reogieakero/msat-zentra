@@ -4,10 +4,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./NurseReferralsSkeleton.module.css";
 
-/* Loading state that mirrors the referrals display: one section card
-   per case (identity header + title + blocks + footer actions), the pager
-   (paginated feeds only), and the action-menu card — so nothing jumps when
-   the fetch lands. */
 export function NurseReferralsSkeleton({
   entries = 5,
   sideRows = 5,

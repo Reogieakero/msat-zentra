@@ -1,13 +1,5 @@
 import type { ChatMessage } from "@/services/anecdotal/anecdotal.types";
 
-/**
- * Multi-conversation history for the anecdotal filing chat. Every new
- * anecdotal entry is filed inside its own conversation; past engine/teacher
- * exchanges are kept per conversation and can be grouped into folders.
- * Persisted in localStorage (UI sessions only — filed records live in the
- * database, so history is a convenience layer, never a source of truth).
- */
-
 export const CONVERSATIONS_KEY = "zentra.anecdotal.conversations.v1";
 const LEGACY_KEY = "zentra.anecdotal.chat";
 
@@ -115,9 +107,9 @@ export function loadConversationStore(): ConversationStore {
       return { conversations, activeId };
     }
   } catch {
-    // Corrupt store — fall through to legacy migration / fresh start.
+
   }
-  // One-time migration of the old single-thread history.
+
   const legacy = readLegacyMessages();
   if (legacy.length > 0) {
     const now = Date.now();
@@ -136,7 +128,7 @@ export function loadConversationStore(): ConversationStore {
       window.localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(store));
       window.localStorage.removeItem(LEGACY_KEY);
     } catch {
-      // Storage unavailable — history simply won't persist.
+
     }
     return store;
   }
@@ -157,11 +149,10 @@ export function saveConversationStore(store: ConversationStore): void {
       })
     );
   } catch {
-    // Storage full or unavailable — history simply won't persist.
+
   }
 }
 
-/** Largest persisted message id, so fresh ids never collide after reload. */
 export function maxMessageId(conversations: StoredConversation[]): number {
   let max = 0;
   for (const c of conversations) {

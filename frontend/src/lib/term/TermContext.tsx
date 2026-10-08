@@ -48,16 +48,13 @@ export function writeStoredTerm(term: ActiveTerm) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(term));
   } catch {
-    /* ignore storage failures */
   }
 }
 
-/** Set by LoginForm on every successful sign-in so the picker shows once per login. */
 export function requestTermPrompt() {
   try {
     window.localStorage.setItem(TERM_PROMPT_KEY, "1");
   } catch {
-    /* ignore */
   }
 }
 
@@ -65,7 +62,6 @@ export function clearTermPrompt() {
   try {
     window.localStorage.removeItem(TERM_PROMPT_KEY);
   } catch {
-    /* ignore */
   }
 }
 
@@ -76,7 +72,6 @@ async function fetchSchoolYears(): Promise<SchoolYearOption[]> {
   return data.schoolYears ?? [];
 }
 
-/** Default term: today inside a term > active year Term 1 > first available. */
 export function resolveDefaultTerm(years: SchoolYearOption[]): ActiveTerm | null {
   if (years.length === 0) return null;
   const now = Date.now();
@@ -101,12 +96,8 @@ interface TermContextValue {
   isLoading: boolean;
   isError: boolean;
   activeTerm: ActiveTerm | null;
-  /** True once the persisted term has been read from storage (mount effect
-   *  ran). Gate term-scoped queries on this to avoid firing once with an
-   *  empty key and refetching after hydration. */
   termReady: boolean;
   setActiveTerm: (term: ActiveTerm) => void;
-  /** True when the post-login picker must be shown (set on every login). */
   promptRequired: boolean;
   setPromptRequired: (required: boolean) => void;
 }
@@ -119,26 +110,20 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
   const [promptRequired, setPromptRequiredState] = React.useState(false);
   const [ready, setReady] = React.useState(false);
 
-  // Hydrate persisted selection + login prompt flag on mount only.
   React.useEffect(() => {
     setActiveTermState(readStoredTerm());
     try {
       setPromptRequiredState(window.localStorage.getItem(TERM_PROMPT_KEY) === "1");
     } catch {
-      /* ignore */
     }
     setReady(true);
   }, []);
 
-  // Re-sync the prompt flag when it changes outside React state (direct
-  // localStorage writes, other tabs, OAuth callbacks) so the picker shows
-  // on every login without exception.
   React.useEffect(() => {
     const sync = () => {
       try {
         setPromptRequiredState(window.localStorage.getItem(TERM_PROMPT_KEY) === "1");
       } catch {
-        /* ignore */
       }
     };
     window.addEventListener("storage", sync);
@@ -162,10 +147,6 @@ export function TermProvider({ children }: { children: React.ReactNode }) {
   const setActiveTerm = React.useCallback(
     (term: ActiveTerm) => {
       setActiveTermState((prev) => {
-        // Switching scope refetches term-scoped data — but NOT the
-        // term-picker itself (it lists all years/terms, scope-independent).
-        // Term-scoped keys carry the termId, so stale-term rows are never
-        // reused; invalidation just hurries the refetch.
         if (prev?.termId !== term.termId || prev?.schoolYearId !== term.schoolYearId) {
           void queryClient.invalidateQueries({
             predicate: (query) =>

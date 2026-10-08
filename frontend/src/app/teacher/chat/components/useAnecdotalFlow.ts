@@ -103,7 +103,6 @@ function splitTimeParts(timeInput: string): { hour: string; minute: string; ampm
   };
 }
 
-/** Guided anecdotal filing engine for the active Bama chat. */
 export function useAnecdotalFlow({
   active,
   activeId,
@@ -119,7 +118,7 @@ export function useAnecdotalFlow({
   const [category, setCategory] = useState<AnecdotalCategory | null>(null);
   const [tier, setTier] = useState<AnecdotalTier | null>(null);
   const [textQuestion, setTextQuestion] = useState<TextQuestion | null>(null);
-  // Value never read — the setter is used by resetFlow only.
+
   const [, setTextInput] = useState("");
   const [incident, setIncident] = useState("");
   const [location, setLocation] = useState("");
@@ -145,8 +144,6 @@ export function useAnecdotalFlow({
   const progressTimer = useRef<number | null>(null);
   const progressValue = useRef(0);
 
-  // Post-mount store hydration — reading localStorage during render would
-  // hydrate different HTML than the server sent.
   /* eslint-disable react-hooks/set-state-in-effect -- client-only store hydration */
   useEffect(() => {
     setFlows(loadFlowStore());
@@ -190,9 +187,6 @@ export function useAnecdotalFlow({
     });
   }
 
-  // Restore filing progress when the active chat changes. The snapshot
-  // restore is inherently effect-driven (it reacts to chat switches, not
-  // render inputs).
   /* eslint-disable react-hooks/set-state-in-effect -- chat-switch snapshot restore + progress persistence */
   useEffect(() => {
     if (!hydrated) return;
@@ -220,7 +214,6 @@ export function useAnecdotalFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, hydrated]);
 
-  // Persist filing progress (covered by the block disable above).
   useEffect(() => {
     if (!hydrated || !activeId || active?.type !== "anecdotal") return;
     const snap = {
@@ -242,10 +235,7 @@ export function useAnecdotalFlow({
     queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchAnecdotalOptions,
   });
-  // Advisory-only picker: when the login teacher advises sections, the
-  // student list narrows to those advisees (never the subject-handled
-  // union). Non-advisers (roster error/empty) keep the full handled list
-  // so the flow still works for subject teachers.
+
   const session = useSession();
   const advisoryQuery = useQuery({
     queryKey: advisoryRosterKey(session?.sub ?? null, termKey),
@@ -307,7 +297,6 @@ export function useAnecdotalFlow({
     );
   }
 
-  // ---- Guided flow: student → class → category → tier → date → answers ----
   function handleStudentPick(id: string) {
     const picked = students.find((s) => s.id === id) ?? null;
     if (!picked || studentId !== "") return;
@@ -433,8 +422,7 @@ export function useAnecdotalFlow({
     if (!hydrated || !active || active.type !== "anecdotal" || active.filed) return;
     if (textQuestion !== null || observationDate === null || incident !== "") return;
     if (active.messages.some((m) => m.from === "assistant" && m.text === TEXT_QUESTION_LABELS.incident)) return;
-    // Only fire for the conversation that actually answered the date —
-    // never leak the step into a freshly switched thread.
+
     if (!observationDate || !active.messages.some((m) => m.from === "user" && m.text.includes(observationDate))) return;
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setTextQuestion("incident");
@@ -447,8 +435,7 @@ export function useAnecdotalFlow({
   useEffect(() => {
     if (!hydrated || !textQuestion || !active || active.type !== "anecdotal" || active.filed) return;
     if (active.messages.some((m) => m.from === "assistant" && m.text === TEXT_QUESTION_LABELS[textQuestion])) return;
-    // The incident answer must live in this conversation's messages —
-    // never leak the next step into a freshly switched thread.
+
     if (incident === "" || !active.messages.some((m) => m.from === "user" && m.text === incident)) return;
     pushToActive([
       { id: nextMessageId(), from: "assistant", text: TEXT_QUESTION_LABELS[textQuestion], at: Date.now() },
@@ -500,8 +487,7 @@ export function useAnecdotalFlow({
 
   async function fileRecord() {
     if (filing || active?.filed) return;
-    // Name exactly what's missing instead of failing silently — same as
-    // the anecdotal page.
+
     if (!student) {
       setFlowError("Pick a student first.");
       return;
@@ -595,8 +581,7 @@ export function useAnecdotalFlow({
           return next;
         });
       }
-      // Teacher lists subscribe under these keys — refresh all so the new
-      // record appears in the repo, folders, and referral composer.
+
       queryClient.invalidateQueries({ queryKey: ["anecdotal"] });
       queryClient.invalidateQueries({ queryKey: ["anecdotal-mine"] });
       queryClient.invalidateQueries({ queryKey: ["referableAnecdotal"] });
@@ -622,7 +607,7 @@ export function useAnecdotalFlow({
 
   function handleAnecSend() {
     if (filing || !active || active.filed) return;
-    // Answering a text question.
+
     if (textQuestion !== null) {
       const value = draft.trim();
       if (!value || !student) return;
@@ -636,7 +621,7 @@ export function useAnecdotalFlow({
       setTextQuestion(NEXT_QUESTION[textQuestion]);
       return;
     }
-    // Nothing to answer — file when everything is ready.
+
     if (canFile) void fileRecord();
   }
 

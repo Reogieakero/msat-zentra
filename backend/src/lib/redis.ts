@@ -9,11 +9,6 @@ function isConfigured(): boolean {
   return Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
 }
 
-/**
- * Lazily-initialized Upstash Redis REST client (TLS is handled by the REST
- * endpoint). Returns null when caching is disabled or unconfigured so callers
- * can fall back to live data without crashing.
- */
 export function getRedis(): Redis | null {
   if (!getEnv().CACHE_ENABLED) return null;
   if (client) return client;

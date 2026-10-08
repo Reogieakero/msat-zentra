@@ -1,6 +1,3 @@
-// Principal academics board: section/grade shapes, DO 15 descriptor
-// bands, honor-roll preview shapes, subject vocabulary. Pure — no API
-// calls (the board reads the same summary the page assembles).
 export type RiskLevel = "High" | "Moderate" | "Low";
 export type Remarks = "Passed" | "Failed";
 export type SubjectStatus = "On Track" | "At Risk" | "Failing";
@@ -42,7 +39,6 @@ export interface PassFailByGrade {
   failed: number;
 }
 
-// DO 15, s. 2026 descriptor bands for numeric grades (Key Stages 2-4).
 export type DescriptorBand =
   | "Advancing"
   | "Benchmarking"
@@ -82,10 +78,8 @@ export interface AcademicsSummary {
   potentialHonorRoll: PotentialHonorCandidate[];
 }
 
-/** Alias retained for the academics page response type. */
 export type AcademicsMock = AcademicsSummary;
 
-/** Subject name → short display code used in compact student cards. */
 export const SUBJECT_CODES: Record<string, string> = {
   English: "ENG",
   Mathematics: "MATH",
@@ -98,7 +92,6 @@ export const SUBJECT_CODES: Record<string, string> = {
   ICT: "ICT",
 };
 
-/** Fallback subject column order when no section has been selected yet. */
 export const subjectColumns: string[] = [
   "English",
   "Mathematics",

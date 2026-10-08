@@ -38,7 +38,6 @@ function ctxOf(req: { user?: { id: string; role: string } }) {
   };
 }
 
-// Registrar overview (G11–G12 authority only, band-resolved per caller).
 router.get(
   "/overview",
   requireAuth,
@@ -56,9 +55,6 @@ router.get(
   }
 );
 
-// Registrar final-grade viewer. View-only role in the grade pipeline:
-// a student's grades become visible ONLY when every subject for that
-// student (in the term) has been adviser-approved.
 router.get(
   "/final-grades",
   requireAuth,
@@ -76,7 +72,6 @@ router.get(
   }
 );
 
-// Accounts breakdown per grade level + section (registrar G11–G12 band).
 router.get(
   "/account-breakdown",
   requireAuth,
@@ -96,7 +91,6 @@ router.get(
   }
 );
 
-// List adviser SF10 access requests (registrar G11–12 band only).
 router.get(
   "/adviser-access-requests",
   requireAuth,
@@ -114,8 +108,6 @@ router.get(
   }
 );
 
-// SF10 records for the advisees of a given access request. Used by the registrar
-// review modal before approving.
 router.get(
   "/adviser-access-requests/:id/records",
   requireAuth,
@@ -135,7 +127,6 @@ router.get(
   }
 );
 
-// Decide (approve or deny) an adviser SF10 access request. 409 if already decided.
 router.post(
   "/adviser-access-requests/:id/approve",
   requireAuth,
@@ -156,7 +147,7 @@ router.post(
 
 async function decideAccessRequest(req: any, res: any, next: any, approved: boolean) {
   try {
-    // Legacy id source: ?query id wins when present, else the path param.
+
     const id = String(req.query.id ?? req.params.id);
     const result = await decideAccess(ctxOf(req), {
       requestId: id,
@@ -172,7 +163,6 @@ async function decideAccessRequest(req: any, res: any, next: any, approved: bool
   }
 }
 
-// List G11–G12 students (registrar band) for the SF10 upload picker.
 router.get(
   "/students",
   requireAuth,
@@ -186,8 +176,6 @@ router.get(
   }
 );
 
-// Registrar-scoped audit trail for account approvals. Restricted to the band
-// (G11–G12). No cache: this reflects live auditor state.
 router.get(
   "/accounts-audit",
   requireAuth,
@@ -203,7 +191,6 @@ router.get(
   }
 );
 
-// GET /api/registrar/settings/profile — own display name, photo, palette.
 router.get(
   "/settings/profile",
   requireAuth,
@@ -217,7 +204,6 @@ router.get(
   }
 );
 
-// PATCH /api/registrar/settings/profile — display name + workspace palette.
 router.patch(
   "/settings/profile",
   requireAuth,
@@ -243,8 +229,6 @@ router.patch(
   }
 );
 
-// POST /api/registrar/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

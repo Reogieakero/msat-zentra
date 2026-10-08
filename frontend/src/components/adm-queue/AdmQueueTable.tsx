@@ -22,8 +22,6 @@ import {
 import styles from "./adm-queue.module.css";
 import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
 
-/* Badge color language for queue statuses — color-coded (amber/blue/green/
-   red) plus the legacy neutrals guidance still passes. */
 export type AdmQueueStatusVariant =
   | "amber"
   | "blue"
@@ -38,8 +36,6 @@ export type AdmQueueStatusVariant =
 
 export type AdmQueueRisk = "High" | "Moderate" | "Low";
 
-/* One display-ready row. Each role maps its own case shape onto this —
-   the table itself never knows about guidance or nurse rows. */
 export interface AdmQueueRowVM {
   id: string;
   lrn: string;
@@ -51,8 +47,7 @@ export interface AdmQueueRowVM {
   riskLevel: AdmQueueRisk | undefined;
   latestLabel: string;
   LatestIcon: React.ComponentType<{ className?: string }>;
-  /* ISO time of the latest action for the elapsed clock ("—"/null
-     renders "—"). */
+
   actionTime: string | null;
   dateReferred: string;
 }
@@ -65,19 +60,11 @@ function RiskBadge({ level, loading = false }: { level: AdmQueueRisk | undefined
       </span>
     );
   if (!level) return <span className={styles.noRisk}>—</span>;
-  // Shared RAG convention (same as teacher/principal desks):
-  // High red, Moderate amber, Low green.
+
   const variant = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
-/**
- * Latest referred ADM cases — one shared table list and header for the
- * guidance and nurse ADM referrals queues: LRN, Type, Case status,
- * Risk, Latest action, Time elapsed, Date referred, Row actions.
- * Roles map their rows onto the view-model and inject their own
- * action cells; dialogs and mutations stay with the callers.
- */
 export function AdmQueueTable({
   title,
   description,
@@ -100,15 +87,13 @@ export function AdmQueueTable({
   rows: AdmQueueRowVM[];
   renderActions: (id: string) => React.ReactNode;
   riskLoading?: boolean;
-  /** Cap the visible list to the latest N rows (search still matches all). */
+
   limit?: number;
-  /** Redirect on row click (keyboard-accessible). Omit for static rows. */
+
   onRowClick?: (id: string) => void;
-  /** Type-column badge text. Defaults to "ADM" (queue tables); pass null
-      to hide the Type column for non-case lists. */
+
   typeBadgeLabel?: string | null;
-  /** Glow accent card treatment. Defaults off so existing queues render
-      byte-identical. */
+
   glow?: boolean;
 }) {
   const [query, setQuery] = React.useState("");
@@ -190,7 +175,7 @@ export function AdmQueueTable({
                       onClick={
                         clickable
                           ? (e) => {
-                              // Action buttons handle their own clicks.
+
                               if ((e.target as HTMLElement).closest("button,a")) return;
                               onRowClick(row.id);
                             }

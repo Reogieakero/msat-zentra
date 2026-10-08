@@ -1,5 +1,3 @@
-// Filing flow for anecdotal records: filing options lookup + record
-// creation (POST /api/anecdotal).
 import { apiClient } from "@/lib/api/client";
 import type {
   AnecdotalOptions,

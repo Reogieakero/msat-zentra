@@ -1,8 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import { writeAudit } from "../../lib/audit.js";
-import { invalidateTags } from "../../lib/cache.js";
-import { fanoutNotification } from "../../lib/notify.js";
 import { adviserSectionsOr404 } from "../../modules/teacher/advisory.repository.js";
 import { recomputeRisk, recomputeRosterRisk } from "../risk.js";
 import {
@@ -27,7 +25,6 @@ export interface LegacyBulkInput {
   records: BulkRecord[];
 }
 
-// Legacy AM/PM path (adviser-only, frozen behavior).
 export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulkInput) {
   const { sectionId, termId, date, records } = input;
   const teacherId = ctx.userId;
@@ -35,12 +32,12 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     throw new AppError(403, "FORBIDDEN", "Legacy AM/PM attendance is adviser-only");
   }
   const legacySession: "AM" | "PM" = input.session ?? "AM";
-  // 1. The section must be one of the caller's advisory sections.
+
   const sections = await adviserSectionsOr404(teacherId);
   if (!sections.some((s) => s.id === sectionId)) {
     throw new AppError(403, "FORBIDDEN", "Section is not in your advisory");
   }
-  // Per-term verification gate: advisory sheets need this term's grant.
+
   const legacyGrant = await prisma.teacherTermGrant.findUnique({
     where: { userId_termId: { userId: teacherId, termId } },
     select: { id: true },
@@ -53,8 +50,6 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     );
   }
 
-  // 2. Date rules (Philippines calendar day): no future, no weekends,
-  //    past days locked (EOD lock — no override in v1).
   const recordDay = phDayKey(new Date(date));
   const todayKey = phDayKey(new Date());
   if (recordDay > todayKey) {
@@ -64,16 +59,13 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     throw new AppError(422, "WEEKEND", "Cannot take attendance on a weekend");
   }
   if (recordDay < todayKey) {
-    // Same-week grace: days earlier this week (Mon–Sun) stay editable;
-    // anything older is locked.
+
     if (mondayOf(recordDay) !== mondayOf(todayKey)) {
       throw new AppError(403, "PAST_LOCKED", "Days before this week are locked");
     }
   }
   const normalizedDate = new Date(`${recordDay}T00:00:00Z`);
 
-  // 3. Every student must be enrolled in the section — registered
-  // profiles, or roster enlistments (`roster:<id>`, no account needed).
   const studentIds = Array.from(new Set(records.map((r: { studentId: string }) => r.studentId)));
   const rosterIds = studentIds
     .filter((id) => id.startsWith("roster:"))
@@ -96,8 +88,6 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
   const keyOf = (studentId: string | null, rosterId: string | null) =>
     rosterId ? `roster:${rosterId}` : (studentId as string);
 
-  // 4. Previous marks (same calendar day) — notifications fire only when
-  //    a status newly becomes absent/late, never on plain resubmits.
   const previous = await prisma.attendanceRecord.findMany({
     where: {
       OR: [
@@ -113,8 +103,7 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     select: { id: true, studentId: true, rosterId: true, status: true },
   });
   const prevByStudent = new Map(previous.map((p) => [keyOf(p.studentId, p.rosterId), p]));
-  // Snapshot of pre-write statuses for the notification check below —
-  // prevByStudent gets overwritten with fresh writes in the write loop.
+
   const prevStatus = new Map(previous.map((p) => [keyOf(p.studentId, p.rosterId), p.status]));
   const names = new Map(
     (
@@ -125,10 +114,6 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     ).map((u) => [u.id, u.fullName])
   );
 
-  // Day-scoped write (not raw timestamp upsert): legacy rows may carry
-  // non-midnight timestamps, so match by calendar day to avoid stacking
-  // two rows for one student/day/session. One $transaction round-trip
-  // for the whole sheet (was: await inside for loop).
   const updateKeys: string[] = [];
   const createKeys: string[] = [];
   const writeOps: Array<Promise<unknown>> = [];
@@ -179,7 +164,7 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
   const statusByStudent = new Map(records.map((r) => [r.studentId, r.status]));
   for (const w of written) {
     const isRoster = w.studentId.startsWith("roster:");
-    // Later duplicates in the same payload see the fresh write.
+
     prevByStudent.set(w.studentId, {
       id: w.id,
       studentId: isRoster ? null : w.studentId,
@@ -188,8 +173,7 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     });
   }
   const byStudent = new Map(written.map((w) => [`${w.studentId}|${legacySession}`, w]));
-  // Parent pings queue here and flush void-after-res below so the
-  // confirmed response never waits on per-parent fan-outs.
+
   const pendingParentPings: Array<{
     userId: string;
     studentId: string;
@@ -197,14 +181,10 @@ export async function submitLegacyBulk(ctx: AttendanceContext, input: LegacyBulk
     status: string;
   }> = [];
 
-  // Risk recompute in parallel; parent links in ONE batched query
-  // (was: sequential awaits + one findMany per flagged student).
   const uniqueIds = Array.from(new Set(records.map((r) => r.studentId)));
   await Promise.all(
     uniqueIds.map((id) =>
-      // Risk + parent notifications only apply to registered profiles.
-      // Roster enlistments get the roster risk path (snapshot +
-      // auto-intervention, no parent links).
+
       id.startsWith("roster:")
         ? recomputeRosterRisk(id.slice("roster:".length), termId)
         : recomputeRisk(id, termId),
@@ -267,21 +247,11 @@ export interface SubjectBulkInput {
   records: BulkRecord[];
 }
 
-// Per-subject bulk write. Authorization is assignment-anchored:
-// - subject_teacher callers must hold TeacherSubjectAssignment
-//   { teacherId, subjectId, sectionId, termId };
-// - adviser callers must own the section AND the subject must be offered there
-//   (an assignment row exists for subject+section+term, any holder).
-// - every student must be enrolled in the section (profile or roster).
-// Duplicate prevention: unique (student|roster, subjectId, dateDay, slot).
 export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBulkInput) {
   const { sectionId, termId, subjectId, assignmentId, slot, date, records } = input;
   const teacherId = ctx.userId;
   const callerRole = ctx.role;
 
-  // 0. Per-term verification gate (auth flow per term): this term must hold
-  // a grant row for the caller. Advisory-section sheets open on any grant;
-  // code-linked sections additionally require the verified code unlock.
   const grant = await prisma.teacherTermGrant.findUnique({
     where: { userId_termId: { userId: teacherId, termId } },
     select: { via: true, attendanceVerifiedAt: true },
@@ -302,7 +272,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
     );
   }
 
-  // 1. Subject must be offered in this section+term.
   const offerings = await prisma.teacherSubjectAssignment.findMany({
     where: { subjectId, sectionId, termId },
     include: { subject: { select: { name: true, code: true } } },
@@ -312,7 +281,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   }
   const subjectLabel = offerings[0]?.subject.name ?? "the subject";
 
-  // 2. Caller authorization.
   let effectiveAssignmentId: string | null = null;
   if (callerRole === "adviser") {
     const sections = await adviserSectionsOr404(teacherId);
@@ -328,9 +296,7 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
       effectiveAssignmentId = offerings[0]!.id;
     }
   } else {
-    // subject_teacher (or any non-adviser role reaching here): must hold the
-    // assignment — or a committed timetable slot attached to their linked
-    // teacher-list code for this subject + section + term.
+
     const own = offerings.filter((o) => o.teacherId === teacherId);
     let linked = false;
     if (own.length === 0) {
@@ -360,8 +326,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
     }
   }
 
-  // 3. Date rules — identical to the legacy path (PH day, no future/weekend,
-  //    same-week grace).
   const recordDay = phDayKey(new Date(date));
   const todayKey = phDayKey(new Date());
   if (recordDay > todayKey) {
@@ -377,7 +341,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   const dayStart = new Date(`${recordDay}T00:00:00Z`);
   const dayEnd = new Date(dayStart.getTime() + 86_400_000);
 
-  // 4. Enrollment check (profile or roster, section-scoped).
   const studentIds = Array.from(new Set(records.map((r) => r.studentId)));
   const rosterIds = studentIds
     .filter((id) => id.startsWith("roster:"))
@@ -397,7 +360,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   const keyOf = (studentId: string | null, rosterId: string | null) =>
     rosterId ? `roster:${rosterId}` : (studentId as string);
 
-  // 5. Previous marks for this (subject, day, slot) — upsert, never stack.
   const previous = await prisma.attendanceRecord.findMany({
     where: {
       OR: [
@@ -421,10 +383,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
     ).map((u) => [u.id, u.fullName])
   );
 
-  // Batched write: one $transaction round-trip for the whole sheet instead
-  // of N sequential update/create round-trips (was: await inside for loop).
-  // Updates keep their order first, creates after — the flat result array
-  // follows the same order, so ids map back positionally.
   const updateKeys: string[] = [];
   const createKeys: string[] = [];
   const writeOps: Array<Promise<unknown>> = [];
@@ -458,7 +416,7 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
             sectionId,
             termId,
             date: normalizedDate,
-            session: "AM", // placeholder — session is frozen (legacy reads only)
+            session: "AM",
             status: r.status,
             recordedBy: teacherId,
             subjectId,
@@ -494,8 +452,7 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
     });
   }
   const byStudent = new Map(written.map((w) => [w.studentId, w]));
-  // Parent pings queue here and flush void-after-res below so the
-  // confirmed response never waits on per-parent fan-outs.
+
   const pendingParentPings: Array<{
     userId: string;
     studentId: string;
@@ -503,9 +460,6 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
     status: string;
   }> = [];
 
-  // Risk recompute runs in parallel (one promise per student, was: sequential
-  // await in loop). Parent links resolve with ONE batched query for all
-  // newly-flagged profiles (was: one findMany per flagged student).
   const uniqueIds = Array.from(new Set(records.map((r) => r.studentId)));
   await Promise.all(
     uniqueIds.map((id) =>

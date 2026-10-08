@@ -28,7 +28,7 @@ export default function RiskBoardStudentsPage() {
 
   const handleSelectSection = React.useCallback((section: string) => {
     setSelectedSection(section);
-    // Let the table re-render with the new filter before scrolling to it.
+
     requestAnimationFrame(() => {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       tableRef.current?.scrollIntoView({

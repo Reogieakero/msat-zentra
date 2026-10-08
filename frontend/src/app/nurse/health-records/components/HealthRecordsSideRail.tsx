@@ -15,8 +15,6 @@ function share(total: number, part: number): number {
   return Math.min(100, Math.round((part / total) * 100));
 }
 
-/* Documentation storage meter — total bytes filed plus the top students
-   by share, so the heaviest records are visible at a glance. */
 function StorageCard({ folders }: { folders: StudentHealthFolder[] }) {
   const total = folderStorageBytes(folders);
   const fileCount = folders.reduce((sum, f) => sum + f.fileCount, 0);
@@ -74,7 +72,6 @@ function StorageCard({ folders }: { folders: StudentHealthFolder[] }) {
   );
 }
 
-/* Top students by finished case count — the records needing attention. */
 function TopStudentsCard({ folders }: { folders: StudentHealthFolder[] }) {
   const top = React.useMemo(
     () =>
@@ -130,7 +127,6 @@ function TopStudentsCard({ folders }: { folders: StudentHealthFolder[] }) {
   );
 }
 
-/* Legend for the folder color coding (dominant case type per folder). */
 function FolderLegendCard() {
   return (
     <div className={assign.card} aria-label="Folder color legend">
@@ -165,11 +161,6 @@ function FolderLegendCard() {
   );
 }
 
-/**
- * Right rail for the health-records repository — storage meter, top
- * students, and the folder color legend. Same glow-card language as the
- * anecdotal repository rail.
- */
 export function HealthRecordsSideRail({ folders }: { folders: StudentHealthFolder[] }) {
   return (
     <>

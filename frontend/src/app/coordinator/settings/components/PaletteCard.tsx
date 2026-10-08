@@ -131,9 +131,6 @@ function SwatchRow({
   );
 }
 
-/* Workspace palette: primary + secondary brand colors. Picks preview live
-   across the site; Save persists them to the coordinator's StaffProfile row
-   and Reset returns to the theme default. */
 export function PaletteCard() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -146,8 +143,6 @@ export function PaletteCard() {
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
-  // Sync saved colors into the pickers (render-time adjustment: resyncs
-  // only when the saved pair itself changes, never while picking).
   const [syncedSig, setSyncedSig] = React.useState<string | null>(null);
   const paletteSig = `${savedPrimary ?? ""}|${savedSecondary ?? ""}`;
   if (syncedSig !== paletteSig) {
@@ -156,7 +151,6 @@ export function PaletteCard() {
     setSecondary(savedSecondary);
   }
 
-  // Live preview across the site as colors are picked.
   React.useEffect(() => {
     if (profile.data) applyPalette(primary, secondary);
   }, [primary, secondary, profile.data]);

@@ -39,8 +39,6 @@ const ADVISER_QUICK_ACTIONS = [
   { title: "New Referral", description: "Refer from an anecdotal record", href: "/teacher/advisory/referrals", icon: Send },
 ];
 
-// Non-advisers have no Advisory branch — point them at their own classes
-// instead of adviser-only surfaces.
 const CLASS_QUICK_ACTIONS = [
   { title: "Take Attendance", description: "Record today's attendance", href: "/teacher/attendance", icon: CalendarClock },
   { title: "Enter Scores", description: "Log grades for your classes", href: "/teacher/grading", icon: ClipboardCheck },
@@ -49,15 +47,11 @@ const CLASS_QUICK_ACTIONS = [
 ];
 
 export default function TeacherOverviewPage() {
-  // Teacher-scoped key: cached data renders instantly when navigating back,
-  // and one teacher's overview can never leak to another teacher's session.
-  // Stale data (>30s) refetches silently in the background — the loaded UI
-  // stays visible, so isPending below is only true on a genuine first load.
+
   const { data, isPending, isError } = useTeacherOverview();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Warm the gradebook payload while idle so the grading landing usually
-  // paints from cache instead of the network.
+
   const queryClient = useQueryClient();
   const session = useSession();
   const prefetchTeacherId = session?.sub ?? null;
@@ -81,7 +75,7 @@ export default function TeacherOverviewPage() {
       }
     }
   }, [queryClient, prefetchTeacherId, termKey]);
-  // Sidebar-only: rail pins 16px below the lone topbar (4rem).
+
   const mySlotsQuery = useQuery({
     queryKey: ["teacher-my-slots", termKey],
     queryFn: async () => {
@@ -113,10 +107,6 @@ export default function TeacherOverviewPage() {
     );
   }
 
-  // Non-advisers see every student in their own classes (subject-assignment
-  // datas) instead of an advisory roster they don't have — and their gauge
-  // runs off handled-subject risk (academic + attendance only), since the
-  // advisory engine has no advisees to score for them.
   const isAdviser = !!data.advisorySection;
   const quickActions = isAdviser ? ADVISER_QUICK_ACTIONS : CLASS_QUICK_ACTIONS;
   const classStudents = data.classStudents ?? [];
@@ -148,8 +138,6 @@ export default function TeacherOverviewPage() {
             <TeacherOverviewAttendanceTable sectionId={data.advisorySection.id} />
           ) : null}
 
-          {/* Anecdotal filings belong to advisers only — regular teachers
-              (no advisory section) never see this panel. */}
           {isAdviser ? <TeacherOverviewAnecdotes /> : null}
         </div>
 

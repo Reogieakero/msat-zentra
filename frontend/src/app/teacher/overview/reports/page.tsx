@@ -21,8 +21,6 @@ interface ReportSlot {
   section: { id: string; name: string; gradeLevel: string };
 }
 
-/* Teaching-load report for the active term, resolved from the teacher's
-   linked timetable slots: totals by status plus a per-section breakdown. */
 export default function TeacherReportsPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;

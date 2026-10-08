@@ -40,8 +40,6 @@ export async function saveSignature(ctx: AnecdotalContext, signatureImage: strin
   return { imageUrl: profile.signatureImageUrl };
 }
 
-// Stamp the teacher's saved signature onto one record (same signatory rule
-// as drawing directly). 409 when the teacher hasn't saved one yet.
 export async function applySignature(ctx: AnecdotalContext, recordId: string) {
   const [record, profile] = await Promise.all([
     prisma.anecdotalRecord.findUnique({
@@ -86,9 +84,6 @@ export async function applySignature(ctx: AnecdotalContext, recordId: string) {
   return signed;
 }
 
-// Drawn-signature sign-off for one record. Only the signatory may sign: the
-// section adviser, or the observer when no adviser is assigned (same rule
-// that picks the printed name). Re-signing overwrites the previous mark.
 export async function signRecord(ctx: AnecdotalContext, recordId: string, signatureImage: string) {
   const record = await prisma.anecdotalRecord.findUnique({
     where: { id: recordId },
@@ -111,10 +106,7 @@ export async function signRecord(ctx: AnecdotalContext, recordId: string, signat
   } catch (e) {
     throw new AppError(400, "BAD_SIGNATURE", (e as Error).message);
   }
-  // No storage bucket is provisioned yet, so the PNG data URL itself is
-  // stored on the row (small canvas PNGs only — capped by the parser).
-  // If a bucket is added later, upload here and store the public URL;
-  // readers already accept both data: and https: URLs.
+
   const imageUrl = `data:image/png;base64,${image.toString("base64")}`;
   const signed = await prisma.anecdotalRecord.update({
     where: { id: record.id },
@@ -131,7 +123,6 @@ export async function signRecord(ctx: AnecdotalContext, recordId: string, signat
   return signed;
 }
 
-// Remove a signature (same signatory rule). The form returns to unsigned.
 export async function removeSignature(ctx: AnecdotalContext, recordId: string) {
   const record = await prisma.anecdotalRecord.findUnique({
     where: { id: recordId },

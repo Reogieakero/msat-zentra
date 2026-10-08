@@ -62,8 +62,6 @@ export async function updateProfileSettings(ctx: GuidanceContext, input: UpdateP
   return readProfileSettings(counselorId);
 }
 
-// POST /api/guidance/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 export async function updateProfilePhoto(ctx: GuidanceContext, photoUrl: string) {
   const counselorId = ctx.userId;
   await prisma.staffProfile.upsert({

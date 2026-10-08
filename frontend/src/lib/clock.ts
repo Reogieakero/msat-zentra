@@ -2,13 +2,6 @@
 
 import * as React from "react";
 
-// Single home for the live-clock + elapsed-time vocabulary shared by every
-// queue surface (coordinator / nurse / guidance / principal). Merged from
-// the identical copies that lived in the coordinator grab-bag, the nurse
-// referrals table, the guidance intervention row, and the gated-clock
-// copies in the guidance/nurse tables and session dialogs.
-/* Live clock — ticks every 30s; elapsed readouts render days / hours /
-   minutes only, so per-second ticks would just burn renders. */
 export function useNowTick(): number {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -18,9 +11,6 @@ export function useNowTick(): number {
   return now;
 }
 
-/* Gated live clock — ticks every second while `active` (open dialogs,
-   visible countdowns) so "starts at" guards stay exact, and stops
-   otherwise. Paused callers keep their last value. */
 export function useActiveNowTick(active: boolean): number {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -31,8 +21,6 @@ export function useActiveNowTick(active: boolean): number {
   return now;
 }
 
-/* "4d 3h 12m" / "3h 12m" / "12m" / "just now" — days, hours, minutes only,
-   never seconds. */
 export function formatElapsedShort(ms: number): string {
   const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
   if (totalMinutes < 1) return "just now";
@@ -46,9 +34,6 @@ export function formatElapsedShort(ms: number): string {
   return parts.join(" ");
 }
 
-/* ms from a YYYY-MM-DD (or ISO) date to now. Null when unparseable — the
-   cell then shows "—". Also rejects the "—" placeholder itself, so
-   latest-action readouts (which render "—" for unknown) share this. */
 export function msSinceDate(
   date: string | null,
   now: number,

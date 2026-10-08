@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import styles from "./WeightsVisual.module.css";
 
 type Props = {
@@ -9,7 +8,6 @@ type Props = {
   exam: number;
 };
 
-/** Proportional WW/PT/E bar with legend — shared by the weights and solution modals. */
 export function WeightsVisual({ ww, pt, exam }: Props) {
   const total = ww + pt + exam;
   return (

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,12 +12,6 @@ import {
 } from "./adm-stage-activity";
 import styles from "./adm-tracking-timeline.module.css";
 
-/* Shared ADM tracking timeline — one output on every teacher surface
-   (adm-cases rail card + referrals track dialog) and the coordinator
-   track-case dialog: the 8 pipeline steps with state badges and owners,
-   plus the latest action on each stage (who did what, when). `reader`
-   switches the actor voice ("You" for the filing teacher, desk names for
-   the coordinator). Status-only; no clinical detail ever renders here. */
 export function AdmTrackingTimeline({
   input,
   reader = "teacher",
@@ -26,8 +19,6 @@ export function AdmTrackingTimeline({
   input: TrackerCaseInput;
   reader?: "teacher" | "coordinator";
 }) {
-  // Small pure derivation (8 steps, one pass over the timeline) — computed
-  // directly so fresh query data repaints live with no memo staleness.
   const steps = buildAdmTrackSteps({
     stage: input.stage ?? null,
     referralStatus: input.referralStatus ?? null,

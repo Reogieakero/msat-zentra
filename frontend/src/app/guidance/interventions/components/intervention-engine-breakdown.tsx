@@ -7,19 +7,12 @@ import { fetchInterventionEngine } from "@/services/guidance/interventions.servi
 import type { EngineBreakdown as EngineBreakdownData } from "@/services/guidance/interventions.types";
 import rowStyles from "./intervention-row.module.css";
 
-/* Risk-level color code — Low green, Moderate amber, High red — shared by
-   the engine strip and every factor badge in the sheet. NOTE: the app
-   theme is monochrome (`--destructive` is near-black/white ink), so High
-   uses the explicit `red` badge variant — `destructive` would render gray. */
 export function levelVariant(level: string): "red" | "amber" | "green" {
   if (level === "High") return "red";
   if (level === "Moderate") return "amber";
   return "green";
 }
 
-/* Shared live-engine query — the summary chip and the breakdown read the
-   same cached result, so the sheet never disagrees with itself. Lazy:
-   only fetched when the details sheet opens. */
 export function useInterventionEngine(studentKey: string, enabled = true) {
   return useQuery({
     queryKey: ["guidance-interventions", "engine", studentKey],
@@ -62,8 +55,6 @@ function EngineSkeleton() {
   );
 }
 
-/* Snapshot fallback — the flagged booleans the table already carries, for
-   when the live breakdown can't be reached. The sheet never breaks. */
 function SnapshotFallback({
   factors,
   openReferrals,
@@ -161,12 +152,6 @@ function DivergenceNote({ data }: { data: EngineBreakdownData }) {
   );
 }
 
-/**
- * Pro-level risk breakdown for See details — live engine values (subject
- * grades, attendance rate, behavior filings) plus the flagged → stored →
- * live level trail, mirroring the principal InterventionDrawer pattern.
- * Lazy: mounted only when the details sheet opens.
- */
 export function EngineBreakdown({
   studentKey,
   factors,
@@ -193,9 +178,6 @@ export function EngineBreakdown({
   const attendanceOn = data.live.attendance;
   const behavioralOn = data.live.behavioral;
 
-  /* Hero number color: flagged factors take the live risk color
-     (High red, Moderate amber); Clear factors stay gray. Red is explicit
-     (theme destructive is monochrome ink). */
   const heroClass = (on: boolean): string =>
     !on
       ? "text-muted-foreground"

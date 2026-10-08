@@ -8,7 +8,7 @@ import styles from "./coordinator-referrals-create-dialog.module.css";
 
 interface CoordinatorReferralsCreateDialogProps {
   target: AdmCaseRow | null;
-  /** Read-only session scope the profile will be filed under. */
+
   scopeLabel: string;
   onClose: () => void;
   onConfirm: () => void;
