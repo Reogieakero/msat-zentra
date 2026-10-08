@@ -24,9 +24,6 @@ const SUBJECT_NAMES: Record<GradeLevel, { name: string; code: string }[]> = {
   G12: [{ name: "Calc 12", code: "CALC12" }, { name: "Research 12", code: "RES12" }, { name: "Physics 12", code: "PHY12" }, { name: "Filipino 12", code: "FIL12" }, { name: "Contemporary Arts 12", code: "ARTS12" }, { name: "Entrepreneurship 12", code: "ENTREP12" }],
 };
 
-// Dedicated subject teachers who SOLELY own their subject's gradebooks
-// (advisers are not assigned to these subjects, so flag resolution ownership
-// is deterministic).
 const SUBJECT_TEACHERS: { email: string; fullName: string; employeeId: string; grade: GradeLevel; code: string }[] = [
   { email: "teacher.filipino@zentra.test", fullName: "Ms. Filipino Teacher", employeeId: "TCH002", grade: "G7", code: "FIL7" },
   { email: "teacher.ap@zentra.test", fullName: "Mr. AP Teacher", employeeId: "TCH003", grade: "G7", code: "AP7" },
@@ -46,17 +43,15 @@ const OCCUPATIONS = ["Teacher", "Engineer", "Nurse", "Vendor", "Driver", "Accoun
 function rand<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randInt(min: number, max: number): number { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function pickDate(sy: number, sm: number, em: number): Date { return new Date(sy, randInt(sm, em) - 1, randInt(1, 28), randInt(7, 16), randInt(0, 59)); }
-// Term-scoped dates: within SY 2026-2027 Term 1, but never in the future —
-// from the term start (Jun 15) up to "now" (clamped to the term end).
+
 function inTermDate(): Date {
-  const start = new Date(2026, 5, 20, 7, 0, 0).getTime(); // Jun 20 2026 (safely inside term start)
-  const end = Math.min(Date.now(), new Date(2026, 9, 31, 23, 59, 59).getTime()); // now, capped at Oct 31
+  const start = new Date(2026, 5, 20, 7, 0, 0).getTime();
+  const end = Math.min(Date.now(), new Date(2026, 9, 31, 23, 59, 59).getTime());
   const t = start + Math.random() * Math.max(0, end - start);
   return new Date(t);
 }
 function id(prefix: string): string { return `${prefix}_${Math.random().toString(36).slice(2, 12)}`; }
-// Deterministic id derived from a stable key so re-runs reuse existing rows
-// instead of generating fresh random ids that dangle from FK constraints.
+
 function keyId(prefix: string, key: string): string { return `${prefix}_${key.replace(/[^a-zA-Z0-9]/g, "_")}`; }
 
 const STAFF_ACCOUNTS = [
@@ -73,7 +68,6 @@ async function main() {
   const studentHash = await argon2.hash(STUDENT_PASSWORD);
   const parentHash = await argon2.hash(PARENT_PASSWORD);
 
-  // Staff accounts (keyed by email; capture real ids)
   for (const a of STAFF_ACCOUNTS) {
     await prisma.user.upsert({
       where: { email: a.email },
@@ -83,7 +77,7 @@ async function main() {
   }
   const principal = await prisma.user.findUniqueOrThrow({ where: { email: "principal@zentra.test" } });
   const registrarUser = await prisma.user.findUniqueOrThrow({ where: { email: "registrar@zentra.test" } });
-  // Registrar is hardcoded (no self-registration) and owns the senior-high band.
+
   await prisma.staffProfile.upsert({
     where: { userId: registrarUser.id },
     update: { handledGradeLevels: ["G11", "G12"] },
@@ -93,8 +87,6 @@ async function main() {
   const guidance = await prisma.user.findUniqueOrThrow({ where: { email: "guidance@zentra.test" } });
   const admCoord = await prisma.user.findUniqueOrThrow({ where: { email: "adm@zentra.test" } });
 
-  // School years SY 2026-2027 through SY 2049-2050 (idempotent upserts).
-  // SY 2026-2027 is the active year; every year gets terms 1-3.
   for (let y = 2026; y <= 2049; y++) {
     const yearName = `SY ${y}-${y + 1}`;
     let row = await prisma.schoolYear.findFirst({ where: { name: yearName } });
@@ -129,7 +121,6 @@ async function main() {
     create: { schoolYearId: schoolYear.id, termNumber: 1, startDate: new Date("2026-06-15"), endDate: new Date("2026-10-31") },
   });
 
-  // Subjects
   const subjectIds: Record<string, string> = {};
   const subjectData: { id: string; name: string; code: string; gradeLevel: GradeLevel }[] = [];
   for (const grade of GRADE_LEVELS) for (const s of SUBJECT_NAMES[grade]) subjectData.push({ id: id("subj"), name: s.name, code: s.code, gradeLevel: grade });
@@ -141,7 +132,6 @@ async function main() {
     subjectIds[`${grade}:${s.code}`] = rec.id;
   }
 
-  // Sections + advisers + students + parents + sf10. Users created individually to capture real ids.
   const sections: { id: string; gradeLevel: GradeLevel; name: string; adviserId: string }[] = [];
   const studentProfiles: { userId: string; lrn: string; gradeLevel: GradeLevel; sectionId: string; birthdate: Date; gender: string; address: string }[] = [];
   const parentProfiles: { userId: string; address: string; occupation: string }[] = [];
@@ -192,10 +182,6 @@ async function main() {
   await prisma.studentProfile.createMany({ data: studentProfiles, skipDuplicates: true });
   await prisma.parentProfile.createMany({ data: parentProfiles, skipDuplicates: true });
 
-  // StudentRoster: decoupled enrollment, built from PERSISTED student_profiles so
-  // roster LRNs match the real accounts. One roster entry per enrolled student —
-  // the breakdown therefore reflects the exact section population (withAccount /
-  // pending), with noAccount = enrolled but never registered.
   const persistedProfiles = await prisma.studentProfile.findMany({
     select: { lrn: true, gradeLevel: true, sectionId: true },
   });
@@ -213,30 +199,20 @@ async function main() {
   const allStudents = studentProfiles.map((s) => ({ userId: s.userId, sectionId: s.sectionId, gradeLevel: s.gradeLevel }));
   const totalStudents = allStudents.length;
 
-  // G11–G12 students whose WHOLE term is adviser-approved (every subject locked and
-  // approved), so they surface as one complete per-student row in the registrar's
-  // Final Grade Approvals screen. ~70% of the band is seeded complete; the rest
-  // stay unlocked so partially-graded (not-yet-viewable) students also exist.
   const completeStudentIds = new Set<string>();
   for (const st of allStudents) {
     if (st.gradeLevel !== "G11" && st.gradeLevel !== "G12") continue;
     if (Math.random() < 0.7) completeStudentIds.add(st.userId);
   }
 
-  // Teacher assignments (per section/subject/term), grade components + assessments (per subject+term,
-  // matching the schema unique (subjectId, termId, componentType)), and grades for all students in the grade.
   const teacherAssignments: { id: string; teacherId: string; subjectId: string; sectionId: string; termId: string }[] = [];
   const studentGrades: { id: string; assessmentId: string; studentId: string; rawScore: number; percentageScore: number }[] = [];
   const finalGrades: { id: string; studentId: string; subjectId: string; termId: string; computedAverage: number; transmutedGrade: number; remarks: Remarks; lockStatus: LockStatus }[] = [];
-  // G11–G12 final-grade ids that advisers have already approved (complete sets),
-  // so the registrar's Final Grade Approvals screen has live per-student rows.
+
   const lockedFinalGradeIds: string[] = [];
 
   const componentTypes: ComponentType[] = ["WRITTEN_WORK", "PERFORMANCE_TASK", "QUARTERLY_EXAM"];
 
-  // 1) Grade components per subject+term (school-wide). Unique (subjectId, termId, componentType).
-  // Weights follow DepEd Order No. 8, s. 2015: SHS uses WW 25 / PT 45 / QA 30
-  // for every subject; JHS varies by learning area.
   const seedWeights = (
     grade: GradeLevel,
     code: string,
@@ -266,12 +242,11 @@ async function main() {
       }
     }
   }
-  // Read back the actual persisted component ids so assessments reference real rows.
+
   const persistedGC = await prisma.gradeComponent.findMany({ where: { termId: term.id } });
   const gcByKey: Record<string, string> = {};
   for (const gc of persistedGC) gcByKey[`${gc.subjectId}:${gc.componentType}`] = gc.id;
 
-  // Assessments per component (skipDuplicates on @@unique([gradeComponentId, title])).
   const assessments: { id: string; gradeComponentId: string; title: string; maxScore: number; dateGiven: Date; createdBy: string }[] = [];
   const assessByKey: Record<string, string> = {};
   for (const grade of GRADE_LEVELS) {
@@ -287,7 +262,6 @@ async function main() {
     }
   }
 
-  // 2) Teacher assignments per section/subject, and grades for every student in that grade.
   const soleOwned = new Set(SUBJECT_TEACHERS.map((t) => `${t.grade}:${t.code}`));
   for (const section of sections) {
     for (const s of SUBJECT_NAMES[section.gradeLevel]) {
@@ -311,8 +285,7 @@ async function main() {
       for (const st of gradeStudents) {
         const avg = randInt(70, 98);
         const fgId = id("fg");
-        // Advisers approve every subject of a G11–G12 student only when the whole
-        // term is complete (completeStudentIds); everyone else stays unlocked.
+
         const shouldApprove = completeStudentIds.has(st.userId);
         if (shouldApprove) lockedFinalGradeIds.push(fgId);
         finalGrades.push({
@@ -332,8 +305,7 @@ async function main() {
   await prisma.assessment.createMany({ data: assessments, skipDuplicates: true });
   await prisma.studentGrade.createMany({ data: studentGrades, skipDuplicates: true });
   await prisma.finalGrade.createMany({ data: finalGrades, skipDuplicates: true });
-  // Stamp adviserApprovedAt on the seeded adviser-approved G11–G12 finals so the
-  // approval state is complete.
+
   if (lockedFinalGradeIds.length) {
     await prisma.finalGrade.updateMany({
       where: { id: { in: lockedFinalGradeIds } },
@@ -341,7 +313,6 @@ async function main() {
     });
   }
 
-  // Attendance (>=20)
   const attendance = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
@@ -350,7 +321,6 @@ async function main() {
   }
   await prisma.attendanceRecord.createMany({ data: attendance, skipDuplicates: true });
 
-  // Anecdotal + followups (>=20)
   const anecdotals: { id: string; studentId: string; observerId: string; sectionId: string; observationDatetime: Date; descriptionOfIncident: string; descriptionOfLocation: string; notesRecommendationsActions: string; confidentialityLevel: Confidentiality; termId: string }[] = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
@@ -361,7 +331,6 @@ async function main() {
   const anecdotalRecs = await prisma.anecdotalRecord.findMany({ where: { id: { in: anecdotals.map((a) => a.id) } } });
   await prisma.anecdotalRecordFollowup.createMany({ data: anecdotalRecs.map((a) => ({ id: id("af"), anecdotalRecordId: a.id, followupBy: a.observerId, followupDate: inTermDate(), notes: "Followed up with student." })), skipDuplicates: true });
 
-  // Non-adviser subject teacher: files anecdotal records by category.
   const subjTeacherEmail = "teacher.subject@zentra.test";
   const subjTeacher = await prisma.user.upsert({
     where: { email: subjTeacherEmail },
@@ -373,7 +342,7 @@ async function main() {
     update: { employeeId: "TCH001", isAdviser: false, department: "Academic" },
     create: { userId: subjTeacher.id, employeeId: "TCH001", isAdviser: false, department: "Academic" },
   });
-  // Assign the subject teacher to G7-A's Math section (they are NOT the adviser).
+
   const targetSection = sections.find((s) => s.id === "sec-G7-A")!;
   const targetSubjectId = subjectIds["G7:MATH7"];
   await prisma.teacherSubjectAssignment.upsert({
@@ -401,8 +370,6 @@ async function main() {
   });
   await prisma.anecdotalRecord.createMany({ data: subjAnecdotals, skipDuplicates: true });
 
-  // Dedicated subject teachers: sole owners of their subject's gradebooks in
-  // every section of their grade.
   for (const t of SUBJECT_TEACHERS) {
     const teacher = await prisma.user.upsert({
       where: { email: t.email },
@@ -424,8 +391,6 @@ async function main() {
     }
   }
 
-  // Grade flags (G7-A English — the adviser is the sole gradebook owner, so
-  // resolution ownership is deterministic for smoke tests).
   const flagSection = sections.find((s) => s.id === "sec-G7-A")!;
   const flagSubjectId = subjectIds["G7:ENG7"];
   const flagStudents = allStudents.filter((st) => st.sectionId === flagSection.id).slice(0, 4);
@@ -487,7 +452,7 @@ async function main() {
     ],
     skipDuplicates: true,
   });
-  // Audit trail for the seeded flags (mirrors what the raise/resolve routes write).
+
   const seedFlagAudits = [
     { id: id("al"), userId: flagSection.adviserId, actionType: "grade_flag_raise" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-open-mine"), reason: "wrong_score — English 7 / G7-A" },
     { id: id("al"), userId: subjTeacher.id, actionType: "grade_flag_raise" as ActionType, sourceTable: "grade_flags", sourceId: keyId("gf", "g7a-open-against"), reason: "missing_assessment — English 7 / G7-A" },
@@ -497,14 +462,9 @@ async function main() {
   ];
   await prisma.auditLog.createMany({ data: seedFlagAudits, skipDuplicates: true });
 
-  // Referrals (>=20)
   const referralsData = anecdotalRecs.slice(0, Math.max(MIN_RECORDS, anecdotalRecs.length)).map((a) => ({ id: id("ref"), anecdotalRecordId: a.id, referredToRole: "guidance_counselor" as ReferralTarget, referredBy: a.observerId, reason: "Behavioral concern requiring guidance intervention.", status: rand(["pending", "in_progress", "resolved"] as ReferralStatus[]), studentId: a.studentId, termId: term.id }));
   await prisma.referral.createMany({ data: referralsData, skipDuplicates: true });
 
-  // Interventions (>=20). Seeded to mirror the auto-creation rule: for each
-  // at-risk student (first MIN_RECORDS), evaluate the engine risk and create an
-  // intervention assigned to the Guidance Counselor. No referralId/reviewedBy
-  // (those columns were removed — interventions are engine-driven, not referred).
   for (const st of allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents))) {
     const { result } = await evaluateRisk(st.userId, term.id);
     if (result.riskLevel === "Low") continue;
@@ -523,10 +483,6 @@ async function main() {
     });
   }
 
-  // Deterministic at-risk student with NO intervention assigned — lets the
-  // Principal exercise the "Create & assign" flow on a clean row. We force a
-  // Moderate risk (single anecdote → behavioral flag) and delete any intervention
-  // that may have been created for this student above so the drawer shows "None".
   const unassignedAtRisk = allStudents[MIN_RECORDS] ?? allStudents[0];
   if (unassignedAtRisk) {
     const section = await prisma.section.findFirst({ where: { students: { some: { userId: unassignedAtRisk.userId } } }, select: { id: true } });
@@ -547,7 +503,6 @@ async function main() {
     await recomputeRisk(unassignedAtRisk.userId, term.id);
   }
 
-  // Health (>=20)
   const health = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
@@ -555,7 +510,6 @@ async function main() {
   }
   await prisma.healthRecord.createMany({ data: health, skipDuplicates: true });
 
-  // Home visitation (>=20)
   const home = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
@@ -563,7 +517,6 @@ async function main() {
   }
   await prisma.homeVisitationRecord.createMany({ data: home, skipDuplicates: true });
 
-  // ADM profiles + nested meetings/modules/devices (>=20)
   const admData = [];
   for (let i = 0; i < Math.max(MIN_RECORDS, totalStudents); i++) {
     const st = allStudents[i % totalStudents];
@@ -597,7 +550,6 @@ async function main() {
     });
   }
 
-  // Risk snapshots (>=20) — computed from real seeded grades/attendance/anecdotals.
   const riskStudents = allStudents.slice(0, Math.max(MIN_RECORDS, totalStudents));
   for (const st of riskStudents) {
     try {
@@ -609,9 +561,6 @@ async function main() {
     }
   }
 
-  // Adviser SF10 access requests (registrar review surface) — G11–G12 only.
-  // One pending, one already approved, one already denied, to exercise all
-  // states on the registrar Adviser Access Requests page.
   const accessSections = sections.filter((s) => s.gradeLevel === "G11" || s.gradeLevel === "G12");
   if (accessSections.length > 0) {
     const pendingSection = accessSections[0];
@@ -658,13 +607,10 @@ async function main() {
     });
   }
 
-  // Audit logs (>=20)
   await prisma.auditLog.createMany({ data: Array.from({ length: MIN_RECORDS }, (_, i) => ({ id: id("al"), userId: principal.id, actionType: rand(["account_approval", "grade_lock", "grade_unlock", "referral_status_change", "intervention_approval"] as ActionType[]), sourceTable: "StudentProfile", sourceId: allStudents[i % totalStudents].userId, reason: "Seeded audit entry." })), skipDuplicates: true });
 
-  // Notifications (>=20)
   await prisma.notification.createMany({ data: Array.from({ length: MIN_RECORDS }, (_, i) => ({ id: id("nt"), userId: allStudents[i % totalStudents].userId, type: "attendance_alert", sourceTable: "AttendanceRecord", sourceId: allStudents[i % totalStudents].userId, channel: ["web", "mobile"] as NotifChannel[], message: "Attendance update for your child.", isRead: false })), skipDuplicates: true });
 
-  // Report snapshots (>=20)
   await prisma.reportSnapshot.createMany({ data: sections.slice(0, Math.max(MIN_RECORDS, sections.length)).map((s) => ({ id: id("rp"), reportType: rand(["trends", "intervention_success", "heat_map", "honor_roll"]), scope: "section", scopeId: s.id, termId: term.id, payload: { generated: true, section: s.name } })), skipDuplicates: true });
 
   console.log(`Seed complete:
@@ -678,4 +624,3 @@ async function main() {
 main()
   .catch((e) => { console.error(e); process.exit(1); })
   .finally(() => prisma.$disconnect());
-

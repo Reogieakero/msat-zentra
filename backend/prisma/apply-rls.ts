@@ -22,7 +22,6 @@ drop function if exists zentra_uid();
 
 const allSql = drop + "\n" + raw;
 
-// Split on ';' but not inside $$ ... $$ dollar-quoted blocks (function bodies).
 const statements: string[] = [];
 let buf = "";
 let i = 0;

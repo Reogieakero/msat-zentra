@@ -4,9 +4,6 @@ import { getLegacyDays } from "../../services/attendance/legacy.service.js";
 
 const router = Router();
 
-// Frozen AM/PM archive reads (AttendanceRecordLegacy — never written by the
-// app). Keeps historical dashboards working after the subject cutover without
-// inventing subject information.
 router.get(
   "/legacy/days",
   requireAuth,

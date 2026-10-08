@@ -12,13 +12,6 @@ export interface StaffQuery {
   profileId: string | null;
 }
 
-// Staff directory for parent-meeting invites — active guidance counselors,
-// nurses, and advisers the coordinator can invite by name.
-// Status-only directory: id, name, role. No student data.
-// The adviser group is scoped to the case: pass referralId (pre-profile) or
-// profileId and only that student's section adviser is listed — the whole
-// adviser roster never crowds the picker. Without a case context, all active
-// advisers are returned (fallback).
 export async function listInvitableStaff(query: StaffQuery) {
   const { referralId, profileId } = query;
   let sectionAdviserId: string | null = null;
@@ -42,16 +35,13 @@ export async function listInvitableStaff(query: StaffQuery) {
       r?.student?.section?.adviserId ?? r?.roster?.section?.adviserId ?? null;
   }
   const scoped = referralId !== null || profileId !== null;
-  // The student's adviser is whoever the section names (adviserId) —
-  // that account often logs in under the subject_teacher role, so the
-  // scoped lookup trusts the assignment, not the login role.
+
   const staff = await prisma.user.findMany({
     where: {
       status: "active",
       OR: [
         { role: { in: ["nurse", "guidance_counselor"] } },
-        // Scoped: just the student's adviser. Unscoped: every adviser.
-        // Scoped-but-unresolvable (no section/adviser): no adviser rows.
+
         ...(scoped && sectionAdviserId
           ? [{ id: sectionAdviserId }]
           : scoped

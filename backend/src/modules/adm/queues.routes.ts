@@ -20,8 +20,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      // Strict 15-row list pages; wide summary reads may request up to 200.
-      // Accepts ?pageSize= (new) and ?limit= (legacy).
+
       const limit = resolvePageSize(req);
       const q =
         typeof req.query.q === "string" && req.query.q.trim()
@@ -94,12 +93,6 @@ router.get(
   }
 );
 
-// Case history timeline for the coordinator's "See history" action. Returns
-// the audit trail across the anecdotal filing, the source referral, the
-// learner profile, and its devices — system events only (reasons + stage
-// diffs), never clinical write-ups. Oldest first: adviser filing →
-// guidance/nurse endorse → coordinator actions → principal decision →
-// devices. At least one of profileId / referralId is required.
 router.get(
   "/history",
   requireAuth,

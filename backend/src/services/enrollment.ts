@@ -1,16 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import type { GradeLevel } from "../generated/prisma/client.js";
 
-// Roster-aware enrollment headcounts.
-//
-// A student counts exactly once: registered student_profiles, plus roster
-// enlistments whose LRN has no profile yet (matched by LRN, mirroring the
-// advisory roster list). Account status never excludes anyone — an enlisted
-// student counts whether or not they have logged in.
-//
-// Profile queries keep their existing semantics; roster rows (which are
-// school-year scoped) are added on top, defaulting to the active year.
-
 async function registeredLrns(lrns: string[]): Promise<Set<string>> {
   if (lrns.length === 0) return new Set();
   const profiles = await prisma.studentProfile.findMany({
@@ -28,8 +18,6 @@ async function activeYearId(): Promise<string | null> {
   return year?.id ?? null;
 }
 
-// Unregistered roster headcount per section id. Only rows in schoolYearId
-// (default: active year) are considered.
 export async function rosterCountsBySection(
   sectionIds: string[],
   schoolYearId?: string | null,
@@ -51,9 +39,6 @@ export async function rosterCountsBySection(
   return counts;
 }
 
-// Profile + roster headcount per section id. Accepts pre-fetched profile
-// groups so callers that already ran the groupBy (e.g. the advisory roster)
-// don't pay for the same scan twice — roster counts are still fetched.
 export async function sectionHeadcounts(
   sectionIds: string[],
   preloadedProfileGroups?: { sectionId: string | null; _count: { _all: number } }[],
@@ -76,8 +61,6 @@ export async function sectionHeadcounts(
   return counts;
 }
 
-// Unregistered roster headcount per grade level. Only rows in schoolYearId
-// (default: active year) are considered.
 export async function rosterCountsByGrade(
   grades: GradeLevel[],
   schoolYearId?: string | null,
@@ -99,7 +82,6 @@ export async function rosterCountsByGrade(
   return counts;
 }
 
-// Total unregistered roster headcount (default: active year).
 export async function totalRosterHeadcount(schoolYearId?: string | null): Promise<number> {
   const yearId = schoolYearId === undefined ? await activeYearId() : schoolYearId;
   const rows = await prisma.studentRoster.findMany({

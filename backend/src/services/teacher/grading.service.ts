@@ -10,13 +10,12 @@ import {
   COMPONENT_LABELS,
   assertAssignment,
   assertSubjectAccess,
-  invalidateGradingCaches,
   refreshFinals,
 } from "../../modules/teacher/grading.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
 export interface GradingContext extends TeacherContext {
-  // Active term id, resolved by the route via resolveActiveTermId.
+
   resolvedTermId: string | null;
 }
 
@@ -28,11 +27,6 @@ function weightsForPreset(preset: "SHS" | "JHS_LANG" | "JHS_MATH_SCI" | "JHS_MAP
   return found.weights;
 }
 
-// GET /api/teacher/grading/classes/:assignmentId — everything the class
-// workspace needs: assignment meta, section students (registered profiles
-// with their final grade for this subject + term), enlisted students without
-// accounts (read-only — scoring requires a profile), components with weights,
-// and assessments with per-student scores.
 export async function getClassWorkspace(ctx: GradingContext, assignmentId: string) {
   const teacherId = ctx.userId;
   const termId = ctx.resolvedTermId;
@@ -120,9 +114,7 @@ export async function getClassWorkspace(ctx: GradingContext, assignmentId: strin
       termNumber: a.term.termNumber,
       schoolYear: a.term.schoolYear.name,
     },
-    // Registered profiles first, then enlisted students without
-    // accounts — both are scorable rows (`roster:<id>` keys for the
-    // latter), sorted by name.
+
     students: [
       ...profiles.map((p) => ({
         id: p.userId,
@@ -166,8 +158,6 @@ export interface UpsertComponentInput {
   weightPercentage: number;
 }
 
-// POST /api/teacher/grading/classes/:assignmentId/components — create or
-// update the weight for one WW/PT/E category of the class subject + term.
 export async function upsertComponent(
   ctx: GradingContext,
   assignmentId: string,
@@ -205,7 +195,7 @@ export async function upsertComponent(
     sourceId: component.id,
     reason: `Set ${componentType} weight to ${weightPercentage}% for ${a.subject.name}`,
   });
-  // Weights reshape every final in the subject + term — recompute them now.
+
   await refreshFinals(a.subjectId, a.termId);
 
   return {
@@ -216,8 +206,6 @@ export async function upsertComponent(
   };
 }
 
-// POST /api/teacher/grading/classes/:assignmentId/components/preset — apply
-// a DepEd Order No. 8 weight set (WW/PT/E) to all three categories at once.
 export async function applyPreset(
   ctx: GradingContext,
   assignmentId: string,
@@ -279,9 +267,6 @@ export interface CreateAssessmentInput {
   dateGiven?: string;
 }
 
-// POST /api/teacher/grading/classes/:assignmentId/assessments — add a WW/PT/E
-// assessment (quiz, activity, exam…). The category row is auto-created at
-// weight 0 when missing so entry never blocks on ordering.
 export async function createAssessment(
   ctx: GradingContext,
   assignmentId: string,
@@ -304,9 +289,7 @@ export async function createAssessment(
     },
   });
   if (!component) {
-    // Senior High classes start at the DepEd standard weight for the
-    // category; Junior High varies by learning area, so it starts at 0
-    // until the teacher picks a preset or sets weights manually.
+
     const isSHS = a.section.gradeLevel === "G11" || a.section.gradeLevel === "G12";
     component = await prisma.gradeComponent.create({
       data: {
@@ -352,9 +335,6 @@ export interface PatchAssessmentInput {
   dateGiven?: string;
 }
 
-// PATCH /api/teacher/grading/assessments/:id — rename / rescale / redate.
-// Ownership: the caller must hold an assignment for the assessment's
-// subject + term (components are shared school-wide per subject + term).
 export async function patchAssessment(
   ctx: GradingContext,
   assessmentId: string,
@@ -379,9 +359,6 @@ export async function patchAssessment(
     },
   });
 
-  // Rescaling the max rewrites every recorded percentage (raw scores are
-  // kept), then every affected final is recomputed so nothing goes stale.
-  // One $transaction round-trip (was: N concurrent updates).
   if (maxChanged) {
     const rows = await prisma.studentGrade.findMany({
       where: { assessmentId: assessment.id },
@@ -421,8 +398,6 @@ export async function patchAssessment(
   };
 }
 
-// DELETE /api/teacher/grading/assessments/:id — removes the assessment and
-// its encoded scores (same ownership rule as PATCH).
 export async function deleteAssessment(ctx: GradingContext, assessmentId: string) {
   const teacherId = ctx.userId;
   const assessment = await prisma.assessment.findUnique({
@@ -432,8 +407,6 @@ export async function deleteAssessment(ctx: GradingContext, assessmentId: string
   if (!assessment) throw new AppError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found");
   await assertSubjectAccess(teacherId, assessment.gradeComponent.subjectId, assessment.gradeComponent.termId);
 
-  // Capture who was scored before the cascade-delete wipes the rows, so
-  // their finals recompute without the ghost assessment.
   const scored = await prisma.studentGrade.findMany({
     where: { assessmentId: assessment.id },
     select: { studentId: true, rosterId: true },

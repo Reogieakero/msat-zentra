@@ -1,6 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
 import type { OutcomeStatus, RiskLevel } from "../../generated/prisma/client.js";
-import { AppError } from "../../lib/errors.js";
 import {
   resolveActiveTermId,
   computeRiskFactors,
@@ -82,18 +81,11 @@ export interface StudentFilters {
   riskLevel?: RiskLevelValue;
   hasIntervention?: boolean;
   factor?: "Academic" | "Attendance" | "Behavioral";
-  // "final" computes the academic factor from transmuted grades; "raw" from the
-  // raw computed average. Drives both the academic factor flag and filtering.
+
   gradeMode?: GradeMode;
-  // Also include students whose live risk dropped to Low but who still
-  // carry an ongoing intervention, so the case can be discontinued
-  // explicitly instead of silently vanishing from the queue.
+
   includeRecovered?: boolean;
-  // Enumerate the full live enrollment (profiles + roster, no account
-  // required) instead of starting from engine snapshots, so at-risk
-  // students the engine hasn't snapshotted yet still appear. Both the
-  // guidance and principal queues use this so the desks track the same
-  // students.
+
   fullCohort?: boolean;
   page?: number;
   pageSize?: number;
@@ -155,12 +147,6 @@ function toInterventionLink(iv: InterventionRow | undefined): InterventionLink |
     : null;
 }
 
-// Principal: list of at-risk students from RiskSnapshot (engine-flagged) for
-// the session's active term, scoped to the active school year. Each student
-// carries their latest Intervention (if any) so the principal can
-// decide/assign/track.
-// Enlisted students without accounts merge in on equal footing (matched by LRN
-// so nobody appears twice after registering).
 export async function getInterventionStudents(
   filters: StudentFilters,
   scope?: TermScopeInput,
@@ -182,21 +168,15 @@ export async function getInterventionStudents(
     return { students: [], total: 0, page, pageSize, highModerate: 0 };
   }
 
-  // Full-cohort mode (guidance queue): enumerate the live enrollment
-  // instead of starting from engine snapshots.
   if (filters.fullCohort) {
     return getLiveCohortStudents(termId, schoolYearId, filters, page, pageSize);
   }
 
-  // Build the student-scoped filter without clobbering `student` across the
-  // three optional conditions (school year + has/none intervention).
   const studentWhere: Record<string, unknown> = {};
   if (schoolYearId) studentWhere.section = { schoolYearId };
   if (filters.hasIntervention === true) studentWhere.interventions = { some: {} };
   if (filters.hasIntervention === false) studentWhere.interventions = { none: {} };
 
-  // Recovered students (Low snapshot, ongoing intervention) join the queue
-  // only when asked and only when no single-level filter is active.
   const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
   const levelClause = includeRecovered
     ? {
@@ -217,7 +197,6 @@ export async function getInterventionStudents(
     ...(Object.keys(studentWhere).length ? { student: studentWhere } : {}),
   };
 
-  // Roster twin of the filter above (roster relation instead of profile).
   const rosterWhere: Record<string, unknown> = {};
   if (schoolYearId) rosterWhere.section = { schoolYearId };
   if (filters.hasIntervention === true) rosterWhere.interventions = { some: {} };
@@ -240,14 +219,10 @@ export async function getInterventionStudents(
     termId,
     ...rosterLevelClause,
     ...(Object.keys(rosterWhere).length ? { roster: rosterWhere } : {}),
-    // Only snapshots actually keyed to a roster entry (never profile rows).
+
     rosterId: { not: null },
   };
 
-  // Fetch the full at-risk cohort for the scope (small: ≤ a few hundred). We
-  // compute the per-factor breakdown live from the engine rule so the principal
-  // can filter by factor and inspect the academic subject grades. Pagination is
-  // applied in memory after factor/filter computation to keep counts correct.
   const [snaps, rosterSnaps] = await Promise.all([
     prisma.riskSnapshot.findMany({
       where,
@@ -374,11 +349,6 @@ export async function getInterventionStudents(
     }),
   ]);
 
-  // A student can have more than one RiskSnapshot row for a term (engine
-  // re-runs append new snapshots). Collapse to one row per student (matched by
-  // LRN so profile + roster rows for the same learner merge, profile wins),
-  // keeping the most recent snapshot, so the principal sees each at-risk
-  // student once.
   type SnapRow = {
     snapshotDate: Date | null;
     studentId: string;
@@ -397,15 +367,14 @@ export async function getInterventionStudents(
   const consider = (lrn: string, date: Date | null, row: SnapRow, profile: boolean) => {
     const prev = byStudent.get(lrn);
     const when = date?.getTime() ?? 0;
-    // Latest snapshot wins; profiles win ties so a registered student never
-    // renders under a `roster:` key.
+
     if (!prev || when > prev.date || (when === prev.date && profile && !prev.profile)) {
       byStudent.set(lrn, { date: when, row, profile });
     }
   };
   for (const s of snaps) {
     const st = s.student;
-    // Roster-keyed snapshots are covered by the roster query below.
+
     if (!st) continue;
     consider(st.lrn, s.snapshotDate, {
       snapshotDate: s.snapshotDate,
@@ -455,10 +424,7 @@ export async function getInterventionStudents(
         transmutedGrade: g.transmutedGrade,
       })),
       gradeMode: filters.gradeMode ?? "final",
-      // subjectId rides along so the subject-era rule (present over
-      // subject sessions) applies exactly like the live engine and the
-      // See-details breakdown — without it every cohort fell back to the
-      // legacy present-over-enrolled math and disagreed with both.
+
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
       anecdotalCount: st.anecdotalCount,
       enrolled,
@@ -495,7 +461,6 @@ export async function getInterventionStudents(
     };
   });
 
-  // Factor filter (Academic / Attendance / Behavioral) applied in memory.
   const filtered = filters.factor
     ? mapped.filter((m) => m.factors[filters.factor!.toLowerCase() as keyof RiskFactors])
     : mapped;
@@ -507,12 +472,6 @@ export async function getInterventionStudents(
   return { students, total, page, pageSize, highModerate };
 }
 
-// Full-cohort enumeration for the guidance queue: every enrolled learner
-// (account profiles AND roster-only students — no account required) is
-// evaluated live, so at-risk students the engine hasn't snapshotted yet
-// still appear. Mirrors the overview's enrollment scope and flag math;
-// snapshot dates are joined in when rows exist (null otherwise, and the
-// tables fall back to the follow-up opened date).
 async function getLiveCohortStudents(
   termId: string,
   schoolYearId: string | undefined,
@@ -680,16 +639,14 @@ async function getLiveCohortStudents(
         transmutedGrade: g.transmutedGrade,
       })),
       gradeMode,
-      // Same subject-era passthrough as above — the queue must agree with
-      // the live engine, never silently use legacy math.
+
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
       anecdotalCount: st.anecdotalCount,
       enrolled,
     });
     const level = levelFromFlags(flags);
     const intervention = toInterventionLink(st.intervention);
-    // Keep live High/Moderate plus recovered students (risk cleared, case
-    // still open) so they can be discontinued instead of vanishing.
+
     const recovered = level === "Low" && intervention?.outcomeStatus === "ongoing";
     if (!includeRecovered && level !== "High" && level !== "Moderate") return null;
     if (includeRecovered && level !== "High" && level !== "Moderate" && !recovered) return null;
@@ -705,10 +662,6 @@ async function getLiveCohortStudents(
       belowThreshold: (g.transmutedGrade ?? 100) < 75,
     }));
 
-    // Detection moment with fallbacks so desks never show a blank date:
-    // engine snapshot → follow-up opened → earliest session booked →
-    // latest underlying evidence (attendance day / anecdotal observation)
-    // that the live flags were computed from.
     const sessionTimes = (intervention?.sessions ?? [])
       .map((s) => new Date(s.createdAt).getTime())
       .filter((t) => Number.isFinite(t));
@@ -748,7 +701,6 @@ async function getLiveCohortStudents(
     };
   };
 
-  // Registered profiles win LRN ties so one learner never renders twice.
   const registeredLrns = new Set(profiles.map((p) => p.lrn));
   const kept: RiskSnapshotStudent[] = [];
   for (const p of profiles) {
@@ -800,7 +752,6 @@ async function getLiveCohortStudents(
 
   const highModerate = kept.length;
 
-  // Factor filter (Academic / Attendance / Behavioral) applied in memory.
   const filtered = filters.factor
     ? kept.filter((m) => m.factors[filters.factor!.toLowerCase() as keyof RiskFactors])
     : kept;

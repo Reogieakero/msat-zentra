@@ -9,8 +9,7 @@ const FN = ["Maria","Juan","Ana","Pedro","Sofia","Lucas","Elena","Miguel","Rosa"
 const LN = ["Santos","Reyes","Cruz","Garcia","Mendoza","Torres","Flores","Ramos","Diaz","Castillo","Manalo","Bautista","Villanueva","Ocampo","Aquino","Salazar"];
 
 (async () => {
-  // 1) Remove the 12 roster-only (no-account) rows added earlier: those whose lrn
-  //    has no matching student_profile.
+
   const allRoster = await p.studentRoster.findMany({ select: { id: true, lrn: true } });
   const profLrns = new Set((await p.studentProfile.findMany({ select: { lrn: true } })).map((s) => s.lrn));
   const orphanRosterIds = allRoster.filter((r) => !profLrns.has(r.lrn)).map((r) => r.id);
@@ -46,7 +45,7 @@ const LN = ["Santos","Reyes","Cruz","Garcia","Mendoza","Torres","Flores","Ramos"
       await p.studentProfile.create({
         data: { userId: user.id, lrn, gradeLevel: s.gradeLevel, sectionId: s.id, birthdate: new Date("2008-05-12"), address: "Mati City" },
       });
-      // Keep roster in sync so the breakdown's roster source reflects this enrollment.
+
       await p.studentRoster.upsert({
         where: { lrn_schoolYearId: { lrn, schoolYearId: year.id } },
         update: { fullName: name, gradeLevel: s.gradeLevel, sectionId: s.id },

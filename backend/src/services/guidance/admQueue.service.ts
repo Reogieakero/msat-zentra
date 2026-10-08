@@ -1,7 +1,4 @@
 import { prisma } from "../../lib/prisma.js";
-import { AppError } from "../../lib/errors.js";
-import { writeAudit } from "../../lib/audit.js";
-import { fanoutNotification } from "../../lib/notify.js";
 import { sectionHeadcounts } from "../enrollment.js";
 import {
   computeRiskFactors,
@@ -21,18 +18,9 @@ export interface AdmQueueQuery {
   pageSize: number;
 }
 
-// Guidance Counselor ADM hand-offs: every ADM-track case the counselor needs
-// awareness of — tracked learner profiles (any stage) plus ADM-track
-// referrals the coordinator hasn't built a profile for yet (consultation).
-// Status-only rows: identity, stage, eligibility, parent-meeting flag and
-// home-visit flag. No certification details, minutes, or visit notes ever
-// leave this endpoint.
-//
-// Plus the counselor's own actionable consultation queue: referrals advisers
-// routed to guidance_counselor that are still open.
 export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, riskTermId: string | null) {
   const { stageFilter, q, page, pageSize } = query;
-  // Term-scoped: prior-term ADM work never leaks into the active term.
+
   const scopeTermId = ctx.termId;
 
   const [profiles, earlyReferrals, consultationReferrals, counselor] =
@@ -77,9 +65,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
         referredToRole: "adm_coordinator",
         admProfiles: { none: {} },
         ...(scopeTermId ? { termId: scopeTermId } : {}),
-        // Receiver scoping: only cases picked for guidance (plus legacy
-        // rows with no stored pick) reach this queue — nurse/LRPC-picked
-        // cases never appear here, even read-only.
+
         OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
       },
       orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
@@ -123,8 +109,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
         },
       },
     }),
-    // Actionable consultation queue: my open guidance referrals —
-    // counsel here, then hand off to the ADM coordinator.
+
     prisma.referral.findMany({
       where: {
         referredToRole: "guidance_counselor",
@@ -161,19 +146,13 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
         },
       },
     }),
-    // Counselor name for auto-filling the referral form signature line.
+
     prisma.user.findUnique({
       where: { id: ctx.userId },
       select: { fullName: true },
     }),
   ]);
 
-  // Which early ADM referrals guidance already reviewed — the review
-  // writes a marker-prefixed audit reason, so no schema change is
-  // needed to tell "waiting on your review" from "with coordinator".
-  // Scoped to this queue's ids (previously an unbounded full-table
-  // scan) with a generous take cap — one referral can carry a few
-  // consultation audits, never thousands.
   const earlyIds = earlyReferrals.map((r) => r.id);
   const consultAudits = earlyIds.length
     ? await prisma.auditLog.findMany({
@@ -249,9 +228,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
     hasHomeVisit: r.homeVisitations.length > 0,
     approved: false,
     approvedAt: null as string | null,
-    // Consultation review context: the linked anecdotal id so the
-    // counselor can open the official report, plus whether this case was
-    // already decided out of the consultation stage.
+
     anecdotalId: r.anecdotalRecord.id,
     consultReviewer: r.consultReviewer ?? "guidance_counselor",
     anecdotalExcerpt: r.anecdotalRecord.descriptionOfIncident,
@@ -261,18 +238,10 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
     recommendations: r.anecdotalRecord.notesRecommendationsActions ?? "",
     reviewed: reviewedIds.has(r.id),
     hasBookedSession: r.counselingSessions.some((s) => s.status === "scheduled"),
-    // Filled below from the latest engine snapshot (risk column).
+
     riskLevel: null as string | null,
   }));
 
-  // Live engine risk per queued student — same rule as the alerts desk,
-  // so the level here never disagrees with it. Stored snapshots are only
-  // written when grades/attendance change, so a snapshot lookup alone
-  // goes stale (and blank for never-snapshotted students).
-  //
-  // Batched: one grades query + one attendance query + two anecdotal
-  // count queries + one headcount lookup for the whole queue, then the
-  // pure `computeRiskFactors` rule per student.
   {
     const termId = riskTermId;
     if (termId && earlyReferrals.length > 0) {
@@ -378,8 +347,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
           earlyRows[i].riskLevel = levelFromFlags(flags);
         });
       } catch {
-        // Keep the null risk levels — one batch failure never blocks
-        // the rest of the queue (same failure semantics as before).
+
       }
     }
   }
@@ -390,17 +358,14 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
 
   const countBy = (stage: string) =>
     merged.filter((c) => c.stage === stage).length;
-  // Reports scope: guidance ADM only — tracked profiles picked for the
-  // guidance counselor (plus legacy rows with no stored pick) and the
-  // consultation queue.
+
   const guidanceCases = [
     ...profileRows.filter(
       (c) => !c.consultReviewer || c.consultReviewer === "guidance_counselor"
     ),
     ...earlyRows,
   ];
-  // Weekly referral volume over the last 12 weeks (Monday buckets) for
-  // the guidance ADM caseload — feeds the referral line graph.
+
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const dayMs = 86_400_000;
   const today = new Date();
@@ -432,10 +397,10 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
     ).length,
     awaitingReview: earlyRows.filter((c) => !c.reviewed).length,
     reviewed: earlyRows.filter((c) => c.reviewed).length,
-    // Guidance-scoped report totals (not the school-wide tracker).
+
     scopedTotal: guidanceCases.length,
     referralTrend,
-    // Referred-actions breakdown for the donut (reports charts).
+
     byAction: [
       {
         action: "needs_review",
@@ -510,7 +475,6 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
     totalSessions: r.counselingSessions.length,
   }));
 
-  // Tile stats stay UNFILTERED; `total` is the filtered pager count.
   const unfilteredTotal = merged.length;
   return {
     summary: {
@@ -519,9 +483,7 @@ export async function getAdmQueue(ctx: GuidanceContext, query: AdmQueueQuery, ri
     },
     counselorName: counselor?.fullName ?? "Guidance Counselor",
     consultationQueue,
-    // Top-section queue: latest ADM cases referred to guidance, referred
-    // or endorsed (unfiltered by search). Unreviewed rows still need the
-    // counselor's anecdotal review; decided rows render read-only.
+
     reviewQueue: earlyRows.slice(0, 3),
     cases,
     page: safePage,

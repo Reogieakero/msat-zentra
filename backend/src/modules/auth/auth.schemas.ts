@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-// Request validation for authentication (POST bodies + approve params).
-// Business-rule validation (credentials, portal gates, grade bands) lives
-// in src/services/auth/*.service.ts; these schemas only check request shape.
-
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),

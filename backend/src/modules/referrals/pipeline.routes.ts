@@ -150,10 +150,6 @@ router.post(
   }
 );
 
-// Adviser-initiated cancel: the teacher who filed the referral withdraws it
-// at any time while the case is still open (any non-terminal status). Lands
-// on the same terminal "dismissed" state the guidance dismiss flow uses,
-// with the adviser's reason kept in notes.
 router.post(
   "/:id/cancel",
   requireAuth,
@@ -174,12 +170,6 @@ router.post(
   }
 );
 
-// Adviser reopen: re-submit the teacher's own cancelled (dismissed)
-// referral. The SAME row flips back to pending (never a duplicate row),
-// so a submitted → cancelled → submitted case reads pending, not dismissed.
-// An optional new destination (type) may be picked: omitted keeps the
-// original desk. Guards mirror creation: own referral, dismissed-only, and
-// no other open ADM case for the student when the final desk is ADM.
 router.post(
   "/:id/reopen",
   requireAuth,
@@ -208,10 +198,6 @@ router.post(
   }
 );
 
-// Adviser delete: permanently remove the teacher's own referral from their
-// list. Only a cancelled (dismissed) referral can be deleted, and only when
-// nothing was ever recorded against it (no sessions, ADM artefacts, visits,
-// or health records) — otherwise the evidence trail must stay intact.
 router.delete(
   "/:id",
   requireAuth,

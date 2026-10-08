@@ -22,12 +22,6 @@ export interface AtRiskQuery {
   displayTerm: DisplayTerm;
 }
 
-// Every student under 80% of current (display-term) attendance, school-wide.
-// Strict per-day basis: present = days present in EVERY offered subject that
-// weekday (late/absent/excused/unrecorded break the day). Flat worst-first
-// list for the Needs Attention tab. Zero-record students count as 0%.
-// `session` is accepted but ignored on the strict path; it only applies to
-// the legacy fallback when the term holds zero subject-era rows.
 export async function getAtRiskStudents(query: AtRiskQuery) {
   const { session, schoolYearId, displayTerm } = query;
   const termId = displayTerm.id;
@@ -66,7 +60,7 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
   });
 
   if (subjectTakes.length === 0) {
-    // Frozen legacy basis (archived AM/PM term) — original logic unchanged.
+
     const records = await prisma.attendanceRecord.findMany({
       where: { termId, session },
       select: { sectionId: true, studentId: true, rosterId: true, status: true },
@@ -85,7 +79,6 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
       else if (r.status === "excused") cell.excused++;
     }
 
-    // Enrollment, LRN-deduped (registered profile wins over roster entry).
     type Enrolled = { key: string; lrn: string; name: string; sectionId: string; hasAccount: boolean };
     const bySectionLrn = new Map<string, Enrolled>();
     for (const p of profiles) {
@@ -142,7 +135,6 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
     };
   }
 
-  // Strict path: day outcomes per enrolled student (LRN-deduped).
   const entries = await prisma.sectionTimetableEntry.findMany({
     where: {
       sectionId: { in: sectionIds },
@@ -162,7 +154,6 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
     buildOfferedMap(entries)
   );
 
-  // Weekday axis only — weekend days never classify anyone absent.
   const outcomeKeys = buildDayAxis(displayTerm.startDate).filter(
     (k) => !isWeekendKey(k)
   );
@@ -193,7 +184,6 @@ export async function getAtRiskStudents(query: AtRiskQuery) {
     });
   }
 
-  // Group enrolled keys per section for the outcome pass.
   const keysBySection = new Map<string, string[]>();
   for (const e of bySectionLrn.values()) {
     if (!keysBySection.has(e.sectionId)) keysBySection.set(e.sectionId, []);
@@ -249,9 +239,6 @@ export async function getStudentAttendanceRate(studentId: string, termId: string
   return rate;
 }
 
-// Per-subject rate for one student (+ daily view derived from subject marks).
-// :id accepts a profile uuid or `roster:<uuid>`. Omit ?subjectId= for the
-// pooled overall rate across all subjects.
 export async function getStudentSubjectRate(
   rawId: string,
   termId: string | undefined,

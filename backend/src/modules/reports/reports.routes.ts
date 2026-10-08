@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
 import { getReports, type ReportScope } from "./reports.service.js";
@@ -8,10 +7,6 @@ const router = Router();
 
 const SCOPES: ReportScope[] = ["school", "grade", "section"];
 
-// Principal Reports & Analytics command center. Aggregates live data across
-// academics, interventions, ADM, anecdotal, attendance, audit, and accounts.
-// ?scope=school|grade|section (default school). For grade/section scope, pass
-// ?gradeLevel=G7 or ?sectionId=<id>.
 router.get(
   "/",
   requireAuth,

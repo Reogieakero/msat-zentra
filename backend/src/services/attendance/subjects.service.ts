@@ -9,9 +9,6 @@ export interface OfferedSubjectsQuery {
   termId?: string;
 }
 
-// Offered subjects for a section+term (assignment-backed) with the caller's
-// mark permission. Powers the teacher subject selector — the ONLY source of
-// valid subjectId values for POST /bulk.
 export async function getOfferedSubjects(query: OfferedSubjectsQuery) {
   const { teacherId, callerRole, sectionId } = query;
   let { termId } = query;
@@ -42,9 +39,6 @@ export async function getOfferedSubjects(query: OfferedSubjectsQuery) {
     }
   }
 
-  // Committed timetable subjects attached to the caller's linked
-  // teacher-list code — one batched read, so claimed subject teachers
-  // can mark their own classes without assignment rows.
   const linkedSubjectIds =
     callerRole !== "adviser" && callerRole !== "principal"
       ? new Set(
@@ -96,12 +90,6 @@ export interface SubjectDaysQuery {
   allowed: boolean;
 }
 
-// Per-student, per-day subject marks for the active term plus the term
-// range — feeds the meetup blocks view (one heatblock per scheduled meetup
-// day of the subject, term-scoped). Authorized for every section the caller
-// may serve (advisory, assignments, code-linked timetable slots).
-// ?mine=1 restricts rows to takes the caller recorded themselves, so a
-// teacher's workspace rate matches what the advisory matrix attributes.
 export async function getSubjectDays(query: SubjectDaysQuery) {
   const { sectionId, subjectId, mineOnly, termId, teacherId, allowed } = query;
   if (!allowed) {

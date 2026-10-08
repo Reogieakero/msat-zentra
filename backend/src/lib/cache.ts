@@ -3,21 +3,6 @@ import { getRedis } from "./redis.js";
 import { getEnv } from "../config/env.js";
 import { logger } from "./pino.js";
 
-/**
- * Response cache for read-heavy GET routes (Principal/Registrar pages).
- *
- * - Keyed by method + path + query string + caller role + caller user id so
- *   different roles never share a cached payload (Principal vs Registrar
- *   scopes differ) and — critically — different users with the same role
- *   never see each other's user-scoped data (e.g. one teacher's advisory
- *   section served to another teacher).
- * - On hit, the cached JSON is served and `x-cache: HIT` is set.
- * - On miss, the response is captured via a patched `res.json` and stored with
- *   the configured TTL (seconds), tagged so it can be purged later.
- * - Failures (Redis down, serialize error) degrade to live responses — caching
- *   is strictly best-effort.
- */
-
 function buildKey(req: Request): string {
   const user = (req as Request & { user?: { id?: string; role?: string } }).user;
   const role = user?.role ?? "anon";
@@ -25,8 +10,7 @@ function buildKey(req: Request): string {
   const qs = req.originalUrl.includes("?")
     ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
     : "";
-  // Term scope varies every payload once the client sends its active
-  // selection — without it, a Term 1 response would be served to Term 2.
+
   const scope = (req as Request & { termScope?: { schoolYearId?: string; termId?: string } }).termScope;
   const scopeKey = scope ? `:${scope.schoolYearId ?? ""}:${scope.termId ?? ""}` : "";
   return `cache:${req.method}:${req.path}${qs}:${role}:${uid}${scopeKey}`;
@@ -37,15 +21,15 @@ function tagKey(tag: string): string {
 }
 
 export interface CacheOptions {
-  /** Cache TTL in seconds. Defaults to CACHE_TTL_SECONDS. */
+
   ttl?: number;
-  /** Invalidation tags attached to the cached entry. */
+
   tags?: string[];
 }
 
 export function cache(options: CacheOptions = {}) {
   return async function cacheMiddleware(req: Request, res: Response, next: NextFunction) {
-    // Only cache idempotent GETs.
+
     if (req.method !== "GET") return next();
     const redis = getRedis();
     if (!redis) return next();
@@ -88,10 +72,6 @@ export function cache(options: CacheOptions = {}) {
   };
 }
 
-/**
- * Purge every cached entry carrying one of the given tags. Call this from
- * write routes (approve / lock / validate / release) so the next read is live.
- */
 export async function invalidateTags(tags: string[]): Promise<void> {
   const redis = getRedis();
   if (!redis || tags.length === 0) return;

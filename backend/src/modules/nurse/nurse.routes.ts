@@ -31,7 +31,6 @@ async function readNurseProfileSettings(nurseId: string) {
   };
 }
 
-// GET /api/nurse/settings/profile — own display name, photo, palette.
 router.get(
   "/settings/profile",
   requireAuth,
@@ -45,9 +44,6 @@ router.get(
   }
 );
 
-// PATCH /api/nurse/settings/profile — display name + workspace palette.
-// Mirrors the teacher endpoint; adviser / master-teacher fields are
-// intentionally absent for the nurse desk.
 router.patch(
   "/settings/profile",
   requireAuth,
@@ -105,8 +101,6 @@ router.patch(
   }
 );
 
-// POST /api/nurse/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

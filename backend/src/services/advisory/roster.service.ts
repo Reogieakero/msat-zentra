@@ -15,18 +15,13 @@ export interface EnlistInput {
   sectionId?: string;
 }
 
-// POST /api/teacher/advisory/roster — enlist a student into the adviser's
-// section roster (enrolled, no login account yet). When the student later
-// registers with the same LRN, the registrar's breakdown links them.
-// Adviser-only (404 otherwise).
 export async function enlistRoster(
   ctx: AdvisoryContext,
   input: EnlistInput,
   yearId: string | null,
 ) {
   const teacherId = ctx.userId;
-  // Enlistments are saved under the session's active School Year — and
-  // the advisership gate is scoped to that same year.
+
   if (!yearId) {
     throw new AppError(409, "NO_ACTIVE_YEAR", "No active school year");
   }
@@ -63,9 +58,6 @@ export async function enlistRoster(
     include: { section: { select: { name: true } } },
   });
 
-  // Audit, cache invalidation, and the bell fanout all run behind the
-  // response so enlisting feels instant — the service returns the payload
-  // and the route responds first.
   const response = {
     studentId: `roster:${entry.id}`,
     name: entry.fullName,
@@ -91,8 +83,7 @@ export async function enlistRoster(
         sourceId: entry.id,
         reason: `Enlisted ${entry.fullName} (${entry.lrn}) to ${entry.section.name}`,
       });
-      // Enrollment headcounts are cached — a new enlistment must refresh
-      // academics, overview, and teacher caches immediately.
+
       await invalidateTags([
         "registrar",
         "record-keeper",
@@ -101,8 +92,7 @@ export async function enlistRoster(
         "principal",
         "teacher",
       ]);
-      // Realtime bell row for the filing adviser (toast suppressed
-      // client-side — the success toast already fired there).
+
       await fanoutNotification({
         userId: teacherId,
         sourceTable: "student_roster",
@@ -111,7 +101,7 @@ export async function enlistRoster(
         sourceId: entry.id,
       });
     } catch {
-      // Logged inside fanoutNotification/audit; never throws outward.
+
     }
   })();
   return response;
@@ -126,18 +116,9 @@ export interface AttendanceSheetQuery {
   schoolYearId: string | null;
 }
 
-// GET /api/teacher/advisory/attendance — submitted marks for one section +
-// date (+ subject & slot) — per-subject sheet prefill.
-//
-// Subject path (subjectId present) filters by (section, subject, day, slot);
-// legacy path filters by session. Without sectionId the scope stays the
-// caller's teachable sections (advisory UNION assignments UNION code-linked
-// timetable sections); with sectionId the scope narrows to that section
-// (403 unless teachable), so two sections sharing a subject never mix marks.
 export async function getAttendanceSheet(ctx: AdvisoryContext, query: AttendanceSheetQuery) {
   const teacherId = ctx.userId;
-  // Advisory UNION assignments UNION code-linked timetable sections, so
-  // claimed subject teachers prefill their own classes too.
+
   const teachable = await teachableSectionIds(
     teacherId,
     null,
@@ -160,8 +141,7 @@ export async function getAttendanceSheet(ctx: AdvisoryContext, query: Attendance
   const dayKey = date.toISOString().slice(0, 10);
   const dayStart = new Date(`${dayKey}T00:00:00Z`);
   const nextDay = new Date(dayStart.getTime() + 86_400_000);
-  // Day-bounded match covers both UTC-midnight rows (new takes) and
-  // local-noon rows (seed backfill) falling on the same UTC calendar day.
+
   const records = await prisma.attendanceRecord.findMany({
     where: {
       sectionId: { in: sectionIds },
@@ -181,4 +161,3 @@ export async function getAttendanceSheet(ctx: AdvisoryContext, query: Attendance
     })),
   };
 }
-

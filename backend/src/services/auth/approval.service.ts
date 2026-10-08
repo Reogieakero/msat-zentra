@@ -22,22 +22,10 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
   if (!target) throw new AppError(404, "USER_NOT_FOUND", "User not found");
   if (target.status === "active") throw new AppError(409, "ALREADY_ACTIVE", "User already active");
 
-  // Auto-provision the student profile from the official roster so an
-  // approved student immediately lands in their section — and therefore in
-  // section counts, subject lists, and gradebooks — instead of remaining
-  // invisible until a profile exists. Roster is the canonical source for
-  // grade level + section, matching the pending list.
-  //
-  // Guard reads stay outside the transaction; every write below runs inside
-  // one atomic unit (activation + provision + carry-over succeed together or
-  // roll back together — a half-approved account must never persist).
   let provisionRoster: { gradeLevel: GradeLevel; sectionId: string } | null = null;
   let carryoverRosterIds: string[] = [];
   if (target.role === "student" && target.lrn) {
-    // A provisioned placeholder (auto-created by another desk from the
-    // roster, e.g. ADM) already owns this LRN — adopting it needs a
-    // human identity decision, so stop here instead of crashing on the
-    // unique constraint.
+
     const lrnTaken = await prisma.studentProfile.findUnique({
       where: { lrn: target.lrn },
       select: { userId: true },
@@ -61,10 +49,7 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
       });
       if (roster) {
         provisionRoster = roster;
-        // Carry over everything recorded under roster enlistments for this
-        // LRN (scores, finals, attendance, anecdotal, referrals) onto the
-        // new profile. The profile is brand-new so no unique conflicts
-        // are possible.
+
         carryoverRosterIds = (
           await prisma.studentRoster.findMany({
             where: { lrn: target.lrn },
@@ -120,15 +105,13 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
     userId: ctx.userId, actionType: "account_approval",
     sourceTable: "users", sourceId: updated.id, reason: "Account activation",
   });
-  // Approvals change enrollment composition — refresh cached headcounts.
+
   await invalidateTags(APPROVAL_TAGS);
   await fanoutNotification({
     userId: updated.id, sourceTable: "users", action: "approve",
     message: "Your account has been approved.",
   });
-  // Own-bell receipt: the acting registrar/record keeper also gets an
-  // inbox row so their badge bumps live (their echo toast is suppressed
-  // client-side — the mutation toast already confirmed it).
+
   void (async () => {
     try {
       const profile = target.lrn
@@ -144,7 +127,7 @@ export async function approveAccount(ctx: AuthContext, targetUserId: string) {
         sourceId: updated.id,
       });
     } catch {
-      // Best-effort only.
+
     }
   })();
   return { id: updated.id, status: updated.status };
@@ -175,8 +158,7 @@ export async function rejectAccount(ctx: AuthContext, targetUserId: string, reas
     action: "reject",
     message: "Your account request was not approved.",
   });
-  // Own-bell receipt + cache refresh (this endpoint previously skipped
-  // invalidation): the actor's badge bumps live with no refresh.
+
   await invalidateTags(APPROVAL_TAGS);
   void (async () => {
     try {
@@ -186,7 +168,7 @@ export async function rejectAccount(ctx: AuthContext, targetUserId: string, reas
         sourceId: updated.id,
       });
     } catch {
-      // Best-effort only.
+
     }
   })();
   return { id: updated.id, status: updated.status };
@@ -201,15 +183,9 @@ export interface PendingQuery {
   hasPaging: boolean;
 }
 
-// List pending account requests. Grade-band enforcement is server-side via
-// the student profile gradeLevel. Optional ?role filters by account role
-// (defaults student).
 export async function listPending(query: PendingQuery) {
   const { band, roleFilter, q, page, pageSize, hasPaging } = query;
-  // Two sources of pending students:
-  //  1) Those with a StudentProfile already (e.g. seeded) — use profile data.
-  //  2) Real sign-ups with no profile yet — read the claimed LRN from User
-  //     and resolve grade band from the official StudentRoster.
+
   const [profiled, bare, rosterSections] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { gradeLevel: { in: band }, user: { status: "pending", role: roleFilter as Role } },
@@ -236,7 +212,7 @@ export async function listPending(query: PendingQuery) {
       select: { id: true, fullName: true, email: true, contactNumber: true, lrn: true, status: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     }),
-    // Canonical section source: the enrolled StudentRoster, not the profile.
+
     prisma.studentRoster.findMany({
       where: { gradeLevel: { in: band } },
       select: { lrn: true, section: { select: { name: true } } },
@@ -261,8 +237,6 @@ export async function listPending(query: PendingQuery) {
     requestedAt: s.user.createdAt.toISOString(),
   }));
 
-  // Single batched roster read for bare sign-ups (was N sequential
-  // findFirst calls). Latest school year wins per LRN.
   const bareLrns = [...new Set(bare.map((u) => u.lrn).filter((l): l is string => !!l))];
   const bareRosters =
     bareLrns.length > 0
@@ -288,7 +262,7 @@ export async function listPending(query: PendingQuery) {
     if (u.lrn) {
       const roster = latestBareRoster.get(u.lrn);
       if (roster) {
-        if (!band.includes(roster.gradeLevel)) continue; // grade-band enforcement
+        if (!band.includes(roster.gradeLevel)) continue;
         gradeLevel = roster.gradeLevel;
         section = roster.section?.name ?? "—";
       }
@@ -309,9 +283,6 @@ export async function listPending(query: PendingQuery) {
     });
   }
 
-  // Server search + pagination (strict-15 standard): ?q= filters the merged
-  // list by name/LRN/section/email, then ?page=&pageSize= slice it.
-  // Absent params return the full list (legacy clients).
   const unfilteredTotal = students.length;
   const matched = q
     ? students.filter(

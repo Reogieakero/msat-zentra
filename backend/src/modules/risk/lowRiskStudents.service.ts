@@ -15,9 +15,6 @@ export interface LowRiskResult {
   pageSize: number;
 }
 
-// Low-risk students in the session's active school year, paginated. Risk is
-// derived live with the same factor rules as the risk list (no flags = Low)
-// so enlisted students without accounts are included on equal footing.
 export async function getLowRiskStudents(
   page: number,
   pageSize: number,

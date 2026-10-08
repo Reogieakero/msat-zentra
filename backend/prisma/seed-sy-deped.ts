@@ -4,11 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// DepEd Order No. 009, s. 2026 — Three-Term School Calendar, SY 2026-2027
-// SY: June 8, 2026 – April 8, 2027 (201 class days)
-// Term 1: June 8 – September 15, 2026
-// Term 2: September 16 – December 18, 2026
-// Term 3: January 4 – April 8, 2027
 const SY_NAME = "SY 2026-2027";
 const SY_START = new Date("2026-06-08T00:00:00Z");
 const SY_END = new Date("2027-04-08T00:00:00Z");
@@ -27,7 +22,6 @@ async function main() {
 
   let sy = await prisma.schoolYear.findFirst({ where: { name: SY_NAME } });
   if (!sy) {
-    // Only one active year at a time
     await prisma.schoolYear.updateMany({ where: { isActive: true }, data: { isActive: false } });
     sy = await prisma.schoolYear.create({
       data: { name: SY_NAME, startDate: SY_START, endDate: SY_END, isActive: true, createdBy },

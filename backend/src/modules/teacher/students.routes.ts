@@ -36,9 +36,6 @@ async function schoolYearCtxOf(req: Request) {
   };
 }
 
-// GET /api/teacher/advisory/students — advisee roster with risk chips.
-// Adviser-only (404 otherwise). No anecdotal content, ever — counts and
-// confidentiality tiers only.
 router.get(
   "/students",
   requireAuth,
@@ -52,9 +49,6 @@ router.get(
   }
 );
 
-// GET /api/teacher/advisory/students/:id/anecdotal — anecdotal records for one
-// advisee (active term). Own records come back in full; anyone else's come back
-// metadata-only (date, category, tier, follow-up count) — never the write-up.
 router.get(
   "/students/:id/anecdotal",
   requireAuth,
@@ -68,8 +62,6 @@ router.get(
   }
 );
 
-// GET /api/teacher/advisory/students/:id/attendance — attendance for one
-// advisee (active term): summary rate plus per-day AM/PM sessions.
 router.get(
   "/students/:id/attendance",
   requireAuth,
@@ -83,8 +75,6 @@ router.get(
   }
 );
 
-// GET /api/teacher/advisory/students/:id/academic — subject grades for one
-// advisee (active term), read-only. Includes a passed/failed summary.
 router.get(
   "/students/:id/academic",
   requireAuth,
@@ -98,9 +88,6 @@ router.get(
   }
 );
 
-// GET /api/teacher/advisory/students/:id — drawer detail for one advisee.
-// 404 unless the student is in the caller's advisory section. Referrals and
-// ADM come back status/stage-only; anecdotal content is never included.
 router.get(
   "/students/:id",
   requireAuth,

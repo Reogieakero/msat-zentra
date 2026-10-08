@@ -1,14 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 
-// Shared audit data-access: batched source-label resolution for the log
-// list. Single-table reads for the status-only drill-down live in the audit
-// service (one query per source type, no fan-out).
-
 export const MAX_PAGE_SIZE = 100;
 
-// Batched label resolution: groups entries by source table and issues one
-// findMany per table (+ one studentProfile lookup), instead of 1-2 findUnique
-// per row (N+1). Falls back to "table #id" when not resolvable.
 export async function resolveSourceLabels(
   entries: { sourceTable: string; sourceId: string }[],
 ): Promise<Map<string, string>> {
@@ -25,7 +18,6 @@ export async function resolveSourceLabels(
     const studentNameById = new Map<string, string>();
     const collectStudentIds: string[] = [];
 
-    // First pass: bulk-fetch source rows per table (select studentId/roster only).
     const sourceStudent = new Map<string, string | null>();
     const sourceRoster = new Map<string, string | null>();
     for (const [table, ids] of byTable) {
@@ -117,7 +109,7 @@ export async function resolveSourceLabels(
           for (const r of rows) labels.set(key(table, r.id), r.name);
         }
       } catch {
-        // Per-table failure falls back to "table #id" below.
+
       }
     }
 
@@ -169,7 +161,7 @@ export async function resolveSourceLabels(
       }
     }
   } catch {
-    // Fallback handled by caller.
+
   }
   return labels;
 }

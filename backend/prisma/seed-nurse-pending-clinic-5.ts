@@ -4,13 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 anecdotal records referred to the school nurse for OTHER matters
-// (regular clinic desk, NOT ADM):
-//   referredToRole = "nurse", consultReviewer = null, status = "pending".
-// Just referred — no action done by the nurse (no sessions, no intake).
-// These surface on /nurse/referrals (Referrals to me) as type Clinic.
-// Idempotent: skips roster entries that already have any nurse referral.
-
 const CASES = [
   {
     observationDaysAgo: 0,
@@ -133,8 +126,6 @@ async function main() {
       },
     });
 
-    // Referral time on the nurse pages = earliest audit entry; mirror what
-    // POST /api/anecdotal/:id/refer writes so "waiting" counts correctly.
     await prisma.auditLog.create({
       data: {
         userId: observerId,

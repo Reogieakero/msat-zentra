@@ -11,7 +11,6 @@ import {
 
 const router = Router();
 
-// GET /api/guidance/settings/profile — own display name, photo, palette.
 router.get(
   "/settings/profile",
   requireAuth,
@@ -25,7 +24,6 @@ router.get(
   }
 );
 
-// PATCH /api/guidance/settings/profile — display name + workspace palette.
 router.patch(
   "/settings/profile",
   requireAuth,
@@ -51,8 +49,6 @@ router.patch(
   }
 );
 
-// POST /api/guidance/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

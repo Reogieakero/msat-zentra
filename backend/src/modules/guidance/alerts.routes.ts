@@ -8,10 +8,6 @@ import { getAlerts } from "../../services/guidance/alerts.service.js";
 
 const router = Router();
 
-// Guidance Counselor alerts: live system-flagged queue from the shared risk
-// engine (academic < 75, attendance < 80%, >= 1 anecdotal this term).
-// Status-only rows — student identity, level, tripped factors, referral and
-// intervention state. No anecdotal write-up content ever leaves this endpoint.
 router.get(
   "/alerts",
   requireAuth,
@@ -34,7 +30,6 @@ router.get(
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = resolveGuidancePageSize(req);
 
-      // Session's active year when carried; legacy lookup otherwise.
       const schoolYearId = req.termScope?.schoolYearId ?? (await scopedYearId(req));
       const termId = await resolveActiveTermId(req);
       res.json(

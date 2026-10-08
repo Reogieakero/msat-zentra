@@ -2,20 +2,15 @@ import { prisma } from "../../lib/prisma.js";
 import { meetsAcademicExcellenceAward } from "../../services/grading.js";
 import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
+import { gradeToNumber as gradeNumber } from "../../lib/grades.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function gradeNumber(gradeLevel: string): number {
-  const m = String(gradeLevel).match(/\d+/);
-  return m ? Number(m[0]) : 0;
-}
-
 export interface LiveHonorSubjectDTO {
   subject: string;
   code: string;
-  /** Live unweighted mean of recorded percentage scores (1dp). */
   average: number;
 }
 
@@ -25,7 +20,6 @@ export interface LiveHonorCandidateDTO {
   lrn: string;
   section: string;
   gradeLevel: number;
-  /** Mean of graded live subject averages (1dp). */
   generalAverage: number;
   lowestSubject: number;
   subjects: LiveHonorSubjectDTO[];
@@ -37,23 +31,10 @@ export interface LiveHonorRoll {
   candidates: LiveHonorCandidateDTO[];
 }
 
-// Principal Honor Roll & Awards — live general-average basis.
-//
-// General Average here = mean of the student's graded LIVE subject averages
-// (unweighted mean of recorded percentage scores per subject, lock-agnostic
-// — the same definition as the advisory students table). NOT the transmuted
-// FinalGrade mean the academics summary uses.
-//
-// Qualification keeps the DO 15, s. 2026 rule on the live scale
-// (generalAverage >= 90, no subject below 80) plus the High-risk exclusion.
-// No lock requirement: live work counts the moment scores are recorded.
-// Students with no recorded scores never appear (no zero-average rows).
 export async function getLiveHonorRoll(scope?: {
   schoolYearId?: string | null;
   termId?: string | null;
 }): Promise<LiveHonorRoll> {
-  // Same scope resolution as the academics summary: session term, else
-  // first term of the session year, else first term of the active year.
   let activeTerm: {
     id: string;
     termNumber: number;
@@ -93,8 +74,6 @@ export async function getLiveHonorRoll(scope?: {
     resolvedYearId = activeYear?.id ?? null;
   }
 
-  // Identity grain: every section in scope with registered profiles +
-  // enlisted roster rows (matched globally by LRN so nobody counts twice).
   const sections = await prisma.section.findMany({
     where: resolvedYearId ? { schoolYearId: resolvedYearId } : undefined,
     select: {
@@ -119,10 +98,7 @@ export async function getLiveHonorRoll(scope?: {
     s.rosterEntries.filter((r) => !registeredLrns.has(r.lrn)).map((r) => r.id),
   );
 
-  // Everything below needs only (termId, sectionIds, profileIds, rosterIds)
-  // — one parallel fan-out, no sequential stages.
   const [gradeRows, attendanceRows, anecdotalRows, headcounts] = await Promise.all([
-    // Live inputs: every recorded percentage score this term, school-wide.
     profileIds.length + rosterIds.length > 0
       ? prisma.studentGrade.findMany({
           where: {
@@ -146,7 +122,6 @@ export async function getLiveHonorRoll(scope?: {
           },
         })
       : Promise.resolve([]),
-    // Attendance statuses for the risk gate (present ratios only).
     prisma.attendanceRecord.findMany({
       where: {
         termId,
@@ -157,7 +132,6 @@ export async function getLiveHonorRoll(scope?: {
       },
       select: { studentId: true, rosterId: true, status: true },
     }),
-    // Anecdotal counts for the risk gate (counts only, never content).
     prisma.anecdotalRecord.findMany({
       where: {
         termId,
@@ -171,8 +145,6 @@ export async function getLiveHonorRoll(scope?: {
     sectionHeadcounts(sectionIds),
   ]);
 
-  // Per-student live subject means (unweighted, 1dp) — same formula as the
-  // advisory desk: sum/count per (student, subject).
   const liveByKey = new Map<
     string,
     Map<string, { sum: number; count: number; name: string; code: string }>
@@ -245,9 +217,6 @@ export async function getLiveHonorRoll(scope?: {
     const lowestSubject = Math.min(...subjects.map((s) => s.average));
     if (!meetsAcademicExcellenceAward(generalAverage, lowestSubject)) continue;
 
-    // High-risk exclusion on the same live basis: the academic flag reads
-    // the live subject means (a >=90 qualifier can never trip it), while
-    // attendance/behavioral read the term's real records.
     const meta = sectionOf.get(key);
     const identity = nameOf.get(key);
     if (!meta || !identity) continue;

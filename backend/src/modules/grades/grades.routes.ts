@@ -30,9 +30,6 @@ router.post(
       });
       if (!assessment) throw new AppError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found");
 
-      // Enlisted students without accounts score under `roster:<id>`. The
-      // roster entry must sit in a section where the caller teaches this
-      // subject + term.
       const rawStudentId = String(req.body.studentId);
       const isRoster = rawStudentId.startsWith("roster:");
       const rosterId = isRoster ? rawStudentId.slice("roster:".length) : null;
@@ -45,7 +42,7 @@ router.post(
       if (isRoster && !rosterEntry) {
         throw new AppError(404, "STUDENT_NOT_FOUND", "Student not found");
       }
-      // Section + category for the realtime confirmation message.
+
       const sectionName = isRoster
         ? (rosterEntry!.section?.name ?? "")
         : (
@@ -85,32 +82,23 @@ router.post(
         });
       }
 
-      // Recompute final grade for this student/subject/term (shared helper —
-      // identical math everywhere finals are recomputed).
       const key = isRoster ? { rosterId: rosterId as string } : { studentId: rawStudentId };
       const final = await recomputeSubjectFinal(key, gc.subjectId, gc.termId);
-      // Unreachable: a score was just stored, so at least one category has
-      // evidence and the recompute always yields a grade.
+
       if (!final) {
         throw new AppError(500, "RECOMPUTE_FAILED", "Could not recompute the final grade");
       }
       const { computedAverage, transmutedGrade, remarks } = final;
 
-      // Risk + parent notifications only apply to registered profiles.
-      // Roster students get the roster risk path (snapshot + auto-intervention).
       if (!isRoster) {
         const term = await prisma.term.findFirst({ where: { id: gc.termId } });
         if (term) await recomputeRisk(rawStudentId, term.id);
       } else {
         await recomputeRosterRisk(rosterId as string, gc.termId);
       }
-      // Finals feed cached teacher / registrar / principal views.
+
       await invalidateTags(["teacher", "registrar", "academics", "overview", "principal", "risk", "guidance"]);
 
-      // True realtime confirmation to the teacher who saved: one inbox row
-      // per assessment per minute (60s dedup on user + source + action) so
-      // a save-all batch lands as a single bell + toast, not one per score.
-      // Names the section and category the scores belong to, in sentence form.
       const categoryName =
         gc.componentType === "WRITTEN_WORK"
           ? "Written Work"
@@ -146,7 +134,6 @@ router.get(
   }
 );
 
-const lockSchema = z.object({});
 router.post(
   "/final-grades/:id/lock",
   requireAuth,
@@ -170,8 +157,6 @@ router.post(
   }
 );
 
-// Stage 2 — adviser approves the subject teacher's locked final, passing it to
-// the registrar/record keeper for final validation.
 router.post(
   "/final-grades/:id/adviser-approve",
   requireAuth,
@@ -197,11 +182,6 @@ router.post(
       await invalidateTags(["registrar", "registrar-finals", "registrar-overview", "academics", "overview", "principal", "risk", "teacher"]);
       res.json(updated);
 
-      // Registrar desk handoff (best-effort): when this approval completes the
-      // student's term set (every final in the term is adviser_approved), the
-      // grade-band owner learns the set is viewable. Partial approvals stay
-      // silent. The 60s message-aware dedup in fanoutNotification absorbs
-      // double-fires from rapid successive approvals.
       void (async () => {
         try {
           const full = await prisma.finalGrade.findUnique({
@@ -247,7 +227,7 @@ router.post(
             excludeUserId: req.user!.id,
           });
         } catch {
-          // Best-effort only — approval already succeeded.
+
         }
       })();
     } catch (e) { next(e); }

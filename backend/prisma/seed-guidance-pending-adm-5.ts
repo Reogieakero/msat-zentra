@@ -4,16 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 anecdotal records referred for ADM with the guidance counselor as
-// consultation reviewer:
-//   referredToRole = "adm_coordinator", consultReviewer = "guidance_counselor",
-//   status = "pending".
-// Just referred — no action done by guidance (no review, no session).
-// These surface in the guidance ADM consultation queue as cases that need
-// review (decide: endorse to the ADM coordinator or reject).
-// Idempotent: skips roster entries that already have a guidance-picked ADM
-// referral.
-
 const CASES = [
   {
     observationDaysAgo: 0,
@@ -100,7 +90,6 @@ async function main() {
   );
 
   let created = 0;
-  // SEED_COUNT caps how many of CASES to create (default: all).
   const limit = Math.max(0, Number(process.env.SEED_COUNT) || CASES.length);
   for (const c of CASES.slice(0, limit)) {
     const target = candidates[created];

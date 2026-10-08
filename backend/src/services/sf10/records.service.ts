@@ -1,7 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { AppError } from "../../lib/errors.js";
-import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { uploadFile, sf10ObjectPath, getSf10Bucket } from "../../lib/storage.js";
 import {
@@ -29,8 +28,6 @@ export async function getSummary() {
     byGrade[g][r.status] += 1;
   }
 
-  // Students with no SF10 record at all are "missing" for their grade —
-  // enlisted students without accounts included (they hold no SF10 yet).
   const [studentsWithoutRecord, rosterLrns, profileLrns] = await Promise.all([
     prisma.studentProfile.groupBy({
       by: ["gradeLevel"],
@@ -64,8 +61,6 @@ export interface RecordsQuery {
   status: "attach" | "available" | "released" | null;
 }
 
-// List SF10 records scoped to the caller's handled grade levels (registrar /
-// record_keeper are banded 11–12 / 7–10 via staffProfile.handledGradeLevels).
 export async function listRecords(query: RecordsQuery) {
   const { band, page, pageSize, q, status } = query;
   const bandWhere =
@@ -73,8 +68,6 @@ export async function listRecords(query: RecordsQuery) {
       ? ({ student: { gradeLevel: { in: band } } } as Prisma.Sf10RecordWhereInput)
       : ({} as Prisma.Sf10RecordWhereInput);
 
-  // Server paging + search (list standard): `total` drives the pager
-  // (filtered count); `counts` stay global (unfiltered) for the tiles.
   const where: Prisma.Sf10RecordWhereInput = {
     ...bandWhere,
     ...(status ? { status } : {}),
@@ -174,7 +167,7 @@ export async function uploadRecord(ctx: Sf10Context, input: UploadInput) {
   if (!student) throw new AppError(404, "NOT_FOUND", "Student not found");
 
   const isRegistrar = ctx.role === "registrar";
-  // Grade-band enforcement for registrar (11–12) / record_keeper (7–10).
+
   const band = await resolveGradeBand(ctx.role, ctx.userId);
   if (band.length > 0 && !band.includes(student.gradeLevel)) {
     throw new AppError(403, "GRADE_SCOPE", "You do not handle this student's grade level");
@@ -208,7 +201,6 @@ export async function uploadRecord(ctx: Sf10Context, input: UploadInput) {
     },
   });
 
-  // Append an initial version snapshot + audit entry.
   const existing = await prisma.sf10RecordVersion.count({
     where: { sf10RecordId: record.id },
   });
@@ -266,8 +258,7 @@ export async function verifyRecord(ctx: Sf10Context, recordId: string) {
   });
   if (!record) throw new AppError(404, "NOT_FOUND", "SF10 record not found");
   const updated = await prisma.sf10Record.update({ where: { id: record.id }, data: { verifiedBy: ctx.userId, verifiedAt: new Date() } });
-  // Registrar desk handoff (best-effort): a verified record needs band
-  // validation. Names the learner + section so the toast reads specific.
+
   void (async () => {
     try {
       const full = await prisma.sf10Record.findUnique({
@@ -297,7 +288,7 @@ export async function verifyRecord(ctx: Sf10Context, recordId: string) {
         excludeUserId: ctx.userId,
       });
     } catch {
-      // Best-effort only — verification already succeeded.
+
     }
   })();
   return updated;
@@ -312,8 +303,7 @@ export async function validateRecord(ctx: Sf10Context, recordId: string) {
     prisma.sf10RecordVersion.create({ data: { sf10RecordId: record.id, versionNumber: record.currentVersion + 1, dataSnapshot: (record.ocrExtractedData as object) ?? {}, changedBy: ctx.userId, changeReason: "Validation" } }),
     prisma.auditLog.create({ data: { userId: ctx.userId, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 validated" } }),
   ]);
-  // Own-bell receipt so the actor's badge bumps live (echo toast
-  // suppressed client-side).
+
   await fanoutNotification({
     userId: ctx.userId,
     sourceTable: "sf10_records",
@@ -335,8 +325,7 @@ export async function releaseRecord(ctx: Sf10Context, recordId: string) {
     }),
     prisma.auditLog.create({ data: { userId: ctx.userId, actionType: "sf10_update", sourceTable: "sf10_records", sourceId: record.id, reason: "SF10 released and archived" } }),
   ]);
-  // Own-bell receipt so the actor's badge bumps live (echo toast
-  // suppressed client-side).
+
   await fanoutNotification({
     userId: ctx.userId,
     sourceTable: "sf10_records",

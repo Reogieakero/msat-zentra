@@ -1,13 +1,5 @@
 import { z } from "zod";
 
-// Request validation for the intervention follow-ups (POST bodies).
-// Business-rule validation (resolve gates, workability, close-out rules)
-// lives in src/services/interventions/*.service.ts; these schemas only check
-// request shape.
-
-// Start a follow-up for a live at-risk student who has no open one yet —
-// same intake as accepting a referral: urgency, first impressions, and an
-// optional first counseling session booked on the spot.
 export const startSchema = z.object({
   studentId: z.string().min(1).optional(),
   rosterId: z.string().min(1).optional(),

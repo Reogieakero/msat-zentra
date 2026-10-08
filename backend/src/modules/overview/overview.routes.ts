@@ -13,12 +13,10 @@ import {
   resolveActiveTermId,
 } from "../../services/risk.js";
 import { meetsAcademicExcellenceAward } from "../../services/grading.js";
+import { GRADE_LABELS, GRADE_ORDER } from "../../lib/grades.js";
 
 const router = Router();
 
-// Principal overview (O4): KPIs, at-risk factor breakdown, and the counts that
-// drive the "Action Required" cards. All values are computed live from the
-// database — no mocked data.
 router.get(
   "/",
   requireAuth,
@@ -26,7 +24,7 @@ router.get(
   cache({ tags: ["overview", "principal"] }),
   async (req, res, next) => {
     try {
-      // Session's active School Year — pages never pick a year themselves.
+
       const schoolYearId =
         req.termScope?.schoolYearId ??
         (
@@ -36,14 +34,12 @@ router.get(
           })
         )?.id;
 
-      // Single active-term resolver, shared with the Risk endpoints so the
-      // Overview's live recompute matches the board/heatmap/students exactly.
       const termId = req.termScope?.termId ?? (await resolveActiveTermId(req));
 
       const [profiles, rosterExtra, activeSections, teachers, anecdotals, students, rosterCohort, admPipeline, admReferrals, accountApprovals, sectionPopulations] =
         await Promise.all([
           prisma.studentProfile.count(),
-          // Enlisted students without accounts count toward enrollment too.
+
           totalRosterHeadcount(),
           prisma.section.count({ where: { adviserId: { not: null } } }),
           prisma.staffProfile.count(),
@@ -65,8 +61,7 @@ router.get(
               },
             },
           }),
-          // Same cohort without accounts — account status never excludes anyone
-          // from risk, honor, or ADM visibility.
+
           prisma.studentRoster.findMany({
             where: schoolYearId ? { schoolYearId } : undefined,
             select: {
@@ -87,8 +82,7 @@ router.get(
           prisma.admLearnerProfile.count({
             where: { stage: { in: ["meeting_parents", "home_visitation", "certification", "principal_approval"] } },
           }),
-          // ADM-track referrals with no learner profile yet — still pending
-          // ADM cases from the principal's view.
+
           prisma.referral.count({
             where: {
               referredToRole: "adm_coordinator",
@@ -107,12 +101,8 @@ router.get(
 
       const enrollment = profiles + rosterExtra;
 
-      // Roster-aware section headcounts (registered + enlisted, no double
-      // count) for populations and attendance denominators below.
       const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
 
-      // Risk cohort: registered profiles plus unregistered enlistments
-      // (matched by LRN so nobody counts twice once they register).
       const registeredLrns = new Set(students.map((s) => s.lrn));
       const riskCohort: {
         gradeLevel: string;
@@ -147,8 +137,6 @@ router.get(
           })),
       ];
 
-      // Live risk recompute via the shared engine so the Overview agrees with
-      // the Risk board/students pages (stored riskLevel column is NOT trusted).
       let attendance = 0;
       let grades = 0;
       let behavior = 0;
@@ -175,8 +163,7 @@ router.get(
           const g = s.gradeLevel;
           riskByGrade.set(g, (riskByGrade.get(g) ?? 0) + 1);
         }
-        // Honor roll uses the SAME rule as the Academics page: every subject
-        // grade must be locked/finalized and the student must not be High risk.
+
         const finals = s.finalGrades;
         const allLocked =
           finals.length > 0 &&
@@ -194,36 +181,19 @@ router.get(
         }
       }
 
-      // Factor totals (counts of students triggering each flag) — these align
-      // with the Risk board's factorTotals. No "wellbeing" pseudo-factor.
       const atRisk = { attendance, grades, behavior, students: atRiskStudents };
 
-      // Risk-level split across all enrolled students (High / Moderate / Low)
-      // plus the at-risk distribution per grade level, ordered G7 -> G12.
-      const GRADE_LABELS: Record<string, string> = {
-        G7: "Grade 7",
-        G8: "Grade 8",
-        G9: "Grade 9",
-        G10: "Grade 10",
-        G11: "Grade 11",
-        G12: "Grade 12",
-      };
-      const GRADE_ORDER = Object.keys(GRADE_LABELS);
       const riskByGradeRows = GRADE_ORDER.map((g) => ({
         grade: GRADE_LABELS[g],
         count: riskByGrade.get(g) ?? 0,
       }));
 
-      // Per-section population (enrolled students, roster-aware) for the
-      // active school year, labelled by grade and ordered G7 -> G12 then
-      // section name.
       const sectionPopulationRows = sectionPopulations.map((s) => ({
         grade: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
         section: s.name,
         count: headcounts.get(s.id) ?? s._count.students,
       }));
 
-      // Sections with attendance below 80% (attendance watch).
       const attendanceSections = schoolYearId
         ? await prisma.section.findMany({
             where: { schoolYearId },

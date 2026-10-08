@@ -1,8 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 
-// Validates req.body / req.params / req.query against a Zod schema and replaces
-// the property with the parsed result.
 export function validate<T extends z.ZodTypeAny>(
   source: "body" | "params" | "query",
   schema: T

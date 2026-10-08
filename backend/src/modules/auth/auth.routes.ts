@@ -45,9 +45,6 @@ router.post("/register/:kind", validate("body", registerSchema), async (req, res
   }
 });
 
-// LRN verification engine. Given a claimed LRN + name, returns the matching
-// official StudentRoster record and a side-by-side comparison verdict so the
-// registrar can confirm the requester is the enrolled student.
 router.get(
   "/match-lrn",
   requireAuth,
@@ -73,9 +70,7 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
       role: "student" | "staff" | "parent";
     };
     const { accessToken, refreshToken, role: userRole } = await login({ email, password, role });
-    // Long-lived refresh token leaves only as an httpOnly cookie — it is
-    // never exposed to page JavaScript. The short-lived access token stays
-    // in the JSON body for the Bearer transport.
+
     setRefreshCookie(res, refreshToken, { secure: isSecureContext() });
     res.json({ accessToken, role: userRole });
   } catch (e) {
@@ -83,8 +78,6 @@ router.post("/login", validate("body", loginSchema), async (req, res, next) => {
   }
 });
 
-// Self-service password change for any authenticated account (used by the
-// teacher settings page, safe for all roles).
 router.post(
   "/change-password",
   requireAuth,
@@ -107,7 +100,7 @@ router.post("/refresh", async (req, res, next) => {
     const token = getRefreshCookie(req);
     if (!token) throw new AppError(401, "INVALID_REFRESH", "Invalid refresh token");
     const { accessToken, refreshToken } = await refreshTokens(token);
-    // Rotate on every use: the fresh token replaces the cookie value.
+
     setRefreshCookie(res, refreshToken, { secure: isSecureContext() });
     res.json({ accessToken });
   } catch (e) {
@@ -115,8 +108,6 @@ router.post("/refresh", async (req, res, next) => {
   }
 });
 
-// Terminates the refresh-token cookie. No auth gate: the access token may
-// already be expired — clearing the cookie is idempotent either way.
 router.post("/logout", async (_req, res, next) => {
   try {
     clearRefreshCookie(res, { secure: isSecureContext() });
@@ -141,9 +132,6 @@ router.post(
   }
 );
 
-// List pending account requests. Registrar sees grade band G11–G12 only; record
-// keeper sees G7–G10. Grade-band enforcement is server-side via the student
-// profile gradeLevel. Optional ?role filters by account role (defaults student).
 router.get(
   "/pending",
   requireAuth,

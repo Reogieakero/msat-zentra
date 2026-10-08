@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-// Request validation for the records desk (registrar + record keeper).
-// Business-rule validation (grade-band scope, ownership) lives in
-// src/services/registry/*.service.ts; these schemas only check request shape.
-
 export const HEX_COLOR = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #RRGGBB hex value");

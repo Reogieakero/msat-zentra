@@ -2,14 +2,6 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
-/**
- * Fills scores for legacy assessments (pre-gradebook seed) so EVERY
- * assessment has grades for every roster student in its subject's grade.
- * Same deterministic curve as seed-gradebook-full.ts. Idempotent:
- * skips existing (assessmentId, rosterId) pairs.
- * Usage: `npx tsx prisma/seed-gradebook-fill-gaps.ts [--dry-run]`
- */
-
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 const DRY = process.argv.includes("--dry-run");
 
@@ -64,7 +56,6 @@ async function main() {
     const rows = missing.map((s, i) => {
       const pct = Math.round(pctFor(s.id, a.id) * 10) / 10;
       return {
-        // Short unique id (long two-uuid ids collide at the 60-char cut).
         id: `gb_f_${a.id.slice(-10)}_${s.id.slice(-10)}_${i}`.slice(0, 60),
         assessmentId: a.id,
         rosterId: s.id,
@@ -72,7 +63,6 @@ async function main() {
         percentageScore: pct,
       };
     });
-    // De-dupe ids inside the batch.
     const seen = new Set<string>();
     const deduped = rows.filter((r) => {
       if (seen.has(r.id)) return false;

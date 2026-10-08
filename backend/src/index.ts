@@ -14,8 +14,6 @@ const server = app.listen(port, () => {
   logger.info({ port, env: env.NODE_ENV }, "Zentra backend listening");
 });
 
-// Graceful shutdown: stop accepting connections, wait for in-flight requests,
-// then close the DB pool so Supabase doesn't strand half-open queries.
 function shutdown(signal: string) {
   logger.info({ signal }, "Shutting down");
   clearInterval(escalationTimer);
@@ -23,14 +21,12 @@ function shutdown(signal: string) {
   server.close(() => {
     disconnectPrisma().finally(() => process.exit(0));
   });
-  // Hard deadline so a hung keep-alive socket can't block the deploy.
+
   setTimeout(() => process.exit(1), 10_000).unref();
 }
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-// Hourly escalation sweep: overdue open grade flags flip to `escalated`.
-// Reads also run it lazily, so this is a backstop, not the source of truth.
 const escalationTimer = setInterval(() => {
   runEscalation()
     .then((count) => {
@@ -40,9 +36,6 @@ const escalationTimer = setInterval(() => {
 }, 3_600_000);
 escalationTimer.unref?.();
 
-// Hourly auto-absent sweep: elapsed subject meetups with zero takes get
-// materialized absent rows (system-recorded), so the engine and the
-// attendance pages read real records. Idempotent; best-effort.
 const autoAbsentTimer = setInterval(() => {
   sweepAutoAbsent()
     .then(({ meetups, rows }) => {

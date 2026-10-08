@@ -5,26 +5,11 @@ import {
 } from "../../services/grading.js";
 import { computeRiskFactors, levelFromFlags } from "../../services/risk.js";
 import { schoolDaysToDate } from "../../services/attendance.js";
-
-const GRADE_LABELS: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
-
-function gradeLabel(gradeLevel: string): string {
-  return GRADE_LABELS[gradeLevel] ?? gradeLevel;
-}
+import { gradeLabel } from "../../lib/grades.js";
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
-
-// DO 15, s. 2026 lists Academic Excellence awardees alphabetically — no
-// bands, no rank order.
 
 export interface AcademicsSummary {
   schoolYear: string;
@@ -35,10 +20,6 @@ export interface AcademicsSummary {
   potentialHonorRoll: PotentialHonorCandidateDTO[];
 }
 
-// Students not yet confirmed (grades still unlocked) but whose current raw
-// partial grades already satisfy the Academic Excellence rule — i.e. they
-// have the potential to make the award list once remaining grades are
-// locked/finalized.
 export interface PotentialHonorCandidateDTO {
   studentId: string;
   name: string;
@@ -93,8 +74,7 @@ export async function getAcademicsSummary(
   mode: "raw" | "final" = "final",
   scope?: { schoolYearId?: string | null; termId?: string | null },
 ): Promise<AcademicsSummary> {
-  // Scoped to the session's active School Year + Term (req.termScope).
-  // Falls back to the database-active year so legacy callers keep working.
+
   let activeTerm: {
     id: string;
     termNumber: number;
@@ -124,16 +104,11 @@ export async function getAcademicsSummary(
   const termId = activeTerm?.id;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
   const schoolYear = activeTerm?.schoolYear?.name ?? "No active school year";
-  // Global "school days done" — weekdays from term start through today.
-  // Single source of truth shared with the attendance heatmaps.
+
   const schoolDays = schoolDaysToDate(activeTerm?.startDate);
 
-  // "final" = only locked/finalized grades; "raw" = include every graded row
-  // (locked or not) so the principal can preview before grades are finalized.
   const lockedOnly = mode === "final";
 
-  // Scope sections to the active school year (was: all years, all sections).
-  // Falls back to the DB-active year when the session carries no scope.
   let resolvedYearId = scope?.schoolYearId ?? null;
   if (!resolvedYearId) {
     const activeYear = await prisma.schoolYear.findFirst({
@@ -171,8 +146,7 @@ export async function getAcademicsSummary(
           },
         },
       },
-      // Enlisted students without accounts — account status never excludes
-      // anyone from academics or risk. Same shape as profiles below.
+
       rosterEntries: {
         select: {
           id: true,
@@ -212,8 +186,6 @@ export async function getAcademicsSummary(
     const grade = gradeLabel(section.gradeLevel);
     const gradeAcc = passFailMap.get(grade) ?? { passed: 0, failed: 0 };
 
-    // Registered profiles plus unregistered enlistments (matched by LRN so
-    // nobody counts twice once they register), normalized to one shape.
     const registeredLrns = new Set(section.students.map((s) => s.lrn));
     const enrolledStudents: {
       userId: string;
@@ -262,9 +234,7 @@ export async function getAcademicsSummary(
             : true
         )
         .filter((f) => f.transmutedGrade != null && f.computedAverage != null);
-      // Every name on the advisory roster (registered profile or enlisted
-      // roster entry) is listed — account or grade status never excludes
-      // anyone. Students without encoded grades get an empty subject list.
+
       const hasGrades = finals.length > 0;
 
       const subjects: StudentSubjectDTO[] = finals.map((f) => {
@@ -285,14 +255,11 @@ export async function getAcademicsSummary(
           )
         : 0;
 
-      // Pass/fail only counts students with encoded grades.
       if (hasGrades) {
         if (overallAverage >= 75) gradeAcc.passed += 1;
         else gradeAcc.failed += 1;
       }
 
-      // Live risk level via the shared engine (do NOT trust the stale stored
-      // riskLevel column — must match the Risk board/students pages).
       const liveLevel = levelFromFlags(
         computeRiskFactors({
           finalGrades: finals.map((f) => ({
@@ -304,8 +271,6 @@ export async function getAcademicsSummary(
           enrolled,
         })
       );
-      const atRisk = liveLevel === "High" || liveLevel === "Moderate";
-
       const amRecords = student.attendanceRecords.filter((a) => a.session === "AM");
       const pmRecords = student.attendanceRecords.filter((a) => a.session === "PM");
       const presentAm = amRecords.filter((a) => a.status === "present").length;
@@ -328,9 +293,6 @@ export async function getAcademicsSummary(
         subjects,
       });
 
-      // Academic Excellence (DO 15, s. 2026): only students with encoded
-      // grades, every subject grade locked/finalized, and the student is not
-      // High risk.
       if (hasGrades) {
         const allLocked = finals.every(
           (f) => f.lockStatus === "locked" || f.lockStatus === "adviser_approved" || f.finalizedAt != null
@@ -348,9 +310,7 @@ export async function getAcademicsSummary(
             });
           }
         } else if (!allLocked && liveLevel !== "High") {
-          // Potential engine: current raw partial grades already meet the
-          // award rule, so the student can still reach the award list once
-          // remaining grades are locked.
+
           const lowestSubject = subjects.reduce(
             (min, s) => Math.min(min, s.transmutedGrade),
             Infinity
@@ -375,9 +335,6 @@ export async function getAcademicsSummary(
 
     passFailMap.set(grade, gradeAcc);
 
-    // Section aggregates only cover students with encoded grades, so
-    // gradeless roster members never drag averages or pass rates. Sections
-    // are always listed, even when nobody has grades yet.
     const graded = students.filter((s) => s.subjects.length > 0);
     const avgTransmuted =
       graded.length > 0
@@ -414,7 +371,6 @@ export async function getAcademicsSummary(
         Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, ""))
     );
 
-  // DO 15, s. 2026: awardees are listed alphabetically.
   const honorRollPreview = honorRollPool
     .sort((a, b) => a.name.localeCompare(b.name));
 

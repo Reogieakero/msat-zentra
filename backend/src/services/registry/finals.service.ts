@@ -7,21 +7,10 @@ export interface FinalsQuery {
   q: string;
 }
 
-// Records-desk final-grade viewer. The desk has a view-only role in the grade
-// pipeline:
-//   1. Subject teacher locks a subject's final grade (lockStatus "locked").
-//   2. Adviser approves it (lockStatus "adviser_approved").
-//   3. A student's grades become visible ONLY when every subject
-//      for that student (in the term) has been adviser-approved.
-// The desk cannot approve — this endpoint simply returns the complete,
-// viewable grade sets grouped by student. All values computed live — no mocks.
 export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) {
   const band = ctx.band;
   const { page, pageSize, q } = query;
 
-  // Every final-grade row for the desk band, with the info needed to
-  // decide which students have a fully adviser-approved term. Roster rows
-  // resolve names/sections from the enlistment instead of a profile.
   const rows = await prisma.finalGrade.findMany({
     where: {
       OR: [
@@ -67,9 +56,6 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
   const sectionIdOf = (r: (typeof rows)[number]) =>
     r.student?.sectionId ?? r.roster?.sectionId ?? "";
 
-  // Batch-fetch teacher assignments for all unique (subject, section, term)
-  // combinations present in the result set. Single term-scoped read
-  // filtered in memory (was one OR branch per unique triple).
   const teacherKeys = new Set<string>();
   const teacherTermIds = new Set<string>();
   for (const r of rows) {
@@ -92,7 +78,6 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
     if (teacherKeys.has(key)) teacherMap.set(key, ta.teacher.fullName);
   }
 
-  // Group rows by (studentId, termId).
   const byKey = new Map<string, typeof rows>();
   for (const r of rows) {
     const key = `${lrnOf(r)}|${r.term.id}`;
@@ -100,9 +85,6 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
     byKey.get(key)!.push(r);
   }
 
-  // A set is "viewable" when every subject the student is enrolled in for the
-  // term has an adviser-approved final grade. We approximate enrolment by the
-  // subjects present in the term for that student. One row per complete student.
   const viewableGroups: (typeof rows)[] = [];
   for (const group of byKey.values()) {
     if (group.length > 0 && group.every((r) => r.lockStatus === "adviser_approved")) {
@@ -110,14 +92,8 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
     }
   }
 
-  // Order complete students by name (the rows within a group are already
-  // ordered by term + name + subject).
   viewableGroups.sort((a, b) => nameOf(a[0]).localeCompare(nameOf(b[0])));
 
-  // Server search (strict-15 standard): ?q= filters complete sets by
-  // student name / LRN / section / subject before paging. Stats below
-  // stay global (unfiltered) for the tiles; `total` is the filtered
-  // count that drives the pager.
   const matchedGroups = q
     ? viewableGroups.filter((group) => {
         const r0 = group[0];
@@ -137,10 +113,6 @@ export async function listFinalGrades(ctx: RegistryContext, query: FinalsQuery) 
   const clampedPage = Math.min(page, totalPages);
   const slice = matchedGroups.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
 
-  // Stats: "ready" = fully adviser-approved (viewable) rows; "complete" =
-  // distinct viewable student-terms. Both stay GLOBAL (unfiltered) for
-  // the tiles; `total` above is the filtered pager count.
-  // "locked" / "adviserApproved" feed the grade pipeline stages on the page.
   const readyCount = viewableGroups.reduce((sum, g) => sum + g.length, 0);
   const completeCount = viewableGroups.length;
   const lockedCount = rows.filter((r) => r.lockStatus === "locked").length;

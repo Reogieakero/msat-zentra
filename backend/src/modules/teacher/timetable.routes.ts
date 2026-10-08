@@ -54,8 +54,6 @@ router.get("/schedule", requireAuth, requireRole("subject_teacher", "adviser"), 
   }
 });
 
-// The signed-in teacher's own timetable slots for the active term —
-// committed slots only (approved + submitted), ordered for calendar render.
 router.get(
   "/schedule/my-slots",
   requireAuth,
@@ -69,8 +67,6 @@ router.get(
   }
 );
 
-// Subject options for the scheduling overlay — grades 7–10 only, so the
-// master teacher can only pick subjects that belong to a section's grade.
 router.get("/schedule/subjects", requireAuth, requireRole("subject_teacher", "adviser"), async (_req, res, next) => {
   try {
     res.json(await listScheduleSubjects());
@@ -90,9 +86,6 @@ router.post("/schedule", requireAuth, requireRole("subject_teacher", "adviser"),
   }
 });
 
-// Day-shape config for the active term. No row yet → app defaults (same shape
-// the setup view used before persistence existed). Principals can read it to
-// render clock times on the review page; only masters may change it.
 router.get(
   "/schedule/config",
   requireAuth,
@@ -129,10 +122,6 @@ router.patch(
   }
 );
 
-// Unlock an approved timetable for editing. Approved slots are locked
-// against fills, swaps, and clears — this is the only way back to draft,
-// keeping every slot's content and stopping it from being official until
-// the principal approves again.
 router.post(
   "/schedule/unlock",
   requireAuth,
@@ -150,9 +139,6 @@ router.post(
   }
 );
 
-// Send draft slots to the principal for review. With a sectionId it sends one
-// section; without it, every draft workspace-wide. Already-submitted and
-// approved rows are untouched either way.
 router.post(
   "/schedule/submit",
   requireAuth,
@@ -170,10 +156,6 @@ router.post(
   }
 );
 
-// Fill (or replace) one timetable slot. Idempotent for the same subject.
-// The slot carries a plain catalog name for display; the derived assignment
-// always belongs to the master editing the grid, so gradebook ownership
-// stays with a real account.
 router.post(
   "/schedule/entries",
   requireAuth,
@@ -214,8 +196,6 @@ router.post(
   }
 );
 
-// Empty one timetable slot. Drops the requester's assignment when its last
-// cell for that subject is gone.
 router.delete(
   "/schedule/entries",
   requireAuth,
@@ -234,8 +214,6 @@ router.delete(
   }
 );
 
-// Clear the whole weekly grid for one section. Drops the requester's
-// assignments left without cells.
 router.delete(
   "/schedule/entries/all",
   requireAuth,
@@ -252,9 +230,6 @@ router.delete(
   }
 );
 
-// Clear every timetable cell workspace-wide for the active term. Entries only
-// ever exist for grades 7–10 (validated on write), so no per-section band
-// check is needed. Three-segment path: never shadowed by the wildcard below.
 router.delete(
   "/schedule/entries/clear-all",
   requireAuth,
@@ -270,8 +245,6 @@ router.delete(
   }
 );
 
-// Master-created catalog records: teacher names and subjects, created from
-// the slot overlay when the needed name is missing from the lists.
 router.post(
   "/schedule/teachers",
   requireAuth,
@@ -289,9 +262,6 @@ router.post(
   }
 );
 
-// Empty the whole teacher-name catalog. Timetable cells cascade via FK; the
-// requester's assignments left without cells are swept so no dead
-// gradebook owners linger.
 router.delete(
   "/schedule/teachers",
   requireAuth,
@@ -307,7 +277,6 @@ router.delete(
   }
 );
 
-// Subjects are usable immediately (no approval concept) and auto-selected.
 router.post(
   "/schedule/subjects",
   requireAuth,
@@ -330,10 +299,6 @@ router.post(
   }
 );
 
-// NOTE: the wildcard delete below stays LAST — Express matches routes in
-// registration order, so every specific /schedule/* route must register
-// before it, otherwise e.g. DELETE /schedule/entries lands here with
-// id="entries" and 404s.
 router.delete("/schedule/:id", requireAuth, requireRole("subject_teacher", "adviser"), async (req, res, next) => {
   try {
     const result = await deleteAssignment(ctxOf(req), req.params.id as string);

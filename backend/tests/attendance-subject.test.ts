@@ -15,7 +15,7 @@ describe("per-subject attendance engine", () => {
         { subjectId: "math", date: D("2026-09-28"), status: "present" },
         { subjectId: "math", date: D("2026-09-28"), status: "absent" },
         { subjectId: "eng", date: D("2026-09-28"), status: "present" },
-        { subjectId: null, date: D("2026-09-28"), status: "present" }, // legacy AM/PM
+        { subjectId: null, date: D("2026-09-28"), status: "present" },
       ]);
       expect(grouped.get("math")!.get("2026-09-28")).toMatchObject({
         present: 1,
@@ -26,7 +26,7 @@ describe("per-subject attendance engine", () => {
         present: 1,
         total: 1,
       });
-      expect(grouped.size).toBe(2); // legacy row excluded
+      expect(grouped.size).toBe(2);
     });
   });
 
@@ -46,8 +46,6 @@ describe("per-subject attendance engine", () => {
 
   describe("dailyFromSubjects", () => {
     it("counts a day present only when every subject is present", () => {
-      // Mon 2026-09-28: 5 subjects, 1 absent -> not a present day.
-      // Tue 2026-09-29: all present -> present day.
       const records = [
         { date: D("2026-09-28"), status: "present" as const },
         { date: D("2026-09-28"), status: "present" as const },
@@ -56,14 +54,14 @@ describe("per-subject attendance engine", () => {
         { date: D("2026-09-29"), status: "present" as const },
       ];
       const { presentDays, totalDays } = dailyFromSubjects(records, 0);
-      expect(totalDays).toBe(2); // two distinct days, NOT five sessions
+      expect(totalDays).toBe(2);
       expect(presentDays).toBe(1);
     });
 
     it("treats late/excused as breaking a present day and skips weekends", () => {
       const records = [
-        { date: D("2026-10-03"), status: "present" as const }, // Saturday
-        { date: D("2026-10-05"), status: "late" as const }, // Monday
+        { date: D("2026-10-03"), status: "present" as const },
+        { date: D("2026-10-05"), status: "late" as const },
       ];
       const { presentDays, totalDays } = dailyFromSubjects(records, 0);
       expect(totalDays).toBe(1);
@@ -84,7 +82,6 @@ describe("per-subject attendance engine", () => {
       enrolled: 40,
     };
     it("legacy rows use present/enrolled", () => {
-      // 1 present of 40 enrolled -> flagged.
       const flags = computeRiskFactors({
         ...base,
         attendance: [{ status: "present" }],
@@ -92,8 +89,6 @@ describe("per-subject attendance engine", () => {
       expect(flags.attendanceFlag).toBe(true);
     });
     it("subject rows use present/subjectSessions (no enrolled inflation)", () => {
-      // 8 present of 10 subject sessions = 80% -> NOT flagged, even though
-      // 8 present of 40 enrolled would flag under the legacy rule.
       const attendance = Array.from({ length: 10 }, (_, i) => ({
         status: i < 8 ? "present" : "absent",
         subjectId: "math",

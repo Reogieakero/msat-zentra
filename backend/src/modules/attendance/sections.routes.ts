@@ -13,12 +13,6 @@ import {
 
 const router = Router();
 
-function schoolYearOf(req: { termScope?: { schoolYearId: string } | null }) {
-  return req.termScope?.schoolYearId ?? null;
-}
-
-// Sections for the session's active school year — id, name, and grade level.
-// Powers the "Grades & sections" navigation card on the heatmap pages.
 router.get(
   "/sections",
   requireAuth,
@@ -33,12 +27,6 @@ router.get(
   }
 );
 
-// Students in a section with their attendance for the session's active term.
-// Strict per-day basis: present = days present in EVERY offered subject that
-// weekday; late/excused/absent are day outcomes on the same basis, so the
-// four counts always sum to school days. `session` is accepted but ignored on
-// the strict path; it only applies to the legacy fallback when the section
-// holds zero subject-era rows for the term.
 router.get(
   "/sections/:id/students",
   requireAuth,
@@ -87,11 +75,6 @@ function requireSectionId(req: { query: unknown }) {
   return sectionId;
 }
 
-// Sheet roster for one section (active term): registered profiles plus
-// enlisted-but-unregistered roster rows (LRN-deduped), each with a live
-// attendance rate. Authorized for every section the caller may take
-// attendance for — advisory, assignments, and code-linked timetable slots —
-// so claimed subject teachers resolve their section's students.
 router.get(
   "/section-roster",
   requireAuth,
@@ -107,10 +90,6 @@ router.get(
   }
 );
 
-// Per-student attendance summary for one section (active term, all
-// subjects): present/late/absent/excused counts plus the present rate.
-// Authorized for every section the caller may serve — feeds the advisory
-// attendance table.
 router.get(
   "/section-summary",
   requireAuth,
@@ -126,9 +105,6 @@ router.get(
   }
 );
 
-// Per-student, per-subject present rates for one section (active term).
-// Read-only matrix for advisory views: each student maps to one rate per
-// subject (null when the subject has no records for them yet).
 router.get(
   "/section-subject-matrix",
   requireAuth,

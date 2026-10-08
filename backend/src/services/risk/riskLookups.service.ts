@@ -8,14 +8,6 @@ import {
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { Request } from "express";
 
-// Batch risk levels for desk queues (nurse/alerts, guidance, ADM).
-// Single HTTP round-trip replacing the per-student N+1 fan-out:
-//   GET /api/risk/students/batch?ids=a,b,c → { levels: { [id]: "High"|"Moderate"|"Low" } }
-// Profiles return the stored riskLevel (same as the single endpoint — one
-// query); roster-enlisted students are evaluated live in bulk (bulk grades +
-// attendance + anecdotal groupBy + section headcounts, then the pure
-// computeRiskFactors — constant queries regardless of N). Unknown ids are
-// omitted (caller renders "—").
 export async function getBatchLevels(
   rawIds: unknown,
   role: string,
@@ -56,9 +48,7 @@ export async function getBatchLevels(
   ]);
 
   const levels: Record<string, string> = {};
-  // Status-only factor flags per student (Academic/Attendance/Behavioral
-  // booleans — same posture as levels, no confidential fields). Lets
-  // desks explain *why* in plain words without another round-trip.
+
   const factors: Record<string, { Academic: boolean; Attendance: boolean; Behavioral: boolean }> = {};
   const rosterIds: string[] = [];
   const rosterSection = new Map<string, string>();
@@ -78,8 +68,7 @@ export async function getBatchLevels(
     rosterIds.push(r.id);
     if (r.sectionId) rosterSection.set(r.id, r.sectionId);
   }
-  // Live factor flags for account-backed students (same engine rule as
-  // the roster path below, batched to constant queries regardless of N).
+
   const profileIds = visibleProfiles.map((p) => p.userId);
   if (profileIds.length > 0) {
     const termId = await resolveActiveTermId(req);
@@ -183,7 +172,6 @@ export async function getBatchLevels(
   return { levels, factors };
 }
 
-// Student/parent: limited projection only (O1) — risk_level + behavioral flag.
 export async function getSingleStudentLevel(
   id: string,
   role: string,
@@ -195,10 +183,7 @@ export async function getSingleStudentLevel(
     select: { riskLevel: true, riskCount: true, lrn: true },
   });
   if (!profile) {
-    // Roster-enlisted students have no profile — evaluate live from
-    // their roster rows so desks (e.g. nurse alerts) can show a risk
-    // level for every referred student, not just account holders.
-    // Same shape as the profile path: { lrn, riskLevel }.
+
     const roster = await prisma.studentRoster.findUnique({
       where: { id },
       select: {
@@ -236,8 +221,7 @@ export async function getSingleStudentLevel(
     const err = { status: 403, code: "FORBIDDEN", message: "Limited view only" };
     throw err;
   }
-  // Advisers are staff, but scoped to their own advisees — never the
-  // whole school. Other staff roles keep their broad read.
+
   if (role === "adviser" && !isSelf && !isPrincipal) {
     const advisee = await prisma.studentProfile.findUnique({
       where: { userId: id },
@@ -251,7 +235,6 @@ export async function getSingleStudentLevel(
   return { lrn: profile.lrn, riskLevel: profile.riskLevel };
 }
 
-// Section heat map: section × risk_factor counts (no student identities).
 export async function getSectionFactorCounts(sectionId: string, termId: string) {
   const students = await prisma.studentProfile.findMany({
     where: { sectionId },
@@ -264,18 +247,16 @@ export async function getSectionFactorCounts(sectionId: string, termId: string) 
     prisma.attendanceRecord.findMany({ where: { sectionId, termId }, select: { studentId: true, status: true } }),
   ]);
   const factors = { attendance: 0, grades: 0, behavior: 0, wellbeing: 0 };
-  // behavior
+
   factors.behavior = anecdotals.length;
-  // grades: students with any subject < 75
+
   const lowGradeStudents = new Set(finals.filter((f) => (f.transmutedGrade ?? 100) < 75).map((f) => f.studentId));
   factors.grades = lowGradeStudents.size;
-  // attendance: students with < 80% present, measured against the section's
-  // enrolled headcount (consistent with the Attendance system).
+
   const enrolled = students.length;
   const attByStudent = new Map<string, { present: number }>();
   for (const a of attendance) {
-    // Roster marks (no account) carry no grade/risk identity — the
-    // section headcount already accounts for those students.
+
     if (!a.studentId) continue;
     const cur = attByStudent.get(a.studentId) ?? { present: 0 };
     if (a.status === "present") cur.present++;

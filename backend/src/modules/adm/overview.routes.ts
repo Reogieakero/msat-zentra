@@ -20,11 +20,6 @@ router.get(
   }
 );
 
-// Teacher-scoped ADM cases (read-only): only ADM cases from referrals the
-// teacher filed themselves, newest first. Status-only — stage labels,
-// eligibility, principal-approval flag and evidence counts only; never
-// certification details, recommendation text, meeting minutes, or home-visit
-// notes.
 router.get(
   "/my-cases",
   requireAuth,
@@ -41,8 +36,7 @@ router.get(
   }),
   async (req, res, next) => {
     try {
-      // Server-paginated + server-searched: ?q=&page=&pageSize= (legacy
-      // ?limit=). Legacy callers with no params keep the bare-array shape.
+
       const qRaw = req.query as Record<string, unknown>;
       const hasPaginationParams =
         typeof qRaw.q !== "undefined" ||

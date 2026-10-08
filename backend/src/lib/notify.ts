@@ -2,10 +2,6 @@ import { prisma } from "./prisma.js";
 import { logger } from "./pino.js";
 import type { NotifChannel } from "../generated/prisma/client.js";
 
-// O7: notification `type` is DERIVED from sourceTable+action, never caller-supplied.
-// Single source of truth for the mapping below.
-type SourceAction = { sourceTable: string; action: string };
-
 const TYPE_MAP: Record<string, string> = {
   "adm_learner_profiles:certify": "new_adm_case",
   "adm_learner_profiles:principal_approve": "new_adm_case",
@@ -108,14 +104,7 @@ export interface NotifyInput {
 export async function fanoutNotification(input: NotifyInput) {
   try {
     const type = deriveNotifType(input.sourceTable, input.action);
-    // Dedup: a retry/double-submit within 60s for the same user + source +
-    // action + identical message must not create a second inbox row. The
-    // message is part of the identity on purpose: distinct events on the
-    // same case (book then cancel seconds later) carry different messages
-    // and must BOTH land — an earlier coarse key (user + type + source +
-    // id only) silently ate the second event. The check + insert run under
-    // a keyed advisory lock so parallel saves (e.g. a save-all batch)
-    // cannot slip duplicates past each other.
+
     const message = input.message ?? "";
     await prisma.$transaction(async (tx) => {
       if (input.sourceId) {
@@ -152,11 +141,6 @@ export async function fanoutNotification(input: NotifyInput) {
   }
 }
 
-// Engine detection handoff: a newly auto-created Moderate/High intervention
-// notifies the assigned guidance counselor (role fanout — every active
-// counselor learns) plus the student's section adviser directly. Best-effort
-// — never throws; callers invoke it with `void` so engine recomputes never
-// delay the confirmed response.
 export async function notifyInterventionDetected(input: {
   level: string;
   interventionId: string;
@@ -215,17 +199,6 @@ export async function notifyInterventionDetected(input: {
   }
 }
 
-// Role fanout: notify every active user holding `role` (bounded), excluding
-// the actor. Best-effort — never throws, never delays the confirmed response.
-// Callers invoke it with `void` after `res.json`. The 60s per-user dedup in
-// fanoutNotification suppresses doubles when the same recipient is also
-// notified directly (e.g. preparedBy + role fanout).
-//
-// `messageFor` personalizes the text per recipient — handoff messages name
-// the actor AND the receiving user ("…referred to you, Juan Dela Cruz —
-// filed by Ana Reyes"), so each inbox row reads for its owner. The callback
-// receives the recipient's id + fullName; plain `message` keeps working for
-// callers that don't personalize.
 export async function fanoutToRole(
   role: string,
   input: Omit<NotifyInput, "userId"> & {
@@ -258,10 +231,6 @@ export async function fanoutToRole(
   }
 }
 
-// Own-bell receipt for registrar/record-keeper academics writes
-// (subject/section/assignment create/update/delete). One-liner for call
-// sites; best-effort, never throws. The actor's echo toast is suppressed
-// client-side — the mutation toast already confirmed it.
 export async function notifyAcademicsSelf(input: {
   userId: string;
   sourceTable: "subjects" | "sections" | "teacher_subject_assignments";
@@ -281,9 +250,7 @@ export async function notifyAcademicsSelf(input: {
     logger.error({ err: e, sourceId: input.sourceId }, "academics self fanout failed");
   }
 }
-// every active registrar (G11-12 band). No creation endpoint writes this table
-// yet (rows are seeded/reviewed via registrar routes) — callers invoke with
-// `void` after `res.json` once a creation path exists. Best-effort, never throws.
+
 export async function notifyAccessRequestCreated(input: {
   requestId: string;
   adviserName: string;

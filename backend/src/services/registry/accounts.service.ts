@@ -9,15 +9,10 @@ export interface BreakdownQuery {
   schoolYearId: string | null;
 }
 
-// Accounts breakdown per grade level + section (desk band). The source
-// of truth is the advisory student list: every StudentProfile in the band plus
-// every active-year StudentRoster enlistment whose LRN has no profile yet
-// (matched by LRN, mirroring the adviser roster list).
 export async function getAccountBreakdown(ctx: RegistryContext, query: BreakdownQuery) {
   const band = ctx.band;
   const schoolYearId = query.schoolYearId;
 
-  // Roster scope follows the session's active School Year.
   const roster = await prisma.studentRoster.findMany({
     where: { gradeLevel: { in: band }, schoolYearId: schoolYearId ?? "__none__" },
     select: { lrn: true, gradeLevel: true, section: { select: { name: true } } },
@@ -25,7 +20,6 @@ export async function getAccountBreakdown(ctx: RegistryContext, query: Breakdown
 
   const rosteredLrns = new Set(roster.map((r) => r.lrn));
 
-  // LRNs that actually have a student_profiles/login account, with their status.
   const lrns = roster.map((r) => r.lrn);
   const profiles = await prisma.studentProfile.findMany({
     where: { lrn: { in: lrns } },
@@ -34,11 +28,6 @@ export async function getAccountBreakdown(ctx: RegistryContext, query: Breakdown
   const statusByLrn = new Map<string, string>();
   for (const pr of profiles) statusByLrn.set(pr.lrn, pr.user.status);
 
-  // Profiles in the band with no active-year roster entry yet (e.g. just
-  // registered, transferred, or seeded without a roster row) still belong
-  // to the advisory population, so attribute them by profile grade/section.
-  // This keeps the grade chart (advisory headcount) reconciled with the
-  // section rosters instead of dropping students missing a roster row.
   const profilesWithoutRoster = await prisma.studentProfile.findMany({
     where: {
       gradeLevel: { in: band },
@@ -66,8 +55,6 @@ export interface BreakdownResultGroup {
   total: number;
 }
 
-// Registrar variant: full advisory population with noAccount + total buckets;
-// suspended counts as withAccount.
 export function buildRegistrarBreakdown(
   roster: { lrn: string; gradeLevel: string; section: { name: string } | null }[],
   statusByLrn: Map<string, string>,
@@ -107,9 +94,6 @@ export interface KeeperBreakdownGroup {
   pending: number;
 }
 
-// Record-keeper variant: roster-driven groups ({ label, grade, withAccount,
-// pending }) plus pending sign-ups with no roster entry yet. Only "active"
-// counts as withAccount; suspended falls through (legacy shape preserved).
 export async function buildRecordKeeperBreakdown(
   band: GradeLevel[],
   roster: { lrn: string; gradeLevel: string; section: { name: string } | null }[],
@@ -126,9 +110,6 @@ export async function buildRecordKeeperBreakdown(
     else if (status === "pending") g.pending++;
   }
 
-  // Pending sign-ups that have no roster entry yet (e.g. just registered) still
-  // count toward the pending total shown in the Pending Students table, so the
-  // breakdown and the table reconcile. Attribute them by their profile grade/section.
   const rosteredLrns = new Set(roster.map((r) => r.lrn));
   const pendingUsers = await prisma.studentProfile.findMany({
     where: { gradeLevel: { in: band }, user: { status: "pending" }, lrn: { notIn: Array.from(rosteredLrns) } },
@@ -148,8 +129,6 @@ export interface StudentsQuery {
   band: GradeLevel[];
 }
 
-// Desk-band students for the SF10 upload picker. Returns lrn, name, grade
-// level, and section so the desk can target a record. Live from the database.
 export async function listBandStudents(band: GradeLevel[]) {
   const rows = await prisma.studentProfile.findMany({
     where: { gradeLevel: { in: band } },
@@ -179,16 +158,10 @@ export interface AccountsAuditQuery {
   pageSize: number;
 }
 
-// Desk-scoped audit trail for account approvals. Restricted to the band:
-// entries are limited to account_approval actions on users that have
-// a StudentProfile in the desk band. The acting user and the affected
-// student are both resolved so the desk can see who did what to whom.
-// No cache: this reflects live auditor state.
 export async function getAccountsAudit(query: AccountsAuditQuery) {
   const { band, page, pageSize } = query;
   const skip = (page - 1) * pageSize;
 
-  // Affected users that belong to the desk band.
   const bandProfiles = await prisma.studentProfile.findMany({
     where: { gradeLevel: { in: band } },
     select: { userId: true },
@@ -214,7 +187,6 @@ export async function getAccountsAudit(query: AccountsAuditQuery) {
     prisma.auditLog.count({ where }),
   ]);
 
-  // Resolve the affected student's details from the source user id.
   const affectedIds = rows
     .map((r) => r.sourceId)
     .filter((id): id is string => Boolean(id));

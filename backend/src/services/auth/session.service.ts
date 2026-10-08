@@ -24,18 +24,11 @@ export async function register(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError(409, "EMAIL_EXISTS", "Email already registered");
 
-  // LRN is captured only for student self-registration; it is verified
-  // against the StudentRoster by the registrar before approval.
   const passwordHash = await argon2.hash(password);
   const user = await prisma.user.create({
     data: { email, passwordHash, fullName, role, contactNumber, lrn: role === "student" ? lrn ?? null : null, status: "pending" },
   });
 
-  // Registrar desk handoff (best-effort, never delays the 201): a new
-  // student sign-up notifies the grade-band owner so the Pending queue pops
-  // live. Band resolves from the official roster via claimed LRN; unknown
-  // LRNs still notify the registrar (they appear as "unknown grade" in the
-  // overview until reconciled).
   if (role === "student") {
     void (async () => {
       try {
@@ -60,7 +53,7 @@ export async function register(input: RegisterInput) {
           sourceId: user.id,
         });
       } catch {
-        // Best-effort only — sign-up already succeeded.
+
       }
     })();
   }

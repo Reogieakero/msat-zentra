@@ -11,7 +11,6 @@ import {
 } from "../attendance.js";
 import {
   GRADE_NUMERIC,
-  schoolYearClause,
 } from "../../modules/attendance/attendance.repository.js";
 
 export interface SectionScope {
@@ -19,8 +18,6 @@ export interface SectionScope {
   schoolYearId: string | null;
 }
 
-// Sections for the session's active school year — id, name, and grade level.
-// Powers the "Grades & sections" navigation card on the heatmap pages.
 export async function listSections(schoolYearId: string | null) {
   const sections = await prisma.section.findMany({
     where: schoolYearId ? { schoolYearId } : {},
@@ -43,21 +40,12 @@ export interface SectionStudentsQuery {
   startDate?: Date | null;
 }
 
-// Students in a section with their attendance for the session's active term.
-// Strict per-day basis: present = days present in EVERY offered subject that
-// weekday; late/excused/absent are day outcomes on the same basis, so the
-// four counts always sum to school days. `session` is accepted but ignored on
-// the strict path; it only applies to the legacy fallback when the section
-// holds zero subject-era rows for the term.
 export async function getSectionStudents(query: SectionStudentsQuery) {
   const { sectionId, session, termId, startDate } = query;
   if (!termId) {
     return { sectionId, students: [] };
   }
 
-  // Total ongoing school days: weekdays (Mon–Fri) from the term start date
-  // through today. Same engine as the section stats so the denominators
-  // (schoolDays) never disagree between the overview and the roster.
   const totalSchoolDays = countSchoolDays(buildDayAxis(startDate ?? null));
 
   const section = await prisma.section.findUnique({
@@ -80,7 +68,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
   });
 
   if (subjectTakes.length === 0) {
-    // Frozen legacy basis (no subject-era rows) — original logic unchanged.
+
     const [students, rosterEntries] = await Promise.all([
       prisma.studentProfile.findMany({
         where: { sectionId },
@@ -95,7 +83,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
         },
         orderBy: { user: { fullName: "asc" } },
       }),
-      // Enlisted students without accounts — zero-record rows included.
+
       prisma.studentRoster.findMany({
         where: { sectionId },
         select: {
@@ -161,7 +149,6 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
     };
   }
 
-  // Strict path: day outcomes per enrolled student (LRN-deduped).
   const [entries, students, rosterEntries] = await Promise.all([
     prisma.sectionTimetableEntry.findMany({
       where: {
@@ -218,7 +205,7 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
     });
   }
   for (const r of rosterEntries) {
-    if (seenLrn.has(r.lrn)) continue; // registered profile wins
+    if (seenLrn.has(r.lrn)) continue;
     enrolled.push({
       key: `roster:${r.id}`,
       id: `roster:${r.id}`,
@@ -228,7 +215,6 @@ export async function getSectionStudents(query: SectionStudentsQuery) {
     });
   }
 
-  // Weekday axis only — weekend days never classify anyone absent.
   const outcomeKeys = buildDayAxis(startDate ?? null).filter(
     (k) => !isWeekendKey(k)
   );
@@ -311,7 +297,7 @@ export async function getSectionRoster(
       .filter((r) => !registeredLrns.has(r.lrn))
       .map((r) => ({ studentId: `roster:${r.id}`, name: r.fullName, lrn: r.lrn, attendanceRate: 1 })),
   ];
-  // Alphabetical by surname (last token), tie-broken by full name.
+
   const surnameOf = (name: string) => {
     const parts = name.trim().split(/\s+/);
     return (parts[parts.length - 1] ?? "").toLowerCase();
@@ -319,8 +305,7 @@ export async function getSectionRoster(
   students.sort(
     (a, b) => surnameOf(a.name).localeCompare(surnameOf(b.name)) || a.name.localeCompare(b.name),
   );
-  // Roster-only attendance rates need their own rows (profiles came with
-  // theirs above).
+
   if (rosterRows.length > 0) {
     const rosterAtt = await prisma.attendanceRecord.findMany({
       where: { rosterId: { in: rosterRows.map((r) => r.id) }, termId },
@@ -342,10 +327,6 @@ export async function getSectionRoster(
   return { sectionId: section.id, sectionName: section.name, termId, students };
 }
 
-// Per-student attendance summary for one section (active term, all
-// subjects): present/late/absent/excused counts plus the present rate.
-// Authorized for every section the caller may serve — feeds the advisory
-// attendance table.
 export async function getSectionSummary(
   sectionId: string,
   termId: string,
@@ -433,9 +414,6 @@ export interface MatrixQuery {
   allowed: boolean;
 }
 
-// Per-student, per-subject present rates for one section (active term).
-// Read-only matrix for advisory views: each student maps to one rate per
-// subject (null when the subject has no records for them yet).
 export async function getSectionSubjectMatrix(query: MatrixQuery) {
   const { sectionId, termId, allowed } = query;
   if (!allowed) {
@@ -470,8 +448,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
         teacherName: { select: { userId: true } },
       },
     }),
-    // Every subject offered in this section + term, so the matrix
-    // covers the full advisory load — not just scheduled/recorded ones.
+
     prisma.teacherSubjectAssignment.findMany({
       where: { sectionId, termId },
       select: { subject: { select: { id: true, name: true, code: true } } },
@@ -482,7 +459,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
   const subjects = new Map<string, { id: string; name: string; code: string }>();
   for (const o of offered) subjects.set(o.subject.id, o.subject);
   for (const t of timetabled) subjects.set(t.subject.id, t.subject);
-  // Subjects with records but no timetable row still get a column.
+
   const subjectIds = await prisma.subject.findMany({
     where: { id: { in: [...new Set(records.map((r) => r.subjectId as string))] } },
     select: { id: true, name: true, code: true },
@@ -490,11 +467,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
   for (const s of subjectIds) {
     if (!subjects.has(s.id)) subjects.set(s.id, s);
   }
-  // Rate = present ÷ elapsed meetups. Elapsed meetups come from the
-  // subject's committed timetable slots (weekdays × term start → today);
-  // a done meetup with no take counts as absent, so "no record" never
-  // renders — only a percentage. Presents dated outside the term window
-  // are ignored on both sides, keeping the rate within 0–100%.
+
   const meetupBySubject = new Map<string, number[]>();
   for (const t of timetabled) {
     const arr = meetupBySubject.get(t.subjectId) ?? [];
@@ -534,8 +507,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
   for (const r of records) {
     const subjectId = r.subjectId as string;
     const dateStr = r.date.toISOString().slice(0, 10);
-    // Every subject teacher's workspace takes count — the adviser
-    // oversees records from all of them, not just the slot owner.
+
     const studentKey = r.rosterId ? `roster:${r.rosterId}` : (r.studentId as string);
     let recorded = recordedDatesBySubject.get(subjectId);
     if (!recorded) {
@@ -561,8 +533,7 @@ export async function getSectionSubjectMatrix(query: MatrixQuery) {
       for (const d of present ?? []) if (elapsed.has(d)) n += 1;
       return n / elapsed.size;
     }
-    // Term hasn't started — fall back to recorded sessions so a number
-    // still renders instead of "no record".
+
     const recorded = recordedDatesBySubject.get(subjectId)?.size ?? 0;
     if (recorded === 0) return 0;
     let n = 0;

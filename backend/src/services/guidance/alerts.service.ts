@@ -20,12 +20,6 @@ export interface AlertsQuery {
   pageSize: number;
 }
 
-// Guidance Counselor alerts: live system-flagged queue from the shared risk
-// engine (academic < 75, attendance < 80%, >= 1 anecdotal this term).
-// Status-only rows — student identity, level, tripped factors, referral and
-// intervention state. No anecdotal write-up content ever leaves this endpoint:
-// the behavioral trigger is a report COUNT, and full filings stay visible
-// only after an adviser refers the case (see the referrals queue).
 export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
   const { levelFilter, factorFilter, q, page, pageSize } = {
     levelFilter: query.level,
@@ -110,9 +104,7 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
         take: 2000,
         select: { studentId: true, rosterId: true, outcomeStatus: true },
       }),
-      // ADM track membership (status-only): a tracked learner profile or
-      // an ADM-track referral marks the case ADM; everything else is the
-      // general guidance caseload.
+
       prisma.admLearnerProfile.findMany({
         where: termId ? { termId } : undefined,
         select: { studentId: true, stage: true },
@@ -128,7 +120,6 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
 
   const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
 
-  // Latest referral / intervention state per student key.
   const referralByKey = new Map<string, string>();
   for (const r of guidanceReferrals) {
     const key = r.studentId ?? (r.rosterId ? `roster:${r.rosterId}` : null);
@@ -139,8 +130,7 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
     const key = iv.studentId ?? (iv.rosterId ? `roster:${iv.rosterId}` : null);
     if (key && !interventionByKey.has(key)) interventionByKey.set(key, iv.outcomeStatus);
   }
-  // ADM stage per student key (tracked profile wins; otherwise any
-  // ADM-track referral still marks the case ADM at consultation).
+
   const admStageByKey = new Map<string, string>();
   for (const p of admProfiles) {
     if (!admStageByKey.has(p.studentId)) admStageByKey.set(p.studentId, p.stage);
@@ -243,7 +233,6 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
     });
   }
 
-  // High first, then most flags, then name — newest risk first.
   flagged.sort(
     (a, b) =>
       (a.level === "High" ? 0 : 1) - (b.level === "High" ? 0 : 1) ||
@@ -267,8 +256,6 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
   const safePage = Math.min(page, totalPages);
   const alerts = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  // Tile stats stay UNFILTERED so searching never shrinks the tiles;
-  // `total` is the filtered pager count.
   const unfilteredTotal = flagged.length;
   return {
     termLabel,

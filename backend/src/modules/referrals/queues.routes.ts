@@ -23,9 +23,7 @@ router.get(
   }),
   async (req, res, next) => {
     try {
-      // Server-paginated + server-searched: ?q=&page=&pageSize= (legacy
-      // ?limit=) plus ?track=clinic|adm and ?status=. Legacy callers with
-      // no params keep the bare-array shape.
+
       const qRaw = req.query as Record<string, unknown>;
       const hasPaginationParams =
         typeof qRaw.q !== "undefined" ||
@@ -60,14 +58,6 @@ router.get(
   }
 );
 
-// Timeline helpers (labels, desk names, per-case audit timelines) live in
-// ./timeline.js, shared with the ADM my-cases endpoint so both teacher
-// surfaces tell the same story.
-
-// Teacher-scoped referrals: returns referrals where the teacher is the referrer
-// (referredBy = me), narrowed to their advisory sections' students. Adviser-only
-// (404 if the teacher has no advisory section). Subject teachers may also read
-// referrals they originated.
 router.get(
   "/mine",
   requireAuth,
@@ -85,9 +75,7 @@ router.get(
   }),
   async (req, res, next) => {
     try {
-      // Server-paginated + server-searched: ?q=&page=&pageSize= (legacy
-      // ?limit=) plus ?highlight=<id> for bell deep-link landings. Legacy
-      // callers with no params keep the bare-array shape.
+
       const qRaw = req.query as Record<string, unknown>;
       const hasPaginationParams =
         typeof qRaw.q !== "undefined" ||

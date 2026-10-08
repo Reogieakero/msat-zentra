@@ -29,10 +29,6 @@ export interface RiskStudentsResult {
 
 const LEVEL_RANK: Record<string, number> = { High: 3, Moderate: 2, Low: 1 };
 
-// Principal: full at-risk student list (status-only factors, no confidential
-// fields) for the session's active school year. Optional section filter.
-// `gradeMode` selects whether the academic factor uses final (transmuted) or
-// raw averages. Enlisted students without accounts are included on equal footing.
 export async function getRiskStudents(
   page: number,
   pageSize: number,
@@ -70,8 +66,7 @@ export async function getRiskStudents(
         },
         attendanceRecords: {
           where: termId ? { termId } : undefined,
-          // subjectId drives the engine's dual-mode attendance rule
-          // (subject-era rows vs legacy AM/PM rows).
+
           select: { status: true, subjectId: true },
         },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
@@ -147,9 +142,7 @@ export async function getRiskStudents(
   ];
 
   const students: RiskStudentRow[] = candidates.map((s) => {
-    // Single source of truth (risk.ts): the same engine the teacher
-    // advisory and overview paths use, so per-student levels agree across
-    // desks. Never trust the stored profile columns here.
+
     const flags = computeRiskFactors({
       finalGrades: s.finalGrades,
       gradeMode,

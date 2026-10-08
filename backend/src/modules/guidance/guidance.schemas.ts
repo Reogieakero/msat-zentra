@@ -1,18 +1,9 @@
 import { z } from "zod";
 
-// Request validation for the guidance desk (POST/PATCH bodies).
-// Business-rule validation (receiver enforcement, term guards, resolve
-// gates) lives in src/services/guidance/*.service.ts; these schemas only
-// check request shape.
-
-// Guidance consultation review on an ADM-purpose referral sitting at the
-// consultation stage with no learner profile yet.
 export const consultReviewSchema = z.object({
   recommendation: z.string().trim().min(1).max(500),
   outcome: z.enum(["endorse", "reject"]),
-  // Optional first session booked alongside an endorsement (same pattern
-  // as the nurse ADM review) — standalone booking while pending goes
-  // through the shared session endpoints instead.
+
   clinicSession: z
     .object({
       scheduledAt: z.string().min(1),

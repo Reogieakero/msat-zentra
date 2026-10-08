@@ -1,32 +1,16 @@
 import { prisma } from "../lib/prisma.js";
-import { pickCurrentTerm } from "../lib/termScope.js";
+import { resolveActiveTermId as resolveActiveTermIdCore } from "../lib/term-resolve.js";
 import { sectionHeadcounts } from "./enrollment.js";
 import { notifyInterventionDetected } from "../lib/notify.js";
 import type { RiskLevel } from "../generated/prisma/client.js";
 
-// Single source of truth for "the active term": the session's selected term
-// (Login → select → scope, via req.termScope) when the request carries one,
-// otherwise the term containing today (falling back to the first term of
-// the active school year). Used by every risk endpoint/service so the live
-// recompute never drifts between the board, heatmap, and students list.
-export async function resolveActiveTermId(
-  req?: { termScope?: { termId: string } | undefined },
-): Promise<string | null> {
-  if (req?.termScope?.termId) return req.termScope.termId;
-  const terms = await prisma.term.findMany({
-    where: { schoolYear: { isActive: true } },
-    orderBy: { termNumber: "asc" },
-    select: { id: true, startDate: true, endDate: true },
-  });
-  return pickCurrentTerm(terms)?.id ?? null;
-}
+export const resolveActiveTermId = resolveActiveTermIdCore;
 
 export interface RiskResult {
   riskCount: number;
   riskLevel: RiskLevel;
 }
 
-// PLAN.md §6.3 — live recompute. Returns flags + level without writing.
 export async function evaluateRisk(
   studentId: string,
   termId: string,
@@ -54,11 +38,7 @@ export async function evaluateRisk(
 
   const attPresent = attendance.filter((a) => a.status === "present").length;
   const enrolled = profile?.section?._count.students ?? 0;
-  // Dual-mode attendance flag (AM/PM → subject migration):
-  // - legacy rows (subjectId NULL): present / enrolled < 0.8 (unchanged).
-  // - subject-era rows: present / subjectSessions < 0.8. The enrolled
-  //   denominator would undercount by the subjects-per-day factor, so it must
-  //   NOT be used once subject rows exist.
+
   const attendanceFlag = attendance.some((a) => a.subjectId !== null)
     ? attendance.length > 0
       ? attPresent / attendance.length < 0.8
@@ -83,8 +63,6 @@ export interface RiskFactors {
 
 export type GradeMode = "raw" | "final";
 
-// A subject grade with both the raw (pre-transmutation) average and the final
-// transmuted grade, so the academic flag can be recomputed on either basis.
 export interface RiskGrade {
   computedAverage: number | null;
   transmutedGrade: number | null;
@@ -92,34 +70,21 @@ export interface RiskGrade {
 
 export interface FactorInputs {
   finalGrades: RiskGrade[];
-  // Per-subject RAW assessment means (unweighted mean of recorded percentage
-  // scores). When provided and their average is below 75, the academic flag
-  // trips even without final grades — early warning straight from encoded
-  // raw scores: sum of subject means ÷ subject count, compared at 75.
+
   rawAverages?: number[];
-  // "final" = recompute academic risk from each subject's transmutedGrade
-  // (DepEd transmuted). "raw" = recompute from each subject's computedAverage
-  // (the raw weighted component average, before transmutation).
+
   gradeMode?: GradeMode;
-  // Subject-era records carry subjectId (non-null). When present, the flag
-  // uses present / subjectSessions; otherwise the legacy present / enrolled.
+
   attendance: { status: string; subjectId?: string | null }[];
   anecdotalCount: number;
-  // Enrolled headcount of the student's section. The attendance flag uses
-  // present / enrolled (consistent with the Attendance heatmap/system), not
-  // present / submittedRecords — legacy rows only.
+
   enrolled: number;
 }
 
-// Picks the grade value used for the academic flag given the selected basis.
 function gradeValue(g: RiskGrade, mode: GradeMode): number | null {
   return mode === "raw" ? g.computedAverage : g.transmutedGrade;
 }
 
-// Pure recompute of risk flags + level from already-fetched data. Mirrors the
-// DB-backed evaluateRisk() rule so every endpoint agrees on a single source of
-// truth (>=2 = High, 1 = Moderate, 0 = Low). Used by overview/academics so the
-// stored, possibly-stale riskLevel column is never trusted directly.
 export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
   const { finalGrades, rawAverages = [], gradeMode = "final", attendance, anecdotalCount, enrolled } = inputs;
   const finalAvg =
@@ -134,9 +99,7 @@ export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
   const academicFlag =
     (finalAvg != null && finalAvg < 75) || (rawAvg != null && rawAvg < 75);
   const attPresent = attendance.filter((a) => a.status === "present").length;
-  // present / enrolled < 0.8 → at-risk. A student with zero recorded presence
-  // (enrolled > 0, present = 0) is below 80% and is flagged.
-  // Subject-era rows (any subjectId non-null): present / subjectSessions < 0.8.
+
   const attendanceFlag = attendance.some((a) => a.subjectId != null)
     ? attendance.length > 0
       ? attPresent / attendance.length < 0.8
@@ -160,9 +123,6 @@ export function isAtRisk(level: RiskLevel): boolean {
   return level === "High" || level === "Moderate";
 }
 
-// Live recompute for an enlisted student without an account. Reads finals,
-// attendance, and anecdotal rows keyed by roster id. No profile columns to
-// update — only the snapshot row (plus auto-intervention below).
 export async function evaluateRosterRisk(
   rosterId: string,
   termId: string,
@@ -184,9 +144,6 @@ export async function evaluateRosterRisk(
     }),
   ]);
 
-  // Same attendance denominator rule as the profile path: present over the
-  // section headcount (LRN-deduped via the shared enrollment helper) for
-  // legacy rows; present over subject sessions once subject rows exist.
   const enrolled = roster
     ? ((await sectionHeadcounts([roster.sectionId])).get(roster.sectionId) ?? 0)
     : 0;
@@ -212,10 +169,6 @@ export async function evaluateRosterRisk(
   return { academicFlag, attendanceFlag, behavioralFlag, result: { riskCount, riskLevel } };
 }
 
-// Writes the computed risk to student_profiles and appends a risk_snapshots row (O4).
-// When a student crosses into Moderate/High risk and has no open intervention, an
-// intervention is auto-created and assigned to the Guidance Counselor — interventions
-// are engine-driven, not manually assigned by the Principal (who only views/tracks).
 export async function recomputeRisk(studentId: string, termId: string) {
   const { result } = await evaluateRisk(studentId, termId);
   await prisma.$transaction([
@@ -252,9 +205,7 @@ export async function recomputeRisk(studentId: string, termId: string) {
             outcomeStatus: "ongoing",
           },
         });
-        // Realtime handoff (fire-and-forget — never delays the recompute
-        // caller): the counselor + section adviser learn the moment a
-        // Moderate/High case is detected.
+
         void notifyInterventionDetected({
           level: result.riskLevel,
           interventionId: created.id,
@@ -266,9 +217,6 @@ export async function recomputeRisk(studentId: string, termId: string) {
   return result;
 }
 
-// Roster twin of recomputeRisk: appends the snapshot row and auto-creates the
-// Guidance intervention for enlisted students without accounts. No profile
-// columns exist to update.
 export async function recomputeRosterRisk(rosterId: string, termId: string) {
   const { result } = await evaluateRosterRisk(rosterId, termId);
   await prisma.riskSnapshot.create({
@@ -300,9 +248,7 @@ export async function recomputeRosterRisk(rosterId: string, termId: string) {
             outcomeStatus: "ongoing",
           },
         });
-        // Realtime handoff (fire-and-forget — never delays the recompute
-        // caller): the counselor + section adviser learn the moment a
-        // Moderate/High case is detected.
+
         void notifyInterventionDetected({
           level: result.riskLevel,
           interventionId: created.id,

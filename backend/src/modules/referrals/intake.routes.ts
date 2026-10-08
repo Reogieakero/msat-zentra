@@ -68,8 +68,6 @@ router.post(
   }
 );
 
-// Accept a case WITH intake: priority triage, first impressions, and an
-// optional first counseling session booked on the spot.
 router.post(
   "/:id/accept",
   requireAuth,
@@ -95,11 +93,6 @@ router.post(
   }
 );
 
-// Nurse intake: accept a case on the clinic's desk WITH first impressions
-// and an optional first clinic session booked on the spot — one atomic
-// call so a case is never half-accepted. Mirrors the guidance accept flow
-// but scoped to the nurse's own queue (direct, escalated-to-nurse, or ADM
-// consultation picked for the nurse).
 router.post(
   "/:id/nurse-accept",
   requireAuth,
@@ -123,13 +116,6 @@ router.post(
   }
 );
 
-// Nurse consultation review on an ADM-purpose referral sitting at the
-// consultation stage with no learner profile yet. Mirrors the guidance
-// consultation review, but only the nurse may decide cases picked for the
-// nurse (consultReviewer === "nurse"):
-//   - endorse: consultation done, case moves to in_progress for the ADM
-//     coordinator's parent meeting (the "create referral forward").
-//   - reject: the filing doesn't warrant ADM, case closes as dismissed.
 router.post(
   "/:id/nurse-adm-review",
   requireAuth,
@@ -157,12 +143,6 @@ router.post(
   }
 );
 
-// Save the nurse's referral form (GCForm-03 fill-up) on an ADM consultation
-// case. Confirming the form writes one endorse-style internal note and sets
-// referralFormReady — the UI forwards (endorses) to the ADM coordinator
-// right away, so the note reads as the endorsement. The nurse's
-// recommendation is NOT copied to intakeNotes, so ADM cards never show a
-// "First impressions" line. Re-saving while pending refreshes the answers.
 router.post(
   "/:id/nurse-referral-form",
   requireAuth,
@@ -188,9 +168,6 @@ router.post(
   }
 );
 
-// Explicit forward: moves a form-ready ADM consultation case to the ADM
-// coordinator (status → in_progress). Requires the completed referral form —
-// without it the case stays on the nurse's desk no matter what.
 router.post(
   "/:id/nurse-adm-forward",
   requireAuth,

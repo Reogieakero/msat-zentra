@@ -8,25 +8,17 @@ import {
 } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
-// Teaching staff options for the slot overlay: plain display names the
-// master types once and picks forever. No accounts involved.
 export async function listTeachers() {
   const rows = await prisma.teacherName.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true, code: true, userId: true },
   });
-  // Never leak account ids — the master only needs to know whether a
-  // teacher linked their login, which refreshes live on claim/unclaim.
+
   return {
     teachers: rows.map((t) => ({ id: t.id, name: t.name, code: t.code, linked: !!t.userId })),
   };
 }
 
-// The catalog row the signed-in teacher linked with their code (if any),
-// plus this term's verification grant. The link is identity (global); the
-// grant is per term — a Term 1 unlock never opens another term.
-// Masters bypass code gates on My Classes / Attendance, so the flag rides
-// along here too.
 export async function getMyLink(ctx: TeacherContext) {
   const teacherId = ctx.userId;
   const [mine, profile] = await Promise.all([
@@ -56,7 +48,7 @@ export async function getMyLink(ctx: TeacherContext) {
           id: mine.id,
           name: mine.name,
           code: mine.code,
-          // Per-term verification (legacy global flag retired).
+
           attendanceVerified: termGrant?.attendanceVerified ?? false,
         }
       : null,
@@ -65,18 +57,13 @@ export async function getMyLink(ctx: TeacherContext) {
   };
 }
 
-// Per-term entry for advisers: answering "continue as adviser for this term"
-// records the term grant in the DB (the auth verification flow per term).
-// Subject teachers enter their code instead (claim + verify-attendance).
 export async function enterTermGrant(ctx: TeacherContext) {
   const teacherId = ctx.userId;
   const termId = ctx.termId;
   if (!termId) {
     throw new AppError(400, "NO_ACTIVE_TERM", "No active term selected");
   }
-  // Only advisers may enter a term this way — everyone else answers
-  // with their teacher-list code. Scoped to the session year so last
-  // year's advisership never opens this year's workspace.
+
   await adviserSectionsOr404(teacherId, ctx.schoolYearId);
   const mine = await prisma.teacherName.findUnique({
     where: { userId: teacherId },
@@ -105,8 +92,6 @@ export async function enterTermGrant(ctx: TeacherContext) {
   };
 }
 
-// Link the teacher's login to their teacher-list row by entering its code.
-// One login holds one row; one row holds one login.
 export async function claimCode(ctx: TeacherContext, code: string) {
   const teacherId = ctx.userId;
   const cleaned = (code ?? "").trim();
@@ -149,11 +134,9 @@ export async function claimCode(ctx: TeacherContext, code: string) {
     sourceId: linked.id,
     reason: `Teacher linked login to teacher list entry ${linked.name} (${linked.code})`,
   });
-  // Every master learns in realtime (toast + bell + catalog refresh)
-  // that this teacher linked the code to their account — including a
-  // master linking their own code, so the record exists in their bell.
+
   void notifyMastersTeacherLinkChanged(linked.id, linked.name, linked.code, "claim");
-  // Self receipt: the linking teacher's own bell keeps the row.
+
   void fanoutNotification({
     userId: teacherId,
     sourceTable: "teacher_names",
@@ -164,12 +147,6 @@ export async function claimCode(ctx: TeacherContext, code: string) {
   return { teacherName: linked };
 }
 
-// Verify the attendance code: the entered code must match the teacher's
-// schedule link code (same code re-entered per term unlocks that term).
-// The unlock lands on this term's grant row — never the global link row —
-// so Term 1 can never open another term. On match both the teacher and
-// every active Master Teacher get a realtime bell row (toast + badge,
-// no refresh).
 export async function verifyAttendance(ctx: TeacherContext, code: string) {
   const teacherId = ctx.userId;
   const termId = ctx.termId;
@@ -198,8 +175,7 @@ export async function verifyAttendance(ctx: TeacherContext, code: string) {
       "This code is not the same as your schedule link code. Check My Classes for the code you linked and try again"
     );
   }
-  // Persist the unlock on THIS term's grant — attendance stops asking
-  // for this term only, until the teacher leaves the term.
+
   await prisma.teacherTermGrant.upsert({
     where: { userId_termId: { userId: teacherId, termId } },
     update: { via: "code", teacherNameId: mine.id, attendanceVerifiedAt: new Date() },
@@ -239,17 +215,12 @@ export async function verifyAttendance(ctx: TeacherContext, code: string) {
           )
       );
     } catch {
-      // Logged inside fanoutNotification; never throws outward.
+
     }
   })();
   return result;
 }
 
-// Leave the active term (per-term): drops ONLY this term's grant row.
-// The catalog link and every other term's grants stay intact — leaving
-// Term 1 never affects Term 2, because access is scoped by term, not by
-// school year. No master fanout: the link itself is unchanged, so there is
-// nothing for the teacher list to react to.
 export async function leaveTerm(ctx: TeacherContext) {
   const teacherId = ctx.userId;
   const termId = ctx.termId;
@@ -263,7 +234,7 @@ export async function leaveTerm(ctx: TeacherContext) {
   if (!mine) {
     throw new AppError(404, "NOT_LINKED", "This login is not linked to any teacher list entry");
   }
-  // Idempotent: leaving a term with no grant row still succeeds.
+
   await prisma.teacherTermGrant.deleteMany({
     where: { userId: teacherId, termId },
   });

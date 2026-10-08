@@ -5,9 +5,6 @@ import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
 import { gradeToNumber } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
-// Master Teacher is a grades 7–10 designation. Pure so it stays unit-tested
-// without a DB: eligible when every known grade sits in that band, or when
-// nothing is assigned yet (new teachers declare first).
 const MASTER_TEACHER_GRADES = new Set([7, 8, 9, 10]);
 
 export function isMasterTeacherEligible(gradeLevels: (string | number)[]): boolean {
@@ -18,11 +15,6 @@ export function isMasterTeacherEligible(gradeLevels: (string | number)[]): boole
   return nums.every((n) => MASTER_TEACHER_GRADES.has(n));
 }
 
-// Adviser section options for Settings ("Are you an adviser?"). Lists every
-// section in the active school year with its holder, flagging which ones
-// appear in the master teacher's schedule (committed timetable entries this
-// term) so the picker can prefer schedule sections. Claimable = unclaimed;
-// advisedByMe = already mine.
 export async function listAdviserSections(ctx: TeacherContext) {
   const teacherId = ctx.userId;
   const termId = ctx.termId;
@@ -67,16 +59,11 @@ export async function listAdviserSections(ctx: TeacherContext) {
   };
 }
 
-// Self-declared Master Teacher designation (grades 7–10 only). The grade
-// band is re-resolved server-side from this term's assignments + advised
-// sections, so a tampered client cannot claim it from grades 11–12.
-// Turning it off is always allowed.
 export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boolean) {
   const teacherId = ctx.userId;
   if (isMasterTeacher) {
     const termId = ctx.termId;
-    // Only one Master Teacher at a time — validate the grade band
-    // first, so we never leave the DB in a half-cleared state.
+
     const [assignments, advised] = await Promise.all([
       termId
         ? prisma.teacherSubjectAssignment.findMany({
@@ -104,10 +91,7 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
         "Master Teacher designation is only available for grades 7–10"
       );
     }
-    // Singleton seat: if another ACTIVE teacher already holds it, refuse
-    // to steal — they must turn it off first. Checked inside an
-    // interactive transaction so concurrent claims cannot both win.
-    // Inactive holders are treated as stale and cleared.
+
     let holderName: string | null = null;
     await prisma.$transaction(async (tx) => {
       const existing = await tx.user.findFirst({
@@ -128,7 +112,7 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
             : "Master Teacher is currently designated — try again after it is turned off"
         );
       }
-      // No active holder: clear any stale flags, then claim.
+
       await tx.staffProfile.updateMany({
         where: { isMasterTeacher: true, userId: { not: teacherId } },
         data: { isMasterTeacher: false },
@@ -154,8 +138,6 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
       : "Teacher removed Master Teacher status",
   });
 
-  // Seat take/release is desk-visible: masters + principal learn live,
-  // and the actor keeps a self receipt. Best-effort, never delays.
   if (isMasterTeacher) {
     void fanoutToRole("principal", {
       sourceTable: "staff_profiles",
@@ -177,9 +159,6 @@ export async function setMasterTeacher(ctx: TeacherContext, isMasterTeacher: boo
   return { isMasterTeacher };
 }
 
-// Teacher profile settings (Settings page): display name, photo, and the
-// workspace palette. Reads/writes the teacher's own User + StaffProfile rows
-// (profile row upserted — teachers created before it existed have none).
 export async function readProfileSettings(teacherId: string) {
   const [user, profile] = await Promise.all([
     prisma.user.findUnique({
@@ -240,8 +219,6 @@ export async function updateProfileSettings(ctx: TeacherContext, input: UpdatePr
   return readProfileSettings(teacherId);
 }
 
-// Profile photo upload (JSON data URL — same storage shape as the drawn
-// signature). PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 export async function updateProfilePhoto(ctx: TeacherContext, photoUrl: string) {
   const teacherId = ctx.userId;
   await prisma.staffProfile.upsert({

@@ -67,9 +67,6 @@ describe("DepEd weight presets (DO 8, s. 2015)", () => {
   });
 });
 
-// Assessment-driven computation: grades come only from categories that
-// actually contain assessments. Configured JHS Languages weights
-// (WW 30 / PT 50 / E 20) unless noted.
 function evidence(parts: Partial<CategoryEvidence> & { componentType: string }): CategoryEvidence {
   return {
     weightPercentage: 0,
@@ -155,11 +152,9 @@ describe("assessment-driven computation", () => {
       evidence({ componentType: "PERFORMANCE_TASK", ...PT50, earned: 0, possible: 0, assessmentCount: 2, encodedCount: 0 }),
       evidence({ componentType: "EXAM", ...E20 }),
     ]);
-    // WW percentage comes only from the 2 encoded assessments.
     const ww = r.categories.find((c) => c.componentType === "WRITTEN_WORK")!;
     expect(ww.percentage).toBeCloseTo(86);
     expect(ww.coverage).toBeCloseTo(2 / 3);
-    // PT exists but this student has nothing encoded → excluded entirely.
     expect(r.availableCategories).toContain("PERFORMANCE_TASK");
     expect(r.rawGrade).toBeCloseTo(86);
   });
@@ -198,7 +193,6 @@ describe("assessment-driven computation", () => {
   });
 
   it("uses total-earned/total-possible within a category, not mean of percentages", () => {
-    // 18/20 (90%) + 25/30 (83.3%): earned/possible = 43/50 = 86%.
     const r = computeSubjectGrade([
       evidence({ componentType: "WRITTEN_WORK", ...WW30, earned: 43, possible: 50, assessmentCount: 2, encodedCount: 2 }),
       evidence({ componentType: "PERFORMANCE_TASK", ...PT50 }),

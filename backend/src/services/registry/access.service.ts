@@ -7,14 +7,11 @@ import type { RegistryContext } from "./registry.types.js";
 
 export interface AccessListQuery {
   band: GradeLevel[];
-  /** "section" filters on the section's grade (registrar); "request" filters on the request row grade (record keeper). */
+
   scope: "section" | "request";
   status?: string;
 }
 
-// List adviser SF10 access requests (desk band only). Server-side filter:
-// band-scoped requests. Optional ?status filters by request status.
-// Live from the database — no mocked data.
 export async function listAccessRequests(query: AccessListQuery) {
   const { band, scope, status: statusFilter } = query;
   const where =
@@ -43,8 +40,6 @@ export async function listAccessRequests(query: AccessListQuery) {
     orderBy: [{ requestedAt: "desc" }],
   });
 
-  // Single batched advisee read across all request sections (was one
-  // findMany per request). Grouped in memory by sectionId.
   const sectionIds = [...new Set(rows.map((r) => r.sectionId).filter((id): id is string => !!id))];
   const allStudents =
     sectionIds.length > 0
@@ -109,14 +104,10 @@ export async function listAccessRequests(query: AccessListQuery) {
 export interface AccessRecordsQuery {
   requestId: string;
   band: GradeLevel[];
-  /** Whether to enforce the band on the request row + student scope (record keeper) or scope students to the request grade (registrar). */
+
   enforceBand: boolean;
 }
 
-// SF10 records for the advisees of a given access request. Used by the
-// review modal before approving, so the desk can confirm each learner's SF10
-// record is present and correct. Returns the real Sf10Record fields (status,
-// source, file URL, verified/validated dates, version) joined to the student.
 export async function getAccessRecords(query: AccessRecordsQuery) {
   const { requestId: id, band, enforceBand } = query;
   const request = await prisma.adviserSf10AccessRequest.findUnique({
@@ -176,15 +167,12 @@ export interface DecideAccessInput {
   requestId: string;
   approved: boolean;
   denyReason?: string;
-  /** Enforce the desk band on the request row (record keeper only). */
+
   enforceBand: boolean;
-  /** Fallback deny reason copy when the caller sends none. */
+
   denyDefault: string;
 }
 
-// Decide (approve or deny) an adviser SF10 access request. Sets status +
-// decision, writes an audit entry, and fans out a notification to the
-// requesting adviser. 409 if the request is already decided.
 export async function decideAccess(
   ctx: RegistryContext,
   input: DecideAccessInput,
@@ -235,8 +223,6 @@ export async function decideAccess(
     sourceId: updated.id,
   });
 
-  // Own-bell receipt: the acting desk's badge bumps live (their echo
-  // toast is suppressed client-side — the mutation toast already confirmed it).
   await fanoutNotification({
     userId: ctx.userId,
     sourceTable: "adviser_sf10_access_requests",

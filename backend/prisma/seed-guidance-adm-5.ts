@@ -4,12 +4,6 @@ import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
-// Seed 5 anecdotal records referred for ADM with the guidance counselor as
-// consultation reviewer:
-//   referredToRole = "adm_coordinator", consultReviewer = "guidance_counselor".
-// These surface on /guidance/adm (consultation review queue).
-// Idempotent: skips roster entries that already have any referral.
-
 const CASES = [
   {
     observationDaysAgo: 0,

@@ -26,8 +26,6 @@ function ctxOf(req: {
   };
 }
 
-// GET /api/teacher/grade-flags?scope=mine|against-me|advisees&status=&q=
-// Runs lazy escalation first so `escalated` rows are always current.
 router.get(
   "/",
   requireAuth,
@@ -43,7 +41,7 @@ router.get(
         pageSize?: number;
         limit?: number;
       };
-      // Flag queues are scoped to the session's active term.
+
       const scopeTermId = req.termScope?.termId ?? null;
       res.json(
         await listFlags(
@@ -57,9 +55,6 @@ router.get(
   }
 );
 
-// GET /api/teacher/grade-flags/options — scoped pickers for the raise dialog.
-// Class options are limited to the session's active term so filings always
-// land in the selected scope — the dialog never picks a term itself.
 router.get(
   "/options",
   requireAuth,
@@ -74,8 +69,6 @@ router.get(
   }
 );
 
-// POST /api/teacher/grade-flags — any teacher may flag any student's grade.
-// The gradebook owner is resolved server-side from TeacherSubjectAssignment.
 router.post(
   "/",
   requireAuth,
@@ -111,8 +104,6 @@ router.post(
   }
 );
 
-// POST /api/teacher/grade-flags/:id/resolve — gradebook owner only, with note.
-// Editing the grade never auto-resolves; resolution is always explicit.
 router.post(
   "/:id/resolve",
   requireAuth,

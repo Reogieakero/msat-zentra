@@ -1,50 +1,38 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
 import type { GradeLevel } from "../../generated/prisma/client.js";
+import {
+  GRADE_BAND_7_10 as BAND_7_10,
+  GRADE_BAND_11_12 as BAND_11_12,
+  roleGradeBand as roleBand,
+} from "../../lib/roles.js";
+import {
+  GRADE_LABELS as LABELS,
+  gradeLabel as labelFor,
+  gradeToNumber as toNumber,
+} from "../../lib/grades.js";
 
-// Shared records-desk data-access: grade-band policy, labels, grade-number
-// mapping, subject category labels, and school-year resolution. Used by both
-// the registrar (G11–12) and record-keeper (G7–10) desks. Endpoint
-// orchestration lives in src/services/registry/*.service.ts.
+export const GRADE_BAND_7_10 = BAND_7_10;
+export const GRADE_BAND_11_12 = BAND_11_12;
 
-// Authority is grade-banded by role: Record Keeper owns junior high (7–10),
-// Registrar owns senior high (11–12).
-export const GRADE_BAND_7_10: GradeLevel[] = ["G7", "G8", "G9", "G10"];
-export const GRADE_BAND_11_12: GradeLevel[] = ["G11", "G12"];
-
-// Same shape for both desks so one endpoint serves each role with data
-// scoped to its own band.
 export function roleGradeBand(role?: string): GradeLevel[] {
-  return role === "record_keeper" ? GRADE_BAND_7_10 : GRADE_BAND_11_12;
+  return roleBand(role);
 }
 
-// Section scoping for the session's active school year (same rule as
-// schoolYearWhere in lib/termScope, without taking the request).
 export function schoolYearClause(schoolYearId: string | null):
   | { schoolYearId: string }
   | { schoolYear: { isActive: boolean } } {
   return schoolYearId ? { schoolYearId } : { schoolYear: { isActive: true } };
 }
 
-export const GRADE_LABELS: Record<string, string> = {
-  G7: "Grade 7",
-  G8: "Grade 8",
-  G9: "Grade 9",
-  G10: "Grade 10",
-  G11: "Grade 11",
-  G12: "Grade 12",
-};
+export const GRADE_LABELS = LABELS;
 
 export function gradeLabel(gradeLevel: string): string {
-  return GRADE_LABELS[gradeLevel] ?? gradeLevel;
+  return labelFor(gradeLevel);
 }
 
-// Grade code → number for every band (G7→7 … G12→12). Inputs are always
-// GradeLevel enums from the database, so digit parsing matches both desks'
-// previous mappings exactly.
 export function gradeToNumber(gradeLevel: GradeLevel | string): number {
-  const m = String(gradeLevel).match(/\d+/);
-  return m ? Number(m[0]) : 0;
+  return toNumber(gradeLevel);
 }
 
 export function toGradeLevel(band: GradeLevel[], n: number): GradeLevel {
@@ -73,8 +61,6 @@ export function parseCategory(raw: unknown): "CORE" | "ELECTIVE" {
   throw new AppError(400, "INVALID_CATEGORY", "Category must be Core or Elective");
 }
 
-// Normalize a school-year label so frontend values like "2026–2027" (en dash,
-// no prefix) match stored rows like "SY 2026-2027".
 function normalizeYearLabel(raw: string): string {
   return raw.trim().replace(/[–—]/g, "-").replace(/\s+/g, " ");
 }
@@ -91,7 +77,6 @@ export async function resolveSchoolYear(requested?: string) {
     select: { id: true, name: true },
   });
 
-  // Try to match the requested label (exact + prefix variants).
   if (requested?.trim()) {
     for (const candidate of yearCandidates(requested)) {
       const found = await prisma.schoolYear.findFirst({ where: { name: candidate } });
@@ -101,8 +86,6 @@ export async function resolveSchoolYear(requested?: string) {
     return activeYear;
   }
 
-  // No match: auto-provision instead of 409 so section creation never fails
-  // just because the year table is empty or uses a different label format.
   const baseLabel = requested?.trim() ? normalizeYearLabel(requested) : activeYear?.name;
   const name = baseLabel
     ? baseLabel.match(/^\d{4}-\d{4}$/)
@@ -127,7 +110,7 @@ export async function resolveSchoolYear(requested?: string) {
     },
     select: { id: true, name: true },
   });
-  // Every school year needs terms 1-3 or later assignment creation 404s.
+
   await prisma.term.createMany({
     data: [1, 2, 3].map((termNumber) => ({ schoolYearId: created.id, termNumber })),
     skipDuplicates: true,

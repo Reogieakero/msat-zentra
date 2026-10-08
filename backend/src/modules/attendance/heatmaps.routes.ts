@@ -22,7 +22,6 @@ function ctxTerm(req: { termScope?: { termId: string; schoolYearId: string } | n
   };
 }
 
-// Attendance heat map: per-grade, per-day present/total rates split by AM/PM session.
 router.get(
   "/heatmap",
   requireAuth,
@@ -69,14 +68,6 @@ router.get(
   }
 );
 
-// Per-section daily attendance heatblocks for the CURRENT term (calendar).
-// Strict per-day basis: a student counts present for a day only when present
-// in EVERY subject offered that weekday (late/absent/excused/unrecorded all
-// break the day). Covers every school day from the term start date through
-// today — previous terms are never mixed in. The `session` param is accepted
-// but ignored on the strict path (subject-era takes carry a placeholder
-// session); it only applies to the legacy fallback below when a term holds
-// zero subject-era rows (e.g. archived AM/PM terms).
 router.get(
   "/section-heatmap",
   requireAuth,
@@ -102,13 +93,6 @@ router.get(
   }
 );
 
-// Per-section attendance stats (rate, below-80% days, trend) and the
-// school-wide daily attendance trend, for the CURRENT term (calendar) —
-// previous terms are never mixed in. Strict per-day basis: a student counts
-// present for a day only when present in EVERY subject offered that weekday.
-// The `session` param is accepted but ignored on the strict path; it only
-// applies to the legacy fallback when a term holds zero subject-era rows.
-// amRate/pmRate echo the single daily rate (no session split exists anymore).
 router.get(
   "/section-stats",
   requireAuth,
@@ -139,9 +123,6 @@ router.get(
   }
 );
 
-// School-wide AM/PM attendance pattern for the session's active term: overall AM/PM
-// present rate plus the average present rate per weekday. Powers the "Patterns"
-// overlay on the risk heatmaps index. Derived from real attendance records.
 router.get(
   "/session-pattern",
   requireAuth,
@@ -162,9 +143,6 @@ router.get(
   }
 );
 
-// Per-subject present rates for a section (active term). Replaces the AM/PM
-// `session-pattern` comparison for subject-era data: one card per offered
-// subject instead of two AM/PM bars.
 router.get(
   "/subject-pattern",
   requireAuth,
@@ -182,12 +160,6 @@ router.get(
   }
 );
 
-// Per-section, per-day, per-subject heatblocks for the CURRENT term
-// (calendar) — previous terms are never mixed in. Each section card renders
-// one row per offered subject and one block per day, colored by the canonical
-// present ratio (present ÷ headcount). Only subject-era rows (subjectId
-// non-null) feed this surface — legacy AM/PM rows stay on the session
-// heatmap + archive reads.
 router.get(
   "/section-subject-heatmap",
   requireAuth,

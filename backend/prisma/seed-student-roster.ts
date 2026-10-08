@@ -2,8 +2,6 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { createPrismaAdapter } from "../src/lib/prismaAdapter.js";
 
-// Roster-only students: enlisted rows with NO login accounts (5 per
-// section). Tops up sections that have fewer — safe to re-run.
 const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 
 const PER_SECTION = 5;

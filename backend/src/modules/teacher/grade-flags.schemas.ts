@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-// Request validation for grade flags (POST bodies + list query).
-// Business-rule validation (ownership, locks, targets) lives in
-// src/services/teacher/gradeFlags.service.ts; these schemas only check
-// request shape.
-
 export const REASONS = [
   "wrong_score",
   "missing_assessment",

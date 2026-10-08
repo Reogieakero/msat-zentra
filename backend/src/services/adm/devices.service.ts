@@ -16,9 +16,7 @@ export interface IssueDeviceInput {
 
 export async function issueDevice(ctx: AdmContext, input: IssueDeviceInput) {
   const serial = String(input.deviceSerial ?? "").trim();
-  // Guard: one active issue per serial — a still-issued device holding
-  // the same serial (case-insensitive) rejects with 409 so the dialog
-  // can show an inline duplicate error instead of double-issuing.
+
   const clash = await prisma.admDevice.findFirst({
     where: {
       deviceSerial: { equals: serial, mode: "insensitive" },
@@ -46,9 +44,7 @@ export async function issueDevice(ctx: AdmContext, input: IssueDeviceInput) {
     },
   });
   await writeAudit({ userId: ctx.userId, actionType: "adm_edit", sourceTable: "adm_devices", sourceId: device.id, reason: "ADM device issued" });
-  // Realtime handoff: the referring adviser learns the device moved
-  // without refreshing — naming the issuing coordinator. Best-effort —
-  // never delays the response.
+
   const studentName = profile.student?.user?.fullName ?? "your student";
   const actor = await actorName(ctx.userId);
   if (profile.referral && profile.referral.referredBy !== ctx.userId) {
@@ -69,8 +65,7 @@ export async function issueDevice(ctx: AdmContext, input: IssueDeviceInput) {
     messageFor: (r) =>
       `${actor} issued learning device ${serial} to ${studentName} — sent to you, ${r.fullName}.`,
   });
-  // The Principal signs every ADM case, so issuance is principal-visible
-  // too: same realtime toast + badge + row on the principal desk.
+
   void fanoutToRole("principal", {
     sourceTable: "adm_devices",
     action: "issue",
@@ -105,9 +100,7 @@ export async function returnDevice(ctx: AdmContext, deviceId: string, returnedDa
   if (device.returnedDate) throw new AppError(409, "ALREADY_RETURNED", "Device already returned");
   const updated = await prisma.admDevice.update({ where: { id: device.id }, data: { returnedDate: returnedDate ? new Date(returnedDate) : new Date() } });
   await writeAudit({ userId: ctx.userId, actionType: "adm_edit", sourceTable: "adm_devices", sourceId: device.id, reason: "ADM device returned" });
-  // Realtime handoff: the referring adviser learns of the return
-  // without refreshing — naming the coordinator. Best-effort — never
-  // delays the response.
+
   const ref = device.admLearnerProfile?.referral;
   const studentName = device.admLearnerProfile?.student?.user?.fullName ?? "your student";
   const actor = await actorName(ctx.userId);
@@ -148,14 +141,10 @@ export interface DeviceLedgerQuery {
   orderOldest: boolean;
 }
 
-// Device ledger for the ADM Coordinator Devices page. Read-only join of
-// every issued device with its learner profile + student. Status is derived
-// (returnedDate != null → returned) — never stored.
 export async function listDevices(query: DeviceLedgerQuery) {
-  const { q, statusParam, hasPaging, limit, page, orderOldest } = query;
+  const { q, statusParam, limit, page, orderOldest } = query;
   const skip = limit > 0 ? (page - 1) * limit : 0;
-  // DB-level status + search filter so the ledger stays constant-time
-  // instead of pulling every device row into memory.
+
   const where: Prisma.AdmDeviceWhereInput = {
     ...(statusParam === "issued"
       ? { returnedDate: null }
@@ -218,8 +207,7 @@ export async function listDevices(query: DeviceLedgerQuery) {
     conditionNotes: d.conditionNotes,
     status: d.returnedDate ? ("returned" as const) : ("issued" as const),
   }));
-  // `total` = filtered pager count; issued/returned stay GLOBAL
-  // (unfiltered) so tiles never shrink under search.
+
   const unfiltered = await prisma.admDevice.count();
   return {
     rows,

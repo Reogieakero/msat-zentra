@@ -100,7 +100,6 @@ async function main() {
     }
   }
 
-  // Ensure teacher assignments exist for record-keeper band (needed for detail page teacher column)
   const existingAssignments = await prisma.teacherSubjectAssignment.findMany({
     where: { sectionId: { in: sections.map((s) => s.id) }, termId: term.id },
     select: { id: true },

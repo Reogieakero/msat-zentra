@@ -30,11 +30,6 @@ function ctxOf(req: {
   };
 }
 
-// Adviser section options for Settings ("Are you an adviser?"). Lists every
-// section in the active school year with its holder, flagging which ones
-// appear in the master teacher's schedule (committed timetable entries this
-// term) so the picker can prefer schedule sections. Claimable = unclaimed;
-// advisedByMe = already mine.
 router.get(
   "/settings/adviser-sections",
   requireAuth,
@@ -54,10 +49,6 @@ router.get(
   }
 );
 
-// Self-declared Master Teacher designation (grades 7–10 only). The grade
-// band is re-resolved server-side from this term's assignments + advised
-// sections, so a tampered client cannot claim it from grades 11–12.
-// Turning it off is always allowed.
 router.patch(
   "/settings/master-teacher",
   requireAuth,
@@ -76,9 +67,6 @@ router.patch(
   }
 );
 
-// Teacher profile settings (Settings page): display name, photo, and the
-// workspace palette. Reads/writes the teacher's own User + StaffProfile rows
-// (profile row upserted — teachers created before it existed have none).
 router.get(
   "/settings/profile",
   requireAuth,
@@ -117,8 +105,6 @@ router.patch(
   }
 );
 
-// Profile photo upload (JSON data URL — same storage shape as the drawn
-// signature). PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

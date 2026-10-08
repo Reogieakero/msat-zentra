@@ -7,9 +7,6 @@ import { getOfferedSubjects, getSubjectDays } from "../../services/attendance/su
 
 const router = Router();
 
-// Offered subjects for a section+term (assignment-backed) with the caller's
-// mark permission. Powers the teacher subject selector — the ONLY source of
-// valid subjectId values for POST /bulk.
 router.get(
   "/subjects",
   requireAuth,
@@ -19,7 +16,6 @@ router.get(
       const sectionId = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
       if (!sectionId) throw new AppError(400, "MISSING_SECTION", "sectionId query required");
 
-      // Default to the session's active term — the client always sends it.
       let termId = typeof req.query.termId === "string" ? req.query.termId : undefined;
       if (!termId) {
         termId = req.termScope?.termId ?? (await scopedTermRow(req))?.id;
@@ -38,12 +34,6 @@ router.get(
   }
 );
 
-// Per-student, per-day subject marks for the active term plus the term
-// range — feeds the meetup blocks view (one heatblock per scheduled meetup
-// day of the subject, term-scoped). Authorized for every section the caller
-// may serve (advisory, assignments, code-linked timetable slots).
-// ?mine=1 restricts rows to takes the caller recorded themselves, so a
-// teacher's workspace rate matches what the advisory matrix attributes.
 router.get(
   "/subject-days",
   requireAuth,

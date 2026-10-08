@@ -11,7 +11,6 @@ import {
 } from "./riskHeatmap.service.js";
 import { getRiskStudents } from "./riskStudents.service.js";
 import { getInterventionStudents } from "./interventions.service.js";
-import { fanoutToRole } from "../../lib/notify.js";
 import {
   getBatchLevels,
   getSectionFactorCounts,
@@ -24,9 +23,6 @@ const router = Router();
 
 type ServiceError = { status: number; code: string; message: string };
 
-// The lookup service signals expected denials (403/404) as plain error
-// objects so routes render the exact legacy shape { error: { code, message } }
-// (no `fields` key) instead of the AppError envelope.
 function sendLookupResult(
   res: Response,
   next: (e: unknown) => void,
@@ -44,7 +40,6 @@ function sendLookupResult(
     });
 }
 
-// Principal board overview (O4): KPIs, level distribution, factor totals, trend.
 router.get(
   "/board",
   requireAuth,
@@ -64,7 +59,6 @@ router.get(
   }
 );
 
-// School years (with nested terms) to power the Risk Trend filters.
 router.get(
   "/school-years",
   requireAuth,
@@ -79,7 +73,6 @@ router.get(
   }
 );
 
-// School-year/term-scoped risk trend for the Risk Trend chart.
 router.get(
   "/trend",
   requireAuth,
@@ -102,7 +95,6 @@ router.get(
   }
 );
 
-// Principal: paginated low-risk student list (LRN + name only).
 router.get(
   "/low-risk-students",
   requireAuth,
@@ -120,8 +112,6 @@ router.get(
   }
 );
 
-// Principal: full at-risk student list with status-only factors (O1). Optional
-// `section` filter (section name) for the heatmap drill-down.
 router.get(
   "/students",
   requireAuth,
@@ -130,8 +120,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      // Default 50 (Teacher-aligned small pages); cap 1000 preserved for
-      // explicit export/full-scan callers. Tables render ≤20 rows/page.
+
       const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 50));
       const section =
         typeof req.query.section === "string" ? req.query.section : undefined;
@@ -147,15 +136,6 @@ router.get(
   }
 );
 
-// Batch risk levels for desk queues (nurse/alerts, guidance, ADM).
-// Single HTTP round-trip replacing the per-student N+1 fan-out:
-//   GET /api/risk/students/batch?ids=a,b,c → { levels: { [id]: "High"|"Moderate"|"Low" } }
-// Profiles return the stored riskLevel (same as the single endpoint — one
-// query); roster-enlisted students are evaluated live in bulk (bulk grades +
-// attendance + anecdotal groupBy + section headcounts, then the pure
-// computeRiskFactors — constant queries regardless of N). Unknown ids are
-// omitted (caller renders "—"). Auth mirrors the single endpoint: staff +
-// principal broad read, advisers scoped to their own advisees.
 router.get(
   "/students/batch",
   requireAuth,
@@ -166,7 +146,6 @@ router.get(
   }
 );
 
-// Student/parent: limited projection only (O1) — risk_level + behavioral flag.
 router.get(
   "/students/:id",
   requireAuth,
@@ -177,7 +156,6 @@ router.get(
   }
 );
 
-// Principal board heat map: all sections × risk-factor counts (O4, status-only).
 router.get(
   "/heatmap",
   requireAuth,
@@ -201,7 +179,6 @@ router.get(
   }
 );
 
-// Per section × factor at-risk student list (principal only).
 router.get(
   "/sections/:id/students",
   requireAuth,
@@ -234,7 +211,6 @@ router.get(
   }
 );
 
-// Section heat map: section × risk_factor counts (no student identities).
 router.get(
   "/sections/:id/heatmap",
   requireAuth,
@@ -250,7 +226,6 @@ router.get(
   }
 );
 
-// Principal: staff directory for intervention assignment (all staff roles).
 router.get(
   "/staff",
   requireAuth,
@@ -265,8 +240,6 @@ router.get(
   }
 );
 
-// Principal: at-risk students (RiskSnapshot) for the active term, each with
-// their current intervention link. This is the principal's intervention queue.
 router.get(
   "/interventions",
   requireAuth,
@@ -293,9 +266,7 @@ router.get(
         (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
           ? (req.query.gradeMode as "raw" | "final")
           : undefined;
-      // Same queue as the guidance desk: full live enrollment (profiles +
-      // roster) plus recovered students with open cases, so both desks track
-      // the same at-risk students.
+
       const result = await getInterventionStudents(
         {
           riskLevel,
@@ -316,9 +287,6 @@ router.get(
   }
 );
 
-// Principal: alert guidance counselors about an at-risk student with no
-// intervention action yet. Read-only tracking otherwise — the principal never
-// edits interventions. Fans out to every active guidance counselor.
 router.post(
   "/interventions/:studentId/alert",
   requireAuth,
@@ -341,7 +309,6 @@ router.post(
   }
 );
 
-// Principal: intervention stats for the carousel/sidebar widgets.
 router.get(
   "/interventions/stats",
   requireAuth,
@@ -354,9 +321,7 @@ router.get(
         (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
           ? (req.query.gradeMode as "raw" | "final")
           : undefined;
-      // Service clamps to 100 internally; pass 100 explicitly instead of
-      // 1000 so the intent is honest. Follow-up: dedicated groupBy/count
-      // stats query to avoid materializing student rows for 6 ints.
+
       const result = await getInterventionStudents(
         {
           gradeMode,
@@ -392,10 +357,5 @@ router.get(
     }
   }
 );
-
-// Interventions are auto-created by the risk engine (recomputeRisk) and assigned to
-// the Guidance Counselor. The Principal has read-only visibility (list + detail) — no
-// create/assign/approve/edit endpoints are exposed. The guidance_counselor owns the
-// lifecycle (outcome updates) via their own role-guarded routes if/when added.
 
 export default router;

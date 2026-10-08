@@ -35,7 +35,6 @@ function ctxOf(req: { user?: { id: string; role: string } }) {
   return { userId: req.user!.id, role: req.user!.role, band: GRADE_BAND_7_10 };
 }
 
-// Record Keeper overview (G7–G10 authority only).
 router.get(
   "/overview",
   requireAuth,
@@ -51,7 +50,6 @@ router.get(
   }
 );
 
-// Record Keeper final-grade viewer (G7–10). View-only role in the grade pipeline.
 router.get(
   "/final-grades",
   requireAuth,
@@ -69,7 +67,6 @@ router.get(
   }
 );
 
-// Record Keeper account breakdown (G7–10 band only). Live from the database.
 router.get(
   "/account-breakdown",
   requireAuth,
@@ -86,7 +83,6 @@ router.get(
   }
 );
 
-// Record Keeper accounts audit (G7–10 band only). No cache — live state.
 router.get(
   "/accounts-audit",
   requireAuth,
@@ -102,7 +98,6 @@ router.get(
   }
 );
 
-// Record Keeper adviser SF10 access requests (G7–10 band only).
 router.get(
   "/adviser-access-requests",
   requireAuth,
@@ -120,7 +115,6 @@ router.get(
   }
 );
 
-// SF10 records for the advisees of a given access request (record-keeper G7–10).
 router.get(
   "/adviser-access-requests/:id/records",
   requireAuth,
@@ -140,7 +134,6 @@ router.get(
   }
 );
 
-// Decide (approve or deny) an adviser SF10 access request (record-keeper G7–10).
 router.post(
   "/adviser-access-requests/:id/approve",
   requireAuth,
@@ -175,7 +168,6 @@ async function decideAccessRequestRK(req: any, res: any, next: any, approved: bo
   }
 }
 
-// GET /api/record-keeper/settings/profile — own display name, photo, palette.
 router.get(
   "/settings/profile",
   requireAuth,
@@ -189,7 +181,6 @@ router.get(
   }
 );
 
-// PATCH /api/record-keeper/settings/profile — display name + workspace palette.
 router.patch(
   "/settings/profile",
   requireAuth,
@@ -215,8 +206,6 @@ router.patch(
   }
 );
 
-// POST /api/record-keeper/settings/photo — profile photo upload (JSON data URL).
-// PNG/JPEG/GIF/WebP only, 2MB cap so rows stay lean.
 router.post(
   "/settings/photo",
   requireAuth,

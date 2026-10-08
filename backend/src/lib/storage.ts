@@ -12,18 +12,6 @@ function getClient(): SupabaseClient {
   return client;
 }
 
-/**
- * Bucket resolution.
- *
- * - SF10 files            -> SF10_STORAGE_BUCKET   (fallback: STORAGE_BUCKET)
- * - Clinic / referral session documentation
- *                         -> REFERRAL_STORAGE_BUCKET / CLINIC_STORAGE_BUCKET
- *                            (fallback: STORAGE_BUCKET)
- *
- * Separate env vars let Supabase hold two buckets (e.g. `sf10-docs` and
- * `referral-docs`) with different RLS / lifecycle rules instead of mixing
- * everything into one `zentra-docs` bucket.
- */
 export function getSf10Bucket(): string {
   const env = getEnv();
   return env.SF10_STORAGE_BUCKET ?? env.STORAGE_BUCKET;
@@ -38,9 +26,7 @@ async function ensureBucketExists(bucket: string): Promise<void> {
   const c = getClient();
   const { data, error } = await c.storage.listBuckets();
   if (!error && data?.some((b) => b.name === bucket)) return;
-  // Bucket missing (or list failed) — try to create it. Requires the
-  // service-role key; if creation fails the original upload error below
-  // is still surfaced with the bucket name.
+
   const { error: createError } = await c.storage.createBucket(bucket, { public: true });
   if (createError && !/already exists|duplicate/i.test(createError.message)) {
     logger.error({ bucket, message: createError.message }, '[storage] auto-create bucket failed');
@@ -51,9 +37,6 @@ function isBucketNotFound(message: string): boolean {
   return /bucket not found|bucketnotfound|no such bucket|does not exist/i.test(message);
 }
 
-/**
- * Upload a buffer to Supabase Storage and return the public URL.
- */
 export async function uploadFile(
   buffer: Buffer,
   path: string,
@@ -68,9 +51,7 @@ export async function uploadFile(
     .upload(path, buffer, { contentType, upsert: true });
 
   if (error && isBucketNotFound(error.message)) {
-    // First upload in a fresh Supabase project hits this when the bucket
-    // was never created in Dashboard > Storage. Auto-create once and retry
-    // so session documentation doesn't 500 with "Internal server error".
+
     logger.warn({ bucket: targetBucket, path }, '[storage] bucket not found — creating it and retrying');
     await ensureBucketExists(targetBucket);
     ({ error } = await c.storage

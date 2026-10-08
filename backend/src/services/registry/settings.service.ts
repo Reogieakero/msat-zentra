@@ -66,8 +66,6 @@ export async function updateProfileSettings(
   return readProfileSettings(staffId);
 }
 
-// Profile photo upload (JSON data URL). PNG/JPEG/GIF/WebP only, 2MB cap so
-// rows stay lean.
 export async function updateProfilePhoto(
   ctx: RegistryContext,
   desk: DeskIdentity,

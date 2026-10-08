@@ -5,14 +5,9 @@ import { invalidateTags } from "../../lib/cache.js";
 import { sf10Upload } from "../../lib/upload.js";
 import { resolveGradeBand } from "./sf10.repository.js";
 import {
-  getOcrResult,
   getSummary,
   listRecords,
-  listVersions,
-  releaseRecord,
   uploadRecord,
-  validateRecord,
-  verifyRecord,
 } from "../../services/sf10/records.service.js";
 
 const router = Router();
@@ -34,8 +29,6 @@ router.get(
   }
 );
 
-// List SF10 records scoped to the caller's handled grade levels (registrar /
-// record_keeper are banded 11–12 / 7–10 via staffProfile.handledGradeLevels).
 router.get(
   "/records",
   requireAuth,
@@ -44,8 +37,6 @@ router.get(
     try {
       const band = await resolveGradeBand(req.user!.role, req.user!.id);
 
-      // Server paging + search (list standard): `total` drives the pager
-      // (filtered count); `counts` stay global (unfiltered) for the tiles.
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 15, 1), 100);
       const q = typeof req.query.q === "string" ? req.query.q.trim() : "";

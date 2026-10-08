@@ -16,19 +16,11 @@ export interface AnecdotalQuery {
   pageSize: number;
 }
 
-// Guidance Counselor anecdotal records: ONLY filings an adviser referred to
-// guidance_counselor — guidance can never browse the raw anecdotal table.
-// Metadata only (category, observer, dates, confidentiality tier, referral
-// state). Write-up content stays behind the case-file detail endpoint.
 export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) {
   const { categoryFilter, q, anecdotalTypeFilter, docsOnly, page, pageSize } = query;
-  // Term-scoped: prior-term filings never leak into the active term view.
+
   const scopeTermId = ctx.termId;
 
-  // Push exact-match filters into the database (same ADM/counseling
-  // mapping as GET /api/guidance/referrals, NULL-safe on
-  // `escalatedTo`). Free-text search and the docs-only facet stay in
-  // memory — they derive from joined names and attachment mime types.
   const anecdotalDbClauses: any[] = [];
   if (categoryFilter) {
     anecdotalDbClauses.push({ anecdotalRecord: { category: categoryFilter } });
@@ -55,12 +47,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
   }
 
   const rows = await prisma.referral.findMany({
-    // Same desk scope as GET /api/guidance/referrals: direct
-    // counseling referrals PLUS ADM-track cases picked for the
-    // guidance counselor as consultation reviewer. Otherwise the
-    // alerts/referrals counts (ADM + Counseling) never match the
-    // anecdotal files, and endorsed ADM cases disappear instead of
-    // staying listed with the "with the ADM coordinator" overlay.
+
     where: {
       ...(scopeTermId ? { termId: scopeTermId } : {}),
       OR: [
@@ -105,8 +92,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
           section: { select: { name: true } },
         },
       },
-      // Completed-session documentation for the folder slips: file
-      // metadata + URLs only (no notes, outcomes, or reasons).
+
       counselingSessions: {
         where: { status: "completed" },
         orderBy: { scheduledAt: "asc" },
@@ -130,9 +116,6 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     },
   });
 
-  // Every referred filing reads as its own case file — no dedupe, so
-  // the same anecdotal record filed twice (any track) still shows
-  // both folders, each with its own status and privacy gate.
   const trackOf = (r: (typeof rows)[number]) =>
     r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
       ? "ADM"
@@ -165,17 +148,10 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
           uploadedAt: a.uploadedAt.toISOString(),
         })),
       })),
-    // Action track, same mapping as GET /api/guidance/referrals:
-    // ADM-bound when already escalated toward the ADM coordinator,
-    // otherwise regular guidance counseling. Needed so the desk can
-    // hide the full report on finished (resolved/dismissed) and
-    // endorsed (ADM + in_progress) cases — same overlays as the
-    // referrals page.
+
     referralType: trackOf(r),
   }));
 
-  // Session-documents view: only filings whose sessions carry filed
-  // images (the hasDocs facet lives server-side so pages stay dense).
   const filtered = mapped.filter((r) => {
     if (categoryFilter && r.category !== categoryFilter) return false;
     if (anecdotalTypeFilter === "adm" && r.referralType !== "ADM") return false;
@@ -201,7 +177,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
   const records = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-  // Tile stats stay UNFILTERED; `total` is the filtered pager count.
+
   const unfilteredTotal = mapped.length;
 
   const countBy = (cat: string) => mapped.filter((r) => r.category === cat).length;
@@ -209,8 +185,7 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     grade: GRADE_LABELS[g] ?? g,
     count: mapped.filter((r) => r.grade === (GRADE_LABELS[g] ?? g)).length,
   }));
-  // Top referred students for the rail card — over the full referred
-  // scope (same unfiltered base as the other summary totals).
+
   const topByStudent = new Map<string, { student: string; lrn: string; section: string; count: number }>();
   for (const r of mapped) {
     const key = r.lrn || r.student;

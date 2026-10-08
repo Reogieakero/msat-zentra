@@ -20,8 +20,6 @@ function ctxOf(req: { user?: { id: string; role: string }; termScope?: { termId:
   };
 }
 
-// Teacher-owned record folders. Every route is owner-scoped: teachers only
-// ever see and touch their own folders.
 router.get(
   "/folders",
   requireAuth,

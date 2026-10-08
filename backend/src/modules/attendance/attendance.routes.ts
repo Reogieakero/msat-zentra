@@ -6,13 +6,6 @@ import studentsRoutes from "./students.routes.js";
 import subjectsRoutes from "./subjects.routes.js";
 import takingRoutes from "./taking.routes.js";
 
-// Attendance — thin mount only. Endpoint groups live in sibling routers by
-// responsibility (taking writes, heatmaps, section reads, student reads,
-// subject reads, frozen legacy archive); business logic lives in
-// src/services/attendance/*.service.ts; request schemas in
-// attendance.schemas.ts; shared data-access in attendance.repository.ts.
-// The generic attendance engine stays in src/services/attendance.ts.
-// Mount order is order-insensitive (all paths are distinct).
 const router = Router();
 
 router.use(takingRoutes);

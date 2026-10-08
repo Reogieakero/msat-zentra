@@ -9,10 +9,6 @@ import {
 
 const router = Router();
 
-// Guidance Counselor referrals: every behavior / incident report an adviser
-// routed to guidance_counselor, newest filing first. Status-only plus the
-// referrer's reason and the linked anecdotal category/date — the full
-// write-up itself is opened through the case file, never listed here.
 router.get(
   "/referrals",
   requireAuth,
@@ -32,21 +28,18 @@ router.get(
           : null;
       const q =
         typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
-      // Case type: "ADM" needs ADM action (already moving toward the ADM
-      // coordinator via escalation); anything else is regular guidance
-      // counseling handled on this desk.
+
       const typeFilter =
         req.query.type === "adm" || req.query.type === "counseling"
           ? (req.query.type as "adm" | "counseling")
           : null;
-      // Session/open gates for the action menus (same one-active-session
-      // semantics as the nurse desk; "open" = not resolved or dismissed).
+
       const bookedFilter = req.query.booked === "1";
       const completedFilter = req.query.completed === "1";
       const openFilter = req.query.open === "1";
       const page = Math.max(1, Number(req.query.page) || 1);
       const pageSize = resolveGuidancePageSize(req);
-      // Term-scoped: prior-term cases never leak into the active term queue.
+
       const scopeTermId = req.termScope?.termId ?? null;
       const highlightRaw = req.query.highlight;
       const highlight =

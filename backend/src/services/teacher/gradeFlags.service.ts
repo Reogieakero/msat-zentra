@@ -18,22 +18,17 @@ export interface FlagListQuery {
   limit?: number;
 }
 
-// GET /api/teacher/grade-flags?scope=mine|against-me|advisees&status=&q=
-// Runs lazy escalation first so `escalated` rows are always current.
 export async function listFlags(ctx: TeacherContext, query: FlagListQuery) {
   const teacherId = ctx.userId;
   const { scope, status, q, page, pageSize, limit } = query;
   const scopeTermId = ctx.termId;
   const termFilter = scopeTermId ? { termId: scopeTermId } : {};
-  // Server-paginated (?page=&pageSize=, legacy ?limit=). Callers with
-  // no pagination params keep the bare-array shape.
+
   const rawSize = pageSize ?? limit;
   const effPageSize = rawSize && rawSize > 0 ? Math.min(Math.floor(rawSize), 100) : 15;
   const effPage = Math.max(1, page ?? 1);
   const hasPaginationParams = page !== undefined || pageSize !== undefined || limit !== undefined;
-  // Case-insensitive queue search across the joined student name,
-  // LRN, and subject — evaluated in the database so paging reads only
-  // the visible slice (was: fetch-all then slice in memory).
+
   const needle = q?.trim() ? q.trim() : null;
   const queryFilter = needle
     ? {
@@ -44,8 +39,7 @@ export async function listFlags(ctx: TeacherContext, query: FlagListQuery) {
         ],
       }
     : {};
-  // Real DB pagination: skip/take + count in one round-trip. Shape is
-  // unchanged (bare array without params, pager object with params).
+
   const pagedFlags = async (
     where: Record<string, unknown>,
   ): Promise<unknown> => {
@@ -123,14 +117,11 @@ export interface FlagOptionsQuery {
   termId: string | null;
 }
 
-// GET /api/teacher/grade-flags/options — scoped pickers for the raise dialog.
-// Class options are limited to the session's active term so filings always
-// land in the selected scope — the dialog never picks a term itself.
 export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuery) {
   const teacherId = ctx.userId;
   const { assignedSectionIds, advisedSectionIds } = await teacherScope(teacherId);
   const sectionIds = Array.from(new Set([...assignedSectionIds, ...advisedSectionIds]));
-  // Session's active term — class/section options follow it.
+
   const scopeTermId = query.termId;
   const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
@@ -145,9 +136,7 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
       },
       orderBy: { user: { fullName: "asc" } },
     }),
-    // Enlisted students without accounts (no login yet) — keyed
-    // `roster:<id>`. Grade-flag raising stays profile-only; the
-    // anecdotal composer accepts both.
+
     prisma.studentRoster.findMany({
       where: { sectionId: { in: sectionIds } },
       select: { id: true, lrn: true, fullName: true, sectionId: true },
@@ -161,9 +150,7 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
         term: { select: { id: true, termNumber: true } },
       },
     }),
-    // Every gradebook in the teacher's sections (whoever owns it) — so a
-    // flag can target any of the student's subjects, not just the
-    // teacher's own assignments.
+
     prisma.teacherSubjectAssignment.findMany({
       where: { sectionId: { in: sectionIds }, ...termFilter },
       include: {
@@ -225,12 +212,9 @@ export interface RaiseFlagInput {
   note?: string;
 }
 
-// POST /api/teacher/grade-flags — any teacher may flag any student's grade.
-// The gradebook owner is resolved server-side from TeacherSubjectAssignment.
 export async function raiseFlag(ctx: TeacherContext, input: RaiseFlagInput) {
   const teacherId = ctx.userId;
-  // Flags are always filed under the session's active term — the client
-  // never picks a term per action.
+
   const termId = ctx.termId ?? input.termId;
 
   const [student, subject, section, term] = await Promise.all([
@@ -273,8 +257,6 @@ export async function raiseFlag(ctx: TeacherContext, input: RaiseFlagInput) {
   return serializeFlag(flag);
 }
 
-// POST /api/teacher/grade-flags/:id/resolve — gradebook owner only, with note.
-// Editing the grade never auto-resolves; resolution is always explicit.
 export async function resolveFlag(ctx: TeacherContext, flagId: string, resolutionNote: string) {
   const teacherId = ctx.userId;
   const flag = await prisma.gradeFlag.findUnique({
