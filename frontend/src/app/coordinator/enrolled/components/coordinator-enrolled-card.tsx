@@ -20,11 +20,6 @@ interface CoordinatorEnrolledCardProps {
   completing: boolean;
 }
 
-/* Enrolled learner card — view-only info card. Mirrors the coordinator
-   left-rail live reminder card (aurora visual header with status pill +
-   full-width CTA), with a bold title and primary-colored detail labels.
-   All accents ride --primary so the coordinator's saved palette repaints
-   every card. */
 export function CoordinatorEnrolledCard({
   row,
   onHistory,
@@ -38,9 +33,6 @@ export function CoordinatorEnrolledCard({
     row.referralStatus,
   );
 
-  // Module pass-tracking — the backend serves submitted/released counts per
-  // profile row. Undefined (stale cache) renders an honest syncing state
-  // instead of a misleading 0.
   const hasModuleData =
     typeof row.modulesSubmitted === "number" &&
     typeof row.modulesTotal === "number";

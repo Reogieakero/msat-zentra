@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Donut } from "./Donut";
 import { Skeleton } from "@/components/ui/skeleton";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";

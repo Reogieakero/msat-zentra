@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { gradeLabel } from "@/services/teacher/grading.compute";
 import type { ClassAssignment } from "@/services/teacher/grading.types";
 import styles from "./WorkspaceHeader.module.css";

@@ -13,8 +13,6 @@ import {
 import { Check, FileText, MoreHorizontal, Move as MoveIcon } from "lucide-react";
 import styles from "./session-plan-card.module.css";
 
-/* One session row on the shared card — structural fields only, so both
-   desks map their own session items onto it. */
 export interface PlanSessionItem {
   id: string;
   sessionType: string;
@@ -30,7 +28,6 @@ export interface PlanSessionItem {
 
 export type PlanSessionAction = "docs" | "finish" | "move" | "cancel" | "delete";
 
-/* "2026-09-12" -> "Sep 12, 2026". */
 function formatDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return value;
@@ -42,7 +39,6 @@ function formatDate(value: string): string {
   return `${month} ${Number(match[3])}, ${match[1]}`;
 }
 
-/* "2026-09-20T06:30:00.000Z" -> "2:30 PM" (reader's timezone). */
 function formatTime(iso: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -53,7 +49,6 @@ function formatTime(iso: string): string {
   });
 }
 
-/* "1d 04:03:22" / "04:03:22" — always with seconds, tabular-nums. */
 function formatCountdown(targetMs: number, nowMs: number): string {
   const diff = Math.max(0, targetMs - nowMs);
   const totalSeconds = Math.floor(diff / 1000);
@@ -66,14 +61,6 @@ function formatCountdown(targetMs: number, nowMs: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-/**
- * Shared sessions card — Clinic sessions on the nurse desk, Counseling
- * plan on the guidance desk. Nurse card design: header with the live
- * countdown on the right; each row shows the status badge first
- * (Upcoming / Done / Cancelled), then the live timer, then the title.
- * Docs UI renders only with docsSupported; Mark done / docs stay locked
- * until start time only with gateOnStart.
- */
 export function SessionPlanCard<T extends PlanSessionItem>({
   title,
   sessions,
@@ -127,9 +114,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                     {kindLabel(s.sessionType)}
                   </p>
                   <span className={styles.sessionTopRight}>
-                    {/* No status badge once the session is ongoing —
-                        the live timer beside it already reads "Ongoing",
-                        so a second badge would duplicate it. */}
+
                     {isScheduled && started ? null : (
                       <Badge
                         variant={
@@ -213,9 +198,7 @@ export function SessionPlanCard<T extends PlanSessionItem>({
                     </button>
                   </p>
                 ) : null}
-                {/* Organized actions: the destructive step stays visible
-                    (Cancel / Delete), everything else lives in the ⋯
-                    overflow menu so a row never crowds the modal. */}
+
                 {showActions || (manageable && s.status === "cancelled") ? (
                   <div
                     className={styles.sessionActions}

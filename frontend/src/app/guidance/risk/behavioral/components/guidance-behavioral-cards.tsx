@@ -24,10 +24,6 @@ interface GuidanceBehavioralCardsProps {
   records: GuidanceAnecdotalRecord[];
 }
 
-/**
- * Behavioral signal feed as cards — identity header, labeled detail grid,
- * and status badges. Category + tier only, never the clinical write-up.
- */
 export function GuidanceBehavioralCards({ records }: GuidanceBehavioralCardsProps) {
   return (
     <ul className={styles.grid}>

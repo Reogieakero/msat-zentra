@@ -33,19 +33,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Guidance Counselor nav — branched left rail on desktop (same as the
-// nurse/teacher desks), flattened tab bar on small screens. Referrals are
-// split into two dedicated pages (ADM Cases and Counseling Cases) so the
-// reader never needs the track filter; each page locks to its own track.
-// Interventions live under Overview; Referrals Report covers the whole
-// desk (ADM + counseling insights and reports). Sub-routes (risk heatmap /
-// behavioral) stay under their parent tab via prefix matching, so no
-// submenu is needed.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard, Alerts=BellRing, ADM Cases=Inbox,
-// Interventions=ClipboardList, Anecdotal Records=FilePenLine,
-// Referrals Report=Send, Risk Dashboard=Flame.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -112,9 +99,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// GitHub-style tab bar: every section flattened into one row under the
-// topbar on small screens. Groups only group the source data, not the
-// rendered tabs.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function useIsActive() {

@@ -49,9 +49,6 @@ interface SettingsNavProps {
   onSelect: (id: string) => void;
 }
 
-/* Branched icon dock (reactbits branched-menu language): hovering an icon
-   fans a curved branch with its label out to the side; the active item
-   keeps its branch open. Staggered spring-ish motion, CSS only. */
 export function BranchedNav({ links, activeId, onSelect }: SettingsNavProps) {
   return (
     <nav aria-label="Settings sections" className={styles.dock}>

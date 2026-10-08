@@ -1,5 +1,3 @@
-// Audit-log shapes for the Principal Audit Log page (GET /api/audit).
-// Pure types + label maps.
 export type AuditActionType =
   | "sf10_update"
   | "grade_lock"
@@ -41,7 +39,7 @@ export type ConfidentialTable =
 
 export type AuditEntry = {
   id: string;
-  timestamp: string; // ISO
+  timestamp: string;
   user: string;
   actorRole: AuditRole;
   actionType: AuditActionType;
@@ -120,7 +118,6 @@ export const ACTION_TYPES: { value: AuditActionType; label: string }[] = Object.
   ACTION_LABELS,
 ).map(([value, label]) => ({ value: value as AuditActionType, label }));
 
-// Roles that actually appear in the audit log (drives the Role filter).
 export const ACTOR_ROLES: AuditRole[] = [
   "principal",
   "subject_teacher",

@@ -1,5 +1,3 @@
-// Shared shapes for the guidance desk. Pure types only — no runtime
-// imports, so UI files can `import type` without pulling in fetch logic.
 export type GuidanceReferralStatus =
   | "pending"
   | "in_progress"
@@ -36,16 +34,12 @@ export interface CounselingSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
-  // Role behind the latest session_cancelled audit, when cancelled
-  // (backend audit trail). Adviser/subject-teacher = the withdrawal
-  // auto-cancel cascade; a desk role = that desk cancelled it.
+
   cancelledByRole?: string | null;
-  // When the session was booked (execution time). Falls back to
-  // scheduledAt for legacy rows without it.
+
   createdAt: string;
   completedAt: string;
-  // Optional documentation filed on the session (photos). Empty when
-  // nothing is filed — docs never gate Done.
+
   attachments: CounselingSessionAttachment[];
 }
 
@@ -55,11 +49,9 @@ export interface GuidanceReferralItem {
   lrn: string;
   section: string;
   grade: string;
-  // Account userId (or roster id for enlisted students without accounts)
-  // for the live risk lookup. The endpoint serves both.
+
   studentId: string | null;
-  // Action track: "ADM" needs ADM action (escalated toward the ADM
-  // coordinator), otherwise regular "Counseling" handled on this desk.
+
   type: string;
   category: string;
   referredBy: string;
@@ -82,13 +74,10 @@ export interface GuidanceReferralItem {
   resolutionSummary: string;
   sessions: CounselingSessionItem[];
   completedSessions: number;
-  // Latest execution across referral + sessions (backend audit, ISO).
-  // Empty when no audit trail exists (legacy rows) — callers fall back.
+
   lastActionAt: string;
   lastActionType: string;
-  // Role behind the dismissal, when dismissed (backend audit trail).
-  // Adviser/subject-teacher withdrawals read "Cancelled", desk decisions
-  // read "Reject". Absent when never dismissed.
+
   dismissedByRole?: string | null;
 }
 
@@ -97,12 +86,11 @@ export interface GuidanceTypeSummary {
   inProgress: number;
   followUp: number;
   escalated: number;
-  // Optional for backward-compat with cached responses.
+
   infoRequested?: number;
   resolved: number;
   dismissed: number;
-  // Adviser/subject-teacher withdrawals (subset of dismissed). Optional for
-  // backward-compat with cached responses predating the split.
+
   cancelled?: number;
   booked: number;
   done: number;
@@ -118,7 +106,7 @@ export interface GuidanceReferralsSummary {
   infoRequested?: number;
   dismissed?: number;
   followUp?: number;
-  // Per-track totals for the sidebar's separate Counseling vs ADM menus.
+
   byType?: Record<"Counseling" | "ADM", GuidanceTypeSummary>;
 }
 
@@ -127,10 +115,10 @@ export interface GuidanceReferralsData {
   referrals: GuidanceReferralItem[];
   page: number;
   pageSize: number;
-  /** Filtered pager count (shrinks on search/filter). */
+
   total: number;
   totalPages: number;
-  /** UNFILTERED desk total — tile stats never shrink on search. */
+
   unfilteredTotal?: number;
 }
 
@@ -143,7 +131,7 @@ export interface GuidanceReferralsParams {
   open?: boolean;
   page?: number;
   pageSize?: number;
-  /** Deep-link landing: the backend serves the page containing this case. */
+
   highlight?: string;
 }
 

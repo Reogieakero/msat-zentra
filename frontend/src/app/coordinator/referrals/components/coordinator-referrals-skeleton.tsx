@@ -94,11 +94,6 @@ function RailSkeleton() {
   );
 }
 
-/* Loading state that mirrors the referrals layout 1:1 — glow table card
-   (header controls + 7-column rows + interpretation), the 4 rail cards,
-   and the pager — so skeleton → content swaps with minimal layout shift.
-   Pass layout="table" when the rail is already mounted around it (in-table
-   initial load) to avoid duplicates. */
 export function CoordinatorReferralsSkeleton({
   rows = 10,
   layout = "full",

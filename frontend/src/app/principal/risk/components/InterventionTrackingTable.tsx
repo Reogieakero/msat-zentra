@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
   flexRender,
-  type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
 import { Search, ChevronLeft, ChevronRight, ChevronDown, X, BellRing, Check } from "lucide-react";
@@ -16,7 +15,6 @@ import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import { useGradeMode } from "../../grade-mode-context";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -39,78 +37,9 @@ import type { RiskLevelKey } from "@/services/principal/risk.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { AuroraBanner } from "../../overview/components/AuroraBanner";
 import styles from "./InterventionTrackingTable.module.css";
-
-type OutcomeStatus = "ongoing" | "resolved" | "unresolved";
-type ApprovalStatus = "pending" | "approved" | "rejected" | "modified";
-
-interface InterventionLink {
-  id: string;
-  recommendedAction: string;
-  assignedTo: string | null;
-  assignedStaffName: string | null;
-  approvalStatus: ApprovalStatus;
-  outcomeStatus: OutcomeStatus;
-  createdAt: string | null;
-  sessions: { status: string }[];
-}
-
-interface InterventionStudent {
-  studentId: string;
-  lrn: string;
-  studentName: string;
-  section: string;
-  riskLevel: RiskLevelKey;
-  intervention: InterventionLink | null;
-}
-
-const SECTION_LABEL: Record<OutcomeStatus, string> = {
-  ongoing: "Ongoing",
-  resolved: "Resolved",
-  unresolved: "Unresolved",
-};
-
-const OUTCOME_VARIANT: Record<OutcomeStatus, "warning" | "outline" | "destructive"> = {
-  ongoing: "warning",
-  resolved: "outline",
-  unresolved: "destructive",
-};
-
-/* Pipeline status — same language as the guidance desk: an opened case
-   with zero sessions booked reads "No action yet" (the outcome row is
-   still `ongoing`, so these rows keep matching the Ongoing filter). */
-function pipelineStatus(link: InterventionLink | null): {
-  label: string;
-  variant: "warning" | "outline" | "destructive";
-} {
-  if (!link) return { label: "—", variant: "outline" };
-  if (link.outcomeStatus !== "ongoing") {
-    return {
-      label: SECTION_LABEL[link.outcomeStatus],
-      variant: OUTCOME_VARIANT[link.outcomeStatus],
-    };
-  }
-  if (link.sessions.length === 0) {
-    return { label: "No action yet", variant: "outline" };
-  }
-  return { label: SECTION_LABEL.ongoing, variant: OUTCOME_VARIANT.ongoing };
-}
-
-// Explicit variants (theme tokens are monochrome ink) — same as the
-// guidance interventions desk.
-const RISK_VARIANT: Record<string, "red" | "amber" | "green"> = {
-  High: "red",
-  Moderate: "amber",
-  Low: "green",
-};
-
-const PAGE_SIZE = 8;
-
-const gradeNum = (name: string) => {
-  const m = String(name).match(/(\d+)/);
-  if (!m) return 0;
-  const n = parseInt(m[1], 10);
-  return Number.isNaN(n) ? 0 : n;
-};
+import { SECTION_LABEL, PAGE_SIZE, gradeNum, type InterventionStudent, type OutcomeStatus } from "./intervention-tracking-helpers";
+import { buildInterventionTrackingColumns } from "./intervention-tracking-columns";
+import { InterventionTrackingSkeleton } from "./intervention-tracking-skeleton";
 
 export function InterventionTrackingTable() {
   const { gradeMode } = useGradeMode();
@@ -146,9 +75,6 @@ export function InterventionTrackingTable() {
     },
   });
 
-  // Cohort-wide total (pageSize 1 — only `total` is read) so the banner
-  // below can count at-risk students with no follow-up yet. The table
-  // itself stays scoped to students that have an intervention.
   const { data: cohortData } = useQuery({
     queryKey: ["risk-interventions-cohort", gradeMode],
     queryFn: async () => {
@@ -236,88 +162,7 @@ export function InterventionTrackingTable() {
     setPageIndex(0);
   };
 
-  const columns = React.useMemo<ColumnDef<InterventionStudent>[]>(
-    () => [
-      {
-        id: "name",
-        accessorFn: (row) => row.studentName,
-        header: "Student",
-        size: 200,
-        minSize: 200,
-        maxSize: 200,
-        cell: ({ row }) => (
-          <div className={styles.studentCell}>
-            <span className={styles.studentName}>{row.original.studentName}</span>
-            <span className={styles.studentLrn}>{row.original.lrn}</span>
-          </div>
-        ),
-      },
-      {
-        id: "section",
-        accessorFn: (row) => row.section,
-        header: "Section",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
-        cell: ({ row }) => (
-          <span className={styles.section}>{row.original.section}</span>
-        ),
-      },
-      {
-        id: "risk",
-        accessorFn: (row) => row.riskLevel,
-        header: "Risk",
-        size: 120,
-        minSize: 120,
-        maxSize: 120,
-        cell: ({ row }) => (
-          <Badge variant={RISK_VARIANT[row.original.riskLevel] ?? "outline"}>
-            {row.original.riskLevel}
-          </Badge>
-        ),
-      },
-      {
-        id: "assignee",
-        accessorFn: (row) => row.intervention?.assignedStaffName ?? "",
-        header: "Assigned to",
-        size: 150,
-        minSize: 150,
-        maxSize: 150,
-        cell: ({ row }) => (
-          <span className={styles.assignee}>
-            {row.original.intervention?.assignedStaffName ?? "—"}
-          </span>
-        ),
-      },
-      {
-        id: "status",
-        accessorFn: (row) => row.intervention?.outcomeStatus ?? "",
-        header: "Status",
-        size: 130,
-        minSize: 130,
-        maxSize: 130,
-        cell: ({ row }) => {
-          const status = pipelineStatus(row.original.intervention);
-          return <Badge variant={status.variant}>{status.label}</Badge>;
-        },
-      },
-      {
-        id: "action",
-        accessorFn: (row) => row.intervention?.recommendedAction ?? "",
-        header: "Recommended action",
-        size: 220,
-        minSize: 220,
-        maxSize: 220,
-        enableSorting: false,
-        cell: ({ row }) => (
-          <span className={styles.action}>
-            {row.original.intervention?.recommendedAction ?? "—"}
-          </span>
-        ),
-      },
-    ],
-    []
-  );
+  const columns = React.useMemo(() => buildInterventionTrackingColumns(), []);
 
   const table = useReactTable({
     data: filtered,
@@ -533,7 +378,7 @@ export function InterventionTrackingTable() {
             </TableHeader>
             <TableBody>
               {isPending ? (
-                <SkeletonRows />
+                <InterventionTrackingSkeleton />
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className={styles.empty}>
@@ -591,37 +436,5 @@ export function InterventionTrackingTable() {
       </div>
     </div>
     </div>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <div className={styles.studentCell}>
-              <span className={styles.skelName} />
-              <span className={styles.skelLrn} />
-            </div>
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelCell} style={{ width: "50%" }} />
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelCell} style={{ width: "38%" }} />
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelCell} style={{ width: "60%" }} />
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelCell} style={{ width: "46%" }} />
-          </TableCell>
-          <TableCell>
-            <span className={styles.skelCell} style={{ width: "70%" }} />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
   );
 }

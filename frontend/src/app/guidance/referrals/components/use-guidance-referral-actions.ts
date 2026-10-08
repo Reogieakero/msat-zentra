@@ -133,9 +133,6 @@ const CLOSED_DIALOGS: ActionDialogs = {
   resolve: false,
 };
 
-/** Dialog + mutation orchestration for the guidance referrals table:
- *  which dialog is open, the shared action form, row/session targets,
- *  the status mutation, the 14-action dispatcher, and busy flags. */
 export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
   const [dialogs, setDialogs] = useState<ActionDialogs>({ ...CLOSED_DIALOGS });
   const [form, setForm] = useState<ActionFormState>(INITIAL_GUIDANCE_FORM);
@@ -158,11 +155,10 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
     setActiveSessionId(session.id);
     setForm({
       ...INITIAL_GUIDANCE_FORM,
-      // "Move" starts from the current slot; "finish" leaves the follow-up
-      // date empty so booking the next session stays opt-in.
+
       sessDate: dialog === "move" ? toDateInputValue(session.scheduledAt) : "",
       sessTime: dialog === "move" ? toTimeInputValue(session.scheduledAt) : "",
-      // Follow-up defaults to the same kind of session.
+
       sessType: dialog === "finish" ? session.sessionType : INITIAL_GUIDANCE_FORM.sessType,
     });
     setDialogs((prev) => ({ ...prev, [dialog]: true }));
@@ -202,8 +198,7 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
     onSuccessExtra: (_data, variables) => {
       const message = referralActionMessage(variables.action);
       if (message) toast.success(message);
-      // Instant reminder: re-evaluate the inbox now (booking-filtered
-      // inside) instead of waiting for the next poll tick.
+
       refreshBookingReminders();
     },
     mutationFn: async ({
@@ -306,9 +301,7 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
   const handleAction = (action: string, payload: unknown) => {
     if (!activeId) return;
     if (actionMutation.isPending) return;
-    // Keep the dialog open while the request runs so the submit button's
-    // spinner stays visible. Close only on confirmed success; on error the
-    // dialog stays open with its values intact so the user can retry.
+
     actionMutation.mutate(
       { id: activeId, action, payload },
       {
@@ -322,8 +315,7 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
   };
 
   const isActionPending = actionMutation.isPending;
-  // Per-row busy: only the acting row locks + spins; every other row stays
-  // interactive while the server confirms.
+
   const busyRowId = actionMutation.isPending
     ? ((actionMutation.variables as { id?: string } | undefined)?.id ?? null)
     : null;

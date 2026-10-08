@@ -1,6 +1,3 @@
-// Registry overview shapes (registrar + record-keeper desks serve the
-// same overview projection under different role prefixes). Pure types
-// only — per-desk aliases preserve existing import names.
 export interface RegistryAttachmentRow {
   student: string;
   lrn: string;

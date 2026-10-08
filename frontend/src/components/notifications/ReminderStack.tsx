@@ -49,9 +49,6 @@ function CardRotate({
   );
 }
 
-/* React-Bits-style stacked deck (motion springs, drag-to-cycle):
-   the TOP entry renders in normal flow and sizes the pile; the rest sit
-   absolutely behind it, fanned by rotation. `order` runs bottom → top. */
 export function ReminderStack({
   ids,
   renderCard,
@@ -63,10 +60,6 @@ export function ReminderStack({
   sensitivity?: number;
   onCycle?: (cycledId: string) => void;
 }) {
-  // Visual order, bottom → top: newcomers land on top, handled-away ids
-  // leave the pile. Synced during render, guarded by the joined key so it
-  // runs once per id-set change. Straight deck — no rotation; depth reads
-  // through vertical offset + scale in the render below.
   const [order, setOrder] = React.useState<StackEntry[]>([]);
   const [prevKey, setPrevKey] = React.useState<string>("");
   const idsKey = ids.join("|");

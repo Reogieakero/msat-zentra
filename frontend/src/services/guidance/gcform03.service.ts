@@ -1,6 +1,3 @@
-// GCForm-03 referral form: localStorage draft persistence, template
-// builders, and the official-template fill helpers. Shared by the modal
-// preview and the .xlsx filler so both outputs match word for word.
 import type { OcForm01Detail } from "@/components/ocform01/ocform01";
 import { TEMPLATE_CONCERN_LABELS } from "./gcform03.types";
 import type {
@@ -10,24 +7,14 @@ import type {
   TemplateConcernKey,
 } from "./gcform03.types";
 
-/**
- * GCForm-03 Referral Form data (template: public/referral forms/).
- * Built live — identity, filing, and recommendation fields auto-populate from
- * the case + its official anecdotal report; the counselor answers the rest.
- */
 export const REFERRAL_DRAFT_KEY = "zentra.adm-referral-recommendation";
 
-/* Persistent in-progress fill for the referral page: one localStorage entry
-   per referral so a refresh / accidental navigation never wipes the
-   counselor's answers. Versioned prefix — bump when GcForm03Data changes
-   shape so stale saves stop matching instead of half-loading. */
 const DRAFT_STORE_PREFIX = "zentra.gcform03-fill.v1.";
 
 export function gcForm03DraftKey(referralId: string): string {
   return `${DRAFT_STORE_PREFIX}${referralId}`;
 }
 
-/** Previously saved fill for one referral, or null when absent/unreadable. */
 export function loadGcForm03Draft(referralId: string): unknown {
   try {
     if (typeof window === "undefined" || !referralId) return null;
@@ -44,7 +31,7 @@ export function saveGcForm03Draft(referralId: string, data: GcForm03Data): void 
     if (typeof window === "undefined" || !referralId) return;
     window.localStorage.setItem(gcForm03DraftKey(referralId), JSON.stringify(data));
   } catch {
-    /* Storage full or blocked — the form keeps working in memory. */
+
   }
 }
 
@@ -53,15 +40,10 @@ export function clearGcForm03Draft(referralId: string): void {
     if (typeof window === "undefined" || !referralId) return;
     window.localStorage.removeItem(gcForm03DraftKey(referralId));
   } catch {
-    /* Ignore — nothing to clean. */
+
   }
 }
 
-/**
- * Merge a stored draft over freshly built data. Stored answers always win,
- * but every field falls back to the live build — so a save from an older
- * form shape still yields a complete, submittable form.
- */
 export function sanitizeGcForm03Draft(raw: unknown, fallback: GcForm03Data): GcForm03Data {
   if (!raw || typeof raw !== "object") return fallback;
   const r = raw as Record<string, unknown>;
@@ -130,9 +112,6 @@ export function sanitizeGcForm03Draft(raw: unknown, fallback: GcForm03Data): GcF
   };
 }
 
-/* Review recommendation stored on the referral by the ADM consultation
-   review (`[ADM consult] ...` appended to notes) — reused as the GCForm-03
-   guidance-recommendations line when viewing the passed-on form. */
 export function consultRecommendation(notes?: string | null): string {
   if (!notes) return "";
   const line = notes
@@ -143,7 +122,6 @@ export function consultRecommendation(notes?: string | null): string {
   return line.replace(/^\[ADM consult\]\s*/, "");
 }
 
-/** `☐  Absences/...` → `☑  Absences/...`: only the box flips, never the words. */
 export function templateConcernLabel(
   key: TemplateConcernKey,
   checked: boolean
@@ -152,17 +130,10 @@ export function templateConcernLabel(
   return `${checked ? "☑" : "☐"}${doubleSpace ? "  " : " "}${label}`;
 }
 
-/** `☐ Others:` → `☑ Others:`: only the box flips, never the words. */
 export function templateOthersLabel(checked: boolean): string {
   return `${checked ? "☑" : "☐"} Others:`;
 }
 
-/**
- * Split a paragraph across the template's fixed ruled rows (e.g. Details of
- * Concern → rows 16-18). Word-aware, honors the author's line breaks, and
- * folds overflow into the last row. Shared by the modal preview and the
- * .xlsx filler so both show the identical line distribution.
- */
 export function splitGcForm03Block(
   text: string,
   maxRows: number,
@@ -205,8 +176,6 @@ function today(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-/* Anecdotal category → GCForm-03 concern checkbox. Exact matches check the
-   box; anything else lands in Others with the category as text. */
 function concernsFor(category: string | undefined): GcForm03Concerns {
   const base: GcForm03Concerns = {
     absences: false,
@@ -238,8 +207,7 @@ export function buildGcForm03Data(
   counselorName = ""
 ): GcForm03Data {
   const now = today();
-  /* Details of Concern carries the incident write-up only — the template
-     has no location line, so no "Where it happened" suffix is appended. */
+
   const details =
     report?.descriptionOfIncident ?? row.anecdotalExcerpt ?? row.reason ?? "";
   return {
@@ -259,12 +227,10 @@ export function buildGcForm03Data(
     referredByName: report?.adviserName ?? row.referredBy,
     referredByRole: "Adviser",
     referredDate: report?.observationDate ?? row.date,
-    /* Received-by stays blank until the counselor signs — never a
-       placeholder sentence, so the preview/.xlsx line stays empty. */
+
     receivedBy: counselorName,
     receivedDate: now,
-    /* Guidance call rows start unchecked with blank dates — a date is only
-       an appropriate value once the counselor checks that call. */
+
     guidanceCalls: [
       { call: "1st", checked: false, date: "", subject: "", remarks: "" },
       { call: "2nd", checked: false, date: "", subject: "", remarks: "" },

@@ -20,19 +20,15 @@ function parseDayKey(dayKey: string): Date | undefined {
   return Number.isNaN(day.getTime()) ? undefined : day;
 }
 
-/** shadcn calendar-in-popover sheet date picker speaking "YYYY-MM-DD".
- *  Only the selected subject's meetup dates are markable — future days and
- *  non-meetup days are disabled, with non-meetup days tinted red. While the
- *  meetup list loads (`meetupDates` null) only future days are disabled. */
 export function SheetDatePicker({
   date,
   onChange,
   meetupDates,
 }: {
-  /** "YYYY-MM-DD" sheet date. */
+
   date: string;
   onChange: (date: string) => void;
-  /** "YYYY-MM-DD" meetup keys for the active subject (null while loading). */
+
   meetupDates: string[] | null;
 }) {
   const [open, setOpen] = React.useState(false);

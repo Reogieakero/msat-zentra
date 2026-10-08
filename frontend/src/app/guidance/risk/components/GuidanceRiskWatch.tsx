@@ -48,13 +48,6 @@ function normalizeName(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/**
- * Per-student factor flags from the flagged-student queue
- * (`GET /api/guidance/alerts`), keyed by normalized student name. The
- * alerts feed is per-student while risk rows are per-referral, so names are
- * the join key — flags OR-merge when a student appears more than once.
- * Students with no alert row simply carry no drivers (never assumed).
- */
 export async function fetchAllGuidanceAlertFactors(): Promise<
   Record<string, GuidanceRiskFactorFlags>
 > {
@@ -84,13 +77,6 @@ function referredMs(row: GuidanceRiskRow): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-/**
- * Plain-words risk watch over the guidance desk students — level mix, the
- * High watchlist with driving concerns, and the top flagged concern.
- * Students with no level stay out of the mix (never assumed okay). Links
- * land on each student's newest timeline case. Pure derivation from live
- * rows, so it repaints with the desk.
- */
 export function buildGuidanceRiskWatch(
   rows: GuidanceRiskRow[],
   referralToStudent: Record<string, string | null>,

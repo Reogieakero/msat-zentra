@@ -6,9 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 
-// Targeted invalidation map: notification type/source → exact query keys.
-// Never a 7-key blast, and never the ["academic-insights"] prefix (live and
-// honor-roll are distinct keys so one never kills the other).
 const KEY_FOR_SOURCE: Record<string, string[][]> = {
   schedule_submitted: [["principal-schedule-sections"], ["principal-schedule-config"]],
   schedule_approved: [["principal-schedule-sections"], ["principal-schedule-config"]],
@@ -33,17 +30,9 @@ interface PrincipalNotification {
   createdAt?: string;
 }
 
-// Poll cadence — this is the actual delivery transport, not just a safety
-// net: the browser Supabase client authenticates as anon (the app's sessions
-// are backend-signed JWTs, not Supabase Auth), so row-scoped Realtime events
-// never reach it even with the table published. Cheap indexed query, and
-// rows already toasted are skipped through `seenIds`. 15s (was 5s) —
-// focused polling is per-page (academics: none, attendance: 60s) so the
-// shell poll doesn't need to be aggressive.
 const FALLBACK_POLL_MS = 15_000;
 const MAX_TOASTS_PER_POLL = 3;
 
-/** Current user id from the stored access JWT (backend signs `sub`). */
 function currentUserId(): string | null {
   try {
     const token = window.localStorage.getItem("zentra.access");
@@ -70,19 +59,6 @@ function toastTitleFor(n: PrincipalNotification): string {
   return "New notification";
 }
 
-/**
- * Principal desk realtime sync — one shared Supabase channel per mount.
- * Listens for INSERTs on the Notification table scoped to the signed-in
- * principal and pops a sileo toast on whatever page they are on (e.g. the
- * moment a master teacher sends slots for review), plus refreshes the bell
- * and the approval queue so nothing needs a page refresh.
- *
- * Delivery is two-layer: a 5s backend poll (the working transport — the
- * anon Supabase client never receives row-scoped Realtime events for
- * backend-signed sessions) plus the Supabase Realtime subscription as a
- * bonus path where policies allow. Rows are deduped by id across both
- * layers, so a healthy connection never double-toasts.
- */
 export function usePrincipalRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const lastInvalidated = React.useRef(0);
@@ -131,12 +107,8 @@ export function usePrincipalRealtime(enabled = true) {
         });
       if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
     } catch {
-      // Realtime unavailable — the polling safety net below still delivers.
     }
 
-    // Safety net: pick up anything Realtime missed. First poll only seeds
-    // the seen set (no toast storm for old inbox rows); later polls toast
-    // rows that arrived since, capped per poll.
     let seeded = false;
     async function poll() {
       if (cancelled || document.hidden) return;
@@ -153,22 +125,15 @@ export function usePrincipalRealtime(enabled = true) {
         }
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
         if (fresh.length === 0) return;
-        // Oldest first so the newest toast stays on top.
         const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
         for (const n of ordered) notify(n);
-        // Mark the rest seen (lists still refresh below) to avoid backlog.
         for (const n of fresh) seenIds.current.add(n.id);
         if (fresh.length > MAX_TOASTS_PER_POLL) void invalidate();
       } catch {
-        // Offline / unauthorized — try again on the next tick.
       }
     }
     const timer = window.setInterval(poll, FALLBACK_POLL_MS);
-    // Seed soon after mount so the missed-toast window is tiny (seed itself
-    // never toasts).
     const seedTimer = window.setTimeout(poll, 1_000);
-    // Poll the moment the tab regains focus — submissions that landed while
-    // away surface immediately with no manual refresh.
     const onFocus = () => {
       void poll();
     };
@@ -176,24 +141,17 @@ export function usePrincipalRealtime(enabled = true) {
     document.addEventListener("visibilitychange", onFocus);
 
     function invalidate(row?: PrincipalNotification) {
-      // Throttle bursts to one invalidate per 2s (toasts still fire per row).
       const now = Date.now();
       if (now - lastInvalidated.current < 2000) return;
       lastInvalidated.current = now;
-      // Targeted: resolve keys from the notification type; fall back to the
-      // bell only when the type is unknown (never a full-desk blast).
       const extra = row ? (KEY_FOR_SOURCE[row.type] ?? []) : [];
-      // Attendance-sourced rows without a typed key still refresh attendance.
       const keys = [...ALWAYS_KEYS, ...extra];
       for (const key of keys) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
       }
       if (row && extra.length === 0 && row.type !== "referral_status_change") {
-        // Unknown type: bell already refreshed above; nothing else to do.
       }
       if (!row) {
-        // Overflow path (capped toasts): refresh bell only; lists revalidate
-        // on their own stale timers.
       }
     }
 
@@ -206,7 +164,6 @@ export function usePrincipalRealtime(enabled = true) {
       try {
         channel?.unsubscribe();
       } catch {
-        // Ignore cleanup errors.
       }
     };
   }, [enabled, queryClient]);

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { RiskLevelDonutCard } from "./components/RiskLevelDonutCard";
 import { RiskLevelBreakdown } from "./components/RiskLevelBreakdown";
 import { RiskLevelDistribution } from "./components/RiskLevelDistribution";

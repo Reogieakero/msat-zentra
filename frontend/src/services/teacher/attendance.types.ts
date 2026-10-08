@@ -1,6 +1,3 @@
-// Shared shapes for the teacher attendance sheets. Pure types only.
-// NOTE: legacy AM/PM takes are archived (GET /api/attendance/legacy/days).
-// New takes are keyed by (subjectId, slot) — no session type remains here.
 export type SheetStatus = "present" | "absent" | "late" | "excused";
 
 export interface OfferedSubject {
@@ -28,10 +25,9 @@ export interface SheetContext {
   students: SheetStudent[];
 }
 
-/** Term-scoped per-day subject marks for the meetup blocks view. */
 export interface SubjectDayRecord {
   key: string;
-  date: string; // UTC day key
+  date: string;
   status: SheetStatus;
 }
 
@@ -44,8 +40,6 @@ export interface SubjectDays {
   records: SubjectDayRecord[];
 }
 
-/** Roster for one section the caller may serve (advisory, assignments, or
- *  code-linked timetable slots) — drives code-claimed per-subject sheets. */
 export interface SectionRoster {
   sectionId: string;
   sectionName: string;

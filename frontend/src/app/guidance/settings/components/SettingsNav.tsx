@@ -14,7 +14,6 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Guidance settings sections — preferences only. */
 export function guidanceSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },

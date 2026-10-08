@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import {

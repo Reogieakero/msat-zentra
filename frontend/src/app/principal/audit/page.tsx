@@ -39,14 +39,11 @@ export default function PrincipalAuditPage() {
   const [actorScope, setActorScope] = React.useState<ActorScope>("all");
   const [sourceTable, setSourceTable] = React.useState<string | "all">("all");
   const [query, setQuery] = React.useState("");
-  // Debounced 300ms (matches ADM referrals) so typing doesn't fan out requests.
+
   const debouncedQuery = useDebouncedValue(query, 300);
   const [exporting, setExporting] = React.useState(false);
   const [page, setPage] = React.useState(1);
-  // Union of every source table seen across all fetched pages (trimmed,
-  // exact-value deduped). The dropdown options stay stable while paging
-  // instead of reshuffling to each page's 25 rows — and near-duplicate
-  // variants (case/whitespace) can never appear twice.
+
   const [knownTables, setKnownTables] = React.useState<string[]>([]);
 
   const load = React.useCallback(
@@ -97,8 +94,7 @@ export default function PrincipalAuditPage() {
 
   React.useEffect(() => {
     const ctrl = new AbortController();
-    // Async data fetch on filter/page change — setState happens inside the
-    // promise chain, not synchronously in the effect body.
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load(ctrl.signal);
     return () => ctrl.abort();

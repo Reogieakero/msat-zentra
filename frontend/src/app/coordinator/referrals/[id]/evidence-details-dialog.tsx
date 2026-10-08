@@ -55,11 +55,6 @@ function certificationRecord(value: unknown): {
   return out;
 }
 
-/**
- * Per-evidence details overlay for the case file's Evidence chain.
- * Referral + anecdotal forms open their full official previews instead
- * (handled by the caller); everything else renders here.
- */
 export function EvidenceDetailsDialog({
   target,
   meetings,

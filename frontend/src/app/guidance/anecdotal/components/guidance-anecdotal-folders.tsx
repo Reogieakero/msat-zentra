@@ -60,9 +60,6 @@ function isClosedStatus(status: string): boolean {
   return status === "resolved" || status === "dismissed";
 }
 
-/* Folder body color + slip tone per category — same map as the teacher
-   repo (single source of truth in the teacher side rail, shared with the
-   legend card on this page's rail). */
 const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   behavioral: 1,
   bullying: 2,
@@ -119,17 +116,6 @@ function statusColor(record: GuidanceAnecdotalRecord): string {
   }
 }
 
-/**
- * Referred case files — one folder per referred case (same folder UI as the
- * adviser records page). Each folder holds only its GCForm-01 slip; session
- * documentation lives on the separate Session Documents page.
- * Opening a folder overlays that referral's attached GCForm-01 preview.
- * Finished (resolved/dismissed) and endorsed (ADM + in_progress) cases stay
- * listed, but the full report never opens — the same privacy overlays as the
- * referrals page appear instead.
- * Guidance viewing is read-only — the sign flow never activates for this
- * role because they are never the signatory.
- */
 export function GuidanceAnecdotalFolders({
   records,
   page,
@@ -152,11 +138,7 @@ export function GuidanceAnecdotalFolders({
   const end = Math.min(page * pageSize, total);
 
   const openRecord = (record: GuidanceAnecdotalRecord) => {
-    // Same gates as the referrals/alerts pages: finished
-    // (resolved/dismissed) keeps the full write-up hidden for privacy;
-    // endorsed (ADM + in_progress) moved to the ADM coordinator with its
-    // full report — neither ever opens the official preview. Each folder
-    // opens only its own attached record.
+
     if (isClosedStatus(record.referralStatus)) {
       setPrivacyFor(record.student);
     } else if (isEndorsedCase(record.referralType, record.referralStatus)) {

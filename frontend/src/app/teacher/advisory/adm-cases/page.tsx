@@ -20,7 +20,6 @@ import styles from "./components/adm-cases.module.css";
 
 const TEACHER_ADM_CASES_PAGE_SIZE = 15;
 
-// Narrower cards than the section grid default.
 const GRID_STYLE: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(13rem, 1fr))",
@@ -28,11 +27,6 @@ const GRID_STYLE: React.CSSProperties = {
   minWidth: 0,
 };
 
-/**
- * Teacher ADM cases: only ADM cases from referrals the teacher filed
- * (pending or principal-approved), one section-grid card per case.
- * Read-only — stage and status only, never confidential detail.
- */
 function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | null }) {
   const router = useRouter();
   const { activeTerm } = useTerm();
@@ -40,8 +34,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const [page, setPage] = useState(1);
   const [takeover, setTakeover] = useState(false);
   const [detailCase, setDetailCase] = useState<AdmCase | null>(null);
-  // Bell deep-links (?highlight=<id>) serve the case's own page; the first
-  // pager touch takes over with plain params. Derived, no effects.
+
   const landing = !takeover && highlightId !== null;
 
   const casesQuery = useQuery<MyAdmCasesPage>({
@@ -53,7 +46,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
         ...(landing && highlightId ? { highlight: highlightId } : {}),
         signal,
       }),
-    // Page turns reuse the previous page so they never flash skeletons.
+
     placeholderData: keepPreviousData,
     retry: false,
   });
@@ -62,8 +55,6 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
     setPage(next);
   };
 
-  // Scroll the highlighted case into view once its page renders. The
-  // backend serves the highlight's own page, so the card is mounted here.
   useEffect(() => {
     if (!highlightId) return;
     const t = window.setTimeout(() => {
@@ -73,7 +64,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
     }, 150);
     return () => window.clearTimeout(t);
   }, [highlightId, casesQuery.data]);
-  // Stable reference so downstream memos don't recompute every render.
+
   const cases = useMemo(
     () => (Array.isArray(casesQuery.data?.cases) ? casesQuery.data.cases : []),
     [casesQuery.data]
@@ -81,13 +72,12 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const total = casesQuery.data?.total ?? cases.length;
   const unfilteredTotal = casesQuery.data?.unfilteredTotal ?? cases.length;
 
-  // Derived, never setState-in-effect.
   const totalPages = Math.max(1, casesQuery.data?.totalPages ?? 1);
   const safePage = Math.min(casesQuery.data?.page ?? page, totalPages);
   const pageRows = cases;
 
   function handleTrack(caseData: AdmCase) {
-    // Deep-link into the referrals workflow canvas on this case's referral.
+
     writeLastViewedReferralId(caseData.referralId);
     setDetailCase(null);
     router.push("/teacher/advisory/referrals");
@@ -232,7 +222,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
 }
 
 function TeacherAdvisoryAdmCasesPageWithHighlight() {
-  // useSearchParams needs a Suspense boundary under the app router.
+
   const params = useSearchParams();
   return <TeacherAdvisoryAdmCasesView highlightId={params.get("highlight")} />;
 }

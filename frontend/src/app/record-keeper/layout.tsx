@@ -36,23 +36,18 @@ function RecordKeeperShell({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = React.useState("");
   const profile = useRecordKeeperProfileSettings();
-  // Live record-keeper alerts: a specific sileo toast pops on the current
-  // page the moment another desk acts (new sign-up, access request, finals
-  // ready, SF10 verified), plus the record-keeper lists refresh. Single
-  // channel per mount.
+
   useRecordKeeperRealtime();
 
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
-    // Terminate the server refresh session (clears the httpOnly cookie) —
-    // best-effort; the local wipe below runs regardless.
+
     void logout();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));
-    // Drop all cached record-keeper data so the next login can never briefly
-    // render the previous keeper's overview from the query cache.
+
     queryClient.clear();
     router.push("/login");
   };

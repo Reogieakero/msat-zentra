@@ -8,8 +8,7 @@ export function CoordinatorCertificationsGradeChart({ summary }: { summary: Cert
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
 
   return (
-    /* Shell-less block — the page wraps the whole left panel in one
-       shared glow card, so this renders title + content only. */
+
     <div className={styles.block} aria-label="Certifications by grade level">
       <div>
         <h3 className={styles.sectionTitle}>Certifications by grade level</h3>

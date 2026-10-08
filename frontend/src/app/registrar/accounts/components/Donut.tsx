@@ -13,8 +13,6 @@ type Props = {
   noAccount?: number;
 };
 
-// Primary-tinted ramp that follows the saved workspace palette
-// (RegistrarPaletteGate paints var(--primary) desk-wide).
 const COLORS = {
   withAccount: "var(--primary)",
   pending: "color-mix(in oklch, var(--primary) 65%, var(--card))",

@@ -11,18 +11,10 @@ import { NurseDocumentariesList } from "./components/NurseDocumentariesList";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./health-records-page.module.css";
 
-/**
- * Health Records — the school nurse transaction archive: every finished
- * transaction (completed clinic sessions with notes, outcomes, and
- * attached files, plus resolved case closures) for the students on the
- * nurse's desk. Read-only; handling stays on the case pages.
- */
 export default function NurseHealthRecordsPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Archive view over finished transactions: bounded desk fetch, entries
-  // derived client-side (completed/resolved/endorse-ready), folders unpaged,
-  // in-folder tables paginate at the strict 15 with safePage.
+
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<NurseAlertsPage>({
       queryKey: ["nurse-alerts", "preview", termKey],

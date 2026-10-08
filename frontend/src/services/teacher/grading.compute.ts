@@ -1,8 +1,3 @@
-// Pure grade math for the teacher gradebook: component vocabulary, grade
-// labels, DepEd transmutation, and the assessment-driven subject-grade
-// computation (client twin of backend services/grading.ts
-// computeSubjectGrade — the backend is the source of truth for stored
-// grades). No API calls, no hooks.
 import type {
   CategoryEvidence,
   CategoryResult,
@@ -26,21 +21,16 @@ export const COMPONENT_NAMES: Record<ComponentType, string> = {
   EXAM: "Exam",
 };
 
-/** "G11" -> "11", passthrough otherwise. */
 export function gradeLabel(gradeLevel: string): string {
   const n = gradeLevel.replace(/^G/i, "");
   return /^\d+$/.test(n) ? n : gradeLevel;
 }
 
-/** Senior High (G11/G12) uses the single DepEd weight set for every subject. */
 export function isSHS(gradeLevel: string): boolean {
   const n = gradeLevel.replace(/^G/i, "");
   return n === "11" || n === "12";
 }
 
-// Official DepEd Order No. 8, s. 2015 transmutation bands (mirrors
-// backend/src/services/grading.ts, the source of truth for stored grades).
-// Each band is the inclusive lower bound of the initial-grade range.
 export const TRANSMUTATION_BANDS: { min: number; grade: number }[] = [
   { min: 100, grade: 100 },
   { min: 98.4, grade: 99 },
@@ -85,7 +75,6 @@ export const TRANSMUTATION_BANDS: { min: number; grade: number }[] = [
   { min: 0, grade: 60 },
 ];
 
-/** Find the DepEd table band an initial grade falls in (for display). */
 export function bandForGrade(computed: number): TransmutationBand {
   const clamped = Math.min(100, Math.max(0, computed));
   for (let i = 0; i < TRANSMUTATION_BANDS.length; i += 1) {
@@ -98,17 +87,8 @@ export function bandForGrade(computed: number): TransmutationBand {
   return { grade: 60, low: 0, high: 3.99 };
 }
 
-// ---------------------------------------------------------------------------
-// Assessment-driven grade computation — client twin of backend
-// services/grading.ts computeSubjectGrade (the source of truth for stored
-// grades). Same rules: only categories with assessments contribute (weights
-// normalized), earned/possible over recorded scores, N/A never zero, no
-// evidence → null instead of a fake 0% / Failed.
-// ---------------------------------------------------------------------------
-
 const CANONICAL_ORDER = ["WRITTEN_WORK", "PERFORMANCE_TASK", "EXAM"];
 
-/** Per-category evidence for one student from workspace components. */
 export function subjectEvidence(
   components: ClassComponent[],
   studentId: string,

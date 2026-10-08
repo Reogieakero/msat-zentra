@@ -5,11 +5,6 @@ import { Loader2 } from "lucide-react";
 import { forwardNurseAdmCase } from "@/services/nurse/referrals.service";
 import { useNurseMutation } from "./use-nurse-mutation";
 
-/**
- * Explicit forward for ADM cases whose referral form is completed. The case
- * reaches the ADM coordinator only when the nurse clicks this — saving the
- * form alone never moves it.
- */
 export function NurseForwardAdmButton({
   id,
   student,
@@ -36,8 +31,7 @@ export function NurseForwardAdmButton({
       size="xs"
       disabled={sending}
       onClick={() => forwardMutation.mutate()}
-      /* Fixed min-width + inline spinner slot so the "Forwarding…"
-         swap doesn't widen the Actions cell and shift the row. */
+
       style={{ minWidth: "9.5rem" }}
     >
       {sending ? (

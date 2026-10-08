@@ -11,8 +11,6 @@ import {
 import styles from "./components/attendance.module.css";
 
 export default function PrincipalAttendanceHeatmapsPage() {
-  // Section drill-down (read-only CardModal): opened from any table row.
-  // Null selection shows the picker.
   const [drillOpen, setDrillOpen] = React.useState(false);
   const [drillSelection, setDrillSelection] =
     React.useState<SectionSelection | null>(null);

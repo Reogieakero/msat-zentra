@@ -5,9 +5,6 @@ import { Files } from "lucide-react";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { GuidanceAnecdotalTopStudent } from "@/services/guidance/anecdotal.types";
 
-/* Top students by referred-case count — same card design as the teacher
-   repo rail (assign.card + glow), guidance-worded copy. Fed by the
-   endpoint's summary.topStudents (full referred scope, not the page). */
 export function TopReferredCard({ items }: { items: GuidanceAnecdotalTopStudent[] }) {
   const top = React.useMemo(
     () => [...items].sort((a, b) => b.count - a.count).slice(0, 5),
@@ -53,8 +50,6 @@ export function TopReferredCard({ items }: { items: GuidanceAnecdotalTopStudent[
   );
 }
 
-/* Session-file color key for the documentation slips (same colors as the
-   folder slips: one per counseling session kind, from done sessions). */
 const SESSION_KINDS: { key: string; label: string; color: string }[] = [
   { key: "individual", label: "One-on-one", color: "#3b82f6" },
   { key: "parent_conference", label: "Parent conference", color: "#f59e0b" },

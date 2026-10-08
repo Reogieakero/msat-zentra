@@ -1,6 +1,3 @@
-// Follow-up actions for the guidance interventions desk: at-risk queue
-// fetch, session docs, staff/review/assign/outcome, engine breakdown,
-// follow-up lifecycle (start + session schedule/complete/move/cancel).
 import { apiClient } from "@/lib/api/client";
 import { pickList } from "@/lib/api/payload";
 import { asArray } from "@/lib/api/payload";
@@ -36,18 +33,11 @@ export async function fetchGuidanceInterventions(
     `/api/interventions${query ? `?${query}` : ""}`,
     { signal: opts.signal }
   );
-  // Defensive: the endpoint has served bare {students} shapes — never let
-  // a shape change crash the table.
+
   const students = pickList<AtRiskStudentItem>(data, "students");
   return { ...(data as GuidanceInterventionsData), students };
 }
 
-// Every live at-risk student (High + Moderate, all outcomes) for
-// client-side tables — including flagged students whose follow-up hasn't
-// been opened yet (intervention === null renders with the table's
-// "Ongoing" / "Intervention recorded" fallbacks). The endpoint caps
-// pageSize at 100, so walk all pages — filtering and paging then happen
-// locally. `level: "All"` is required: the endpoint defaults to High-only.
 export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
   const first = await fetchGuidanceInterventions({
     page: 1,

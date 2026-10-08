@@ -21,7 +21,7 @@ export default function GuidanceInterventionsPage() {
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
-  // Debounced 300ms so server queries fire after the user pauses typing.
+
   const debounced = useDebouncedValue(query.trim(), 300);
 
   const handleQueryChange = (value: string) => {
@@ -43,13 +43,11 @@ export default function GuidanceInterventionsPage() {
           },
           { signal }
         ),
-      // Page turns reuse the previous page so they never flash skeletons.
+
       placeholderData: keepPreviousData,
       staleTime: 60_000,
     });
 
-  // Derived, never setState-in-effect: the server clamps too, this keeps
-  // the pager truthful while a filter shrinks the list under the cursor.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AdmReferralFormSheet,
@@ -12,11 +11,6 @@ import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 import type { GcForm03Data } from "@/services/guidance/gcform03.types";
 
-/**
- * Guidance GCForm-03 fill-up sheet — shared fill-up UI opening in place
- * (no navigation), guidance wiring: confirming endorses the case to the
- * ADM coordinator, pops a success toast, then closes back to the list.
- */
 export function GuidanceAdmReferralFormSheet({
   open,
   onClose,
@@ -39,8 +33,6 @@ export function GuidanceAdmReferralFormSheet({
   const invalidateGuidance = useGuidanceInvalidate();
   const referralId = adapter.referralId;
 
-  // Sessions already booked on the case — confirming is blocked while one
-  // is still upcoming (same rule as the nurse desk).
   const sessionsQuery = useQuery({
     queryKey: ["adm-consultation-sessions", referralId],
     queryFn: () => listAdmConsultationSessions(referralId),
@@ -56,8 +48,7 @@ export function GuidanceAdmReferralFormSheet({
   }
 
   function onConfirmed() {
-    // Confirmed server-side: suppress the realtime echo, bump every
-    // guidance query (notifications included) via the shared invalidator.
+
     markSelfNotified(referralId);
     invalidateGuidance();
     onChanged();

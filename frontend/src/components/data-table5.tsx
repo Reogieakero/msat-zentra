@@ -1,32 +1,24 @@
 "use client";
-
 import * as React from "react";
-import type { CSSProperties } from "react";
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  type Cell,
   type ColumnDef,
   type ColumnFiltersState,
-  type Header,
   type SortingState,
   type VisibilityState
 } from "@tanstack/react-table";
 import {
   ChevronDown,
   ColumnsIcon,
-  MoreHorizontal,
   SearchIcon,
   Trash2,
   Download,
   Copy,
   FileText,
-  GripVertical,
-  ArrowUpDown
 } from "lucide-react";
 import {
   DndContext,
@@ -42,13 +34,9 @@ import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   SortableContext,
-  useSortable,
   horizontalListSortingStrategy
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -62,240 +50,13 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow
 } from "@/components/ui/table";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
-
-const initialData: Payment[] = [
-  {
-    id: "m5gr84i9",
-    amount: 316,
-    status: "success",
-    email: "ken99@example.com"
-  },
-  {
-    id: "3u1reuv4",
-    amount: 242,
-    status: "success",
-    email: "Abe45@example.com"
-  },
-  {
-    id: "derv1ws0",
-    amount: 837,
-    status: "processing",
-    email: "Monserrat44@example.com"
-  },
-  {
-    id: "5kma53ae",
-    amount: 874,
-    status: "success",
-    email: "Silas22@example.com"
-  },
-  {
-    id: "bhqecj4p",
-    amount: 721,
-    status: "failed",
-    email: "carmella@example.com"
-  }
-];
-
-export type Payment = {
-  id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
-};
-
-function DraggableHeader({ header }: { header: Header<Payment, unknown> }) {
-  const isSelectColumn = header.column.id === "select";
-  const isActionsColumn = header.column.id === "actions";
-  const isNonDraggable = isSelectColumn || isActionsColumn;
-  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
-    id: header.column.id,
-    disabled: isNonDraggable
-  });
-
-  const style: CSSProperties = {
-    opacity: isDragging ? 0.8 : 1,
-    position: "relative",
-    transform: CSS.Translate.toString(transform),
-    transition,
-    whiteSpace: "nowrap",
-    width: header.column.getSize(),
-    zIndex: isDragging ? 1 : 0
-  };
-
-  if (isNonDraggable) {
-    return (
-      <TableHead
-        className="relative h-10 border-t"
-        style={{ width: header.column.getSize() }}
-        colSpan={header.colSpan}>
-        <div className={isSelectColumn ? "flex items-center" : ""}>
-          {header.isPlaceholder
-            ? null
-            : flexRender(header.column.columnDef.header, header.getContext())}
-        </div>
-      </TableHead>
-    );
-  }
-
-  return (
-    <TableHead
-      ref={setNodeRef}
-      className="relative h-10 border-t"
-      style={style}
-      colSpan={header.colSpan}>
-      <div className="flex items-center justify-start gap-0.5">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7"
-          {...attributes}
-          {...listeners}
-          aria-label="Drag to reorder">
-          <GripVertical className="h-3 w-3 opacity-60" aria-hidden="true" />
-        </Button>
-        {header.column.getCanSort() && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="group h-7 w-7"
-            onClick={header.column.getToggleSortingHandler()}
-            aria-label="Toggle sorting">
-            <ArrowUpDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
-          </Button>
-        )}
-        <span className="ms-1 grow truncate">
-          {header.isPlaceholder
-            ? null
-            : flexRender(header.column.columnDef.header, header.getContext())}
-        </span>
-      </div>
-    </TableHead>
-  );
-}
-
-function DragAlongCell({ cell }: { cell: Cell<Payment, unknown> }) {
-  const isSelectColumn = cell.column.id === "select";
-  const isActionsColumn = cell.column.id === "actions";
-  const isNonDraggable = isSelectColumn || isActionsColumn;
-  const { isDragging, setNodeRef, transform, transition } = useSortable({
-    id: cell.column.id,
-    disabled: isNonDraggable
-  });
-
-  const style: CSSProperties = {
-    opacity: isDragging ? 0.8 : 1,
-    position: "relative",
-    transform: CSS.Translate.toString(transform),
-    transition,
-    width: cell.column.getSize(),
-    zIndex: isDragging ? 1 : 0
-  };
-
-  if (isNonDraggable) {
-    return (
-      <TableCell
-        className={isSelectColumn ? "w-[50px]" : ""}
-        style={{ width: cell.column.getSize() }}>
-        <div className={isSelectColumn ? "flex items-center" : ""}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </div>
-      </TableCell>
-    );
-  }
-
-  return (
-    <TableCell ref={setNodeRef} className="truncate" style={style}>
-      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-    </TableCell>
-  );
-}
-
-const baseColumns: ColumnDef<Payment>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    size: 50,
-    minSize: 50,
-    maxSize: 50
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("status")}</div>
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>
-  },
-  {
-    accessorKey: "amount",
-    header: () => <div>Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD"
-      }).format(amount);
-
-      return <div>{formatted}</div>;
-    }
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    header: () => <div className="text-end">Actions</div>,
-    cell: ({ row }) => {
-      const payment = row.original;
-
-      return (
-        <div className="text-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
-                Copy payment ID
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>View customer</DropdownMenuItem>
-              <DropdownMenuItem>View payment details</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    }
-  }
-];
-
+import { baseColumns, initialData, type Payment } from "./data-table-columns";
+import { DragAlongCell, DraggableHeader } from "./data-table-drag-cells";
+export type { Payment };
 export default function DataTableDemo() {
   const [data] = React.useState<Payment[]>(initialData);
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -308,13 +69,11 @@ export default function DataTableDemo() {
       .filter((id) => id && id !== "select" && id !== "actions")
   );
   const sortableId = React.useId();
-
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   );
-
   const columns = React.useMemo<ColumnDef<Payment>[]>(() => {
     const selectColumn = baseColumns.find((col) => col.id === "select");
     const actionsColumn = baseColumns.find((col) => col.id === "actions");
@@ -331,11 +90,9 @@ export default function DataTableDemo() {
     if (actionsColumn) result.push(actionsColumn);
     return result;
   }, [columnOrder]);
-
   const fullColumnOrder = React.useMemo<string[]>(() => {
     return ["select", ...columnOrder, "actions"];
   }, [columnOrder]);
-
   const table = useReactTable({
     data,
     columns,
@@ -362,7 +119,6 @@ export default function DataTableDemo() {
       columnOrder: fullColumnOrder
     }
   });
-
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (
@@ -381,7 +137,6 @@ export default function DataTableDemo() {
       });
     }
   }
-
   return (
     <div className="w-full max-w-6xl space-y-4">
       <div className="flex items-center gap-2">

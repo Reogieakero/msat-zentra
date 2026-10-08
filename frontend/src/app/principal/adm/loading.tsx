@@ -1,7 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/* Mirrors adm/page.tsx: AdmHeader + AdmStats (KPI row) + AdmPipelineOverview
-   + AdmPipelineGuide — same vertical stack. */
 export default function PrincipalAdmLoading() {
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label="Loading ADM" aria-busy="true">

@@ -1,4 +1,3 @@
-// Principal ADM overview reads.
 import { apiClient } from "@/lib/api/client";
 import { isCancel } from "axios";
 import type { AdmDashboard, AdmReferralsPage } from "./adm.types";

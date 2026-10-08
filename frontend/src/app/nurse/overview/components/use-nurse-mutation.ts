@@ -5,17 +5,6 @@ import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/nurseChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
 
-/**
- * Shared nurse-desk mutation helper.
- *
- * Every nurse mutation follows the same production lifecycle:
- *   idle → pending (button disabled + spinner) → success (toast + targeted
- *   invalidation) OR error (inline message + error toast) → settled.
- *
- * Centralizing the invalidation keys here prevents drift: every nurse
- * mutation refreshes exactly the four nurse queries and nothing else —
- * no whole-app refetch, no stale desk after a write.
- */
 export const NURSE_QUERY_KEYS = [
   ["nurse-alerts"],
   ["nurse-overview"],
@@ -25,14 +14,6 @@ export const NURSE_QUERY_KEYS = [
   ["nurse-notifications"],
 ] as const;
 
-/**
- * Scoped invalidation: a mutation (or realtime event) only refetches the
- * queries it can actually change. Previously every nurse write and every
- * realtime event invalidated all six prefixes — one session booking
- * refetched overview + alerts + referrals + risk + notifications. The
- * default (no scope) preserves the old all-keys behavior so existing call
- * sites stay correct; pass scopes to narrow.
- */
 export type NurseScope = "alerts" | "overview" | "risk" | "notifications";
 
 const NURSE_SCOPE_KEYS: Record<NurseScope, readonly (readonly string[])[]> = {
@@ -64,24 +45,15 @@ interface NurseMutationOptions<TData, TVariables> {
   successTitle: string;
   successDescription?: (variables: TVariables, data: TData) => string;
   errorFallback: string;
-  /** When true, suppress the error toast (caller shows inline error only). */
+
   silentError?: boolean;
   onSuccessExtra?: (data: TData, variables: TVariables) => void;
-  /** Referral id this write acts on — confirmed writes suppress their own
-      realtime echo toast for 30s (bell row still lands). Falls back to
-      `data.id` when the mutation resolves one. */
+
   sourceId?: string | ((variables: TVariables) => string);
-  /** Narrow the post-success refetch (default: all nurse keys, the previous
-      behavior). Most case writes only move queue/overview/risk state. */
+
   scopes?: NurseScope | NurseScope[];
 }
 
-/**
- * useMutation pre-wired for the nurse desk: success toast only after the
- * server confirms, error toast (sanitized, never raw SQL/Prisma) on failure,
- * and targeted nurse-query invalidation. The caller still owns inline error
- * display via `mutation.error` + `apiErrorMessage`.
- */
 export function useNurseMutation<TData = unknown, TVariables = void>(
   options: NurseMutationOptions<TData, TVariables>
 ) {
@@ -90,8 +62,7 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
   return useMutation<TData, Error, TVariables>({
     mutationFn: async (variables) => options.mutationFn(variables),
     onSuccess: (data, variables) => {
-      // Per-sourceId self-suppression: the confirmed id skips its realtime
-      // echo toast for 30s (bell row still lands, lists still invalidate).
+
       const fromData =
         typeof data === "string"
           ? data
@@ -116,11 +87,7 @@ export function useNurseMutation<TData = unknown, TVariables = void>(
       });
       options.onSuccessExtra?.(data, variables);
     },
-    // Pessimistic: rows stay put with their spinner until the server
-    // confirms — only the success refetch above moves/removes them. No
-    // onSettled blanket refetch: it doubled every mutation's network cost
-    // (success invalidated, then settled invalidated again) and refetched
-    // on error when nothing changed.
+
     onError: (err) => {
       if (!options.silentError) {
         toast.error({

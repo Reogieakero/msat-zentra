@@ -29,8 +29,6 @@ import type { ClassStudentRow } from "@/services/teacher/overview.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./teacher-overview-advisory.module.css";
 
-// Factor badges — academic + attendance only. Regular teachers record no
-// anecdotal, so there is never a behavioral factor here.
 const FACTOR_BADGE: Record<string, { variant: "amber" | "green"; label: string }> = {
   academic: { variant: "amber", label: "Academic" },
   attendance: { variant: "green", label: "Attendance" },
@@ -50,11 +48,6 @@ function FactorBadges({ flags }: { flags?: ClassStudentRow["flags"] }) {
   );
 }
 
-/* Class students data table for non-advisers: at-risk students only
-   (status not Low) in the teacher's handled subjects — student name with LRN
-   underneath, handled subject codes (one row only), section, risk status
-   level, and risk factor (attendance + academic only). Same card/table
-   language as the advisory tables. */
 interface TeacherOverviewClassStudentsProps {
   students: ClassStudentRow[];
 }
@@ -63,7 +56,6 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
-  // Display only students whose status is not Low.
   const atRisk = React.useMemo(
     () => students.filter((s) => s.riskLevel !== "Low"),
     [students],

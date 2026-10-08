@@ -8,8 +8,6 @@ import { flexRender, type Cell, type Header } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableHead } from "@/components/ui/table";
 
-/* Shared draggable/sortable header + cell (data-table5 pattern). Header
-   labels align with cell content — grip/sort controls sit after the text. */
 export function DraggableHeader<TData>({ header }: { header: Header<TData, unknown> }) {
   const isSelectColumn = header.column.id === "select";
   const isActionsColumn = header.column.id === "actions";

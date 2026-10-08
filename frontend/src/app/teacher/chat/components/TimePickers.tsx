@@ -16,7 +16,6 @@ interface TimePickersProps {
   onPick: (hour: string | null, minute: string | null, ampm: string | null) => void;
 }
 
-// Custom hour / minute / AM-PM dropdowns — no native time-input chrome.
 export function TimePickers({ value, onPick }: TimePickersProps) {
   const parts = splitTime(value);
   const menus = [

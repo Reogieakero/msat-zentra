@@ -34,9 +34,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-/* Primary palette — every slice is a step down from --primary so all
-   charts on this desk read as one family. Awaiting states are strongest;
-   terminal states fade toward the foreground. */
 export const PRIMARY_STEPS = [
   "var(--primary)",
   "color-mix(in oklch, var(--primary) 72%, var(--foreground) 28%)",
@@ -79,11 +76,6 @@ function interpretActions(actions: NurseAdmActionCount[], total: number): string
   return `${top.label} leads with ${top.count} of ${total} referred case${total === 1 ? "" : "s"} — ${ACTION_TAKEAWAYS[top.action] ?? ""} ${coverage}`;
 }
 
-/**
- * Referred-actions donut for the whole nurse caseload (clinic + ADM),
- * with a plain-language read of what the mix means. Counts come from
- * every case on the nurse's desk (never any page filter).
- */
 function ReferredActions({ data }: { data: NurseAdmReferralsData }) {
   const { actions, total } = data;
 
@@ -151,11 +143,6 @@ function ReferredActions({ data }: { data: NurseAdmReferralsData }) {
   );
 }
 
-/**
- * Weekly line graph of cases referred to the nurse over the last
- * 12 weeks. Counts come from every case on the nurse's desk (never
- * any page filter).
- */
 function ReferralTrend({ data }: { data: NurseAdmReferralsData }) {
   const weeks = data.trend;
   const total = weeks.reduce((m, w) => m + w.count, 0);

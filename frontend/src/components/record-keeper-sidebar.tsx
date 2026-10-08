@@ -30,13 +30,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Record Keeper nav — same branched left rail on desktop + flattened tab bar
-// on small screens as the principal / registrar desks. Active state uses
-// longest-prefix matching so a child page highlights the child, not the
-// parent.
-//
-// Shared-concept convention (same label + icon across desks):
-// Overview=LayoutDashboard.
 const NAV: NavGroup[] = [
   {
     label: "Overview",
@@ -70,8 +63,6 @@ const NAV: NavGroup[] = [
   },
 ];
 
-// GitHub-style tab bar: every section flattened into one row on small
-// screens. Groups only group the source data, not the rendered tabs.
 const TABS: NavItem[] = NAV.flatMap((group) => group.items);
 
 function matches(href: string, pathname: string, exactRoot: string) {
@@ -79,9 +70,6 @@ function matches(href: string, pathname: string, exactRoot: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-// Longest-prefix match: when both a parent (e.g. /record-keeper/accounts)
-// and a child (e.g. /record-keeper/accounts/123) match, the child wins so
-// the rail and tab bar highlight the deepest page.
 function findActiveHref(tabs: NavItem[], pathname: string) {
   let best: string | null = null;
   for (const t of tabs) {

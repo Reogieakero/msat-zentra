@@ -42,9 +42,6 @@ import styles from "./NurseReferralEntry.module.css";
 
 export type SessionDialogKind = "finish" | "move" | "cancel" | "delete";
 
-/* Sentence-form timing lines (no dot separators), e.g.
-   "Referred today, Sep 29, 2026." and
-   "Latest update was needs review on Sep 29, 2026 at 7:57 PM." */
 function referredSentence(row: NurseQueueRow): string {
   if (!row.date || row.date === "—") return "Referral date is not recorded.";
   const date = formatDate(row.date);
@@ -101,20 +98,15 @@ export function NurseReferralEntry({
   const isAdm = row.type === "ADM";
   const isPending = row.status === "pending";
   const isClosed = row.status === "resolved" || row.status === "dismissed" || (row.completedSessions > 0 && !hasScheduledSession(row.sessions));
-  // Endorsed ADM cases moved to the coordinator with their full report —
-  // the anecdotal write-up is no longer viewable on this desk.
+
   const isEndorsedRow = isEndorsed(row.type, row.status);
-  // Clinic sessions run on clinic matters, plus pre-confirm bookings
-  // on pending ADM consultations (booked from review without
-  // deciding). Endorsed ADM sessions stay read-only history.
+
   const canManageSessions = !isAdm || (isAdm && row.status === "pending");
-  // One active session per case — booking waits while one is scheduled
-  // (same rule as the guidance desk; the server enforces it too).
+
   const booked = hasScheduledSession(row.sessions);
   const incident = row.anecdotal?.incident?.trim() || "";
   const latest = latestActionOf(row, alert);
-  // Clinic sessions open in an overlay modal from the rail strip —
-  // never inline in the card. Starts closed; the strip shows the count.
+
   const showSessions = !isPending || (isAdm && row.sessions.length > 0);
   const hasRail = !!row.anecdotalId || showSessions;
   const [sessOpen, setSessOpen] = React.useState(false);
@@ -131,7 +123,6 @@ export function NurseReferralEntry({
         {watermarkLabel(row)}
       </span>
 
-      {/* Horizontal card — identity column left, report middle, rail right */}
       <div className={`relative ${styles.hGrid}${hasRail ? "" : ` ${styles.hGridNoRail}`}`}>
         <div className={styles.idCol}>
           <div className={styles.idTop}>
@@ -176,8 +167,6 @@ export function NurseReferralEntry({
             </div>
           ) : null}
 
-        {/* Clinic intake notes only — ADM consultations carry the
-            endorsement in the internal note below, never here. */}
         {row.intakeNotes && !isAdm ? (
           <p className={styles.calloutMuted}>
             <span className={styles.calloutPrefix}>First impressions: </span>
@@ -198,9 +187,7 @@ export function NurseReferralEntry({
             Sent to the clinic: {row.escalationReason}
           </p>
         ) : null}
-        {/* Internal notes stay off ADM rows — the endorsement lives in
-            the GCForm-03 referral form viewer, and the raw note carries
-            internal `[ADM …]` encoding not meant for display. */}
+
         {row.notes && !isAdm ? (
           <p className={styles.calloutMuted}>
             <span className={styles.calloutPrefix}>Internal note: </span>
@@ -218,11 +205,7 @@ export function NurseReferralEntry({
                   onCreateReferral={(draft) => onCreateReferral(row, draft)}
                 />
               )}
-              {/* The filled template is view-only — confirming
-                  already auto-endorsed, so no forward button.
-                  Shown for every ADM case (pending or endorsed, including
-                  legacy endorsements without the ready flag) so the GCForm-03
-                  matches the guidance ADM "See referral form" behavior. */}
+
               <Button
                 type="button"
                 size="xs"
@@ -235,8 +218,7 @@ export function NurseReferralEntry({
             </>
           ) : (
             <>
-              {/* Clinic flow: view → book → done → docs. Same Book session
-                  button as the guidance desk; one active session at a time. */}
+
               {row.anecdotalId && (
                 <Button
                   type="button"
@@ -318,8 +300,7 @@ export function NurseReferralEntry({
             ) : null}
             {showSessions ? (
               <div className={styles.sessRailBlock}>
-                {/* Custom sessions opener — gradient strip, not a plain button
-                    and not a folder. Opens the sessions as an overlay modal. */}
+
                 <button
                   type="button"
                   className={styles.sessDrop}

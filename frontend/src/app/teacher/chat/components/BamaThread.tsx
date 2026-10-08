@@ -42,13 +42,11 @@ export function BamaThread({
   onStartChat,
   onViewRecord,
 }: BamaThreadProps) {
-  // Keep the thread pinned to the latest message.
   useEffect(() => {
     const el = threadRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [active?.messages.length, active?.id, sending, threadRef]);
 
-  // Inline picker cards (no overlay modals) — each step shows until answered.
   const pickListRef = useRef<HTMLDivElement | null>(null);
   const classListRef = useRef<HTMLDivElement | null>(null);
   const anecOpen = !!active && active.type === "anecdotal" && !active.filed;

@@ -32,9 +32,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  // Live inbox: a toast pops on the current page the moment something lands
-  // (e.g. a master teacher sends slots for review), plus the bell and the
-  // approval queue refresh. Single channel per mount.
+
   usePrincipalRealtime();
   const profile = usePrincipalProfileSettings();
 
@@ -45,8 +43,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
   const isDark = mounted && resolvedTheme === "dark";
 
   const handleLogout = () => {
-    // Terminate the server refresh session (clears the httpOnly cookie) —
-    // best-effort; the local wipe below runs regardless.
+
     void logout();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
@@ -67,10 +64,7 @@ function PrincipalShell({ children }: { children: React.ReactNode }) {
         <ActiveTermBadge />
 
         <div className={styles.search}>
-          {/* Lightweight search field (was cmdk Command with no results list
-              — same look, no dead dependency weight). Filters ADM/audit/risk
-              tables via their own search inputs; this shell field stays
-              visual-only until a global palette ships. */}
+
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}

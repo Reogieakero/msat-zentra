@@ -4,9 +4,6 @@ import { Copy } from "lucide-react";
 
 export type SlotStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | null;
 
-/** One timetable grid cell: filled slot (locked readout or edit button +
- *  status dot + copy affordance) or empty slot (locked dash or
- *  edit/paste button). Pure render — all data arrives as props. */
 export function ScheduleGridCell({
   filled,
   timeLabel,

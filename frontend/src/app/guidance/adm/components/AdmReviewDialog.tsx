@@ -15,8 +15,6 @@ import {
 import { dismissReferral } from "@/services/guidance/referrals.service";
 import { useGuidanceInvalidate } from "../../overview/components/use-guidance-mutation";
 
-/* Case identity for the intake summary (Name / LRN / Section / Observed /
-   Referred) — passed by both callers from their row data. */
 export interface AdmReviewCaseInfo {
   lrn?: string;
   section?: string;
@@ -26,12 +24,6 @@ export interface AdmReviewCaseInfo {
   date?: string;
 }
 
-/**
- * ADM consultation review for cases the adviser routed to guidance —
- * shared review UI, guidance wiring. Create referral hands the typed
- * recommendation to the caller, which opens the fill-up form sheet in
- * place (no navigation).
- */
 export function AdmReviewDialog({
   referralId,
   student,
@@ -41,10 +33,7 @@ export function AdmReviewDialog({
   onClose,
   onChanged,
   onCreateReferral,
-  // "queue" = ADM consultation queue (/guidance/adm): reject goes through
-  // the consultation review. "desk" = ADM-type row on /guidance/referrals
-  // (already ADM-flagged on the guidance desk): reject dismisses the case
-  // directly instead.
+
   mode = "queue",
 }: {
   referralId: string;
@@ -58,13 +47,9 @@ export function AdmReviewDialog({
   mode?: "queue" | "desk";
 }) {
   const invalidateGuidance = useGuidanceInvalidate();
-  // Sessions already booked on the case — fetched silently, only to guard
-  // the one-active-session rule (they render on the page list).
+
   const [bookedScheduled, setBookedScheduled] = React.useState(false);
 
-  // Reset the guard every time the dialog opens (or retargets a new case),
-  // synced during render — never in an effect. The session-list fetch below
-  // stays in an effect: only async work lives there.
   const openKey = open ? referralId : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -89,8 +74,7 @@ export function AdmReviewDialog({
   }, [open, referralId]);
 
   function refreshAll() {
-    // Confirmed server-side: suppress the realtime echo, bump every
-    // guidance query (notifications included) via the shared invalidator.
+
     markSelfNotified(referralId);
     invalidateGuidance();
     onChanged();
@@ -122,8 +106,7 @@ export function AdmReviewDialog({
   async function decideReject(recommendation: string) {
     try {
       if (mode === "desk") {
-        // Desk rows are already ADM-flagged — rejecting closes the case
-        // directly (same outcome, no consultation endpoint involved).
+
         await dismissReferral(referralId, recommendation);
       } else {
         await reviewAdmConsultation(referralId, { recommendation, outcome: "reject" });
@@ -143,7 +126,7 @@ export function AdmReviewDialog({
   }
 
   function goToReferralForm(draft: AdmReviewDraft) {
-    // Info, not success: the case is only endorsed after the form confirms.
+
     toast.info({
       title: "Referral form opened",
       description: "Confirm the form to endorse the case to the ADM coordinator.",

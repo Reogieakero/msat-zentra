@@ -66,8 +66,7 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
   const Role = desk === "registrar" ? "Registrar" : "Record keeper";
 
   const { data, isPending, isError } = useQuery({
-    // Detail key: namespaced so it never collides with the paged list key
-    // ["<desk>-final-grades", page, q] (same endpoint, other params).
+
     queryKey: [`${desk}-final-grades`, "detail"],
     queryFn: () =>
       apiClient
@@ -107,7 +106,7 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
 
   return (
     <section className="space-y-4 lg:space-y-6">
-      {/* Title row */}
+
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Final Grade Details
@@ -146,9 +145,9 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
         </section>
       ) : (
         <div className="grid items-start gap-4 lg:gap-6 lg:grid-cols-3">
-          {/* ── Left column ─────────────────────────────────── */}
+
           <div className="space-y-4 lg:space-y-6 lg:col-span-2">
-            {/* Hero banner */}
+
             <section className={assign.card} aria-label="Overall average">
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
@@ -166,7 +165,6 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
               </div>
             </section>
 
-            {/* Student info card */}
             <section className={assign.card} aria-label="Student information">
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
@@ -195,7 +193,6 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
               </div>
             </section>
 
-            {/* About This Grade Set */}
             <section>
               <h2 className="mb-3 text-base font-semibold">About This Grade Set</h2>
               <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
@@ -216,7 +213,6 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
               </button>
             </section>
 
-            {/* What This Means */}
             <section>
               <h2 className="mb-3 text-base font-semibold">What This Means</h2>
               <ul className="text-muted-foreground space-y-2 text-sm">
@@ -243,7 +239,6 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
               </ul>
             </section>
 
-            {/* Subject Grades table */}
             <section className={assign.card} aria-labelledby="subject-grades">
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
@@ -295,9 +290,8 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
             </section>
           </div>
 
-          {/* ── Right sidebar ──────────── */}
           <div className="space-y-4 lg:space-y-6">
-            {/* Completion card */}
+
             <section className={assign.card} aria-label="Completion">
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
@@ -309,7 +303,7 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
                 </Badge>
               </div>
               <div className="relative space-y-4 rounded-xl bg-card p-4 shadow-xs ring-1 ring-foreground/5">
-                {/* Progress bar */}
+
                 <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
                   <div
                     className="bg-primary h-full rounded-full transition-all"
@@ -317,7 +311,6 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
                   />
                 </div>
 
-                {/* Milestone circles */}
                 <div className="flex items-center justify-between">
                   {milestones.map((m) => {
                     const reached = student.overall >= m;
@@ -336,7 +329,6 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
                   })}
                 </div>
 
-                {/* Follow-up note */}
                 <div className="bg-muted/50 text-muted-foreground rounded-lg p-3 text-sm">
                   {failedCount === 0
                     ? `Great Job! ${student.name}'s final grades are complete and all subjects are passing. Ready for your review.`

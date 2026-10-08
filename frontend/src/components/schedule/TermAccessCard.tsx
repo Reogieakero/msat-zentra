@@ -19,25 +19,14 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 interface TermAccessCardProps {
-  /** Linked teacher-list name, or null when this login has no link (this is
-      also the Master Teacher path — verify would 409 for them, so they get
-      the link-code claim instead). */
   linkedName: string | null;
   termLabel: string;
-  /** Claim-card copy for the unlinked path. */
   claimTitle: string;
   claimDescription: string;
-  /** Toast copy for a successful term verify. */
   successTitle: string;
   successDescription: string;
 }
 
-/* Empty-state code card shared by My Classes and Attendance. Unlinked logins
-   (including the Master Teacher, who never links through the gates) get the
-   link-code claim; linked logins get the per-term verify-code input that
-   records this term's grant. Entering a code only unlocks the term
-   workspace — timetable slots themselves still come from the master
-   teacher's scheduling, which the helper text says outright. */
 export function TermAccessCard({
   linkedName,
   termLabel,

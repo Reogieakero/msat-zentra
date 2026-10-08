@@ -26,8 +26,8 @@ import { ClassDetailDialog } from "./ClassDetailDialog";
 import styles from "./ClassesSchedule.module.css";
 
 const PX_PER_MIN = HOUR_HEIGHT / 60;
-const CELL_PAD = 8; // 8px spacing from cell gutters (top/bottom)
-const HEADER_PX = 28; // 1.75rem — height of the day header, offsets the timeline
+const CELL_PAD = 8;
+const HEADER_PX = 28;
 const DAYS = [1, 2, 3, 4, 5];
 const TOTAL_MIN = TIMELINE[TIMELINE.length - 1].offset;
 const GUTTER_HEIGHT = HEADER_PX + TOTAL_MIN * PX_PER_MIN;
@@ -36,14 +36,12 @@ export function ClassesSchedule({ blocks = WEEK_SCHEDULE }: { blocks?: ScheduleB
   const [selected, setSelected] = useState<ScheduleBlock | null>(null);
   const blocksByDay = DAYS.map((d) => blocks.filter((b) => b.day === d));
 
-  // Live time indicator — ticks every minute, rendered only in today's
-  // column and only while school is in session (Mon–Fri, 7:30 AM–5 PM).
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(id);
   }, []);
-  const todayDow = now.getDay(); // 0 = Sun … 6 = Sat
+  const todayDow = now.getDay();
   const nowOffsetMin = now.getHours() * 60 + now.getMinutes() - SCHOOL_START;
   const showNow =
     todayDow >= 1 && todayDow <= 5 && nowOffsetMin >= 0 && nowOffsetMin <= TOTAL_MIN

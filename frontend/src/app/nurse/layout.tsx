@@ -39,16 +39,14 @@ function NurseShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
-    // Terminate the server refresh session (clears the httpOnly cookie) —
-    // best-effort; the local wipe below runs regardless.
+
     void logout();
-    // Drop all cached queries so the next account on this device never sees
-    // the previous nurse's student data (QueryClient outlives SPA logout).
+
     queryClient.clear();
     try {
       window.sessionStorage.removeItem(NURSE_REFERRAL_DRAFT_KEY);
     } catch {
-      /* storage unavailable — nothing cached to clear */
+
     }
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
@@ -56,9 +54,6 @@ function NurseShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  // Block sensitive desk content until the role check passes. Backend stays
-  // authoritative; this avoids flashing another role's cached data while the
-  // redirect to /login or /errors/403 lands.
   if (!allowed) {
     return (
       <div className={styles.wrapper}>

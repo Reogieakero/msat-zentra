@@ -1,10 +1,5 @@
-// Types for the behavioral records heatmap. The runtime data is fetched from
-// GET /api/anecdotal/records (see backend anecdotal.routes.ts). No mock data
-// is defined here.
-
 export type StudentStatus = "Active" | "Transferred" | "Inactive" | "New";
 
-// Mirrors the backend AnecdotalCategory enum.
 export type BehavioralCategory =
   | "behavioral"
   | "bullying"

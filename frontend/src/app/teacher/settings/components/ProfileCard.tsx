@@ -39,8 +39,6 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
-/* Profile card: photo (upload), display name (edit), role + load summary.
-   Everything persists to the teacher's own User + StaffProfile rows. */
 export function ProfileCard() {
   const session = useSession();
   const invalidateTeacher = useTeacherInvalidate();
@@ -55,8 +53,7 @@ export function ProfileCard() {
   const [photoSaving, setPhotoSaving] = React.useState(false);
 
   const savedName = profile.data?.fullName ?? "";
-  // Sync the input from the saved profile during render, never in an
-  // effect — user edits win until the server value itself changes.
+
   const [prevSavedName, setPrevSavedName] = React.useState<string | null>(null);
   if (prevSavedName !== savedName) {
     setPrevSavedName(savedName);
@@ -82,7 +79,7 @@ export function ProfileCard() {
     setNameSaving(true);
     try {
       await apiClient.patch("/api/teacher/settings/profile", { fullName: name.trim() });
-      // Pessimistic: the header repaints only after the server confirms.
+
       refresh();
       toast.success({ title: "Name updated", description: "Your display name was saved." });
     } catch (err) {

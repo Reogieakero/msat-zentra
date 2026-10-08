@@ -22,15 +22,10 @@ import { NurseAdmReports } from "./components/NurseAdmReports";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./components/nurse-adm.module.css";
 
-/**
- * Referrals Report — insights and reports over every case referred to the
- * school nurse (clinic + ADM). Case work itself lives on the ADM Cases
- * and Clinic Matters timelines, linked from the recommendations below.
- */
 export default function NurseAdmPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
-  // Aggregate insights view: bounded desk fetch (previews slice downstream).
+
   const { data: alertsData, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
       queryKey: ["nurse-alerts", "preview", termKey],
@@ -40,16 +35,11 @@ export default function NurseAdmPage() {
       staleTime: 60_000,
     });
 
-  // All-status case list (pending through dismissed) — insights, reports,
-  // and queue always reflect the current referrals whatever their status.
   const data = React.useMemo(
     () => (alertsData ? buildNurseAdmReferrals(alertsData.cases) : null),
     [alertsData]
   );
 
-  // Live rule-based risk level per student behind these cases (account
-  // id or roster id — the endpoint serves both). Desk-wide so the
-  // high-risk recommendation sees clinic cases too.
   const studentIds = React.useMemo(
     () =>
       [
@@ -73,9 +63,6 @@ export default function NurseAdmPage() {
     enabled: studentIds.length > 0,
   });
 
-  // Referral insights derive from the same desk list the reports read
-  // (clinic + ADM), so every number repaints live with the desk — no
-  // extra fetch.
   const insights = React.useMemo(
     () =>
       data ? buildNurseAdmInsights(data.desk, riskByStudent ?? {}) : null,
@@ -83,9 +70,7 @@ export default function NurseAdmPage() {
   );
 
   if (isPending) {
-    // High-fidelity skeleton mirroring the findings strip + NurseAdmReports
-    // (donut + legend, 12-week line + interpretations) so nothing shifts on
-    // load.
+
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
         <div className={styles.skelFindings} aria-hidden="true">

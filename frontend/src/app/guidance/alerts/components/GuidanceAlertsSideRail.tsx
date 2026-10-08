@@ -17,9 +17,6 @@ function trackHref(r: GuidanceReferralItem): string {
   return `/guidance/referrals/${track}?highlight=${r.id}`;
 }
 
-/* Latest engine-detected intervention students — newest detection first,
-   each with its risk level and detection time. Rows open the interventions
-   desk where the case gets worked. */
 function riskBadgeVariant(level: string): "red" | "amber" | "outline" {
   if (level === "High") return "red";
   if (level === "Moderate") return "amber";
@@ -49,7 +46,6 @@ function LatestDetectedCard({ interventions }: { interventions: AtRiskStudentIte
     return () => window.clearInterval(id);
   }, []);
 
-  // Only the single latest detection — one row, never a list.
   const rows = React.useMemo(
     () =>
       [...interventions]
@@ -105,8 +101,6 @@ function LatestDetectedCard({ interventions }: { interventions: AtRiskStudentIte
   );
 }
 
-/* High-risk students in plain words — names open their timelines. Missing
-   levels are reported, never assumed. */
 function RiskWatchCard({
   referrals,
   interventions,
@@ -173,7 +167,6 @@ function RiskWatchCard({
   );
 }
 
-/* Track mix — ADM vs Counseling vs Intervention with a one-line read. */
 function CaseMixCard({
   referrals,
   interventions,
@@ -224,11 +217,6 @@ function CaseMixCard({
   );
 }
 
-/**
- * Right rail for the guidance alerts desk — needs-action rows, risk watch,
- * and case mix. Pure reads of the same lists the table renders, so every
- * number repaints live with the desk and no manual refresh is ever needed.
- */
 export function GuidanceAlertsSideRail({
   referrals,
   interventions,

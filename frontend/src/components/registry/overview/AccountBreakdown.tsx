@@ -49,10 +49,6 @@ interface GaugeSegment {
   fill: string;
 }
 
-/* Floating tooltip for the band gauge — plain card styling so it reads like
-   the rest of the desk. Rendered inside the chart container, so it carries
-   its own high z-index (see .gaugeTip in the module CSS) to float above the
-   card glow, legends, and neighboring cards. */
 function GaugeTooltip({
   active,
   payload,
@@ -191,11 +187,7 @@ function BandGauge({
 
 export function AccountBreakdown({ desk }: { desk: RegistryDesk }) {
   const { data, isPending, isError } = useQuery({
-    // Dedicated overview key per desk: the accounts page uses a different
-    // key with a PLAIN-ARRAY payload — sharing it overwrote this
-    // object-shaped cache entry (and vice versa), crashing rows.reduce.
-    // Registrar shares ["registrar-account-breakdown"] with the grade
-    // chart; record-keeper uses ["record-keeper-overview-breakdown"].
+
     queryKey:
       desk === "registrar"
         ? ["registrar-account-breakdown"]
@@ -204,15 +196,11 @@ export function AccountBreakdown({ desk }: { desk: RegistryDesk }) {
     staleTime: 30_000,
   });
 
-  // The breakdown endpoint has returned non-array payloads in the wild
-  // (cached/error shapes) — never let one crash the cards below.
   const groups = React.useMemo(
     () => (Array.isArray(data?.data) ? data.data : []),
     [data],
   );
 
-  // One gauge for the whole band scope — section/grade detail already lives
-  // on the Accounts page, so the overview shows band totals only.
   const totals = React.useMemo(() => {
     const active = groups.reduce((s, g) => s + g.withAccount, 0);
     const pending = groups.reduce((s, g) => s + g.pending, 0);

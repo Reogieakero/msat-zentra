@@ -131,9 +131,6 @@ function SwatchRow({
   );
 }
 
-/* Workspace palette: primary + secondary brand colors. Picks preview live
-   across the site; Save persists them to the registrar's StaffProfile row and
-   Reset returns to the theme default. */
 export function PaletteCard() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -146,9 +143,6 @@ export function PaletteCard() {
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
-  // Render-phase sync (not an effect): reseed the editable colors
-  // whenever the server values change. Same committed UI as the effect
-  // version, without the extra render pass.
   const [prevSavedPalette, setPrevSavedPalette] = React.useState<
     [string | null, string | null]
   >([savedPrimary, savedSecondary]);
@@ -161,7 +155,6 @@ export function PaletteCard() {
     setSecondary(savedSecondary);
   }
 
-  // Live preview across the site as colors are picked.
   React.useEffect(() => {
     if (profile.data) applyPalette(primary, secondary);
   }, [primary, secondary, profile.data]);

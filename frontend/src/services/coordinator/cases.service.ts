@@ -1,5 +1,3 @@
-// Case-level fetchers for the ADM Coordinator desk: history timeline,
-// parent meetings (+ attachment uploads), and the full case file.
 import { apiClient } from "@/lib/api/client";
 import { asArray } from "@/lib/api/payload";
 import { parseMeetingAttendees } from "./labels";
@@ -25,9 +23,6 @@ export async function fetchCaseHistory(
   return res.data.events;
 }
 
-/* Meeting documentation upload — images only (server enforces JPG/PNG/WEBP,
-   5 MB each, max 5 per request, 10 per meeting). Same FormData pattern as the
-   clinic session documentation flow. */
 export async function uploadMeetingAttachments(
   meetingId: string,
   files: File[],

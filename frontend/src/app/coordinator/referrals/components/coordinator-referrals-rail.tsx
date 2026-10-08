@@ -71,11 +71,7 @@ export function CoordinatorReferralsRail({
   totalReferred,
   isLoading,
 }: CoordinatorReferralsRailProps) {
-  // Donut slices wear the coordinator's own saved palette hex —
-  // deterministic (no probe timing): darkest (pure primary) first,
-  // stepping toward the card surface. Concrete rgb fills because SVG
-  // attributes can't resolve CSS vars. Falls back to the runtime probe
-  // only when no saved palette exists yet.
+
   const { data: profile } = useCoordinatorProfileSettings();
   const scale = usePrimaryScale(
     SNAPSHOT_STAGES.length,

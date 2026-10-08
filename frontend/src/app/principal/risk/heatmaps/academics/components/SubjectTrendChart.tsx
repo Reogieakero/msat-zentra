@@ -36,7 +36,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-// Theme-safe line palette (ordered G7 → G12 by sorted-grade index).
 const GRADE_COLORS = [
   "#3b82f6",
   "#22c55e",
@@ -55,15 +54,9 @@ type CellStat = { avg: number; graded: number; below: number };
 
 const PASS_DOT = "#22c55e";
 const FAIL_DOT = "#ef4444";
-// Baseline where "no grades yet" markers sit (matches the YAxis domain min).
 const EMPTY_BASELINE = 50;
 
 function dotFor(grade: string, radius: number) {
-  // Per-point dot encodes pass/fail directly: red below 75, green at/above.
-  // Lines keep their per-grade colors; dots are the pass/fail signal. The
-  // value is read from payload[grade] (the datum itself) rather than the
-  // `value` prop, and colors go through `style` because `var()` does not
-  // resolve inside SVG presentation attributes.
   function TrendDot(props: {
     cx?: number;
     cy?: number;
@@ -90,9 +83,6 @@ function dotFor(grade: string, radius: number) {
   return TrendDot;
 }
 
-// Hollow white marker for subjects with no encoded grades yet. Unrecorded
-// points carry no Y coordinate, so these ride on invisible baseline series
-// (see `__empty_*` fields) pinned to the bottom of the axis.
 function EmptyDot(props: { cx?: number; cy?: number }) {
   const { cx, cy } = props;
   if (cx == null || cy == null) return <g />;
@@ -216,7 +206,6 @@ export function SubjectTrendChart({
           };
         } else {
           row[grade] = null;
-          // Pin a white "no records" marker to the axis floor.
           row[`__empty_${grade}`] = EMPTY_BASELINE;
         }
       }
@@ -356,8 +345,7 @@ export function SubjectTrendChart({
                         />
                       );
                     })}
-                    {/* Invisible carriers for the white no-record markers:
-                        transparent path, excluded from legend + tooltip. */}
+
                     {series.map((grade) => (
                       <Line
                         key={`empty-${grade}`}

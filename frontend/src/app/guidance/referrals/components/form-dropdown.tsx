@@ -25,15 +25,10 @@ interface FormDropdownProps {
   onChange: (value: string) => void;
   placeholder: string;
   options: FormDropdownOption[];
-  /** Short lists (urgency, session kind) fit without scrolling. */
   scrollable?: boolean;
   disabled?: boolean;
 }
 
-/**
- * Single-select dropdown built on DropdownMenu (this project does not use
- * the Select UI). Same string contract: value in, value out.
- */
 export function FormDropdown({
   id,
   label,

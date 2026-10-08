@@ -13,11 +13,6 @@ interface NeedsDeviceCase {
   approvalDate: string | null;
 }
 
-/* Principal-approved cases with no device issued yet — the devices-side
-   twin of the live parent-meeting reminder. Read-only flag: it never
-   issues anything itself, it just points at the devices page. Polls the
-   approvals ledger itself (independent of the devices page queries) and
-   stays mounted until a device is recorded for every approved case. */
 function useNeedsDeviceCases(): NeedsDeviceCase[] {
   const [cases, setCases] = React.useState<NeedsDeviceCase[]>([]);
 

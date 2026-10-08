@@ -20,9 +20,6 @@ function LoadingShell() {
   );
 }
 
-// Per-section schedule URL: /teacher/schedule/[sectionId]. Same master gate
-// and shared ["teacher-schedule"] cache as the list view, so navigating from
-// a section card is instant with zero extra network.
 export default function TeacherSectionSchedulePage() {
   const params = useParams<{ sectionId: string }>();
   const sectionId = params.sectionId;

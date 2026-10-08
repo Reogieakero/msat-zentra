@@ -28,8 +28,6 @@ import { formatSection } from "@/lib/utils";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewApprovals.module.css";
 
-// Overview preview pager: 10 rows (registrar) / 5 rows (record-keeper).
-// The full list lives on the SF10 page.
 const PAGE_SIZE_BY_DESK: Record<RegistryDesk, number> = {
   registrar: 10,
   "record-keeper": 5,

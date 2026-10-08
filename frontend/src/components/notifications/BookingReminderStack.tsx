@@ -21,12 +21,6 @@ export interface BookingReminder {
   href: string | null;
 }
 
-/* Session-driven reminder engine — the card's ONLY trigger is the live
-   session list (sileo + bell stay notification-driven and untouched).
-   A card drops for a scheduled session due within the advance window
-   (5 minutes) or already overdue, with no action and no X on record.
-   Handled keys are session-scoped (`sess:<id>`); old notification-id
-   entries simply age out of the 30-day store. */
 const UPCOMING_WINDOW_MS = 5 * 60 * 1000;
 
 interface DeskSession {
@@ -57,8 +51,6 @@ function hrefFor(
   desk: ReminderDesk,
   s: DeskSession
 ): string | null {
-  // The nurse/guidance targets sniff "ADM" off the message to pick the ADM
-  // timeline — pass the track through for routing only (never displayed).
   const routingMessage = s.track === "ADM" ? `ADM ${s.student}` : s.student;
   if (desk === "nurse") {
     return (
@@ -79,9 +71,6 @@ function hrefFor(
     );
   }
   if (desk === "coordinator") {
-    // Profile-stage cases open the full case file; pre-profile referrals
-    // highlight their consultation row on the queue (same deep-link the
-    // overview forwards table uses).
     if (s.sourceTable === "adm_profiles") {
       return `/coordinator/referrals/${encodeURIComponent(s.sourceId)}`;
     }
@@ -102,8 +91,6 @@ const SESSION_KIND_LABELS: Record<string, string> = {
   home_visit: "Home visit",
 };
 
-/* Card message from live session facts — upcoming while in the window,
-   overdue once the time passes (both with venue when set). */
 function sessionMessage(s: DeskSession, now: number): string {
   const kind = SESSION_KIND_LABELS[s.sessionType] ?? s.sessionType.replace(/_/g, " ");
   const venue = s.venue?.trim() ? ` · ${s.venue.trim()}` : "";
@@ -127,9 +114,6 @@ function sessionMessage(s: DeskSession, now: number): string {
   return `${s.student} — overdue ${kind} meetup, ${day} at ${time}${venue} — still unattended`;
 }
 
-/* Evaluate the live session list for the desk and drop cards for due,
-   unhandled sessions (nearest first, capped). Shared by mount, the
-   30-second tick, tab-focus returns, and booking-mutation success. */
 function evaluateSessions(desk: ReminderDesk): void {
   apiClient
     .get<DeskSession[]>("/api/my-sessions/upcoming")
@@ -140,8 +124,6 @@ function evaluateSessions(desk: ReminderDesk): void {
         .filter((s) => sessionDue(s, now))
         .sort((a, b) => (a.scheduledAt < b.scheduledAt ? -1 : 1));
       let changed = false;
-      // No stack cap: every due unhandled session shows. Handled (X / View
-      // case) cards never re-drop, so dismissing can't surface "new" ones.
       for (const s of due) {
         const id = sessionKey(s);
         if (reminders.some((x) => x.id === id)) continue;
@@ -165,10 +147,6 @@ function evaluateSessions(desk: ReminderDesk): void {
 let reminders: BookingReminder[] = [];
 const listeners = new Set<() => void>();
 
-/* Handled reminders persist across reloads (cleared on logout with the
-   rest of the zentra.* keys): a dismissed (X) or acted-on (View case) card
-   never re-drops. Anything still live and unhandled re-drops on every
-   login — the reminder stands until the reader deals with it. */
 const HANDLED_KEY = "zentra.booking-reminders-handled";
 const HANDLED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -192,7 +170,6 @@ function loadHandled(): Record<string, { how: HandledHow; at: number }> {
       try {
         window.localStorage.setItem(HANDLED_KEY, JSON.stringify(parsed));
       } catch {
-        // Storage full/blocked — memory-only from here.
       }
     }
     return parsed;
@@ -214,7 +191,6 @@ function markHandled(id: string, how: HandledHow) {
   try {
     window.localStorage.setItem(HANDLED_KEY, JSON.stringify(map));
   } catch {
-    // Storage full/blocked — memory-only from here.
   }
 }
 
@@ -243,8 +219,6 @@ let activeDesk: ReminderDesk | null = null;
 let lastRefreshAt = 0;
 const REFRESH_THROTTLE_MS = 10_000;
 
-/** Re-run the session evaluation now (mutation success, tab focus).
- *  Throttled — one small list fetch per call. */
 export function refreshBookingReminders(): void {
   if (!activeDesk) return;
   const now = Date.now();
@@ -266,10 +240,6 @@ export function useBookingReminders(): BookingReminder[] {
   return React.useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
-/* Persistent top-center booking reminder rendered as a React-Bits-style
-   stacked deck (spring fanning, drag or click to cycle). Stays until the
-   reader dismisses (X) or acts (View case). Mounted once per desk layout
-   so it survives page navigation. */
 export function BookingReminderStack({ desk }: { desk: ReminderDesk }) {
   const items = useBookingReminders();
   const router = useRouter();
@@ -277,12 +247,7 @@ export function BookingReminderStack({ desk }: { desk: ReminderDesk }) {
   React.useEffect(() => {
     activeDesk = desk;
     evaluateSessions(desk);
-    // Re-evaluate every 30 seconds so a future booking drops its card the
-    // moment it enters the 5-minute window while the page stays open
-    // (handled/dismissed cards never re-drop; dead bookings stay silent).
     const timer = window.setInterval(() => evaluateSessions(desk), 30_000);
-    // Returning to the tab re-evaluates immediately instead of waiting
-    // for the next poll/minute tick (throttled inside refresh).
     const onFocus = () => refreshBookingReminders();
     window.addEventListener("focus", onFocus);
     return () => {

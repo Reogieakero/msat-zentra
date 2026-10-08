@@ -1,4 +1,3 @@
-// Shared shapes + vocabulary for the teacher grade-flags board.
 export type FlagStatus = "open" | "resolved" | "escalated";
 export type FlagReason =
   | "wrong_score"

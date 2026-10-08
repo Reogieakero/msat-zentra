@@ -30,9 +30,6 @@ import type { GradeMode } from "../../grade-mode-context";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./SectionStudentsTable.module.css";
 
-/* Live per-student average across all of their subjects: transmuted
-   grades in final mode, raw computed grades in raw mode. Null when the
-   student has no encoded subjects yet — never a stale stored value. */
 export function liveAverage(st: StudentRow, mode: GradeMode): number | null {
   if (st.subjects.length === 0) return null;
   const vals = st.subjects.map((s) =>
@@ -46,12 +43,6 @@ interface SectionStudentsTableProps {
   gradeMode: GradeMode;
 }
 
-/* Per-factor cell colors — each metric grades itself, mirroring the
-   risk engine cutoffs (academic mean < 75 flagged, attendance < 80%
-   flagged). Near-miss bands read amber: average 75–79.9, attendance
-   80–89.9%. Explicit red/amber/green pairs (the theme tokens are
-   monochrome ink) that stay legible in both modes. No data renders
-   muted. */
 type Tone = "high" | "moderate" | "low";
 
 function toneClass(tone: Tone | null): string {
@@ -75,9 +66,6 @@ function attendanceTone(rate: number, hasRecords: boolean): Tone | null {
   return "low";
 }
 
-/* Students of the selected section as a data table (teacher At-Risk
-   Advisees pattern): filter on the right, sortable fixed-width columns,
-   paginated. Risk category only — never private write-ups. */
 export function SectionStudentsTable({
   section,
   gradeMode,

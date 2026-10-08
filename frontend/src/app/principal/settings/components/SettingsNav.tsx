@@ -14,7 +14,6 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Principal settings sections — preferences only. */
 export function principalSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },

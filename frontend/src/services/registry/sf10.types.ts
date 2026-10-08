@@ -1,5 +1,3 @@
-// Shared SF10 shapes (registrar + record-keeper desks). Merged from the
-// two identical per-desk `types.ts` copies.
 export type Sf10Status = "attach" | "available" | "released";
 export type Sf10Source = "ocr_upload" | "manual" | "auto_populated";
 
@@ -7,7 +5,7 @@ export type Sf10Version = {
   versionNumber: number;
   changedBy: string;
   changeReason: string;
-  changedAt: string; // ISO
+  changedAt: string;
 };
 
 export type Sf10Record = {
@@ -29,8 +27,7 @@ export type Sf10Record = {
   archivedAt: string | null;
   currentVersion: number;
   updatedAt: string;
-  /** Embedded only by legacy payloads — the list now omits versions and the
-      detail sheet fetches them on open. */
+
   versions?: Sf10Version[];
 };
 

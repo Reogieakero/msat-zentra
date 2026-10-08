@@ -1,7 +1,3 @@
-// Shared SF10 record actions (registrar + record-keeper desks hit the
-// same role-agnostic `/api/sf10/*` endpoints). Registrar-only extras
-// (`uploadSf10`, `fetchRegistrarStudents`) currently have no consumers —
-// moved verbatim and flagged, not deleted.
 import { apiClient } from "@/lib/api/client";
 import type {
   Sf10Record,
@@ -52,7 +48,7 @@ export async function uploadSf10(studentId: string, file: File): Promise<void> {
   const form = new FormData();
   form.append("studentId", studentId);
   form.append("file", file);
-  // Let axios set the multipart boundary automatically (do not override Content-Type).
+
   await apiClient.post("/api/sf10/upload", form);
 }
 

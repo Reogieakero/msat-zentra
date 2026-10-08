@@ -6,7 +6,6 @@ import { Download, FileText } from "lucide-react";
 import type { FiledDetail, PreviewDetail } from "@/services/anecdotal/anecdotal.types";
 import styles from "./AnecdotalChat.module.css";
 
-/** Filed-record card: the persisted filing with preview/download actions. */
 export function FiledDetailCard({
   detail,
   downloadingId,
@@ -105,7 +104,6 @@ export function FiledDetailCard({
   );
 }
 
-/** Pre-filing review card (no record id exists yet). */
 export function PreviewDetailCard({ preview }: { preview: PreviewDetail }) {
   return (
     <div className={styles.detailWrap}>

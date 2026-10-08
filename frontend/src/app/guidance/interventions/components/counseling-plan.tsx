@@ -26,7 +26,6 @@ function formatDate(value: string): string {
   return `${month} ${Number(match[3])}, ${match[1]}`;
 }
 
-/* "1d 2h 3m 4s" — days, hours, minutes, seconds for the live countdown. */
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const days = Math.floor(totalSeconds / 86400);
@@ -41,9 +40,6 @@ function formatCountdown(ms: number): string {
   return parts.join(" ");
 }
 
-/* Display-level live state — the DB only knows scheduled/completed/
-// cancelled, so "ongoing" is derived from the clock: a scheduled session
-// whose time arrived reads Ongoing until someone marks it done. */
 export type LiveSessionState = "completed" | "cancelled" | "ongoing" | "upcoming";
 
 export function liveSessionState(
@@ -110,8 +106,6 @@ export function CounselingPlan({
     followUp.sessions.find((s) => s.status === "scheduled") ?? null;
   const [docsFor, setDocsFor] = React.useState<CounselingSessionItem | null>(null);
 
-  // Live per-second clock, ticking only while an upcoming session is on the
-  // plan so the countdown stays exact without burning renders otherwise.
   const hasUpcoming = followUp.sessions.some((s) => s.status === "scheduled");
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -153,9 +147,7 @@ export function CounselingPlan({
             const started =
               s.status === "completed" ||
               (Number.isFinite(target) && target <= now);
-            // Documentary unlocks on finished sessions (even on closed
-            // follow-ups, so late evidence can still be filed) and on booked
-            // sessions once their time arrives (server enforces this too).
+
             const docsUnlocked =
               s.status === "completed" ||
               (workable && s.status === "scheduled" && started);
@@ -250,8 +242,7 @@ export function CounselingPlan({
               ? "Hide sessions"
               : `Show sessions (${followUp.sessions.length})`}
           </Button>
-          {/* No upcoming session (e.g. the booking was cancelled) — booking
-              stays available so the case can move again. */}
+
           {!upcoming && workable && (
             <Button
               type="button"

@@ -7,9 +7,6 @@ interface PrincipalPageHeaderProps {
   actions?: React.ReactNode;
 }
 
-/* Unified compact header for every Principal page.
-   Title 1.25rem/600, subtitle 0.8125rem muted.
-   Heroes (HonorRollHero, AuroraBanner, carousels) render below as content. */
 export function PrincipalPageHeader({
   title,
   description,

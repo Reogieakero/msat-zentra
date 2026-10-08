@@ -8,17 +8,12 @@ import styles from "./StudentHeatmap.module.css";
 
 const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];
 
-// Blend factor colors in the same oklch colour space the rest of the theme
-// uses (every other color-mix in the app is `in oklch`), so the map stays on
-// the system palette. Lowest band keeps the fill off the raw factor hue.
 const gridColor = (base: string, intensity: number) => {
   const normalized = Math.max(0, Math.min(1, intensity));
-  const opacity = Math.round(18 + normalized * 72); // 18% → 90%
+  const opacity = Math.round(18 + normalized * 72);
   return `color-mix(in oklch, ${base} ${opacity}%, transparent)`;
 };
 
-// Empty/zero cells use the light theme surface (mirrors the attendance map's
-// --hm-0 empty band) so a section without a given flag reads as neutral.
 const EMPTY_CELL_BG = "color-mix(in oklch, var(--muted), transparent 45%)";
 
 export function StudentHeatmap({

@@ -1,4 +1,3 @@
-// Audit-log API access for the Principal Audit Log page.
 import { apiClient } from "@/lib/api/client";
 import type { AuditQuery, AuditResponse } from "./audit.types";
 

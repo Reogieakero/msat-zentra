@@ -36,25 +36,19 @@ interface FinishSessionDialogProps {
   onClose: () => void;
   onSubmit: (fields: FinishSessionFields) => void;
   description: string;
-  /** Optional section header above the follow-up booking (guidance desks). */
   followUpTitle?: string;
   followUpHint?: string;
   followUpDateLabel?: string;
   followUpTimeLabel?: string;
   venuePlaceholder?: string;
-  /** Counseling desks pick a follow-up kind; the clinic desk does not. */
   showSessionType?: boolean;
   sessionTypeOptions?: { value: string; label: string }[];
   defaultSessionType?: string;
-  /** The clinic follow-up carries no venue — guidance desks do. */
   showFollowUpVenue?: boolean;
-  /** Extra section between outcome and follow-up booking (clinic photo docs). */
   docsSection?: React.ReactNode;
-  /** Guard for stale views: a session that hasn't started can't be finished. */
   notStarted?: boolean;
   notStartedMessage?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call (shown under validation errors). */
   serverError?: string | null;
   submitLabel?: string;
   idPrefix?: string;
@@ -71,11 +65,6 @@ function toScheduledAt(date: string, time: string): string | null {
   return `${date}T${time}:00`;
 }
 
-/**
- * Shared mark-done modal — notes (required), outcome (optional), and an
- * optional follow-up booking, with the future-date guard built in. The
- * caller performs the save (and any documentation uploads).
- */
 export function FinishSessionDialog({
   open,
   onClose,
@@ -106,8 +95,6 @@ export function FinishSessionDialog({
   const [venue, setVenue] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh form every time the modal opens — synced during render, never
-  // in an effect.
   const openKey = open ? defaultSessionType : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -159,8 +146,6 @@ export function FinishSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        // Locked while the save is in flight — closes only on server
-        // confirmation, never early.
         if (!next && !busy) {
           onClose();
           setError(null);

@@ -52,8 +52,7 @@ export function LoginForm({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // The refresh token arrives as an httpOnly cookie — it must be
-          // accepted (and later sent) cross-origin localhost:3000 → :4000.
+
           credentials: "include",
           body: JSON.stringify({ email: identifier, password, role }),
         },
@@ -74,12 +73,9 @@ export function LoginForm({
         return;
       }
       if (data.accessToken) setAccessToken(data.accessToken);
-      // Drop any cached queries from a previous account on this device
-      // before entering the new session (QueryClient outlives SPA login).
+
       queryClient.clear();
-      // Every successful login must force the term-scope picker once the
-      // workspace loads (state + localStorage via context, so the overlay
-      // shows even when a term was picked in a previous session).
+
       setPromptRequired(true);
       toast.success({ title: "Signed in", description: "Redirecting you now." });
       const home =

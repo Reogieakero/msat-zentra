@@ -14,7 +14,6 @@ import type { BehavioralRecord } from "../types";
 
 const PAGE_SIZE = 21;
 
-// File-slip tone follows severity so each folder reads urgency at a glance.
 function severityTone(severity: BehavioralRecord["severity"]): 2 | 3 | 5 {
   if (severity === "High") return 5;
   if (severity === "Moderate") return 3;
@@ -24,8 +23,7 @@ function severityTone(severity: BehavioralRecord["severity"]): 2 | 3 | 5 {
 export function RecordsHeatblocks() {
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
-  // Folders never open the full report on this desk — clicking one shows the
-  // same privacy overlay the other roles use.
+
   const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
 
   const { data, isPending, isError } = useQuery({

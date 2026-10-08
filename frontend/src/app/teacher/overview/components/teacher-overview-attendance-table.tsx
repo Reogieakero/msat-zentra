@@ -52,20 +52,12 @@ interface AverageRow {
   risk: "Low" | "Moderate" | "High";
 }
 
-// General average across all subjects (mean of per-subject present /
-// elapsed rates). A done meetup with no take counts as absent, so every
-// subject carries a percentage. Mirrors the risk engine's
-// subjectAverageAttendance() — same numerator/denominator, same 0.8 line.
 function overallAverage(rates: Record<string, number | null>): number {
   const rated = Object.values(rates).filter((r): r is number => r !== null);
   if (rated.length === 0) return 0;
   return rated.reduce((sum, r) => sum + r, 0) / rated.length;
 }
 
-// At-risk cutoff shared with the engine (backend ATTENDANCE_RISK_CUTOFF).
-// < 0.8 High = engine attendanceFlag trips. 0.8–0.9 Moderate is watch-only
-// (NOT engine at-risk); >= 0.9 Low. NOTE: this Moderate is a display band,
-// unrelated to the engine's Moderate (single risk factor).
 const ATTENDANCE_AT_RISK_CUTOFF = 0.8;
 
 function riskOf(average: number): "Low" | "Moderate" | "High" {
@@ -88,9 +80,6 @@ function rateClass(rate: number): string {
   return "text-red-600 dark:text-red-500";
 }
 
-/* Advisory attendance: one row per advisee with their average present
-   percentage across all subjects plus a risk badge. Plain icon-free
-   headers with fixed widths; the filter sits on the right. */
 export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: string }) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;

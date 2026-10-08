@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,16 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { ClinicDatePicker, ClinicTimePicker } from "@/app/nurse/overview/components/ClinicDateTimePicker";
+import { useAdmReviewDraft } from "./use-adm-review-draft";
+import { AdmReviewBlockedDialog, AdmReviewConfirmDialogs } from "./adm-review-confirm-dialogs";
 import styles from "./adm-review-dialog.module.css";
-
-/* Handoff to the caller when Create referral is confirmed: the typed
-   recommendation plus the optional session the reviewer picked. */
 export interface AdmReviewDraft {
   recommendation: string;
   scheduledAt?: string;
 }
-
-/* Per-desk wording overrides — defaults match the nurse modal. */
 export interface AdmReviewCopy {
   askBookEmpty: string;
   recommendationRequired: string;
@@ -36,7 +32,6 @@ export interface AdmReviewCopy {
   bookFailed: string;
   rejectFailed: string;
 }
-
 export const DEFAULT_ADM_REVIEW_COPY: AdmReviewCopy = {
   askBookEmpty:
     "Pick a date and a time first — or leave both empty and carry on with the review instead.",
@@ -51,19 +46,9 @@ export const DEFAULT_ADM_REVIEW_COPY: AdmReviewCopy = {
   bookFailed: "Could not book the session. Try again.",
   rejectFailed: "Could not reject this case. Try again.",
 };
-
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
-
-/**
- * Shared ADM consultation review dialog (nurse + guidance desks, same UI):
- * intake summary, official report folder, optional session (date + time),
- * recommendation, then Reject / Book session / Create referral with
- * confirmations. Action buttons keep their labels and show a spinner
- * while running. The caller implements the API calls (booking, reject,
- * referral handoff) and any toasts/refreshes around them.
- */
 export function AdmReviewDialog({
   open,
   onClose,
@@ -110,175 +95,39 @@ export function AdmReviewDialog({
   onCreateReferral: (draft: AdmReviewDraft) => void;
 }) {
   const copy: AdmReviewCopy = { ...DEFAULT_ADM_REVIEW_COPY, ...copyOverrides };
-  const [recommendation, setRecommendation] = React.useState("");
-  const [sessionDate, setSessionDate] = React.useState("");
-  const [sessionTime, setSessionTime] = React.useState("");
-  const [acting, setActing] = React.useState(false);
-  const [booking, setBooking] = React.useState(false);
-  const [confirmFor, setConfirmFor] = React.useState<null | "book" | "reject" | "create">(null);
-  const [blockedOpen, setBlockedOpen] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [previewId, setPreviewId] = React.useState<string | null>(null);
-
-  /* Fresh form on every open — no stale recommendation/session carried over.
-     Synced during render keyed by open (never in an effect). */
-  const [prevOpen, setPrevOpen] = React.useState(open);
-  if (open && !prevOpen) {
-    setPrevOpen(true);
-    setRecommendation("");
-    setSessionDate("");
-    setSessionTime("");
-    setError(null);
-    setConfirmFor(null);
-    setBlockedOpen(false);
-    setPreviewId(null);
-  } else if (!open && prevOpen) {
-    setPrevOpen(false);
-  }
-
+  const {
+    recommendation,
+    setRecommendation,
+    sessionDate,
+    setSessionDate,
+    sessionTime,
+    setSessionTime,
+    acting,
+    booking,
+    confirmFor,
+    setConfirmFor,
+    blockedOpen,
+    setBlockedOpen,
+    error,
+    previewId,
+    setPreviewId,
+    askBook,
+    askReject,
+    askCreate,
+    bookSessionOnly,
+    decideReject,
+    goToReferralForm,
+  } = useAdmReviewDraft({
+    open,
+    hasActiveSession,
+    copy,
+    formatError,
+    onBookSession,
+    onReject,
+    onCreateReferral,
+    onClose,
+  });
   if (!open) return null;
-
-  function fail(err: unknown, fallback: string) {
-    setError(formatError ? formatError(err, fallback) : fallback);
-  }
-
-  function resolveSession(): string | null | undefined {
-    if (!sessionDate && !sessionTime) return undefined;
-    if (!sessionDate || !sessionTime) {
-      setError(copy.incompleteSession);
-      return null;
-    }
-    const at = new Date(`${sessionDate}T${sessionTime}:00`);
-    if (Number.isNaN(at.getTime())) {
-      setError(copy.invalidSession);
-      return null;
-    }
-    if (at.getTime() <= Date.now()) {
-      setError(copy.pastSession);
-      return null;
-    }
-    return `${sessionDate}T${sessionTime}:00`;
-  }
-
-  // Footer buttons validate first (inline error, no popup), then ask for
-  // confirmation in the confirm dialog. The actual work runs only after
-  // confirming, with a spinner on the acting button.
-  function askBook() {
-    if (!sessionDate || !sessionTime) {
-      setError(copy.askBookEmpty);
-      return;
-    }
-    setError(null);
-    setConfirmFor("book");
-  }
-
-  function askReject() {
-    if (!recommendation.trim()) {
-      setError(copy.recommendationRequired);
-      return;
-    }
-    setError(null);
-    setConfirmFor("reject");
-  }
-
-  function askCreate() {
-    // Detector first: create referral cannot be bypassed while an upcoming
-    // session (or follow-up) still has to be done — pop an explanatory
-    // dialog instead of proceeding.
-    if (hasActiveSession) {
-      setBlockedOpen(true);
-      return;
-    }
-    if (!recommendation.trim()) {
-      setError(copy.recommendationRequired);
-      return;
-    }
-    setError(null);
-    setConfirmFor("create");
-  }
-
-  // Standalone booking: schedule the session WITHOUT deciding the case —
-  // it stays pending. On success every modal auto-closes (review +
-  // confirm) with a single success toast from the caller. One active
-  // session per referral.
-  async function bookSessionOnly() {
-    // Idempotency: rapid double-clicks on the confirm button issue one
-    // request — the disabled state flips only after re-render.
-    if (booking || acting) return;
-    if (hasActiveSession) {
-      setConfirmFor(null);
-      setError(copy.activeSessionExists);
-      return;
-    }
-    const scheduledAt = resolveSession();
-    if (!scheduledAt) {
-      setConfirmFor(null);
-      return;
-    }
-    setError(null);
-    setBooking(true);
-    try {
-      await onBookSession(scheduledAt);
-      setSessionDate("");
-      setSessionTime("");
-      setConfirmFor(null);
-      onClose();
-    } catch (err) {
-      setConfirmFor(null);
-      fail(err, copy.bookFailed);
-    } finally {
-      setBooking(false);
-    }
-  }
-
-  async function decideReject() {
-    // Idempotency: see bookSessionOnly.
-    if (acting || booking) return;
-    if (!recommendation.trim()) {
-      setConfirmFor(null);
-      setError(copy.recommendationRequired);
-      return;
-    }
-    setError(null);
-    setActing(true);
-    try {
-      await onReject(recommendation.trim());
-      setConfirmFor(null);
-      onClose();
-    } catch (err) {
-      fail(err, copy.rejectFailed);
-    } finally {
-      setActing(false);
-    }
-  }
-
-  function goToReferralForm() {
-    if (!recommendation.trim()) {
-      setConfirmFor(null);
-      setError(copy.recommendationRequired);
-      return;
-    }
-    const scheduledAt = resolveSession();
-    if (scheduledAt === null) {
-      setConfirmFor(null);
-      return;
-    }
-    if (scheduledAt && hasActiveSession) {
-      setConfirmFor(null);
-      setError(copy.activeSessionExists);
-      return;
-    }
-    setError(null);
-    setConfirmFor(null);
-    onCreateReferral({
-      recommendation: recommendation.trim(),
-      ...(scheduledAt ? { scheduledAt } : {}),
-    });
-    // The handoff opens the referral form (modal or page) — always close
-    // every review modal behind it.
-    onClose();
-  }
-
   return (
     <>
       <Dialog open onOpenChange={(isOpen) => { if (!isOpen && !acting && !booking) onClose(); }}>
@@ -402,101 +251,24 @@ export function AdmReviewDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {confirmFor && (
-        <Dialog
-          open
-          onOpenChange={(isOpen) => {
-            if (!isOpen && !acting && !booking) setConfirmFor(null);
-          }}
-        >
-          <DialogContent
-            className={styles.dialogScrollHidden}
-            aria-busy={acting || booking || undefined}
-          >
-            <DialogHeader>
-              <DialogTitle>
-                {confirmFor === "book"
-                  ? "Book this session?"
-                  : confirmFor === "reject"
-                    ? "Reject this case?"
-                    : "Create referral?"}
-              </DialogTitle>
-              <DialogDescription>
-                {confirmFor === "book" ? (
-                  <>A {sessionNoun} session will be scheduled for {student}. The case stays pending until you decide.</>
-                ) : confirmFor === "reject" ? (
-                  <>{student}&rsquo;s case will be closed without ADM follow-through — the coordinator never receives it. This can&apos;t be undone.</>
-                ) : (
-                  <>Open the referral form with your recommendation carried over.{createConfirmHint ? ` ${createConfirmHint}` : ""}</>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="destructive"
-                className={styles.btnRed}
-                onClick={() => setConfirmFor(null)}
-                disabled={acting || booking}
-              >
-                Cancel
-              </Button>
-              {confirmFor === "book" ? (
-                <Button
-                  onClick={() => void bookSessionOnly()}
-                  disabled={booking}
-                  aria-busy={booking || undefined}
-                >
-                  {booking ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  {booking ? "Booking…" : "Yes, book"}
-                </Button>
-              ) : confirmFor === "reject" ? (
-                <Button
-                  variant="destructive"
-                  className={styles.btnRed}
-                  onClick={() => void decideReject()}
-                  disabled={acting}
-                  aria-busy={acting || undefined}
-                >
-                  {acting ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                  {acting ? "Rejecting…" : "Yes, reject"}
-                </Button>
-              ) : (
-                <Button onClick={goToReferralForm}>
-                  Continue
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {blockedOpen && (
-        <Dialog
-          open
-          onOpenChange={(isOpen) => {
-            if (!isOpen) setBlockedOpen(false);
-          }}
-        >
-          <DialogContent className={styles.dialogScrollHidden}>
-            <DialogHeader>
-              <DialogTitle>Finish the upcoming session first</DialogTitle>
-              <DialogDescription>
-                {student}&rsquo;s referral still has an upcoming {sessionNoun} session
-                (or follow-up) to be done. Create referral cannot be bypassed —
-                finish or cancel that session first, then come back to create
-                the referral.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setBlockedOpen(false)}>
-                Got it
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
+      <AdmReviewConfirmDialogs
+        confirmFor={confirmFor}
+        student={student}
+        sessionNoun={sessionNoun}
+        createConfirmHint={createConfirmHint}
+        acting={acting}
+        booking={booking}
+        onCancel={() => setConfirmFor(null)}
+        onBook={() => void bookSessionOnly()}
+        onReject={() => void decideReject()}
+        onCreate={() => goToReferralForm()}
+      />
+      <AdmReviewBlockedDialog
+        open={blockedOpen}
+        student={student}
+        sessionNoun={sessionNoun}
+        onClose={() => setBlockedOpen(false)}
+      />
       {previewId && (
         <OcForm01PreviewDialog recordId={previewId} onClose={() => setPreviewId(null)} />
       )}

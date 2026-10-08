@@ -19,6 +19,15 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useTerm } from "@/lib/term/TermContext";
+import {
+  interpretGradeRisk,
+  interpretLevels,
+  interpretRisk,
+  type FactorKey,
+  type FactorRow,
+  type LevelKey,
+  type LevelRow,
+} from "./overview-risk-interpret";
 import { fetchOverview } from "@/services/principal/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./OverviewRisk.module.css";
@@ -27,26 +36,11 @@ const chartConfig = {
   value: { label: "Students", color: "var(--primary)" },
 } satisfies ChartConfig;
 
-type FactorKey = "attendance" | "grades" | "behavior";
-
-// Primary-tinted ramps, identical in light and dark mode: the principal's
-// saved palette paints var(--primary) desk-wide (PrincipalPaletteGate), and
-// mixing toward var(--card) keeps each step legible on either surface.
-// Applied through style fills so the CSS vars resolve inside recharts SVG.
 const FACTOR_COLORS: Record<FactorKey, string> = {
   attendance: "var(--primary)",
   grades: "color-mix(in oklch, var(--primary) 65%, var(--card))",
   behavior: "color-mix(in oklch, var(--primary) 35%, var(--card))",
 };
-
-interface FactorRow {
-  key: FactorKey;
-  label: string;
-  value: number;
-  color: string;
-}
-
-type LevelKey = "high" | "moderate" | "low";
 
 const LEVEL_COLORS: Record<LevelKey, string> = {
   high: "var(--primary)",
@@ -55,93 +49,6 @@ const LEVEL_COLORS: Record<LevelKey, string> = {
 };
 
 const GRADE_BAR_FILL = "var(--primary)";
-
-interface LevelRow {
-  key: LevelKey;
-  label: string;
-  value: number;
-  color: string;
-}
-
-function interpretRisk(
-  attendance: number,
-  grades: number,
-  behavior: number,
-  students: number,
-  enrollment: number
-): string {
-  if (students === 0) {
-    return "No students are currently flagged at risk for the active term.";
-  }
-
-  const rows: FactorRow[] = [
-    { key: "attendance", label: "Attendance", value: attendance, color: "" },
-    { key: "grades", label: "Academics", value: grades, color: "" },
-    { key: "behavior", label: "Behavior", value: behavior, color: "" },
-  ];
-  rows.sort((a, b) => b.value - a.value);
-
-  const pct = Math.round((students / Math.max(enrollment, 1)) * 100);
-  const top = rows[0];
-  const second = rows[1];
-  const third = rows[2];
-
-  const insights: string[] = [
-    `${students} of ${enrollment} students (${pct}%) are flagged at risk this term.`,
-  ];
-  if (top.value > 0) {
-    insights.push(
-      `${top.label} is the most common trigger, affecting ${top.value} student(s).`
-    );
-  }
-  if (second.value > 0) {
-    insights.push(`${second.label} follows at ${second.value}, and ${third.label} at ${third.value}.`);
-  }
-
-  return insights.join(" ");
-}
-
-function interpretLevels(high: number, moderate: number, low: number): string {
-  const total = high + moderate + low;
-  if (total === 0) {
-    return "No students are tracked by risk level this term.";
-  }
-  const hp = Math.round((high / total) * 100);
-  const mp = Math.round((moderate / total) * 100);
-  const lp = 100 - hp - mp;
-  const phrases: string[] = [`${total} students split by live risk level.`];
-  if (high === total) {
-    phrases[0] = `Every student tracked (${total}) is flagged High risk this term.`;
-  } else {
-    const parts: string[] = [];
-    if (high > 0) parts.push(`${high} (${hp}%) High`);
-    if (moderate > 0) parts.push(`${moderate} (${mp}%) Moderate`);
-    parts.push(`${low} (${lp}%) Low`);
-    phrases.push(parts.join(", ") + " — High means two or more factors, Moderate means one.");
-  }
-  return phrases.join(" ");
-}
-
-function interpretGradeRisk(rows: { grade: string; count: number }[]): string {
-  const atRisk = rows.reduce((sum, r) => sum + r.count, 0);
-  if (atRisk === 0) {
-    return "No at-risk students across grade levels this term.";
-  }
-  const ranked = [...rows].sort((a, b) => b.count - a.count);
-  const top = ranked[0];
-  const pct = Math.round((top.count / atRisk) * 100);
-  const present = rows.filter((r) => r.count > 0).length;
-  const phrases: string[] = [
-    `${atRisk} at-risk students spread across ${present} grade level(s).`,
-  ];
-  phrases.push(
-    `${top.grade} carries the heaviest load with ${top.count} (${pct}%) of all at-risk learners.`
-  );
-  if (ranked[1] && ranked[1].count > 0) {
-    phrases.push(`${ranked[1].grade} follows with ${ranked[1].count}.`);
-  }
-  return phrases.join(" ");
-}
 
 function useOverview() {
   const { activeTerm } = useTerm();
@@ -214,7 +121,7 @@ export function OverviewRisk() {
 
   return (
     <div className={styles.riskGrid}>
-      {/* Card 1 — Risk at a glance */}
+
       <Card className={`${assign.card} ${styles.card}`}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
@@ -285,7 +192,6 @@ export function OverviewRisk() {
         </CardContent>
       </Card>
 
-      {/* Card 2 — Students by risk level */}
       <Card className={`${assign.card} ${styles.card}`}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
@@ -368,7 +274,6 @@ export function OverviewRisk() {
         </CardContent>
       </Card>
 
-      {/* Card 3 — At-risk students by grade */}
       <Card className={`${assign.card} ${styles.card}`}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Cell, Pie, PieChart } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,12 +25,8 @@ export function CoordinatorOverviewStageChart({
   primary,
 }: {
   stageDonut: StageDonutEntry[];
-  /** Saved settings hex — wins over the probed runtime palette. */
   primary?: string | null;
 }) {
-  // Slices wear the coordinator's own workspace palette (darkest first),
-  // tracking recolors live via the runtime --primary probe when no saved
-  // hex is set yet.
   const scale = usePrimaryScale(Math.max(stageDonut.length, 1), primary);
   const slices = stageDonut.map((d, i) => ({
     ...d,

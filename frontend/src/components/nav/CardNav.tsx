@@ -34,9 +34,6 @@ interface CardNavProps {
   buttonTextColor?: string;
 }
 
-/* CardNav (reactbits) ported to TypeScript + CSS modules. Links render as
-   Next.js Links and collapse the menu on navigate; icons come from lucide;
-   type is set to the app font. Colors accept CSS variables. */
 export default function CardNav({
   logo,
   logoAlt = "Logo",

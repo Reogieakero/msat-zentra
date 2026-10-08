@@ -20,9 +20,6 @@ import type {
   GuidanceDialogKey,
 } from "./GuidanceReferralDialogs";
 
-/** Session lifecycle dialogs on the guidance referrals page (schedule,
- *  finish, move, cancel, delete) — thin wrappers around the shared
- *  session-booking modals. Pure props; the page owns all flow state. */
 export function GuidanceSessionDialogs({
   dialogs,
   activeRow,
@@ -40,7 +37,7 @@ export function GuidanceSessionDialogs({
 }) {
   return (
     <>
-      {/* Schedule a session — shared book-session modal */}
+
       {dialogs.schedule && (
         <BookSessionDialog
           open
@@ -65,7 +62,6 @@ export function GuidanceSessionDialogs({
         />
       )}
 
-      {/* Mark a session done — shared finish modal */}
       {dialogs.finish && (
         <SharedFinishSessionDialog
           open
@@ -107,7 +103,6 @@ export function GuidanceSessionDialogs({
         />
       )}
 
-      {/* Move a session — shared reschedule modal */}
       {dialogs.move && (
         <SharedRescheduleSessionDialog
           open
@@ -126,7 +121,6 @@ export function GuidanceSessionDialogs({
         />
       )}
 
-      {/* Cancel a session — shared cancel modal */}
       {dialogs.cancelSess && (
         <SharedCancelSessionDialog
           open
@@ -149,7 +143,6 @@ export function GuidanceSessionDialogs({
         />
       )}
 
-      {/* Delete a cancelled session — shared delete confirm */}
       {dialogs.deleteSess && (
         <SharedDeleteSessionDialog
           open

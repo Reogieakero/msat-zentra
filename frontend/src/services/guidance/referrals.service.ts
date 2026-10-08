@@ -1,6 +1,3 @@
-// Referral queue actions for the guidance desk: paged fetch, full-walk
-// fetch, status/accept lifecycle, escalation, reassignment, notes,
-// follow-ups, dismissal, specialist referral, ADM initiation.
 import { apiClient } from "@/lib/api/client";
 import { pickList } from "@/lib/api/payload";
 import type {
@@ -32,8 +29,7 @@ export async function fetchGuidanceReferrals(
     `/api/guidance/referrals${query ? `?${query}` : ""}`,
     { signal: opts.signal }
   );
-  // Defensive: the endpoint has served bare arrays and {referrals} shapes —
-  // never let a shape change crash the table.
+
   if (Array.isArray(data)) {
     return {
       summary: { total: data.length, pending: 0, inProgress: 0, resolved: 0 },
@@ -49,10 +45,6 @@ export async function fetchGuidanceReferrals(
   return { ...(data as GuidanceReferralsData), referrals };
 }
 
-// Every referral on the desk (newest pages first) for client-side tables.
-// The endpoint caps pageSize at 100, so walk all pages — filtering and
-// paging then happen locally. Optional params (e.g. type) scope the walk
-// to the same track a locked page shows.
 export async function fetchAllGuidanceReferrals(
   params: GuidanceReferralsParams = {}
 ): Promise<GuidanceReferralItem[]> {

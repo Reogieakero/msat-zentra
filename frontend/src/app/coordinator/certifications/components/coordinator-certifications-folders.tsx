@@ -50,18 +50,12 @@ interface CoordinatorCertificationsFoldersProps {
   onQueryChange: (value: string) => void;
   status: CertStatusFilter;
   onStatusChange: (value: CertStatusFilter) => void;
-  /** Background refresh with folders on screen — inline hint, never a skeleton. */
+
   isSyncing?: boolean;
 }
 
-/* Desk-level pagination standard: the folder grid pages at the list size. */
 const DISPLAY_LIMIT = 15;
 
-/**
- * Certification files — one folder per certification the ADM Coordinator
- * issued. Opening a folder opens the full case file in a new tab; prepared
- * cases can be endorsed to the Principal straight from the grid.
- */
 export function CoordinatorCertificationsFolders({
   records,
   query,
@@ -74,8 +68,7 @@ export function CoordinatorCertificationsFolders({
   const [forwardTarget, setForwardTarget] =
     React.useState<CertRecord | null>(null);
   const [helpOpen, setHelpOpen] = React.useState(false);
-  /** Row being endorsed — its folder shows `Endorsing…` while every
-      other folder stays usable. */
+
   const [forwardingId, setForwardingId] = React.useState<string | null>(null);
 
   const forwardMutation = useMutation({
@@ -86,9 +79,7 @@ export function CoordinatorCertificationsFolders({
       return data;
     },
     onSuccess: (_data, id) => {
-      // Pessimistic: the folder locks only via the refetch below after the
-      // server confirms. No cache patch: the UI must never outrun the
-      // processing. The acting folder shows Endorsing… until settle.
+
       markSelfNotified(id);
       void queryClient.invalidateQueries({
         queryKey: ["coordinator-certifications"],
@@ -119,17 +110,14 @@ export function CoordinatorCertificationsFolders({
     [records, status],
   );
   const total = filtered.length;
-  // Client pager over the merged records — the wide summary fetch can hold
-  // up to 200 rows, so page instead of slicing only the first 15.
+
   const totalPages = Math.max(1, Math.ceil(total / DISPLAY_LIMIT));
   const [page, setPage] = React.useState(1);
-  // Derived clamp — never setState in an effect. Filter changes reset to
-  // page 1 in the change handlers below; shrinkage self-heals via safePage.
+
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = total === 0 ? 0 : (safePage - 1) * DISPLAY_LIMIT + 1;
   const end = Math.min(safePage * DISPLAY_LIMIT, total);
-  // Relative timestamps tick with the 30s overview clock so "5m ago" never
-  // goes stale without a refetch; memoized against the visible slice.
+
   const nowTick = useNowTick();
   const visible = React.useMemo(
     () =>
@@ -151,8 +139,7 @@ export function CoordinatorCertificationsFolders({
 
   return (
     <>
-      {/* Flat panel — no card background/border; folders sit directly on
-          the page like the reference. */}
+
       <div className={styles.panel}>
         <div className={styles.header}>
           <div className={styles.headerText}>
@@ -221,9 +208,7 @@ export function CoordinatorCertificationsFolders({
                         <FolderCard
                           label={record.student}
                           sublabel={`${record.lrn} · ${record.grade}`}
-                          /* Folder body follows the coordinator's saved
-                             palette — --primary is painted on <html> by the
-                             palette gate, so folders repaint live. */
+
                           folderColor="var(--primary)"
                           files={[
                             {

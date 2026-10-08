@@ -39,15 +39,6 @@ function sessionStatusVariant(status: string): "default" | "success" | "secondar
   }
 }
 
-/**
- * Per-row 3-dots menu for adviser-referred rows (ADM / Counseling) — the
- * same entries as the nurse alerts menu: View referral form (ADM only),
- * View anecdotal report, See more, plus read-only timing lines (time
- * elapsed, date referred) that used to be table columns. The two link
- * entries jump to the highlighted case on its home page without overlaying
- * anything; the filled form and the report open from the case page itself.
- * Handling stays on the case pages.
- */
 export function GuidanceAlertsRowActions({
   row,
   elapsedText,
@@ -62,15 +53,12 @@ export function GuidanceAlertsRowActions({
   const [endorsedOpen, setEndorsedOpen] = React.useState(false);
 
   const isClosed = row.status === "resolved" || row.status === "dismissed";
-  // Endorsed ADM cases moved to the coordinator with their full report —
-  // the anecdotal write-up is no longer viewable on this desk.
+
   const isEndorsedRow = row.type === "ADM" && row.status === "in_progress";
 
   const homeHref =
     row.type === "ADM" ? "/guidance/referrals/adm" : "/guidance/referrals/counseling";
-  // Same deep-links as the nurse menu: both entries jump to the
-  // highlighted case on its home page — no overlay. The filled form and
-  // the anecdotal report open from the case page itself.
+
   const seeMoreHref = `${homeHref}?highlight=${row.id}`;
   const viewFormHref = row.type === "ADM" ? seeMoreHref : null;
 
@@ -80,8 +68,7 @@ export function GuidanceAlertsRowActions({
       return;
     }
     if (!row.anecdotalId) return;
-    // Finished cases keep the full write-up hidden; the reason on this
-    // page stays visible.
+
     if (isClosed) setPrivacyOpen(true);
     else setPreviewId(row.anecdotalId);
   }
@@ -139,11 +126,6 @@ export function GuidanceAlertsRowActions({
   );
 }
 
-/**
- * 3-dots menu for engine intervention rows: Booked session (read-only list
- * of the intervention's sessions) and See more (the interventions desk,
- * where sessions and outcomes are managed).
- */
 export function GuidanceInterventionRowActions({
   item,
   elapsedText,

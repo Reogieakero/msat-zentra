@@ -50,13 +50,6 @@ function mostLevelBadge(level: GuidanceGradeAttentionRow["mostLevel"]) {
   return <span className={styles.muted}>—</span>;
 }
 
-/**
- * Grade levels needing attention — one row per grade level with every
- * section of that level in the row, the at-risk headcount, and the most
- * common risk level among the grade's at-risk students. Searchable, with
- * row-click into Interventions. Terminal-free by construction: grades
- * always list, counts plainly show zero.
- */
 export function GuidanceOverviewGradeTable({ rows }: GuidanceOverviewGradeTableProps) {
   const router = useRouter();
   const [query, setQuery] = React.useState("");

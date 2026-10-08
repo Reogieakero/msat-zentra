@@ -74,8 +74,6 @@ const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
   { value: "none", label: "No level" },
 ];
 
-/* Wall-clock ms of an alert's latest action. Null when unknown — those
-   rows sink to the bottom of the sequence. */
 function actionTimeOf(alert: NurseAlertItem): number | null {
   const { time } = latestActionOf(alert.row, alert);
   if (!time || time === "—") return null;
@@ -84,9 +82,6 @@ function actionTimeOf(alert: NurseAlertItem): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
-/* Color-coded status badges — amber = needs action, blue = in motion,
-   green = completed/forwarded, red = escalated or rejected, gray = closed.
-   Unknown keys fall back to the raw-status variant. */
 export function statusVariant(
   status: string
 ): "amber" | "blue" | "green" | "red" | "secondary" | "outline" {
@@ -110,9 +105,6 @@ export function statusVariant(
   }
 }
 
-/* Badge variant per action-derived status key — the same vocabulary the
-   overview charts use, so every surface agrees. Unknown keys fall back
-   to the raw-status variant. Shared with the nurse ADM referrals queue. */
 export const ACTION_STATUS_VARIANT: Record<
   string,
   "amber" | "blue" | "green" | "red" | "secondary" | "outline"
@@ -141,16 +133,13 @@ export function RiskBadge({
       </span>
     );
   if (!level) return <span className={styles.noRisk}>—</span>;
-  // Shared RAG convention (same as teacher/principal/guidance desks):
-  // High red, Moderate amber, Low green.
+
   const variant = level === "High" ? "red" : level === "Moderate" ? "amber" : "green";
   return <Badge variant={variant}>{level}</Badge>;
 }
 
 export type ActionIcon = React.ComponentType<{ className?: string }>;
 
-/* One icon per latest-action kind, matched by keyword on the action label.
-   Shared with the nurse ADM referrals queue. */
 export function actionIconFor(label: string): ActionIcon {
   const text = label.toLowerCase();
   if (text.includes("booked")) return CalendarPlus;
@@ -173,14 +162,6 @@ export function actionIconFor(label: string): ActionIcon {
   return Bell;
 }
 
-/**
- * Every case referred to the nurse (ADM consultations + clinic matters) as
- * a data table: student, case status, live rule-based risk level, latest
- * action (name + elapsed since it ran), and the live countdown from when
- * the case was referred to right now. Read-only — handling happens on the
- * ADM Cases / Clinic Matters pages. Same card + table language as the
- * overview Needs-review table.
- */
 export function NurseReferralsTable({
   alerts,
   riskByStudent,
@@ -199,16 +180,15 @@ export function NurseReferralsTable({
   riskByStudent: Record<string, NurseRiskLevel>;
   riskLoading?: boolean;
   onChanged: () => void;
-  /** Controlled server search (debounced by the page). Uncontrolled legacy
-      fallback keeps the internal input when the page passes nothing. */
+
   query?: string;
   onQueryChange?: (v: string) => void;
-  /** Server pager (page turns reuse previous data, never flash skeletons). */
+
   page?: number;
   totalPages?: number;
-  /** Filtered pager count. */
+
   total?: number;
-  /** UNFILTERED desk total — tiles never shrink on search. */
+
   unfilteredTotal?: number;
   onPageChange?: (p: number) => void;
   serverPaged?: boolean;
@@ -221,8 +201,7 @@ export function NurseReferralsTable({
   const setQuery = onQueryChange ?? setInternalQuery;
 
   const filtered = React.useMemo(() => {
-    // Server-searched when the page owns the query (?q=) — the table only
-    // applies the client risk facet on the served page rows.
+
     const q = serverPaged ? "" : query.trim().toLowerCase();
     const rows = alerts.filter((a) => {
       if (risk !== "") {
@@ -242,8 +221,7 @@ export function NurseReferralsTable({
         return false;
       return true;
     });
-    // Sequence by latest action time — most recently acted-on case first,
-    // rows with no action time sink to the bottom.
+
     rows.sort((a, b) => {
       const at = actionTimeOf(a);
       const bt = actionTimeOf(b);
@@ -312,9 +290,7 @@ export function NurseReferralsTable({
           const allDone =
             doneCount > 0 &&
             !alert.row.sessions.some((s) => s.status === "scheduled");
-          // Action-based status — what the case actually needs now
-          // (Endorsed, Booked session, Done, Needs review…) instead of the
-          // raw database enum. Same vocabulary the overview charts use.
+
           const actionStatus = allDone
             ? { key: "done", label: "Done" }
             : deriveActionStatus(
@@ -415,10 +391,7 @@ export function NurseReferralsTable({
         enableSorting: false,
         cell: ({ row }) => {
           const alert = row.original;
-          // Deep-link to the page where this case lives — the page
-          // auto-scrolls to and highlights it. ADM form-ready cases also
-          // overlay the filled referral form (form=1); every other row
-          // still lands highlighted on its own case.
+
           const homeBase =
             alert.row.type === "ADM"
               ? "/nurse/referrals/adm"
@@ -458,8 +431,6 @@ export function NurseReferralsTable({
     state: { sorting },
   });
 
-  // Filtered pager count (server total when server-paged) alongside the
-  // UNFILTERED desk total so tiles never shrink on search.
   const total = serverPaged ? (totalProp ?? filtered.length) : filtered.length;
   const riskLabel =
     RISK_OPTIONS.find((o) => o.value === risk)?.label ?? "All risks";

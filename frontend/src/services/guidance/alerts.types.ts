@@ -1,4 +1,3 @@
-// Alert feed shapes for the guidance desk. Pure types only.
 export type GuidanceAlertLevel = "High" | "Moderate";
 export type GuidanceAlertFactor = "academic" | "attendance" | "behavioral";
 
@@ -15,8 +14,7 @@ export interface GuidanceAlertItem {
   anecdotalCount: number;
   referralStatus: string | null;
   interventionOutcome: string | null;
-  // "adm" = tracked ADM profile or ADM-track referral exists for the
-  // student; "general" = all other referred/general guidance cases.
+
   track: "adm" | "general";
   admStageLabel: string | null;
 }

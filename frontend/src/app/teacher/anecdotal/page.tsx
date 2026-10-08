@@ -13,11 +13,6 @@ import { FolderLegendCard, TopAttentionCard } from "./components/AnecdotalSideRa
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/anecdotal-repo.module.css";
 
-/**
- * Teacher anecdotal repository: a stored-files message when nothing is
- * filed yet; the sidebar + folder grid once records exist. Filing happens
- * in Chat with Bama (New record button).
- */
 export default function TeacherAnecdotalPage() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
@@ -33,9 +28,6 @@ export default function TeacherAnecdotalPage() {
     [recordsQuery.data]
   );
 
-  // Geometry-matched skeleton: same grid (main + 17rem rail), panel
-  // header + search + folder grid, and rail summary cards as the loaded
-  // repo — no layout shift when records land.
   if (recordsQuery.isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading filed records">

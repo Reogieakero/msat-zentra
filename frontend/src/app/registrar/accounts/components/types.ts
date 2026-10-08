@@ -34,12 +34,12 @@ export type PendingStudent = {
   address: string;
   imageUrl: string | null;
   status: StudentApprovalStatus;
-  requestedAt: string; // ISO timestamp
+  requestedAt: string;
 };
 
 export type PendingStudentsResponse = {
   students: PendingStudent[];
-  /** Present when the request asked for server pagination (?page/?q). */
+
   total?: number;
   unfilteredTotal?: number;
   page?: number;

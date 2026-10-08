@@ -4,7 +4,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { GuidanceAnecdotalSummary } from "@/services/guidance/anecdotal.types";
 import styles from "./guidance-category-donut.module.css";
 
-/** Neutral ink scale — darkest slice always marks the leading category. */
 const SHADES = ["#171717", "#525252", "#737373", "#a3a3a3", "#d4d4d4"];
 
 const CATEGORY_LABELS: { key: "behavioral" | "bullying" | "academic" | "attendance" | "health"; label: string }[] = [
@@ -63,10 +62,6 @@ export function categoryInterpretation(summary: GuidanceAnecdotalSummary): strin
   return `${top.label} leads with ${top.count} of ${total} referred filing${total === 1 ? "" : "s"} (${top.percent}%). ${TAKEAWAYS[top.key] ?? ""} ${coverage}`;
 }
 
-/**
- * Donut of referred filings by category + a plain-language read of what the
- * mix means. Counts only — the write-ups stay in the case files.
- */
 export function GuidanceCategoryDonut({ summary }: { summary: GuidanceAnecdotalSummary }) {
   const { slices, total } = buildCategorySlices(summary);
 

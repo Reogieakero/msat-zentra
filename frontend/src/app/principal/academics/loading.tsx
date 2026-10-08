@@ -1,8 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/* Mirrors academics desk: section card grid + (on selection) students
-   table. Card grid dimensions match SectionCardGrid; table keeps the
-   6-column sticky header shape. */
 export default function PrincipalAcademicsLoading() {
   return (
     <section aria-label="Loading academics" aria-busy="true" className="flex flex-col gap-4">

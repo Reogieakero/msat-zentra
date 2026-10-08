@@ -28,7 +28,6 @@ import {
 import { CoordinatorDevicesIssueDialog } from "./components/coordinator-devices-issue-dialog";
 import pageStyles from "../pages.module.css";
 
-/* Desk-level pagination standard: full list pages = 15. */
 const DEVICE_PAGE_SIZE = 15;
 
 function CoordinatorDevicesPageInner() {
@@ -37,19 +36,16 @@ function CoordinatorDevicesPageInner() {
   const pathname = usePathname();
   const router = useRouter();
   const [queryInput, setQueryInput] = React.useState("");
-  // Debounced 300ms server search (registrar precedent).
+
   const debounced = useDebouncedValue(queryInput.trim(), 300);
   const [filter, setFilter] = React.useState<DeviceFilter>("all");
   const [page, setPage] = React.useState(1);
-  // Deep-link from the sidebar needs-device reminder (?issue=1): initial
-  // state derives from the URL (no effect); the effect below only clears
-  // the param so a later close never reopens it.
+
   const [issueOpen, setIssueOpen] = React.useState(
     () => searchParams.get("issue") === "1",
   );
   const [returnTarget, setReturnTarget] = React.useState<AdmDeviceRow | null>(null);
-  /** Id of the device being returned — its row button shows `Recording…`
-      while every other row stays usable. */
+
   const [returningId, setReturningId] = React.useState<string | null>(null);
   const issueParamCleared = React.useRef(false);
   React.useEffect(() => {
@@ -78,9 +74,6 @@ function CoordinatorDevicesPageInner() {
     staleTime: 30_000,
   });
 
-  // Principal-approved cases with no device issued yet — powers the
-  // centered needs prompt and scopes the issue dialog's learner picker.
-  // Preview shape (distinct key suffix) so it never poisons the paged list.
   const needsQuery = useQuery({
     queryKey: ["coordinator-devices", "preview", "needs-device"],
     queryFn: ({ signal }) =>
@@ -107,9 +100,7 @@ function CoordinatorDevicesPageInner() {
       const { data } = await apiClient.post(`/api/adm/devices/${id}/return`, {});
       return data;
     },
-    // Pessimistic: the row flips only via the refetch below after the
-    // server confirms. No optimistic patch: the UI must never outrun the
-    // processing. The acting row shows Recording… until settle.
+
     onSuccess: (data, id) => {
       void data;
       markSelfNotified(id);
@@ -121,15 +112,14 @@ function CoordinatorDevicesPageInner() {
     onSettled: () => setReturningId(null),
   });
 
-  // Defensive: non-array payloads (cached/error shapes) never crash the table.
   const rows = React.useMemo(
     () => (Array.isArray(devicesQuery.data?.rows) ? devicesQuery.data.rows : []),
     [devicesQuery.data],
   );
-  // `total` = filtered pager count; tiles read the UNFILTERED globals.
+
   const deviceTotal = devicesQuery.data?.total ?? 0;
   const deviceTotalPages = devicesQuery.data?.totalPages ?? 1;
-  // Derived clamp — never setState in an effect.
+
   const deviceSafePage = Math.min(page, deviceTotalPages);
   const deviceLimit = devicesQuery.data?.limit ?? DEVICE_PAGE_SIZE;
   const deviceStart = deviceTotal === 0 ? 0 : (deviceSafePage - 1) * deviceLimit + 1;
@@ -150,9 +140,7 @@ function CoordinatorDevicesPageInner() {
   const needsCountText = `${needsDevice.length} principal-approved case${
     needsDevice.length === 1 ? "" : "s"
   } still ${needsDevice.length === 1 ? "needs" : "need"} a device.`;
-  // Truly empty ledger (loaded, no error, no active filters): the table
-  // (with its title + search) steps aside so one centered block owns the
-  // page. Filtered-to-zero keeps the table so the search can be cleared.
+
   const ledgerTrulyEmpty =
     !devicesQuery.isPending &&
     !devicesQuery.isError &&
@@ -220,7 +208,6 @@ function CoordinatorDevicesPageInner() {
         </>
       )}
 
-      {/* Issue to an approved case without a device */}
       <CoordinatorDevicesIssueDialog
         open={issueOpen}
         candidates={needsDevice}
@@ -229,7 +216,6 @@ function CoordinatorDevicesPageInner() {
         onIssued={invalidate}
       />
 
-      {/* Return confirm — same card-modal UI as every other dialog. */}
       <CardModal
         open={returnTarget !== null}
         onClose={() => setReturnTarget(null)}

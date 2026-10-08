@@ -71,10 +71,6 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
     invalidateTeacher.flags();
   };
 
-  // Grouped board view: bounded full-scope fetches feed the client-side
-  // grouping (a grouped board cannot page server-side meaningfully).
-  // Tab-gated: only the visible tab fetches — mounting no longer fires
-  // three 100-row reads (notably `advisees` for non-advisers).
   const mineQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "mine", termKey],
     queryFn: ({ signal }) => fetchFlags("mine", { pageSize: 100, signal }),
@@ -87,9 +83,7 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
     placeholderData: keepPreviousData,
     enabled: mode === "against-me",
   });
-  // Advisership for the tab comes from the small shared sections query
-  // (cached with Settings) — not from the heavy advisees flags fetch, which
-  // runs only when its tab is visible.
+
   const sectionsQuery = useQuery<{ sections: { advisedByMe: boolean }[] }>({
     queryKey: ["teacher-settings-adviser-sections"],
     queryFn: async () => {
@@ -109,9 +103,6 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
     enabled: mode === "advisees",
   });
 
-  // Mode-aware: inactive tabs are disabled (idle-pending), so only the
-  // visible tab drives loading/error. Cached tab data stays instant via
-  // placeholderData on revisit.
   const activeQuery =
     mode === "raised-by-me"
       ? mineQuery

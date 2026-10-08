@@ -27,9 +27,7 @@ export default function NurseOverviewPage() {
     });
 
   if (isPending) {
-    // Skeleton mirrors the real layout one-to-one (teacher body grid: main
-    // data-table card + sticky side card, then breakdown + trends) so
-    // nothing shifts when the data arrives.
+
     return (
       <section className={styles.page} aria-busy="true">
         <div className={styles.body}>
@@ -145,16 +143,13 @@ export default function NurseOverviewPage() {
     );
   }
 
-  // Background refetch (staleTime expiry, realtime invalidate, focus):
-  // keep existing data visible + a subtle non-blocking indicator.
   const refreshing = isFetching && !isPending;
 
   return (
     <section className={styles.page} aria-busy={refreshing}>
-      {/* Floating pill — never shifts the content. */}
+
       {refreshing ? <NurseRefreshBadge label="Refreshing overview…" /> : null}
-      {/* Teacher overview layout: main data-table column + sticky right
-          rail of cards. Same grid, same sticky offset, same card shell. */}
+
       <div className={styles.body}>
         <div className={styles.mainCol}>
           <NurseNeedsReviewPanel needsReview={data.needsReview} />

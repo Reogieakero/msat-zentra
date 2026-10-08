@@ -1,8 +1,3 @@
-// Shapes for the guidance interventions desk (at-risk follow-ups). Pure
-// types only. Note: `CounselingSessionType` / `CounselingSessionItem` /
-// `ScheduleSessionInput` intentionally mirror the referrals-desk versions —
-// the interventions table carries a lighter row (attachmentsCount instead
-// of full attachments), so they stay distinct types.
 export type InterventionApproval =
   | "pending"
   | "approved"
@@ -41,12 +36,9 @@ export interface CounselingSessionItem {
   sessionNotes: string;
   outcome: string;
   cancelReason: string;
-  // Role behind the latest session_cancelled audit, when cancelled
-  // (backend audit trail).
+
   cancelledByRole?: string | null;
-  // When the session was booked (execution time). Falls back to
-  // scheduledAt for legacy rows without it — never display the future
-  // appointment as the action time.
+
   createdAt: string;
   completedAt: string;
   attachmentsCount: number;
@@ -64,7 +56,7 @@ export interface StudentFollowUp {
   intakeNotes: string;
   sessions: CounselingSessionItem[];
   completedSessions: number;
-  // When the intervention was opened (ISO, null for legacy rows).
+
   createdAt: string | null;
 }
 
@@ -81,10 +73,10 @@ export interface AtRiskStudentItem {
   grade: string;
   riskLevel: string;
   riskCount: number;
-  /** Engine detection moment for the active term (RiskSnapshot date). */
+
   detectedAt: string | null;
   factors: AtRiskFactors;
-  /** Read-only context: adviser-referred cases exist separately. Never mixed. */
+
   referralContext: ReferralContext;
   intervention: StudentFollowUp | null;
 }
@@ -103,10 +95,10 @@ export interface GuidanceInterventionsData {
   students: AtRiskStudentItem[];
   page: number;
   pageSize: number;
-  /** Filtered pager count (shrinks on search/filter). */
+
   total: number;
   totalPages: number;
-  /** UNFILTERED cohort total — tile stats never shrink on search. */
+
   unfilteredTotal?: number;
 }
 

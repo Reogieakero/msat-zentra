@@ -55,7 +55,7 @@ export function CoordinatorReferralsOutcomeDialog({
     <CardModal
       open={target !== null}
       onClose={() => {
-        // Locked while saving — X/backdrop/Escape can't drop the flight.
+
         if (!pending) onClose();
       }}
       dismissable={!pending}

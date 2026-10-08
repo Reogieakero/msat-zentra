@@ -14,7 +14,6 @@ export interface SettingsSectionLink {
   Icon: LucideIcon;
 }
 
-/* Registrar settings sections — preferences only. */
 export function registrarSettingsSections(): SettingsSectionLink[] {
   return [
     { id: "section-profile", label: "Profile", Icon: UserRound },

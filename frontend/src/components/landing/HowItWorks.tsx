@@ -79,9 +79,6 @@ export function HowItWorks() {
   const programmatic = React.useRef(false);
   const lastIdx = React.useRef(0);
 
-  // Scroll position drives the active tab while the section is in view.
-  // State only updates when the step index actually changes, so passive
-  // scrolling doesn't trigger a re-render on every frame.
   React.useEffect(() => {
     const computeIdx = () => {
       const section = sectionRef.current;
@@ -118,7 +115,6 @@ export function HowItWorks() {
 
   const current = steps[activeIdx];
 
-  // Clicking a tab smooth-scrolls the section to that step.
   const selectTab = (i: number) => {
     const section = sectionRef.current;
     if (!section) return;

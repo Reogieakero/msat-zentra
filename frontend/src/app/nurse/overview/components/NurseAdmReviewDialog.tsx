@@ -12,19 +12,6 @@ import { scheduleClinicSession } from "@/services/nurse/sessions.service";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { useNurseMutation } from "./use-nurse-mutation";
 
-/**
- * ADM consultation review for cases the adviser routed to the nurse —
- * shared review UI, nurse wiring: review here, then Create referral opens
- * the fill-up form sheet in place (no navigation) via onCreateReferral.
- * Reject (turn down) closes the case straight from this dialog.
- * "Start handling" stays clinic-only — this dialog is the nurse's
- * pipeline path for ADM cases.
- *
- * Book-session and reject run through useNurseMutation so the buttons get
- * action-specific pending state, success toasts fire only after the backend
- * confirms, and errors reset loading + surface inline (shared dialog) without
- * duplicate toasts.
- */
 export function NurseAdmReviewDialog({
   row,
   onChanged,

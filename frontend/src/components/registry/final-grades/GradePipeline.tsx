@@ -4,9 +4,6 @@ import * as React from "react";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./GradePipeline.module.css";
 
-// Shared final-grade pipeline ramp (registrar + record-keeper desks).
-// The final stage owner label differs per desk; everything else is
-// identical.
 import type { RegistryDesk } from "@/services/registry/overview.service";
 const STAGES = [
   {

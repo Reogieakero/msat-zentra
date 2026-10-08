@@ -569,7 +569,7 @@ export default function LiquidEther({
         this.props = props || {};
         this.uniforms = this.props.material?.uniforms;
       }
-      // ShaderPass override: base init(simProps) supplies args this pass ignores.
+
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       init(..._args: any[]) {
         this.scene = new THREE.Scene();
@@ -1084,7 +1084,7 @@ export default function LiquidEther({
             Common.renderer.forceContextLoss();
           }
         } catch {
-          /* noop */
+
         }
       }
     }
@@ -1163,14 +1163,14 @@ export default function LiquidEther({
         try {
           resizeObserverRef.current.disconnect();
         } catch {
-          /* noop */
+
         }
       }
       if (intersectionObserverRef.current) {
         try {
           intersectionObserverRef.current.disconnect();
         } catch {
-          /* noop */
+
         }
       }
       if (webglRef.current) {

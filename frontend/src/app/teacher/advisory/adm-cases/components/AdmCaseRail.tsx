@@ -20,15 +20,10 @@ interface AdmCaseRailProps {
   onTrack: (caseData: AdmCase) => void;
 }
 
-/* Read-only case tracking in a right-side card: the official 8-stage ADM
-   pipeline with the current position plus status-only facts. No clinical
-   detail ever renders here. */
 export function AdmCaseRail({ caseData, onClose, onTrack }: AdmCaseRailProps) {
   const listRef = React.useRef<HTMLDivElement | null>(null);
   const currentOrder = stageOrder(caseData.stage);
-  // Same shared tracker input as the referrals track dialog — one output
-  // on both pages. Filing/reviewer identity falls back (adviser filed it;
-  // reviewer unknown on this list) and the audit timeline carries the rest.
+
   const trackInput: TrackerCaseInput = {
     stage: caseData.stage,
     referralStatus: caseData.referralStatus,
@@ -91,9 +86,6 @@ export function AdmCaseRail({ caseData, onClose, onTrack }: AdmCaseRailProps) {
         </span>
       </div>
 
-      {/* The 8-step timeline scrolls inside the card (same pattern as the
-          referrals track dialog) with the shared scroll-down hint pinned
-          under it — guaranteed visible whenever stages sit below the fold. */}
       <div ref={listRef} className={`relative ${styles.timelineScroll} pr-1`}>
         <AdmTrackingTimeline input={trackInput} />
       </div>

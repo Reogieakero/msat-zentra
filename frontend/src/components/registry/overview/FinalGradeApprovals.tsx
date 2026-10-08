@@ -47,9 +47,7 @@ function fetchViewableFinals(desk: RegistryDesk) {
 export function FinalGradeApprovals({ desk }: { desk: RegistryDesk }) {
   const router = useRouter();
   const { data, isPending, isError } = useQuery({
-    // Namespaced preview key: shares the "<desk>-final-grades" prefix so
-    // realtime invalidation refreshes it, without colliding with the paged
-    // list key ["<desk>-final-grades", page, q].
+
     queryKey: [`${desk}-final-grades`, "preview"],
     queryFn: () => fetchViewableFinals(desk),
     staleTime: 30_000,

@@ -15,8 +15,6 @@ import type { DayConfig } from "./schedule-time";
 import type { ScheduleSection } from "../page";
 
 function getErrorMessage(err: unknown, fallback: string): string {
-  // The backend envelopes errors as { error: { code, message } } — read that
-  // first so users see the real reason instead of axios's raw status text.
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
   const message = data?.error?.message ?? data?.message;
   if (typeof message === "string" && message) return message;
@@ -29,7 +27,6 @@ function SendToPrincipalCard() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
-  // Shared query key with the list + setup views — zero extra network.
   const sectionsQuery = useQuery<{ sections: ScheduleSection[] }>({
     queryKey: ["teacher-schedule", termKey],
     queryFn: async () => {
@@ -202,8 +199,6 @@ function ConfigureCard() {
   );
 }
 
-// Workspace action cards for the rail, styled exactly like the catalog cards:
-// Send-to-principal (workspace-wide drafts) and day-shape Configure.
 export function WorkspaceCards() {
   return (
     <>

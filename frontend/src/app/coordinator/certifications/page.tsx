@@ -30,7 +30,7 @@ function tabToStatus(tab: string | null): CertStatusFilter {
 function CertificationsBody() {
   const params = useSearchParams();
   const [queryInput, setQueryInput] = React.useState("");
-  // Debounced 300ms server search (registrar precedent).
+
   const query = useDebouncedValue(queryInput.trim(), 300);
   const [status, setStatus] = React.useState<CertStatusFilter>(() =>
     tabToStatus(params.get("tab")),
@@ -60,7 +60,6 @@ function CertificationsBody() {
     staleTime: 30_000,
   });
 
-  // Defensive: non-array payloads (cached/error shapes) never crash the merge.
   const records = React.useMemo(
     () =>
       mergeCertRecords(
@@ -184,9 +183,7 @@ function CertificationsBody() {
   return (
     <section className={styles.page} aria-label="Certifications">
       <div className={styles.layout}>
-        {/* Certification folders sit flat on the page (no card
-            background); the insights panel on the right carries the
-            shared glow-card design. */}
+
         <div className={styles.main}>
           <CoordinatorCertificationsFolders
             records={records}

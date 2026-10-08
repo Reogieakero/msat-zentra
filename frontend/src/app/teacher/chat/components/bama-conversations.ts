@@ -1,9 +1,3 @@
-/**
- * Bama chat history. Conversations are grouped by helper type (grade flag
- * or anecdotal record) and persist in localStorage — UI sessions only,
- * never a source of truth.
- */
-
 export type BamaChatType = "grade-flag" | "anecdotal";
 
 export const BAMA_CHAT_TYPES: { key: BamaChatType; label: string }[] = [
@@ -16,8 +10,6 @@ export interface BamaMessage {
   from: "assistant" | "user";
   text: string;
   at: number;
-  // Guided-flow widgets (anecdotal chats): pickers, option buttons,
-  // date picker, review card, filed card. Plain data only — persisted.
   question?: {
     type: "student" | "class" | "category" | "tier" | "datetime";
     options: { value: string; label: string }[];
@@ -49,7 +41,6 @@ export interface BamaConversation {
   createdAt: number;
   updatedAt: number;
   messages: BamaMessage[];
-  /** Set once its anecdotal record is filed — the thread becomes read-only. */
   filed?: boolean;
 }
 
@@ -146,7 +137,6 @@ export function saveBamaStore(store: BamaStore): void {
       })
     );
   } catch {
-    // Storage unavailable — history simply won't persist.
   }
 }
 
@@ -162,12 +152,10 @@ export function maxMessageId(conversations: BamaConversation[]): number {
 
 let messageId = Date.now();
 
-/** Next unique chat message id (module-scoped so dialogs + thread agree). */
 export function nextMessageId(): number {
   return messageId++;
 }
 
-/** Reseed the id counter (e.g. after loading persisted chats). */
 export function syncMessageId(n: number): void {
   messageId = Math.max(messageId, n);
 }

@@ -15,10 +15,6 @@ interface SignaturePadProps {
 const INK = "#111111";
 const PAD_HEIGHT = 160;
 
-/**
- * Drawn-signature capture: mouse, stylus, or finger via Pointer Events.
- * Exports a transparent PNG data URL for POST /api/anecdotal/:id/sign.
- */
 export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -77,7 +73,7 @@ export function SignaturePad({ onSave, onCancel, saving, error }: SignaturePadPr
     try {
       canvasRef.current?.releasePointerCapture(e.pointerId);
     } catch {
-      // Pointer already released — harmless.
+
     }
   }
 

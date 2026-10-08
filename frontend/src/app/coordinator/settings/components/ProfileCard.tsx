@@ -35,8 +35,6 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
-/* Profile card: photo (upload) + display name (edit). Persists to the
-   coordinator's own User + StaffProfile rows. */
 export function ProfileCard() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -50,8 +48,7 @@ export function ProfileCard() {
   const [photoSaving, setPhotoSaving] = React.useState(false);
 
   const savedName = profile.data?.fullName ?? "";
-  // Sync the server value into the editable field (render-time adjustment:
-  // resyncs only when the saved value itself changes, never while typing).
+
   const lastSyncedName = React.useRef<string | null>(null);
   if (lastSyncedName.current !== savedName) {
     lastSyncedName.current = savedName;

@@ -20,7 +20,6 @@ export async function fetchStudentList(pick: ClassPick | null): Promise<StudentL
   return data;
 }
 
-/** Teacher-scoped roster key — one teacher's class roster never leaks to another session. */
 export function studentListKey(
   teacherId: string | null | undefined,
   pick: ClassPick | null,
@@ -28,10 +27,6 @@ export function studentListKey(
   return ["teacher-student-list", teacherId ?? "anon", pick ? `${pick.kind}:${pick.id}` : "first"] as const;
 }
 
-/** Roster for the picked card: handled subject × section or advised section.
- *  `pick` null serves the default (first advisory section for advisers,
- *  first handled class otherwise) AND both rails — one request renders the
- *  whole page, no overview wait. */
 export function useStudentList(pick: ClassPick | null) {
   const session = useSession();
   const teacherId = session?.sub ?? null;

@@ -27,8 +27,6 @@ function buildFluidConfig(dark: boolean): FluidConfig {
 export function Hero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Track the actual `.dark` class on <html> so the fluid background switches
-  // to the black back-color reliably when dark mode is toggled.
   const [isDark, setIsDark] = useState(false);
   useEffect(() => {
     const root = document.documentElement;

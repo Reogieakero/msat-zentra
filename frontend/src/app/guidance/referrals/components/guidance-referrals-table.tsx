@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, Loader2, Search, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
-import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { GuidanceReferralsToolbar } from "./guidance-referrals-toolbar";
+import { GuidanceReferralsDialogsHost } from "./guidance-referrals-dialogs-host";
+import { useGuidanceReferralsFilter } from "./use-guidance-referrals-filter";
 import type {
   GuidanceReferralItem,
   GuidanceReferralsSummary,
@@ -23,8 +17,6 @@ import { useGuidanceReferralActions } from "./use-guidance-referral-actions";
 import {
   GuidanceReferralEntry,
 } from "./GuidanceReferralEntry";
-import { AdmReviewDialog } from "../../adm/components/AdmReviewDialog";
-import { GuidanceAdmReferralFormSheet } from "../../adm/components/GuidanceAdmReferralFormSheet";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { GuidanceActionMenu } from "./GuidanceActionMenu";
 import {
@@ -35,7 +27,6 @@ import {
 
 import styles from "./guidance-referrals-table.module.css";
 
-/* Re-exported for the interventions page (same helpers, new home). */
 export {
   combineDateTime,
   formatDateTime,
@@ -46,16 +37,11 @@ export {
   SESSION_KIND_OPTIONS,
 } from "./guidance-referrals-format";
 
-/* Spinner shown inside a button while its action is running. The button
-   text already flips ("Saving…"), so this is purely visual. */
 function Busy({ busy }: { busy: boolean }) {
   if (!busy) return null;
   return <Loader2 className={styles.spin} aria-hidden="true" />;
 }
 
-/* Scroll hint — a floating "scroll for more" pill shown only while the
-   page itself is scrollable and the reader hasn't reached the bottom.
-   Rendered instead of the pager on full-list feeds. */
 function ScrollHint({ count }: { count: number }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -72,8 +58,7 @@ function ScrollHint({ count }: { count: number }) {
     };
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
-    // Measure after paint (and again once content settles) — async so the
-    // effect itself never sets state synchronously.
+
     const t1 = window.setTimeout(update, 0);
     const t2 = window.setTimeout(update, 500);
     return () => {
@@ -94,8 +79,6 @@ function ScrollHint({ count }: { count: number }) {
   );
 }
 
-import { useActiveNowTick } from "@/lib/clock";
-
 export function GuidanceReferralsTable({
   referrals,
   summary,
@@ -113,8 +96,7 @@ export function GuidanceReferralsTable({
   onRetry,
   isRetrying,
   isNavigating = false,
-  // Legacy full-list mode: every row renders, the pager is replaced by
-  // the scroll hint. All guidance queues are server-paged now.
+
   paginate = true,
   lockType = false,
   title = "Referrals to me",
@@ -137,14 +119,13 @@ export function GuidanceReferralsTable({
     busyRowId,
     invalidateGuidance,
   } = useGuidanceReferralActions(referrals);
-  /* Anecdotal record open in the official-form overlay (same as folder UI). */
+
   const [previewId, setPreviewId] = useState<string | null>(null);
-  /* Student whose finished case shows the privacy notice instead. */
+
   const [privacyFor, setPrivacyFor] = useState<string | null>(null);
-  /* Student whose endorsed case shows the moved-with-case notice instead. */
+
   const [endorsedFor, setEndorsedFor] = useState<string | null>(null);
-  // ADM-track row under review (desk mode — same actions as the nurse ADM
-  // review, without the coordinator form).
+
   const [reviewAdmFor, setReviewAdmFor] = useState<GuidanceReferralItem | null>(null);
   const [formSheet, setFormSheet] = useState<{
     row: GuidanceReferralItem;
@@ -156,103 +137,34 @@ export function GuidanceReferralsTable({
   const goToPage = (next: number) => onPageChange?.(next);
   const hasActiveFilters =
     query.trim() !== "" || action !== "" || (!lockType && typeFilter !== "");
-  // One live clock for every countdown on this page — ticks each second
-  // only while a scheduled session is visible, so seconds stay exact.
-  const hasScheduledOnPage = referrals.some((r) =>
-    r.sessions.some((s) => s.status === "scheduled")
-  );
-  const now = useActiveNowTick(hasScheduledOnPage);
+
+  const { now } = useGuidanceReferralsFilter({ referrals, highlightId });
   const typeFilterLabel =
     GUIDANCE_TYPES.find((t) => t.value === typeFilter)?.label ?? "All types";
 
   function clearFilters() {
     onQueryChange("");
     onActionChange("");
-    // Locked pages (ADM Cases / Counseling Cases) stay on their track —
-    // clearing only resets the search and the action menu.
     onTypeChange(lockType ? typeFilter : "");
   }
-
-  // Scroll the highlighted case into view once its page renders. The
-  // backend serves the highlight's own page (?highlight=), so the row is
-  // mounted on arrival; later page turns simply no-op when it is absent.
-  useEffect(() => {
-    if (!highlightId) return;
-    const t = window.setTimeout(() => {
-      document
-        .getElementById(`guidance-case-${highlightId}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 150);
-    return () => window.clearTimeout(t);
-  }, [highlightId, referrals]);
 
   return (
     <div className={styles.layout}>
       <div className={`${styles.feed} ${styles.layoutFeed}`}>
         <h1 className={styles.srOnly}>Cases sent to guidance</h1>
-        {/* Locked track pages hide the toolbar (title, search, track
-            picker) — filtering lives in the action sidebar. Every queue
-            is server-paginated, locked or not. */}
         {!lockType && (
-        <div className={`${styles.toolbar} ${styles.toolbarSticky}`}>
-          <div>
-            <p className={styles.pageTitle}>{title}</p>
-          </div>
-          <div className={styles.toolbarFilters}>
-            <div className={styles.searchWrap}>
-              <Search className={styles.searchIcon} aria-hidden />
-              <Input
-                className={styles.searchInput}
-                style={{ height: "1.75rem" }}
-                placeholder="Search by student name or keyword…"
-                value={query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                aria-label="Search your cases"
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label={`Filter cases by type, currently showing: ${typeFilterLabel}`}
-                  className={`${styles.filterBtn} ${typeFilter !== "" ? styles.filterActive : ""}`}
-                >
-                  {typeFilterLabel}
-                  {typeFilter !== "" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                {GUIDANCE_TYPES.map((item) => (
-                  <DropdownMenuCheckboxItem
-                    key={item.label}
-                    checked={typeFilter === item.value}
-                    onCheckedChange={() => {
-                      onTypeChange(item.value);
-                      // Sidebar actions are per-track — a stale action from
-                      // the other track would empty the list, so reset it.
-                      onActionChange("");
-                      goToPage(1);
-                    }}
-                  >
-                    {item.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-              >
-                <X aria-hidden />
-                Show all
-              </Button>
-            )}
-          </div>
-        </div>
+          <GuidanceReferralsToolbar
+            title={title}
+            query={query}
+            onQueryChange={onQueryChange}
+            typeFilter={typeFilter}
+            onTypeChange={onTypeChange}
+            onActionChange={onActionChange}
+            onPageChange={goToPage}
+            hasActiveFilters={hasActiveFilters}
+            onClear={clearFilters}
+            typeFilterLabel={typeFilterLabel}
+          />
         )}
 
       {mutation.isError && (
@@ -313,7 +225,6 @@ export function GuidanceReferralsTable({
         </ol>
       )}
 
-      {/* Pager (server-paged mode) or scroll hint (full-list mode). */}
       {paginate ? (
         <nav className={styles.pager} aria-label="Cases pages">
           <p className={styles.range}>
@@ -382,83 +293,27 @@ export function GuidanceReferralsTable({
         handleAction={handleAction}
         onResolveCase={resolveCase}
       />
-
-      {/* Official GCForm-01 report overlay — same preview the folder UI opens. */}
-      <OcForm01PreviewDialog
-        recordId={previewId}
-        onClose={() => setPreviewId(null)}
+      <GuidanceReferralsDialogsHost
+        previewId={previewId}
+        onPreviewClose={() => setPreviewId(null)}
+        privacyFor={privacyFor}
+        onPrivacyClose={() => setPrivacyFor(null)}
+        endorsedFor={endorsedFor}
+        onEndorsedClose={() => setEndorsedFor(null)}
+        reviewAdmFor={reviewAdmFor}
+        onReviewClose={() => setReviewAdmFor(null)}
+        onReviewChanged={() => {
+          invalidateGuidance();
+        }}
+        onCreateReferral={(draft) => {
+          if (reviewAdmFor) setFormSheet({ row: reviewAdmFor, draft });
+        }}
+        formSheet={formSheet}
+        onFormSheetClose={() => setFormSheet(null)}
+        onFormSheetChanged={() => {
+          invalidateGuidance();
+        }}
       />
-
-      {/* Privacy notice instead of the report on finished cases. */}
-      <PrivacyNoticeDialog
-        open={privacyFor !== null}
-        onClose={() => setPrivacyFor(null)}
-        studentName={privacyFor ?? undefined}
-      />
-      {/* Moved-with-case notice instead of the report on endorsed cases. */}
-      <PrivacyNoticeDialog
-        open={endorsedFor !== null}
-        onClose={() => setEndorsedFor(null)}
-        studentName={endorsedFor ?? undefined}
-        reason="endorsed"
-      />
-      {reviewAdmFor && (
-        <AdmReviewDialog
-          referralId={reviewAdmFor.id}
-          student={reviewAdmFor.student}
-          anecdotalId={reviewAdmFor.anecdotalId || null}
-          info={{
-            lrn: reviewAdmFor.lrn,
-            section: reviewAdmFor.section,
-            grade: reviewAdmFor.grade,
-            category: reviewAdmFor.category,
-            date: reviewAdmFor.date,
-          }}
-          open
-          onClose={() => setReviewAdmFor(null)}
-          onChanged={() => {
-            invalidateGuidance();
-          }}
-          onCreateReferral={(draft) => setFormSheet({ row: reviewAdmFor, draft })}
-          mode="desk"
-        />
-      )}
-      {formSheet && (
-        <GuidanceAdmReferralFormSheet
-          open
-          onClose={() => setFormSheet(null)}
-          adapter={{
-            id: formSheet.row.id,
-            student: formSheet.row.student,
-            lrn: formSheet.row.lrn,
-            section: formSheet.row.section,
-            grade: formSheet.row.grade,
-            stage: "consultation",
-            stageLabel: "Consultation and referral",
-            eligibility: "pending",
-            referralId: formSheet.row.id,
-            referralStatus: formSheet.row.status,
-            reason: formSheet.row.reason,
-            referredBy: formSheet.row.referredBy,
-            preparedBy: formSheet.row.referredBy,
-            date: formSheet.row.date,
-            meetingAttended: null,
-            hasHomeVisit: false,
-            approved: false,
-            approvedAt: null,
-            anecdotalId: formSheet.row.anecdotalId || undefined,
-            category: formSheet.row.category,
-            anecdotalExcerpt: formSheet.row.anecdotalExcerpt,
-            recommendations: formSheet.row.recommendations,
-          }}
-          anecdotalId={formSheet.row.anecdotalId || null}
-          lrn={formSheet.row.lrn}
-          initialDraft={formSheet.draft}
-          onChanged={() => {
-            invalidateGuidance();
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -481,13 +336,11 @@ interface GuidanceReferralsTableProps {
   onRetry: () => void;
   isRetrying: boolean;
   isNavigating?: boolean;
-  // Locked pages (ADM Cases / Counseling Cases) hide the track dropdown
-  // and keep "Show all" within their own track.
+
   lockType?: boolean;
   title?: string;
-  // Deep-link arrival from the alerts table: scrolls to and highlights
-  // the case once its page renders.
+
   highlightId?: string | null;
-  /** UNFILTERED desk total — shown beside the filtered pager count. */
+
   unfilteredTotal?: number;
 }

@@ -47,10 +47,6 @@ interface RecordFolderGridProps {
   emptyText: string;
 }
 
-/**
- * One FolderCard per filed record (same folder UI as the registrar SF10
- * feed). Clicking a card overlays the OCForm-01 report preview.
- */
 export function RecordFolderGrid({
   records,
   emptyText,

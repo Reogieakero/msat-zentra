@@ -22,8 +22,6 @@ interface CancelDialogProps {
   onConfirm: () => void;
 }
 
-// Cancel modal (CardModal with reason, mirrors the guidance dismiss dialog):
-// withdrawing a pending referral needs a recorded reason.
 export function ReferralCancelDialog({
   target,
   reason,
@@ -91,8 +89,6 @@ interface DeleteDialogProps {
   onConfirm: () => void;
 }
 
-// Delete modal (CardModal confirm, mirrors the coordinator confirm
-// dialogs): permanently remove a cancelled referral from the list.
 export function ReferralDeleteDialog({
   target,
   pending,
@@ -135,9 +131,6 @@ export function ReferralDeleteDialog({
           disabled={pending}
           aria-busy={pending || undefined}
           onClick={() => {
-            // Hold the dialog open for the flight: success closes it via
-            // the page clearing the target; failure leaves it open with
-            // the error shown so the user can retry.
             onConfirm();
           }}
         >

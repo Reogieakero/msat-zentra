@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/table";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { deriveActionStatus } from "@/services/nurse/labels";
+import { NurseActionBadge, waitingElapsed } from "./nurse-action-badge";
+import { useNowMs } from "./use-now-ms";
 import type { NurseQueueRow } from "@/services/nurse/nurse.types";
 import { NurseQueueRowActions } from "./NurseQueueRowActions";
 import { NurseAdmReviewDialog } from "./NurseAdmReviewDialog";
@@ -38,57 +40,6 @@ import { NurseForwardAdmButton } from "./NurseForwardAdmButton";
 import type { AdmReviewDraft } from "@/components/adm-review/AdmReviewDialog";
 import { NurseAdmReferralFormSheet } from "../../referrals/components/NurseAdmReferralFormSheet";
 import styles from "./nurse-overview.module.css";
-
-/* Status badge follows what the nurse actually did with the referral —
-   the same action vocabulary as the overview KPI cards and charts. */
-function NurseActionBadge({ row }: { row: NurseQueueRow }) {
-  const action = deriveActionStatus(row.type, row.status, row.sessions);
-  switch (action.key) {
-    case "endorsed":
-    case "done":
-    case "done_session":
-      return <Badge variant="green">{action.label}</Badge>;
-    case "rejected":
-      return <Badge variant="red">{action.label}</Badge>;
-    case "needs_review":
-      return <Badge variant="amber">{action.label}</Badge>;
-    case "escalated":
-      return <Badge variant="red">{action.label}</Badge>;
-    case "booked":
-    case "followup":
-      return <Badge variant="blue">{action.label}</Badge>;
-    default:
-      return <Badge variant="outline">{action.label}</Badge>;
-  }
-}
-
-/* Elapsed wait from the referred time to now — days / hours / minutes,
-   never seconds. */
-function waitingElapsed(referredAt: string, nowMs: number): string {
-  if (!referredAt) return "—";
-  const t = new Date(referredAt).getTime();
-  if (!Number.isFinite(t)) return "—";
-  const mins = Math.floor(Math.max(0, nowMs - t) / 60_000);
-  if (mins < 1) return "Just now";
-  const hours = Math.floor(mins / 60);
-  const days = Math.floor(hours / 24);
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours % 24 > 0) parts.push(`${hours % 24}h`);
-  if (mins % 60 > 0) parts.push(`${mins % 60}m`);
-  return parts.join(" ");
-}
-
-/* Minute-precision clock is enough (no seconds displayed) — re-renders
-   twice a minute so the Waiting column stays fresh. */
-function useNowMs(intervalMs = 30_000): number {
-  const [nowMs, setNowMs] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), intervalMs);
-    return () => window.clearInterval(id);
-  }, [intervalMs]);
-  return nowMs;
-}
 
 export function NurseNeedsReviewPanel({
   needsReview,
@@ -184,17 +135,13 @@ export function NurseNeedsReviewPanel({
         enableSorting: false,
         cell: ({ row }) => {
           const item = row.original;
-          // Same deep-links as the alerts table — the case page
-          // auto-scrolls to and highlights the row; ADM form-ready cases
-          // also overlay the filled form.
+
           const homeBase =
             item.type === "ADM"
               ? "/nurse/referrals/adm"
               : "/nurse/referrals/clinic";
           const seeMoreHref = `${homeBase}?highlight=${item.id}`;
-          // Every ADM case overlays its GCForm-03 (pending or endorsed,
-          // including legacy endorsements) — same as the guidance ADM
-          // "See referral form" behavior.
+
           const viewFormHref =
             item.type === "ADM" ? `${seeMoreHref}&form=1` : seeMoreHref;
           return (

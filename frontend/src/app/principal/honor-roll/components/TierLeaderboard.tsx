@@ -13,7 +13,6 @@ interface Props {
   candidates: HonorRollCandidate[];
 }
 
-// DO 15, s. 2026 descriptor bands (Advancing 90+ → Emerging below 65).
 const BAND_ICON: Record<DescriptorBand, React.ComponentType<{ className?: string }>> = {
   Advancing: Crown,
   Benchmarking: Medal,

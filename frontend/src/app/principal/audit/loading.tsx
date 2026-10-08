@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./page.module.css";
 
-/* Mirrors audit/page.tsx: hero + toolbar + 25-row table + pager. */
 export default function PrincipalAuditLoading() {
   return (
     <section className={styles.page} aria-label="Loading audit log" aria-busy="true">

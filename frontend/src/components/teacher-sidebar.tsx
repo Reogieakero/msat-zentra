@@ -43,13 +43,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Teacher nav branching: Overview (dashboard), Advisory (list, attendance,
-// academic, anecdotal, referrals, adm), Workspace (class, gradebook,
-// attendance, chat, + timeslot for masters), Settings (general settings).
-// Non-advisers see only Overview, Workspace and Settings — the Advisory
-// branch unlocks once they claim a section in Settings. Chat with Bama is
-// an adviser-only filing surface (anecdotal records belong to advisers),
-// so regular subject teachers never see it.
 function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
   const workspaceItems = [
     { title: "Class", href: "/teacher/classes", icon: BookOpen },
@@ -92,19 +85,14 @@ function buildNav(isMasterTeacher: boolean, isAdviser: boolean): NavGroup[] {
 export function TeacherSidebar() {
   const session = useSession();
   const overview = useTeacherOverview();
-  // First-frame values from the per-teacher caches: tabs must not pop in/out
-  // after a hard refresh. The live overview overwrites them on resolve. While
-  // the overview is still unknown (null cache + pending), show the full nav
-  // so advisers never see their branch vanish on first paint; non-advisers
-  // settle to Overview/Workspace/Settings once the payload lands.
+
   const cachedMaster = useCachedMasterTeacher(session?.sub);
   const isMasterTeacher = overview.data?.isMasterTeacher ?? cachedMaster;
   const cachedAdviser = useCachedAdviser(session?.sub);
   const isAdviser = overview.data?.isAdviser ?? cachedAdviser ?? true;
   const nav = buildNav(isMasterTeacher, isAdviser);
   const tabs = nav.flatMap((group) => group.items);
-  // Sidebar-only: left branched rail on desktop, tab bar on small screens.
-  // No top navbar variant — the rail is the single desktop nav.
+
   const railScrollRef = React.useRef<HTMLDivElement | null>(null);
 
   return (

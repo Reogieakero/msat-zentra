@@ -1,7 +1,3 @@
-// Counseling sessions on one guidance referral: schedule / complete /
-// reschedule / cancel / delete, plus optional photo documentation.
-// Filing is optional — these helpers only build the evidence trail, they
-// never gate Done or resolve.
 import { apiClient } from "@/lib/api/client";
 import { asArray } from "@/lib/api/payload";
 import type {
@@ -57,8 +53,6 @@ export async function cancelSession(
   return data;
 }
 
-// Permanently remove a cancelled session (only cancelled sessions can be
-// deleted; scheduled/completed must be finished or cancelled first).
 export async function deleteSession(id: string, sessionId: string): Promise<unknown> {
   const { data } = await apiClient.delete(
     `/api/referrals/${id}/sessions/${sessionId}`
@@ -66,8 +60,6 @@ export async function deleteSession(id: string, sessionId: string): Promise<unkn
   return data;
 }
 
-// Optional documentation on one counseling session: list / upload / remove
-// image attachments.
 export async function listSessionAttachments(
   referralId: string,
   sessionId: string

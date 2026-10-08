@@ -23,8 +23,6 @@ export default function PrincipalHonorRollPage() {
   const [grade, setGrade] = React.useState<string>("7");
   const [rankOpen, setRankOpen] = React.useState(false);
 
-  // Live general-average snapshot (lock-agnostic realtime means). Term-scoped.
-  // No polling — realtime invalidates this exact key on grade saves.
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
   const {

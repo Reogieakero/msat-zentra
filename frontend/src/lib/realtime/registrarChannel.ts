@@ -20,9 +20,6 @@ const REGISTRAR_KEYS = [
 
 type KeyTuple = readonly [string, ...string[]];
 
-/* Targeted realtime invalidation: each event refreshes only the queries its
-   source table feeds (plus the bell). Unknown tables fall back to the full
-   sweep so correctness never depends on the map staying exhaustive. */
 function keysForNotification(
   row: Pick<RegistrarNotification, "sourceTable" | "type">,
 ): KeyTuple[] {
@@ -55,18 +52,9 @@ interface RegistrarNotification {
   createdAt?: string;
 }
 
-// Poll cadence — this is the actual delivery transport, not just a safety
-// net: the browser Supabase client authenticates as anon (the app's sessions
-// are backend-signed JWTs, not Supabase Auth), so row-scoped Realtime events
-// never reach it even with the table published. Cheap indexed query, and
-// rows already toasted are skipped through `seenIds`. Kept short so
-// sign-ups, access requests, and finals-ready events surface within seconds.
 const FALLBACK_POLL_MS = 5_000;
 const MAX_TOASTS_PER_POLL = 3;
 
-/** Self-save suppression: writes this session already confirmed with a
- *  direct toast skip the realtime duplicate (data still invalidates, the
- *  bell row still lands). Keyed by notification sourceId. */
 const selfSaved = new Map<string, number>();
 const SELF_SUPPRESS_MS = 30_000;
 
@@ -74,7 +62,6 @@ export function markSelfNotified(sourceId: string) {
   selfSaved.set(sourceId, Date.now());
 }
 
-/** Current user id from the stored access JWT (backend signs `sub`). */
 function currentUserId(): string | null {
   try {
     const token = window.localStorage.getItem("zentra.access");
@@ -90,20 +77,6 @@ function currentUserId(): string | null {
   }
 }
 
-/**
- * Registrar desk realtime sync — one shared Supabase channel per mount.
- * Listens for INSERTs on the Notification table scoped to the signed-in
- * registrar and pops a specific sileo toast on whatever page they are on
- * (e.g. the moment a G11 student signs up or finals become ready), plus
- * invalidates the registrar query keys so lists refresh with no manual reload.
- *
- * Delivery is two-layer: a 5s backend poll (the working transport — the
- * anon Supabase client never receives row-scoped Realtime events for
- * backend-signed sessions) plus the Supabase Realtime subscription as a
- * bonus path where policies allow. Rows are deduped by id across both
- * layers, so a healthy connection never double-toasts. Titles come from the
- * shared registrarNotificationTitle mapper so bell and sileo match.
- */
 export function useRegistrarRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const lastInvalidated = React.useRef(0);
@@ -123,9 +96,7 @@ export function useRegistrarRealtime(enabled = true) {
     function notify(row: RegistrarNotification) {
       if (!row || row.userId !== userId || seenIds.current.has(row.id)) return;
       seenIds.current.add(row.id);
-      // Writes this session already confirmed with a direct toast (approvals,
-      // access decisions, SF10 validates) skip the realtime echo toast — the
-      // bell row still lands and lists still invalidate.
+
       const selfConfirmed =
         !!row.sourceId && Date.now() - (selfSaved.get(row.sourceId) ?? 0) < SELF_SUPPRESS_MS;
       if (!selfConfirmed) {
@@ -165,12 +136,9 @@ export function useRegistrarRealtime(enabled = true) {
         });
       if (!cancelled) channel = ch as unknown as { unsubscribe: () => void };
     } catch {
-      // Realtime unavailable — the polling safety net below still delivers.
+
     }
 
-    // Safety net: pick up anything Realtime missed. First poll only seeds
-    // the seen set (no toast storm for old inbox rows); later polls toast
-    // rows that arrived since, capped per poll.
     let seeded = false;
     async function poll() {
       if (cancelled || document.hidden) return;
@@ -187,22 +155,20 @@ export function useRegistrarRealtime(enabled = true) {
         }
         const fresh = mine.filter((n) => !seenIds.current.has(n.id));
         if (fresh.length === 0) return;
-        // Oldest first so the newest toast stays on top.
+
         const ordered = [...fresh].reverse().slice(0, MAX_TOASTS_PER_POLL);
         for (const n of ordered) notify(n);
-        // Mark the rest seen (lists still refresh below) to avoid backlog.
+
         for (const n of fresh) seenIds.current.add(n.id);
         void invalidate(fresh);
       } catch {
-        // Offline / unauthorized — try again on the next tick.
+
       }
     }
     const timer = window.setInterval(poll, FALLBACK_POLL_MS);
-    // Seed soon after mount so the missed-toast window is tiny (seed itself
-    // never toasts).
+
     const seedTimer = window.setTimeout(poll, 1_000);
-    // Poll the moment the tab regains focus — events that landed while
-    // away surface immediately with no manual refresh.
+
     const onFocus = () => {
       void poll();
     };
@@ -210,9 +176,7 @@ export function useRegistrarRealtime(enabled = true) {
     document.addEventListener("visibilitychange", onFocus);
 
     function invalidate(rows?: RegistrarNotification[]) {
-      // Throttle bursts to one invalidate per 2s (toasts still fire per row).
-      // Rows arriving inside the window accumulate and flush together so no
-      // table's keys are ever dropped by the throttle.
+
       const now = Date.now();
       if (rows) {
         for (const row of rows) pendingRows.current.push(row);
@@ -239,7 +203,7 @@ export function useRegistrarRealtime(enabled = true) {
       for (const row of queued) {
         for (const key of keysForNotification(row)) keys.set(key.join("|"), key);
       }
-      // No rows (or unknown table) → full sweep preserves correctness.
+
       const targets = keys.size > 0 ? [...keys.values()] : [...REGISTRAR_KEYS];
       for (const key of targets) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
@@ -256,7 +220,7 @@ export function useRegistrarRealtime(enabled = true) {
       try {
         channel?.unsubscribe();
       } catch {
-        // Ignore cleanup errors.
+
       }
     };
   }, [enabled, queryClient]);

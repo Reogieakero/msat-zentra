@@ -1,13 +1,3 @@
-/**
- * Shared realtime bookkeeping for the nurse desk.
- *
- * - `markNurseLocalMutation` is called on every confirmed local mutation
- *   success so inbound realtime events within a short window are treated as
- *   echoes of our own write (initiator already toasted locally → skip toast).
- * - `seenRealtimeEvent` deduplicates redelivered postgres_changes payloads
- *   by event key (table + row id + commit timestamp).
- */
-
 let lastLocalMutationAt = 0;
 
 export function markNurseLocalMutation(): void {
@@ -16,7 +6,6 @@ export function markNurseLocalMutation(): void {
     (window as unknown as { __nurseLocalMutationAt?: number }).__nurseLocalMutationAt =
       lastLocalMutationAt;
   } catch {
-    /* storage unavailable — module timestamp still applies */
   }
 }
 
@@ -26,7 +15,6 @@ export function wasRecentLocalMutation(windowMs = 5000): boolean {
       .__nurseLocalMutationAt;
     if (typeof w === "number" && Date.now() - w < windowMs) return true;
   } catch {
-    /* ignore */
   }
   return Date.now() - lastLocalMutationAt < windowMs;
 }
@@ -37,7 +25,6 @@ const SEEN_MAX = 500;
 
 export function seenRealtimeEvent(key: string): boolean {
   const now = Date.now();
-  // Opportunistic expiry so the map never grows unbounded.
   if (seen.size > SEEN_MAX) {
     for (const [k, t] of seen) {
       if (now - t > SEEN_TTL_MS) seen.delete(k);

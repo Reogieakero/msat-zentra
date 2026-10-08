@@ -1,36 +1,13 @@
-/**
- * Shared risk-dashboard data — one builder for every desk.
- *
- * Each role is locked out of the principal `/api/risk/*` aggregates, so
- * every number here is rebuilt client-side from that desk's own referrals
- * plus the per-student risk-level projection the role may read. Counts and
- * levels only — never confidential notes from other roles.
- *
- * Desks feed the same minimal row shape; only the fetchers differ:
- * - nurse:      referrals scoped to the clinic desk + `fetchNurseRiskLevels`
- * - guidance:   counseling/ADM referrals + `fetchGuidanceRiskLevels`
- */
-
 export type RiskLevelBucket = "High" | "Moderate" | "Low" | "Unassessed";
 
-/** Which desk the dashboard reads — drives the "clinic/guidance desk" copy. */
 export type RiskDesk = "clinic" | "guidance";
 
-/** Minimal case shape every desk maps its referrals to. */
 export interface RiskCaseRow {
   id: string;
   section: string;
   category: string;
 }
 
-/**
- * Primary ink scale per color mode. SVG `fill` attributes cannot reliably
- * resolve CSS `var()` references (and users can recolor --primary at
- * runtime), so charts pick resolved hexes from the active theme instead.
- * The brand primary is monochrome ink (near-black on light, near-white on
- * dark), so these steps ARE the primary palette — darkest/most prominent
- * always marks the most urgent bucket in both modes.
- */
 export const LEVEL_COLORS_LIGHT: Record<RiskLevelBucket, string> = {
   High: "#171717",
   Moderate: "#525252",
@@ -45,7 +22,6 @@ export const LEVEL_COLORS_DARK: Record<RiskLevelBucket, string> = {
   Unassessed: "#404040",
 };
 
-/** Primary ink scale, rank-ordered — leader stays most prominent per mode. */
 export const CATEGORY_SHADES_LIGHT = [
   "#171717",
   "#404040",
@@ -66,8 +42,6 @@ export const CATEGORY_SHADES_DARK = [
   "#2e2e2e",
 ];
 
-/* Plain words for non-technical readers — single source of truth so every
-   desk says the same thing about the same bucket. */
 export const LEVEL_WORDS: Record<RiskLevelBucket, string> = {
   High: "Needs urgent attention",
   Moderate: "Keep an eye on",
@@ -75,7 +49,6 @@ export const LEVEL_WORDS: Record<RiskLevelBucket, string> = {
   Unassessed: "Not assessed yet",
 };
 
-/** Donut slice separator — must match the card surface per mode. */
 export const CARD_SURFACE_LIGHT = "#ffffff";
 export const CARD_SURFACE_DARK = "#2e2e2e";
 
@@ -104,17 +77,13 @@ export interface RiskDashboard {
   highCount: number;
   levelMix: LevelSlice[];
   categoryRows: CategorySlice[];
-  /** Column labels for the matrix (capped, remainder rolled into Other). */
   matrixCategories: string[];
   matrix: SectionMatrixRow[];
   colTotals: number[];
 }
 
-/** Heat columns cap at 7 named categories — the tail rolls into Other. */
 const MAX_MATRIX_COLUMNS = 7;
 
-/** Display label for a raw category — blank/"—" reads as Uncategorized,
-   anything else leads with an uppercase letter. */
 function toCategoryLabel(raw: string | null | undefined): string {
   const text = (raw ?? "").trim();
   if (text === "" || text === "—") return "Uncategorized";
@@ -127,9 +96,6 @@ export function buildRiskDashboard(
   caseToStudent: Record<string, string | null>,
   isDark = false
 ): RiskDashboard {
-  // Risk levels are per student — dedupe cases that share a student so one
-  // frequently-referred learner never inflates a bucket. Cases whose student
-  // id is unknown (or whose level lookup failed) read as Unassessed.
   const levelOf = new Map<string, RiskLevelBucket>();
   for (const row of rows) {
     const sid = caseToStudent[row.id] ?? null;
@@ -167,7 +133,6 @@ export function buildRiskDashboard(
       fill: shades[i] ?? shades[shades.length - 1],
     }));
 
-  // Section × category matrix — status-only counts, no identities.
   const matrixCategories = categoryRows
     .slice(0, MAX_MATRIX_COLUMNS)
     .map((r) => r.label);
@@ -179,8 +144,6 @@ export function buildRiskDashboard(
     const section = row.section?.trim() || "—";
     const raw = row.category?.trim() ?? "";
     const label = toCategoryLabel(raw);
-    // Labels outside the capped column set roll into Other; without an
-    // Other column there is nothing to roll into, so the case is skipped.
     const col = colIndex.get(label) ?? (hasOther ? colIndex.get("Other")! : -1);
     if (col < 0) continue;
     const counts = cells.get(section) ?? columns.map(() => 0);
@@ -236,12 +199,6 @@ function shortWeekLabel(date: Date): string {
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
 }
 
-/**
- * Weekly referral lines per category over the trailing 12 weeks, oldest
- * first — top categories get their own line, the tail rolls into Other.
- * Feeds the trend-lines chart that replaces the section matrix; needs a
- * referral date per row, so desks map their own date field in.
- */
 export function buildCategoryTrend(
   items: { category: string; referredAt: string }[],
   weeks: number = TREND_WEEKS,

@@ -10,11 +10,6 @@ interface AdmCaseCardProps {
   onDetails: () => void;
 }
 
-/**
- * Section-grid case card (avatar, name/title hierarchy, status row, stage
- * progress, actions) in the shared section card style. Read-only — stage
- * and status only.
- */
 export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
   const initials = initialsOf(caseData.studentName);
 

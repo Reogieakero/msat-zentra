@@ -1,5 +1,3 @@
-// Advisory ADM-case shapes. Pure types only.
-/** One ADM case for an advisory student — status-only, never clinical detail. */
 export interface AdmCase {
   id: string;
   studentId: string;
@@ -9,8 +7,7 @@ export interface AdmCase {
   section: string;
   photoUrl: string | null;
   referralId: string;
-  // Pending or ongoing only — the API never serves dismissed (cancelled)
-  // cases here; those live on the teacher's referrals table.
+
   referralStatus: "pending" | "in_progress" | "resolved";
   consultReviewer?: string | null;
   stage: string;

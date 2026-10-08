@@ -12,7 +12,7 @@ import type {
   Section,
   Teacher,
 } from "@/services/principal/assign.types";
-// Desk-agnostic event dedupe helpers (shared with the nurse desk).
+
 import { realtimeEventKey, seenRealtimeEvent } from "./nurseRealtimeMeta";
 import { wasRecentPrincipalAssignMutation } from "./principalAssignRealtimeMeta";
 
@@ -36,21 +36,6 @@ function gradeToNumber(gradeLevel: string): number {
   return m ? Number(m[0]) : 0;
 }
 
-/**
- * Principal assignment realtime sync — one shared Supabase channel per mount.
- *
- * - UPDATE on Section → merge ONLY `{adviserId, adviserName}` into the
- *   matching cached row (never a refetch, never a toast — silent merge).
- * - INSERT on Section → append the new row (principal-created sections appear
- *   live), scoped to the active school year.
- * - DELETE on Section → drop the row from cache.
- * - Initiator echo guard: our own mutation already updated the cache from the
- *   server response, so events inside the echo window are skipped.
- * - Adviser names resolve from the cached teachers list; on an unknown id we
- *   invalidate just the teachers query (rare, cheap) instead of refetching
- *   sections.
- * - Reconnect / visibility restore refetches ONLY the scoped sections query.
- */
 export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: string, schoolYearName: string) {
   const queryClient = useQueryClient();
 
@@ -61,9 +46,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
     let cancelled = false;
     let visibilityHandler: (() => void) | null = null;
     let onlineHandler: (() => void) | null = null;
-    // Skip reconcile on the FIRST subscribe after mount — the query just
-    // fetched, so an immediate invalidate would double the initial request.
-    // Only re-subscribes (socket drop) reconcile.
+
     let subscribedOnce = false;
     const key = assignSectionsKey(schoolYearId);
 
@@ -82,7 +65,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
         const next = prev.map((sec) => {
           if (sec.id !== sectionId) return sec;
           touched = true;
-          // Display name: linked teacher first, free-text label otherwise.
+
           const linked = adviserId ? teachers.find((t) => t.id === adviserId)?.name ?? null : "";
           if (adviserId && linked == null) unknownTeacher = true;
           const display = linked ?? adviserLabel ?? "";
@@ -129,7 +112,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
       const rowSchoolYearId = row?.schoolYearId;
       const rowAdviserId = row?.adviserId ?? null;
       if (!id || !name || !gradeLevel) return;
-      // Only rows filed under this scope belong in this cache.
+
       if (rowSchoolYearId && rowSchoolYearId !== schoolYearId) return;
       const eventKey = realtimeEventKey("Section", payload.eventType ?? "INSERT", id, payload.commit_timestamp ?? null);
       if (seenRealtimeEvent(eventKey)) return;
@@ -168,8 +151,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
     }
 
     function reconcile() {
-      // Database is the source of truth — backfill anything missed, scoped to
-      // this desk's sections query only.
+
       void queryClient.invalidateQueries({ queryKey: key });
     }
 
@@ -209,7 +191,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
       document.addEventListener("visibilitychange", visibilityHandler);
       window.addEventListener("online", onlineHandler);
     } catch {
-      // Realtime unavailable — staleTime + window-focus refetch cover freshness.
+
     }
 
     return () => {
@@ -219,7 +201,7 @@ export function usePrincipalAssignRealtime(enabled: boolean, schoolYearId: strin
         if (onlineHandler) window.removeEventListener("online", onlineHandler);
         channel?.unsubscribe();
       } catch {
-        // Ignore cleanup errors.
+
       }
     };
   }, [enabled, schoolYearId, schoolYearName, queryClient]);

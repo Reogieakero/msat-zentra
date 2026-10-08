@@ -8,21 +8,10 @@ interface PrivacyNoticeDialogProps {
   open: boolean;
   onClose: () => void;
   studentName?: string;
-  // "finished" = case is closed, report kept private. "endorsed" = case
-  // was endorsed to the ADM coordinator: the full report moved with the
-  // case and is no longer viewable on this desk. "principal" = viewer has
-  // nothing to do with the case unless an open case was forwarded to them.
+
   reason?: "finished" | "endorsed" | "principal";
 }
 
-/**
- * Shown instead of the official report when a case is finished (full
- * write-up hidden to protect privacy), endorsed to ADM (report moved
- * with the case), or viewed from a desk with nothing to do with the case
- * (principal). The folder stays visible so staff know a record
- * exists, but the full write-up never opens — the summary on the page
- * is all that remains visible.
- */
 export function PrivacyNoticeDialog({
   open,
   onClose,

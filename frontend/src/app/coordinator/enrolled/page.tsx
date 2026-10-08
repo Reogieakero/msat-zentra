@@ -19,9 +19,6 @@ function CoordinatorEnrolledPageInner() {
   const openedFor = React.useRef<string | null>(null);
   const { rows, enrolledPending, historyTarget, setHistoryTarget } = r;
 
-  // Deep-link support (?highlight=<rowId>): open history for the matching
-  // enrolled row once it loads. No-ops when the id is not shown so
-  // filters stay untouched.
   React.useEffect(() => {
     if (!highlight || openedFor.current === highlight) return;
     if (enrolledPending || historyTarget) return;
@@ -55,8 +52,7 @@ function CoordinatorEnrolledPageInner() {
         onHistory={r.setHistoryTarget}
         onComplete={r.setCompleteTarget}
       />
-      {/* Server pager (strict 15-row list pages). Tiles read unfiltered
-          totals; this pager reads the filtered count. */}
+
       {!r.enrolledPending && !r.enrolledError && r.total > 0 ? (
         <div
           style={{
@@ -92,13 +88,11 @@ function CoordinatorEnrolledPageInner() {
         </div>
       ) : null}
 
-      {/* Case history */}
       <CaseHistoryDialog
         target={r.historyTarget}
         onClose={() => r.setHistoryTarget(null)}
       />
 
-      {/* Mark completed — confirm then pessimistic server-confirmed update. */}
       <CardModal
         open={r.completeTarget !== null}
         onClose={() => {

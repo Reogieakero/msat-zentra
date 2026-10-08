@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PANEL_ROWS, type ReportsPayload, type ReportScope } from "@/services/principal/reports";
@@ -19,8 +18,6 @@ export default function PrincipalReportsPage() {
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
 
-  // Cached (was manual useState+useEffect with zero cache). Term-scoped,
-  // 5-min stale — Refresh explicitly invalidates instead of full reload.
   const { data, isPending, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["principal-reports", termId, scope],
     queryFn: async () =>

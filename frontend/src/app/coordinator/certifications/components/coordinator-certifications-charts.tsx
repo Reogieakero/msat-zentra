@@ -44,11 +44,7 @@ function interpretSummary(summary: CertSummary): string {
 }
 
 export function CoordinatorCertificationsCharts({ summary }: { summary: CertSummary }) {
-  // Donut slices wear the coordinator's own saved palette hex —
-  // deterministic (no probe timing): darkest (pure primary) first,
-  // stepping toward the card surface. Concrete rgb fills because SVG
-  // attributes can't resolve CSS vars. Falls back to the runtime probe
-  // only when no saved palette exists yet.
+
   const { data: profile } = useCoordinatorProfileSettings();
   const scale = usePrimaryScale(ORDER.length, profile?.primaryColor ?? null);
   const rows = ORDER.map((status, i) => ({
@@ -59,8 +55,7 @@ export function CoordinatorCertificationsCharts({ summary }: { summary: CertSumm
   }));
 
   return (
-    /* Shell-less block — the page wraps the whole left panel in one
-       shared glow card, so this renders title + content only. */
+
     <div className={styles.block} aria-label="Certifications by status">
       <div>
         <h3 className={styles.sectionTitle}>Certifications by status</h3>

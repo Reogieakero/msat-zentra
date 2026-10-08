@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type {
@@ -17,7 +16,6 @@ type Props = {
   standings: ClassAverageRow[];
 };
 
-// Initials from the subject name ("Araling Panlipunan" → "AP").
 function subjectInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";

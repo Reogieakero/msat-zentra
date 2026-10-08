@@ -16,16 +16,6 @@ import styles from "../nurse-referrals-page.module.css";
 
 const NURSE_CLINIC_PAGE_SIZE = 15;
 
-/**
- * Clinic Matters — every clinic matter sent to the school nurse, newest
- * first. Locked to the Clinic type so no case-type filter is needed.
- * Server track-filtered (?track=clinic) + server-paginated (15/page,
- * previous page kept so turns never flash skeletons).
- *
- * Deep-links from the bell (?highlight=<id>) serve the case's own page
- * (?highlight=) and scroll to it; the first pager touch takes over with
- * plain ?track=&page=. Derived — no setState in effects.
- */
 function NurseClinicReferralsView() {
   const params = useSearchParams();
   const highlightId = params.get("highlight");
@@ -57,7 +47,6 @@ function NurseClinicReferralsView() {
       staleTime: 60_000,
     });
 
-  // Derived, never setState-in-effect.
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 

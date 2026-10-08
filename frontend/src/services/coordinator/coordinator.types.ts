@@ -1,5 +1,3 @@
-// Shared shapes for the ADM Coordinator desk. Pure types only — no runtime
-// imports, so UI files can `import type` without pulling in fetch logic.
 export type AdmEligibility = "pending" | "eligible" | "ineligible";
 
 export type AdmStage =
@@ -32,40 +30,29 @@ export interface AdmCaseRow {
   approvalDate: string | null;
   forms: AdmFormRef[];
   studentId?: string;
-  /* Latest parent/guardian meeting (from /referrals/all) — null when no
-     meeting booked yet or the row is an early referral without a profile. */
+
   meeting?: {
     id: string;
     datetime: string;
     venue: string;
     attended: boolean;
-    /** Invited staff user ids — prefills the reschedule picker so editing
-        time/venue never wipes the invite list. */
+
     inviteeIds?: string[];
   } | null;
-  /* Guidance/nurse hand-off timestamp (full ISO) on early referral rows —
-     the moment the referral to the ADM Coordinator was created. Waiting-time
-     readouts run from here, not from the anecdotal observation date. */
+
   endorsedAt?: string | null;
-  /** Consultation reviewer on early referral rows (nurse | guidance_counselor | lrpc | null when direct). */
+
   consultReviewer?: string | null;
-  /** Referral-level status on early referral rows (pending | in_progress | …). */
+
   referralStatus?: string;
-  /** Latest audit action across the case (referral + profile + meetings),
-      served per row by /referrals/all for the Latest action column. */
+
   lastActionAt?: string | null;
   lastActionType?: string | null;
-  /* Module pass-tracking (from /referrals/all on profile rows) — submitted
-     vs released ADM modules. Early (pre-profile) rows carry 0/0. Optional
-     so older cached pages without the field still type-check. */
+
   modulesSubmitted?: number;
   modulesTotal?: number;
 }
 
-/* Action-derived ADM case status — what the case actually needs now,
-   computed from the backend pipeline (ADM_STAGE_FLOW in
-   backend/src/services/adm.ts) instead of showing the raw stage enum.
-   Same idea as the nurse queue's deriveActionStatus. */
 export interface AdmCaseStatus {
   key: string;
   label: string;
@@ -75,8 +62,7 @@ export interface AdmDashboard {
   kpis: { pendingSignature: number; signed: number; active: number };
   stageBreakdown: { stage: string; short: string; count: number }[];
   latestReferred: AdmCaseRow[];
-  /** Headline totals served with the dashboard so the overview page does not
-      need extra round-trips. Optional for backward compatibility. */
+
   totalReferred?: number;
   needsRevision?: number;
   deviceSummary?: { issued: number; returned: number };
@@ -85,7 +71,7 @@ export interface AdmDashboard {
 export interface AdmReferralsPage {
   rows: AdmCaseRow[];
   total: number;
-  /** Filtered pager count is `total`; tile stats stay UNFILTERED. */
+
   unfilteredTotal?: number;
   complete?: number;
   totalReferred: number;
@@ -98,10 +84,7 @@ export interface AdmReferralsPage {
 
 export interface AdmApprovalRow extends AdmCaseRow {
   section?: string;
-  /* Devices ever issued to this learner profile (GET /api/adm/approvals
-     serves devicesIssued per row). 0 = principal-approved with no device
-     yet — the devices page uses this for its needs-device list. Optional
-     so older cached pages without the field still type-check. */
+
   devicesIssued?: number;
   modulesSubmitted?: number;
   modulesTotal?: number;
@@ -140,7 +123,7 @@ export interface AdmDevicesPage {
   complete?: number;
   issued: number;
   returned: number;
-  /** Present when the ledger was read with `page + pageSize` pagination. */
+
   page?: number;
   totalPages?: number;
   limit?: number;
@@ -164,9 +147,6 @@ export interface AdmHistoryEvent {
   at: string;
 }
 
-/* Staff invited to a parent meeting at booking time (guidance / nurse /
-   adviser accounts) — separate from `attendees` (free-text people present,
-   recorded with the outcome). */
 export interface AdmMeetingInvitee {
   id: string;
   fullName: string;
@@ -196,9 +176,6 @@ export interface AdmMeeting {
   recordedBy: string;
 }
 
-/* People present at a parent meeting, logged by the ADM Coordinator with
-   the outcome. Stored as a JSON array of { name, role }; roles come from
-   the fixed set the API enforces. */
 export type MeetingAttendeeRole =
   | "parent_guardian"
   | "teacher"
@@ -212,8 +189,7 @@ export type MeetingAttendeeRole =
 export interface MeetingAttendee {
   name: string;
   role: MeetingAttendeeRole;
-  /** Present when the entry came from the invitee checklist (booking-time
-      invite), linking attendance back to the invited staff account. */
+
   userId?: string;
 }
 

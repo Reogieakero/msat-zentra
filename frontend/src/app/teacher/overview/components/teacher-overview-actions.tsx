@@ -15,9 +15,7 @@ export interface QuickAction {
 
 interface TeacherOverviewActionsProps {
   actions: QuickAction[];
-  /** Compact 2-per-row tiles for the narrow sidebar rail. */
   compact?: boolean;
-  /** Single row of 4 cards (main column). */
   row?: boolean;
 }
 

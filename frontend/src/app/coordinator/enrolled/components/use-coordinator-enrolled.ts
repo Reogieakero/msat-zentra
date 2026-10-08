@@ -20,7 +20,6 @@ import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/coordinatorChannel";
 import { ELIG_OPTIONS } from "./coordinator-enrolled-constants";
 
-/* Desk-level pagination standard: full list pages = 15. */
 export const ENROLLED_PAGE_SIZE = 15;
 
 export interface CoordinatorEnrolledModel {
@@ -36,8 +35,7 @@ export interface CoordinatorEnrolledModel {
   enrolledPending: boolean;
   enrolledError: boolean;
   enrolledRefetching: boolean;
-  /** Background refresh with data on screen — show a subtle sync hint,
-      never the full skeleton. */
+
   enrolledBackground: boolean;
   refetchEnrolled: () => void;
   query: string;
@@ -53,8 +51,7 @@ export interface CoordinatorEnrolledModel {
   completeTarget: AdmCaseRow | null;
   setCompleteTarget: (r: AdmCaseRow | null) => void;
   stagePending: boolean;
-  /** Id of the row being completed — row-level `Marking…` state so
-      unrelated rows stay usable during the mutation. */
+
   completingId: string | null;
   confirmComplete: () => void;
 }
@@ -63,7 +60,7 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
   const queryClient = useQueryClient();
   const [now] = React.useState(() => Date.now());
   const [queryInput, setQueryInput] = React.useState("");
-  // Debounced 300ms server search (registrar precedent).
+
   const debounced = useDebouncedValue(queryInput.trim(), 300);
   const [elig, setElig] = React.useState<"all" | AdmEligibility>("all");
   const [page, setPage] = React.useState(1);
@@ -77,7 +74,6 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     setPage(1);
   }, []);
 
-  // Server-paginated enrollment monitoring (strict 15-row list pages).
   const enrolledQuery = useQuery({
     queryKey: ["coordinator-enrolled", page, debounced, elig, ENROLLED_PAGE_SIZE],
     queryFn: ({ signal }) =>
@@ -92,10 +88,6 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     staleTime: 30_000,
   });
 
-  // Enrolled = approved by the Principal. Guard against any unapproved
-  // row leaking through (e.g. stale cache from before signing).
-  // Eligibility itself is filtered server-side (?eligibility=).
-  // Defensive: non-array payloads never crash the grid.
   const rows = React.useMemo(() => {
     const all = Array.isArray(enrolledQuery.data?.rows)
       ? enrolledQuery.data.rows
@@ -116,9 +108,7 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
       });
       return data;
     },
-    // Pessimistic: the row leaves the tab only via the refetch below after
-    // the server confirms. No optimistic removal: the UI must never outrun
-    // the processing. The acting row shows Completing… until settle.
+
     onSuccess: (_data, vars) => {
       markSelfNotified(vars.id);
       invalidate();
@@ -146,10 +136,9 @@ export function useCoordinatorEnrolled(): CoordinatorEnrolledModel {
     setPage(1);
   }
 
-  // `total` = filtered pager count; tiles read the UNFILTERED globals.
   const total = enrolledQuery.data?.total ?? 0;
   const totalPages = enrolledQuery.data?.totalPages ?? 1;
-  // Derived clamp — never setState in an effect.
+
   const safePage = Math.min(page, totalPages);
   const limit = enrolledQuery.data?.limit ?? ENROLLED_PAGE_SIZE;
   const start = total === 0 ? 0 : (safePage - 1) * limit + 1;

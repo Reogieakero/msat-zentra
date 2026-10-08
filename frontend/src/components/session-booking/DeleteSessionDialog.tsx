@@ -22,14 +22,9 @@ interface DeleteSessionDialogProps {
   keepLabel?: string;
   submitLabel?: string;
   busy?: boolean;
-  /** Save failure from the caller's API call. */
   serverError?: string | null;
 }
 
-/**
- * Shared delete-cancelled-session confirm — permanent removal, case stays
- * open. The caller performs the delete.
- */
 export function DeleteSessionDialog({
   open,
   onClose,
@@ -43,8 +38,6 @@ export function DeleteSessionDialog({
 }: DeleteSessionDialogProps) {
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh error state every time the modal opens — synced during render,
-  // never in an effect.
   const openKey = open ? "open" : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {
@@ -58,7 +51,6 @@ export function DeleteSessionDialog({
     <Dialog
       open
       onOpenChange={(next) => {
-        // Locked while the delete is in flight.
         if (!next && !busy) {
           onClose();
           setError(null);

@@ -5,7 +5,6 @@ import { Info } from "lucide-react";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 
-// Folder body color per anecdotal category (mirrors the folder grid).
 export const CATEGORY_COLORS: Record<string, string> = {
   behavioral: "#f59e0b",
   bullying: "#ef4444",
@@ -29,7 +28,6 @@ function humanize(value: string): string {
     .join(" ");
 }
 
-/* Top students by filed-report count — the advisees needing attention. */
 export function TopAttentionCard({ records }: { records: MyAnecdotalRecord[] }) {
   const top = React.useMemo(() => {
     const counts = new Map<string, { name: string; lrn: string; count: number }>();
@@ -80,8 +78,6 @@ export function TopAttentionCard({ records }: { records: MyAnecdotalRecord[] }) 
   );
 }
 
-/* Legend for the folder UI color coding (same card design as the
-   schedule slot legend). */
 export function FolderLegendCard() {
   return (
     <div className={assign.card} aria-label="Folder color legend">

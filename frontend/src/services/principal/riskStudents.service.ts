@@ -1,4 +1,3 @@
-// Principal at-risk-students list reads.
 import { apiClient } from "@/lib/api/client";
 import type { BackendBoard, BackendHeatmap, BackendStudentsResult } from "./riskStudents.types";
 
@@ -21,8 +20,7 @@ export async function fetchRiskStudents(
   gradeMode: "raw" | "final" = "final",
   pageSize = 50,
 ): Promise<BackendStudentsResult> {
-  // Default 50 (Teacher-aligned); explicit pageSize=1000 preserved for
-  // export/full-scan callers. Server cap stays 1000.
+
   const params: Record<string, string> = { pageSize: String(pageSize) };
   if (section) params.section = section;
   params.gradeMode = gradeMode;

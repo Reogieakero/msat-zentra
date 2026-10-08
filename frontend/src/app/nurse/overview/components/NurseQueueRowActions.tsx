@@ -52,16 +52,12 @@ export function NurseQueueRowActions({
 }: {
   row: NurseQueueRow;
   onChanged: () => void;
-  // Hides menu entries the caller already offers as primary buttons
-  // (timeline layout).
+
   hiddenItems?: Array<"start" | "resolve">;
-  // Deep-links to the page where this case lives (alerts table): "See
-  // more" jumps to the highlighted case, "View referral form" also
-  // overlays the filled referral form — no manual hunting.
+
   seeMoreHref?: string;
   viewFormHref?: string;
-  // View-only mode (alerts table): exactly three items — View referral
-  // form, View anecdotal report, See more. No status edits, no truncation.
+
   viewOnly?: boolean;
 }) {
   const [startOpen, setStartOpen] = React.useState(false);
@@ -102,9 +98,7 @@ export function NurseQueueRowActions({
   const notePending = noteMutation.isPending;
 
   const isClosed = row.status === "resolved" || row.status === "dismissed";
-  // Endorsed ADM cases moved to the coordinator with their full report —
-  // the anecdotal write-up is no longer viewable on this desk (same rule
-  // as the ADM referrals page).
+
   const isEndorsedRow = isEndorsed(row.type, row.status);
 
   function openReport() {
@@ -113,8 +107,7 @@ export function NurseQueueRowActions({
       return;
     }
     if (!row.anecdotalId) return;
-    // Same privacy rule as guidance: finished cases keep the full
-    // write-up hidden; the summary on this page stays visible.
+
     if (isClosed) setPrivacyOpen(true);
     else setPreviewId(row.anecdotalId);
   }
@@ -145,9 +138,7 @@ export function NurseQueueRowActions({
 
   function handleResolve() {
     setDialogError(null);
-    // Mirror the referrals-page gate: Done needs ≥1 completed clinic
-    // session (docs stay optional). The server enforces this too — this
-    // is just the friendly early message.
+
     if (row.type !== "ADM" && row.completedSessions === 0) {
       setDialogError("Finish at least one clinic session before marking this case done.");
       return;
@@ -239,8 +230,7 @@ export function NurseQueueRowActions({
               <DropdownMenuSeparator />
             </>
           )}
-          {/* ADM cases follow the consultation review pipeline — raw status
-              edits are blocked server-side, so only notes stay here. */}
+
           {isAdm && (
             <DropdownMenuItem
               disabled={notePending}

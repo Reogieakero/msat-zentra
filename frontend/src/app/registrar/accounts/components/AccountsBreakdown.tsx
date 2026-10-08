@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Donut } from "./Donut";
 import { Skeleton } from "@/components/ui/skeleton";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -6,7 +5,7 @@ import styles from "./accounts-breakdown.module.css";
 
 export type AccountBreakdown = {
   id: string;
-  label: string; // e.g. "Grade 11 · 11-A (STEM)"
+  label: string;
   withAccount: number;
   pending: number;
   noAccount?: number;

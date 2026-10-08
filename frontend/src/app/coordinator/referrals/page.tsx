@@ -25,9 +25,6 @@ function CoordinatorReferralsPageInner() {
   const openedFor = React.useRef<string | null>(null);
   const { rows, isInitialLoading, selected, setSelected } = r;
 
-  // Deep-link from the overview forwards table (?highlight=<rowId>):
-  // open the matching case file once its page loads. No-ops when the id
-  // is not on the current page so filters/pagination stay untouched.
   React.useEffect(() => {
     if (!highlight || openedFor.current === highlight) return;
     if (isInitialLoading || selected) return;
@@ -38,10 +35,6 @@ function CoordinatorReferralsPageInner() {
     }
   }, [highlight, rows, isInitialLoading, selected, setSelected]);
 
-  // Auto-ask endorsement: opening the case file on a certified-but-
-  // unforwarded case pops the forward confirm every visit until the case is
-  // endorsed. Dismissing stays dismissed for this sheet opening (the flip
-  // guard only refires on a newly selected row).
   const autoForwardEligible =
     r.selected !== null &&
     r.selected.stage === "certification" &&
@@ -85,8 +78,7 @@ function CoordinatorReferralsPageInner() {
             onHistory={r.setHistoryTarget}
             onBook={r.bookForRow}
           />
-          {/* During initial load the table skeleton below already reserves the
-              pager space, so nothing renders here (no duplicated skeleton). */}
+
           {!r.isInitialLoading && !r.referralsError ? (
             <CoordinatorReferralsPager
               total={r.total}
@@ -100,7 +92,6 @@ function CoordinatorReferralsPageInner() {
         </div>
       </div>
 
-      {/* Case file */}
       <CaseHistoryDialog
         target={r.historyTarget}
         onClose={() => r.setHistoryTarget(null)}
@@ -123,7 +114,6 @@ function CoordinatorReferralsPageInner() {
         bookPendingId={r.bookPendingId}
       />
 
-      {/* Advance confirm */}
       <CoordinatorReferralsAdvanceDialog
         target={r.advanceTarget}
         pending={r.advancePending}
@@ -131,7 +121,6 @@ function CoordinatorReferralsPageInner() {
         onConfirm={r.confirmAdvance}
       />
 
-      {/* Forward confirm */}
       <CoordinatorReferralsForwardDialog
         target={r.forwardTarget}
         pending={r.forwardPending}
@@ -139,7 +128,6 @@ function CoordinatorReferralsPageInner() {
         onConfirm={r.confirmForward}
       />
 
-      {/* Create profile */}
       <CoordinatorReferralsCreateDialog
         target={r.createTarget}
         scopeLabel={r.scopeLabel}
@@ -149,8 +137,6 @@ function CoordinatorReferralsPageInner() {
         canConfirm={r.canCreate}
       />
 
-      {/* Book parent meeting — shared booking dialog (same as nurse/guidance).
-          Modal only, never opens the case sheet. */}
       <CoordinatorReferralsBookDialog
         open={r.bookOpen}
         selected={r.bookTarget ?? r.selected}
@@ -162,7 +148,6 @@ function CoordinatorReferralsPageInner() {
         onSubmit={(fields) => r.confirmBook(fields)}
       />
 
-      {/* Record meeting outcome */}
       <CoordinatorReferralsOutcomeDialog
         target={r.outcomeTarget}
         attended={r.outcomeAttended}

@@ -19,8 +19,6 @@ const WEIGHT_ROWS = 3;
 const RECENT_ROWS = 3;
 const TABLE_ROWS = 8;
 
-/* Sidebar placeholders — same weights card, recent-assessments card, and
-   finals banner structure as WorkspaceSidebar. */
 function SidebarSkeleton() {
   return (
     <aside className={side.sidebar} aria-hidden="true">
@@ -76,9 +74,6 @@ function SidebarSkeleton() {
   );
 }
 
-/* Encode-scores placeholder — same Card shell and fixed-layout
-   Student / LRN / Score / % table (38/24/22/16) as ScoreGrid, with an
-   input-sized slot in the score column. */
 function EncodeCardSkeleton() {
   return (
     <Card className={grid.card} aria-hidden="true">
@@ -120,8 +115,6 @@ function EncodeCardSkeleton() {
   );
 }
 
-/* Full workspace placeholder mirroring the loaded class workspace:
-   back link + header, sidebar rail, and encode-scores card. */
 export function ClassWorkspaceSkeleton() {
   return (
     <section className={page.page} aria-busy="true" aria-label="Loading class workspace">

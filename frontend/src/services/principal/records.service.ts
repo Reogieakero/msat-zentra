@@ -7,11 +7,6 @@ import type {
   RecordStudent,
 } from "@/app/principal/risk/heatmaps/records/types";
 
-// Canonical backend anecdotal categories (mirror of the AnecdotalCategory enum
-// + CATEGORY_META in backend/src/modules/anecdotal/anecdotal.routes.ts).
-// Colors are the concrete per-category hexes shared with the teacher
-// anecdotal desk (CATEGORY_COLORS in teacher/anecdotal) — NOT var(--chart-N),
-// which is grayscale in this theme and rendered every folder gray.
 export const CATEGORY_META: Record<BehavioralCategory, { label: string; color: string }> = {
   behavioral: { label: "Behavioral", color: "#f59e0b" },
   bullying: { label: "Bullying", color: "#ef4444" },
@@ -36,8 +31,6 @@ export function titleCase(value: string): string {
     .join(" ");
 }
 
-// The dominant anecdotal category for a student = the category of their most
-// severe behavioral record.
 export function primaryCategory(student: RecordStudent): BehavioralCategory {
   return student.behavioral.reduce((top, rec) =>
     SEVERITY_RANK[rec.severity] > SEVERITY_RANK[top.severity] ? rec : top
@@ -48,7 +41,6 @@ export function categoryColor(student: RecordStudent): string {
   return CATEGORY_META[primaryCategory(student)].color;
 }
 
-// Shape returned by GET /api/anecdotal/records (see backend anecdotal.routes.ts).
 type RawBackendRecord = {
   id: string;
   date: string;
@@ -64,8 +56,8 @@ type RawBackendStudent = {
   lrn: string;
   name: string;
   status: string;
-  gradeLevel: string; // "G7" … "G12"
-  section: string; // e.g. "G7-A"
+  gradeLevel: string;
+  section: string;
   sectionId: string;
   behavioral: RawBackendRecord[];
 };
@@ -95,10 +87,7 @@ export function normalizeRecords(raw: {
   schoolYear: string;
   sections: RawBackendSection[];
 }): RecordDataset {
-  // The backend can list the same LRN more than once (repeat rows within or
-  // across sections). Merge duplicates so every LRN renders exactly once —
-  // otherwise React hits duplicate-key errors and the tracked/record counts
-  // inflate.
+
   const byLrn = new Map<string, RecordStudent>();
   const sections: RecordSection[] = [];
 
@@ -107,8 +96,7 @@ export function normalizeRecords(raw: {
     for (const st of section.students) {
       const existing = byLrn.get(st.lrn);
       if (existing) {
-        // Union behavioral records by id (the same incident can repeat on
-        // both rows).
+
         const ids = new Set(existing.behavioral.map((r) => r.id));
         for (const rec of st.behavioral) {
           if (!ids.has(rec.id)) {
@@ -147,9 +135,6 @@ export function normalizeRecords(raw: {
   return { schoolYear: raw.schoolYear, sections };
 }
 
-// Shared query function — both the heatblocks and the overview fetch the same
-// data and reuse the identical query key (["records-heatmap"]) so React Query
-// dedupes them into a single network request.
 export async function fetchRecords(): Promise<RecordDataset> {
   const res = await apiClient.get<{ schoolYear: string; sections: RawBackendSection[] }>(
     "/api/anecdotal/records"

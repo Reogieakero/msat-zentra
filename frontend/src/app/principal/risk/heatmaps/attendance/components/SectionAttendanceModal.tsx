@@ -81,7 +81,6 @@ export function SectionAttendanceModal({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pageIndex, setPageIndex] = React.useState(0);
 
-  // Picker mode (no section chosen yet): every section in the school.
   const sectionsQuery = useQuery({
     queryKey: ["attendance-modal-sections"],
     queryFn: async () => {
@@ -108,7 +107,6 @@ export function SectionAttendanceModal({
     staleTime: 30_000,
   });
 
-  // Reset table state whenever the drilled section changes.
   React.useEffect(() => {
     setStudentQuery("");
     setSorting([]);

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { CalendarClock, Clock, Flag, Hash, Image as ImageIcon, Send, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {

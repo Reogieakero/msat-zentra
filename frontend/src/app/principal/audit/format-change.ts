@@ -1,9 +1,7 @@
-// Human-friendly rendering of audit old/new values for non-technical readers.
 import type { AuditActionType, AuditEntry } from "@/services/principal/audit.types";
 
 type FieldMap = Record<string, string>;
 
-// snake_case / enum key -> plain label
 const FIELD_LABELS: FieldMap = {
   lock_status: "Grade lock",
   locked_by: "Locked by",
@@ -33,7 +31,6 @@ const FIELD_LABELS: FieldMap = {
   outcome_notes: "Outcome notes",
 };
 
-// enum value -> plain word
 const VALUE_LABELS: Record<string, string> = {
   unlocked: "Unlocked",
   locked: "Locked",
@@ -74,7 +71,6 @@ export type ChangeLine = {
   to: string;
 };
 
-// Build a readable list of changed fields for an entry.
 export function buildChangeLines(entry: AuditEntry): ChangeLine[] {
   const oldV = entry.oldValue ?? {};
   const newV = entry.newValue ?? {};
@@ -90,7 +86,6 @@ export function buildChangeLines(entry: AuditEntry): ChangeLine[] {
   return lines;
 }
 
-// A short, one-line plain summary of what happened.
 const ACTION_VERB: Partial<Record<AuditActionType, string>> = {
   grade_lock: "locked grades",
   grade_unlock: "unlocked grades",

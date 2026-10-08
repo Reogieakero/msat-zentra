@@ -15,19 +15,10 @@ interface CardModalProps {
   description?: React.ReactNode;
   size?: CardModalSize;
   children: React.ReactNode;
-  /* Identity for the scroll hint to re-check overflow when async content
-     swaps (e.g. loading skeleton → loaded preview). */
   watchKey?: unknown;
-  /* When false, X / overlay-click / Escape are all disabled so a
-     processing action (e.g. approving) cannot be dismissed mid-flight.
-     Defaults to true. */
   dismissable?: boolean;
 }
 
-/* Card modal — a dedicated modal card (overlay + glowing card), separate
-   from the dialog UI component. Monochrome palette only. Closes on
-   overlay click and Escape, locks body scroll while open, and moves
-   focus into the card. */
 export function CardModal({
   open,
   onClose,
@@ -41,8 +32,6 @@ export function CardModal({
   const cardRef = React.useRef<HTMLDivElement | null>(null);
   const bodyRef = React.useRef<HTMLDivElement | null>(null);
 
-  /* Fire particles across the overlay background, rising bottom → top
-     behind the card (shared FireParticles, 48 for fullscreen scale). */
   React.useEffect(() => {
     if (!open || !dismissable) return;
     const onKey = (e: KeyboardEvent) => {

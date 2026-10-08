@@ -49,8 +49,7 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
 
   const students = useMemo(() => {
     if (!options || !selectedClass) return [];
-    // Grade flags attach to registered profiles only — roster enlistments
-    // (`roster:<id>`, no account yet) are excluded.
+
     return options.students.filter((s) => s.sectionId === selectedClass.sectionId && !s.id.startsWith("roster:"));
   }, [options, selectedClass]);
 
@@ -95,8 +94,7 @@ export function RaiseFlagDialog({ open, onOpenChange, options, onRaised }: Raise
     <CardModal
       open={open}
       onClose={() => {
-        // Locked while the raise is in flight — closes only on server
-        // confirmation, never early.
+
         if (submitting) return;
         reset();
         onOpenChange(false);

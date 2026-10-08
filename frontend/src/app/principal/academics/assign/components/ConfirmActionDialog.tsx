@@ -8,15 +8,11 @@ type Props = {
   title: string;
   description: string;
   confirmLabel: string;
-  /** Red confirm button for destructive actions (e.g. Delete). */
   destructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
-// Shared confirm dialog for card actions (Remove adviser / Delete section).
-// Confirm fires the optimistic mutation and closes in the same tick —
-// toasts and rollback are owned by the mutation hook.
 export function ConfirmActionDialog({
   title,
   description,

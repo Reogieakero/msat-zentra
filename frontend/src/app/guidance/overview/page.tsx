@@ -25,8 +25,6 @@ export default function GuidanceOverviewPage() {
       staleTime: 60_000,
     });
 
-  // Saved settings hex — charts build their scale straight from it, so the
-  // donut, bars, and stacked sections always wear the counselor's primary.
   const profile = useGuidanceProfileSettings();
   const primary = profile.data?.primaryColor ?? null;
 

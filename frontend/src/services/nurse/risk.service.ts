@@ -1,6 +1,3 @@
-// Live risk lookups for the nurse desk: batched levels + factor flags per
-// referred student, and the risk-board desk fetch. Never throws — misses
-// simply render "—" / hide driver lines.
 import { apiClient } from "@/lib/api/client";
 import { pickList } from "@/lib/api/payload";
 import { isNurseScope, toQueueRow } from "./labels";
@@ -11,8 +8,6 @@ import type {
   RawReferral,
 } from "./nurse.types";
 
-// Plain words for non-technical readers — single source of truth so every
-// desk says the same thing about the same level or factor.
 export const RISK_LEVEL_WORDS: Record<NurseRiskLevel, string> = {
   High: "Needs urgent attention",
   Moderate: "Keep an eye on",
@@ -25,9 +20,6 @@ export const RISK_FACTOR_WORDS: Record<keyof NurseRiskFactors, string> = {
   Behavioral: "behavior notes",
 };
 
-// Live factor flags per referred student — same batched endpoint as levels
-// (additive `factors` map). Ids with no result stay absent. Never throws:
-// an empty map simply hides the driver lines.
 export async function fetchNurseRiskFactors(
   studentIds: string[]
 ): Promise<Record<string, NurseRiskFactors>> {
@@ -51,10 +43,6 @@ export async function fetchNurseRiskFactors(
   }
 }
 
-// Live rule-based risk level per referred student — single batched call
-// (GET /api/risk/students/batch?ids=…) replacing the old per-student N+1
-// fan-out. Falls back to per-id requests only if the batch endpoint is
-// unavailable (transitional). Ids with no result stay absent (table "—").
 export async function fetchNurseRiskLevels(
   studentIds: string[]
 ): Promise<Record<string, NurseRiskLevel>> {
@@ -73,7 +61,7 @@ export async function fetchNurseRiskLevels(
     }
     return map;
   } catch {
-    // Transitional fallback — one failure never blocks the rest.
+
     const settled = await Promise.allSettled(
       unique.map(async (id) => {
         const { data } = await apiClient.get<{ lrn: string; riskLevel: NurseRiskLevel }>(
@@ -92,17 +80,11 @@ export async function fetchNurseRiskLevels(
   }
 }
 
-/**
- * Nurse risk desk fetch — the dashboard math itself lives in the shared
- * `@/components/risk-dashboard/risk-dashboard-data` module so the nurse
- * and guidance boards stay identical.
- */
 export async function fetchNurseRisk(signal?: AbortSignal): Promise<{
   rows: NurseQueueRow[];
   referralToStudent: Record<string, string>;
 }> {
-  // Aggregate dashboard input: bounded desk fetch, defensively normalized
-  // across every payload shape the queue endpoint has served.
+
   const { data } = await apiClient.get<
     RawReferral[] | { referrals: RawReferral[] } | { data: RawReferral[]; rows: RawReferral[] }
   >("/api/referrals/?page=1&pageSize=100", { signal });

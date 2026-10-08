@@ -14,7 +14,6 @@ import {
 import { ClinicFormDropdown } from "./ClinicFormDropdown";
 import { cn } from "@/lib/utils";
 
-/* Half-hour slots across the school day, stored as "HH:MM". */
 const TIME_SLOTS: string[] = (() => {
   const slots: string[] = [];
   for (let hour = 7; hour <= 18; hour += 1) {
@@ -44,14 +43,11 @@ function parseDateInput(value: string): Date | undefined {
 interface ClinicDatePickerProps {
   id: string;
   label: string;
-  /** "YYYY-MM-DD" ("" when unset). */
   value: string;
   onChange: (value: string) => void;
-  /** Days before this "YYYY-MM-DD" are disabled (past dates). */
   min?: string;
 }
 
-/** shadcn calendar-in-popover date picker speaking "YYYY-MM-DD". */
 export function ClinicDatePicker({
   id,
   label,
@@ -103,12 +99,10 @@ export function ClinicDatePicker({
 interface ClinicTimePickerProps {
   id: string;
   label: string;
-  /** "HH:MM" 24-hour ("" when unset). */
   value: string;
   onChange: (value: string) => void;
 }
 
-/** Readable time-slot dropdown ("2:30 PM") instead of a typed time input. */
 export function ClinicTimePicker({
   id,
   label,

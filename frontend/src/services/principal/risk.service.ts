@@ -1,4 +1,3 @@
-// Principal risk-board reads + local fetch-state hooks.
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api/client";
 import type {

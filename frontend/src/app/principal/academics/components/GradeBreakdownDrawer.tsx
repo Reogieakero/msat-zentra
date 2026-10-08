@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { CardModal } from "@/components/ui/CardModal";
 import { RiskBadge } from "./RiskBadge";
 import type { StudentRow } from "@/services/principal/academics";

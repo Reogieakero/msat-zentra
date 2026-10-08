@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/* Mirrors risk/students: heatmap + StudentsListTable (20/pg, pager footer). */
 export default function PrincipalRiskStudentsLoading() {
   return (
     <section aria-label="Loading at-risk students" aria-busy="true" className="flex flex-col gap-4">

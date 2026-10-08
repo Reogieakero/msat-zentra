@@ -63,10 +63,6 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
     staleTime: 30_000,
   });
 
-  // Device preview — same fetcher + backend order as the Devices ledger
-  // (status=issued, oldest first), paging at the list size so preview and
-  // list stay comparable. Dedicated preview key suffix so it never poisons
-  // the paged list cache.
   const devicesQuery = useQuery({
     queryKey: ["coordinator-devices", "preview", "issued", "oldest", 15],
     queryFn: ({ signal }) =>
@@ -75,9 +71,6 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
     staleTime: 30_000,
   });
 
-  // Fresh forwards still at consultation — the nurse/guidance hand-off queue.
-  // Same fetcher + columns + backend order as the referrals list; preview
-  // pager matches the list size (15) so counts stay comparable.
   const forwardsQuery = useQuery({
     queryKey: ["coordinator-referrals", "preview", 1, "", "consultation", 15],
     queryFn: ({ signal }) =>
@@ -87,14 +80,13 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
   });
 
   const data = dashboardQuery.data;
-  // Page-level gate covers the dashboard only. Forwards/devices render
-  // independently below so one slow widget never blanks the KPIs.
+
   const isPending = dashboardQuery.isPending;
   const isError = dashboardQuery.isError || !data;
 
   const referredToMe = React.useMemo(() => {
     if (typeof data?.totalReferred === "number") return data.totalReferred;
-    // Fallback for a stale cached payload from before the summary fields.
+
     return countFor(
       data?.stageBreakdown,
       "consultation",
@@ -133,8 +125,6 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
     [data],
   );
 
-  // Full consultation queue — the table paginates client-side (5 per page).
-  // Array-guarded: non-array payloads (cached/error shapes) never crash it.
   const recentRows = React.useMemo(
     () => (Array.isArray(forwardsQuery.data?.rows) ? forwardsQuery.data.rows : []),
     [forwardsQuery.data],
@@ -174,8 +164,7 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
     [newReferrals, needsRevision, devicesOut],
   );
   const attentionError = devicesQuery.isError;
-  // Dashboard counts alone unlock Review; a devices failure only marks its
-  // own row unavailable instead of blocking the whole dialog.
+
   const attentionReady = data !== undefined && needsRevision !== null;
   const allClear =
     attentionReady &&
@@ -186,9 +175,6 @@ export function useCoordinatorOverview(): CoordinatorOverviewModel {
     [attention],
   );
 
-  // Server already returns the oldest-issued first; keep a client-side guard
-  // so the order holds even for a stale pre-change cached payload.
-  // Preview pages at the list size (15).
   const oldestOut = React.useMemo(() => {
     const raw = devicesQuery.data?.rows;
     const rows = Array.isArray(raw) ? raw : [];

@@ -38,8 +38,6 @@ interface Props {
 
 const PAGE_SIZE = 10;
 
-// Descriptor band → badge color (same hue ramp as the risk tables:
-// top band green, mid bands blue/amber, lowest red).
 const BAND_VARIANT: Record<string, "green" | "blue" | "amber" | "red"> = {
   Advancing: "green",
   Benchmarking: "blue",
@@ -48,9 +46,6 @@ const BAND_VARIANT: Record<string, "green" | "blue" | "amber" | "red"> = {
   Emerging: "red",
 };
 
-/* Honor awardees as a data table in the At-Risk Advisees pattern: glow-card
-   shell, title + count, search on the right, fixed-width sortable columns,
-   bordered table, pager footer. Grade tabs scope the list per grade level. */
 export function CandidateTable({
   candidates,
   grades,
@@ -61,8 +56,6 @@ export function CandidateTable({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
-  // Fixed columns only: Student, Section, General Avg, Band. No per-subject
-  // columns — the general average is the single basis of this table.
   const columns = React.useMemo<ColumnDef<HonorRollCandidate>[]>(
     () => [
       {

@@ -35,8 +35,6 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
-/* Profile card: photo (upload) + display name (edit). Persists to the
-   principal's own User + StaffProfile rows. */
 export function ProfileCard() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -50,9 +48,7 @@ export function ProfileCard() {
   const [photoSaving, setPhotoSaving] = React.useState(false);
 
   const savedName = profile.data?.fullName ?? "";
-  // Render-phase sync (not an effect): reseed the editable field whenever
-  // the server value changes. Same committed UI as the effect version,
-  // without the extra render pass.
+
   const [prevSavedName, setPrevSavedName] = React.useState(savedName);
   if (prevSavedName !== savedName) {
     setPrevSavedName(savedName);

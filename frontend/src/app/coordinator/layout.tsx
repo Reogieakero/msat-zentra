@@ -36,9 +36,7 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { allowed } = useRoleGuard(["adm_coordinator"]);
-  // Cross-user sync: another desk's decision invalidates this desk's lists
-  // without manual refresh. Single channel, cleaned up on unmount.
-  // Only subscribe once the role check passes.
+
   useCoordinatorRealtime(allowed);
   const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = React.useState("");
@@ -47,11 +45,9 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
-    // Terminate the server refresh session (clears the httpOnly cookie) —
-    // best-effort; the local wipe below runs regardless.
+
     void logout();
-    // Drop all cached queries so the next account on this device never sees
-    // the previous coordinator's student data (QueryClient outlives SPA logout).
+
     queryClient.clear();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
@@ -59,8 +55,6 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  // Block sensitive desk content until the role check passes (see guidance
-  // shell — backend stays authoritative).
   if (!allowed) {
     return (
       <div className={styles.wrapper}>
@@ -177,8 +171,7 @@ function CoordinatorShell({ children }: { children: React.ReactNode }) {
         <main className={styles.main}>{children}</main>
       </div>
       <CoordinatorPaletteGate />
-      {/* Live parent-meeting reminder: drops a top-center card when a booked
-          meeting enters the 5-minute window or runs overdue unattended. */}
+
       <BookingReminderStack desk="coordinator" />
     </div>
   );

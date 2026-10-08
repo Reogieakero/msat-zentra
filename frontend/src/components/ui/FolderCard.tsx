@@ -7,7 +7,7 @@ export interface FolderFile {
   tag: string;
   tone?: 1 | 2 | 3 | 4 | 5;
   icon?: "image" | "video" | "code" | "doc" | "chart";
-  /** Session-type color coding (guidance documentation slips). */
+
   sessionKind?: "individual" | "parent_conference" | "group" | "home_visit";
 }
 
@@ -33,12 +33,11 @@ interface FolderCardProps {
   label: string;
   sublabel?: string;
   files: FolderFile[];
-  /** Optional chip pinned to the folder's bottom-right (e.g. record type). */
+
   cornerTag?: string;
-  /** Optional folder body color (e.g. per-category). Defaults to gray. */
+
   folderColor?: string;
-  /** Optional per-slip click (e.g. open a gallery). Slips render as plain
-      divs when omitted; as buttons (with stopPropagation) when provided. */
+
   onFileClick?: (index: number) => void;
 }
 

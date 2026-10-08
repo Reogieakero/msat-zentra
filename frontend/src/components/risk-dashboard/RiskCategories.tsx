@@ -13,10 +13,6 @@ import type { CategorySlice, RiskDesk } from "./risk-dashboard-data";
 import { usePrimaryScale } from "./use-primary-scale";
 import styles from "./RiskCategories.module.css";
 
-/**
- * Desk cases grouped by report category — one bar per category. Counts
- * only; the underlying write-ups stay on their case pages.
- */
 export function RiskCategories({
   desk,
   rows,
@@ -26,16 +22,12 @@ export function RiskCategories({
   desk: RiskDesk;
   rows: CategorySlice[];
   interpretation: string;
-  /** Saved settings hex — wins over the probed runtime palette. */
   primary?: string | null;
 }) {
-  // Tooltip swatch follows the theme ink so it stays legible on the
-  // popover surface in both modes.
   const { resolvedTheme } = useTheme();
   const chartConfig = {
     count: { label: "Cases", color: resolvedTheme === "dark" ? "#fafafa" : "#171717" },
   } satisfies ChartConfig;
-  // Live primary-ink steps in rank order — bars follow user palettes.
   const shades = usePrimaryScale(Math.max(rows.length, 1), primary);
   return (
     <Card className={`${styles.panel} ${styles.glow}`}>

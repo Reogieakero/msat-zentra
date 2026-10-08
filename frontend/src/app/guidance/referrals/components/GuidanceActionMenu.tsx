@@ -13,12 +13,6 @@ import {
 import type { GuidanceReferralsSummary } from "@/services/guidance/guidance.types";
 import styles from "./GuidanceActionMenu.module.css";
 
-/* Right sidebar — separate Counseling vs ADM menus mirroring the nurse
-   desk. Each link picks one action (type + status + gates, server-side);
-   the per-track server total sits on the right. The Cancelled rows need
-   the dismissal actor (client-only), so they render only on the locked
-   full-list pages (showCancelled) — the unlocked All page has no server
-   equivalent and would show a wrong list. */
 export function GuidanceActionMenu({
   action,
   summary,

@@ -1,11 +1,5 @@
 import { apiClient } from "@/lib/api/client";
 
-/**
- * Teacher-owned folders for filed anecdotal records. Unlike chat threads
- * (local UI sessions), folders live in the database, are scoped to the
- * owning teacher, and each folder has a dedicated records page.
- */
-
 export interface RecordFolder {
   id: string;
   name: string;

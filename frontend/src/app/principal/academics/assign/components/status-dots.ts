@@ -1,10 +1,3 @@
-// Shared status-dot palette (Vercel-style).
-// 🟢 Green — Success / completed successfully
-// 🟡 Yellow — Warning / pending / attention needed
-// 🔴 Red — Error / failed
-// ⚪ Gray — Queued, inactive, or no status
-// 🔵 Blue — In progress / building / running
-
 export const DOT = {
   green: "#22c55e",
   yellow: "#eab308",

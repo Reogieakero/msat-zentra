@@ -22,11 +22,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-/**
- * Weekly line graph of ADM cases referred to guidance over the last
- * 12 weeks. Counts come from the full guidance caseload (never any page
- * filter).
- */
 export function GuidanceAdmTrend({ summary }: { summary: GuidanceAdmSummary }) {
   const weeks = summary.referralTrend ?? [];
   const total = weeks.reduce((m, w) => m + w.count, 0);

@@ -7,8 +7,7 @@ import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import styles from "./coordinator-referrals-confirm-dialogs.module.css";
 
 interface ConfirmDialogProps {
-  // Minimal shape — the queue passes full rows, the case file page passes
-  // just the student name. Both dialogs only read `student`.
+
   target: Pick<AdmCaseRow, "student"> | null;
   pending: boolean;
   onClose: () => void;
@@ -45,9 +44,7 @@ export function CoordinatorReferralsAdvanceDialog({
           disabled={pending}
           aria-busy={pending || undefined}
           onClick={() => {
-            // Hold the dialog open for the flight: success closes it via
-            // the hook clearing the target; failure leaves it open with
-            // Cancel re-enabled so the user can retry.
+
             onConfirm();
           }}
         >

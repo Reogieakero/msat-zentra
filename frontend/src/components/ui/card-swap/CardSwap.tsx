@@ -63,12 +63,6 @@ const placeNow = (el: HTMLElement, slot: Slot, skew: number) =>
     force3D: true,
   });
 
-/**
- * CardSwap — ReactBits-style stacked card deck. Cards cycle front-to-back
- * on a timer with a GSAP elastic (or linear) motion. The deck is centered
- * in its parent (margin-inline auto); give the parent a fixed height and
- * `overflow: visible` so the drop animation can play.
- */
 export function CardSwap({
   width = 500,
   height = 400,
@@ -114,7 +108,6 @@ export function CardSwap({
   const container = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    // Keep the cycling order in sync with the number of cards.
     if (order.current.length !== count) {
       order.current = Array.from({ length: count }, (_, i) => i);
     }
@@ -127,8 +120,6 @@ export function CardSwap({
       placeNow(el as HTMLElement, makeSlot(i, cardDistance, verticalDistance, count), skewAmount)
     );
 
-    // Static fanned stack when there is nothing to cycle or the user
-    // prefers reduced motion.
     if (els.length < 2 || reduced) return;
 
     const swap = () => {

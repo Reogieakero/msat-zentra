@@ -32,8 +32,6 @@ import { BookingReminderStack } from "@/components/notifications/BookingReminder
 import { useTeacherRealtime } from "@/lib/realtime/teacherChannel";
 import styles from "./record-teacher.module.css";
 
-/* Per-page breadcrumb slot inside the top navbar (left-aligned with the
-   main panel). Pages publish a memoized node; unmount clears it. */
 const TopbarCrumbContext = React.createContext<{
   setCrumb: (node: React.ReactNode) => void;
 }>({ setCrumb: () => {} });
@@ -51,11 +49,8 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { resolvedTheme, setTheme } = useTheme();
   const [query, setQuery] = React.useState("");
-  // Live adviser alerts: a sileo toast pops on the current page the moment
-  // another desk acts on their case (e.g. ADM coordinator books a parent
-  // meeting), plus their lists refresh. Single channel per mount.
+
   useTeacherRealtime();
-  // Saved workspace palette paints every teacher page (mounted below).
 
   const profile = useTeacherProfileSettings();
   const [topbarCrumb, setTopbarCrumb] = React.useState<React.ReactNode>(null);
@@ -67,14 +62,12 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
   const isDark = resolvedTheme === "dark";
 
   const handleLogout = () => {
-    // Terminate the server refresh session (clears the httpOnly cookie) —
-    // best-effort; the local wipe below runs regardless.
+
     void logout();
     Object.keys(window.localStorage)
       .filter((key) => key.startsWith("zentra."))
       .forEach((key) => window.localStorage.removeItem(key));
-    // Drop all cached teacher data so the next login can never briefly
-    // render the previous teacher's overview from the query cache.
+
     queryClient.clear();
     router.push("/login");
   };
@@ -185,8 +178,7 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
       <div className={`${styles.shell} ${styles.shellWithRail}`}>
         <main className={styles.main}>{children}</main>
       </div>
-      {/* First-login self-onboarding: asks new teachers if they advise, and
-          links their account to the principal-listed section on claim. */}
+
       <AdviserClaimGate />
       <BookingReminderStack desk="teacher" />
     </div>

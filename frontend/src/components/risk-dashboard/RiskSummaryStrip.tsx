@@ -4,11 +4,6 @@ import { Card } from "@/components/ui/card";
 import type { RiskDashboard } from "./risk-dashboard-data";
 import styles from "./RiskSummaryStrip.module.css";
 
-/**
- * One-line plain-words summary of the whole desk — students, urgent
- * attention, and the busiest section. Full-width glow strip above the
- * dashboard grid on both desks.
- */
 export function RiskSummaryStrip({ dashboard }: { dashboard: RiskDashboard }) {
   const { totalStudents, highCount, matrix, totalCases } = dashboard;
   const topSection = matrix[0] ?? null;

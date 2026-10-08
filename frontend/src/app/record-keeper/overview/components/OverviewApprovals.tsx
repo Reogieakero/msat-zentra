@@ -27,10 +27,6 @@ import { formatRelativeTime } from "../../accounts/components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/components/registry/overview/OverviewApprovals.module.css";
 
-// Same pending-students source as the Accounts page: identical column set
-// and backend order (no client re-sort), same verify-and-approve action.
-// Preview fetches only the first page (dedicated preview key so it never
-// poisons the paged list cache); page turns live on the Accounts page.
 const PAGE_SIZE = 8;
 
 async function fetchPendingStudents(signal?: AbortSignal) {
@@ -56,9 +52,6 @@ export function OverviewApprovals() {
     router.push("/record-keeper/accounts");
   }, [router]);
 
-  // Backend order (requested oldest-first) — exactly as the Accounts page
-  // renders it. No client re-sort so the two tables stay identical.
-  // Preview shows the first page only; full paging lives on Accounts.
   const pendingStudents = data?.students ?? [];
   const total = data?.total ?? pendingStudents.length;
   const pageRows = pendingStudents;
@@ -73,8 +66,7 @@ export function OverviewApprovals() {
         approve ? {} : { reason: "Rejected by record keeper" }
       ),
     onSuccess: (_data, { id, approve }) => {
-      // Self-receipt lands in our own bell (badge bumps live); suppress its
-      // echo toast — the toast below already confirmed the action.
+
       markSelfNotified(id);
       toast.success({
         title: approve ? "Approved" : "Rejected",

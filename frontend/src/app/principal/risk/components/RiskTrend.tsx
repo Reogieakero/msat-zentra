@@ -75,8 +75,7 @@ async function fetchSchools(): Promise<SchoolYearOption[]> {
 
 export function RiskTrend() {
   const gradId = React.useId().replace(/:/g, "");
-  // Session scope (Login → select → active term). The chart defaults to it;
-  // the dropdowns below are optional analytical browsing, never required.
+
   const { activeTerm } = useTerm();
 
   const [yearChoice, setYearChoice] = usePersistentState<string>(
@@ -92,7 +91,6 @@ export function RiskTrend() {
     "all"
   );
 
-  // A scope switch (top-bar badge) resets the view back to the new scope.
   const scopeKey = activeTerm ? `${activeTerm.schoolYearId}:${activeTerm.termId}` : "none";
   const [prevScopeKey, setPrevScopeKey] = React.useState(scopeKey);
   if (prevScopeKey !== scopeKey) {
@@ -136,9 +134,7 @@ export function RiskTrend() {
   const effectiveTermId = chosenTerm?.id;
 
   const { data, isPending } = useQuery({
-    // Key on the *resolved* ids (not the raw "auto" choices) so the query
-    // waits until a year/term is actually resolved and refires when the
-    // effective selection changes.
+
     queryKey: ["risk-trend", chosenYear?.id, effectiveTermId ?? "none"],
     queryFn: async () => {
       const params: Record<string, string> = {};

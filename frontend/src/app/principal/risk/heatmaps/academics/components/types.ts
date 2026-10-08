@@ -43,7 +43,6 @@ export type AttentionItem = {
   below: number;
 };
 
-/** Grade-filter sentinel for the live academic trend (all grade levels). */
 export const ALL_GRADES = "__all__";
 
 export function gradeSortKey(grade: string): number {
@@ -55,7 +54,6 @@ export function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-/** Green shades for passing, solid red only for below-75. */
 export function avgStyle(avg: number | null): React.CSSProperties {
   if (avg === null) {
     return {

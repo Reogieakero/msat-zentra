@@ -1,6 +1,3 @@
-// Shared shapes for the teacher desk overview. Pure types only — no
-// runtime imports, so UI files can `import type` without pulling in
-// fetch logic.
 export interface TeacherClassRow {
   id: string;
   subject: string;
@@ -64,10 +61,10 @@ export interface ClassStudentRow {
   lrn: string;
   sectionId: string;
   section: string;
-  /** Subject codes the teacher handles in this student's section — one row. */
+
   subjects: string[];
   riskLevel: "Low" | "Moderate" | "High";
-  /** Academic + attendance only — regular teachers record no anecdotal. */
+
   flags: ("academic" | "attendance")[];
 }
 
@@ -98,7 +95,6 @@ export interface TeacherOverviewData {
   };
 }
 
-/** Critical first-paint payload: identity, classes, advisory. No aggregations. */
 export interface TeacherOverviewCritical {
   teacherName: string;
   isAdviser: boolean;
@@ -121,7 +117,6 @@ export interface TeacherOverviewCritical {
   };
 }
 
-/** Lazy secondary payload: gradebook widgets + activity. */
 export interface TeacherOverviewSecondary {
   assessments: SubjectAssessmentRow[];
   standings: ClassAverageRow[];
@@ -130,8 +125,6 @@ export interface TeacherOverviewSecondary {
   openFlags: number;
 }
 
-/** Lean gradebook payload: classes + assessments + standings in one round
- *  trip (no risk scans, no advisory engine, no activity log). */
 export interface TeacherOverviewGradebook {
   classes: TeacherClassRow[];
   assessments: SubjectAssessmentRow[];

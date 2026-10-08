@@ -28,12 +28,6 @@ interface CertificationSheetProps {
   onCertified: () => void;
 }
 
-/**
- * ADM certification fill-up — slides in right after the parent meeting is
- * confirmed attended (no home visitation needed). Records the
- * coordinator's recommendation and moves the case into the certification
- * stage in one step.
- */
 export function CertificationSheet({
   open,
   context,
@@ -44,8 +38,6 @@ export function CertificationSheet({
   const [recommendation, setRecommendation] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fresh form every time the sheet opens for a case (derived state during
-  // render — guarded so it only fires on open/case change, never loops).
   const openKey = open && context ? context.profileId : null;
   const [prevOpenKey, setPrevOpenKey] = React.useState<string | null>(null);
   if (openKey !== prevOpenKey) {

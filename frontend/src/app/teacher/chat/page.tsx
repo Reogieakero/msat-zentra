@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { BamaChat } from "./components/BamaChat";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 
-// Chat with Bama is an adviser-only filing surface: regular subject
-// teachers get no nav item, and a direct URL bounces them back to Overview
-// once the overview confirms they advise no section.
 export default function TeacherChatPage() {
   return (
     <Suspense>

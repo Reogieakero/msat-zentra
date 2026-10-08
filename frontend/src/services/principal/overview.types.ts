@@ -1,4 +1,3 @@
-// Principal overview dashboard shapes. Pure types only.
 export interface OverviewKpis {
   enrollment: number;
   activeSections: number;

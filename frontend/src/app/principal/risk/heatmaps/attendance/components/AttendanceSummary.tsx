@@ -31,9 +31,6 @@ function trendDirection(points: TrendPoint[]): "up" | "down" | "flat" {
   return "flat";
 }
 
-/** Page header + KPI strip. Queries share cache keys with the views below
- *  (SectionAverages, SchoolTrend), so no extra network is spent — and the
- *  30s poll keeps every number live with no manual refresh. */
 export function AttendanceSummary() {
   const statsQuery = useQuery({
     queryKey: ["attendance-section-averages"],

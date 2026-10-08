@@ -22,8 +22,6 @@ function decode(token: string): Session {
   }
 }
 
-// Lightweight client-side session reader. Real enforcement stays server-side in
-// the backend; this is a scaffold stub for role-aware shells only.
 export function useSession(): Session {
   const [session] = useState<Session>(() => {
     const token = getAccessToken();

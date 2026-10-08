@@ -1,4 +1,3 @@
-// Alert feed fetch for the guidance desk.
 import { apiClient } from "@/lib/api/client";
 import type { GuidanceAlertsData, GuidanceAlertsParams } from "./alerts.types";
 

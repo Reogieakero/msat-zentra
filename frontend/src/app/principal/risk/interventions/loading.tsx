@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/* Mirrors interventions desk: header + filter row + 10-row case table. */
 export default function PrincipalInterventionsLoading() {
   return (
     <section aria-label="Loading interventions" aria-busy="true" className="flex flex-col gap-3">

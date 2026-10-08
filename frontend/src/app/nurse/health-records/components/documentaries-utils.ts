@@ -122,9 +122,6 @@ export function entryStatusVariant(
   return statusVariant(entry.row.status);
 }
 
-/* Per-student folder over finished transactions — one folder per student
-   whose cases appear here. Colors follow the dominant case type so the
-   grid reads at a glance. */
 export interface StudentHealthFolder {
   key: string;
   student: string;
@@ -143,8 +140,7 @@ export const HEALTH_FOLDER_COLORS: Record<"ADM" | "Clinic", string> = {
 };
 
 function folderIdentity(row: NurseQueueRow): { key: string; lrn: string } {
-  // Same identity rules as the overview builder: registered students key
-  // by LRN, roster enlistments fall back to name + section.
+
   const lrn = (row.lrn || "").trim();
   if (lrn && lrn !== "—") return { key: `lrn:${lrn}`, lrn };
   return {
@@ -185,12 +181,12 @@ export function groupEntriesByStudent(entries: DocEntry[]): StudentHealthFolder[
   }
   const folders = [...map.values()];
   for (const f of folders) {
-    // Newest case first inside each folder.
+
     f.entries.sort((a, b) => b.sortTime - a.sortTime || b.dateDay.localeCompare(a.dateDay));
     const adm = f.entries.filter((e) => e.row.type === "ADM").length;
     f.dominantType = adm * 2 >= f.entries.length ? "ADM" : "Clinic";
   }
-  // Most files first — the heaviest records surface on top.
+
   folders.sort((a, b) => b.fileCount - a.fileCount || b.entries.length - a.entries.length);
   return folders;
 }

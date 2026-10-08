@@ -15,8 +15,6 @@ import type { NurseQueueRow, NurseTrendPoint } from "@/services/nurse/nurse.type
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
-/* Minute-precision clock is enough (no seconds displayed) — re-renders
-   twice a minute so the waiting card stays fresh. */
 function useNowMs(intervalMs = 30_000): number {
   const [nowMs, setNowMs] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -26,8 +24,6 @@ function useNowMs(intervalMs = 30_000): number {
   return nowMs;
 }
 
-/* Daily case-load line over the trailing 14 days — referred time to now,
-   one line per case type. */
 function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
   const total = trend.reduce((n, d) => n + d.adm + d.clinic, 0);
   if (total === 0) {
@@ -96,8 +92,6 @@ function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
   );
 }
 
-/* "2d 4h 12m" / "4h 12m" / "12m" / "Just now" — days, hours, minutes
-   only, never seconds; same vocabulary as the queue's Waiting column. */
 function formatElapsedLong(ms: number): string {
   const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
   if (totalMinutes < 1) return "Just now";
@@ -111,9 +105,6 @@ function formatElapsedLong(ms: number): string {
   return parts.join(" ");
 }
 
-/* Waiting time per case — one point per waiting case, longest waiting
-   first, in hours. A line fits waiting time better than bars: it reads
-   as the queue draining from the longest wait down. */
 function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
   const nowMs = useNowMs();
 

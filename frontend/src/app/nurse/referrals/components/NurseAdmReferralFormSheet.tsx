@@ -13,8 +13,6 @@ import type {
   NurseQueueRow,
 } from "@/services/nurse/nurse.types";
 
-/* Flatten the filled form into the internal note the coordinator receives
-   with the endorsed case. */
 function referralFormOf(f: GcForm03Data): NurseAdmReferralForm {
   const checked = CONCERN_OPTIONS.filter((c) => f.concerns[c.key]);
   const concerns = checked.map((c) =>
@@ -41,12 +39,6 @@ function referralFormOf(f: GcForm03Data): NurseAdmReferralForm {
   };
 }
 
-/**
- * Nurse GCForm-03 fill-up sheet — shared fill-up UI opening in place on
- * the referrals page (no navigation), nurse wiring: confirming SAVES the
- * referral form AND endorses the case to the ADM coordinator at once,
- * pops a success toast, then closes back to the list.
- */
 export function NurseAdmReferralFormSheet({
   open,
   onClose,
@@ -78,8 +70,7 @@ export function NurseAdmReferralFormSheet({
   }
 
   function onConfirmed() {
-    // Confirmed server-side: suppress the realtime echo, bump every nurse
-    // query (notifications included) via the shared invalidator.
+
     markSelfNotified(row.id);
     invalidateNurse();
     onChanged();

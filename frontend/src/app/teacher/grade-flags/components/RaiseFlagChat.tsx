@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 import { useTerm } from "@/lib/term/TermContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -14,62 +13,24 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { ArrowUp, Bot, Check, ChevronDown, History, Loader2 } from "lucide-react";
-import {
-  REASON_LABELS,
-  type FlagReason,
-} from "@/services/teacher/gradeFlags.types";
+import { ArrowUp, Check, ChevronDown, History, Loader2 } from "lucide-react";
+import { REASON_LABELS, type FlagReason } from "@/services/teacher/gradeFlags.types";
 import {
   fetchFlagOptions,
   raiseFlag,
 } from "@/services/teacher/gradeFlags.service";
 import { sileo } from "@/components/ui/sonner";
+import {
+  CATEGORIES,
+  STORAGE_KEY,
+  loadMessages,
+  type ChatMessage,
+  type FiledDetail,
+} from "./raise-flag-chat-storage";
+import { RaiseFlagMessages } from "./raise-flag-chat-messages";
 import styles from "./RaiseFlagChat.module.css";
 
-interface FiledDetail {
-  studentName: string;
-  lrn: string;
-  section: string;
-  subject: string;
-  termNumber: number;
-  reasonLabel: string;
-  note: string;
-  owner: string;
-  filedOn: string;
-}
-
-interface ChatMessage {
-  id: number;
-  from: "assistant" | "user";
-  text: string;
-  detail?: FiledDetail;
-}
-
-const STORAGE_KEY = "zentra.grade-flags.chat";
-
 let messageId = Date.now();
-
-function loadMessages(): ChatMessage[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Drop stored confirmations saved in the old one-line shape.
-    return (parsed as ChatMessage[]).filter(
-      (m) =>
-        m &&
-        typeof m.text === "string" &&
-        (m.detail === undefined ||
-          (typeof m.detail.studentName === "string" && typeof m.detail.note === "string"))
-    );
-  } catch {
-    return [];
-  }
-}
-
-const CATEGORIES = Object.entries(REASON_LABELS) as [FlagReason, string][];
 
 export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
   const invalidateTeacher = useTeacherInvalidate();
@@ -89,8 +50,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
   const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Post-mount read on purpose: reading localStorage during render would
-    // hydrate different HTML than the server sent (server has no storage).
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages(loadMessages());
     setHydrated(true);
@@ -101,12 +61,12 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     } catch {
-      // Storage full or unavailable — chat simply won't persist.
+
     }
   }, [messages, hydrated]);
 
   useEffect(() => {
-    // Keep the latest message visible without moving the composer.
+
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
@@ -115,14 +75,12 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
     queryKey: ["grade-flags", "options", termKey],
     queryFn: fetchFlagOptions,
   });
-  // Grade flags attach to registered profiles only — roster enlistments
-  // (`roster:<id>`, no account yet) are excluded.
+
   const students = useMemo(
     () => (optionsQuery.data?.students ?? []).filter((s) => !s.id.startsWith("roster:")),
     [optionsQuery.data]
   );
-  // The class picker lists the SELECTED student's subjects (every gradebook in
-  // their section, whoever owns it) — not the teacher's own assignments.
+
   const sectionClasses = useMemo(
     () => optionsQuery.data?.sectionClasses ?? [],
     [optionsQuery.data]
@@ -223,51 +181,7 @@ export function RaiseFlagChat({ onHistory }: { onHistory: () => void }) {
     <div className={styles.chat}>
       <div className={styles.chatBody}>
         <div className={styles.messages} aria-live="polite" ref={messagesRef}>
-          {messages.map((m) =>
-            m.from === "assistant" ? (
-              <div key={m.id} className={styles.rowAssistant}>
-                <span className={styles.botAvatar} aria-hidden>
-                  <Bot className={styles.botIcon} />
-                </span>
-                {m.detail ? (
-                  <div className={styles.detailWrap}>
-                    <div className={styles.detailCard}>
-                      <div className={styles.detailHead}>
-                        <p className={styles.detailTitle}>{m.detail.studentName}</p>
-                        <Badge variant="amber">Open</Badge>
-                      </div>
-                      <p className={styles.detailSub}>
-                        {m.detail.lrn} · {m.detail.subject} · {m.detail.section} · Term{" "}
-                        {m.detail.termNumber}
-                      </p>
-                      <div className={styles.detailReasonRow}>
-                        <Badge variant="outline">{m.detail.reasonLabel}</Badge>
-                        <span className={styles.detailFiledOn}>{m.detail.filedOn}</span>
-                      </div>
-                      <p className={styles.detailNote}>&ldquo;{m.detail.note}&rdquo;</p>
-                      <dl className={styles.detailMeta}>
-                        <div className={styles.detailMetaRow}>
-                          <dt>Gradebook owner</dt>
-                          <dd>{m.detail.owner}</dd>
-                        </div>
-                        <div className={styles.detailMetaRow}>
-                          <dt>Status</dt>
-                          <dd>Open · waiting on owner</dd>
-                        </div>
-                      </dl>
-                    </div>
-                    <hr className={styles.endMark} aria-hidden />
-                  </div>
-                ) : (
-                  <p className={styles.bubbleAssistant}>{m.text}</p>
-                )}
-              </div>
-            ) : (
-              <div key={m.id} className={styles.rowUser}>
-                <p className={styles.bubbleUser}>{m.text}</p>
-              </div>
-            )
-          )}
+          <RaiseFlagMessages messages={messages} />
         </div>
 
         <div className={styles.dock}>

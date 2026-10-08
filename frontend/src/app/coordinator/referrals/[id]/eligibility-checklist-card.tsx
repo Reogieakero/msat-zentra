@@ -16,10 +16,6 @@ export interface ChecklistInput {
   hasCertification: boolean;
 }
 
-/* Mirrors backend evaluateAdmEligibility (backend/src/services/adm.ts):
-   referral + anecdotal + certification(verified) + parent engagement
-   (meeting attended OR minutes OR home-visit). Pure derivation — the
-   coordinator never types eligibility directly. */
 export function deriveChecklist(input: ChecklistInput): {
   key: string;
   label: string;
@@ -68,8 +64,7 @@ export function EligibilityChecklistCard({
   checklist: ReturnType<typeof deriveChecklist>;
   eligibilityStatus: AdmEligibility;
   compact?: boolean;
-  /** Optional step carousel — when provided, prev/next chevrons render
-      beside the card so steps change from here too. */
+
   stepIndex?: number;
   stepTotal?: number;
   onPrevStep?: () => void;

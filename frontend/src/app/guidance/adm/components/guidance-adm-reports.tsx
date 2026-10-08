@@ -28,10 +28,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
   fontSize: 12,
 };
 
-/* Primary palette — every slice is a step down from --primary so all
-   charts on this desk read as one family. Awaiting states are strongest;
-   terminal states fade toward the foreground. Shared with the insights
-   category bars. */
 export const PRIMARY_STEPS = [
   "var(--primary)",
   "color-mix(in oklch, var(--primary) 72%, var(--foreground) 28%)",
@@ -74,12 +70,6 @@ function interpretActions(actions: GuidanceAdmReportActionCount[], total: number
   return `${top.label} leads with ${top.count} of ${total} referred case${total === 1 ? "" : "s"} — ${ACTION_TAKEAWAYS[top.action] ?? ""} ${coverage}`;
 }
 
-/**
- * Referred-actions donut for the whole guidance desk (ADM + Counseling),
- * with a plain-language read of what the mix means. Counts come from every
- * case on the guidance desk (never any page filter) — same contents as the
- * nurse Referrals Report, over the guidance referrals basis.
- */
 function ReferredActions({ data }: { data: GuidanceAdmReferralsData }) {
   const { actions, total } = data;
 
@@ -147,10 +137,6 @@ function ReferredActions({ data }: { data: GuidanceAdmReferralsData }) {
   );
 }
 
-/**
- * Weekly line graph of cases referred to guidance over the last 12 weeks.
- * Counts come from every case on the guidance desk (never any page filter).
- */
 function ReferralTrend({ data }: { data: GuidanceAdmReferralsData }) {
   const weeks = data.trend;
   const total = weeks.reduce((m, w) => m + w.count, 0);
