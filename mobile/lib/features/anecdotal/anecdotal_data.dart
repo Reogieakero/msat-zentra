@@ -6,9 +6,41 @@
 // :id/export (.xlsx bytes).
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+
+// Folder body color per anecdotal category — web parity with
+// frontend/src/app/teacher/anecdotal/components/AnecdotalSideRail.tsx
+// CATEGORY_COLORS (mirrored by the folder grid, Bama cards, guidance/nurse).
+const anecdotalCategoryColors = {
+  'behavioral': Color(0xFFF59E0B),
+  'bullying': Color(0xFFEF4444),
+  'academic': Color(0xFF3B82F6),
+  'attendance': Color(0xFF22C55E),
+  'health': Color(0xFF8B5CF6),
+};
+
+const anecdotalCategoryLabels = {
+  'behavioral': 'Behavioral',
+  'bullying': 'Bullying',
+  'academic': 'Academic',
+  'attendance': 'Attendance',
+  'health': 'Health',
+};
+
+/// Web-identical lookup (case-insensitive); unknown categories fall back to
+/// neutral gray like the folder SVG default.
+Color anecdotalCategoryColor(String? category) =>
+    anecdotalCategoryColors[category?.trim().toLowerCase()] ?? const Color(0xFF8A8A8A);
+
+String anecdotalCategoryLabel(String? category) {
+  final key = category?.trim().toLowerCase();
+  if (key != null && anecdotalCategoryLabels.containsKey(key)) return anecdotalCategoryLabels[key]!;
+  if (key == null || key.isEmpty) return '—';
+  return key.split('_').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
+}
 
 class AnecdotalFolder {
   final String id;

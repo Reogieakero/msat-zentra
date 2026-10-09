@@ -24,6 +24,7 @@ class _State extends ConsumerState<AnecdotalRepoPage> {
   String _q = '';
   String? _folderId; // null = all folders
   int _page = 0;
+  bool _legendOpen = true;
 
   void _openDetail(MyAnecdotalRecord r) {
     showModalBottomSheet(
@@ -99,6 +100,53 @@ class _State extends ConsumerState<AnecdotalRepoPage> {
           );
         },
         orElse: () => const SizedBox.shrink(),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: ZCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => setState(() => _legendOpen = !_legendOpen),
+              child: Row(children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                  ),
+                  child: const Icon(Icons.info_outline, size: 20),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Legend', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('What each folder color means.', style: TextStyle(fontSize: 12)),
+                  ]),
+                ),
+                Icon(_legendOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 20),
+              ]),
+            ),
+            if (_legendOpen) ...[
+              const SizedBox(height: 8),
+              for (final key in anecdotalCategoryColors.keys)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: anecdotalCategoryColors[key]),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(anecdotalCategoryLabels[key]!, style: const TextStyle(fontSize: 13)),
+                  ]),
+                ),
+            ],
+          ]),
+        ),
       ),
       const SizedBox(height: 8),
       Expanded(
@@ -178,10 +226,15 @@ class _State extends ConsumerState<AnecdotalRepoPage> {
         itemBuilder: (context, i) {
           final records = entries[i].value..sort((a, b) => b.observationDatetime.compareTo(a.observationDatetime));
           final first = records.first;
+          final cats = {for (final r in records) r.category.trim().toLowerCase()};
+          final uniform = cats.length == 1 ? anecdotalCategoryColor(cats.first) : null;
           return ZCard(
             padding: EdgeInsets.zero,
             child: ExpansionTile(
               dense: true,
+              leading: uniform == null
+                  ? null
+                  : Container(width: 10, height: 10, decoration: BoxDecoration(shape: BoxShape.circle, color: uniform)),
               title: Text(first.studentName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               subtitle: Text('${first.lrn} · ${first.section} · ${records.length} record${records.length == 1 ? '' : 's'}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
@@ -209,12 +262,15 @@ class _RecordRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       onTap: onTap,
       child: Row(children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: theme.colorScheme.surfaceContainerLow),
-          child: const Icon(Icons.folder_outlined, size: 20),
-        ),
+        Builder(builder: (_) {
+          final c = anecdotalCategoryColor(record.category);
+          return Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: c.withValues(alpha: 0.12)),
+            child: Icon(Icons.folder_outlined, size: 20, color: c),
+          );
+        }),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -222,7 +278,8 @@ class _RecordRow extends StatelessWidget {
             Text('${record.lrn} · ${record.section}',
                 style: theme.textTheme.bodySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
             const SizedBox(height: 2),
-            Text('${record.date} · ${record.category}${record.folderName?.isNotEmpty ?? false ? ' · ${record.folderName}' : ''}',
+            Text(
+                '${record.date} · ${anecdotalCategoryLabel(record.category)}${record.folderName?.isNotEmpty ?? false ? ' · ${record.folderName}' : ''}',
                 style: theme.textTheme.bodySmall),
           ]),
         ),
