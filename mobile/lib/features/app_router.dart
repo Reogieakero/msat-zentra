@@ -15,6 +15,7 @@ import '../shared/models.dart';
 import 'adviser/academic_overview_page.dart';
 import 'adviser/adm_cases_page.dart';
 import 'adviser/advisory_list_page.dart';
+import 'anecdotal/anecdotal_repo_page.dart';
 import 'adviser/adviser_schedule_page.dart';
 import 'adviser/student_detail_page.dart';
 import 'auth/first_time_gate.dart';
@@ -59,6 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/adviser/advisory', builder: (context, _) => const AdviserShell(selected: AdviserRoute.advisory, child: AdvisoryListPage())),
       GoRoute(path: '/adviser/academic', builder: (context, _) => const AdviserShell(selected: AdviserRoute.academic, child: AcademicOverviewPage())),
       GoRoute(path: '/adviser/adm-cases', builder: (context, _) => const AdviserShell(selected: AdviserRoute.admCases, child: AdmCasesPage())),
+      GoRoute(path: '/adviser/anecdotal', builder: (context, _) => const AdviserShell(selected: AdviserRoute.anecdotal, child: AnecdotalRepoPage())),
       GoRoute(path: '/adviser/schedule', builder: (context, _) => const AdviserShell(selected: AdviserRoute.schedule, child: AdviserSchedulePage())),
       GoRoute(
         path: '/adviser/bama',

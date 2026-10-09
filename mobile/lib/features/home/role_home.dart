@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import '../../design/shell.dart';
 import '../settings/settings_page.dart' show SettingsPage;
 
-enum AdviserRoute { advisory, academic, admCases, schedule, bama, referrals }
+enum AdviserRoute { advisory, academic, admCases, anecdotal, schedule, bama, referrals }
 
 enum WorkspaceRoute { classes, gradebook, attendance, more }
 
