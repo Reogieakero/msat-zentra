@@ -8,8 +8,25 @@ import type { GuidanceRiskFactorRow, GuidanceRiskHeatmap } from "./risk.types";
 export async function fetchGuidanceRiskLevels(
   studentIds: string[]
 ): Promise<Record<string, GuidanceRiskLevel>> {
-  const unique = [...new Set(studentIds.filter(Boolean))];
+  // Bound to one page (15). Prefer the batch endpoint to avoid N+1 per-student
+  // requests; fall back to bounded per-id fetch only for small sets.
+  const unique = [...new Set(studentIds.filter(Boolean))].slice(0, 15);
   if (unique.length === 0) return {};
+  try {
+    const { data } = await apiClient.get<{ levels: Record<string, string> }>(
+      "/api/risk/students/batch",
+      { params: { ids: unique.join(",") } },
+    );
+    const map: Record<string, GuidanceRiskLevel> = {};
+    for (const [id, level] of Object.entries(data?.levels ?? {})) {
+      if (level === "High" || level === "Moderate" || level === "Low") {
+        map[id] = level;
+      }
+    }
+    if (Object.keys(map).length > 0) return map;
+  } catch {
+    // Fall through to bounded per-id fallback below.
+  }
   const settled = await Promise.allSettled(
     unique.map(async (id) => {
       const { data } = await apiClient.get<{ lrn: string; riskLevel: GuidanceRiskLevel }>(
@@ -33,7 +50,8 @@ export async function fetchGuidanceRiskLevels(
   return map;
 }
 
-const ALERTS_PAGE_SIZE = 100;
+// Strict 15/page ceiling (was 100×10=1000 rows max).
+const ALERTS_PAGE_SIZE = 15;
 const MAX_ALERT_PAGES = 10;
 
 async function fetchAllAlerts(): Promise<{

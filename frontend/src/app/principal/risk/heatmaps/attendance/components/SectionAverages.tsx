@@ -16,9 +16,13 @@ import {
 import {
   ArrowDownRight,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   Minus,
 } from "lucide-react";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, Users } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { apiClient } from "@/lib/api/client";
 import {
   Card,
@@ -80,7 +84,13 @@ export function SectionAverages({
     refetchOnWindowFocus: false,
   });
   const sections = React.useMemo(
-    () => [...(data?.sections ?? [])].sort((a, b) => a.rate - b.rate),
+    () =>
+      [...(data?.sections ?? [])].sort((a, b) => {
+        const ga = Number(String(a.gradeLevel).replace(/\D/g, "")) || 0;
+        const gb = Number(String(b.gradeLevel).replace(/\D/g, "")) || 0;
+        if (ga !== gb) return ga - gb;
+        return a.section.localeCompare(b.section);
+      }),
     [data]
   );
   const below = sections.filter((s) => s.rate < 80).length;
@@ -205,9 +215,35 @@ export function SectionAverages({
 
   const rows = table.getRowModel().rows;
 
+  const pageCount = table.getPageCount();
+  const pageIdx = table.getState().pagination.pageIndex;
+  const filteredCount = table.getFilteredRowModel().rows.length;
+  const start = filteredCount === 0 ? 0 : pageIdx * PAGE_SIZE + 1;
+  const end = Math.min((pageIdx + 1) * PAGE_SIZE, filteredCount);
+
+  const isEmpty = !isPending && sections.length === 0;
+  if (isEmpty) {
+    return (
+      <Card className="relative">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <CardContent className="relative flex flex-col gap-4">
+          <PrincipalEmptyState
+            icon={Users}
+            title="No section data available"
+            hint="No attendance data for sections in the active term. Records will appear here once school days elapse."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
   return (
-    <Card>
-      <CardHeader>
+    <Card className="relative">
+      <span className={assign.glowClip} aria-hidden="true">
+        <span className={assign.cardGlow} />
+      </span>
+      <CardHeader className="relative">
         <div>
           <CardTitle>Section Averages</CardTitle>
           <CardDescription>
@@ -233,7 +269,7 @@ export function SectionAverages({
         </CardAction>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="relative flex flex-col gap-4">
       {isPending ? (
         <div className={styles.kpis}>
           {Array.from({ length: 4 }).map((_, i) => (
@@ -264,7 +300,11 @@ export function SectionAverages({
       {isPending ? (
         <Skeleton className={styles.skelTable} />
       ) : sections.length === 0 ? (
-        <p className={styles.empty}>No section data available.</p>
+        <PrincipalEmptyState
+          icon={Users}
+          title="No section data available"
+          hint="No attendance data for sections in the active term. Records will appear here once school days elapse."
+        />
       ) : (
         <>
           <div className="relative overflow-x-auto rounded-md border">
@@ -340,29 +380,32 @@ export function SectionAverages({
               </TableBody>
             </Table>
           </div>
-          <div className="relative flex items-center justify-end space-x-2">
-            <div className="text-muted-foreground flex-1 text-sm">
-              {table.getFilteredRowModel().rows.length} section
-              {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
-            </div>
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+          <div className="relative flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-[0.8125rem] tabular-nums" aria-live="polite">
+              {filteredCount > 0 ? `${start}–${end} of ${filteredCount} · Page ${pageIdx + 1} of ${Math.max(pageCount, 1)}` : "0 of 0"}
+            </p>
+            {pageCount > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeft aria-hidden />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                  <ChevronRight aria-hidden />
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import {
   Dialog,
   DialogContent,
@@ -57,26 +57,11 @@ export function NurseDocumentariesList({ alerts }: { alerts: NurseAlertItem[] })
 
   if (folders.length === 0) {
     return (
-      <div className={styles.emptyWrap}>
-        <section
-          className={`${assign.card} ${styles.emptyCard}`}
-          aria-label="No health records"
-        >
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className={`${styles.empty} relative`}>
-            <span className={styles.emptyIcon} aria-hidden="true">
-              <FolderOpen />
-            </span>
-            <p className={styles.emptyTitle}>No files stored yet</p>
-            <p className={styles.emptyHint}>
-              Finished clinic sessions and resolved cases will appear here,
-              one folder per student.
-            </p>
-          </div>
-        </section>
-      </div>
+      <NurseEmptyState
+        icon={FolderOpen}
+        title="No files stored yet"
+        hint="Finished clinic sessions and resolved cases will appear here, one folder per student."
+      />
     );
   }
 

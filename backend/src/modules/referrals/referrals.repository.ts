@@ -1,8 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/errors.js";
+import { MAX_PAGE_SIZE, PAGE_SIZE, resolvePaging } from "../../lib/pagination.js";
 
-export const NURSE_QUEUE_PAGE_SIZE = 15;
-export const NURSE_QUEUE_MAX_PAGE_SIZE = 100;
+export const NURSE_QUEUE_PAGE_SIZE = PAGE_SIZE;
+export const NURSE_QUEUE_MAX_PAGE_SIZE = MAX_PAGE_SIZE;
 
 export const NURSE_CACHE_TAGS = [
   "nurse",
@@ -15,11 +16,7 @@ export const NURSE_CACHE_TAGS = [
 ] as const;
 
 export function resolveQueuePageSize(req: { query: unknown }): number {
-  const q = req.query as Record<string, unknown>;
-  const raw =
-    typeof q.pageSize !== "undefined" ? Number(q.pageSize) : Number(q.limit);
-  if (!Number.isFinite(raw) || raw <= 0) return NURSE_QUEUE_PAGE_SIZE;
-  return Math.min(Math.floor(raw), NURSE_QUEUE_MAX_PAGE_SIZE);
+  return resolvePaging(req.query, { maxPageSize: NURSE_QUEUE_MAX_PAGE_SIZE }).pageSize;
 }
 
 export const REFERRAL_WRITE_TAGS = [

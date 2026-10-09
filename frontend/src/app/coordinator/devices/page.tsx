@@ -9,6 +9,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Loader2, TabletSmartphone } from "lucide-react";
+import { CoordinatorEmptyCard } from "../components/CoordinatorEmptyCard";
+import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
@@ -77,7 +80,7 @@ function CoordinatorDevicesPageInner() {
   const needsQuery = useQuery({
     queryKey: ["coordinator-devices", "preview", "needs-device"],
     queryFn: ({ signal }) =>
-      fetchCoordinatorApprovals(1, { limit: 200, signal }),
+      fetchCoordinatorApprovals(1, { limit: 15, signal }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
@@ -149,22 +152,41 @@ function CoordinatorDevicesPageInner() {
     !hasActiveFilters;
 
   return (
-    <section className={pageStyles.page}>
+    <section
+      className={ledgerTrulyEmpty ? `${pageStyles.page} ${pageStyles.pageEmpty}` : pageStyles.page}
+      aria-label="Learning devices"
+      aria-busy={devicesQuery.isPending || undefined}
+    >
+      {devicesQuery.isPending ? (
+        <PageHeaderSkeleton withActions />
+      ) : ledgerTrulyEmpty ? null : (
+        <CoordinatorPageHeader
+          title="Learning Devices"
+          description="Tablets issued to ADM learners — issue new devices and record returns."
+          actions={
+            showNeeds ? (
+              <Button onClick={() => setIssueOpen(true)}>Issue device</Button>
+            ) : undefined
+          }
+        />
+      )}
       {ledgerTrulyEmpty ? (
-        <div className={pageStyles.centerEmpty}>
-          {showNeeds ? (
-            <p className={pageStyles.needsMessage}>
-              <TabletSmartphone aria-hidden="true" />
-              {needsCountText}
-            </p>
-          ) : null}
-          <p className={pageStyles.emptyHint}>No devices issued yet.</p>
-          {showNeeds ? (
-            <Button onClick={() => setIssueOpen(true)}>
-              Issue device
-            </Button>
-          ) : null}
-        </div>
+        <CoordinatorEmptyCard
+          icon={TabletSmartphone}
+          title="No devices issued yet"
+          hint={
+            showNeeds
+              ? needsCountText
+              : "Devices you issue to principal-approved cases will appear here."
+          }
+          label="Learning devices"
+          action={
+            showNeeds ? (
+              <Button onClick={() => setIssueOpen(true)}>Issue device</Button>
+            ) : undefined
+          }
+          centered
+        />
       ) : (
         <>
           {showNeeds ? (

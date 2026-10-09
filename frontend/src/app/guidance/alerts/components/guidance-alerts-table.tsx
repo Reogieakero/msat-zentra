@@ -1,10 +1,13 @@
 "use client";
 import * as React from "react";
 import {
+  BellRing,
   ChevronDown,
   Search,
+  SearchX,
   X,
 } from "lucide-react";
+import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -163,9 +166,17 @@ export function GuidanceAlertsTable({
       </div>
       <div className={styles.tableBody}>
         {!hasRows ? (
-          <p className={styles.empty}>No referred cases — nothing needs your attention right now.</p>
+          <GuidanceEmptyState
+            icon={BellRing}
+            title="No referred cases"
+            hint="No referred cases — nothing needs your attention right now."
+          />
         ) : filtered.length === 0 ? (
-          <p className={styles.empty}>No cases match your search and filters.</p>
+          <GuidanceEmptyState
+            icon={SearchX}
+            title="No cases match your search"
+            hint="Try a different name or keyword, or clear the search and filters."
+          />
         ) : (
           <div className={styles.tableWrap}>
             <Table aria-label="Cases on the guidance desk">
@@ -194,29 +205,31 @@ export function GuidanceAlertsTable({
             </Table>
           </div>
         )}
-        <div className={styles.pager}>
-          <p className={styles.range}>
-            {total} case{total === 1 ? "" : "s"}
-          </p>
-          <div className={styles.pagerButtons}>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
+        {totalPages > 1 && (
+          <div className={styles.pager}>
+            <p className={styles.range}>
+              {total} case{total === 1 ? "" : "s"}
+            </p>
+            <div className={styles.pagerButtons}>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={safePage >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

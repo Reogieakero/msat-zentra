@@ -75,6 +75,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const totalPages = Math.max(1, casesQuery.data?.totalPages ?? 1);
   const safePage = Math.min(casesQuery.data?.page ?? page, totalPages);
   const pageRows = cases;
+  const isEmpty = !casesQuery.isPending && !casesQuery.isError && total === 0;
 
   function handleTrack(caseData: AdmCase) {
 
@@ -84,15 +85,17 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-label="ADM cases">
       <div className={styles.body}>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">ADM Cases</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {total === 1 ? "1 referred case" : `${total} referred cases`}
-            {unfilteredTotal !== total ? ` (of ${unfilteredTotal} total)` : ""}.
-          </p>
-        </div>
+        {isEmpty ? null : (
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">ADM Cases</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {total === 1 ? "1 referred case" : `${total} referred cases`}
+              {unfilteredTotal !== total ? ` (of ${unfilteredTotal} total)` : ""}.
+            </p>
+          </div>
+        )}
 
         {casesQuery.isPending ? (
           <div style={GRID_STYLE} aria-busy="true" aria-label="Loading ADM cases">
@@ -123,12 +126,12 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
             school office.
           </p>
         ) : total === 0 ? (
-          <div className="flex min-h-[60vh] flex-1 flex-col items-center justify-center">
-            <div className={`${assign.card} mx-auto w-full max-w-md`}>
+          <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+            <div className={`${assign.card} w-full max-w-md`}>
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
               </span>
-              <div className="relative flex flex-col items-center gap-2 py-8 text-center">
+              <div className="relative flex flex-col items-center gap-2 py-6 text-center">
                 <span
                   className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
                   aria-hidden="true"

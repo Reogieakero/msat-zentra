@@ -6,6 +6,7 @@ import { Activity, TrendingUp, TriangleAlert, Users } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PrincipalPageHeader } from "../../../../components/PrincipalPageHeader";
+import { PageHeaderSkeleton } from "../../../../components/skeletons/PageHeaderSkeleton";
 import styles from "./attendance.module.css";
 
 interface SectionStat {
@@ -81,12 +82,17 @@ export function AttendanceSummary() {
         ? "Slipping"
         : "Steady";
 
+  const isEmpty = !loading && sections.length === 0 && atRisk === 0 && enrolled === 0;
   return (
     <>
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : isEmpty ? null : (
       <PrincipalPageHeader
         title="Attendance Heatmap"
         description="School-wide daily attendance — a student counts present for a day only when present in every subject offered that day. Sections and students under 80% need attention."
       />
+      )}
       {loading ? (
         <div className={styles.kpiGrid} aria-hidden>
           {Array.from({ length: 4 }).map((_, i) => (

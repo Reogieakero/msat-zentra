@@ -21,8 +21,8 @@ const SCALE = ["var(--hm-0)", "var(--hm-1)", "var(--hm-2)", "var(--hm-3)", "var(
 
 type Selection = { sectionId: string; section: string; factor: RiskFactor } | null;
 
-export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" | "final" }) {
-  const { data, loading, error } = useRiskHeatmap(gradeMode);
+export function RiskFactorHeatmap() {
+  const { data, loading, error } = useRiskHeatmap();
   const [selected, setSelected] = React.useState<Selection>(null);
   const [visible, setVisible] = React.useState(false);
   const [students, setStudents] = React.useState<HeatmapStudent[]>([]);
@@ -51,7 +51,7 @@ export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" |
     queueMicrotask(() => {
       if (!cancelled) setLoadingStudents(true);
     });
-    fetchSectionFactorStudents(selected.sectionId, selected.factor, data.termId, gradeMode)
+    fetchSectionFactorStudents(selected.sectionId, selected.factor, data.termId)
       .then((res) => {
         if (!cancelled) setStudents(res);
       })
@@ -65,7 +65,7 @@ export function RiskFactorHeatmap({ gradeMode = "final" }: { gradeMode?: "raw" |
     return () => {
       cancelled = true;
     };
-  }, [selected, data?.termId, gradeMode]);
+  }, [selected, data?.termId]);
 
   const sections = data?.sections ?? [];
   const factorTotals = data?.factorTotals;

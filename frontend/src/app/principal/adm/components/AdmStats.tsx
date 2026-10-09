@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchAdmDashboard } from "@/services/principal/adm.service";
+import { useTerm } from "@/lib/term/TermContext";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./AdmStats.module.css";
 
 const STATS = [
@@ -28,9 +30,13 @@ const STATS = [
 ] as const;
 
 export function AdmStats() {
+  const { termReady } = useTerm();
   const { data, isPending } = useQuery({
     queryKey: ["adm-dashboard"],
     queryFn: ({ signal }) => fetchAdmDashboard(signal),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    enabled: termReady,
   });
 
   const getStatValue = (key: string) => {
@@ -43,16 +49,26 @@ export function AdmStats() {
   };
 
   return (
-    <section className={styles.section}>
+    <section className={styles.section} aria-busy={isPending || undefined}>
       <div className={styles.grid}>
         {STATS.map((stat) => (
           <div key={stat.key} className={styles.stat}>
             <span className={styles.glowClip} aria-hidden="true">
               <span className={styles.cardGlow} />
             </span>
+            {isPending ? (
+              <>
+                <Skeleton className="h-8 w-16" aria-hidden="true" />
+                <Skeleton className="h-4 w-24" aria-hidden="true" />
+                <Skeleton className="h-3 w-full" aria-hidden="true" />
+              </>
+            ) : (
+              <>
             <span className={styles.value}>{getStatValue(stat.key)}</span>
             <span className={styles.label}>{stat.label}</span>
             <p className={styles.description}>{stat.description}</p>
+              </>
+            )}
           </div>
         ))}
       </div>

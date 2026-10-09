@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-table";
 import {
   Bell,
+  BellRing,
   CalendarClock,
   CalendarPlus,
   Check,
@@ -24,9 +25,11 @@ import {
   Flag,
   Hourglass,
   SearchIcon,
+  SearchX,
   Send,
   X,
 } from "lucide-react";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import { Badge } from "@/components/ui/badge";
 import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
 import { Button } from "@/components/ui/button";
@@ -521,13 +524,17 @@ export function NurseReferralsTable({
         )}
       </div>
       {alerts.length === 0 ? (
-        <p className={`${styles.empty} relative`}>
-          No referred cases — nothing needs your attention right now.
-        </p>
+        <NurseEmptyState
+          icon={BellRing}
+          title="No referred cases"
+          hint="No referred cases — nothing needs your attention right now."
+        />
       ) : filtered.length === 0 ? (
-        <p className={`${styles.empty} relative`}>
-          No cases match your search and filters.
-        </p>
+        <NurseEmptyState
+          icon={SearchX}
+          title="No cases match your search"
+          hint="Try a different name or keyword, or clear the search and filters."
+        />
       ) : (
         <div className="relative overflow-x-auto rounded-md border">
           <Table
@@ -603,40 +610,42 @@ export function NurseReferralsTable({
             </>
           )}
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              serverPaged && onPageChange && page !== undefined
-                ? onPageChange(Math.max(1, page - 1))
-                : table.previousPage()
-            }
-            disabled={
-              serverPaged && page !== undefined
-                ? page <= 1
-                : !table.getCanPreviousPage()
-            }
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              serverPaged && onPageChange && page !== undefined
-                ? onPageChange(page + 1)
-                : table.nextPage()
-            }
-            disabled={
-              serverPaged && page !== undefined && totalPages !== undefined
-                ? page >= totalPages
-                : !table.getCanNextPage()
-            }
-          >
-            Next
-          </Button>
-        </div>
+        {(serverPaged ? (totalPages ?? 1) > 1 : table.getPageCount() > 1) && (
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                serverPaged && onPageChange && page !== undefined
+                  ? onPageChange(Math.max(1, page - 1))
+                  : table.previousPage()
+              }
+              disabled={
+                serverPaged && page !== undefined
+                  ? page <= 1
+                  : !table.getCanPreviousPage()
+              }
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                serverPaged && onPageChange && page !== undefined
+                  ? onPageChange(page + 1)
+                  : table.nextPage()
+              }
+              disabled={
+                serverPaged && page !== undefined && totalPages !== undefined
+                  ? page >= totalPages
+                  : !table.getCanNextPage()
+              }
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

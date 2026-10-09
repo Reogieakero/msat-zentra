@@ -15,7 +15,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, CalendarDays } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
+import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { apiClient } from "@/lib/api/client";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
 import {
@@ -273,9 +275,29 @@ export function SchoolTrend() {
   const bodyLines =
     statusLine && interpretation.length > 1 ? interpretation.slice(0, -1) : interpretation;
 
+  const isEmpty = !isPending && (chartData.length === 0 || series.length === 0);
+  if (isEmpty) {
+    return (
+      <Card className="relative">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <CardContent className="relative flex flex-col gap-4 px-4">
+          <PrincipalEmptyState
+            icon={CalendarDays}
+            title="No trend data yet"
+            hint="No trend data yet — blocks appear once school days elapse."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
   return (
-      <Card>
-        <CardHeader>
+      <Card className="relative">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <CardHeader className="relative">
           <div>
             <CardTitle>
               {mode === "subject" ? "Subject Trends" : "Grade Trends"}
@@ -303,7 +325,7 @@ export function SchoolTrend() {
             </div>
           </CardAction>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 px-4">
+        <CardContent className="relative flex flex-col gap-4 px-4">
           {isPending ? (
             <>
               <Skeleton className={styles.skelChart} />
@@ -311,9 +333,11 @@ export function SchoolTrend() {
               <Skeleton className={styles.skelLineShort} />
             </>
           ) : chartData.length === 0 || series.length === 0 ? (
-            <p className={styles.empty}>
-              No trend data yet — blocks appear once school days elapse.
-            </p>
+            <PrincipalEmptyState
+              icon={CalendarDays}
+              title="No trend data yet"
+              hint="No trend data yet — blocks appear once school days elapse."
+            />
           ) : (
             <>
               <div className={styles.chartWrap}>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, TabletSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { formatElapsedShort, msSinceDate } from "@/lib/clock";
 import type { AdmDeviceRow } from "@/services/coordinator/coordinator.types";
+import { CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
 import styles from "./coordinator-overview-devices.module.css";
 
 interface CoordinatorOverviewDevicesProps {
@@ -60,26 +61,29 @@ export function CoordinatorOverviewDevices({
   now,
   onRetry,
 }: CoordinatorOverviewDevicesProps) {
+  const isEmpty = !isPending && !isError && oldestOut.length === 0;
   return (
     <Card className={styles.card}>
       <span className={styles.glowClip} aria-hidden="true">
         <span className={styles.cardGlow} />
       </span>
-      <CardHeader>
-        <div className={styles.headerRow}>
-          <div>
-            <CardTitle className={styles.sectionTitle}>Learning devices</CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              {hasData
-                ? `${issued} still out · ${returned} returned.`
-                : "Tablet issuance and return ledger."}
-            </CardDescription>
+      {!isEmpty && (
+        <CardHeader>
+          <div className={styles.headerRow}>
+            <div>
+              <CardTitle className={styles.sectionTitle}>Learning devices</CardTitle>
+              <CardDescription className={styles.sectionDesc}>
+                {hasData
+                  ? `${issued} still out · ${returned} returned.`
+                  : "Tablet issuance and return ledger."}
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/coordinator/devices">See all</Link>
+            </Button>
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/coordinator/devices">See all</Link>
-          </Button>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      )}
       <CardContent className={styles.body}>
         {isPending ? (
           <div className={styles.tableWrap} aria-busy="true">
@@ -113,12 +117,11 @@ export function CoordinatorOverviewDevices({
             </Button>
           </div>
         ) : oldestOut.length === 0 ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>No tablets currently issued</p>
-            <p className={styles.emptyHint}>
-              Newly issued tablets will appear here, longest-out first.
-            </p>
-          </div>
+          <CoordinatorEmptyState
+            icon={TabletSmartphone}
+            title="No tablets currently issued"
+            hint="Newly issued tablets will appear here, longest-out first."
+          />
         ) : (
           <div className={styles.tableWrap}>
             <Table aria-label="Longest-outstanding tablets">
@@ -164,7 +167,7 @@ export function CoordinatorOverviewDevices({
             </Table>
           </div>
         )}
-        {!isPending && !isError ? (
+        {!isPending && !isError && !isEmpty ? (
           <p className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
             {buildInterpretation(oldestOut, issued, now)}

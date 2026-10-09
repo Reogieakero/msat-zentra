@@ -22,6 +22,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Sf10UploadPanel } from "@/components/registry/sf10/Sf10UploadPanel";
+import { RecordKeeperEmptyState } from "@/app/record-keeper/components/RecordKeeperEmptyCard";
+import { RecordKeeperPageHeader } from "@/app/record-keeper/components/RecordKeeperPageHeader";
+import { RegistrarEmptyState } from "@/app/registrar/components/RegistrarEmptyCard";
+import { RegistrarPageHeader } from "@/app/registrar/components/RegistrarPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { Sf10DetailSheet as RegistrarDetailSheet } from "@/app/registrar/sf10/components/Sf10DetailSheet";
 import { Sf10DetailSheet as RecordKeeperDetailSheet } from "@/app/record-keeper/sf10/components/Sf10DetailSheet";
 import { StatusBadge, formatRelativeTime } from "@/components/registry/sf10/shared";
@@ -104,6 +109,10 @@ export function Sf10Page({
     });
   };
   const DetailSheet = desk === "registrar" ? RegistrarDetailSheet : RecordKeeperDetailSheet;
+  const EmptyState = desk === "registrar" ? RegistrarEmptyState : RecordKeeperEmptyState;
+  const DeskPageHeader = desk === "registrar" ? RegistrarPageHeader : RecordKeeperPageHeader;
+  const headerTitle = "SF10 Records";
+  const headerDescription = `Learner SF10 files for grades ${gradeRange} — validated, attached, and released.`;
   if (!isPending && !isError && counts.total === 0) {
     return (
       <section className={styles.page}>
@@ -114,15 +123,11 @@ export function Sf10Page({
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
               </span>
-              <div className={`${styles.empty} relative`}>
-                <span className={styles.emptyIcon} aria-hidden="true">
-                  <FolderOpen />
-                </span>
-                <p className={styles.emptyTitle}>No SF10 records yet</p>
-                <p className={styles.emptyHint}>
-                  Upload a file above to attach the first SF10 record for grades {gradeRange}.
-                </p>
-              </div>
+              <EmptyState
+                icon={FolderOpen}
+                title="No SF10 records yet"
+                hint={`Upload a file above to attach the first SF10 record for grades ${gradeRange}.`}
+              />
             </section>
           </div>
         </div>
@@ -132,6 +137,11 @@ export function Sf10Page({
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
+        {isPending ? (
+          <PageHeaderSkeleton />
+        ) : (
+          <DeskPageHeader title={headerTitle} description={headerDescription} />
+        )}
         <section className={assign.card} aria-label="SF10 summary">
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
@@ -269,15 +279,11 @@ export function Sf10Page({
             ) : isError ? (
               <p className={styles.empty}>Could not load SF10 records.</p>
             ) : filtering && pageRows.length === 0 ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <SearchX />
-                </span>
-                <p className={styles.emptyTitle}>No matching records</p>
-                <p className={styles.emptyHint}>
-                  No SF10 records match the current search or filter.
-                </p>
-              </div>
+              <EmptyState
+                icon={SearchX}
+                title="No matching records"
+                hint="No SF10 records match the current search or filter."
+              />
             ) : (
               <div className={styles.tableWrap}>
                 <Table>
@@ -343,7 +349,7 @@ export function Sf10Page({
               </div>
             )}
           </div>
-          {filteredTotal > 0 && (
+          {filteredTotal > pageSize && (
             <div className={`${styles.footer} relative`}>
               <p className={styles.footerInfo}>
                 Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}

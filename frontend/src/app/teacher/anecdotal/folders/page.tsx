@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
@@ -8,6 +8,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/FolderCard";
+import { PAGE_SIZE, ZentraPagination } from "@/components/shared/pagination";
 import {
   fetchMyRecords,
   type MyAnecdotalRecord,
@@ -81,6 +82,12 @@ export default function AnecdotalFoldersPage() {
     [recordsQuery.data]
   );
 
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStudents = students.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <section className={styles.page}>
       <Button type="button" variant="ghost" size="sm" asChild className={styles.backBtn}>
@@ -116,28 +123,31 @@ export default function AnecdotalFoldersPage() {
           No filed records yet — file the first GCForm-01 from the chat.
         </p>
       ) : (
-        <div className={styles.studentGrid}>
-          {students.map((s) => (
-            <Link
-              key={s.studentId}
-              href={`/teacher/anecdotal/folders/student/${s.studentId}`}
-              className={styles.studentLink}
-              aria-label={`Open ${s.studentName}'s record folder (${s.records.length} records)`}
-            >
-              <FolderCard
-                label={s.studentName}
-                sublabel={`${s.lrn} · ${s.section}`}
-                files={[...s.records]
-                  .sort((a, b) => (a.observationDatetime < b.observationDatetime ? 1 : -1))
-                  .map((r) => ({
-                    name: `OCForm-01_${r.observationDatetime.slice(0, 10)}`,
-                    tag: `${humanize(r.category)} • ${timeAgo(r.observationDatetime)}`,
-                    icon: "doc" as const,
-                  }))}
-              />
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className={styles.studentGrid}>
+            {pageStudents.map((s) => (
+              <Link
+                key={s.studentId}
+                href={`/teacher/anecdotal/folders/student/${s.studentId}`}
+                className={styles.studentLink}
+                aria-label={`Open ${s.studentName}'s record folder (${s.records.length} records)`}
+              >
+                <FolderCard
+                  label={s.studentName}
+                  sublabel={`${s.lrn} · ${s.section}`}
+                  files={[...s.records]
+                    .sort((a, b) => (a.observationDatetime < b.observationDatetime ? 1 : -1))
+                    .map((r) => ({
+                      name: `OCForm-01_${r.observationDatetime.slice(0, 10)}`,
+                      tag: `${humanize(r.category)} • ${timeAgo(r.observationDatetime)}`,
+                      icon: "doc" as const,
+                    }))}
+                />
+              </Link>
+            ))}
+          </div>
+          <ZentraPagination currentPage={safePage} totalItems={students.length} onPageChange={setPage} />
+        </>
       )}
     </section>
   );

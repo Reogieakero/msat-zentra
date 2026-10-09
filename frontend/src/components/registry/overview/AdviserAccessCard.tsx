@@ -19,22 +19,25 @@ export function AdviserAccessCard({ desk }: { desk: RegistryDesk }) {
   });
 
   const pending = data?.pendingAdviserAccess ?? 0;
+  const isEmpty = !isPending && !isError && pending === 0;
 
   return (
-    <section className={assign.card} aria-labelledby="overview-adviser-access">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-adviser-access"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-adviser-access" className="text-base font-semibold">
-            Adviser Access Requests
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Adviser SF10 read-access requests waiting for your decision.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-adviser-access" className="text-base font-semibold">
+              Adviser Access Requests
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Adviser SF10 read-access requests waiting for your decision.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       <div className={`${styles.body} relative`}>
         {isPending ? (
           <Skeleton className={styles.skelCount} />

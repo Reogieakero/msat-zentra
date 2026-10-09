@@ -42,6 +42,25 @@ const OCCUPATIONS = ["Teacher", "Engineer", "Nurse", "Vendor", "Driver", "Accoun
 
 function rand<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randInt(min: number, max: number): number { return Math.floor(Math.random() * (max - min + 1)) + min; }
+// Unique-name generator: first + middle initial + last guarantees uniqueness
+// across all seeded students (FIRST x LAST alone produced duplicates).
+const NAME_MI = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const usedStudentNames = new Set<string>();
+let nameSeq = 0;
+function uniqueStudentName(gender: string): string {
+  for (let t = 0; t < 10000; t++) {
+    const seq = nameSeq + t;
+    const first = gender === "Female"
+      ? FIRST_NAMES[seq % FIRST_NAMES.length]
+      : FIRST_NAMES[(seq + 7) % FIRST_NAMES.length];
+    const last = LAST_NAMES[(seq * 7 + 3) % LAST_NAMES.length];
+    const cand = `${first} ${NAME_MI[seq % NAME_MI.length]}. ${last}`;
+    if (!usedStudentNames.has(cand)) { usedStudentNames.add(cand); nameSeq = seq + 1; return cand; }
+  }
+  const cand = `Student ${nameSeq} ${rand(LAST_NAMES)}`;
+  usedStudentNames.add(cand); nameSeq++;
+  return cand;
+}
 function pickDate(sy: number, sm: number, em: number): Date { return new Date(sy, randInt(sm, em) - 1, randInt(1, 28), randInt(7, 16), randInt(0, 59)); }
 
 function inTermDate(): Date {
@@ -156,7 +175,8 @@ async function main() {
       sections.push({ id: sectionId, gradeLevel: grade, name: `${grade}-${secName}`, adviserId: adviser.id });
 
       for (let i = 1; i <= STUDENTS_PER_SECTION; i++) {
-        const fullName = `${rand(FIRST_NAMES)} ${rand(LAST_NAMES)}`;
+        const gender = i % 2 === 1 ? "Female" : "Male";
+        const fullName = uniqueStudentName(gender);
         const sEmail = `student.${grade.toLowerCase()}.${secName.toLowerCase()}.${i}@zentra.test`;
         const student = await prisma.user.upsert({
           where: { email: sEmail },
@@ -164,7 +184,7 @@ async function main() {
           create: { email: sEmail, fullName, role: "student" as Role, passwordHash: studentHash, status: "active" },
         });
         const lrn = `20${String(randInt(100000000, 999999999)).padStart(9, "0")}`;
-        studentProfiles.push({ userId: student.id, lrn, gradeLevel: grade, sectionId, birthdate: pickDate(2010, 1, 12), gender: i % 2 === 1 ? "Female" : "Male", address: `${randInt(1, 999)} ${rand(LAST_NAMES)} St., Quezon City` });
+        studentProfiles.push({ userId: student.id, lrn, gradeLevel: grade, sectionId, birthdate: pickDate(2010, 1, 12), gender, address: `${randInt(1, 999)} ${rand(LAST_NAMES)} St., Quezon City` });
 
         const pEmail = `parent.${grade.toLowerCase()}.${secName.toLowerCase()}.${i}@zentra.test`;
         const parent = await prisma.user.upsert({

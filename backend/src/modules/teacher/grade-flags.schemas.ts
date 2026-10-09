@@ -26,6 +26,6 @@ export const listQuerySchema = z.object({
   status: z.enum(["open", "resolved", "escalated"]).optional(),
   q: z.string().max(120).optional(),
   page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  pageSize: z.coerce.number().int().min(1).max(15).optional(),
+  limit: z.coerce.number().int().min(1).max(15).optional(),
 });

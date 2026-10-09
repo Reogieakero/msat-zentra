@@ -47,6 +47,7 @@ const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]>
     ["guidance-risk"],
     ["guidance-risk-levels"],
     ["guidance-risk-heatmap"],
+    ["guidance-risk-behavioral"],
     ["guidance-risk-alert-factors"],
   ],
   documents: [["guidance-session-documents"]],

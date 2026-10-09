@@ -7,6 +7,7 @@ import { errorHandler, notFound } from "./lib/errors.js";
 import { logger } from "./lib/pino.js";
 import { prisma } from "./lib/prisma.js";
 import { authLimiter } from "./middleware/rateLimit.js";
+import { perfLog } from "./lib/perf.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import { attachTermScope } from "./middleware/termScope.js";
@@ -56,6 +57,8 @@ export function createApp() {
     next();
   });
   app.use(express.json({ limit: "1mb" }));
+  // Request timing + payload-size instrumentation (no PII).
+  app.use("/api", perfLog);
 
   app.get("/health", async (_req, res) => {
     try {

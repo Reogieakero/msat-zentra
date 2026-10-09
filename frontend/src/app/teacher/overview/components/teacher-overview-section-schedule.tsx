@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CalendarDays } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import {
   buildTimetable,
@@ -11,7 +12,6 @@ import { MyWeekGrid, type MyWeekSlot } from "@/app/teacher/classes/components/My
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import styles from "./teacher-overview-advisory.module.css";
 
 interface ScheduleEntry {
   day: number;
@@ -26,7 +26,7 @@ interface ScheduleSectionRow {
   timetableEntries: ScheduleEntry[];
 }
 
-export function AdvisorySectionSchedule() {
+export function AdvisorySectionSchedule({ onEmptyChange }: { onEmptyChange?: (empty: boolean) => void }) {
   const overview = useTeacherOverview();
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
@@ -39,10 +39,10 @@ export function AdvisorySectionSchedule() {
   }, []);
 
   const schedQuery = useQuery<{ sections: ScheduleSectionRow[] }>({
-    queryKey: ["teacher-schedule", termKey],
+    queryKey: ["teacher-schedule-section", section?.id ?? "none", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSectionRow[] }>(
-        "/api/teacher/schedule",
+        `/api/teacher/schedule?sectionId=${encodeURIComponent(section?.id ?? "")}`,
       );
       return data;
     },
@@ -73,6 +73,18 @@ export function AdvisorySectionSchedule() {
       section: { id: section.id, name: section.name, gradeLevel: section.gradeLevel },
     }));
   const config = configQuery.data?.config ?? null;
+  const loaded =
+    !overview.isPending &&
+    !!section &&
+    !schedQuery.isPending &&
+    !schedQuery.isError &&
+    !configQuery.isPending &&
+    !!config;
+  const isEmpty = loaded && slots.length === 0;
+  const isBlank = !overview.isPending && (!section || isEmpty);
+  React.useEffect(() => {
+    onEmptyChange?.(isBlank);
+  }, [isBlank, onEmptyChange]);
 
   const nowKey = React.useMemo(() => {
     if (!config) return null;
@@ -105,7 +117,60 @@ export function AdvisorySectionSchedule() {
     return `${day}:${row.periodIndex}`;
   }, [config, nowTick]);
 
-  if (!section) return null;
+  if (!section) {
+    return (
+      <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center" aria-label="Advisory class schedule">
+        <div className={`${assign.card} w-full max-w-md`}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <CalendarDays size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">No advisory section</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              A class schedule appears here once a section is assigned to you.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const scheduleEmpty =
+    !schedQuery.isPending &&
+    !configQuery.isPending &&
+    !!config &&
+    !schedQuery.isError &&
+    !!live &&
+    slots.length === 0;
+  if (scheduleEmpty) {
+    return (
+      <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center" aria-label="Advisory class schedule">
+        <div className={`${assign.card} w-full max-w-md`}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <CalendarDays size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">No published schedule for {section.name} yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Your weekly timetable will appear here once the master teacher publishes it.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section aria-label="Advisory class schedule" className="flex min-w-0 flex-col gap-3">
@@ -127,8 +192,6 @@ export function AdvisorySectionSchedule() {
           <p role="alert" className="relative text-sm text-destructive">
             Could not load the section schedule.
           </p>
-        ) : slots.length === 0 ? (
-          <p className={`${styles.empty} relative`}>No published schedule for {section.name} yet.</p>
         ) : (
           <div className="relative min-w-0">
             <MyWeekGrid slots={slots} config={config} nowKey={nowKey} />

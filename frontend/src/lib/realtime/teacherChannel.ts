@@ -117,6 +117,10 @@ export function useTeacherRealtime(enabled = true) {
       ];
       const SCHEDULE: readonly (readonly string[])[] = [
         ["teacher-schedule"],
+        ["teacher-schedule-summary"],
+        ["teacher-schedule-section"],
+  ["teacher-schedule-summary"],
+  ["teacher-schedule-section"],
         ["teacher-schedule-config"],
         ["teacher-schedule-me"],
         ["teacher-my-slots"],
@@ -227,6 +231,7 @@ export function useTeacherRealtime(enabled = true) {
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("online", onFocus);
 
     function invalidate(
       rowOrRows?: TeacherNotification | TeacherNotification[],
@@ -261,6 +266,7 @@ export function useTeacherRealtime(enabled = true) {
       window.clearTimeout(seedTimer);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("online", onFocus);
       try {
         channel?.unsubscribe();
       } catch {

@@ -20,7 +20,6 @@ import { Settings, Sun, Moon, UserRound, LogOut } from "lucide-react";
 import { ActiveTermBadge } from "@/components/term/ActiveTermBadge";
 import { PrincipalBell } from "./components/PrincipalBell";
 import { usePrincipalRealtime } from "@/lib/realtime/principalChannel";
-import { GradeModeProvider } from "./grade-mode-context";
 import {
   PrincipalPaletteGate,
   usePrincipalProfileSettings,
@@ -164,9 +163,5 @@ export default function PrincipalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <GradeModeProvider>
-      <PrincipalShell>{children}</PrincipalShell>
-    </GradeModeProvider>
-  );
+  return <PrincipalShell>{children}</PrincipalShell>;
 }

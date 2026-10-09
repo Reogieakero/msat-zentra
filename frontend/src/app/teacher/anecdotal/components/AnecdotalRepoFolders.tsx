@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input";
 import type { MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { CATEGORY_COLORS } from "./AnecdotalSideRail";
 import styles from "./anecdotal-repo-folders.module.css";
-
-const PAGE_SIZE = 20;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 const CATEGORY_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   behavioral: 1,

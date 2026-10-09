@@ -46,21 +46,70 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     });
   }
 
-  const rows = await prisma.referral.findMany({
+  const deskScope = {
+    OR: [
+      { referredToRole: "guidance_counselor" },
+      {
+        referredToRole: "adm_coordinator",
+        OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+      },
+    ],
+  };
+  const scopeClauses: any[] = [deskScope];
+  if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
+  if (anecdotalDbClauses.length) scopeClauses.push(...anecdotalDbClauses);
+  const summaryWhere: any = { AND: scopeClauses };
 
-    where: {
-      ...(scopeTermId ? { termId: scopeTermId } : {}),
+  const extraClauses: any[] = [];
+  if (docsOnly) {
+    extraClauses.push({
+      counselingSessions: {
+        some: { status: "completed", attachments: { some: { mimeType: { startsWith: "image/" } } } },
+      },
+    });
+  }
+  const needle = q.trim();
+  if (needle) {
+    extraClauses.push({
       OR: [
-        { referredToRole: "guidance_counselor" },
-        {
-          referredToRole: "adm_coordinator",
-          OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
-        },
+        { student: { user: { fullName: { contains: needle, mode: "insensitive" } } } },
+        { student: { lrn: { contains: needle, mode: "insensitive" } } },
+        { student: { section: { name: { contains: needle, mode: "insensitive" } } } },
+        { roster: { fullName: { contains: needle, mode: "insensitive" } } },
+        { roster: { lrn: { contains: needle, mode: "insensitive" } } },
+        { roster: { section: { name: { contains: needle, mode: "insensitive" } } } },
+        { referredByUser: { fullName: { contains: needle, mode: "insensitive" } } },
+        { anecdotalRecord: { observer: { fullName: { contains: needle, mode: "insensitive" } } } },
       ],
-      ...(anecdotalDbClauses.length ? { AND: anecdotalDbClauses } : {}),
-    },
-    orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
-    take: 1000,
+    });
+  }
+  const pagedWhere: any = { AND: [...scopeClauses, ...extraClauses] };
+
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const orderBy = [
+    { anecdotalRecord: { observationDatetime: "desc" as const } },
+    { id: "desc" as const },
+  ];
+
+  const [summaryTotal, total] = await Promise.all([
+    prisma.referral.count({ where: summaryWhere }),
+    prisma.referral.count({ where: pagedWhere }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / effPageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageIds = (
+    await prisma.referral.findMany({
+      where: pagedWhere,
+      select: { id: true },
+      orderBy,
+      skip: (safePage - 1) * effPageSize,
+      take: effPageSize,
+    })
+  ).map((r) => r.id);
+
+  const pageRows = await prisma.referral.findMany({
+    where: { id: { in: pageIds } },
+    orderBy,
     select: {
       id: true,
       status: true,
@@ -116,11 +165,11 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     },
   });
 
-  const trackOf = (r: (typeof rows)[number]) =>
+  const trackOf = (r: (typeof pageRows)[number]) =>
     r.escalatedTo === "adm_coordinator" || r.referredToRole === "adm_coordinator"
       ? "ADM"
       : "Counseling";
-  const mapped = rows.map((r) => ({
+  const mapped = pageRows.map((r) => ({
     id: r.anecdotalRecord.id,
     referralId: r.id,
     student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
@@ -152,66 +201,106 @@ export async function getAnecdotal(ctx: GuidanceContext, query: AnecdotalQuery) 
     referralType: trackOf(r),
   }));
 
-  const filtered = mapped.filter((r) => {
-    if (categoryFilter && r.category !== categoryFilter) return false;
-    if (anecdotalTypeFilter === "adm" && r.referralType !== "ADM") return false;
-    if (anecdotalTypeFilter === "counseling" && r.referralType !== "Counseling") return false;
-    if (
-      docsOnly &&
-      !r.sessionDocs.some((s) =>
-        s.files.some((f) => f.mimeType.toLowerCase().startsWith("image/"))
-      )
-    )
-      return false;
-    if (
-      q &&
-      !`${r.student} ${r.lrn} ${r.section} ${r.observer} ${r.referredBy}`
-        .toLowerCase()
-        .includes(q)
-    )
-      return false;
-    return true;
-  });
+  const records = mapped;
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const records = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-
-  const unfilteredTotal = mapped.length;
-
-  const countBy = (cat: string) => mapped.filter((r) => r.category === cat).length;
-  const byGrade = GRADE_ORDER.map((g) => ({
+  const categories = ["behavioral", "bullying", "academic", "attendance", "health"];
+  const catCounts = await Promise.all(
+    categories.map((cat) =>
+      prisma.referral.count({
+        where: { AND: [summaryWhere, { anecdotalRecord: { category: cat } }] },
+      }),
+    ),
+  );
+  const gradeCounts = await Promise.all(
+    GRADE_ORDER.map((g) =>
+      prisma.referral.count({
+        where: {
+          AND: [
+            summaryWhere,
+            { OR: [{ student: { gradeLevel: g } }, { roster: { gradeLevel: g } }] },
+          ],
+        },
+      }),
+    ),
+  );
+  const byGrade = GRADE_ORDER.map((g, i) => ({
     grade: GRADE_LABELS[g] ?? g,
-    count: mapped.filter((r) => r.grade === (GRADE_LABELS[g] ?? g)).length,
+    count: gradeCounts[i] ?? 0,
   }));
 
-  const topByStudent = new Map<string, { student: string; lrn: string; section: string; count: number }>();
-  for (const r of mapped) {
-    const key = r.lrn || r.student;
-    const entry = topByStudent.get(key) ?? { student: r.student, lrn: r.lrn, section: r.section, count: 0 };
-    entry.count += 1;
-    topByStudent.set(key, entry);
+  const [topProfileGroups, topRosterGroups] = await Promise.all([
+    prisma.anecdotalRecord.groupBy({
+      by: ["studentId"],
+      where: { studentId: { not: null }, referrals: { some: summaryWhere } },
+      _count: { _all: true },
+      orderBy: { _count: { studentId: "desc" } },
+      take: 5,
+    }),
+    prisma.anecdotalRecord.groupBy({
+      by: ["rosterId"],
+      where: { rosterId: { not: null }, referrals: { some: summaryWhere } },
+      _count: { _all: true },
+      orderBy: { _count: { rosterId: "desc" } },
+      take: 5,
+    }),
+  ]);
+  const topProfileIds = topProfileGroups.map((g) => g.studentId).filter((v): v is string => !!v);
+  const topRosterIds = topRosterGroups.map((g) => g.rosterId).filter((v): v is string => !!v);
+  const [topProfiles, topRosters] = await Promise.all([
+    topProfileIds.length
+      ? prisma.studentProfile.findMany({
+          where: { userId: { in: topProfileIds } },
+          select: { userId: true, lrn: true, user: { select: { fullName: true } }, section: { select: { name: true } } },
+        })
+      : Promise.resolve([]),
+    topRosterIds.length
+      ? prisma.studentRoster.findMany({
+          where: { id: { in: topRosterIds } },
+          select: { id: true, lrn: true, fullName: true, section: { select: { name: true } } },
+        })
+      : Promise.resolve([]),
+  ]);
+  const topCountById = new Map<string, number>();
+  for (const g of topProfileGroups) if (g.studentId) topCountById.set(g.studentId, g._count._all);
+  for (const g of topRosterGroups) if (g.rosterId) topCountById.set(`roster:${g.rosterId}`, g._count._all);
+  const topCandidates = [
+    ...topProfiles.map((p) => ({
+      student: p.user.fullName,
+      lrn: p.lrn,
+      section: p.section?.name ?? "—",
+      count: topCountById.get(p.userId) ?? 0,
+    })),
+    ...topRosters.map((r) => ({
+      student: r.fullName,
+      lrn: r.lrn,
+      section: r.section?.name ?? "—",
+      count: topCountById.get(`roster:${r.id}`) ?? 0,
+    })),
+  ];
+  const mergedTops = new Map<string, { student: string; lrn: string; section: string; count: number }>();
+  for (const c of topCandidates) {
+    const key = c.lrn || c.student;
+    const prev = mergedTops.get(key);
+    if (prev) prev.count += c.count;
+    else mergedTops.set(key, { ...c });
   }
-  const topStudents = [...topByStudent.values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+  const topStudents = [...mergedTops.values()].sort((a, b) => b.count - a.count).slice(0, 5);
   return {
     summary: {
-      total: mapped.length,
-      behavioral: countBy("behavioral"),
-      bullying: countBy("bullying"),
-      academic: countBy("academic"),
-      attendance: countBy("attendance"),
-      health: countBy("health"),
+      total: summaryTotal,
+      behavioral: catCounts[0] ?? 0,
+      bullying: catCounts[1] ?? 0,
+      academic: catCounts[2] ?? 0,
+      attendance: catCounts[3] ?? 0,
+      health: catCounts[4] ?? 0,
       byGrade,
       topStudents,
     },
     records,
     page: safePage,
-    pageSize,
+    pageSize: effPageSize,
     total,
     totalPages,
-    unfilteredTotal,
+    unfilteredTotal: summaryTotal,
   };
 }

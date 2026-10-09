@@ -17,6 +17,8 @@
     "prisma:gradebook": "tsx prisma/seed-gradebook-full.ts",
     "prisma:gradebook-gaps": "tsx prisma/seed-gradebook-fill-gaps.ts",
     "prisma:gradebook-audit": "tsx prisma/audit-gradebook-coverage.ts",
+    "prisma:seed100": "tsx prisma/seed-100-topup.ts",
+    "prisma:seed100-fix": "tsx prisma/fix-seed100-gaps.ts",
     "test": "vitest run --testTimeout=15000",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"

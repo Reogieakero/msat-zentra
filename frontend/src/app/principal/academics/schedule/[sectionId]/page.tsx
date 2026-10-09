@@ -5,15 +5,19 @@ import { ArrowLeft, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePersistedRail } from "@/hooks/use-persisted-rail";
 import { PrincipalPageHeader } from "../../../components/PrincipalPageHeader";
+import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
+import { CalendarDays } from "lucide-react";
 import { usePrincipalScheduleSection } from "./components/use-principal-schedule-section";
 import { ScheduleReadonlyGrid } from "./components/schedule-readonly-grid";
 import { ReviewPanel } from "./components/review-panel";
 import { ReviewDialog } from "./components/review-dialog";
+import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 function LoadingShell() {
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-busy="true" aria-label="Loading schedule">
-      <div className="h-8 w-56 rounded bg-muted" />
-      <div className="h-72 rounded-lg border bg-muted/40" />
+      <PageHeaderSkeleton withActions />
+      <Skeleton className="h-72 w-full" aria-hidden="true" />
     </section>
   );
 }
@@ -58,14 +62,16 @@ export default function PrincipalSectionSchedulePage() {
           title="Section not found"
           description="This section does not exist or is outside grades 7–10."
         />
-        <div>
-          <Link
-            href="/principal/academics/schedule"
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Back to sections
-          </Link>
-        </div>
+        <PrincipalEmptyCard
+          icon={CalendarDays}
+          title="Section not found"
+          hint="This section does not exist or is outside grades 7–10."
+          action={
+            <Button asChild>
+              <Link href="/principal/academics/schedule">Back to sections</Link>
+            </Button>
+          }
+        />
       </section>
     );
   }

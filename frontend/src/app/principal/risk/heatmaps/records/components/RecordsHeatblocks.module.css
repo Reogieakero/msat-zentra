@@ -5,7 +5,6 @@
   gap: 1rem;
   min-width: 0;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .header {
@@ -56,15 +55,14 @@
   gap: 1rem;
   flex-wrap: wrap;
   padding: 0.625rem 0 0.125rem;
-  border-top: 1px solid var(--border);
-  background-color: color-mix(in oklch, var(--card) 90%, transparent);
-  backdrop-filter: blur(8px);
+  background: transparent;
 }
 
 .range {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .pagerButtons {
@@ -89,15 +87,35 @@
 }
 
 .headCount {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1rem 0.75rem;
+}
+
+@media (max-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .folderBtn {

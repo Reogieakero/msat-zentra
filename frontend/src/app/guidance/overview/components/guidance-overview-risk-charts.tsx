@@ -13,6 +13,8 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { HeartPulse, Flag, GraduationCap } from "lucide-react";
+import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import type {
   GuidanceCategoryRow,
@@ -77,6 +79,10 @@ export function GuidanceOverviewRiskCharts({
 
   const gradeRows = riskByGrade.map((r) => ({ grade: r.short, count: r.count }));
   const maxGrade = Math.max(1, ...gradeRows.map((r) => r.count));
+  const levelsEmpty = levelTotal === 0;
+  const factorTotal = factorRows.reduce((s, r) => s + r.count, 0);
+  const factorsEmpty = factorTotal === 0;
+  const gradeEmpty = gradeRows.every((r) => r.count === 0);
 
   return (
     <div className={styles.chartGrid}>
@@ -84,15 +90,21 @@ export function GuidanceOverviewRiskCharts({
         <span className={styles.glowClip} aria-hidden="true">
           <span className={styles.cardGlow} />
         </span>
+        {levelsEmpty ? null : (
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Risk levels</CardTitle>
           <CardDescription className={styles.sectionDesc}>
             Live recompute · High ≥ 2 flags, Moderate = 1, Low = 0.
           </CardDescription>
         </CardHeader>
+        )}
         <CardContent className={styles.cardBody}>
-          {levelTotal === 0 ? (
-            <p className={styles.empty}>No students enrolled.</p>
+          {levelsEmpty ? (
+            <GuidanceEmptyState
+              icon={HeartPulse}
+              title="No students enrolled"
+              hint="No enrolled students found for the active school year."
+            />
           ) : (
             <>
               <div className={styles.donutWrap}>
@@ -136,12 +148,12 @@ export function GuidanceOverviewRiskCharts({
                   </li>
                 ))}
               </ul>
-            </>
-          )}
           <p className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
             {interpretLevels(riskByLevel.high, riskByLevel.moderate, riskByLevel.low)}
           </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -149,13 +161,23 @@ export function GuidanceOverviewRiskCharts({
         <span className={styles.glowClip} aria-hidden="true">
           <span className={styles.cardGlow} />
         </span>
+        {factorsEmpty ? null : (
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Risk factors</CardTitle>
           <CardDescription className={styles.sectionDesc}>
             Students tripping each flag this term.
           </CardDescription>
         </CardHeader>
+        )}
         <CardContent className={styles.cardBody}>
+          {factorsEmpty ? (
+            <GuidanceEmptyState
+              icon={Flag}
+              title="No risk flags this term"
+              hint="No risk flags tripped this term — every student clears all three checks."
+            />
+          ) : (
+            <>
           <div className={styles.barWrap}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={factorRows} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
@@ -177,6 +199,8 @@ export function GuidanceOverviewRiskCharts({
             <span className={styles.interpretationLabel}>What it means · </span>
             {interpretFactors(factorTotals.attendance, factorTotals.grades, factorTotals.behavior)}
           </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -184,13 +208,23 @@ export function GuidanceOverviewRiskCharts({
         <span className={styles.glowClip} aria-hidden="true">
           <span className={styles.cardGlow} />
         </span>
+        {gradeEmpty ? null : (
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>At-risk by grade</CardTitle>
           <CardDescription className={styles.sectionDesc}>
             Moderate + High students per grade level.
           </CardDescription>
         </CardHeader>
+        )}
         <CardContent className={styles.cardBody}>
+          {gradeEmpty ? (
+            <GuidanceEmptyState
+              icon={GraduationCap}
+              title="No at-risk students"
+              hint="No grade level has at-risk students right now."
+            />
+          ) : (
+            <>
           <div className={styles.barWrap}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={gradeRows} margin={{ top: 8, right: 4, bottom: 0, left: -12 }}>
@@ -216,10 +250,10 @@ export function GuidanceOverviewRiskCharts({
           </div>
           <p className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
-            {gradeRows.every((r) => r.count === 0)
-              ? "No grade level has at-risk students right now."
-              : `Highest: ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.grade} with ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.count} students needing attention.`}
+            {`Highest: ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.grade} with ${[...gradeRows].sort((a, b) => b.count - a.count)[0]?.count} students needing attention.`}
           </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

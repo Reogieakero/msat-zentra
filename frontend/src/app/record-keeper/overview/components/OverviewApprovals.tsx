@@ -22,12 +22,12 @@ import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/recordKeeperChannel";
 import { formatGrade, formatSection } from "@/lib/utils";
 import { LrnVerifyButton } from "../../accounts/components/LrnVerifyButton";
+import { RecordKeeperEmptyState } from "../../components/RecordKeeperEmptyCard";
 import type { PendingStudentsResponse } from "../../accounts/components/types";
 import { formatRelativeTime } from "../../accounts/components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/components/registry/overview/OverviewApprovals.module.css";
-
-const PAGE_SIZE = 8;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 async function fetchPendingStudents(signal?: AbortSignal) {
   return apiClient
@@ -58,6 +58,7 @@ export function OverviewApprovals() {
   const start = total === 0 ? 0 : 1;
   const end = Math.min(PAGE_SIZE, total);
   const hasRecords = total > 0;
+  const isEmpty = !isPending && !isError && !hasRecords;
 
   const act = useMutation({
     mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
@@ -86,25 +87,27 @@ export function OverviewApprovals() {
   });
 
   return (
-    <section className={assign.card} aria-labelledby="overview-pending-approvals">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-pending-approvals"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-pending-approvals" className="text-base font-semibold">
-            Pending Approvals
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Approvals and follow-ups that need record keeper attention this term.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-pending-approvals" className="text-base font-semibold">
+              Pending Approvals
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Approvals and follow-ups that need record keeper attention this term.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
+              View all
+            </Button>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          <Button variant="link" size="sm" className={styles.viewAll} onClick={goAccounts}>
-            View all
-          </Button>
-        </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.tableWrap}>
@@ -113,15 +116,11 @@ export function OverviewApprovals() {
         ) : isError ? (
           <p className={styles.empty}>Could not load overview figures.</p>
         ) : !hasRecords ? (
-          <div className={styles.emptyBlock}>
-            <span className={styles.emptyIcon} aria-hidden>
-              <UserCheck />
-            </span>
-            <p className={styles.emptyTitle}>All caught up</p>
-            <p className={styles.emptyHint}>
-              No pending student enrollments in the G7–10 band.
-            </p>
-          </div>
+          <RecordKeeperEmptyState
+            icon={UserCheck}
+            title="All caught up"
+            hint="No pending student enrollments in the G7–10 band."
+          />
         ) : (
           <div className={styles.tableWrap}>
             <Table aria-label="Pending student accounts">

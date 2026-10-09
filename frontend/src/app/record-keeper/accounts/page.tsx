@@ -18,14 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { LrnVerifyButton } from "./components/LrnVerifyButton";
+import { RecordKeeperEmptyCard, RecordKeeperEmptyState } from "../components/RecordKeeperEmptyCard";
+import { RecordKeeperPageHeader } from "../components/RecordKeeperPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { AccountsBreakdown, type AccountBreakdown } from "./components/AccountsBreakdown";
 import { formatGrade, formatSection } from "@/lib/utils";
 import type { PendingStudentsResponse } from "./components/types";
 import { formatRelativeTime } from "./components/types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts.module.css";
-
-const PAGE_SIZE = 8;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 async function fetchPendingStudents(page: number, q: string, signal?: AbortSignal) {
   return apiClient
@@ -108,10 +110,37 @@ export default function AccountApprovalsPage() {
   }, [breakdownData]);
 
   const tilesPending = breakdownPending || isPending;
+  // True empty (no records at all, not a search with no matches):
+  // hide the page header, tiles, and queue/breakdown cards entirely and
+  // render a single centered card instead.
+  const isTrueEmpty =
+    !isPending && !isError && !breakdownPending && !hasRecords && !searching;
+
+  if (isTrueEmpty) {
+    return (
+      <section className={`${styles.page} ${styles.pageEmpty}`}>
+        <RecordKeeperEmptyCard
+          icon={UserPlus}
+          title="No pending student accounts"
+          hint="New G7–10 sign-ups awaiting record keeper sign-off will appear here."
+          label="Account approvals"
+          centered
+        />
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
+        {tilesPending ? (
+          <PageHeaderSkeleton />
+        ) : (
+          <RecordKeeperPageHeader
+            title="Account Approvals"
+            description="Approve or reject student account requests for grades 7–10."
+          />
+        )}
         <section className={assign.card} aria-label="Accounts summary">
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
@@ -217,25 +246,17 @@ export default function AccountApprovalsPage() {
             ) : isError ? (
               <p className={styles.empty}>Could not load pending students.</p>
             ) : !hasRecords ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <UserPlus />
-                </span>
-                <p className={styles.emptyTitle}>No pending student accounts</p>
-                <p className={styles.emptyHint}>
-                  New G7–10 sign-ups awaiting record keeper sign-off will appear here.
-                </p>
-              </div>
+              <RecordKeeperEmptyState
+                icon={UserPlus}
+                title="No pending student accounts"
+                hint="New G7–10 sign-ups awaiting record keeper sign-off will appear here."
+              />
             ) : searching && pageRows.length === 0 ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <SearchX />
-                </span>
-                <p className={styles.emptyTitle}>No matching students</p>
-                <p className={styles.emptyHint}>
-                  {`No students match "${query}".`}
-                </p>
-              </div>
+              <RecordKeeperEmptyState
+                icon={SearchX}
+                title="No matching students"
+                hint={`No students match "${query}".`}
+              />
             ) : (
               <div className={styles.tableWrap}>
                 <Table aria-label="Pending student accounts">
@@ -285,7 +306,7 @@ export default function AccountApprovalsPage() {
             )}
           </div>
 
-          {hasRecords && (
+          {totalPages > 1 && (
             <div className={`${styles.pager} relative`}>
               <p className={styles.range}>
                 Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}

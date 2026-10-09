@@ -11,10 +11,47 @@ export interface RiskResult {
   riskLevel: RiskLevel;
 }
 
+function flagsFromParts(args: {
+  grades: RiskGrade[];
+  mode?: GradeMode;
+  attendance: { status: string; subjectId: string | null }[];
+  anecdotalCount: number;
+  enrolled: number;
+}): { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult } {
+  // Real-time unified rule: EITHER average < 75 flags academic.
+  // gradeMode is ignored (kept for backwards compat).
+  const finalAvg =
+    args.grades.length > 0
+      ? args.grades.reduce((s, g) => s + (g.transmutedGrade ?? 0), 0) / args.grades.length
+      : null;
+  const rawAvg =
+    args.grades.length > 0
+      ? args.grades.reduce((s, g) => s + (g.computedAverage ?? 0), 0) / args.grades.length
+      : null;
+  const academicFlag =
+    (finalAvg != null && finalAvg < 75) || (rawAvg != null && rawAvg < 75);
+
+  const attPresent = args.attendance.filter((a) => a.status === "present").length;
+  const attendanceFlag = args.attendance.some((a) => a.subjectId !== null)
+    ? args.attendance.length > 0
+      ? attPresent / args.attendance.length < 0.8
+      : false
+    : args.enrolled > 0
+      ? attPresent / args.enrolled < 0.8
+      : false;
+
+  const behavioralFlag = args.anecdotalCount >= 1;
+
+  const riskCount = (academicFlag ? 1 : 0) + (attendanceFlag ? 1 : 0) + (behavioralFlag ? 1 : 0);
+  const riskLevel: RiskLevel = riskCount >= 2 ? "High" : riskCount === 1 ? "Moderate" : "Low";
+
+  return { academicFlag, attendanceFlag, behavioralFlag, result: { riskCount, riskLevel } };
+}
+
 export async function evaluateRisk(
   studentId: string,
   termId: string,
-  gradeMode: GradeMode = "final"
+  _gradeMode?: GradeMode,
 ): Promise<{ academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult }> {
   const [finalGrades, attendance, anecdotals, profile] = await Promise.all([
     prisma.finalGrade.findMany({
@@ -32,27 +69,62 @@ export async function evaluateRisk(
     }),
   ]);
 
-  const academicFlag = finalGrades.length > 0
-    ? finalGrades.reduce((s, g) => s + (gradeValue(g, gradeMode) ?? 0), 0) / finalGrades.length < 75
-    : false;
+  return flagsFromParts({
+    grades: finalGrades,
+    attendance,
+    anecdotalCount: anecdotals,
+    enrolled: profile?.section?._count.students ?? 0,
+  });
+}
 
-  const attPresent = attendance.filter((a) => a.status === "present").length;
-  const enrolled = profile?.section?._count.students ?? 0;
+export interface DualRisk {
+  raw: RiskResult;
+  final: RiskResult;
+  rawFlags: { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean };
+  finalFlags: { academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean };
+}
 
-  const attendanceFlag = attendance.some((a) => a.subjectId !== null)
-    ? attendance.length > 0
-      ? attPresent / attendance.length < 0.8
-      : false
-    : enrolled > 0
-      ? attPresent / enrolled < 0.8
-      : false;
-
-  const behavioralFlag = anecdotals >= 1;
-
-  const riskCount = (academicFlag ? 1 : 0) + (attendanceFlag ? 1 : 0) + (behavioralFlag ? 1 : 0);
-  const riskLevel: RiskLevel = riskCount >= 2 ? "High" : riskCount === 1 ? "Moderate" : "Low";
-
-  return { academicFlag, attendanceFlag, behavioralFlag, result: { riskCount, riskLevel } };
+export async function evaluateBothRisk(
+  studentId: string,
+  termId: string,
+): Promise<DualRisk> {
+  const [finalGrades, attendance, anecdotals, profile] = await Promise.all([
+    prisma.finalGrade.findMany({
+      where: { studentId, termId },
+      select: { computedAverage: true, transmutedGrade: true },
+    }),
+    prisma.attendanceRecord.findMany({
+      where: { studentId, termId },
+      select: { status: true, subjectId: true },
+    }),
+    prisma.anecdotalRecord.count({ where: { studentId, termId } }),
+    prisma.studentProfile.findUnique({
+      where: { userId: studentId },
+      select: { section: { select: { _count: { select: { students: true } } } } },
+    }),
+  ]);
+  const parts = {
+    grades: finalGrades,
+    attendance,
+    anecdotalCount: anecdotals,
+    enrolled: profile?.section?._count.students ?? 0,
+  };
+  const rawFull = flagsFromParts({ ...parts });
+  const finalFull = flagsFromParts({ ...parts });
+  return {
+    raw: rawFull.result,
+    final: finalFull.result,
+    rawFlags: {
+      academicFlag: rawFull.academicFlag,
+      attendanceFlag: rawFull.attendanceFlag,
+      behavioralFlag: rawFull.behavioralFlag,
+    },
+    finalFlags: {
+      academicFlag: finalFull.academicFlag,
+      attendanceFlag: finalFull.attendanceFlag,
+      behavioralFlag: finalFull.behavioralFlag,
+    },
+  };
 }
 
 export interface RiskFactors {
@@ -61,6 +133,8 @@ export interface RiskFactors {
   behavioralFlag: boolean;
 }
 
+// Deprecated: gradeMode is ignored — all views are real-time unified.
+// Kept for backwards compat with callers that still pass it.
 export type GradeMode = "raw" | "final";
 
 export interface RiskGrade {
@@ -81,23 +155,24 @@ export interface FactorInputs {
   enrolled: number;
 }
 
-function gradeValue(g: RiskGrade, mode: GradeMode): number | null {
-  return mode === "raw" ? g.computedAverage : g.transmutedGrade;
-}
-
 export function computeRiskFactors(inputs: FactorInputs): RiskFactors {
-  const { finalGrades, rawAverages = [], gradeMode = "final", attendance, anecdotalCount, enrolled } = inputs;
-  const finalAvg =
+  const { finalGrades, rawAverages = [], attendance, anecdotalCount, enrolled } = inputs;
+  // Unified real-time rule: EITHER average < 75.
+  const finalAvgFromGrades =
     finalGrades.length > 0
-      ? finalGrades.reduce((s, g) => s + (gradeValue(g, gradeMode) ?? 0), 0) /
-        finalGrades.length
+      ? finalGrades.reduce((s, g) => s + (g.transmutedGrade ?? 0), 0) / finalGrades.length
+      : null;
+  const rawAvgFromGrades =
+    finalGrades.length > 0
+      ? finalGrades.reduce((s, g) => s + (g.computedAverage ?? 0), 0) / finalGrades.length
       : null;
   const rawAvg =
     rawAverages.length > 0
       ? rawAverages.reduce((s, v) => s + v, 0) / rawAverages.length
-      : null;
+      : rawAvgFromGrades;
   const academicFlag =
-    (finalAvg != null && finalAvg < 75) || (rawAvg != null && rawAvg < 75);
+    (finalAvgFromGrades != null && finalAvgFromGrades < 75) ||
+    (rawAvg != null && rawAvg < 75);
   const attPresent = attendance.filter((a) => a.status === "present").length;
 
   const attendanceFlag = attendance.some((a) => a.subjectId != null)
@@ -126,7 +201,7 @@ export function isAtRisk(level: RiskLevel): boolean {
 export async function evaluateRosterRisk(
   rosterId: string,
   termId: string,
-  gradeMode: GradeMode = "final"
+  _gradeMode?: GradeMode,
 ): Promise<{ academicFlag: boolean; attendanceFlag: boolean; behavioralFlag: boolean; result: RiskResult }> {
   const [finalGrades, attendance, anecdotals, roster] = await Promise.all([
     prisma.finalGrade.findMany({
@@ -148,36 +223,84 @@ export async function evaluateRosterRisk(
     ? ((await sectionHeadcounts([roster.sectionId])).get(roster.sectionId) ?? 0)
     : 0;
 
-  const academicFlag = finalGrades.length > 0
-    ? finalGrades.reduce((s, g) => s + (gradeValue(g, gradeMode) ?? 0), 0) / finalGrades.length < 75
-    : false;
+  return flagsFromParts({
+    grades: finalGrades,
+    attendance,
+    anecdotalCount: anecdotals,
+    enrolled,
+  });
+}
 
-  const attPresent = attendance.filter((a) => a.status === "present").length;
-  const attendanceFlag = attendance.some((a) => a.subjectId !== null)
-    ? attendance.length > 0
-      ? attPresent / attendance.length < 0.8
-      : false
-    : enrolled > 0
-      ? attPresent / enrolled < 0.8
-      : false;
-
-  const behavioralFlag = anecdotals >= 1;
-
-  const riskCount = (academicFlag ? 1 : 0) + (attendanceFlag ? 1 : 0) + (behavioralFlag ? 1 : 0);
-  const riskLevel: RiskLevel = riskCount >= 2 ? "High" : riskCount === 1 ? "Moderate" : "Low";
-
-  return { academicFlag, attendanceFlag, behavioralFlag, result: { riskCount, riskLevel } };
+export async function evaluateBothRosterRisk(
+  rosterId: string,
+  termId: string,
+): Promise<DualRisk> {
+  const [finalGrades, attendance, anecdotals, roster] = await Promise.all([
+    prisma.finalGrade.findMany({
+      where: { rosterId, termId },
+      select: { computedAverage: true, transmutedGrade: true },
+    }),
+    prisma.attendanceRecord.findMany({
+      where: { rosterId, termId },
+      select: { status: true, subjectId: true },
+    }),
+    prisma.anecdotalRecord.count({ where: { rosterId, termId } }),
+    prisma.studentRoster.findUnique({
+      where: { id: rosterId },
+      select: { sectionId: true },
+    }),
+  ]);
+  const enrolled = roster
+    ? ((await sectionHeadcounts([roster.sectionId])).get(roster.sectionId) ?? 0)
+    : 0;
+  const parts = { grades: finalGrades, attendance, anecdotalCount: anecdotals, enrolled };
+  const rawFull = flagsFromParts({ ...parts });
+  const finalFull = flagsFromParts({ ...parts });
+  return {
+    raw: rawFull.result,
+    final: finalFull.result,
+    rawFlags: {
+      academicFlag: rawFull.academicFlag,
+      attendanceFlag: rawFull.attendanceFlag,
+      behavioralFlag: rawFull.behavioralFlag,
+    },
+    finalFlags: {
+      academicFlag: finalFull.academicFlag,
+      attendanceFlag: finalFull.attendanceFlag,
+      behavioralFlag: finalFull.behavioralFlag,
+    },
+  };
 }
 
 export async function recomputeRisk(studentId: string, termId: string) {
-  const { result } = await evaluateRisk(studentId, termId);
+  const dual = await evaluateBothRisk(studentId, termId);
+  const result = dual.final;
   await prisma.$transaction([
     prisma.studentProfile.update({
       where: { userId: studentId },
-      data: { riskCount: result.riskCount, riskLevel: result.riskLevel },
+      data: {
+        riskCount: result.riskCount,
+        riskLevel: result.riskLevel,
+        academicFlag: dual.finalFlags.academicFlag,
+        attendanceFlag: dual.finalFlags.attendanceFlag,
+        behavioralFlag: dual.finalFlags.behavioralFlag,
+      },
     }),
     prisma.riskSnapshot.create({
-      data: { studentId, riskLevel: result.riskLevel, riskCount: result.riskCount, termId },
+      data: {
+        studentId,
+        riskLevel: result.riskLevel,
+        riskLevelRaw: dual.raw.riskLevel,
+        riskLevelFinal: result.riskLevel,
+        academicFlag: dual.finalFlags.academicFlag,
+        attendanceFlag: dual.finalFlags.attendanceFlag,
+        behavioralFlag: dual.finalFlags.behavioralFlag,
+        academicFlagRaw: dual.rawFlags.academicFlag,
+        attendanceFlagRaw: dual.rawFlags.attendanceFlag,
+        behavioralFlagRaw: dual.rawFlags.behavioralFlag,
+        riskCount: result.riskCount,
+        termId,
+      },
     }),
   ]);
 
@@ -218,10 +341,37 @@ export async function recomputeRisk(studentId: string, termId: string) {
 }
 
 export async function recomputeRosterRisk(rosterId: string, termId: string) {
-  const { result } = await evaluateRosterRisk(rosterId, termId);
-  await prisma.riskSnapshot.create({
-    data: { studentId: null, rosterId, riskLevel: result.riskLevel, riskCount: result.riskCount, termId },
-  });
+  const dual = await evaluateBothRosterRisk(rosterId, termId);
+  const result = dual.final;
+  await prisma.$transaction([
+    prisma.studentRoster.update({
+      where: { id: rosterId },
+      data: {
+        riskCount: result.riskCount,
+        riskLevel: result.riskLevel,
+        academicFlag: dual.finalFlags.academicFlag,
+        attendanceFlag: dual.finalFlags.attendanceFlag,
+        behavioralFlag: dual.finalFlags.behavioralFlag,
+      },
+    }),
+    prisma.riskSnapshot.create({
+      data: {
+        studentId: null,
+        rosterId,
+        riskLevel: result.riskLevel,
+        riskLevelRaw: dual.raw.riskLevel,
+        riskLevelFinal: result.riskLevel,
+        academicFlag: dual.finalFlags.academicFlag,
+        attendanceFlag: dual.finalFlags.attendanceFlag,
+        behavioralFlag: dual.finalFlags.behavioralFlag,
+        academicFlagRaw: dual.rawFlags.academicFlag,
+        attendanceFlagRaw: dual.rawFlags.attendanceFlag,
+        behavioralFlagRaw: dual.rawFlags.behavioralFlag,
+        riskCount: result.riskCount,
+        termId,
+      },
+    }),
+  ]);
 
   const atRisk = result.riskLevel === "High" || result.riskLevel === "Moderate";
   if (atRisk) {

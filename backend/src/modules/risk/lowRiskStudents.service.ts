@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { resolveActiveTermId } from "../../services/risk.js";
+import { computeRiskFactors, levelFromFlags, resolveActiveTermId } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
 
@@ -15,11 +15,14 @@ export interface LowRiskResult {
   pageSize: number;
 }
 
+// Real-time unified: Low = live levelFromFlags === "Low" (EITHER avg < 75).
 export async function getLowRiskStudents(
   page: number,
   pageSize: number,
   scope?: TermScopeInput,
+  q?: string,
 ): Promise<LowRiskResult> {
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
   const termId = scope?.termId ?? (await resolveActiveTermId());
   const schoolYearId =
     scope?.schoolYearId ??
@@ -30,10 +33,34 @@ export async function getLowRiskStudents(
       })
     )?.id;
 
-  const [profiles, rosterEntries] = await Promise.all([
+  const needle = (q ?? "").trim();
+  const profileSearch: any = needle
+    ? {
+        OR: [
+          { user: { fullName: { contains: needle, mode: "insensitive" } } },
+          { lrn: { contains: needle, mode: "insensitive" } },
+        ],
+      }
+    : null;
+  const rosterSearch: any = needle
+    ? {
+        OR: [
+          { fullName: { contains: needle, mode: "insensitive" } },
+          { lrn: { contains: needle, mode: "insensitive" } },
+        ],
+      }
+    : null;
+
+  const [profiles, rosters] = await Promise.all([
     prisma.studentProfile.findMany({
-      where: schoolYearId ? { section: { schoolYearId } } : undefined,
+      where: {
+        AND: [
+          ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+          ...(profileSearch ? [profileSearch] : []),
+        ],
+      },
       orderBy: { lrn: "asc" },
+      take: 5000,
       select: {
         lrn: true,
         user: { select: { fullName: true } },
@@ -42,13 +69,22 @@ export async function getLowRiskStudents(
           where: termId ? { termId } : undefined,
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
+        attendanceRecords: {
+          where: termId ? { termId } : undefined,
+          select: { status: true, subjectId: true },
+        },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
       },
     }),
     prisma.studentRoster.findMany({
-      where: schoolYearId ? { schoolYearId } : undefined,
+      where: {
+        AND: [
+          ...(schoolYearId ? [{ schoolYearId }] : []),
+          ...(rosterSearch ? [rosterSearch] : []),
+        ],
+      },
       orderBy: { lrn: "asc" },
+      take: 5000,
       select: {
         lrn: true,
         fullName: true,
@@ -57,74 +93,50 @@ export async function getLowRiskStudents(
           where: termId ? { termId } : undefined,
           select: { computedAverage: true, transmutedGrade: true },
         },
-        attendanceRecords: { where: termId ? { termId } : undefined, select: { status: true } },
+        attendanceRecords: {
+          where: termId ? { termId } : undefined,
+          select: { status: true, subjectId: true },
+        },
         anecdotalRecords: { where: termId ? { termId } : undefined, select: { id: true } },
       },
     }),
   ]);
-  const registeredLrns = new Set(profiles.map((s) => s.lrn));
 
+  const registered = new Set(profiles.map((p) => p.lrn));
   const sectionIds = Array.from(
     new Set([
-      ...profiles.map((s) => s.section?.id).filter(Boolean),
-      ...rosterEntries.map((r) => r.sectionId),
+      ...profiles.map((p) => p.section?.id).filter((v): v is string => !!v),
+      ...rosters.map((r) => r.sectionId),
     ]),
-  ) as string[];
+  );
   const headcounts = await sectionHeadcounts(sectionIds);
 
-  type Candidate = {
-    lrn: string;
-    name: string;
-    finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
-    attendanceRecords: { status: string }[];
-    anecdotalCount: number;
-    enrolled: number;
-  };
-  const candidates: Candidate[] = [
-    ...profiles.map((s) => ({
-      lrn: s.lrn,
-      name: s.user.fullName,
-      finalGrades: s.finalGrades,
-      attendanceRecords: s.attendanceRecords,
-      anecdotalCount: s.anecdotalRecords.length,
-      enrolled: headcounts.get(s.section?.id ?? "") ?? 0,
-    })),
-    ...rosterEntries
-      .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({
-        lrn: r.lrn,
-        name: r.fullName,
-        finalGrades: r.finalGrades,
-        attendanceRecords: r.attendanceRecords,
-        anecdotalCount: r.anecdotalRecords.length,
-        enrolled: headcounts.get(r.sectionId) ?? 0,
-      })),
-  ];
+  const lows: LowRiskStudent[] = [];
+  for (const p of profiles) {
+    const flags = computeRiskFactors({
+      finalGrades: p.finalGrades,
+      attendance: p.attendanceRecords,
+      anecdotalCount: p.anecdotalRecords.length,
+      enrolled: headcounts.get(p.section?.id ?? "") ?? 0,
+    });
+    if (levelFromFlags(flags) === "Low") lows.push({ lrn: p.lrn, name: p.user.fullName });
+  }
+  for (const r of rosters) {
+    if (registered.has(r.lrn)) continue;
+    const flags = computeRiskFactors({
+      finalGrades: r.finalGrades,
+      attendance: r.attendanceRecords,
+      anecdotalCount: r.anecdotalRecords.length,
+      enrolled: headcounts.get(r.sectionId) ?? 0,
+    });
+    if (levelFromFlags(flags) === "Low") lows.push({ lrn: r.lrn, name: r.fullName });
+  }
 
-  const low = candidates.filter((s) => {
-    const avg =
-      s.finalGrades.length > 0
-        ? s.finalGrades.reduce((sum, g) => sum + (g.transmutedGrade ?? 0), 0) /
-          s.finalGrades.length
-        : 100;
-    const academic = avg < 75;
-    const present = s.attendanceRecords.filter((a) => a.status === "present").length;
-    const attendance = s.enrolled > 0 && present / s.enrolled < 0.8;
-    const behavioral = s.anecdotalCount > 0;
-    return !academic && !attendance && !behavioral;
-  });
-
-  low.sort((a, b) => a.lrn.localeCompare(b.lrn));
-
-  const total = low.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  lows.sort((a, b) => a.lrn.localeCompare(b.lrn));
+  const total = lows.length;
+  const totalPages = Math.max(1, Math.ceil(total / effPageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
-  const slice = low.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const students = lows.slice((safePage - 1) * effPageSize, safePage * effPageSize);
 
-  return {
-    students: slice.map((r) => ({ lrn: r.lrn, name: r.name })),
-    total,
-    page: safePage,
-    pageSize,
-  };
+  return { students, total, page: safePage, pageSize: effPageSize };
 }

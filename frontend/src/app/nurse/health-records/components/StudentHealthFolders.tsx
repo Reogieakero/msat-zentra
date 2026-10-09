@@ -10,6 +10,7 @@ import {
   type StudentHealthFolder,
 } from "./documentaries-utils";
 import styles from "./StudentHealthFolders.module.css";
+import { PAGE_SIZE, ZentraPagination } from "@/components/shared/pagination";
 
 const TYPE_TONES: Record<string, 1 | 2 | 3 | 4 | 5> = {
   ADM: 3,
@@ -36,6 +37,7 @@ export function StudentHealthFolders({
   onOpenCase: (folder: StudentHealthFolder, index: number) => void;
 }) {
   const [query, setQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
   const needle = query.trim().toLowerCase();
   const visible = React.useMemo(() => {
     if (!needle) return folders;
@@ -43,6 +45,10 @@ export function StudentHealthFolders({
       `${f.student} ${f.lrn} ${f.section}`.toLowerCase().includes(needle),
     );
   }, [folders, needle]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageFolders = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const caseCount = folders.reduce((sum, f) => sum + f.entries.length, 0);
   const fileCount = folders.reduce((sum, f) => sum + f.fileCount, 0);
@@ -66,7 +72,10 @@ export function StudentHealthFolders({
               style={{ height: "2rem" }}
               placeholder="Search student, LRN, section…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
               aria-label="Search student folders"
             />
           </div>
@@ -84,28 +93,31 @@ export function StudentHealthFolders({
       ) : visible.length === 0 ? (
         <p className={styles.emptyInline}>No student folders match your search.</p>
       ) : (
-        <ul className={styles.folderGrid} aria-label="Student health folders">
-          {visible.map((folder) => (
-            <li key={folder.key} className={styles.folderCell}>
-              <button
-                type="button"
-                className={styles.folderBtn}
-                onClick={() => onOpenCase(folder, 0)}
-                aria-label={`Open ${folder.student}'s health folder (${folder.entries.length} cases, ${folder.fileCount} files)`}
-              >
-                <FolderCard
-                  label={folder.student}
-                  sublabel={
-                    [folder.lrn, folder.section].filter((v) => v && v !== "—").join(" · ") || undefined
-                  }
-                  folderColor={HEALTH_FOLDER_COLORS[folder.dominantType]}
-                  cornerTag={folder.dominantType}
-                  files={folderFiles(folder)}
-                />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={styles.folderGrid} aria-label="Student health folders">
+            {pageFolders.map((folder) => (
+              <li key={folder.key} className={styles.folderCell}>
+                <button
+                  type="button"
+                  className={styles.folderBtn}
+                  onClick={() => onOpenCase(folder, 0)}
+                  aria-label={`Open ${folder.student}'s health folder (${folder.entries.length} cases, ${folder.fileCount} files)`}
+                >
+                  <FolderCard
+                    label={folder.student}
+                    sublabel={
+                      [folder.lrn, folder.section].filter((v) => v && v !== "—").join(" · ") || undefined
+                    }
+                    folderColor={HEALTH_FOLDER_COLORS[folder.dominantType]}
+                    cornerTag={folder.dominantType}
+                    files={folderFiles(folder)}
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <ZentraPagination currentPage={safePage} totalItems={visible.length} onPageChange={setPage} />
+        </>
       )}
     </div>
   );

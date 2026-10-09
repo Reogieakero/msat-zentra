@@ -12,6 +12,10 @@ import {
   AttachmentTitle,
 } from "@/components/ui/attachment";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { TeacherEmptyState } from "../../../components/TeacherEmptyCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Loader2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTerm } from "@/lib/term/TermContext";
 
@@ -77,11 +81,13 @@ export function AdvisoryAttendanceList({
   filter,
   selectedId,
   onSelect,
+  onEmptyChange,
 }: {
   sectionId: string;
   filter: string;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  onEmptyChange?: (empty: boolean) => void;
 }) {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
@@ -103,6 +109,10 @@ export function AdvisoryAttendanceList({
 
   const subjects = React.useMemo(() => matrixQuery.data?.subjects ?? [], [matrixQuery.data]);
   const students = React.useMemo(() => matrixQuery.data?.students ?? [], [matrixQuery.data]);
+  const sectionBlank = !matrixQuery.isPending && !matrixQuery.isError && students.length === 0;
+  React.useEffect(() => {
+    onEmptyChange?.(sectionBlank);
+  }, [sectionBlank, onEmptyChange]);
 
   const selected = selectedId
     ? (students.find((s) => s.studentId === selectedId) ?? null)
@@ -135,26 +145,77 @@ export function AdvisoryAttendanceList({
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <li key={i} className={assign.skelRowGrid} aria-hidden="true">
               <div className="flex items-center gap-3">
-                <div className="h-11 w-11 shrink-0 rounded-full bg-muted" />
+                <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
                 <div className="min-w-0 flex-1 space-y-2">
-                  <div className="h-3 w-2/3 rounded bg-muted" />
-                  <div className="h-3 w-1/3 rounded bg-muted" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <Skeleton className="h-3 w-1/3" />
                 </div>
-                <div className="h-6 w-12 shrink-0 rounded bg-muted" />
+                <Skeleton className="h-6 w-12 shrink-0" />
               </div>
             </li>
           ))}
         </ul>
       ) : matrixQuery.isError ? (
-        <p role="alert" className="text-sm text-destructive">
-          Could not load advisory attendance.
-        </p>
+        <div className={assign.card}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <p role="alert" className="font-medium">
+              Could not load advisory attendance.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => matrixQuery.refetch()}
+              disabled={matrixQuery.isFetching}
+            >
+              {matrixQuery.isFetching ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Retrying</span>
+                </>
+              ) : (
+                "Try again"
+              )}
+            </Button>
+          </div>
+        </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {students.length === 0
-            ? "No students in this section yet."
-            : "No students match your search."}
-        </p>
+        students.length === 0 ? (
+          <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+            <div className={`${assign.card} w-full max-w-md`}>
+              <span className={assign.glowClip} aria-hidden="true">
+                <span className={assign.cardGlow} />
+              </span>
+              <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+                <span
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                  aria-hidden="true"
+                >
+                  <Users size={24} className="text-muted-foreground" />
+                </span>
+                <p className="font-medium">No students in this section yet</p>
+                <p className="max-w-sm text-sm text-muted-foreground">
+                  Students will appear here once enrolled in this advisory section.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className={assign.card}>
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
+            </span>
+            <div className="relative">
+              <TeacherEmptyState
+                icon={Users}
+                title="No students match your search"
+                hint="Try a different name or LRN."
+              />
+            </div>
+          </div>
+        )
       ) : (
         <ul className={GRID} aria-label="Student attendance">
           {rows.map(({ student, avg }) => {

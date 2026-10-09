@@ -8,6 +8,8 @@ const PER_SECTION = 5;
 const FIRST = ["Maria", "Juan", "Ana", "Pedro", "Sofia", "Lucas", "Elena", "Miguel", "Rosa", "Jose"];
 const LAST = ["Santos", "Reyes", "Cruz", "Garcia", "Mendoza", "Torres", "Flores", "Ramos", "Diaz", "Bautista"];
 
+const MI = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
 function hashNum(s: string): number {
   let h = 0;
   for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -34,7 +36,7 @@ async function main() {
       const i = existing + k;
       return {
         lrn: `88${String((base + i * 7919) % 100000000).padStart(8, "0")}`,
-        fullName: `${FIRST[(base + i) % FIRST.length]} ${LAST[(base + i * 3) % LAST.length]}`,
+        fullName: `${FIRST[(base + i) % FIRST.length]} ${MI[(base + i * 5) % MI.length]}. ${LAST[(base + i * 3) % LAST.length]}`,
         gradeLevel: sec.gradeLevel,
         sectionId: sec.id,
         schoolYearId: sec.schoolYearId,

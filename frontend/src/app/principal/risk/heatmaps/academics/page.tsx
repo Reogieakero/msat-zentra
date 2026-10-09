@@ -19,6 +19,7 @@ import {
   type CellData,
 } from "./components/types";
 import shell from "../components/heatmap.module.css";
+import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
 
 function isBelow75(avg: number, subjectCount: number): boolean {
   return subjectCount > 0 && avg < 75;
@@ -27,12 +28,12 @@ function isBelow75(avg: number, subjectCount: number): boolean {
 export default function PrincipalAcademicHeatmapsPage() {
   const [gradeFilter, setGradeFilter] = usePersistentState<string>(
     "academic-heatmap:grade",
-    ALL_GRADES
+    "Grade 7"
   );
 
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termId = activeTerm?.termId ?? null;
-  const { data, isPending, dataUpdatedAt } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["academic-insights", "live", termId],
     queryFn: async () => {
       const res = await apiClient.get<BackendAcademicSummary>("/api/academics", {
@@ -42,6 +43,7 @@ export default function PrincipalAcademicHeatmapsPage() {
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    enabled: termReady,
   });
 
   const sections = React.useMemo(() => {
@@ -155,9 +157,13 @@ export default function PrincipalAcademicHeatmapsPage() {
     return Array.from(set).sort((a, b) => gradeSortKey(a) - gradeSortKey(b));
   }, [sections]);
 
+  // Single-grade default lives in the trend card now: normalize any legacy
+  // "all grades" value (or a grade absent from current data) to Grade 7
+  // when available, else the first available grade.
   React.useEffect(() => {
-    if (gradeFilter !== ALL_GRADES && grades.length > 0 && !grades.includes(gradeFilter)) {
-      setGradeFilter(ALL_GRADES);
+    if (grades.length === 0) return;
+    if (!grades.includes(gradeFilter)) {
+      setGradeFilter(grades.includes("Grade 7") ? "Grade 7" : grades[0]);
     }
   }, [grades, gradeFilter, setGradeFilter]);
 
@@ -189,16 +195,16 @@ export default function PrincipalAcademicHeatmapsPage() {
     return items.sort((a, b) => a.avg - b.avg);
   }, [sections, cellByKey, selectedSubject, gradeFilter]);
 
+  const isEmpty = !isPending && sections.length === 0;
   return (
     <div className={shell.shell}>
       <div className={shell.layout}>
-        <section className={shell.page}>
-          <AcademicsHeader
-            grades={grades}
-            gradeFilter={gradeFilter}
-            onGradeFilterChange={setGradeFilter}
-            dataUpdatedAt={dataUpdatedAt}
-          />
+        <section className={shell.page} aria-busy={isPending || undefined}>
+          {isPending ? (
+            <PageHeaderSkeleton withActions />
+          ) : isEmpty ? null : (
+          <AcademicsHeader />
+          )}
           <KpiStrip
             below={below}
             gradedTotal={gradedStudents.length}
@@ -211,6 +217,7 @@ export default function PrincipalAcademicHeatmapsPage() {
             subjects={subjects}
             grades={grades}
             gradeFilter={gradeFilter}
+            onGradeFilterChange={setGradeFilter}
             isPending={isPending}
             selectedSubject={selectedSubject}
             onSelectSubject={setSelectedSubject}
@@ -223,7 +230,7 @@ export default function PrincipalAcademicHeatmapsPage() {
               onClear={() => setSelectedSubject(null)}
             />
           ) : null}
-          <NeedsAttentionList items={attention} isPending={isPending} />
+          <NeedsAttentionList items={attention} isPending={isPending} isNoData={sections.length === 0} />
         </section>
       </div>
     </div>

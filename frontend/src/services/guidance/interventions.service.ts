@@ -38,18 +38,23 @@ export async function fetchGuidanceInterventions(
   return { ...(data as GuidanceInterventionsData), students };
 }
 
+// Bounded preview fan-out: strict 15/page, max 10 pages (150 rows).
+const FETCH_ALL_PAGE_SIZE = 15;
+const FETCH_ALL_MAX_PAGES = 10;
+
 export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
   const first = await fetchGuidanceInterventions({
     page: 1,
-    pageSize: 100,
+    pageSize: FETCH_ALL_PAGE_SIZE,
     level: "All",
     outcome: "all",
   });
   const all = [...first.students];
-  for (let p = 2; p <= first.totalPages; p++) {
+  const pages = Math.min(first.totalPages, FETCH_ALL_MAX_PAGES);
+  for (let p = 2; p <= pages; p++) {
     const res = await fetchGuidanceInterventions({
       page: p,
-      pageSize: 100,
+      pageSize: FETCH_ALL_PAGE_SIZE,
       level: "All",
       outcome: "all",
     });

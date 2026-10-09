@@ -1,9 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import styles from "./honor-roll.module.css";
 
 export default function PrincipalHonorRollLoading() {
   return (
     <section className={styles.page} aria-label="Loading honor roll" aria-busy="true">
+      <PageHeaderSkeleton withActions />
       <div className="flex flex-col gap-2 rounded-md border p-6" aria-hidden="true">
         <Skeleton className="h-7 w-64" />
         <Skeleton className="h-4 w-96" />

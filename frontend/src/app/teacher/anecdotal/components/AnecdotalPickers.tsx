@@ -14,8 +14,7 @@ import type {
   AnecdotalStudent,
 } from "@/services/anecdotal/anecdotal.types";
 import styles from "./AnecdotalChat.module.css";
-
-const PAGE_SIZE = 10;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export function StudentPicker({
   open,

@@ -63,21 +63,94 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     });
   }
 
-  const rows = await prisma.referral.findMany({
+  const deskScope = {
+    OR: [
+      { referredToRole: "guidance_counselor" },
+      {
+        referredToRole: "adm_coordinator",
+        OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+      },
+    ],
+  };
+  const scopeClauses: any[] = [deskScope];
+  if (scopeTermId) scopeClauses.push({ termId: scopeTermId });
+  if (dbClauses.length) scopeClauses.push(...dbClauses);
+  const baseWhere: any = { AND: scopeClauses };
 
-    where: {
-      ...(scopeTermId ? { termId: scopeTermId } : {}),
-      OR: [
-        { referredToRole: "guidance_counselor" },
-        {
-          referredToRole: "adm_coordinator",
-          OR: [{ consultReviewer: null }, { consultReviewer: "guidance_counselor" }],
+  const sessionClauses: any[] = [];
+  if (bookedFilter) sessionClauses.push({ counselingSessions: { some: {} } });
+  if (completedFilter) sessionClauses.push({ counselingSessions: { some: { status: "completed" } } });
+  if (openFilter) sessionClauses.push({ status: { notIn: ["resolved", "dismissed"] } });
+
+  const needle = q.trim();
+  const searchClause = needle
+    ? {
+        OR: [
+          { reason: { contains: needle, mode: "insensitive" } },
+          { student: { user: { fullName: { contains: needle, mode: "insensitive" } } } },
+          { student: { lrn: { contains: needle, mode: "insensitive" } } },
+          { student: { section: { name: { contains: needle, mode: "insensitive" } } } },
+          { roster: { fullName: { contains: needle, mode: "insensitive" } } },
+          { roster: { lrn: { contains: needle, mode: "insensitive" } } },
+          { roster: { section: { name: { contains: needle, mode: "insensitive" } } } },
+          { referredByUser: { fullName: { contains: needle, mode: "insensitive" } } },
+          { anecdotalRecord: { descriptionOfIncident: { contains: needle, mode: "insensitive" } } },
+          { anecdotalRecord: { observer: { fullName: { contains: needle, mode: "insensitive" } } } },
+        ],
+      }
+    : null;
+  const pagedWhere: any = {
+    AND: [...scopeClauses, ...sessionClauses, ...(searchClause ? [searchClause] : [])],
+  };
+
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const orderBy = [
+    { anecdotalRecord: { observationDatetime: "desc" as const } },
+    { id: "desc" as const },
+  ];
+
+  const [unfilteredTotal, total] = await Promise.all([
+    prisma.referral.count({ where: baseWhere }),
+    prisma.referral.count({ where: pagedWhere }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / effPageSize));
+  let safePage = Math.min(Math.max(1, page), totalPages);
+  if (highlight) {
+    const hl = await prisma.referral.findFirst({
+      where: { ...pagedWhere, id: highlight },
+      select: { id: true, anecdotalRecord: { select: { observationDatetime: true } } },
+    });
+    const hlDt = hl?.anecdotalRecord?.observationDatetime;
+    if (hl && hlDt) {
+      const rank = await prisma.referral.count({
+        where: {
+          AND: [
+            pagedWhere,
+            {
+              OR: [
+                { anecdotalRecord: { observationDatetime: { gt: hlDt } } },
+                { anecdotalRecord: { observationDatetime: hlDt }, id: { gt: highlight } },
+              ],
+            },
+          ],
         },
-      ],
-      ...(dbClauses.length ? { AND: dbClauses } : {}),
-    },
-    orderBy: { anecdotalRecord: { observationDatetime: "desc" } },
-    take: 1000,
+      });
+      safePage = Math.floor(rank / effPageSize) + 1;
+    }
+  }
+  const pageIds = (
+    await prisma.referral.findMany({
+      where: pagedWhere,
+      select: { id: true },
+      orderBy,
+      skip: (safePage - 1) * effPageSize,
+      take: effPageSize,
+    })
+  ).map((r) => r.id);
+
+  const pageRows = await prisma.referral.findMany({
+    where: { id: { in: pageIds } },
+    orderBy,
     select: {
       id: true,
       reason: true,
@@ -152,7 +225,7 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     },
   });
 
-  const mapped = rows.map((r) => ({
+  const mapped = pageRows.map((r) => ({
     id: r.id,
     student: r.student?.user.fullName ?? r.roster?.fullName ?? "Unknown student",
     lrn: r.student?.lrn ?? r.roster?.lrn ?? "",
@@ -269,97 +342,108 @@ export async function getCases(ctx: GuidanceContext, query: CasesQuery) {
     dismissedByRole: dismissedByRole.get(r.id) ?? null,
   }));
 
-  const filtered = withAction.filter((r) => {
-    if (statusFilter && r.status !== statusFilter) return false;
-    if (typeFilter === "adm" && r.type !== "ADM") return false;
-    if (typeFilter === "counseling" && r.type !== "Counseling") return false;
-    if (bookedFilter && r.sessions.length === 0) return false;
-    if (completedFilter && !r.sessions.some((s) => s.status === "completed")) return false;
-    if (openFilter && (r.status === "resolved" || r.status === "dismissed")) return false;
-    if (
-      q &&
-      !`${r.student} ${r.lrn} ${r.section} ${r.referredBy} ${r.observer} ${r.reason} ${r.anecdotalExcerpt} ${r.category}`
-        .toLowerCase()
-        .includes(q)
-    )
-      return false;
-    return true;
+  const referrals = withAction;
+
+  const typeClause = (t: "ADM" | "Counseling"): any =>
+    t === "ADM"
+      ? { OR: [{ escalatedTo: "adm_coordinator" }, { referredToRole: "adm_coordinator" }] }
+      : {
+          AND: [
+            { OR: [{ escalatedTo: null }, { escalatedTo: { not: "adm_coordinator" } }] },
+            { referredToRole: { not: "adm_coordinator" } },
+          ],
+        };
+  const scopedFor = (t: "ADM" | "Counseling"): any => ({ AND: [...scopeClauses, typeClause(t)] });
+  const openClause = { status: { notIn: ["resolved", "dismissed"] } };
+  const bookedClause = { counselingSessions: { some: {} } };
+  const doneClause = { counselingSessions: { some: { status: "completed" } } };
+
+  const dismissedScope = await prisma.referral.findMany({
+    where: { AND: [...scopeClauses, { status: "dismissed" }] },
+    select: { id: true, escalatedTo: true, referredToRole: true },
   });
-
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  let safePage = Math.min(page, totalPages);
-  if (highlight) {
-    const idx = filtered.findIndex(
-      (r) => (r as { id?: unknown }).id === highlight
-    );
-    if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
+  const cancelledIds = new Set<string>();
+  if (dismissedScope.length > 0) {
+    const cancelLogs = await prisma.auditLog.findMany({
+      where: {
+        sourceTable: "referrals",
+        sourceId: { in: dismissedScope.map((d) => d.id) },
+        actionType: "referral_dismissed",
+        user: { role: { in: ["adviser", "subject_teacher"] } },
+      },
+      select: { sourceId: true },
+    });
+    for (const l of cancelLogs) cancelledIds.add(l.sourceId);
   }
-  const referrals = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const cancelledOf = (t: "ADM" | "Counseling") =>
+    dismissedScope.filter(
+      (d) =>
+        cancelledIds.has(d.id) &&
+        (d.escalatedTo === "adm_coordinator" || d.referredToRole === "adm_coordinator"
+          ? "ADM"
+          : "Counseling") === t,
+    ).length;
 
-  const isCancelled = (r: { status: string; id: string }) =>
-    r.status === "dismissed" &&
-    (dismissedByRole.get(r.id) === "adviser" ||
-      dismissedByRole.get(r.id) === "subject_teacher");
-
-  const unfilteredTotal = mapped.length;
+  const [statusGroups, admGroups, counselGroups] = await Promise.all([
+    prisma.referral.groupBy({ by: ["status"], where: baseWhere, _count: { _all: true } }),
+    prisma.referral.groupBy({ by: ["status"], where: scopedFor("ADM"), _count: { _all: true } }),
+    prisma.referral.groupBy({ by: ["status"], where: scopedFor("Counseling"), _count: { _all: true } }),
+  ]);
+  const countOf = (groups: any[], s: string) =>
+    groups.find((g) => g.status === s)?._count._all ?? 0;
+  const [
+    admBooked,
+    admDone,
+    admOpen,
+    counselBooked,
+    counselDone,
+    counselOpen,
+  ] = await Promise.all([
+    prisma.referral.count({ where: { AND: [scopedFor("ADM"), bookedClause] } }),
+    prisma.referral.count({ where: { AND: [scopedFor("ADM"), doneClause] } }),
+    prisma.referral.count({ where: { AND: [scopedFor("ADM"), openClause] } }),
+    prisma.referral.count({ where: { AND: [scopedFor("Counseling"), bookedClause] } }),
+    prisma.referral.count({ where: { AND: [scopedFor("Counseling"), doneClause] } }),
+    prisma.referral.count({ where: { AND: [scopedFor("Counseling"), openClause] } }),
+  ]);
+  const byTypeRow = (
+    groups: any[],
+    t: "ADM" | "Counseling",
+    booked: number,
+    done: number,
+    open: number,
+  ) => ({
+    pending: countOf(groups, "pending"),
+    inProgress: countOf(groups, "in_progress"),
+    followUp: countOf(groups, "follow_up"),
+    escalated: countOf(groups, "escalated"),
+    infoRequested: countOf(groups, "info_requested"),
+    resolved: countOf(groups, "resolved"),
+    dismissed: countOf(groups, "dismissed"),
+    cancelled: cancelledOf(t),
+    booked,
+    done,
+    open,
+  });
 
   return {
     summary: {
-      total: mapped.length,
-      pending: mapped.filter((r) => r.status === "pending").length,
-      inProgress: mapped.filter((r) => r.status === "in_progress").length,
-      resolved: mapped.filter((r) => r.status === "resolved").length,
-      escalated: mapped.filter((r) => r.status === "escalated").length,
-      infoRequested: mapped.filter((r) => r.status === "info_requested").length,
-      dismissed: mapped.filter((r) => r.status === "dismissed").length,
-      followUp: mapped.filter((r) => r.status === "follow_up").length,
-
-      byType: (["Counseling", "ADM"] as const).reduce(
-        (acc, type) => {
-          const scoped = mapped.filter((r) => r.type === type);
-          const open = scoped.filter(
-            (r) => r.status !== "resolved" && r.status !== "dismissed"
-          );
-          acc[type] = {
-            pending: scoped.filter((r) => r.status === "pending").length,
-            inProgress: scoped.filter((r) => r.status === "in_progress").length,
-            followUp: scoped.filter((r) => r.status === "follow_up").length,
-            escalated: scoped.filter((r) => r.status === "escalated").length,
-            infoRequested: scoped.filter((r) => r.status === "info_requested").length,
-            resolved: scoped.filter((r) => r.status === "resolved").length,
-            dismissed: scoped.filter((r) => r.status === "dismissed").length,
-            cancelled: scoped.filter((r) => isCancelled(r)).length,
-            booked: scoped.filter((r) => r.sessions.length > 0).length,
-            done: scoped.filter((r) =>
-              r.sessions.some((s) => s.status === "completed")
-            ).length,
-            open: open.length,
-          };
-          return acc;
-        },
-        {} as Record<
-          "Counseling" | "ADM",
-          {
-            pending: number;
-            inProgress: number;
-            followUp: number;
-            escalated: number;
-            infoRequested: number;
-            resolved: number;
-            dismissed: number;
-            cancelled: number;
-            booked: number;
-            done: number;
-            open: number;
-          }
-        >
-      ),
+      total: unfilteredTotal,
+      pending: countOf(statusGroups, "pending"),
+      inProgress: countOf(statusGroups, "in_progress"),
+      resolved: countOf(statusGroups, "resolved"),
+      escalated: countOf(statusGroups, "escalated"),
+      infoRequested: countOf(statusGroups, "info_requested"),
+      dismissed: countOf(statusGroups, "dismissed"),
+      followUp: countOf(statusGroups, "follow_up"),
+      byType: {
+        Counseling: byTypeRow(counselGroups, "Counseling", counselBooked, counselDone, counselOpen),
+        ADM: byTypeRow(admGroups, "ADM", admBooked, admDone, admOpen),
+      },
     },
     referrals,
     page: safePage,
-    pageSize,
+    pageSize: effPageSize,
     total,
     totalPages,
     unfilteredTotal,

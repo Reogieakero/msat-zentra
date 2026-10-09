@@ -258,7 +258,7 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
       const newOrder = typeof updater === "function" ? updater(fullColumnOrder) : updater;
       setColumnOrder(newOrder.filter((id: string) => id !== "select" && id !== "actions"));
     },
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: {
       sorting,
       columnFilters,
@@ -427,24 +427,26 @@ export function TeacherOverviewAdvisory({ students }: TeacherOverviewAdvisoryPro
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
               </div>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                </Button>
-              </div>
+              {table.getPageCount() > 1 && (
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -59,13 +59,12 @@ export interface InterventionStudentsResult {
 
 export type RiskFactorKey = "Academic" | "Attendance" | "Behavioral";
 
-export type GradeMode = "raw" | "final";
-
 export interface StudentFilters {
   riskLevel?: RiskLevelKey | "all";
   hasIntervention?: boolean;
   factor?: RiskFactorKey | "all";
-  gradeMode?: GradeMode;
+  q?: string;
+  section?: string;
 }
 
 export interface StaffOption {

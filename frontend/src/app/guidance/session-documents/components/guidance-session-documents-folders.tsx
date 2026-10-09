@@ -13,7 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { HelpCircle, Loader2 } from "lucide-react";
+import { HelpCircle, Loader2, SearchX } from "lucide-react";
+import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { CATEGORY_COLORS } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import type { GuidanceAnecdotalRecord } from "@/services/guidance/anecdotal.types";
 import {
@@ -207,13 +208,11 @@ export function GuidanceSessionDocumentsFolders({
         <div className={styles.content}>
           <div className={styles.scrollArea}>
             {records.length === 0 ? (
-              <div className={styles.empty}>
-                <p className={styles.emptyTitle}>No session documents here</p>
-                <p className={styles.emptyBody}>
-                  Try a different name or keyword, or clear the filter to see every filed image.
-                  GCForm-01 reports live on the Anecdotal Records page.
-                </p>
-              </div>
+              <GuidanceEmptyState
+                icon={SearchX}
+                title="No session documents here"
+                hint="Try a different name or keyword, or clear the filter to see every filed image. GCForm-01 reports live on the Anecdotal Records page."
+              />
             ) : (
               <div className={styles.studentGrid}>
                 {records.map((record) => {
@@ -261,39 +260,41 @@ export function GuidanceSessionDocumentsFolders({
               </div>
             )}
           </div>
-          <div className={styles.pager}>
-            <p className={styles.range}>
-              Showing {start}–{end} of {total}
-            </p>
-            <div className={styles.pagerButtons}>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page <= 1 || isNavigating}
-                onClick={() => onPageChange(page - 1)}
-              >
-                Previous
-              </Button>
-              <span className={styles.pageLabel} aria-live="polite">
-                {isNavigating ? (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                    <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
-                    Loading…
-                  </span>
-                ) : (
-                  `Page ${page} of ${totalPages}`
-                )}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page >= totalPages || isNavigating}
-                onClick={() => onPageChange(page + 1)}
-              >
-                Next
-              </Button>
+          {totalPages > 1 && (
+            <div className={styles.pager}>
+              <p className={styles.range}>
+                Showing {start}–{end} of {total}
+              </p>
+              <div className={styles.pagerButtons}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1 || isNavigating}
+                  onClick={() => onPageChange(page - 1)}
+                >
+                  Previous
+                </Button>
+                <span className={styles.pageLabel} aria-live="polite">
+                  {isNavigating ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                      <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
+                      Loading…
+                    </span>
+                  ) : (
+                    `Page ${page} of ${totalPages}`
+                  )}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= totalPages || isNavigating}
+                  onClick={() => onPageChange(page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

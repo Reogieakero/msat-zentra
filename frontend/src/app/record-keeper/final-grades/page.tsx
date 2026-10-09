@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./final-grades.module.css";
+import { RecordKeeperEmptyCard, RecordKeeperEmptyState } from "../components/RecordKeeperEmptyCard";
+import { RecordKeeperPageHeader } from "../components/RecordKeeperPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { GradePipeline } from "@/components/registry/final-grades/GradePipeline";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
@@ -104,10 +107,36 @@ export default function FinalGradeApprovalsPage() {
   const hasRecords = (data?.complete ?? 0) > 0;
   const searching = debouncedQuery.length > 0;
   const isSyncing = isFetching && !isPending;
+  // True empty (no records at all, not a search with no matches):
+  // hide the page header, pipeline, tiles, and table card entirely and
+  // render a single centered card instead.
+  const isTrueEmpty = !isPending && !isError && !hasRecords && !searching;
+
+  if (isTrueEmpty) {
+    return (
+      <section className={`${styles.page} ${styles.pageEmpty}`}>
+        <RecordKeeperEmptyCard
+          icon={GraduationCap}
+          title="No complete grade sets yet"
+          hint="Students appear once every subject is adviser-approved."
+          label="Final grade approvals"
+          centered
+        />
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
+        {isPending ? (
+          <PageHeaderSkeleton />
+        ) : (
+          <RecordKeeperPageHeader
+            title="Final Grade Approvals"
+            description="One row per student with a complete term — every subject adviser-approved (grades 7–10)."
+          />
+        )}
         <GradePipeline
           desk="record-keeper"
           counts={{
@@ -219,25 +248,17 @@ export default function FinalGradeApprovalsPage() {
             ) : isError ? (
               <p className={styles.empty}>Could not load final grades.</p>
             ) : !hasRecords ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <GraduationCap />
-                </span>
-                <p className={styles.emptyTitle}>No complete grade sets yet</p>
-                <p className={styles.emptyHint}>
-                  Students appear once every subject is adviser-approved.
-                </p>
-              </div>
+              <RecordKeeperEmptyState
+                icon={GraduationCap}
+                title="No complete grade sets yet"
+                hint="Students appear once every subject is adviser-approved."
+              />
             ) : searching && pageRows.length === 0 ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <SearchX />
-                </span>
-                <p className={styles.emptyTitle}>No matching grade sets</p>
-                <p className={styles.emptyHint}>
-                  {`No complete grade sets match "${query}".`}
-                </p>
-              </div>
+              <RecordKeeperEmptyState
+                icon={SearchX}
+                title="No matching grade sets"
+                hint={`No complete grade sets match "${query}".`}
+              />
             ) : (
               <div className={styles.tableWrap}>
                 <Table>
@@ -297,7 +318,7 @@ export default function FinalGradeApprovalsPage() {
             )}
           </div>
 
-          {hasRecords && (
+          {totalPages > 1 && (
             <div className={`${styles.footer} relative`}>
               <p className={styles.footerInfo}>
                 Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}

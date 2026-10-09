@@ -26,3 +26,31 @@
   gap: 0.75rem;
   min-width: 0;
 }
+
+/* Empty-state page that fits the viewport exactly (no page scroll).
+   Section-level only — the centered empty card keeps its own size
+   (same max-width as enrolled). Math mirrors coordinator.module.css
+   shell offsets. Doubled selector beats .page regardless of order.
+   overflow: clip (not hidden) trims residual sub-pixel/glow overflow
+   without creating a scroll container. Must stay after .page. */
+.pageEmpty.pageEmpty {
+  justify-content: center;
+  min-height: calc(100vh - 3rem - 2rem);
+  min-height: calc(100dvh - 3rem - 2rem);
+  padding-bottom: 0;
+  overflow: clip;
+}
+
+@media (max-width: 1023px) {
+  .pageEmpty.pageEmpty {
+    min-height: calc(100vh - 6rem - 2rem);
+    min-height: calc(100dvh - 6rem - 2rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .pageEmpty.pageEmpty {
+    min-height: calc(100vh - 6rem - 1.5rem);
+    min-height: calc(100dvh - 6rem - 1.5rem);
+  }
+}

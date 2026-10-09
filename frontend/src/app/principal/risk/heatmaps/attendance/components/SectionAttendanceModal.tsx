@@ -11,7 +11,8 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Users } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
 import { CardModal } from "@/components/ui/CardModal";
 import { Badge } from "@/components/ui/badge";
@@ -322,6 +323,14 @@ export function SectionAttendanceModal({
               {total} student{total === 1 ? "" : "s"}
             </p>
           </div>
+          {!studentsQuery.isPending && !studentsQuery.isError && filtered.length === 0 && !studentQuery.trim() ? (
+            <PrincipalEmptyState
+              icon={Users}
+              title="No students in this section"
+              hint="No students found in this section for the active term."
+            />
+          ) : (
+          <>
           <div className={common.searchWrap} style={{ marginBottom: "0.75rem" }}>
             <Search className={common.searchIcon} aria-hidden />
             <Input
@@ -433,6 +442,8 @@ export function SectionAttendanceModal({
                 label="students"
               />
             </>
+          )}
+          </>
           )}
         </>
       )}

@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CardModal } from "@/components/ui/CardModal";
+import { Spinner } from "@/components/ui/spinner";
 import formStyles from "@/app/principal/academics/assign/components/form.module.css";
 import type { RiskSnapshotStudent } from "../types";
 export function AlertGuidanceDialog({
@@ -50,7 +51,14 @@ export function AlertGuidanceDialog({
           aria-busy={pending || undefined}
           onClick={onSubmit}
         >
-          {pending ? "Alerting…" : "Alert guidance"}
+          {pending ? (
+            <>
+              <Spinner className="size-4" aria-hidden />
+              Alerting…
+            </>
+          ) : (
+            "Alert guidance"
+          )}
         </Button>
       </div>
     </CardModal>

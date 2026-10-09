@@ -118,30 +118,25 @@ export default function TeacherStudentListPage() {
   }
   if (rail.length === 0) {
     return (
-      <section className={styles.page}>
-        <div className={styles.heading}>
-          <h1>Student List</h1>
-          <p>
-            Advised sections and handled subject × sections — pick one to see
-            its students with attendance percentage and academic grade.
-          </p>
-        </div>
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <BookOpen size={24} className="text-muted-foreground" />
+      <section className={styles.page} aria-label="Student List">
+        <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+          <div className={`${assign.card} w-full max-w-md`}>
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
             </span>
-            <p className="font-medium">No students to list yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Your advised sections and handled subject × section cards will
-              appear here once sections are assigned to you this term.
-            </p>
+            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+              <span
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                aria-hidden="true"
+              >
+                <BookOpen size={24} className="text-muted-foreground" />
+              </span>
+              <p className="font-medium">No students to list yet</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Your advised sections and handled subject × section cards will
+                appear here once sections are assigned to you this term.
+              </p>
+            </div>
           </div>
         </div>
       </section>

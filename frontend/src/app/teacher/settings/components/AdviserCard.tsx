@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
+import { useTerm } from "@/lib/term/TermContext";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
@@ -30,8 +32,11 @@ export type AdviserSectionOption = {
   hasCode?: boolean;
 };
 export function useAdviserSections() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   return useQuery<{ sections: AdviserSectionOption[] }>({
-    queryKey: ["teacher-settings-adviser-sections"],
+    // Term-scoped: advisory assignments differ per school year/term.
+    queryKey: ["teacher-settings-adviser-sections", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: AdviserSectionOption[] }>(
         "/api/teacher/settings/adviser-sections",
@@ -202,7 +207,14 @@ export function AdviserCard() {
                 onClick={() => void handleRelease(mine[0]?.id ?? advisorySection?.id ?? null)}
                 className="text-destructive hover:text-destructive"
               >
-                {saving ? "Working…" : "I'm not an adviser"}
+                {saving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" aria-hidden />
+                    <span aria-live="polite">Saving</span>
+                  </>
+                ) : (
+                  "I'm not an adviser"
+                )}
               </Button>
             </div>
           )}
@@ -265,7 +277,13 @@ export function AdviserCard() {
 }
 export function AdviserPicker({ ordered, loading, loadError, effectiveSelected, saving, code, codeRequired, onCodeChange, onSelect, onClaim }: { ordered: AdviserSectionOption[]; loading: boolean; loadError: boolean; effectiveSelected: string | null; saving: boolean; code: string; codeRequired: boolean; onCodeChange: (v: string) => void; onSelect: (id: string) => void; onClaim: () => void }) {
   if (loading) {
-    return <p className="text-sm text-muted-foreground" aria-busy="true">Loading sections…</p>;
+    return (
+      <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading sections">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-2/3" />
+      </div>
+    );
   }
   if (loadError) {
     return (

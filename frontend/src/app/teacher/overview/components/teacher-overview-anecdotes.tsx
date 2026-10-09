@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { NotebookPen } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
@@ -48,8 +49,11 @@ function recordDate(iso: string): string {
 }
 
 export function TeacherOverviewAnecdotes() {
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const anecdotesQuery = useQuery({
-    queryKey: ["teacher-anecdotes"],
+    // Term-scoped: never show Term A anecdotes for Term B.
+    queryKey: ["teacher-anecdotes", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<AnecdoteRow[]>("/api/anecdotal/referable");
       return Array.isArray(data) ? data : [];
@@ -66,12 +70,6 @@ export function TeacherOverviewAnecdotes() {
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
-        <div className="relative">
-          <h2 className={styles.sectionTitle}>Anecdotal Records</h2>
-          <p className={styles.sectionDesc}>
-            Latest filings for your advisees — category only, never the private write-up.
-          </p>
-        </div>
       {anecdotesQuery.isPending ? (
         <div className="relative flex flex-col gap-2" aria-busy="true" aria-label="Loading anecdotes">
           {[0, 1, 2].map((i) => (
@@ -97,6 +95,12 @@ export function TeacherOverviewAnecdotes() {
         </div>
       ) : (
         <>
+          <div className="relative">
+            <h2 className={styles.sectionTitle}>Anecdotal Records</h2>
+            <p className={styles.sectionDesc}>
+              Latest filings for your advisees — category only, never the private write-up.
+            </p>
+          </div>
           <ul className="relative grid min-w-0 grid-cols-2 items-start justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-5">
             {rows.map((r) => (
               <li key={r.id} className="min-w-0">

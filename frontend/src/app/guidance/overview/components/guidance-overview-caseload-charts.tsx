@@ -13,6 +13,8 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Inbox, School } from "lucide-react";
+import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import type {
   GuidanceReferralTypeRow,
@@ -94,6 +96,8 @@ export function GuidanceOverviewCaseloadCharts({
   const topSections = [...sectionHeat]
     .sort((a, b) => b.high - a.high || b.moderate - a.moderate)
     .slice(0, 6);
+  const referralsEmpty = referralsTotal === 0;
+  const sectionsEmpty = topSections.length === 0 || topSections.every((s) => s.high === 0 && s.moderate === 0);
 
   return (
     <div className={styles.chartGrid}>
@@ -101,15 +105,21 @@ export function GuidanceOverviewCaseloadCharts({
         <span className={styles.glowClip} aria-hidden="true">
           <span className={styles.cardGlow} />
         </span>
+        {referralsEmpty ? null : (
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Referred cases by type</CardTitle>
           <CardDescription className={styles.sectionDesc}>
             ADM vs counseling split of the cases on your desk this term.
           </CardDescription>
         </CardHeader>
+        )}
         <CardContent className={styles.cardBody}>
-          {referralsTotal === 0 ? (
-            <p className={styles.empty}>No cases referred to you this term.</p>
+          {referralsEmpty ? (
+            <GuidanceEmptyState
+              icon={Inbox}
+              title="No referred cases"
+              hint="No cases referred to you for the active term yet."
+            />
           ) : (
             <>
               <div className={styles.donutWrap}>
@@ -153,12 +163,12 @@ export function GuidanceOverviewCaseloadCharts({
                   </li>
                 ))}
               </ul>
-            </>
-          )}
           <p className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
             {interpretReferralTypes(referralsByType)}
           </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -166,16 +176,27 @@ export function GuidanceOverviewCaseloadCharts({
         <span className={styles.glowClip} aria-hidden="true">
           <span className={styles.cardGlow} />
         </span>
+        {sectionsEmpty ? null : (
         <CardHeader>
           <CardTitle className={styles.sectionTitle}>Sections needing attention</CardTitle>
           <CardDescription className={styles.sectionDesc}>
             High-risk students per section · top 6 sections.
           </CardDescription>
         </CardHeader>
+        )}
         <CardContent className={styles.cardBody}>
-          {topSections.every((s) => s.high === 0 && s.moderate === 0) ? (
-            <p className={styles.empty}>No section has at-risk students right now.</p>
+          {sectionsEmpty ? (
+            <GuidanceEmptyState
+              icon={School}
+              title="No sections need attention"
+              hint={
+                topSections.length === 0
+                  ? "No sections found for the active school year."
+                  : "No section has at-risk students right now."
+              }
+            />
           ) : (
+            <>
             <div className={styles.barWrap}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topSections} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
@@ -194,13 +215,12 @@ export function GuidanceOverviewCaseloadCharts({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          )}
           <p className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
-            {topSections.length === 0
-              ? "No sections found for the active school year."
-              : `${topSections[0]?.section} leads with ${topSections[0]?.high} high-risk and ${topSections[0]?.moderate} moderate-risk students.`}
+            {`${topSections[0]?.section} leads with ${topSections[0]?.high} high-risk and ${topSections[0]?.moderate} moderate-risk students.`}
           </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

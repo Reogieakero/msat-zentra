@@ -3,8 +3,11 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { BellRing, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { GuidanceAlertsTable } from "./components/guidance-alerts-table";
 import { GuidanceAlertsSideRail } from "./components/GuidanceAlertsSideRail";
 import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
@@ -17,9 +20,10 @@ import { fetchAllGuidanceInterventions } from "@/services/guidance/interventions
 import type { AtRiskStudentItem } from "@/services/guidance/interventions.types";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/guidance-alerts.module.css";
+import pageStyles from "../pages.module.css";
 
 export default function GuidanceAlertsPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const referralsQuery = useQuery<GuidanceReferralItem[]>({
@@ -28,6 +32,7 @@ export default function GuidanceAlertsPage() {
     queryFn: () => fetchAllGuidanceReferrals(),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled: termReady,
   });
   const interventionsQuery = useQuery<AtRiskStudentItem[]>({
 
@@ -35,6 +40,7 @@ export default function GuidanceAlertsPage() {
     queryFn: fetchAllGuidanceInterventions,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled: termReady,
   });
 
   const isPending = referralsQuery.isPending || interventionsQuery.isPending;
@@ -64,12 +70,13 @@ export default function GuidanceAlertsPage() {
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading referred cases">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.repoGrid}>
           <div className={styles.skelPanel}>
             <div className={styles.skelPanelHead}>
@@ -140,8 +147,31 @@ export default function GuidanceAlertsPage() {
     );
   }
 
+  const isTrueEmpty = referrals.length === 0 && interventions.length === 0;
+
   return (
-    <section className={styles.page}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={isFetching || undefined}
+      aria-label="Alerts"
+    >
+      {isTrueEmpty ? null : (
+        <GuidancePageHeader
+          title="Alerts"
+          description="Every ADM, counseling, and intervention case needing your attention."
+        />
+      )}
+      {isTrueEmpty ? (
+        <GuidanceEmptyCard
+          icon={BellRing}
+          title="No referred cases"
+          hint="New ADM, counseling, and intervention cases will appear here."
+          label="Referred cases"
+          centered
+          layout="fit"
+        />
+      ) : (
+        <>
       <div className={styles.repoGrid}>
         <div className="flex min-w-0 flex-col">
           <GuidanceAlertsTable
@@ -165,6 +195,8 @@ export default function GuidanceAlertsPage() {
           riskByStudent={riskByStudent ?? {}}
         />
       </div>
+        </>
+      )}
     </section>
   );
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ShieldCheck } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
-import { useGradeMode } from "../../grade-mode-context";
 import type { RiskBoardData, RiskFactor, RiskLevelKey } from "@/services/principal/risk.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./RiskLevelBreakdown.module.css";
 
 const LEVELS: RiskLevelKey[] = ["High", "Moderate", "Low"];
@@ -23,18 +25,14 @@ const FACTOR_LABEL: Record<RiskFactor, string> = {
 };
 
 export function RiskLevelBreakdown() {
-  const { gradeMode } = useGradeMode();
-
   const { activeTerm } = useTerm();
   const { data, isPending } = useQuery({
-    queryKey: ["risk-board", activeTerm?.termId ?? null, gradeMode],
+    queryKey: ["risk-board", activeTerm?.termId ?? null, activeTerm?.schoolYearId ?? null],
     queryFn: async () => {
-      const res = await apiClient.get<RiskBoardData>("/api/risk/board", {
-        params: { gradeMode },
-      });
+      const res = await apiClient.get<RiskBoardData>("/api/risk/board");
       return res.data;
     },
-    staleTime: 60_000,
+    staleTime: 15_000,
     refetchOnWindowFocus: false,
   });
 
@@ -59,44 +57,70 @@ export function RiskLevelBreakdown() {
     (a, b) => b[1] - a[1]
   )[0] ?? ["Academic", 0]) as [RiskFactor, number];
 
+  if (!isPending && total === 0) {
+    return (
+      <div className={`${assign.card} ${styles.card}`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <PrincipalEmptyState
+          icon={ShieldCheck}
+          title="Board is all clear"
+          hint="No students are currently flagged for risk in the active term."
+        />
+      </div>
+    );
+  }
   return (
-    <div className={`${assign.card} ${styles.card}`}>
+    <div className={`${assign.card} ${styles.card}`} aria-busy={isPending || undefined}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <h3 className={`${styles.title} relative`}>Risk Breakdown</h3>
-
       {isPending ? (
-        <p className={`${styles.summary} relative`}>Loading risk distribution…</p>
-      ) : total === 0 ? (
-        <p className={`${styles.summary} relative`}>
-          No students are currently flagged for risk. The board is all clear for
-          the active term.
-        </p>
+        <>
+          <Skeleton className="h-5 w-36" aria-hidden="true" />
+          <div className="flex flex-col gap-2" aria-hidden="true">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+          <ul className={styles.list} aria-hidden="true">
+            {LEVELS.map((level) => (
+              <li key={level} className={styles.item}>
+                <Skeleton className="size-2.5 shrink-0" />
+                <div className={styles.itemText}>
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="ml-auto h-4 w-20 shrink-0" />
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
         <>
-          <p className={`${styles.summary} relative`}>
-            <strong style={{ color: "var(--primary)" }}>
-              {atRisk.toLocaleString()}
-            </strong>{" "}
-            of <strong>{total.toLocaleString()}</strong> students ({" "}
-            <strong>{pct(atRisk)}%</strong> ) are at some level of risk. Of those,{" "}
-            <strong style={{ color: "var(--primary)" }}>
-              {counts.High.toLocaleString()}
-            </strong>{" "}
-            are high risk and need priority review.
-          </p>
+      <h3 className={`${styles.title} relative`}>Risk Breakdown</h3>
 
-          {dominantFactor[1] > 0 && (
-            <p className={`${styles.insight} relative`}>
-              The most common trigger is{" "}
-              <strong>{FACTOR_LABEL[dominantFactor[0]]}</strong> — it accounts for{" "}
-              <strong>{dominantFactor[1].toLocaleString()}</strong> at-risk flag
-              {dominantFactor[1] === 1 ? "" : "s"}. Targeting this area could
-              reduce overall risk the fastest.
-            </p>
-          )}
-        </>
+      <p className={`${styles.summary} relative`}>
+        <strong style={{ color: "var(--primary)" }}>
+          {atRisk.toLocaleString()}
+        </strong>{" "}
+        of <strong>{total.toLocaleString()}</strong> students ({" "}
+        <strong>{pct(atRisk)}%</strong> ) are at some level of risk. Of those,{" "}
+        <strong style={{ color: "var(--primary)" }}>
+          {counts.High.toLocaleString()}
+        </strong>{" "}
+        are high risk and need priority review.
+      </p>
+
+      {dominantFactor[1] > 0 && (
+        <p className={`${styles.insight} relative`}>
+          The most common trigger is{" "}
+          <strong>{FACTOR_LABEL[dominantFactor[0]]}</strong> — it accounts for{" "}
+          <strong>{dominantFactor[1].toLocaleString()}</strong> at-risk flag
+          {dominantFactor[1] === 1 ? "" : "s"}. Targeting this area could
+          reduce overall risk the fastest.
+        </p>
       )}
 
       <ul className={`${styles.list} relative`}>
@@ -117,11 +141,13 @@ export function RiskLevelBreakdown() {
               </span>
             </div>
             <span className={styles.itemValue}>
-              {isPending ? "—" : `${counts[level]} (${pct(counts[level])}%)`}
+              {`${counts[level]} (${pct(counts[level])}%)`}
             </span>
           </li>
         ))}
       </ul>
+        </>
+      )}
     </div>
   );
 }

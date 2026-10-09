@@ -16,6 +16,8 @@ import {
 import { CoordinatorReferralsCreateDialog } from "./components/coordinator-referrals-create-dialog";
 import { CoordinatorReferralsBookDialog } from "./components/coordinator-referrals-book-dialog";
 import { CoordinatorReferralsOutcomeDialog } from "./components/coordinator-referrals-outcome-dialog";
+import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import styles from "./components/coordinator-referrals.module.css";
 
 function CoordinatorReferralsPageInner() {
@@ -48,9 +50,26 @@ function CoordinatorReferralsPageInner() {
   }
 
   return (
-    <section className={styles.page} aria-label="Referrals">
+    <section
+      className={
+        !r.isInitialLoading && !r.referralsError && r.rows.length === 0 && !r.hasActiveFilters
+          ? `${styles.page} ${styles.pageEmpty}`
+          : styles.page
+      }
+      aria-label="Referrals"
+      aria-busy={r.isInitialLoading || undefined}
+    >
+      {r.isInitialLoading ? (
+        <PageHeaderSkeleton />
+      ) : r.referralsError || r.rows.length > 0 || r.hasActiveFilters ? (
+        <CoordinatorPageHeader
+          title="Referrals"
+          description="ADM intake queue — review referred students and manage their case files."
+        />
+      ) : null}
       <div className={styles.contentSingle}>
-        {!r.referralsError ? (
+        {!r.referralsError &&
+        !(r.rows.length === 0 && !r.hasActiveFilters && !r.isInitialLoading) ? (
           <CoordinatorReferralsRail
             stageCounts={r.stageCounts}
             totalReferred={r.totalReferred}
@@ -79,7 +98,7 @@ function CoordinatorReferralsPageInner() {
             onBook={r.bookForRow}
           />
 
-          {!r.isInitialLoading && !r.referralsError ? (
+          {!r.isInitialLoading && !r.referralsError && r.total > 0 ? (
             <CoordinatorReferralsPager
               total={r.total}
               start={r.start}

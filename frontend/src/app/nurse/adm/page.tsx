@@ -3,10 +3,13 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NursePageHeader } from "../components/NursePageHeader";
+import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
 import { fetchNurseRiskLevels } from "@/services/nurse/risk.service";
 import type {
@@ -21,18 +24,20 @@ import { NurseAdmInsights } from "./components/NurseAdmInsights";
 import { NurseAdmReports } from "./components/NurseAdmReports";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import styles from "./components/nurse-adm.module.css";
+import pageStyles from "../pages.module.css";
 
 export default function NurseAdmPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const { data: alertsData, isPending, isError, refetch, isFetching } =
     useQuery<NurseAlertsPage>({
       queryKey: ["nurse-alerts", "preview", termKey],
       queryFn: ({ signal }) =>
-        fetchNurseAlerts({ page: 1, pageSize: 100, signal }),
+        fetchNurseAlerts({ page: 1, pageSize: 15, signal }),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const data = React.useMemo(
@@ -60,7 +65,7 @@ export default function NurseAdmPage() {
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
   const insights = React.useMemo(
@@ -73,6 +78,7 @@ export default function NurseAdmPage() {
 
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referrals report">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.skelFindings} aria-hidden="true">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className={styles.skelFinding} />
@@ -132,9 +138,20 @@ export default function NurseAdmPage() {
   }
 
   const refreshing = isFetching && !isPending;
+  const isTrueEmpty = (data?.desk.length ?? 0) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Referrals report"
+    >
+      {isTrueEmpty ? null : (
+        <NursePageHeader
+          title="Referrals Report"
+          description="ADM and clinic referral trends, outcomes, and desk load."
+        />
+      )}
       {refreshing ? <NurseRefreshBadge label="Refreshing referrals report…" /> : null}
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
@@ -149,8 +166,21 @@ export default function NurseAdmPage() {
           </button>
         </p>
       ) : null}
-      {insights ? <NurseAdmInsights data={insights} /> : null}
-      <NurseAdmReports data={data} />
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={FileBarChart2}
+          title="No referrals this term"
+          hint="Referral trends and outcomes will appear here once cases are filed."
+          label="Referrals report"
+          centered
+          layout="fit"
+        />
+      ) : (
+        <>
+          {insights ? <NurseAdmInsights data={insights} /> : null}
+          <NurseAdmReports data={data} />
+        </>
+      )}
     </section>
   );
 }

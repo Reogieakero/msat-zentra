@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
 import type {
   ClassAssessment,
   ClassDetail,
@@ -30,15 +31,19 @@ export async function fetchClassDetail(assignmentId: string): Promise<ClassDetai
 export function classDetailKey(
   teacherId: string | null | undefined,
   assignmentId: string,
+  termKey?: string,
 ) {
-  return ["teacher-grading-class", teacherId ?? "anon", assignmentId] as const;
+  // Term-scoped: grading classes differ per term.
+  return ["teacher-grading-class", teacherId ?? "anon", assignmentId, termKey ?? ""] as const;
 }
 
 export function useClassDetail(assignmentId: string) {
   const session = useSession();
   const teacherId = session?.sub ?? null;
+  const { activeTerm } = useTerm();
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   return useQuery({
-    queryKey: classDetailKey(teacherId, assignmentId),
+    queryKey: classDetailKey(teacherId, assignmentId, termKey),
     queryFn: () => fetchClassDetail(assignmentId),
     enabled: !!teacherId && !!assignmentId,
 

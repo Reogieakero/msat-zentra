@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Users, Flame, Gauge } from "lucide-react";
+import { Users, Flame, Gauge, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { SectionSummary } from "@/services/principal/academics";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import styles from "./SectionCardGrid.module.css";
 
 interface SectionCardGridProps {
@@ -22,11 +22,11 @@ export function SectionCardGrid({
 }: SectionCardGridProps) {
   const ordered = React.useMemo(
     () =>
-      [...sections].sort((a, b) => {
-        const grade = Number(a.grade.replace(/\D/g, "")) - Number(b.grade.replace(/\D/g, ""));
+      [...(sections ?? [])].sort((a, b) => {
+        const grade = Number((a.grade ?? "").replace(/\D/g, "")) - Number((b.grade ?? "").replace(/\D/g, ""));
         if (grade !== 0) return grade;
         if (a.grade !== b.grade) return a.grade < b.grade ? -1 : 1;
-        return a.section.localeCompare(b.section);
+        return (a.section ?? "").localeCompare(b.section ?? "");
       }),
     [sections],
   );
@@ -40,7 +40,12 @@ export function SectionCardGrid({
           ))}
         </div>
       ) : sections.length === 0 ? (
-        <p className={styles.empty}>No sections on file.</p>
+        <PrincipalEmptyCard
+          icon={BookOpen}
+          title="No sections on file"
+          hint="No sections on file for the active term. Sections will appear here once created."
+          centered
+        />
       ) : (
         <div className={styles.grid} aria-label="Sections">
           {ordered.map((s) => {
@@ -49,14 +54,11 @@ export function SectionCardGrid({
               <button
                 key={s.sectionId}
                 type="button"
-                className={`${assign.card} ${styles.cardBtn} ${active ? styles.cardActive : ""}`}
+                className={`${styles.cardBtn} ${active ? styles.cardActive : ""}`}
                 onClick={() => onSelectSection(active ? null : s.sectionId)}
                 aria-pressed={active}
                 title={active ? `Hide students of ${s.section}` : `Show students of ${s.section}`}
               >
-                <span className={assign.glowClip} aria-hidden="true">
-                  <span className={assign.cardGlow} />
-                </span>
                 <span className={`${styles.cardHead} relative`}>
                   <span className={styles.sectionName}>{s.section}</span>
                   <Badge variant="secondary" className={styles.gradeBadge}>
@@ -65,24 +67,24 @@ export function SectionCardGrid({
                 </span>
                 <span className={`${styles.stats} relative`}>
                   <span className={styles.stat}>
-                    <span className={styles.statTop}>
+                    <span className={`${styles.statIconChip} ${styles.statIconChipStudents}`}>
                       <Users className={styles.statIcon} aria-hidden />
-                      <span className={styles.statValue}>{s.students.length}</span>
                     </span>
+                    <span className={styles.statValue}>{s.students?.length ?? 0}</span>
                     <span className={styles.statLabel}>Students</span>
                   </span>
                   <span className={styles.stat}>
-                    <span className={styles.statTop}>
+                    <span className={`${styles.statIconChip} ${styles.statIconChipAvg}`}>
                       <Gauge className={styles.statIcon} aria-hidden />
-                      <span className={styles.statValue}>{s.avgTransmuted}</span>
                     </span>
+                    <span className={styles.statValue}>{s.avgTransmuted}</span>
                     <span className={styles.statLabel}>Avg grade</span>
                   </span>
                   <span className={styles.stat}>
-                    <span className={styles.statTop}>
+                    <span className={`${styles.statIconChip} ${styles.statIconChipRisk}`}>
                       <Flame className={styles.statIcon} aria-hidden />
-                      <span className={styles.statValue}>{s.atRiskCount}</span>
                     </span>
+                    <span className={styles.statValue}>{s.atRiskCount}</span>
                     <span className={styles.statLabel}>At risk</span>
                   </span>
                 </span>

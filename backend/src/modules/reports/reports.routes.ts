@@ -11,7 +11,8 @@ router.get(
   "/",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["reports", "principal"] }),
+  // Heavy aggregation: 5-min cache + ReportSnapshot DB fallback inside service.
+  cache({ ttl: 300, tags: ["reports", "principal"] }),
   async (req, res, next) => {
     try {
       const scopeParam = typeof req.query.scope === "string" ? req.query.scope : "school";

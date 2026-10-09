@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import styles from "./SectionStudentsPanel.module.css";
 import shared from "../academics.module.css";
+import { PAGE_SIZE, ZentraPagination } from "@/components/shared/pagination";
 
 interface Props {
   section: SectionSummary | null;
@@ -47,6 +48,8 @@ export function SectionStudentsPanel({
   };
 
   React.useEffect(() => clearHoverTimer, []);
+
+  const [page, setPage] = React.useState(1);
 
   const handleEnter = (st: StudentRow) => {
     clearHoverTimer();
@@ -100,6 +103,11 @@ export function SectionStudentsPanel({
     );
   }
 
+  const students = section.students ?? [];
+  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStudents = students.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <TooltipProvider>
       <div className={shared.tableWrap}>
@@ -116,7 +124,7 @@ export function SectionStudentsPanel({
             </tr>
           </thead>
           <tbody>
-            {section.students.map((st) => (
+            {pageStudents.map((st) => (
               <tr
                 key={st.studentId}
                 className={styles.studentRow}
@@ -165,6 +173,7 @@ export function SectionStudentsPanel({
             ))}
           </tbody>
         </table>
+        <ZentraPagination currentPage={safePage} totalItems={students.length} onPageChange={setPage} />
       </div>
     </TooltipProvider>
   );

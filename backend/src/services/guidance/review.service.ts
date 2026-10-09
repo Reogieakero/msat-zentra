@@ -105,10 +105,12 @@ export async function reviewConsultation(
         ? {
             status: "in_progress",
             notes: referral.notes ? `${referral.notes}\n${note}` : note,
+            consultReviewedAt: new Date(),
           }
         : {
             status: "dismissed",
             notes: referral.notes ? `${referral.notes}\n${note}` : note,
+            consultReviewedAt: new Date(),
           },
   });
   if (applied.count === 0) {

@@ -1,6 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
+import { BookOpen, X } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +27,27 @@ export function SubjectSectionBreakdown({
   const scope = gradeFilter === ALL_GRADES ? "All grades" : gradeFilter;
   const worst = items.length > 0 ? items[0] : null;
 
+  if (items.length === 0) {
+    return (
+      <Card className={styles.glowCard}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
+        <CardContent>
+          <PrincipalEmptyState
+            icon={BookOpen}
+            title="No section grades yet"
+            hint={`No section has grades for ${subject} yet — clear.`}
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={onClear}>
+                Clear selection
+              </Button>
+            }
+          />
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <Card className={styles.glowCard}>
       <span className={styles.glowClip} aria-hidden="true">
@@ -57,11 +79,6 @@ export function SubjectSectionBreakdown({
         </div>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
-          <p className={styles.clearNote}>
-            No section has grades for {subject} yet — clear.
-          </p>
-        ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -95,7 +112,6 @@ export function SubjectSectionBreakdown({
               </tbody>
             </table>
           </div>
-        )}
       </CardContent>
     </Card>
   );

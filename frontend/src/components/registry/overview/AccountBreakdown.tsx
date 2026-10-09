@@ -210,32 +210,36 @@ export function AccountBreakdown({ desk }: { desk: RegistryDesk }) {
   const coverage =
     totals.total === 0 ? 0 : Math.round((totals.active / totals.total) * 100);
 
+  const isEmpty = !isPending && !isError && totals.total === 0;
+
   return (
-    <section className={assign.card} aria-labelledby="overview-account-coverage">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-account-coverage"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-account-coverage" className="text-base font-semibold">
-            Account Breakdown
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Active-year roster vs sign-up status across the whole band.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-account-coverage" className="text-base font-semibold">
+              Account Breakdown
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Active-year roster vs sign-up status across the whole band.
+            </p>
+          </div>
+          <div className="relative">
+            {isPending ? (
+              <Badge variant="amber" className={styles.pendingBadge}>
+                …
+              </Badge>
+            ) : (
+              <Badge variant="amber" className={styles.pendingBadge}>
+                {totals.pending} pending
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className="relative">
-          {isPending ? (
-            <Badge variant="amber" className={styles.pendingBadge}>
-              …
-            </Badge>
-          ) : (
-            <Badge variant="amber" className={styles.pendingBadge}>
-              {totals.pending} pending
-            </Badge>
-          )}
-        </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.skelWrap}>
@@ -264,10 +268,12 @@ export function AccountBreakdown({ desk }: { desk: RegistryDesk }) {
               />
             )}
 
-            <p className={styles.footnote}>
-              {coverage}% of enrolled students already have an active account. Pending
-              counts reconcile with the Pending Approvals list above.
-            </p>
+            {!isEmpty && (
+              <p className={styles.footnote}>
+                {coverage}% of enrolled students already have an active account. Pending
+                counts reconcile with the Pending Approvals list above.
+              </p>
+            )}
           </>
         )}
       </div>

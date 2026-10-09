@@ -12,6 +12,8 @@ import {
   YAxis,
 } from "recharts";
 import type { NurseQueueRow, NurseTrendPoint } from "@/services/nurse/nurse.types";
+import { CalendarClock, Hourglass } from "lucide-react";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
@@ -25,10 +27,6 @@ function useNowMs(intervalMs = 30_000): number {
 }
 
 function CaseLoadLine({ trend }: { trend: NurseTrendPoint[] }) {
-  const total = trend.reduce((n, d) => n + d.adm + d.clinic, 0);
-  if (total === 0) {
-    return <p className={styles.empty}>No referred cases in the last 14 days.</p>;
-  }
   return (
     <div
       className={styles.lineChart}
@@ -129,10 +127,6 @@ function WaitingTimeLine({ rows }: { rows: NurseQueueRow[] }) {
     };
   }, [rows, nowMs]);
 
-  if (points.length === 0) {
-    return <p className={styles.empty}>No cases waiting.</p>;
-  }
-
   return (
     <>
       <p className={styles.legendTotal}>
@@ -191,12 +185,18 @@ export function NurseOverviewTrends({
   dailyTrend: NurseTrendPoint[];
   needsReview: NurseQueueRow[];
 }) {
+  const caseEmpty = dailyTrend.reduce((n, d) => n + d.adm + d.clinic, 0) === 0;
+  const waitEmpty =
+    needsReview.filter((r) =>
+      Number.isFinite(Math.max(0, Date.now() - new Date(r.referredAt).getTime())),
+    ).length === 0;
   return (
     <div className={styles.twoCol}>
       <div className={assign.card}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {caseEmpty ? null : (
         <div className="relative">
           <h2 className={styles.sectionTitle}>Case load</h2>
           <p className={styles.sectionDesc}>
@@ -204,20 +204,39 @@ export function NurseOverviewTrends({
             now.
           </p>
         </div>
+        )}
         <div className="relative">
-          <CaseLoadLine trend={dailyTrend} />
+          {caseEmpty ? (
+            <NurseEmptyState
+              icon={CalendarClock}
+              title="No referred cases"
+              hint="No referred cases in the last 14 days."
+            />
+          ) : (
+            <CaseLoadLine trend={dailyTrend} />
+          )}
         </div>
       </div>
       <div className={assign.card}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {waitEmpty ? null : (
         <div className="relative">
           <h2 className={styles.sectionTitle}>Waiting time</h2>
           <p className={styles.sectionDesc}>Time elapsed from referred to now.</p>
         </div>
+        )}
         <div className="relative">
-          <WaitingTimeLine rows={needsReview} />
+          {waitEmpty ? (
+            <NurseEmptyState
+              icon={Hourglass}
+              title="No cases waiting"
+              hint="Cases awaiting action will appear here."
+            />
+          ) : (
+            <WaitingTimeLine rows={needsReview} />
+          )}
         </div>
       </div>
     </div>

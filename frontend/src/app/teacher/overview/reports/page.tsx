@@ -1,10 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Check, Clock } from "lucide-react";
+import { BookOpen, Check, Clock, CalendarX, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { TeacherEmptyState } from "../../components/TeacherEmptyCard";
+import { ZentraPageHeaderSkeleton, ZentraDashboardCardSkeleton, ZentraChartSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 
 interface LinkedName {
@@ -48,26 +51,21 @@ export default function TeacherReportsPage() {
 
   if (meQuery.isPending) {
     return (
-      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-          <p className="mt-1 text-sm text-muted-foreground" aria-busy="true">
-            Loading report…
-          </p>
+      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-busy="true" aria-label="Loading report">
+        <ZentraPageHeaderSkeleton />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <ZentraDashboardCardSkeleton />
+          <ZentraDashboardCardSkeleton />
+          <ZentraDashboardCardSkeleton />
         </div>
+        <ZentraChartSkeleton compact withLegend={false} />
       </section>
     );
   }
 
   if (!linked) {
     return (
-      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Link your teacher code to see your teaching load.
-          </p>
-        </div>
+      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-label="Link teacher code">
         <TeacherCodeClaim
           title="Link your teacher code"
           description="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your per-section teaching load will report here."
@@ -152,13 +150,39 @@ export default function TeacherReportsPage() {
 
       {slotsQuery.isPending ? (
         <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading report">
-          <div className="h-24 rounded-xl border border-input bg-card" />
-          <div className="h-48 rounded-xl border border-input bg-card" />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <ZentraDashboardCardSkeleton />
+            <ZentraDashboardCardSkeleton />
+            <ZentraDashboardCardSkeleton />
+          </div>
+          <ZentraChartSkeleton compact withLegend={false} />
         </div>
       ) : slotsQuery.isError ? (
-        <p role="alert" className="text-sm text-destructive">
-          Could not load your report.
-        </p>
+        <div className={assign.card}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <p role="alert" className="font-medium">
+              Could not load your report.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => slotsQuery.refetch()}
+              disabled={slotsQuery.isFetching}
+            >
+              {slotsQuery.isFetching ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  <span aria-live="polite">Retrying</span>
+                </>
+              ) : (
+                "Try again"
+              )}
+            </Button>
+          </div>
+        </div>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -213,10 +237,11 @@ export default function TeacherReportsPage() {
             </div>
             <div className="relative flex flex-col gap-3">
               {bySection.size === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No committed slots yet — your load appears here once the master
-                  teacher schedules {linked.name}.
-                </p>
+                <TeacherEmptyState
+                  icon={CalendarX}
+                  title="No committed slots yet"
+                  hint="Your load appears here once the master teacher schedules your sections."
+                />
               ) : (
                 [...bySection.values()].map((entry) => (
                   <div key={entry.section.id} className="flex min-w-0 flex-col gap-1">

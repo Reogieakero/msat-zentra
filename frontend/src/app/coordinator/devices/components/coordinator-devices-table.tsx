@@ -333,29 +333,31 @@ export function CoordinatorDevicesTable({
           </TableBody>
         </Table>
       </div>
-      <div className="relative flex items-center justify-end space-x-2">
-        <div className="text-muted-foreground flex-1 text-sm">
-          Showing {start}–{end} of {total}
+      {totalPages > 1 && (
+        <div className="relative flex items-center justify-end space-x-2">
+          <div className="text-muted-foreground flex-1 text-sm">
+            Showing {start}–{end} of {total}
+          </div>
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => onPageChange(page + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
       <DeviceDetailsModal row={detailsRow} onClose={() => setDetailsRow(null)} />
     </div>
   );

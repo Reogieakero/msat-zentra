@@ -4008,6 +4008,9 @@ export const StudentProfileScalarFieldEnum = {
   photoUrl: 'photoUrl',
   riskCount: 'riskCount',
   riskLevel: 'riskLevel',
+  academicFlag: 'academicFlag',
+  attendanceFlag: 'attendanceFlag',
+  behavioralFlag: 'behavioralFlag',
   createdAt: 'createdAt'
 } as const
 
@@ -4094,7 +4097,12 @@ export const StudentRosterScalarFieldEnum = {
   fullName: 'fullName',
   gradeLevel: 'gradeLevel',
   sectionId: 'sectionId',
-  schoolYearId: 'schoolYearId'
+  schoolYearId: 'schoolYearId',
+  riskCount: 'riskCount',
+  riskLevel: 'riskLevel',
+  academicFlag: 'academicFlag',
+  attendanceFlag: 'attendanceFlag',
+  behavioralFlag: 'behavioralFlag'
 } as const
 
 export type StudentRosterScalarFieldEnum = (typeof StudentRosterScalarFieldEnum)[keyof typeof StudentRosterScalarFieldEnum]
@@ -4360,6 +4368,7 @@ export const ReferralScalarFieldEnum = {
   referredBy: 'referredBy',
   reason: 'reason',
   consultReviewer: 'consultReviewer',
+  consultReviewedAt: 'consultReviewedAt',
   referralFormReady: 'referralFormReady',
   status: 'status',
   notes: 'notes',
@@ -4621,6 +4630,14 @@ export const RiskSnapshotScalarFieldEnum = {
   studentId: 'studentId',
   rosterId: 'rosterId',
   riskLevel: 'riskLevel',
+  riskLevelRaw: 'riskLevelRaw',
+  riskLevelFinal: 'riskLevelFinal',
+  academicFlag: 'academicFlag',
+  attendanceFlag: 'attendanceFlag',
+  behavioralFlag: 'behavioralFlag',
+  academicFlagRaw: 'academicFlagRaw',
+  attendanceFlagRaw: 'attendanceFlagRaw',
+  behavioralFlagRaw: 'behavioralFlagRaw',
   riskCount: 'riskCount',
   snapshotDate: 'snapshotDate',
   termId: 'termId'

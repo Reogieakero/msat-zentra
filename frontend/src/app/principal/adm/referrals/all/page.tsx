@@ -12,7 +12,10 @@ import type {
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { GcForm03PreviewDialog } from "@/app/guidance/adm/components/GcForm03PreviewDialog";
 import { SignReturnConfirmDialog } from "./SignReturnConfirmDialog";
+import { ShieldCheck } from "lucide-react";
 import { PrincipalPageHeader } from "../../../components/PrincipalPageHeader";
+import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
+import { PrincipalEmptyCard } from "../../../components/PrincipalEmptyCard";
 import styles from "./all.module.css";
 import assign from "../../../academics/assign/components/section-assignments.module.css";
 import { useAdmReferralsList } from "./components/use-adm-referrals-list";
@@ -25,7 +28,7 @@ export default function PrincipalAdmReferralsAllPage() {
   const [actionId, setActionId] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const { rows, setRows, totalCount, totalPages, safePage, start, end, loading, error, load } =
+  const { rows, setRows, totalCount, totalPages, safePage, start, end, loading, isFetching, error, refetch } =
     useAdmReferralsList(search, page);
   const { gcOpen, setGcOpen, gcData, openGcForm03 } = useGcForm03Opener();
   const [pendingAction, setPendingAction] = React.useState<{
@@ -73,7 +76,7 @@ export default function PrincipalAdmReferralsAllPage() {
         );
         void queryClient.invalidateQueries({ queryKey: ["adm-dashboard"] });
         toast.success({ title: "Signed — moved to monitoring" });
-        return load(page);
+        return refetch();
       })
       .catch((err: unknown) => {
         console.error("[/api/adm principal-approve] failed:", err);
@@ -92,7 +95,7 @@ export default function PrincipalAdmReferralsAllPage() {
       .then(() => {
         void queryClient.invalidateQueries({ queryKey: ["adm-dashboard"] });
         toast.success({ title: "Returned to ADM Coordinator" });
-        return load(page);
+        return refetch();
       })
       .catch((err: unknown) => {
         console.error("[/api/adm principal-return] failed:", err);
@@ -105,12 +108,27 @@ export default function PrincipalAdmReferralsAllPage() {
   };
   const pendingRow =
     pendingAction && rows.find((r) => r.id === pendingAction.id);
+  const isEmpty = !loading && !error && totalCount === 0 && search.trim() === "";
+  const headerLoading = loading;
   return (
-    <section aria-label="ADM cases" className="flex min-w-0 flex-col gap-3">
+    <section aria-label="ADM cases" className="flex min-w-0 flex-col gap-3" aria-busy={headerLoading || undefined}>
+      {headerLoading ? (
+        <PageHeaderSkeleton />
+      ) : isEmpty ? null : (
       <PrincipalPageHeader
         title="ADM Referrals"
         description="Cases the ADM Coordinator endorsed upward — review, sign, or return for revision."
       />
+      )}
+      {isEmpty ? (
+        <PrincipalEmptyCard
+          icon={ShieldCheck}
+          title="No referrals found"
+          hint="Endorsed cases will appear here once filed."
+          label="Endorsed ADM Cases"
+          centered
+        />
+      ) : (
       <div className={assign.card}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
@@ -143,6 +161,7 @@ export default function PrincipalAdmReferralsAllPage() {
           rows={rows}
           totalCount={totalCount}
           loading={loading}
+          isFetching={isFetching}
           error={error}
           search={search}
           actionId={actionId}
@@ -153,10 +172,11 @@ export default function PrincipalAdmReferralsAllPage() {
           onRequestSign={(id) => setPendingAction({ id, type: "sign" })}
           onRequestReturn={(id) => setPendingAction({ id, type: "return" })}
           onViewForms={(r) => setFormsFor(r)}
-          onPrev={() => load(safePage - 1)}
-          onNext={() => load(safePage + 1)}
+          onPrev={() => setPage(Math.max(1, safePage - 1))}
+          onNext={() => setPage(safePage + 1)}
         />
       </div>
+      )}
       <AdmPreviewModal
         preview={preview}
         onClose={() => setPreview(null)}

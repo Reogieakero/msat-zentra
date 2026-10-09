@@ -30,7 +30,7 @@ export interface SectionSummary {
   passPct: number;
   failPct: number;
   atRiskCount: number;
-  students: StudentRow[];
+  students?: StudentRow[];
 }
 
 export interface PassFailByGrade {

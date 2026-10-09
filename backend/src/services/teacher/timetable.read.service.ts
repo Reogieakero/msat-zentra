@@ -3,35 +3,70 @@ import { AppError } from "../../lib/errors.js";
 import { SCHEDULE_CONFIG_DEFAULTS, toScheduleConfig } from "../../modules/teacher/teacher.repository.js";
 import type { TeacherContext } from "./teacher.types.js";
 
-export async function getSchedule(ctx: TeacherContext) {
+export interface ScheduleQueryOpts {
+  summary?: boolean;
+  sectionId?: string;
+  gradeLevel?: string;
+}
+
+export async function getSchedule(ctx: TeacherContext, opts?: ScheduleQueryOpts) {
   const termId = ctx.termId;
   const yearId = ctx.schoolYearId;
+  const allowedGrades = ["G7", "G8", "G9", "G10"] as const;
+  type AllowedGrade = (typeof allowedGrades)[number];
+  const gradeLevels: AllowedGrade[] = opts?.gradeLevel
+    ? (allowedGrades as readonly string[]).includes(opts.gradeLevel)
+      ? [opts.gradeLevel as AllowedGrade]
+      : [...allowedGrades]
+    : [...allowedGrades];
   const sections = await prisma.section.findMany({
     where: {
-      gradeLevel: { in: ["G7", "G8", "G9", "G10"] },
+      gradeLevel: { in: gradeLevels },
       ...(yearId ? { schoolYearId: yearId } : {}),
+      ...(opts?.sectionId ? { id: opts.sectionId } : {}),
     },
-    include: {
-      adviser: { select: { fullName: true } },
-      teacherAssignments: {
-        where: termId ? { termId } : undefined,
-        include: { subject: true, teacher: { select: { fullName: true } } },
-      },
-      timetableEntries: {
-        where: termId ? { termId } : undefined,
-        select: {
-          subjectId: true,
-          teacherNameId: true,
-          day: true,
-          period: true,
-          status: true,
-          reviewNote: true,
-          subject: { select: { id: true, name: true, code: true } },
-          teacherName: { select: { id: true, name: true } },
-        },
-      },
-      _count: { select: { students: true } },
-    },
+    orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
+    ...(opts?.summary
+      ? {
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+            adviserId: true,
+            adviser: { select: { fullName: true } },
+            timetableEntries: {
+              where: termId ? { termId } : undefined,
+              select: { status: true, reviewNote: true },
+            },
+            _count: { select: { students: true } },
+          },
+        }
+      : {
+          include: {
+            adviser: { select: { fullName: true } },
+            teacherAssignments: {
+              where: termId ? { termId } : undefined,
+              include: {
+                subject: { select: { id: true, name: true, code: true, gradeLevel: true, category: true } },
+                teacher: { select: { fullName: true } },
+              },
+            },
+            timetableEntries: {
+              where: termId ? { termId } : undefined,
+              select: {
+                subjectId: true,
+                teacherNameId: true,
+                day: true,
+                period: true,
+                status: true,
+                reviewNote: true,
+                subject: { select: { id: true, name: true, code: true } },
+                teacherName: { select: { id: true, name: true } },
+              },
+            },
+            _count: { select: { students: true } },
+          },
+        }),
   });
   return { sections };
 }

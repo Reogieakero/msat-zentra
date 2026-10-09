@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import styles from "./adm-queue.module.css";
 import { formatElapsedShort, msSinceDate as msSince, useNowTick } from "@/lib/clock";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 export type AdmQueueStatusVariant =
   | "amber"
@@ -78,6 +79,8 @@ export function AdmQueueTable({
   onRowClick,
   typeBadgeLabel = "ADM",
   glow = false,
+  searchValue,
+  onSearchChange,
 }: {
   title: string;
   description: string;
@@ -95,19 +98,28 @@ export function AdmQueueTable({
   typeBadgeLabel?: string | null;
 
   glow?: boolean;
+
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }) {
-  const [query, setQuery] = React.useState("");
+  const [innerQuery, setInnerQuery] = React.useState("");
   const now = useNowTick();
+  const controlled = onSearchChange !== undefined;
+  const query = controlled ? (searchValue ?? "") : innerQuery;
+  const setQuery = controlled ? onSearchChange : setInnerQuery;
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const activeQuery = controlled ? query : debouncedQuery;
 
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
+    if (controlled) return rows;
+    const q = debouncedQuery.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) => r.searchText.toLowerCase().includes(q));
-  }, [rows, query]);
+  }, [rows, debouncedQuery, controlled]);
 
   const visible = limit !== undefined ? filtered.slice(0, limit) : filtered;
 
-  const searching = query.trim() !== "";
+  const searching = activeQuery.trim() !== "";
 
   return (
     <Card className={glow ? styles.glow : undefined}>

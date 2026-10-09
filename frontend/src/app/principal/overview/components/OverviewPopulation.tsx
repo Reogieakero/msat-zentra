@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pie, PieChart, Cell } from "recharts";
-import { Users, ShieldAlert, Award } from "lucide-react";
+import { Users } from "lucide-react";
+import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import {
   CardTitle,
   CardDescription,
@@ -20,7 +21,6 @@ import { useTerm } from "@/lib/term/TermContext";
 import { fetchOverview } from "@/services/principal/overview.service";
 import type { OverviewSectionRow } from "@/services/principal/overview.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { AuroraBanner } from "./AuroraBanner";
 import styles from "./OverviewPopulation.module.css";
 
 const chartConfig = {
@@ -44,10 +44,15 @@ interface GradeGroup {
   rows: OverviewSectionRow[];
 }
 
+function toCount(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function interpretPopulation(rows: OverviewSectionRow[]): string {
   if (rows.length === 0) return "";
-  const total = rows.reduce((sum, r) => sum + r.count, 0);
-  const ranked = [...rows].sort((a, b) => b.count - a.count);
+  const total = rows.reduce((sum, r) => sum + toCount(r.count), 0);
+  const ranked = [...rows].sort((a, b) => toCount(b.count) - toCount(a.count));
   const top = ranked[0];
   const bottom = ranked[ranked.length - 1];
   const avg = Math.round((total / rows.length) * 10) / 10;
@@ -56,7 +61,7 @@ function interpretPopulation(rows: OverviewSectionRow[]): string {
   ];
   if (top.section !== bottom.section) {
     parts.push(
-      `${top.section} carries the largest population at ${top.count}, while ${bottom.section} is the smallest at ${bottom.count}.`
+      `${top.section} carries the largest population at ${toCount(top.count)}, while ${bottom.section} is the smallest at ${toCount(bottom.count)}.`
     );
   }
   return parts.join(" ");
@@ -80,7 +85,7 @@ export function OverviewPopulation() {
       rowsByGrade.set(r.grade, list);
     }
     return GRADE_ORDER.filter((g) => rowsByGrade.has(g)).map((g) => {
-      const list = rowsByGrade.get(g) ?? [];
+      const list = (rowsByGrade.get(g) ?? []).map((r) => ({ ...r, count: toCount(r.count) }));
       return {
         grade: g,
         total: list.reduce((sum, r) => sum + r.count, 0),
@@ -94,18 +99,15 @@ export function OverviewPopulation() {
     [data]
   );
   const totalEnrolled = React.useMemo(
-    () => (data?.sections ?? []).reduce((sum, r) => sum + r.count, 0),
+    () => (data?.sections ?? []).reduce((sum, r) => sum + toCount(r.count), 0),
     [data]
   );
 
-  const spotlight = React.useMemo(() => {
-    const rows = [...(data?.riskByGrade ?? [])].sort((a, b) => b.count - a.count);
-    return rows.length > 0 && rows[0].count > 0 ? rows[0] : null;
-  }, [data]);
-  const honorCount = data?.honorRoll ?? 0;
+  const populationEmpty = !data || groups.length === 0 || totalEnrolled === 0;
 
   return (
     <section aria-label="Section populations" className={styles.section}>
+      {!isPending && !isError && populationEmpty ? null : (
       <div className={styles.header}>
         <div className={styles.headerText}>
           <CardTitle>Section populations</CardTitle>
@@ -116,19 +118,20 @@ export function OverviewPopulation() {
         <div>
           {isPending ? (
             <Skeleton className={styles.headerBadgeSkel} />
-          ) : (
+          ) : !populationEmpty ? (
             <Badge variant="secondary" className={styles.popBadge}>
               <Users className={styles.popIcon} aria-hidden />
               {totalEnrolled} enrolled
             </Badge>
-          )}
+          ) : null}
         </div>
       </div>
+      )}
       <div className={styles.content}>
         {isPending ? (
           <>
             <div className={styles.groupSkelWrap}>
-              {Array.from({ length: 3 }).map((_, i) => (
+              {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className={styles.groupSkel}>
                   <Skeleton className={styles.groupSkelTitle} />
                   <div className={styles.groupSkelBody}>
@@ -142,15 +145,15 @@ export function OverviewPopulation() {
                 </div>
               ))}
             </div>
-            <div className={styles.groups}>
-              <Skeleton className={styles.bannerSkel} />
-              <Skeleton className={styles.bannerSkel} />
-            </div>
           </>
         ) : isError ? (
           <p className={styles.empty}>Could not load section populations.</p>
-        ) : groups.length === 0 ? (
-          <p className={styles.empty}>No sections on file for the active school year.</p>
+        ) : populationEmpty ? (
+          <PrincipalEmptyCard
+            icon={Users}
+            title="No sections on file"
+            hint="No sections on file for the active school year. Sections will appear here once created."
+          />
         ) : (
           <>
             <div className={styles.groups}>
@@ -207,41 +210,13 @@ export function OverviewPopulation() {
                             aria-hidden
                           />
                           <span className={styles.sectionName}>{r.section}</span>
-                          <span className={styles.sectionCount}>{r.count}</span>
+                          <span className={styles.sectionCount}>{toCount(r.count)}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                 </div>
               ))}
-              <AuroraBanner
-                icon={ShieldAlert}
-                pill="Grade spotlight"
-                count={spotlight ? spotlight.count : 0}
-                title={
-                  spotlight
-                    ? `${spotlight.grade} carries the heaviest at-risk load`
-                    : "No at-risk learners this term"
-                }
-                cta="View risk board"
-                href="/principal/risk"
-                label={
-                  spotlight
-                    ? `Grade spotlight: ${spotlight.grade} has ${spotlight.count} at-risk students. View risk board.`
-                    : "Grade spotlight: no at-risk learners this term. View risk board."
-                }
-              />
-              <AuroraBanner
-                icon={Award}
-                pill="Honor Roll"
-                count={honorCount}
-                title={
-                  honorCount === 1 ? "Qualifier this term" : "Qualifiers this term"
-                }
-                cta="View honor roll"
-                href="/principal/honor-roll"
-                label={`Honor Roll: ${honorCount} qualifiers this term. View honor roll.`}
-              />
             </div>
             {interpretation ? (
               <p className={styles.chartInterpretation}>{interpretation}</p>

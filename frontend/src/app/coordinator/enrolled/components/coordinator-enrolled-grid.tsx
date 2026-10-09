@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { ClipboardList, Loader2, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
+import { CoordinatorEmptyCard } from "../../components/CoordinatorEmptyCard";
 import { CoordinatorEnrolledCard } from "./coordinator-enrolled-card";
 import styles from "./coordinator-enrolled-card.module.css";
 
@@ -92,14 +93,24 @@ export function CoordinatorEnrolledGrid({
   }
 
   if (rows.length === 0) {
+    if (!hasActiveFilters) {
+      return (
+        <CoordinatorEmptyCard
+          icon={ClipboardList}
+          title="No enrolled learners yet"
+          hint="Approved cases appear here automatically once the Principal signs them."
+          label="Enrolled ADM learners"
+          centered
+        />
+      );
+    }
     return (
-      <div className={styles.emptyWrap}>
-        <p className={styles.emptyText}>
-          {hasActiveFilters
-            ? `No enrolled students match your search and filters.`
-            : `No students in enrollment monitoring yet. Approved cases appear here automatically.`}
-        </p>
-      </div>
+      <CoordinatorEmptyCard
+        icon={SearchX}
+        title="No matching learners"
+        hint="No enrolled students match your search and filters."
+        label="Enrolled ADM learners"
+      />
     );
   }
 

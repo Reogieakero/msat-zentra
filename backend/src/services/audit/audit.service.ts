@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
-import { MAX_PAGE_SIZE, resolveSourceLabels } from "../../modules/audit/audit.repository.js";
+import { MAX_PAGE_SIZE, PAGE_SIZE, resolvePaging } from "../../lib/pagination.js";
+import { resolveSourceLabels } from "../../modules/audit/audit.repository.js";
 
 export interface AuditListQuery {
   actionType?: string;
@@ -46,11 +47,14 @@ function buildWhere(query: Omit<AuditListQuery, "page" | "pageSize">) {
 }
 
 export async function listAudit(query: AuditListQuery) {
-  const { page = "1", pageSize = "20" } = query;
+  const { page = "1", pageSize = String(PAGE_SIZE) } = query;
   const where = buildWhere(query);
 
-  const take = Math.min(parseInt(pageSize, 10) || 20, MAX_PAGE_SIZE);
-  const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * take;
+  const { page: safePage, pageSize: take } = resolvePaging(
+    { page, pageSize },
+    { maxPageSize: MAX_PAGE_SIZE },
+  );
+  const skip = (safePage - 1) * take;
 
   const [rows, total] = await Promise.all([
     prisma.auditLog.findMany({

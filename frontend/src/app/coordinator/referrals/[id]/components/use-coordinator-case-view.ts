@@ -25,8 +25,11 @@ import type { CertSheetContext } from "../certification-sheet";
 import { CASE_STEPS, type CaseStepId } from "../case-steps";
 import { deriveChecklist } from "../eligibility-checklist-card";
 export function useCoordinatorCaseView(caseId: string) {
+  const { activeTerm } = useTerm();
+  const caseTermKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const detailQuery = useQuery({
-    queryKey: ["coordinator-case", caseId],
+    // Term-scoped: never show another term's case file.
+    queryKey: ["coordinator-case", caseId, caseTermKey],
     queryFn: ({ signal }) => fetchCoordinatorCaseDetail(caseId, signal),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
@@ -34,7 +37,6 @@ export function useCoordinatorCaseView(caseId: string) {
   const now = useNowTick();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? "";
   const scopeLabel = activeTerm
     ? `${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`

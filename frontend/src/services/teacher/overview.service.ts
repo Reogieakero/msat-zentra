@@ -16,7 +16,7 @@ const OVERVIEW_GC_MS = 5 * 60_000;
 
 export async function fetchTeacherOverview(): Promise<TeacherOverviewCritical> {
   const { data } = await apiClient.get<TeacherOverviewCritical>(
-    "/api/teacher/overview?scope=critical",
+    "/api/teacher/overview?scope=critical&atRiskOnly=1",
   );
   return data;
 }

@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { HelpCircle, Loader2 } from "lucide-react";
+import { Award, HelpCircle, Loader2, SearchX } from "lucide-react";
 import { CardModal } from "@/components/ui/CardModal";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "@/components/ui/sonner";
@@ -27,6 +27,7 @@ import type {
   CertStatusFilter,
 } from "@/services/coordinator/certifications.types";
 import { CoordinatorCertificationsFilters } from "./coordinator-certifications-filters";
+import { CoordinatorEmptyCard, CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
 import styles from "./coordinator-certifications-folders.module.css";
 
 function timeAgo(iso: string | null): string {
@@ -137,6 +138,18 @@ export function CoordinatorCertificationsFolders({
     );
   };
 
+  if (records.length === 0 && query.trim() === "" && status === "all") {
+    return (
+      <CoordinatorEmptyCard
+        icon={Award}
+        title="No certifications on file yet"
+        hint="Certifications you prepare will appear here as folders you can endorse."
+        label="Certifications"
+        centered
+      />
+    );
+  }
+
   return (
     <>
 
@@ -180,9 +193,11 @@ export function CoordinatorCertificationsFolders({
         </div>
         <div className={styles.content}>
           {visible.length === 0 ? (
-            <p className={styles.empty}>
-              No certification files match the current filters.
-            </p>
+            <CoordinatorEmptyState
+              icon={SearchX}
+              title="No matching certifications"
+              hint="No certification files match the current filters."
+            />
           ) : (
             <div className={styles.studentGrid}>
               {visible.map(({ record, date }) => {

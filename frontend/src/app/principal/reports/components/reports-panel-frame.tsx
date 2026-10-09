@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Info } from "lucide-react";
+import { FileBarChart, Info } from "lucide-react";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import styles from "./reports-panels.module.css";
 export function PanelMessage({ children }: { children: React.ReactNode }) {
@@ -51,5 +52,11 @@ export function PanelFrame({
   );
 }
 export function EmptyState() {
-  return <p className={styles.empty}>No data for the selected scope.</p>;
+  return (
+    <PrincipalEmptyState
+      icon={FileBarChart}
+      title="No data for this scope"
+      hint="No data for the selected scope. Records will appear here once available."
+    />
+  );
 }

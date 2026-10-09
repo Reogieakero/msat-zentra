@@ -105,28 +105,30 @@ export default function TeacherAnecdotalPage() {
 
   if (records.length === 0) {
     return (
-      <section className={`${styles.page} flex min-h-[60vh] flex-1 flex-col justify-center`}>
-        <div className={`${assign.card} mx-auto w-full max-w-md`}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center gap-2 py-8 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <FolderOpen size={24} className="text-muted-foreground" />
+      <section className={styles.page} aria-label="Anecdotal records">
+        <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+          <div className={`${assign.card} w-full max-w-md`}>
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
             </span>
-            <p className="font-medium">No files stored yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Files you file through Chat with Bama will appear here once stored.
-            </p>
-            <Button asChild size="sm" className="mt-2">
-              <Link href="/teacher/chat">
-                <Cat size={16} aria-hidden="true" />
-                Chat with Bama
-              </Link>
-            </Button>
+            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+              <span
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                aria-hidden="true"
+              >
+                <FolderOpen size={24} className="text-muted-foreground" />
+              </span>
+              <p className="font-medium">No files stored yet</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Files you file through Chat with Bama will appear here once stored.
+              </p>
+              <Button asChild size="sm" className="mt-2">
+                <Link href="/teacher/chat">
+                  <Cat size={16} aria-hidden="true" />
+                  Chat with Bama
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

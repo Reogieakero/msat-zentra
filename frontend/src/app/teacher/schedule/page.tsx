@@ -14,10 +14,14 @@ import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
-import { SectionScheduleCard } from "@/components/schedule/SectionScheduleCard";
+import { SectionScheduleCard, type StatusEntry } from "@/components/schedule/SectionScheduleCard";
 import styles from "./schedule-empty.module.css";
 import { CatalogCards } from "./components/CatalogCards";
 import { WorkspaceCards } from "./components/WorkspaceCards";
+import { TeacherPageHeader } from "../components/TeacherPageHeader";
+import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
+import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ScheduleSubject {
   id: string;
@@ -46,6 +50,10 @@ export interface ScheduleSection {
   timetableEntries: TimetableEntry[];
 }
 
+export type ScheduleSectionSummary = Omit<ScheduleSection, "timetableEntries"> & {
+  timetableEntries: StatusEntry[];
+};
+
 export interface TimetableEntry {
   subjectId: string;
   teacherNameId: string | null;
@@ -58,39 +66,33 @@ export interface TimetableEntry {
 }
 
 interface ScheduleData {
-  sections: ScheduleSection[];
+  sections: ScheduleSectionSummary[];
 }
 
 function ScheduleSkeleton() {
   return (
-    <div className={styles.skelWrap} aria-busy="true" aria-label="Loading schedule">
-      <div className="flex items-center gap-3">
-        <div className={styles.skelAvatar} />
-        <div className="flex-1 space-y-2">
-          <div className={styles.skelLabel} />
-          <div className={styles.skelSub} />
-        </div>
-        <div className={styles.skelBtn} />
-      </div>
+    <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading schedule">
+      <ZentraPageHeaderSkeleton />
       <div className={styles.skelGrid}>
         {[0, 1, 2].map((i) => (
           <div key={i} className={styles.skelCard}>
             <div className="flex items-center gap-3">
-              <div className={styles.skelAvatar} />
+              <Skeleton className="size-11 shrink-0 rounded-full" />
               <div className="flex-1 space-y-1.5">
-                <div className={styles.skelLabel} />
-                <div className={styles.skelName} />
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-3 w-24" />
               </div>
-              <div className={styles.skelBtn} />
+              <Skeleton className="h-6 w-16" />
             </div>
             <div className="space-y-1.5 mt-2">
               {[0, 1].map((j) => (
-                <div key={j} className="h-8 rounded bg-muted" />
+                <Skeleton key={j} className="h-8 w-full" />
               ))}
             </div>
           </div>
         ))}
       </div>
+      <ZentraTableSkeleton rows={4} columns={3} withPager={false} />
     </div>
   );
 }
@@ -111,9 +113,9 @@ export default function TeacherSchedulePage() {
     isLoading: schedIsLoading,
     isError: schedIsError,
   } = useQuery<ScheduleData>({
-    queryKey: ["teacher-schedule", termKey],
+    queryKey: ["teacher-schedule-summary", termKey],
     queryFn: async () => {
-      const { data } = await apiClient.get<ScheduleData>("/api/teacher/schedule");
+      const { data } = await apiClient.get<ScheduleData>("/api/teacher/schedule?summary=1");
       return data;
     },
     enabled: isMasterTeacher,
@@ -198,26 +200,20 @@ export default function TeacherSchedulePage() {
 
   return (
     <section className="flex w-full flex-col gap-5">
+      <TeacherPageHeader
+        title="Schedule"
+        description="Master scheduling workspace for grades 7–10 sections, subjects, and timetable slots."
+      />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="min-w-0">
           {orderedSections.length === 0 ? (
-            <div className={styles.emptyWrap}>
-              <div className={styles.card}>
-                <span className={styles.glowClip} aria-hidden="true">
-                  <span className={styles.cardGlow} />
-                </span>
-                <div className="relative flex flex-col items-center justify-center gap-0.5 p-8 text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                    <Inbox size={32} className="text-primary" aria-hidden />
-                  </div>
-                  <h3 className="text-lg font-semibold">No sections yet</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Sections created by the principal (grades 7–10) will appear here for
-                    scheduling.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <TeacherEmptyCard
+              centered
+              icon={Inbox}
+              title="No sections yet"
+              hint="Sections created by the principal (grades 7–10) will appear here for scheduling."
+              label="Schedule sections"
+            />
           ) : (
             <div className={assign.grid} role="group" aria-label="Sections">
               {orderedSections.map((section) => {

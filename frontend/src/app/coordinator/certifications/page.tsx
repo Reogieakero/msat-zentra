@@ -18,6 +18,8 @@ import {
   summarizeCertRecords,
 } from "@/services/coordinator/certifications.service";
 import type { CertStatusFilter } from "@/services/coordinator/certifications.types";
+import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import styles from "./components/coordinator-certifications.module.css";
 
 function tabToStatus(tab: string | null): CertStatusFilter {
@@ -93,7 +95,8 @@ function CertificationsBody() {
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Certifications">
+        <PageHeaderSkeleton />
         <div className={styles.layout}>
           <div className={styles.main}>
             <div className={styles.skelPanel}>
@@ -180,9 +183,21 @@ function CertificationsBody() {
     );
   }
 
+  const trulyEmpty =
+    records.length === 0 && query.trim() === "" && status === "all";
+
   return (
-    <section className={styles.page} aria-label="Certifications">
-      <div className={styles.layout}>
+    <section
+      className={trulyEmpty ? `${styles.page} ${styles.pageEmpty}` : styles.page}
+      aria-label="Certifications"
+    >
+      {trulyEmpty ? null : (
+        <CoordinatorPageHeader
+          title="Certifications"
+          description="Prepare recommendation folders and endorse them to the Principal for signature."
+        />
+      )}
+      <div className={trulyEmpty ? `${styles.layout} ${styles.layoutEmpty}` : styles.layout}>
 
         <div className={styles.main}>
           <CoordinatorCertificationsFolders
@@ -195,6 +210,7 @@ function CertificationsBody() {
           />
         </div>
 
+        {trulyEmpty ? null : (
         <aside className={styles.side}>
           <section className={assign.card} aria-label="Certification insights">
             <span className={assign.glowClip} aria-hidden="true">
@@ -207,6 +223,7 @@ function CertificationsBody() {
             </div>
           </section>
         </aside>
+        )}
       </div>
     </section>
   );

@@ -12,10 +12,10 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SearchIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight, SearchIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import {
   Table,
   TableBody,
@@ -26,21 +26,26 @@ import {
 } from "@/components/ui/table";
 import { RiskBadge } from "./RiskBadge";
 import type { SectionSummary, StudentRow } from "@/services/principal/academics";
-import type { GradeMode } from "../../grade-mode-context";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./SectionStudentsTable.module.css";
 
-export function liveAverage(st: StudentRow, mode: GradeMode): number | null {
-  if (st.subjects.length === 0) return null;
-  const vals = st.subjects.map((s) =>
-    mode === "final" ? s.transmutedGrade : s.computedAverage,
-  );
+// Unified real-time: primary average is transmuted (final scale).
+// General average across subjects that have a grade only — ungraded
+// subjects never drag the average down.
+function gradedValues(st: StudentRow, pick: (s: StudentRow["subjects"][number]) => unknown): number[] {
+  return st.subjects
+    .map(pick)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+}
+
+export function liveAverage(st: StudentRow): number | null {
+  const vals = gradedValues(st, (s) => s.transmutedGrade);
+  if (vals.length === 0) return null;
   return vals.reduce((sum, v) => sum + v, 0) / vals.length;
 }
 
 interface SectionStudentsTableProps {
   section: SectionSummary;
-  gradeMode: GradeMode;
 }
 
 type Tone = "high" | "moderate" | "low";
@@ -66,10 +71,7 @@ function attendanceTone(rate: number, hasRecords: boolean): Tone | null {
   return "low";
 }
 
-export function SectionStudentsTable({
-  section,
-  gradeMode,
-}: SectionStudentsTableProps) {
+export function SectionStudentsTable({ section }: SectionStudentsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
@@ -91,16 +93,29 @@ export function SectionStudentsTable({
       },
       {
         id: "average",
-        accessorFn: (row) => liveAverage(row, gradeMode) ?? -1,
-        header: gradeMode === "final" ? "Average" : "Raw avg",
+        accessorFn: (row) => liveAverage(row) ?? -1,
+        header: "General Average",
         size: 120,
         minSize: 120,
         maxSize: 120,
         cell: ({ row }) => {
-          const avg = liveAverage(row.original, gradeMode);
+          const avg = liveAverage(row.original);
+          if (avg === null) {
+            return (
+              <span
+                className="text-muted-foreground tabular-nums"
+                title="No general average yet — no graded subjects"
+              >
+                —
+              </span>
+            );
+          }
           return (
-            <span className={toneClass(averageTone(avg))}>
-              {avg === null ? "—" : avg.toFixed(1)}
+            <span
+              className={`font-medium tabular-nums ${toneClass(averageTone(avg))}`}
+              title="Mean of the student's graded subject averages"
+            >
+              {avg.toFixed(1)}
             </span>
           );
         },
@@ -131,11 +146,12 @@ export function SectionStudentsTable({
         cell: ({ row }) => <RiskBadge level={row.original.riskLevel} />,
       },
     ],
-    [gradeMode],
+    [],
   );
 
+  const students = section.students ?? [];
   const table = useReactTable({
-    data: section.students,
+    data: students,
     columns,
     getRowId: (row) => row.studentId,
     onSortingChange: setSorting,
@@ -144,10 +160,20 @@ export function SectionStudentsTable({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
+  if (students.length === 0) {
+    return (
+      <PrincipalEmptyCard
+        icon={Users}
+        title="No students enrolled"
+        hint={`No students enrolled in ${section.section}. Enrolled students will appear here once added.`}
+        label={`Students of ${section.section}`}
+      />
+    );
+  }
   return (
     <section aria-label={`Students of ${section.section}`} className="flex min-w-0 flex-col gap-3">
       <div className={assign.card}>
@@ -160,8 +186,8 @@ export function SectionStudentsTable({
               {section.section} · {section.grade}
             </h2>
             <p className={styles.sectionDesc}>
-              Averages compute live across all subjects — {section.students.length} student
-              {section.students.length === 1 ? "" : "s"}.
+              Averages compute live across all subjects — {students.length} student
+              {students.length === 1 ? "" : "s"}.
             </p>
           </div>
           <InputGroup className="max-w-40 shrink-0">
@@ -216,7 +242,7 @@ export function SectionStudentsTable({
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    {section.students.length === 0
+                    {students.length === 0
                       ? "No students enrolled in this section."
                       : "No students match your search."}
                   </TableCell>
@@ -230,27 +256,28 @@ export function SectionStudentsTable({
             {table.getFilteredRowModel().rows.length} student
             {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
           </div>
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-        <div className="relative">
-          <Badge variant="secondary">{section.students.length} enrolled</Badge>
+          {table.getPageCount() > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <ChevronLeft aria-hidden />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+                <ChevronRight aria-hidden />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </section>

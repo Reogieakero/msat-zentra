@@ -11,8 +11,7 @@ import { formatSection } from "@/lib/utils";
 import type { RegistryDesk } from "@/services/registry/overview.service";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./FinalGradeApprovals.module.css";
-
-const FETCH_PAGE_SIZE = 8;
+import { PAGE_SIZE as FETCH_PAGE_SIZE } from "@/components/shared/pagination";
 
 interface ReadyStudentRow {
   id: string;
@@ -62,21 +61,25 @@ export function FinalGradeApprovals({ desk }: { desk: RegistryDesk }) {
     router.push(`/${desk}/final-grades`);
   }, [router, desk]);
 
+  const isEmpty = !isPending && !isError && viewable.length === 0;
+
   return (
-    <section className={assign.card} aria-labelledby="overview-finals-ready">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-finals-ready"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-finals-ready" className="text-base font-semibold">
-            Final Grade Approvals
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Students whose grades are fully adviser-approved and ready for you to view.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-finals-ready" className="text-base font-semibold">
+              Final Grade Approvals
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Students whose grades are fully adviser-approved and ready for you to view.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.skelWrap}>

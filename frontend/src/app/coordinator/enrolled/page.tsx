@@ -10,6 +10,8 @@ import { useCoordinatorEnrolled } from "./components/use-coordinator-enrolled";
 import { CoordinatorEnrolledFilters } from "./components/coordinator-enrolled-filters";
 import { CoordinatorEnrolledGrid } from "./components/coordinator-enrolled-grid";
 import { CoordinatorEnrolledSkeleton } from "./components/coordinator-enrolled-skeleton";
+import { CoordinatorPageHeader } from "../components/CoordinatorPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import styles from "./components/coordinator-enrolled.module.css";
 
 function CoordinatorEnrolledPageInner() {
@@ -30,7 +32,24 @@ function CoordinatorEnrolledPageInner() {
   }, [highlight, rows, enrolledPending, historyTarget, setHistoryTarget]);
 
   return (
-    <section className={styles.page} aria-label="Enrolled students">
+    <section
+      className={
+        !r.enrolledPending && !r.enrolledError && r.total === 0 && !r.hasActiveFilters
+          ? `${styles.page} ${styles.pageEmpty}`
+          : styles.page
+      }
+      aria-label="Enrolled students"
+      aria-busy={r.enrolledPending || undefined}
+    >
+      {r.enrolledPending ? (
+        <PageHeaderSkeleton />
+      ) : r.enrolledError || r.total > 0 || r.hasActiveFilters ? (
+        <CoordinatorPageHeader
+          title="Enrolled ADM Learners"
+          description="Learners in enrollment monitoring and completed ADM cases."
+        />
+      ) : null}
+      {!r.enrolledPending && !r.enrolledError && r.total === 0 && !r.hasActiveFilters ? null : (
       <CoordinatorEnrolledFilters
         total={r.total}
         query={r.query}
@@ -41,6 +60,7 @@ function CoordinatorEnrolledPageInner() {
         hasActiveFilters={r.hasActiveFilters}
         onClear={r.clearFilters}
       />
+      )}
       <CoordinatorEnrolledGrid
         rows={r.rows}
         isPending={r.enrolledPending}
@@ -53,7 +73,7 @@ function CoordinatorEnrolledPageInner() {
         onComplete={r.setCompleteTarget}
       />
 
-      {!r.enrolledPending && !r.enrolledError && r.total > 0 ? (
+      {!r.enrolledPending && !r.enrolledError && r.total > 0 && r.totalPages > 1 ? (
         <div
           style={{
             display: "flex",

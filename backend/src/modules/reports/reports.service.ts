@@ -94,35 +94,58 @@ export async function getReports(params: {
   let activeTerm: {
     id: string;
     termNumber: number;
+    startDate: Date | null;
+    endDate: Date | null;
     schoolYear: { name: string; id: string };
   } | null = null;
+  const termSelect = {
+    id: true,
+    termNumber: true,
+    startDate: true,
+    endDate: true,
+    schoolYear: { select: { name: true, id: true } },
+  } as const;
   if (params.termId) {
     activeTerm = await prisma.term.findUnique({
       where: { id: params.termId },
-      select: { id: true, termNumber: true, schoolYear: { select: { name: true, id: true } } },
+      select: termSelect,
     });
   }
   if (!activeTerm && params.schoolYearId) {
     activeTerm = await prisma.term.findFirst({
       where: { schoolYearId: params.schoolYearId },
       orderBy: { termNumber: "asc" },
-      select: { id: true, termNumber: true, schoolYear: { select: { name: true, id: true } } },
+      select: termSelect,
     });
   }
   if (!activeTerm) {
     activeTerm = await prisma.term.findFirst({
       where: { schoolYear: { isActive: true } },
       orderBy: { termNumber: "asc" },
-      select: {
-        id: true,
-        termNumber: true,
-        schoolYear: { select: { name: true, id: true } },
-      },
+      select: termSelect,
     });
   }
   const termId = activeTerm?.id ?? null;
   const schoolYearId = activeTerm?.schoolYear.id ?? null;
   const termLabel = activeTerm ? `Term ${activeTerm.termNumber}` : "No active term";
+
+  // Snapshot fallback (DB cache when Redis is absent/cold): serve a fresh
+  // snapshot (<30 min) for this exact scope+term instead of recomputing.
+  const scopeId = params.sectionId ?? params.gradeLevel ?? null;
+  if (termId) {
+    try {
+      const snap = await prisma.reportSnapshot.findFirst({
+        where: { reportType: "principal-reports", scope: params.scope, scopeId, termId },
+        orderBy: { generatedAt: "desc" },
+        select: { payload: true, generatedAt: true },
+      });
+      if (snap && Date.now() - snap.generatedAt.getTime() < 30 * 60_000) {
+        return snap.payload as unknown as ReportsPayload;
+      }
+    } catch {
+      // Snapshot is best-effort; fall through to live computation.
+    }
+  }
   const schoolYear = activeTerm?.schoolYear.name ?? "No active school year";
 
   const { sectionWhere, studentWhere } = await resolveScopeFilter(params.scope, {
@@ -187,8 +210,19 @@ export async function getReports(params: {
       }),
 
       prisma.auditLog.findMany({
+        // Term-scoped by date range when the term carries dates; otherwise
+        // bounded to the latest 500 rows (was 2000, unscoped across terms).
+        where:
+          activeTerm?.startDate || activeTerm?.endDate
+            ? {
+                createdAt: {
+                  ...(activeTerm?.startDate ? { gte: activeTerm.startDate } : {}),
+                  ...(activeTerm?.endDate ? { lte: activeTerm.endDate } : {}),
+                },
+              }
+            : undefined,
         orderBy: { createdAt: "desc" },
-        take: 2000,
+        take: 500,
         select: { actionType: true },
       }),
       prisma.anecdotalRecord.findMany({
@@ -320,7 +354,7 @@ export async function getReports(params: {
 
   const accountApprovals = await buildAccountApprovals();
 
-  return {
+  const payload: ReportsPayload = {
     termLabel,
     schoolYear,
     kpis,
@@ -335,6 +369,25 @@ export async function getReports(params: {
     anecdotalCategories,
     accountApprovals,
   };
+
+  // Persist snapshot for the fallback path (best-effort, never fails live).
+  if (termId) {
+    try {
+      await prisma.reportSnapshot.create({
+        data: {
+          reportType: "principal-reports",
+          scope: params.scope,
+          scopeId,
+          termId,
+          payload: payload as unknown as object,
+        },
+      });
+    } catch {
+      // Ignore snapshot write failures.
+    }
+  }
+
+  return payload;
 }
 
 function anecdotalScopeWhere(
@@ -364,61 +417,32 @@ async function buildTrends(
     orderBy: { termNumber: "asc" },
     select: { id: true, termNumber: true },
   });
-  const sectionWhere: Record<string, unknown> = {};
-  if (scope === "section" && opts.sectionId) sectionWhere.id = opts.sectionId;
-  else if (scope === "grade" && opts.gradeLevel) sectionWhere.gradeLevel = opts.gradeLevel;
-  else sectionWhere.schoolYearId = opts.schoolYearId;
-
-  const perTerm = await Promise.all(
-    terms.map(async (t) => {
-      const sections = await prisma.section.findMany({
-        where: sectionWhere,
-        select: {
-          id: true,
-          students: {
-            select: {
-              lrn: true,
-              finalGrades: {
-                where: { termId: t.id },
-                select: { transmutedGrade: true },
-              },
-            },
-          },
-          rosterEntries: {
-            select: {
-              lrn: true,
-              finalGrades: {
-                where: { termId: t.id },
-                select: { transmutedGrade: true },
-              },
-            },
-          },
-        },
-      });
-      let sum = 0;
-      let count = 0;
-      const tally = (grades: { transmutedGrade: number | null }[]) => {
-        for (const g of grades) {
-          if (g.transmutedGrade != null) {
-            sum += g.transmutedGrade as number;
-            count += 1;
+  // Single aggregate query across all terms: one grouped AVG instead of a
+  // per-term full section+grade scan fan-out.
+  const termIds = terms.map((t) => t.id);
+  const gradeWhere: Record<string, unknown> =
+    scope === "section" && opts.sectionId
+      ? { OR: [{ student: { sectionId: opts.sectionId } }, { roster: { sectionId: opts.sectionId } }] }
+      : scope === "grade" && opts.gradeLevel
+        ? {
+            OR: [
+              { student: { gradeLevel: opts.gradeLevel } },
+              { roster: { gradeLevel: opts.gradeLevel } },
+            ],
           }
-        }
-      };
-      for (const s of sections) {
-        const registeredLrns = new Set(s.students.map((st) => st.lrn));
-        for (const st of s.students) tally(st.finalGrades);
-        for (const r of s.rosterEntries) {
-          if (!registeredLrns.has(r.lrn)) tally(r.finalGrades);
-        }
-      }
-      const avg = count > 0 ? round1(sum / count) : 0;
-      return { term: `T${t.termNumber}`, avgTransmuted: avg, order: t.termNumber };
-    }),
-  );
-  return perTerm
-    .sort((a, b) => a.order - b.order)
-    .map(({ term, avgTransmuted }) => ({ term, avgTransmuted }));
+        : {};
+  const groups =
+    termIds.length > 0
+      ? await prisma.finalGrade.groupBy({
+          by: ["termId"],
+          where: { termId: { in: termIds }, transmutedGrade: { not: null }, ...gradeWhere },
+          _avg: { transmutedGrade: true },
+        })
+      : [];
+  const avgByTerm = new Map(groups.map((g) => [g.termId, g._avg.transmutedGrade ?? 0]));
+  return terms
+    .sort((a, b) => a.termNumber - b.termNumber)
+    .map((t) => ({ term: `T${t.termNumber}`, avgTransmuted: round1(avgByTerm.get(t.id) ?? 0) }));
 }
 
 function buildInterventionSuccess(

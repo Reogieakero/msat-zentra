@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Trophy, X } from "lucide-react";
 import { HonorRollHero } from "./components/HonorRollHero";
 import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
+import { PrincipalEmptyCard } from "../components/PrincipalEmptyCard";
 import { TierLeaderboard } from "./components/TierLeaderboard";
 import { CandidateTable } from "./components/CandidateTable";
 import {
@@ -17,13 +18,14 @@ import {
   type HonorRollCandidate,
 } from "@/services/principal/honorRoll.types";
 import { useTerm } from "@/lib/term/TermContext";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import styles from "./honor-roll.module.css";
 
 export default function PrincipalHonorRollPage() {
   const [grade, setGrade] = React.useState<string>("7");
   const [rankOpen, setRankOpen] = React.useState(false);
 
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termId = activeTerm?.termId ?? null;
   const {
     data: summary,
@@ -35,9 +37,10 @@ export default function PrincipalHonorRollPage() {
     queryFn: fetchLiveHonorRoll,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    enabled: termReady,
   });
 
-  const loading = isPending;
+  const loading = isPending || !termReady;
   const derived = React.useMemo(
     () => (summary ? deriveHonorRoll(summary) : null),
     [summary]
@@ -95,7 +98,8 @@ export default function PrincipalHonorRollPage() {
 
   if (loading) {
     return (
-      <section className={styles.page}>
+      <section className={styles.page} aria-label="Loading honor roll" aria-busy="true">
+        <PageHeaderSkeleton withActions />
         <div className={styles.skeletonHero} />
         <div className={styles.skeletonBar} />
         <div className={styles.skeletonTable} />
@@ -103,6 +107,20 @@ export default function PrincipalHonorRollPage() {
     );
   }
 
+  const isEmpty = !loading && (derived?.candidates ?? []).length === 0;
+  if (isEmpty) {
+    return (
+      <section className={styles.page}>
+        <PrincipalEmptyCard
+          icon={Trophy}
+          title="No awardees this term"
+          hint="Students with a live general average of 90+ and no subject below 80 will appear here as scores are recorded."
+          label="Honor Roll & Awards"
+          centered
+        />
+      </section>
+    );
+  }
   return (
     <section className={styles.page}>
       <PrincipalPageHeader

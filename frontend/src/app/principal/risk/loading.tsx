@@ -1,9 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import styles from "./risk.module.css";
 
 export default function PrincipalRiskLoading() {
   return (
     <section className={styles.page} aria-label="Loading risk board" aria-busy="true">
+      <PageHeaderSkeleton />
       <div className={styles.topSummary} aria-hidden="true">
         <div className="flex flex-col items-center gap-3 rounded-md border p-4">
           <Skeleton className="size-36 rounded-full" />

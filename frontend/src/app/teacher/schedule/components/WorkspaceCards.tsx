@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { ScheduleConfigDialog } from "./ScheduleConfigDialog";
 import type { DayConfig } from "./schedule-time";
-import type { ScheduleSection } from "../page";
+import type { ScheduleSectionSummary } from "../page";
 
 function getErrorMessage(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { error?: { message?: unknown }; message?: unknown } } })?.response?.data;
@@ -27,11 +27,11 @@ function SendToPrincipalCard() {
   const { activeTerm } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
-  const sectionsQuery = useQuery<{ sections: ScheduleSection[] }>({
-    queryKey: ["teacher-schedule", termKey],
+  const sectionsQuery = useQuery<{ sections: ScheduleSectionSummary[] }>({
+    queryKey: ["teacher-schedule-summary", termKey],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ sections: ScheduleSection[] }>(
-        "/api/teacher/schedule",
+      const { data } = await apiClient.get<{ sections: ScheduleSectionSummary[] }>(
+        "/api/teacher/schedule?summary=1",
       );
       return data;
     },

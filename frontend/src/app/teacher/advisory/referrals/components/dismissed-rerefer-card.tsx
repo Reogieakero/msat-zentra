@@ -145,7 +145,7 @@ export function DismissedRereferCard({
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.get<
         DismissedMine[] | { referrals: DismissedMine[] }
-      >("/api/referrals/mine?page=1&pageSize=100", { signal });
+      >("/api/referrals/mine?page=1&pageSize=15", { signal });
       if (Array.isArray(data)) return data;
       const rows = (data as { referrals?: unknown }).referrals;
       return Array.isArray(rows) ? (rows as DismissedMine[]) : [];

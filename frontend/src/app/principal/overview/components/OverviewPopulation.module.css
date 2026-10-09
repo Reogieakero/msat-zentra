@@ -41,11 +41,23 @@
   height: 0.875rem;
 }
 
-/* ---- Grade groups ---- */
+/* ---- Grade groups: 3 cards per row ---- */
 .groups {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .group {
@@ -89,12 +101,23 @@
   gap: 0.875rem;
 }
 
-/* ---- Aurora banner loading skeletons (banner visuals live in the
-   shared AuroraBanner styles) ---- */
-.bannerSkel {
-  min-height: 12rem;
-  height: 100%;
-  border-radius: var(--radius-md);
+/* ---- Skeletons ---- */
+.groupSkelWrap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .groupSkelWrap {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .groupSkelWrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---- Donut ---- */
@@ -196,11 +219,6 @@
 }
 
 /* ---- Skeletons ---- */
-.groupSkelWrap {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-}
 
 .groupSkel {
   display: flex;

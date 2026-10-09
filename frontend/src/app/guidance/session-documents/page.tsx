@@ -6,6 +6,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import {
   SessionFilesLegendCard,
@@ -20,7 +23,6 @@ import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
 import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/guidance/anecdotal/components/guidance-anecdotal.module.css";
 
 const GUIDANCE_SESSION_DOCS_PAGE_SIZE = 15;
@@ -32,7 +34,7 @@ function hasDocsCheck(record: { sessionDocs?: { files: { mimeType: string }[] }[
 }
 
 export default function GuidanceSessionDocumentsPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
   const [type, setType] = React.useState<TypeFilter>("");
@@ -61,6 +63,7 @@ export default function GuidanceSessionDocumentsPage() {
         ),
       staleTime: 60_000,
       placeholderData: keepPreviousData,
+      enabled: termReady,
     });
 
   const docsRecords = React.useMemo(
@@ -82,6 +85,7 @@ export default function GuidanceSessionDocumentsPage() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading session documents">
+        <ZentraPageHeaderSkeleton />
         <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div className={`${styles.main} flex min-w-0 flex-col`}>
             <div className={styles.skelPanel}>
@@ -173,33 +177,29 @@ export default function GuidanceSessionDocumentsPage() {
   const hasActiveFilters = query !== "" || type !== "";
   if (data.total === 0 && !hasActiveFilters) {
     return (
-      <section className={`${styles.page} flex min-h-[60vh] flex-1 flex-col justify-center`}>
-        <div className={`${assign.card} mx-auto w-full max-w-md`}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center gap-2 py-8 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <FolderOpen size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">No referred files yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Filed session images will appear here once counseling sessions complete.
-            </p>
+      <section className={styles.page} aria-label="Session documents">
+        <GuidanceEmptyCard
+          icon={FolderOpen}
+          title="No session files yet"
+          hint="Filed session images will appear here once counseling sessions complete."
+          label="Session documents"
+          action={
             <Button asChild size="sm" className="mt-2">
               <Link href="/guidance/referrals">View referrals</Link>
             </Button>
-          </div>
-        </div>
+          }
+          centered
+        />
       </section>
     );
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-label="Session documents">
+      <GuidancePageHeader
+        title="Session Documents"
+        description="Filed counseling session images and attachments, one folder per student."
+      />
       <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceSessionDocumentsFolders

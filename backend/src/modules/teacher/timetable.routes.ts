@@ -48,7 +48,16 @@ async function termCtxOf(req: Request) {
 
 router.get("/schedule", requireAuth, requireRole("subject_teacher", "adviser"), async (req, res, next) => {
   try {
-    res.json(await getSchedule(await termCtxOf(req)));
+    const summary = req.query.summary === "1" || req.query.summary === "true";
+    const sectionId = String(req.query.sectionId ?? "").trim();
+    const gradeLevel = String(req.query.gradeLevel ?? "").trim();
+    res.json(
+      await getSchedule(await termCtxOf(req), {
+        summary,
+        ...(sectionId ? { sectionId } : {}),
+        ...(gradeLevel ? { gradeLevel } : {}),
+      }),
+    );
   } catch (e) {
     next(e);
   }

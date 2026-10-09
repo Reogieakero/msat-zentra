@@ -61,27 +61,30 @@ export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
   const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, total);
   const hasRecords = (data?.missingSf10 ?? []).length > 0;
+  const isEmpty = !isPending && !isError && !hasRecords;
 
   return (
-    <section className={assign.card} aria-labelledby="overview-missing-sf10">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-missing-sf10"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-missing-sf10" className="text-base font-semibold">
-            Missing SF10 Records
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            G11–12 students with no SF10 record on file yet.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-missing-sf10" className="text-base font-semibold">
+              Missing SF10 Records
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              G11–12 students with no SF10 record on file yet.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <Button variant="link" size="sm" className={styles.viewAll} onClick={goSf10}>
+              View all
+            </Button>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          <Button variant="link" size="sm" className={styles.viewAll} onClick={goSf10}>
-            View all
-          </Button>
-        </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.tableWrap}>
@@ -137,7 +140,7 @@ export function MissingSf10Table({ desk }: { desk: RegistryDesk }) {
           </div>
         )}
       </div>
-      {hasRecords && (
+      {totalPages > 1 && (
         <div className={`${styles.footer} relative`}>
           <span className={styles.footerInfo}>
             {total > 0 ? `${start}–${end} of ${total}` : "0 of 0"}

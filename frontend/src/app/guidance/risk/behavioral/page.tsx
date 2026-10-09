@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { FileText, Loader2, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../../components/GuidancePageHeader";
+import { GuidanceEmptyCard, GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
 import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -33,7 +36,7 @@ import styles from "../../pages.module.css";
 const GUIDANCE_BEHAVIORAL_PAGE_SIZE = 15;
 
 export default function GuidanceBehavioralPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
   const [category, setCategory] = React.useState<BehavioralCategoryFilter>("all");
@@ -56,6 +59,7 @@ export default function GuidanceBehavioralPage() {
         ),
       staleTime: 60_000,
       placeholderData: keepPreviousData,
+      enabled: termReady,
     });
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
@@ -63,15 +67,8 @@ export default function GuidanceBehavioralPage() {
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · Behavioral</p>
-            <h1 className={styles.title}>Behavioral records</h1>
-            <p className={styles.lede}>Loading referred filings…</p>
-          </div>
-          <Skeleton style={{ width: "8rem", height: "1.5rem" }} />
-        </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading behavioral records">
+        <ZentraPageHeaderSkeleton withActions actionCount={1} />
 
         <Card className={styles.card} aria-hidden="true">
           <CardHeader>
@@ -156,13 +153,8 @@ export default function GuidanceBehavioralPage() {
 
   if (isError || !data) {
     return (
-      <section className={styles.page}>
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · Behavioral</p>
-            <h1 className={styles.title}>Behavioral records</h1>
-          </div>
-        </div>
+      <section className={styles.page} aria-label="Behavioral records">
+        <GuidancePageHeader title="Behavioral Records" />
         <Card className={styles.card}>
           <CardHeader>
             <CardTitle className={styles.sectionTitle}>
@@ -194,23 +186,31 @@ export default function GuidanceBehavioralPage() {
   const to = Math.min(safePage * data.pageSize, data.total);
 
   return (
-    <section className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Insights · Behavioral</p>
-          <h1 className={styles.title}>Behavioral records</h1>
-          <p className={styles.lede}>
-            Live category flags and counts from filings referred to guidance —
-            the signal behind the behavioral risk flag (≥ 1 report).
-          </p>
-        </div>
-        <Badge variant="outline">
-          Live · {data.total} referred
-          {data.unfilteredTotal !== undefined && data.unfilteredTotal !== data.total
-            ? ` (of ${data.unfilteredTotal})`
-            : ""}
-        </Badge>
-      </div>
+    <section className={styles.page} aria-label="Behavioral records">
+      {(data.unfilteredTotal ?? data.total) === 0 && query === "" && category === "all" ? null : (
+        <GuidancePageHeader
+          title="Behavioral Records"
+          description="Live category flags and counts from filings referred to guidance — the signal behind the behavioral risk flag (≥ 1 report)."
+          actions={
+            <Badge variant="outline">
+              Live · {data.total} referred
+              {data.unfilteredTotal !== undefined && data.unfilteredTotal !== data.total
+                ? ` (of ${data.unfilteredTotal})`
+                : ""}
+            </Badge>
+          }
+        />
+      )}
+      {(data.unfilteredTotal ?? data.total) === 0 && query === "" && category === "all" ? (
+        <GuidanceEmptyCard
+          icon={FileText}
+          title="No behavioral records"
+          hint="Behavioral filings referred to guidance will appear here."
+          label="Behavioral records"
+          centered
+        />
+      ) : (
+        <>
 
       <Card className={styles.card}>
         <CardHeader>
@@ -254,43 +254,47 @@ export default function GuidanceBehavioralPage() {
         </CardHeader>
         <CardContent>
           {data.records.length === 0 ? (
-            <p className={styles.sectionDesc}>
-              No referred filings match — try clearing the search or filter.
-            </p>
+            <GuidanceEmptyState
+              icon={SearchX}
+              title="No referred filings match"
+              hint="Try clearing the search or filter to see every referred filing."
+            />
           ) : (
             <GuidanceBehavioralCards records={data.records} />
           )}
 
-          <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={safePage <= 1 || (isFetching && !isPending)}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <span className={styles.sectionDesc} aria-live="polite">
-              {isFetching && !isPending ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                  <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
-                  Loading…
-                </span>
-              ) : (
-                `Page ${safePage} of ${totalPages}`
-              )}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={safePage >= totalPages || (isFetching && !isPending)}
-              onClick={() =>
-                setPage((p) => Math.min(totalPages, p + 1))
-              }
-            >
-              Next
-            </Button>
-          </div>
+          {totalPages > 1 && (
+            <div className={styles.actionsRight} style={{ marginTop: "0.75rem" }}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safePage <= 1 || (isFetching && !isPending)}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className={styles.sectionDesc} aria-live="polite">
+                {isFetching && !isPending ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                    <Loader2 className="animate-spin" aria-hidden style={{ width: "0.875rem", height: "0.875rem" }} />
+                    Loading…
+                  </span>
+                ) : (
+                  `Page ${safePage} of ${totalPages}`
+                )}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safePage >= totalPages || (isFetching && !isPending)}
+                onClick={() =>
+                  setPage((p) => Math.min(totalPages, p + 1))
+                }
+              >
+                Next
+              </Button>
+            </div>
+          )}
 
           <div className={styles.actions} style={{ marginTop: "0.75rem" }}>
             <Button size="sm" variant="outline" asChild>
@@ -307,6 +311,8 @@ export default function GuidanceBehavioralPage() {
         Guidance sees owning + referred rows; the full write-up opens only
         through the case file, never from this feed.
       </p>
+        </>
+      )}
     </section>
   );
 }

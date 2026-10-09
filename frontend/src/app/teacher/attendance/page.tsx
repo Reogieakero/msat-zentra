@@ -8,6 +8,7 @@ import { apiClient } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/components/ui/sonner";
 import { AttendanceRosterTable } from "./components/AttendanceRosterTable";
+import { ZentraPageHeaderSkeleton, ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { AttendanceTermGate } from "./components/AttendanceTermGate";
 import { SheetDatePicker } from "./components/sheet-date-picker";
 import { VerifyCodeCard } from "./components/verify-code-card";
@@ -290,12 +291,10 @@ export default function TeacherAdvisoryAttendancePage() {
   useTopbarCrumb(topbarCrumb);
   if (meQuery.isPending || ((linked || isMasterTeacher) && mySlotsQuery.isPending)) {
     return (
-      <section className={styles.page}>
-        <div className={styles.body}>
-          <p className="text-sm text-muted-foreground" aria-busy="true">
-            Loading attendance…
-          </p>
-        </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading attendance">
+        <ZentraPageHeaderSkeleton />
+        <ZentraFilterBarSkeleton selects={2} />
+        <ZentraTableSkeleton rows={8} columns={4} />
       </section>
     );
   }

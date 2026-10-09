@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../../components/skeletons/PageHeaderSkeleton";
 
 export default function PrincipalRiskStudentsLoading() {
   return (
     <section aria-label="Loading at-risk students" aria-busy="true" className="flex flex-col gap-4">
+      <PageHeaderSkeleton />
       <Skeleton className="h-48 w-full" aria-hidden="true" />
       <div className="rounded-md border p-4" aria-hidden="true">
         <div className="flex flex-wrap items-center justify-between gap-3">

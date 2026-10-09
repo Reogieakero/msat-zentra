@@ -86,3 +86,9 @@
     opacity: 0.45;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonRow {
+    animation: none;
+  }
+}

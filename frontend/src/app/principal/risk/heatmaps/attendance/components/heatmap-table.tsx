@@ -53,6 +53,7 @@ export function TablePager({
   onNext: () => void;
   label: string;
 }) {
+  if (totalPages <= 1) return null;
   return (
     <div className={common.pager}>
       <p className={common.range}>

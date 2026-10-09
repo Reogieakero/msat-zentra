@@ -66,7 +66,7 @@ type RawBackendSection = {
   sectionId: string;
   section: string;
   gradeLevel: string;
-  students: RawBackendStudent[];
+  students: RawBackendStudent[] | null | undefined;
 };
 
 function normalizeStatus(status: string): RecordStudent["status"] {
@@ -93,7 +93,7 @@ export function normalizeRecords(raw: {
 
   for (const section of raw.sections) {
     const students: RecordStudent[] = [];
-    for (const st of section.students) {
+    for (const st of section.students ?? []) {
       const existing = byLrn.get(st.lrn);
       if (existing) {
 

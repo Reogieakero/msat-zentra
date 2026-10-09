@@ -144,14 +144,16 @@ export function DocumentaryTable({
         )}
       </div>
 
-      <div className={styles.pager}>
-        <p className={styles.range}>Showing {start}–{end} of {total}</p>
-        <div className={styles.pagerButtons}>
-          <Button size="xs" variant="outline" disabled={safePage <= 1} onClick={() => onPageChange(Math.max(1, safePage - 1))}>Previous</Button>
-          <span className={styles.pageLabel} aria-live="polite">Page {safePage} of {totalPages}</span>
-          <Button size="xs" variant="outline" disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)}>Next</Button>
+      {totalPages > 1 && (
+        <div className={styles.pager}>
+          <p className={styles.range}>Showing {start}–{end} of {total}</p>
+          <div className={styles.pagerButtons}>
+            <Button size="xs" variant="outline" disabled={safePage <= 1} onClick={() => onPageChange(Math.max(1, safePage - 1))}>Previous</Button>
+            <span className={styles.pageLabel} aria-live="polite">Page {safePage} of {totalPages}</span>
+            <Button size="xs" variant="outline" disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)}>Next</Button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

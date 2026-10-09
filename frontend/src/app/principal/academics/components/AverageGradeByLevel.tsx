@@ -26,7 +26,7 @@ export function AverageGradeByLevel({
     const subjMap = new Map<string, number[]>();
     for (const s of scoped) {
       if (activeSectionId && s.sectionId !== activeSectionId) continue;
-      for (const st of s.students) {
+      for (const st of s.students ?? []) {
         for (const sub of st.subjects) {
           const arr = subjMap.get(sub.subject) ?? [];
           arr.push(sub.transmutedGrade);

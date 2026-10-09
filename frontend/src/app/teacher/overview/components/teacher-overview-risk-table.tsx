@@ -51,9 +51,11 @@ function FactorBadges({ flags }: { flags?: AdvisoryStatusRow["flags"] }) {
 
 interface TeacherOverviewRiskTableProps {
   students: AdvisoryStatusRow[];
+  totalCount?: number;
 }
 
-export function TeacherOverviewRiskTable({ students }: TeacherOverviewRiskTableProps) {
+export function TeacherOverviewRiskTable({ students, totalCount }: TeacherOverviewRiskTableProps) {
+  const total = totalCount ?? students.length;
   const atRisk = React.useMemo(
     () => students.filter((s) => s.flag !== "none" || (s.flags?.length ?? 0) > 0),
     [students],
@@ -110,7 +112,7 @@ export function TeacherOverviewRiskTable({ students }: TeacherOverviewRiskTableP
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
@@ -121,13 +123,15 @@ export function TeacherOverviewRiskTable({ students }: TeacherOverviewRiskTableP
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
           </span>
-          <div className="relative">
-            <h2 className={styles.sectionTitle}>At-Risk Advisees</h2>
-            <p className={styles.sectionDesc}>
-              Flagged by the system — 0 students. Category only, never the private
-              write-up.
-            </p>
-          </div>
+          {total > 0 ? (
+            <div className="relative">
+              <h2 className={styles.sectionTitle}>At-Risk Advisees</h2>
+              <p className={styles.sectionDesc}>
+                Flagged by the system — 0 students. Category only, never the private
+                write-up.
+              </p>
+            </div>
+          ) : null}
           <div className="relative flex flex-col items-center gap-2 py-6 text-center">
             <span
               className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
@@ -218,24 +222,26 @@ export function TeacherOverviewRiskTable({ students }: TeacherOverviewRiskTableP
               {table.getFilteredRowModel().rows.length} student
               {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
             </div>
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+            {table.getPageCount() > 1 && (
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

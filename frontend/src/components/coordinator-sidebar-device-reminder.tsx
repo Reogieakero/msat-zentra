@@ -21,7 +21,8 @@ function useNeedsDeviceCases(): NeedsDeviceCase[] {
     const load = () => {
       apiClient
         .get<AdmApprovalsPage>("/api/adm/approvals", {
-          params: { limit: 200 },
+          // Strict 15-record ceiling for sidebar preview.
+          params: { limit: 15 },
         })
         .then(({ data }) => {
           if (cancelled || !data || !Array.isArray(data.rows)) return;

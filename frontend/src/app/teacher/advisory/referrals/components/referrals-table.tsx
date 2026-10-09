@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import { typeForDesk } from "./referral-types";
@@ -65,6 +66,7 @@ export function ReferralsTable({
   reopenPending,
   reopenRowId,
   onReferAgain,
+  onNewReferral,
 }: {
   referrals: ReferralRow[];
   total: number;
@@ -81,6 +83,7 @@ export function ReferralsTable({
   reopenPending: boolean;
   reopenRowId: string | null;
   onReferAgain: (row: ReferralRow) => void;
+  onNewReferral?: () => void;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const columns = React.useMemo<ColumnDef<ReferralRow>[]>(
@@ -202,10 +205,9 @@ export function ReferralsTable({
   });
   if (referralsQuery.isPending) {
     return (
-      <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading referrals">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 rounded-md bg-muted" />
-        ))}
+      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading referrals">
+        <ZentraFilterBarSkeleton selects={1} />
+        <ZentraTableSkeleton rows={8} columns={5} />
       </div>
     );
   }
@@ -225,35 +227,48 @@ export function ReferralsTable({
             onClick={() => referralsQuery.refetch()}
             disabled={referralsQuery.isFetching}
           >
-            {referralsQuery.isFetching ? "Retrying…" : "Try again"}
+            {referralsQuery.isFetching ? (
+              <>
+                <Loader2 size={16} className="animate-spin" aria-hidden />
+                <span aria-live="polite">Retrying</span>
+              </>
+            ) : (
+              "Try again"
+            )}
           </Button>
         </div>
       </div>
     );
   }
   if (referrals.length === 0) {
+    const isTrueEmpty = unfilteredTotal === 0;
     return (
-      <div className={assign.card}>
-        <span className={assign.glowClip} aria-hidden="true">
-          <span className={assign.cardGlow} />
-        </span>
-        <div className="relative">
-          <h2 className={styles.sectionTitle}>Referrals</h2>
-          <p className={styles.sectionDesc}>
-            Your submitted referrals — 0 referrals.
-          </p>
-        </div>
-        <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-            aria-hidden="true"
-          >
-            <Send size={24} className="text-muted-foreground" />
+      <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+        <div className={`${assign.card} w-full max-w-md`}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
           </span>
-          <p className="font-medium">No referrals yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Referrals you submit will appear here once created.
-          </p>
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <Send size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">
+              {isTrueEmpty ? "No referrals yet" : "No referrals match your search"}
+            </p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {isTrueEmpty
+                ? "Referrals you submit will appear here once created."
+                : "Try a different search or filter."}
+            </p>
+            {isTrueEmpty && onNewReferral ? (
+              <Button size="sm" className="mt-2" onClick={onNewReferral}>
+                New referral
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
     );
@@ -338,30 +353,32 @@ export function ReferralsTable({
           </TableBody>
         </Table>
       </div>
-      <div className="relative flex items-center justify-end space-x-2">
-        <div className="text-muted-foreground flex-1 text-sm">
-          Page {safePage} of {totalPages} — {total} referral
-          {total === 1 ? "" : "s"}
+      {totalPages > 1 && (
+        <div className="relative flex items-center justify-end space-x-2">
+          <div className="text-muted-foreground flex-1 text-sm">
+            Page {safePage} of {totalPages} — {total} referral
+            {total === 1 ? "" : "s"}
+          </div>
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(Math.max(1, safePage - 1))}
+              disabled={safePage <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(Math.max(1, safePage - 1))}
-            disabled={safePage <= 1}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
-            disabled={safePage >= totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

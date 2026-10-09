@@ -1,6 +1,8 @@
 "use client";
 import * as React from "react";
+import { Inbox, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import type {
   NurseQueueRow,
   NurseSessionItem,
@@ -163,16 +165,15 @@ export function NurseAlertsTable({
     <div className={styles.layout}>
       <div className={styles.feed}>
         {visibleRows.length === 0 ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>
-              {hasActiveFilters ? "No cases match the selected filter" : "You're all caught up"}
-            </p>
-            <p className={styles.emptyHint}>
-              {hasActiveFilters
+          <NurseEmptyState
+            icon={hasActiveFilters ? SearchX : Inbox}
+            title={hasActiveFilters ? "No cases match the selected filter" : "You're all caught up"}
+            hint={
+              hasActiveFilters
                 ? "Pick a different action in the sidebar, or show every case."
-                : "New cases sent to you by advisers will appear here."}
-            </p>
-          </div>
+                : "New cases sent to you by advisers will appear here."
+            }
+          />
         ) : (
           <ol className={styles.cards} aria-label={title}>
             {visibleRows.map((alert) => (
@@ -194,7 +195,7 @@ export function NurseAlertsTable({
             ))}
           </ol>
         )}
-        {paginate ? (
+        {paginate && totalPages > 1 ? (
           <nav className={styles.pager} aria-label="Cases pages">
             <p className={styles.range}>
               Showing {start}–{end} of {total}

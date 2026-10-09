@@ -1,21 +1,24 @@
 import { apiClient } from "@/lib/api/client";
 import type { InterventionStudentsResult, StudentFilters } from "@/app/principal/risk/interventions/types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export async function fetchInterventionStudents(
   filters: StudentFilters,
   page = 1,
-  pageSize = 20
+  pageSize = PAGE_SIZE,
+  signal?: AbortSignal
 ): Promise<InterventionStudentsResult> {
   const params: Record<string, string> = { page: String(page), pageSize: String(pageSize) };
   if (filters.riskLevel && filters.riskLevel !== "all") params.riskLevel = filters.riskLevel;
   if (filters.hasIntervention !== undefined)
     params.hasIntervention = String(filters.hasIntervention);
   if (filters.factor && filters.factor !== "all") params.factor = filters.factor;
-  if (filters.gradeMode) params.gradeMode = filters.gradeMode;
+  if (filters.q?.trim()) params.q = filters.q.trim();
+  if (filters.section?.trim()) params.section = filters.section.trim();
 
   const { data } = await apiClient.get<InterventionStudentsResult>(
     "/api/risk/interventions",
-    { params }
+    { params, signal }
   );
   return data;
 }

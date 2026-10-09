@@ -12,7 +12,7 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { Badge } from "@/components/ui/badge";
@@ -176,7 +176,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
@@ -197,15 +197,18 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
           </span>
-          <div className="relative">
-            <h2 className={styles.sectionTitle}>
-              Advisory Attendance{matrixQuery.data ? ` · ${matrixQuery.data.sectionName}` : ""}
-            </h2>
-            <p className={styles.sectionDesc}>
-              General average present across all subjects this term — below 80% is at-risk (same as the engine).
+          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <Users size={24} className="text-muted-foreground" />
+            </span>
+            <p className="font-medium">No students in this section yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Attendance for this advisory section will appear here once students are enrolled.
             </p>
           </div>
-          <p className={`${styles.empty} relative`}>No students in this section yet.</p>
         </div>
       ) : (
         <div className={assign.card}>
@@ -285,24 +288,26 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
               {table.getFilteredRowModel().rows.length} student
               {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
             </div>
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+            {table.getPageCount() > 1 && (
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

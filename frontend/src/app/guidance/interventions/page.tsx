@@ -2,9 +2,12 @@
 
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { HeartHandshake, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { fetchGuidanceInterventions } from "@/services/guidance/interventions.service";
 import type { GuidanceInterventionsData } from "@/services/guidance/interventions.types";
 import {
@@ -17,7 +20,7 @@ import styles from "./components/guidance-interventions.module.css";
 const GUIDANCE_INTERVENTIONS_PAGE_SIZE = 15;
 
 export default function GuidanceInterventionsPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
@@ -46,15 +49,18 @@ export default function GuidanceInterventionsPage() {
 
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
   const safePage = Math.min(data?.page ?? page, totalPages);
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={isPending || undefined}>
       {isPending ? (
-        <div aria-busy="true" className={styles.feed}>
+        <>
+          <ZentraPageHeaderSkeleton />
+          <div aria-busy="true" className={styles.feed}>
           <div className={styles.skelToolbar}>
             <div className={styles.skelHeadText}>
               <Skeleton className={styles.skelTitle} />
@@ -96,7 +102,8 @@ export default function GuidanceInterventionsPage() {
               <Skeleton className={styles.skelPageBtn} />
             </div>
           </div>
-        </div>
+          </div>
+        </>
       ) : isError || !data ? (
         <div className={styles.empty} role="alert">
           <p className={styles.emptyTitle}>We couldn&apos;t load the queue</p>
@@ -115,22 +122,36 @@ export default function GuidanceInterventionsPage() {
             {isRefetching ? "Loading…" : "Try again"}
           </Button>
         </div>
-      ) : (
-        <GuidanceInterventionsTable
-          summary={data.summary}
-          students={Array.isArray(data.students) ? data.students : []}
-          page={safePage}
-          pageSize={data.pageSize}
-          total={data.total}
-          totalPages={totalPages}
-          unfilteredTotal={data.unfilteredTotal}
-          onPageChange={setPage}
-          query={query}
-          onQueryChange={handleQueryChange}
-          onRetry={() => refetch()}
-          isRetrying={isRefetching}
-          isNavigating={isFetching && !isPending}
+      ) : (data.unfilteredTotal ?? data.total) === 0 && query.trim() === "" ? (
+        <GuidanceEmptyCard
+          icon={HeartHandshake}
+          title="No intervention cases"
+          hint="At-risk students needing guidance follow-up will appear here."
+          label="Intervention cases"
+          centered
         />
+      ) : (
+        <>
+          <GuidancePageHeader
+            title="Interventions"
+            description="At-risk students on the guidance desk — start, schedule, or close follow-through."
+          />
+          <GuidanceInterventionsTable
+            summary={data.summary}
+            students={Array.isArray(data.students) ? data.students : []}
+            page={safePage}
+            pageSize={data.pageSize}
+            total={data.total}
+            totalPages={totalPages}
+            unfilteredTotal={data.unfilteredTotal}
+            onPageChange={setPage}
+            query={query}
+            onQueryChange={handleQueryChange}
+            onRetry={() => refetch()}
+            isRetrying={isRefetching}
+            isNavigating={isFetching && !isPending}
+          />
+        </>
       )}
     </section>
   );

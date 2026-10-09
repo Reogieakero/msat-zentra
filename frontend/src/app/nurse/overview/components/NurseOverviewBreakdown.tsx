@@ -13,6 +13,9 @@ import {
   YAxis,
 } from "recharts";
 import type { NurseBreakdownRow } from "@/services/nurse/nurse.types";
+import type { LucideIcon } from "lucide-react";
+import { Activity, ClipboardList, Send } from "lucide-react";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
@@ -46,27 +49,34 @@ function BarPanel({
   title,
   description,
   rows,
+  emptyTitle,
   emptyText,
+  icon: Icon,
 }: {
   title: string;
   description: string;
   rows: NurseBreakdownRow[];
+  emptyTitle: string;
   emptyText: string;
+  icon: LucideIcon;
 }) {
   const { slices, total } = buildSlices(rows);
   const height = Math.max(168, slices.length * 36 + 16);
+  const isEmpty = rows.length === 0;
 
   return (
     <div className={assign.card}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
+      {isEmpty ? null : (
       <div className="relative">
         <h2 className={styles.sectionTitle}>{title}</h2>
         <p className={styles.sectionDesc}>{description}</p>
       </div>
-      {rows.length === 0 ? (
-        <p className={`${styles.empty} relative`}>{emptyText}</p>
+      )}
+      {isEmpty ? (
+        <NurseEmptyState icon={Icon} title={emptyTitle} hint={emptyText} />
       ) : (
         <>
           <div
@@ -113,28 +123,35 @@ function DonutPanel({
   title,
   description,
   rows,
+  emptyTitle,
   emptyText,
   unit,
+  icon: Icon,
 }: {
   title: string;
   description: string;
   rows: NurseBreakdownRow[];
+  emptyTitle: string;
   emptyText: string;
   unit: string;
+  icon: LucideIcon;
 }) {
   const { slices, total } = buildSlices(rows);
+  const isEmpty = rows.length === 0;
 
   return (
     <div className={assign.card}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
+      {isEmpty ? null : (
       <div className="relative">
         <h2 className={styles.sectionTitle}>{title}</h2>
         <p className={styles.sectionDesc}>{description}</p>
       </div>
-      {rows.length === 0 ? (
-        <p className={`${styles.empty} relative`}>{emptyText}</p>
+      )}
+      {isEmpty ? (
+        <NurseEmptyState icon={Icon} title={emptyTitle} hint={emptyText} />
       ) : (
         <div
           className={`${styles.chartRow} relative`}
@@ -200,20 +217,26 @@ export function NurseOverviewBreakdown({
         title="Caseload by status"
         description="Every referred case — ADM and clinic matters — by the same actions as the case lists."
         rows={statusBreakdown}
-        emptyText="No cases yet."
+        emptyTitle="No cases yet"
+        emptyText="Cases referred to the clinic will appear here."
+        icon={Activity}
         unit={statusBreakdown.reduce((n, r) => n + r.count, 0) === 1 ? "case" : "cases"}
       />
       <BarPanel
         title="Clinic matters caseload"
         description="Referred clinic matters, by clinic action."
         rows={clinicStatusBreakdown}
-        emptyText="No clinic cases yet."
+        emptyTitle="No clinic cases yet"
+        emptyText="Clinic matters referred to you will appear here."
+        icon={ClipboardList}
       />
       <BarPanel
         title="ADM cases caseload"
         description="Referred ADM cases, by ADM action."
         rows={admStatusBreakdown}
-        emptyText="No ADM cases yet."
+        emptyTitle="No ADM cases yet"
+        emptyText="ADM cases referred to you will appear here."
+        icon={Send}
       />
     </div>
   );

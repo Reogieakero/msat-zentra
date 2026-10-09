@@ -21,6 +21,7 @@ import { TeacherCodeClaim } from "@/components/schedule/TeacherCodeClaim";
 import { TermAccessCard } from "@/components/schedule/TermAccessCard";
 import { NoTermRecordsPanel } from "@/components/schedule/NoTermRecordsPanel";
 import { MyWeekGrid } from "./MyWeekGrid";
+import { ZentraPageHeaderSkeleton, ZentraFilterBarSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { TimetableSidebar, type LinkedName } from "./timetable-sidebar";
 import { useSession } from "@/lib/auth/useSession";
 import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
@@ -186,8 +187,9 @@ export function MyTimetable() {
   if (meQuery.isPending) {
     return (
       <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading classes">
-        <div className="h-8 w-56 rounded bg-muted" />
-        <div className="h-72 rounded-lg border bg-muted/40" />
+        <ZentraPageHeaderSkeleton />
+        <ZentraFilterBarSkeleton selects={1} />
+        <ZentraTableSkeleton rows={8} columns={4} />
       </div>
     );
   }
@@ -202,18 +204,12 @@ export function MyTimetable() {
 
   if (!linked && !isMasterTeacher) {
     return (
-      <>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My Classes</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Link your teacher code to attach your timetable.
-          </p>
-        </div>
+      <div aria-label="Link teacher code">
         <TeacherCodeClaim
           title="Link your teacher code"
           description="Enter the code next to your name in the master teacher's teacher list (e.g. MS-101). Your assigned subjects and their timeslots will attach to this calendar."
         />
-      </>
+      </div>
     );
   }
 

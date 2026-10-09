@@ -46,7 +46,8 @@ export async function fetchNurseRiskFactors(
 export async function fetchNurseRiskLevels(
   studentIds: string[]
 ): Promise<Record<string, NurseRiskLevel>> {
-  const unique = [...new Set(studentIds.filter(Boolean))];
+  // Bound batch size: callers pass at most one page (15) of students.
+  const unique = [...new Set(studentIds.filter(Boolean))].slice(0, 15);
   if (unique.length === 0) return {};
   const isLevel = (v: unknown): v is NurseRiskLevel =>
     v === "High" || v === "Moderate" || v === "Low";
@@ -61,7 +62,8 @@ export async function fetchNurseRiskLevels(
     }
     return map;
   } catch {
-
+    // Fallback is bounded to the same 15 ids — never fan out per-student
+    // across a full dataset.
     const settled = await Promise.allSettled(
       unique.map(async (id) => {
         const { data } = await apiClient.get<{ lrn: string; riskLevel: NurseRiskLevel }>(
@@ -84,10 +86,11 @@ export async function fetchNurseRisk(signal?: AbortSignal): Promise<{
   rows: NurseQueueRow[];
   referralToStudent: Record<string, string>;
 }> {
-
+  // Strict 15-record ceiling; server already scopes to nurse desk by role.
+  // isNurseScope kept as defense-in-depth only.
   const { data } = await apiClient.get<
     RawReferral[] | { referrals: RawReferral[] } | { data: RawReferral[]; rows: RawReferral[] }
-  >("/api/referrals/?page=1&pageSize=100", { signal });
+  >("/api/referrals/?page=1&pageSize=15", { signal });
   const list = pickList<RawReferral>(data, "data", "rows", "referrals");
   const scoped = list.filter(isNurseScope);
   const rows = scoped.map(toQueueRow);

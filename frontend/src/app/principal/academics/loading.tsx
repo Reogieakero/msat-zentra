@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 
 export default function PrincipalAcademicsLoading() {
   return (
     <section aria-label="Loading academics" aria-busy="true" className="flex flex-col gap-4">
+      <PageHeaderSkeleton />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden="true">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-2 rounded-md border p-4">

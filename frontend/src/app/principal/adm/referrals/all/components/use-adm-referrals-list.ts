@@ -1,57 +1,72 @@
-"use client";
 import * as React from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAdmReferrals } from "@/services/principal/adm.service";
 import type { AdmReferralRow } from "@/services/principal/adm.types";
-import { useMinLoading } from "../../../useMinLoading";
-const PAGE_SIZE = 20;
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { PAGE_SIZE } from "@/components/shared/pagination";
+
+const STAGE = "principal_approval";
+
 export function useAdmReferralsList(search: string, page: number) {
-  const [rows, setRows] = React.useState<AdmReferralRow[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [stage] = React.useState<string>("principal_approval");
-  const [loading, setLoading] = useMinLoading(600);
-  const [error, setError] = React.useState<string | null>(null);
-  const load = React.useCallback(
-    (p: number, signal?: AbortSignal) => {
-      setLoading(true);
-      return fetchAdmReferrals(
-        p,
-        PAGE_SIZE,
-        signal,
-        search.trim(),
-        stage === "all" ? "" : stage,
-      )
-        .then((data) => {
-          if (!data) return;
-          setError(null);
-          setRows(Array.isArray(data.rows) ? data.rows : []);
-          setTotal(
-            typeof data.total === "number" ? data.total : data.rows.length,
-          );
-          setCurrentPage(typeof data.page === "number" ? data.page : p);
-        })
-        .catch((err: unknown) => {
-          if ((err as { code?: string })?.code === "ERR_CANCELED") return;
-          setError("Failed to load referrals");
-          console.error("[/api/adm/referrals] fetch failed:", err);
-        })
-        .finally(() => setLoading(false));
-    },
-    [search, stage, setLoading],
+  const queryClient = useQueryClient();
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const queryKey = React.useMemo(
+    () => ["adm-referrals", debouncedSearch, page, STAGE],
+    [debouncedSearch, page]
   );
-  React.useEffect(() => {
-    const controller = new AbortController();
-    const t = setTimeout(() => load(1, controller.signal), 300);
-    return () => {
-      clearTimeout(t);
-      controller.abort();
-    };
-  }, [load]);
+
+  const query = useQuery({
+    queryKey,
+    queryFn: ({ signal }) =>
+      fetchAdmReferrals(page, PAGE_SIZE, signal, debouncedSearch, STAGE),
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+    retry: 1,
+  });
+
+  const rows = React.useMemo(
+    () => (Array.isArray(query.data?.rows) ? query.data.rows : []),
+    [query.data]
+  );
+  const total = React.useMemo(() => {
+    if (typeof query.data?.total === "number") return query.data.total;
+    return rows.length;
+  }, [query.data, rows.length]);
+  const currentPage = React.useMemo(
+    () => (typeof query.data?.page === "number" ? query.data.page : page),
+    [query.data, page]
+  );
+
+  const setRows = React.useCallback(
+    (updater: (prev: AdmReferralRow[]) => AdmReferralRow[]) => {
+      queryClient.setQueryData(queryKey, (prev: unknown) => {
+        const typed = prev as
+          | { rows?: AdmReferralRow[]; total?: number; page?: number }
+          | undefined;
+        const nextRows = updater(
+          Array.isArray(typed?.rows) ? typed.rows : []
+        );
+        return { ...(typed ?? {}), rows: nextRows };
+      });
+    },
+    [queryClient, queryKey]
+  );
+
+  const load = React.useCallback(
+    () => query.refetch(),
+    [query]
+  );
+
   const totalCount = total;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const start = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, totalCount);
+  const loading = query.isPending;
+  const error = query.isError ? "Failed to load referrals" : null;
+
   return {
     rows,
     setRows,
@@ -64,8 +79,10 @@ export function useAdmReferralsList(search: string, page: number) {
     pageSize: PAGE_SIZE,
     page: currentPage,
     loading,
+    isFetching: query.isFetching,
     error,
     load,
-    stage,
+    refetch: query.refetch,
+    stage: STAGE,
   };
 }

@@ -27,6 +27,9 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { toast } from "@/components/ui/sonner";
 import { LrnVerifyButton } from "./components/LrnVerifyButton";
+import { RegistrarEmptyCard, RegistrarEmptyState } from "../components/RegistrarEmptyCard";
+import { RegistrarPageHeader } from "../components/RegistrarPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import { AccountsBreakdown, type AccountBreakdown } from "./components/AccountsBreakdown";
@@ -132,10 +135,37 @@ export default function AccountApprovalsPage() {
   }, [breakdownData]);
 
   const tilesPending = breakdownPending || isPending;
+  // True empty (no records at all, not a search with no matches):
+  // hide the page header, tiles, and queue/breakdown cards entirely and
+  // render a single centered card instead.
+  const isTrueEmpty =
+    !isPending && !isError && !breakdownPending && !hasRecords && !searching;
+
+  if (isTrueEmpty) {
+    return (
+      <section className={`${styles.page} ${styles.pageEmpty}`}>
+        <RegistrarEmptyCard
+          icon={UserPlus}
+          title="No pending student accounts"
+          hint="New G11–12 sign-ups awaiting registrar sign-off will appear here."
+          label="Account approvals"
+          centered
+        />
+      </section>
+    );
+  }
 
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
+        {tilesPending ? (
+          <PageHeaderSkeleton />
+        ) : (
+          <RegistrarPageHeader
+            title="Account Approvals"
+            description="Approve or reject student account requests for grades 11–12."
+          />
+        )}
         <section className={assign.card} aria-label="Accounts summary">
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
@@ -244,25 +274,17 @@ export default function AccountApprovalsPage() {
             ) : isError ? (
               <p className={styles.empty}>Could not load pending students.</p>
             ) : !hasRecords ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <UserPlus />
-                </span>
-                <p className={styles.emptyTitle}>No pending student accounts</p>
-                <p className={styles.emptyHint}>
-                  New G11–12 sign-ups awaiting registrar sign-off will appear here.
-                </p>
-              </div>
+              <RegistrarEmptyState
+                icon={UserPlus}
+                title="No pending student accounts"
+                hint="New G11–12 sign-ups awaiting registrar sign-off will appear here."
+              />
             ) : searching && pageRows.length === 0 ? (
-              <div className={styles.emptyBlock}>
-                <span className={styles.emptyIcon} aria-hidden>
-                  <SearchX />
-                </span>
-                <p className={styles.emptyTitle}>No matching students</p>
-                <p className={styles.emptyHint}>
-                  {`No students match "${query}".`}
-                </p>
-              </div>
+              <RegistrarEmptyState
+                icon={SearchX}
+                title="No matching students"
+                hint={`No students match "${query}".`}
+              />
             ) : (
               <div className={styles.tableWrap}>
                 <Table aria-label="Pending student accounts">
@@ -353,7 +375,7 @@ export default function AccountApprovalsPage() {
             )}
           </div>
 
-          {hasRecords && (
+          {totalPages > 1 && (
             <div className={`${styles.pager} relative`}>
               <p className={styles.range}>
                 Showing {filteredTotal > 0 ? `${start}–${end}` : "0"} of {filteredTotal}

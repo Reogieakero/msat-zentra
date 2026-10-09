@@ -2,6 +2,7 @@
 
 import { Activity, CalendarClock, CheckCircle2, Send, Stethoscope } from "lucide-react";
 import type { NurseKpis } from "@/services/nurse/nurse.types";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./nurse-overview.module.css";
 
@@ -45,6 +46,14 @@ export function NurseOverviewKpis({ kpis }: { kpis: NurseKpis }) {
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {kpis.total === 0 ? (
+          <NurseEmptyState
+            icon={Stethoscope}
+            title="No cases on your desk"
+            hint="Cases routed to the clinic will appear here."
+          />
+        ) : (
+          <>
         <div className="relative flex items-center gap-3">
           <span
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10"
@@ -73,6 +82,8 @@ export function NurseOverviewKpis({ kpis }: { kpis: NurseKpis }) {
             </li>
           ))}
         </ul>
+          </>
+        )}
       </div>
     </div>
   );

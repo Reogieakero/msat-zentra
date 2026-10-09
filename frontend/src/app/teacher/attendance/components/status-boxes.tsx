@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import type { SheetStatus } from "@/services/teacher/attendance.types";
 export const STATUS_BOXES: { value: SheetStatus; letter: string; activeClass: string; label: string }[] = [
   { value: "present", letter: "P", activeClass: "bg-green-500/70 border-green-500/70 text-white", label: "Present" },
@@ -6,7 +7,7 @@ export const STATUS_BOXES: { value: SheetStatus; letter: string; activeClass: st
   { value: "late", letter: "L", activeClass: "bg-amber-500/70 border-amber-500/70 text-white", label: "Late" },
   { value: "excused", letter: "E", activeClass: "bg-blue-500/70 border-blue-500/70 text-white", label: "Excused" },
 ];
-export function StatusBoxes({
+export const StatusBoxes = React.memo(function StatusBoxes({
   value,
   onPick,
   disabled,
@@ -40,7 +41,7 @@ export function StatusBoxes({
       })}
     </div>
   );
-}
+});
 export const BLOCK_DOT: Record<SheetStatus, string> = {
   present: "bg-green-500",
   late: "bg-amber-500",
@@ -53,7 +54,8 @@ export const BLOCK_LABEL: Record<SheetStatus, string> = {
   late: "Late",
   excused: "Excused",
 };
-export function MeetupBlocksCell({
+const MAX_VISIBLE_DOTS = 30;
+export const MeetupBlocksCell = React.memo(function MeetupBlocksCell({
   dates,
   statusOf,
   pastDue,
@@ -74,6 +76,8 @@ export function MeetupBlocksCell({
   if (!hasTerm || dates.length === 0) {
     return <span className="text-xs text-muted-foreground">No meetup dates.</span>;
   }
+  const hiddenCount = dates.length > MAX_VISIBLE_DOTS ? dates.length - MAX_VISIBLE_DOTS : 0;
+  const visible = hiddenCount > 0 ? dates.slice(dates.length - MAX_VISIBLE_DOTS) : dates;
   return (
     <div
       className="flex items-center gap-[3px] overflow-x-auto py-0.5"
@@ -81,7 +85,15 @@ export function MeetupBlocksCell({
       role="img"
       aria-label={`${dates.length} meetup days`}
     >
-      {dates.map((d) => {
+      {hiddenCount > 0 ? (
+        <span
+          title={`${hiddenCount} earlier meetup${hiddenCount === 1 ? "" : "s"}`}
+          className="flex h-[17px] shrink-0 items-center rounded-[4px] border border-border/60 bg-muted px-1 text-[10px] font-semibold text-muted-foreground"
+        >
+          +{hiddenCount}
+        </span>
+      ) : null}
+      {visible.map((d) => {
         const s = statusOf(studentId, d);
         const autoAbsent = !s && pastDue(d);
         return (
@@ -102,7 +114,7 @@ export function MeetupBlocksCell({
       })}
     </div>
   );
-}
+});
 export function rateClass(rate: number): string {
   if (rate >= 0.9) return "text-green-600 dark:text-green-500";
   if (rate >= 0.75) return "text-amber-600 dark:text-amber-500";

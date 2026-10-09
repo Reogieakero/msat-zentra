@@ -3,8 +3,11 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { BellRing, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NursePageHeader } from "../components/NursePageHeader";
+import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import { NurseReferralsTable } from "./components/NurseReferralsTable";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import { fetchNurseAlerts } from "@/services/nurse/alerts.service";
@@ -18,12 +21,13 @@ import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/nurse-alerts.module.css";
+import pageStyles from "../pages.module.css";
 
 const NURSE_ALERTS_PAGE_SIZE = 15;
 
 export default function NurseAlertsPage() {
   const invalidateNurse = useNurseInvalidate();
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
@@ -43,6 +47,7 @@ export default function NurseAlertsPage() {
 
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
@@ -68,13 +73,14 @@ export default function NurseAlertsPage() {
     queryKey: ["nurse-risk-levels", studentIds, termKey],
     queryFn: () => fetchNurseRiskLevels(studentIds),
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
   const riskLoading = studentIds.length > 0 && (riskPending || riskFetching);
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading referred cases">
+        <ZentraPageHeaderSkeleton />
         <div className={assign.card}>
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
@@ -134,9 +140,20 @@ export default function NurseAlertsPage() {
   }
 
   const refreshing = isFetching && !isPending;
+  const isTrueEmpty = (data.unfilteredTotal ?? data.total) === 0 && debounced === "";
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Referred cases"
+    >
+      {isTrueEmpty ? null : (
+        <NursePageHeader
+          title="Alerts"
+          description="Every ADM and clinic case needing your attention."
+        />
+      )}
 
       {refreshing ? <NurseRefreshBadge label="Refreshing cases…" /> : null}
       {riskError && studentIds.length > 0 ? (
@@ -152,6 +169,16 @@ export default function NurseAlertsPage() {
           </button>
         </p>
       ) : null}
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={BellRing}
+          title="No referred cases"
+          hint="New ADM and clinic cases will appear here."
+          label="Referred cases"
+          centered
+          layout="fit"
+        />
+      ) : (
       <NurseReferralsTable
         alerts={Array.isArray(data.alerts) ? data.alerts : []}
         riskByStudent={riskByStudent ?? {}}
@@ -171,6 +198,7 @@ export default function NurseAlertsPage() {
           invalidateNurse();
         }}
       />
+      )}
     </section>
   );
 }

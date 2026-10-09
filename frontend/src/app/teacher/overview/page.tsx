@@ -110,14 +110,22 @@ export default function TeacherOverviewPage() {
   const isAdviser = !!data.advisorySection;
   const quickActions = isAdviser ? ADVISER_QUICK_ACTIONS : CLASS_QUICK_ACTIONS;
   const classStudents = data.classStudents ?? [];
-  const studentCount = isAdviser ? data.advisory.students.length : classStudents.length;
+  const studentCount = isAdviser
+    ? (data.advisoryTotal ?? data.advisory.students.length)
+    : (data.classStudentsTotal ?? classStudents.length);
   const atRiskFactors = isAdviser
     ? data.atRiskFactors
-    : {
-        academic: classStudents.filter((s) => s.flags.includes("academic")).length,
-        attendance: classStudents.filter((s) => s.flags.includes("attendance")).length,
-        behavioral: 0,
-      };
+    : data.classAtRiskFactors
+      ? {
+          academic: data.classAtRiskFactors.academic,
+          attendance: data.classAtRiskFactors.attendance,
+          behavioral: 0,
+        }
+      : {
+          academic: classStudents.filter((s) => s.flags.includes("academic")).length,
+          attendance: classStudents.filter((s) => s.flags.includes("attendance")).length,
+          behavioral: 0,
+        };
   const atRiskStudents = isAdviser
     ? data.atRiskStudents
     : classStudents.filter((s) => s.riskLevel !== "Low").length;
@@ -129,9 +137,9 @@ export default function TeacherOverviewPage() {
           <TeacherOverviewActions actions={quickActions} />
 
           {isAdviser ? (
-            <TeacherOverviewRiskTable students={data.advisory.students} />
+            <TeacherOverviewRiskTable students={data.advisory.students} totalCount={data.advisoryTotal} />
           ) : (
-            <TeacherOverviewClassStudents students={classStudents} />
+            <TeacherOverviewClassStudents students={classStudents} totalCount={data.classStudentsTotal} />
           )}
 
           {data.advisorySection ? (

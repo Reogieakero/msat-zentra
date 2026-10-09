@@ -69,40 +69,42 @@ export function TeacherCodeClaim({ title, description }: TeacherCodeClaimProps) 
           <span className={assign.cardGlow} />
         </span>
         <div className="relative flex flex-col items-center text-center">
-          <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-            <KeyRound size={32} className="text-primary" />
+          <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
+            <KeyRound size={24} className="text-primary" />
           </span>
           <h3 className="text-lg font-semibold">{title}</h3>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
           <div className="mt-4 flex w-full flex-col gap-2">
-            <Input
-              placeholder="Teacher code (e.g. MS-101)…"
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setClaimError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleClaim();
-              }}
-              aria-label="Teacher code"
-              className="text-center uppercase"
-            />
+            <div className="flex w-full items-center gap-2">
+              <Input
+                placeholder="Teacher code (e.g. MS-101)…"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setClaimError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleClaim();
+                }}
+                aria-label="Teacher code"
+                className="min-w-0 flex-1 text-center uppercase"
+              />
+              <Button onClick={handleClaim} disabled={claim.isPending} className="shrink-0">
+                {claim.isPending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" aria-hidden />
+                    <span aria-live="polite">Linking…</span>
+                  </>
+                ) : (
+                  "Link code"
+                )}
+              </Button>
+            </div>
             {claimError ? (
               <p role="alert" className="text-sm text-destructive">
                 {claimError}
               </p>
             ) : null}
-            <Button onClick={handleClaim} disabled={claim.isPending}>
-              {claim.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" aria-hidden />
-                  <span aria-live="polite">Linking…</span>
-                </>
-              ) : (
-                "Link code"
-              )}
-            </Button>
           </div>
         </div>
       </div>

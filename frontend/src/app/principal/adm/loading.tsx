@@ -1,12 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 
 export default function PrincipalAdmLoading() {
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label="Loading ADM" aria-busy="true">
-      <div aria-hidden="true">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="mt-2 h-4 w-96" />
-      </div>
+      <PageHeaderSkeleton />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden="true">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-2 rounded-md border p-4">

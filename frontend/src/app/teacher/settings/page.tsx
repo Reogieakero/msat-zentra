@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import BranchedMenu from "@/components/nav/BranchedMenu";
 import { scrollToSection, settingsSections } from "./components/SettingsNav";
 import { ProfileCard } from "./components/ProfileCard";
+import { TeacherPageHeader } from "../components/TeacherPageHeader";
+import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { PaletteCard } from "./components/PaletteCard";
 import { PasswordCard } from "./components/PasswordCard";
 import { AdviserCard } from "./components/AdviserCard";
@@ -22,12 +24,20 @@ export default function TeacherSettingsPage() {
     setActiveSection(id);
     scrollToSection(id);
   };
+  if (overview.isPending) {
+    return (
+      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-busy="true" aria-label="Loading settings">
+        <ZentraPageHeaderSkeleton />
+        <ZentraTableSkeleton rows={4} columns={2} withPager={false} />
+      </section>
+    );
+  }
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Your profile, appearance, and account security.</p>
-      </div>
+      <TeacherPageHeader
+        title="Settings"
+        description="Your profile, appearance, and account security."
+      />
       <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-24">
           <BranchedMenu items={[{ label: "Settings", children: links.map((l) => ({ value: l.id, label: l.label, icon: <l.Icon size={16} strokeWidth={1.8} aria-hidden="true" /> })) }]} defaultOpen={[0]} defaultActive={activeSection} onSelect={(value) => handleSelectSection(value)} width={240} />

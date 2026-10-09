@@ -1,10 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import type { OutcomeStatus, RiskLevel } from "../../generated/prisma/client.js";
 import {
   resolveActiveTermId,
   computeRiskFactors,
   levelFromFlags,
-  type GradeMode,
 } from "../../services/risk.js";
 import { sectionHeadcounts } from "../../services/enrollment.js";
 import type { TermScopeInput } from "../../lib/termScope.js";
@@ -81,8 +81,12 @@ export interface StudentFilters {
   riskLevel?: RiskLevelValue;
   hasIntervention?: boolean;
   factor?: "Academic" | "Attendance" | "Behavioral";
+  q?: string;
+  section?: string;
+  outcomeStatus?: OutcomeStatusValue;
 
-  gradeMode?: GradeMode;
+  /** @deprecated ignored — all views are real-time unified. */
+  gradeMode?: "raw" | "final";
 
   includeRecovered?: boolean;
 
@@ -152,7 +156,8 @@ export async function getInterventionStudents(
   scope?: TermScopeInput,
 ): Promise<InterventionStudentsResult> {
   const page = Math.max(1, filters.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
+  // Strict 15-record ceiling for normal lists.
+  const pageSize = Math.min(15, Math.max(1, filters.pageSize ?? 15));
 
   const termId = scope?.termId ?? (await resolveActiveTermId());
   const schoolYearId =
@@ -423,8 +428,6 @@ export async function getInterventionStudents(
         computedAverage: g.computedAverage,
         transmutedGrade: g.transmutedGrade,
       })),
-      gradeMode: filters.gradeMode ?? "final",
-
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
       anecdotalCount: st.anecdotalCount,
       enrolled,
@@ -461,9 +464,18 @@ export async function getInterventionStudents(
     };
   });
 
-  const filtered = filters.factor
-    ? mapped.filter((m) => m.factors[filters.factor!.toLowerCase() as keyof RiskFactors])
-    : mapped;
+  const needle = (filters.q ?? "").trim().toLowerCase();
+  const filtered = mapped.filter((m) => {
+    if (filters.factor && !m.factors[filters.factor!.toLowerCase() as keyof RiskFactors]) return false;
+    if (
+      needle &&
+      !`${m.studentName} ${m.lrn} ${m.section}`.toLowerCase().includes(needle)
+    )
+      return false;
+    if (filters.section && m.section !== filters.section) return false;
+    if (filters.outcomeStatus && m.intervention?.outcomeStatus !== filters.outcomeStatus) return false;
+    return true;
+  });
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;
@@ -472,15 +484,320 @@ export async function getInterventionStudents(
   return { students, total, page, pageSize, highModerate };
 }
 
-async function getLiveCohortStudents(
+const COHORT_LEVEL_RANK: Record<string, number> = { High: 0, Moderate: 1, Low: 2 };
+
+export async function getColumnCohortStudents(
   termId: string,
   schoolYearId: string | undefined,
   filters: StudentFilters,
   page: number,
   pageSize: number
 ): Promise<InterventionStudentsResult> {
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const needle = (filters.q ?? "").trim();
   const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
-  const gradeMode = filters.gradeMode ?? "final";
+
+  const hasIntClause = filters.hasIntervention === true
+    ? { interventions: { some: {} } }
+    : filters.hasIntervention === false
+      ? { interventions: { none: {} } }
+      : null;
+  const outcomeClause = filters.outcomeStatus
+    ? { interventions: { some: { outcomeStatus: filters.outcomeStatus } } }
+    : null;
+  const profileLevelClause = filters.riskLevel
+    ? { riskLevel: filters.riskLevel }
+    : includeRecovered
+      ? {
+          OR: [
+            { riskLevel: { in: ["High", "Moderate"] } },
+            { riskLevel: "Low", interventions: { some: { outcomeStatus: "ongoing" } } },
+          ],
+        }
+      : { riskLevel: { in: ["High", "Moderate"] } };
+  const profileSearch: any = needle
+    ? {
+        OR: [
+          { user: { fullName: { contains: needle, mode: "insensitive" } } },
+          { lrn: { contains: needle, mode: "insensitive" } },
+          { section: { name: { contains: needle, mode: "insensitive" } } },
+        ],
+      }
+    : null;
+  const profileWhere: any = {
+    AND: [
+      ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+      ...(filters.section ? [{ section: { name: filters.section } }] : []),
+      profileLevelClause,
+      ...(hasIntClause ? [hasIntClause] : []),
+      ...(outcomeClause ? [outcomeClause] : []),
+      ...(filters.factor
+        ? [{ [{ Academic: "academicFlag", Attendance: "attendanceFlag", Behavioral: "behavioralFlag" }[filters.factor]]: true }]
+        : []),
+      ...(profileSearch ? [profileSearch] : []),
+    ],
+  };
+
+  const ivRoster = (extra: Prisma.Sql) => Prisma.sql`EXISTS (SELECT 1 FROM "Intervention" iv WHERE iv."rosterId" = r."id" AND ${extra})`;
+  const rosterConds: Prisma.Sql[] = [];
+  if (schoolYearId) rosterConds.push(Prisma.sql`r."schoolYearId" = ${schoolYearId}`);
+  if (filters.section) rosterConds.push(Prisma.sql`s."name" = ${filters.section}`);
+  if (filters.riskLevel) {
+    rosterConds.push(Prisma.sql`r."riskLevel" = ${filters.riskLevel}`);
+  } else if (includeRecovered) {
+    rosterConds.push(
+      Prisma.sql`(r."riskLevel" IN ('High', 'Moderate') OR (r."riskLevel" = 'Low' AND ${ivRoster(Prisma.sql`iv."outcomeStatus" = 'ongoing'`)}))`
+    );
+  } else {
+    rosterConds.push(Prisma.sql`r."riskLevel" IN ('High', 'Moderate')`);
+  }
+  if (filters.hasIntervention === true) rosterConds.push(ivRoster(Prisma.sql`TRUE`));
+  if (filters.hasIntervention === false)
+    rosterConds.push(Prisma.sql`NOT ${ivRoster(Prisma.sql`TRUE`)}`);
+  if (filters.outcomeStatus)
+    rosterConds.push(ivRoster(Prisma.sql`iv."outcomeStatus" = ${filters.outcomeStatus}`));
+  if (filters.factor)
+    rosterConds.push(
+      Prisma.sql`${Prisma.raw(`r."${{ Academic: "academicFlag", Attendance: "attendanceFlag", Behavioral: "behavioralFlag" }[filters.factor]}"`)} = TRUE`
+    );
+  if (needle)
+    rosterConds.push(
+      Prisma.sql`(r."fullName" ILIKE ${`%${needle}%`} OR r."lrn" ILIKE ${`%${needle}%`} OR s."name" ILIKE ${`%${needle}%`})`
+    );
+  const rosterScope = Prisma.sql`FROM "StudentRoster" r LEFT JOIN "Section" s ON s."id" = r."sectionId" WHERE ${Prisma.join(rosterConds, " AND ")} AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`;
+
+  const interventionSelect = {
+    orderBy: { id: "desc" as const },
+    take: 1,
+    select: {
+      id: true,
+      recommendedAction: true,
+      assignedTo: true,
+      approvalStatus: true,
+      outcomeStatus: true,
+      outcomeNotes: true,
+      priority: true,
+      intakeNotes: true,
+      counselingSessions: {
+        orderBy: { scheduledAt: "asc" as const },
+        select: {
+          id: true,
+          sessionType: true,
+          scheduledAt: true,
+          venue: true,
+          status: true,
+          sessionNotes: true,
+          outcome: true,
+          cancelReason: true,
+          createdAt: true,
+          completedAt: true,
+          attachments: { select: { id: true } },
+        },
+      },
+      assignedAt: true,
+      assignee: { select: { fullName: true } },
+    },
+  } as const;
+
+  const [profileTotal, rosterTotalRows, highModerateProfiles, highModerateRosters] = await Promise.all([
+    prisma.studentProfile.count({ where: profileWhere }),
+    prisma.$queryRaw<{ count: bigint }[]>(
+      Prisma.sql`SELECT COUNT(*) AS count ${rosterScope}`
+    ),
+    prisma.studentProfile.count({
+      where: {
+        AND: [
+          ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+          { riskLevel: { in: ["High", "Moderate"] } },
+        ],
+      },
+    }),
+    prisma.$queryRaw<{ count: bigint }[]>(
+      Prisma.sql`SELECT COUNT(*) AS count FROM "StudentRoster" r WHERE ${schoolYearId ? Prisma.sql`r."schoolYearId" = ${schoolYearId} AND ` : Prisma.sql``}r."riskLevel" IN ('High', 'Moderate') AND NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`
+    ),
+  ]);
+  const total = profileTotal + Number(rosterTotalRows[0]?.count ?? 0);
+  const highModerate =
+    highModerateProfiles + Number(highModerateRosters[0]?.count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / effPageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const windowTake = safePage * effPageSize;
+
+  const [profileWindow, rosterIdWindow] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: profileWhere,
+      orderBy: [{ riskLevel: "desc" }, { riskCount: "desc" }, { user: { fullName: "asc" } }],
+      select: {
+        userId: true,
+        lrn: true,
+        gradeLevel: true,
+        riskLevel: true,
+        riskCount: true,
+        academicFlag: true,
+        attendanceFlag: true,
+        behavioralFlag: true,
+        user: { select: { fullName: true } },
+        section: { select: { name: true } },
+        interventions: interventionSelect,
+      },
+      take: windowTake,
+    }),
+    prisma.$queryRaw<{ id: string; riskLevel: string; riskCount: number; fullName: string }[]>(
+      Prisma.sql`SELECT r."id", r."riskLevel", r."riskCount", r."fullName" ${rosterScope} ORDER BY r."riskLevel" DESC, r."riskCount" DESC, r."fullName" ASC LIMIT ${windowTake} OFFSET 0`
+    ),
+  ]);
+
+  type WindowRow = {
+    kind: "profile" | "roster";
+    studentId: string;
+    lrn: string;
+    studentName: string;
+    section: string;
+    gradeLevel: string;
+    riskLevel: string;
+    riskCount: number;
+    academicFlag: boolean;
+    attendanceFlag: boolean;
+    behavioralFlag: boolean;
+    intervention: InterventionRow | undefined;
+  };
+  const windowRows: WindowRow[] = [
+    ...profileWindow.map((s) => ({
+      kind: "profile" as const,
+      studentId: s.userId,
+      lrn: s.lrn,
+      studentName: s.user.fullName,
+      section: s.section?.name ?? "—",
+      gradeLevel: String(s.gradeLevel),
+      riskLevel: String(s.riskLevel),
+      riskCount: s.riskCount,
+      academicFlag: s.academicFlag,
+      attendanceFlag: s.attendanceFlag,
+      behavioralFlag: s.behavioralFlag,
+      intervention: s.interventions[0] as InterventionRow | undefined,
+    })),
+    ...rosterIdWindow.map((r) => ({
+      kind: "roster" as const,
+      studentId: `roster:${r.id}`,
+      lrn: "",
+      studentName: "",
+      section: "",
+      gradeLevel: "",
+      riskLevel: r.riskLevel,
+      riskCount: r.riskCount,
+      academicFlag: false,
+      attendanceFlag: false,
+      behavioralFlag: false,
+      intervention: undefined as InterventionRow | undefined,
+    })),
+  ];
+  const rosterWindowIds = rosterIdWindow.map((r) => r.id);
+  const rosterHydrated = rosterWindowIds.length
+    ? await prisma.studentRoster.findMany({
+        where: { id: { in: rosterWindowIds } },
+        select: {
+          id: true,
+          lrn: true,
+          fullName: true,
+          gradeLevel: true,
+          riskLevel: true,
+          riskCount: true,
+          academicFlag: true,
+          attendanceFlag: true,
+          behavioralFlag: true,
+          section: { select: { name: true } },
+          interventions: interventionSelect,
+        },
+      })
+    : [];
+  const rosterById = new Map(rosterHydrated.map((r) => [r.id, r]));
+  const merged: WindowRow[] = windowRows
+    .map((w) => {
+      if (w.kind === "profile") return w;
+      const full = rosterById.get(w.studentId.slice(7));
+      if (!full) return null;
+      return {
+        ...w,
+        lrn: full.lrn,
+        studentName: full.fullName,
+        section: full.section?.name ?? "—",
+        gradeLevel: String(full.gradeLevel),
+        riskLevel: String(full.riskLevel),
+        riskCount: full.riskCount,
+        academicFlag: full.academicFlag,
+        attendanceFlag: full.attendanceFlag,
+        behavioralFlag: full.behavioralFlag,
+        intervention: full.interventions[0] as InterventionRow | undefined,
+      };
+    })
+    .filter((w): w is WindowRow => w !== null)
+    .sort(
+      (a, b) =>
+        (COHORT_LEVEL_RANK[a.riskLevel] ?? 9) - (COHORT_LEVEL_RANK[b.riskLevel] ?? 9) ||
+        b.riskCount - a.riskCount ||
+        a.studentName.localeCompare(b.studentName)
+    )
+    .slice((safePage - 1) * effPageSize, safePage * effPageSize);
+
+  const snapProfileIds = merged.filter((m) => m.kind === "profile").map((m) => m.studentId);
+  const snapRosterIds = merged
+    .filter((m) => m.kind === "roster")
+    .map((m) => m.studentId.slice(7));
+  const [snapP, snapR] = await Promise.all([
+    snapProfileIds.length
+      ? prisma.riskSnapshot.groupBy({
+          by: ["studentId"],
+          where: { termId, studentId: { in: snapProfileIds } },
+          _max: { snapshotDate: true },
+        })
+      : Promise.resolve([] as { studentId: string | null; _max: { snapshotDate: Date | null } }[]),
+    snapRosterIds.length
+      ? prisma.riskSnapshot.groupBy({
+          by: ["rosterId"],
+          where: { termId, rosterId: { in: snapRosterIds } },
+          _max: { snapshotDate: true },
+        })
+      : Promise.resolve([] as { rosterId: string | null; _max: { snapshotDate: Date | null } }[]),
+  ]);
+  const snapDateByKey = new Map<string, Date>();
+  for (const g of snapP) if (g.studentId && g._max.snapshotDate) snapDateByKey.set(g.studentId, g._max.snapshotDate);
+  for (const g of snapR)
+    if (g.rosterId && g._max.snapshotDate) snapDateByKey.set(`roster:${g.rosterId}`, g._max.snapshotDate);
+
+  const students: RiskSnapshotStudent[] = merged.map((m) => {
+    const intervention = toInterventionLink(m.intervention);
+    return {
+      studentId: m.studentId,
+      lrn: m.lrn,
+      studentName: m.studentName,
+      section: m.section,
+      gradeLevel: m.gradeLevel,
+      riskLevel: m.riskLevel,
+      riskCount: m.riskCount,
+      snapshotDate:
+        snapDateByKey.get(m.studentId)?.toISOString() ?? intervention?.createdAt ?? null,
+      factors: {
+        academic: m.academicFlag,
+        attendance: m.attendanceFlag,
+        behavioral: m.behavioralFlag,
+      },
+      subjectGrades: [],
+      intervention,
+    };
+  });
+
+  return { students, total, page: safePage, pageSize: effPageSize, highModerate };
+}
+
+async function getLiveCohortStudents(
+  termId: string,
+  schoolYearId: string | undefined,
+  filters: StudentFilters,
+  page: number,
+  pageSize: number,
+): Promise<InterventionStudentsResult> {
+  // Real-time unified: always live, gradeMode ignored.
+  const includeRecovered = filters.includeRecovered === true && !filters.riskLevel;
 
   const [profiles, rosters, profileSnapDates, rosterSnapDates] = await Promise.all([
     prisma.studentProfile.findMany({
@@ -638,8 +955,6 @@ async function getLiveCohortStudents(
         computedAverage: g.computedAverage,
         transmutedGrade: g.transmutedGrade,
       })),
-      gradeMode,
-
       attendance: st.attendanceRecords.map((a) => ({ status: a.status, subjectId: a.subjectId })),
       anecdotalCount: st.anecdotalCount,
       enrolled,
@@ -752,9 +1067,18 @@ async function getLiveCohortStudents(
 
   const highModerate = kept.length;
 
-  const filtered = filters.factor
-    ? kept.filter((m) => m.factors[filters.factor!.toLowerCase() as keyof RiskFactors])
-    : kept;
+  const needle = (filters.q ?? "").trim().toLowerCase();
+  const filtered = kept.filter((m) => {
+    if (filters.factor && !m.factors[filters.factor!.toLowerCase() as keyof RiskFactors]) return false;
+    if (
+      needle &&
+      !`${m.studentName} ${m.lrn} ${m.section}`.toLowerCase().includes(needle)
+    )
+      return false;
+    if (filters.section && m.section !== filters.section) return false;
+    if (filters.outcomeStatus && m.intervention?.outcomeStatus !== filters.outcomeStatus) return false;
+    return true;
+  });
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;

@@ -72,21 +72,25 @@ export function Sf10AttachFeed({ desk }: { desk: RegistryDesk }) {
     router.push(`/${desk}/sf10`);
   }, [router, desk]);
 
+  const isEmpty = !isPending && !isError && feed.length === 0;
+
   return (
-    <section className={assign.card} aria-labelledby="overview-sf10-feed">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-sf10-feed"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-sf10-feed" className="text-base font-semibold">
-            Latest SF10 Files Attached
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Most recent SF10 records pulled into G11–12 student files this term.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-sf10-feed" className="text-base font-semibold">
+              Latest SF10 Files Attached
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Most recent SF10 records pulled into G11–12 student files this term.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <div className={styles.skelWrap}>

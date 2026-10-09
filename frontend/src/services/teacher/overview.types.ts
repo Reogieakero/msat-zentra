@@ -112,9 +112,15 @@ export interface TeacherOverviewCritical {
   atRiskStudents: number;
   classes: TeacherClassRow[];
   classStudents: ClassStudentRow[];
+  classStudentsTotal: number;
+  classAtRiskFactors: {
+    academic: number;
+    attendance: number;
+  };
   advisory: {
     students: AdvisoryStatusRow[];
   };
+  advisoryTotal: number;
 }
 
 export interface TeacherOverviewSecondary {

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import { cache } from "../../lib/cache.js";
+import { prisma } from "../../lib/prisma.js";
 import { resolveActiveTermId } from "../../services/risk.js";
 import { getRiskBoard, getRiskTrend, getSchoolsForRisk } from "./riskBoard.service.js";
 import { getLowRiskStudents } from "./lowRiskStudents.service.js";
@@ -44,14 +45,11 @@ router.get(
   "/board",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
   async (req, res, next) => {
     try {
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
-      const board = await getRiskBoard(gradeMode, req.termScope ?? undefined);
+      // Real-time unified: ?gradeMode accepted but ignored.
+      const board = await getRiskBoard(undefined, req.termScope ?? undefined);
       res.json(board);
     } catch (e) {
       next(e);
@@ -77,7 +75,7 @@ router.get(
   "/trend",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
   async (req, res, next) => {
     try {
       const schoolYearId =
@@ -99,12 +97,13 @@ router.get(
   "/low-risk-students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 15));
-      const result = await getLowRiskStudents(page, pageSize, req.termScope ?? undefined);
+      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
+      const q = typeof req.query.q === "string" ? req.query.q : undefined;
+      const result = await getLowRiskStudents(page, pageSize, req.termScope ?? undefined, q);
       res.json(result);
     } catch (e) {
       next(e);
@@ -116,19 +115,33 @@ router.get(
   "/students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 60 }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
 
-      const pageSize = Math.min(1000, Math.max(1, Number(req.query.pageSize) || 50));
+      // Strict 15-record ceiling for normal lists.
+      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
       const section =
         typeof req.query.section === "string" ? req.query.section : undefined;
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
-      const result = await getRiskStudents(page, pageSize, section, gradeMode, req.termScope ?? undefined);
+      const q = typeof req.query.q === "string" ? req.query.q : undefined;
+      const riskLevel =
+        req.query.riskLevel === "High" ||
+        req.query.riskLevel === "Moderate" ||
+        req.query.riskLevel === "Low"
+          ? (req.query.riskLevel as "High" | "Moderate" | "Low")
+          : undefined;
+      const factor =
+        req.query.factor === "Academic" ||
+        req.query.factor === "Attendance" ||
+        req.query.factor === "Behavioral"
+          ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
+          : undefined;
+      // Real-time unified: ?gradeMode accepted but ignored.
+      const result = await getRiskStudents(page, pageSize, section, undefined, req.termScope ?? undefined, q, {
+        riskLevel,
+        factor,
+      });
       res.json(result);
     } catch (e) {
       next(e);
@@ -160,18 +173,15 @@ router.get(
   "/heatmap",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 60 }),
   async (req, res, next) => {
     try {
       const termId = await resolveActiveTermId(req);
       if (!termId) {
         return res.status(404).json({ error: { code: "NO_ACTIVE_TERM", message: "No active term" } });
       }
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
-      const heatmap = await getRiskHeatmap(termId, gradeMode, req.termScope?.schoolYearId ?? null);
+      // Real-time unified: ?gradeMode accepted but ignored.
+      const heatmap = await getRiskHeatmap(termId, undefined, req.termScope?.schoolYearId ?? null);
       res.json(heatmap);
     } catch (e) {
       next(e);
@@ -183,15 +193,11 @@ router.get(
   "/sections/:id/students",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
   async (req, res, next) => {
     try {
       const termId = typeof req.query.termId === "string" ? req.query.termId : null;
       const factor = req.query.factor as RiskFactor | undefined;
-      const gradeMode =
-        req.query.gradeMode === "raw" || req.query.gradeMode === "final"
-          ? (req.query.gradeMode as "raw" | "final")
-          : "final";
       if (!termId) {
         return res.status(400).json({ error: { code: "MISSING_TERM", message: "termId query required" } });
       }
@@ -202,7 +208,7 @@ router.get(
         String(req.params.id),
         factor,
         termId,
-        gradeMode
+        undefined,
       );
       res.json({ sectionId: String(req.params.id), termId, factor, students });
     } catch (e) {
@@ -244,11 +250,12 @@ router.get(
   "/interventions",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 60 }),
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+      // Strict 15-record ceiling for normal lists.
+      const pageSize = Math.min(15, Math.max(1, Number(req.query.pageSize) || 15));
       const riskLevel =
         typeof req.query.riskLevel === "string"
           ? (req.query.riskLevel as "Low" | "Moderate" | "High")
@@ -261,10 +268,18 @@ router.get(
         typeof req.query.factor === "string"
           ? (req.query.factor as "Academic" | "Attendance" | "Behavioral")
           : undefined;
-      const gradeMode =
-        typeof req.query.gradeMode === "string" &&
-        (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
-          ? (req.query.gradeMode as "raw" | "final")
+      const q =
+        typeof req.query.q === "string" && req.query.q.trim()
+          ? req.query.q.trim()
+          : undefined;
+      const section =
+        typeof req.query.section === "string" && req.query.section.trim()
+          ? req.query.section.trim()
+          : undefined;
+      const outcomeStatus =
+        typeof req.query.outcomeStatus === "string" &&
+        ["ongoing", "resolved", "unresolved"].includes(req.query.outcomeStatus)
+          ? (req.query.outcomeStatus as "ongoing" | "resolved" | "unresolved")
           : undefined;
 
       const result = await getInterventionStudents(
@@ -272,7 +287,9 @@ router.get(
           riskLevel,
           hasIntervention,
           factor,
-          gradeMode,
+          q,
+          section,
+          outcomeStatus,
           includeRecovered: true,
           fullCohort: true,
           page,
@@ -313,44 +330,38 @@ router.get(
   "/interventions/stats",
   requireAuth,
   requireRole("principal"),
-  cache({ tags: ["risk", "principal"] }),
+  cache({ tags: ["risk", "principal"], ttl: 15 }),
   async (req, res, next) => {
     try {
-      const gradeMode =
-        typeof req.query.gradeMode === "string" &&
-        (req.query.gradeMode === "raw" || req.query.gradeMode === "final")
-          ? (req.query.gradeMode as "raw" | "final")
-          : undefined;
-
+      // Aggregate stats via DB counts — never slice a page to compute totals.
+      // totalAtRisk still needs the live cohort computation; intervention
+      // breakdowns come from cheap indexed counts scoped to the term.
+      const termId = req.termScope?.termId ?? null;
+      const termWhere = termId ? { termId } : {};
       const result = await getInterventionStudents(
         {
-          gradeMode,
           includeRecovered: true,
           fullCohort: true,
           page: 1,
-          pageSize: 100,
+          pageSize: 15,
         },
         req.termScope ?? undefined,
       );
-      const students = result.students;
-      const withIntervention = students.filter((s) => s.intervention !== null);
-      const pendingApproval = withIntervention.filter(
-        (s) => s.intervention?.approvalStatus === "pending"
-      );
-      const highRisk = students.filter((s) => s.riskLevel === "High");
-      const resolved = withIntervention.filter(
-        (s) => s.intervention?.outcomeStatus === "resolved"
-      );
-      const ongoing = withIntervention.filter(
-        (s) => s.intervention?.outcomeStatus === "ongoing"
-      );
+      const [withIntervention, pendingApproval, resolved, ongoing, highRisk] =
+        await Promise.all([
+          prisma.intervention.count({ where: termWhere }),
+          prisma.intervention.count({ where: { ...termWhere, approvalStatus: "pending" } }),
+          prisma.intervention.count({ where: { ...termWhere, outcomeStatus: "resolved" } }),
+          prisma.intervention.count({ where: { ...termWhere, outcomeStatus: "ongoing" } }),
+          prisma.riskSnapshot.count({ where: { ...termWhere, riskLevel: "High" } }),
+        ]);
       res.json({
         totalAtRisk: result.highModerate,
-        withIntervention: withIntervention.length,
-        pendingApproval: pendingApproval.length,
-        highRisk: highRisk.length,
-        resolved: resolved.length,
-        ongoing: ongoing.length,
+        withIntervention,
+        pendingApproval,
+        highRisk,
+        resolved,
+        ongoing,
       });
     } catch (e) {
       next(e);

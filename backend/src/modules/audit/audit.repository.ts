@@ -1,6 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import { MAX_PAGE_SIZE as SHARED_MAX, PAGE_SIZE } from "../../lib/pagination.js";
 
-export const MAX_PAGE_SIZE = 100;
+export { PAGE_SIZE };
+export const MAX_PAGE_SIZE = SHARED_MAX;
 
 export async function resolveSourceLabels(
   entries: { sourceTable: string; sourceId: string }[],

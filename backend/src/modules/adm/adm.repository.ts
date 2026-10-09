@@ -1,6 +1,10 @@
 import { prisma } from "../../lib/prisma.js";
 import type { AdmStage } from "../../services/adm.js";
 import { GRADE_LABELS as GRADE_LABEL } from "../../lib/grades.js";
+import {
+  PAGE_SIZE as SHARED_PAGE_SIZE,
+  resolvePaging,
+} from "../../lib/pagination.js";
 
 export { GRADE_LABEL };
 
@@ -10,15 +14,12 @@ export const ELIGIBILITY_LABEL: Record<string, string> = {
   ineligible: "Ineligible",
 };
 
-export const PAGE_SIZE = 15;
-export const MAX_PAGE_SIZE = 200;
+export const PAGE_SIZE = SHARED_PAGE_SIZE;
+// Strict 15-record ceiling (was 200). Bulk operations use dedicated endpoints.
+export const MAX_PAGE_SIZE = SHARED_PAGE_SIZE;
 
 export function resolvePageSize(req: { query: unknown }): number {
-  const q = req.query as Record<string, unknown>;
-  const raw =
-    typeof q.pageSize !== "undefined" ? Number(q.pageSize) : Number(q.limit);
-  if (!Number.isFinite(raw) || (raw as number) <= 0) return PAGE_SIZE;
-  return Math.min(Math.floor(raw as number), MAX_PAGE_SIZE);
+  return resolvePaging(req.query, { maxPageSize: MAX_PAGE_SIZE }).pageSize;
 }
 
 export const REFERRAL_STAGES: AdmStage[] = [

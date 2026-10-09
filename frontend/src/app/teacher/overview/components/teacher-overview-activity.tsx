@@ -31,8 +31,7 @@ import {
 } from "@/components/ui/table";
 import type { TeacherActivityRow } from "@/services/teacher/overview.types";
 import styles from "./teacher-overview-activity.module.css";
-
-const PAGE_SIZE = 10;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 interface TeacherOverviewActivityProps {
   activity: TeacherActivityRow[];
@@ -142,29 +141,31 @@ export function TeacherOverviewActivity({ activity }: TeacherOverviewActivityPro
         </Table>
       </CardContent>
 
-      <CardFooter className={styles.footer}>
-        <span className={styles.footerInfo}>
-          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1 || filtered.length === 0}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages || filtered.length === 0}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      </CardFooter>
+      {totalPages > 1 && (
+        <CardFooter className={styles.footer}>
+          <span className={styles.footerInfo}>
+            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
+          </span>
+          <div className={styles.footerActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || filtered.length === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || filtered.length === 0}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }

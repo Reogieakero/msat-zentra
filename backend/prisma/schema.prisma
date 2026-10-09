@@ -295,6 +295,9 @@ model StudentProfile {
   photoUrl     String?
   riskCount    Int        @default(0)
   riskLevel    RiskLevel  @default(Low)
+  academicFlag Boolean @default(false)
+  attendanceFlag Boolean @default(false)
+  behavioralFlag Boolean @default(false)
   createdAt    DateTime   @default(now())
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -439,6 +442,11 @@ model StudentRoster {
   gradeLevel   GradeLevel
   sectionId    String
   schoolYearId String
+  riskCount    Int        @default(0)
+  riskLevel    RiskLevel  @default(Low)
+  academicFlag Boolean @default(false)
+  attendanceFlag Boolean @default(false)
+  behavioralFlag Boolean @default(false)
   section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
@@ -452,6 +460,7 @@ model StudentRoster {
   @@index([gradeLevel])
   @@index([sectionId])
   @@index([schoolYearId])
+  @@index([schoolYearId, riskLevel])
 }
 
 enum SubjectCategory {
@@ -714,6 +723,8 @@ model GradeFlag {
   @@index([raisedBy])
   @@index([studentId])
   @@index([status])
+  // Flag queue reads scope to the active term.
+  @@index([termId, status, ownerId])
 }
 
 // ---------------------------------------------------------------------------
@@ -823,6 +834,9 @@ model AnecdotalRecord {
   @@index([studentId, termId])
   @@index([rosterId, termId])
   @@index([sectionId, termId])
+  // Anecdotal list reads filter by term + section ordered by recency.
+  @@index([termId, sectionId, observationDatetime])
+  @@index([observerId, termId])
 }
 
 // Teacher-owned collections of filed anecdotal records. Folders organize
@@ -859,6 +873,7 @@ model Referral {
   // reviewer may act on the case at the consultation stage; everyone else
   // sees it read-only. Null = legacy / non-ADM routing.
   consultReviewer   String?
+  consultReviewedAt DateTime?
   // Nurse ADM flow: the referral form (GCForm-03 fill-up) must be completed
   // on the dedicated form page before the case can be forwarded to the ADM
   // coordinator. Confirming the form sets this flag; forwarding requires it
@@ -898,6 +913,10 @@ model Referral {
   @@index([studentId])
   @@index([rosterId])
   @@index([termId])
+  // Paginated queue reads filter by term + desk + status together.
+  @@index([termId, referredToRole, status])
+  @@index([termId, status])
+  @@index([termId, referredToRole, consultReviewedAt])
 }
 
 // Guidance counseling work on one referral: scheduled talks with the
@@ -922,7 +941,7 @@ model CounselingSession {
   outcome      String?
   cancelReason String?
   createdBy    String
-  createdAt    DateTime @default(now())
+  createdAt   DateTime      @default(now())
   completedAt  DateTime?
   referral     Referral? @relation(fields: [referralId], references: [id], onDelete: Cascade)
   intervention Intervention? @relation(fields: [interventionId], references: [id], onDelete: Cascade)
@@ -931,6 +950,7 @@ model CounselingSession {
   @@index([referralId])
   @@index([interventionId])
   @@index([status])
+  @@index([status, scheduledAt])
 }
 
 // Documentation filed on one clinic/counseling session: photos (wound,
@@ -981,6 +1001,8 @@ model Intervention {
   @@index([outcomeStatus])
   @@index([approvalStatus])
   @@index([assignedTo, outcomeStatus])
+  // Stats + queue reads scope counts to the active term.
+  @@index([termId, approvalStatus, outcomeStatus])
 }
 // ---------------------------------------------------------------------------
 // 3.6 Specialist modules
@@ -1209,6 +1231,7 @@ model AuditLog {
   @@index([sourceTable, sourceId, createdAt])
   @@index([actionType])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model RiskSnapshot {
@@ -1218,6 +1241,14 @@ model RiskSnapshot {
   studentId   String?
   rosterId    String?
   riskLevel   RiskLevel
+  riskLevelRaw RiskLevel?
+  riskLevelFinal RiskLevel?
+  academicFlag Boolean?
+  attendanceFlag Boolean?
+  behavioralFlag Boolean?
+  academicFlagRaw Boolean?
+  attendanceFlagRaw Boolean?
+  behavioralFlagRaw Boolean?
   riskCount   Int
   snapshotDate DateTime @default(now())
   termId      String
@@ -1227,6 +1258,12 @@ model RiskSnapshot {
   @@index([rosterId])
   @@index([studentId])
   @@index([termId, riskLevel])
+  @@index([termId, riskLevelRaw])
+  @@index([termId, riskLevelFinal])
+  @@index([termId, snapshotDate])
+  @@index([termId, academicFlag])
+  @@index([termId, attendanceFlag])
+  @@index([termId, behavioralFlag])
 }
 
 model ReportSnapshot {
@@ -1278,6 +1315,8 @@ model Notification {
   isRead      Boolean       @default(false)
   createdAt   DateTime      @default(now())
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Notification badge + paged list reads per user.
+  @@index([userId, isRead, createdAt])
 }
 
 // Operational (not part of the 30 domain tables): refresh token store

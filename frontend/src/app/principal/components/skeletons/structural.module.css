@@ -1,0 +1,196 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 1rem;
+  min-height: 7.5rem;
+}
+
+.cardLabel {
+  height: 1rem;
+  width: 6rem;
+}
+
+.cardValue {
+  height: 2rem;
+  width: 4rem;
+}
+
+.cardHint {
+  height: 0.75rem;
+  width: 8rem;
+}
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.search {
+  height: 2.25rem;
+  width: 14rem;
+  max-width: 100%;
+}
+
+.select {
+  height: 2.25rem;
+  width: 9rem;
+}
+
+.filterBtn {
+  height: 2.25rem;
+  width: 7rem;
+}
+
+.tableWrap {
+  overflow: hidden;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.tableHead {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  background: var(--muted);
+  opacity: 0.55;
+}
+
+.tableRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border-top: 1px solid var(--border);
+  min-height: 3.25rem;
+}
+
+.cellMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cellName {
+  height: 1rem;
+  width: 10rem;
+  max-width: 100%;
+}
+
+.cellSub {
+  height: 0.75rem;
+  width: 6rem;
+  max-width: 100%;
+}
+
+.cell {
+  height: 1rem;
+  width: 5rem;
+  flex-shrink: 0;
+}
+
+.cellBadge {
+  height: 1.375rem;
+  width: 4.5rem;
+  flex-shrink: 0;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.pagerRange {
+  height: 1rem;
+  width: 6rem;
+  margin-right: auto;
+}
+
+.pagerBtn {
+  height: 2rem;
+  width: 5rem;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 1rem;
+}
+
+.chartTitle {
+  height: 1.25rem;
+  width: 12rem;
+}
+
+.chartBody {
+  height: 14rem;
+  width: 100%;
+}
+
+.chartBodySm {
+  height: 10rem;
+  width: 100%;
+}
+
+.legend {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.legendChip {
+  height: 1.25rem;
+  width: 5.5rem;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 12rem;
+}
+
+.modalField {
+  height: 2.5rem;
+  width: 100%;
+}
+
+.modalRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card [data-slot="skeleton"],
+  .tableWrap [data-slot="skeleton"],
+  .chart [data-slot="skeleton"],
+  .filterBar [data-slot="skeleton"],
+  .modalBody [data-slot="skeleton"],
+  .modalFooter [data-slot="skeleton"] {
+    animation: none;
+  }
+}

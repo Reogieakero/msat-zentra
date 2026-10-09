@@ -20,6 +20,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { BookOpen, ChevronDown } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import {
   ALL_GRADES,
   gradeSortKey,
@@ -143,11 +152,45 @@ function TrendTooltip({
   );
 }
 
-export function SubjectTrendChart({
-  sections,
+function GradeFilterMenu({
+  grades,
+  gradeFilter,
+  onGradeFilterChange,
+}: {
+  grades: string[];
+  gradeFilter: string;
+  onGradeFilterChange: (grade: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className={styles.trendGradeBtn}>
+          {gradeFilter}
+          <ChevronDown aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className={styles.trendGradeMenu}>
+        {[...grades]
+          .sort((a, b) => gradeSortKey(a) - gradeSortKey(b))
+          .map((g) => (
+            <DropdownMenuItem
+              key={g}
+              onSelect={() => onGradeFilterChange(g)}
+              className={styles.trendGradeItem}
+            >
+              <span>{g}</span>
+            </DropdownMenuItem>
+          ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function SubjectTrendChart({  sections,
   subjects,
   grades,
   gradeFilter,
+  onGradeFilterChange,
   isPending,
   selectedSubject,
   onSelectSubject,
@@ -156,6 +199,7 @@ export function SubjectTrendChart({
   subjects: string[];
   grades: string[];
   gradeFilter: string;
+  onGradeFilterChange: (grade: string) => void;
   isPending: boolean;
   selectedSubject: string | null;
   onSelectSubject: (subject: string | null) => void;
@@ -240,26 +284,57 @@ export function SubjectTrendChart({
     series.some((g) => row[g] != null)
   );
 
+  const isEmpty = !isPending && !hasData;
+  if (isEmpty) {
+    return (
+      <Card className={styles.glowCard}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
+        <CardContent className={styles.chartBody}>
+          <div className={styles.trendEmptyFilter}>
+            <GradeFilterMenu
+              grades={grades}
+              gradeFilter={gradeFilter}
+              onGradeFilterChange={onGradeFilterChange}
+            />
+          </div>
+          <PrincipalEmptyState
+            icon={BookOpen}
+            title="No graded records"
+            hint="No graded records for the active term. Grades will appear here once finalized."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <Card className={styles.glowCard}>
       <span className={styles.glowClip} aria-hidden="true">
         <span className={styles.cardGlow} />
       </span>
       <CardHeader>
-        <div>
-          <CardTitle>Subject trend</CardTitle>
-          <CardDescription>
-            {gradeFilter === ALL_GRADES
-              ? "Average transmuted grade per subject, one line per grade level. Red is below 75, green is passing, white means no grades yet. Click a point to rank its sections."
-              : `Average transmuted grade per subject for ${gradeFilter}. Red is below 75, green is passing, white means no grades yet. Click a point to rank its sections.`}
-          </CardDescription>
+        <div className={styles.trendHeadRow}>
+          <div>
+            <CardTitle>Subject trend</CardTitle>
+            <CardDescription>
+              {gradeFilter === ALL_GRADES
+                ? "Average transmuted grade per subject, one line per grade level. Red is below 75, green is passing, white means no grades yet. Click a point to rank its sections."
+                : `Average transmuted grade per subject for ${gradeFilter}. Red is below 75, green is passing, white means no grades yet. Click a point to rank its sections.`}
+            </CardDescription>
+          </div>
+          <div className={styles.trendGradeWrap}>
+            <GradeFilterMenu
+              grades={grades}
+              gradeFilter={gradeFilter}
+              onGradeFilterChange={onGradeFilterChange}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className={styles.chartBody}>
         {isPending ? (
           <Skeleton className={styles.chartSkel} aria-hidden />
-        ) : !hasData ? (
-          <p className={styles.empty}>No graded records for the active term.</p>
         ) : (
           <>
             <div className={styles.chartScroll}>
@@ -331,7 +406,12 @@ export function SubjectTrendChart({
                       }}
                     />
                     {series.map((grade) => {
-                      const color = colorFor(grade);
+                      // Single-grade view: neutral line color so it never
+                      // clashes with the dot semantics (red = below 75,
+                      // green = passing). Grade 12 happens to sit on the
+                      // red slot of the multi-grade palette.
+                      const color =
+                        series.length === 1 ? "#3b82f6" : colorFor(grade);
                       return (
                         <Line
                           key={grade}

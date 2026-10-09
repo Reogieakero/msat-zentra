@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuditToolbar, type ActorScope } from "./components/AuditToolbar";
 import { AuditTable } from "./components/AuditTable";
 import { AuditSkeleton } from "./components/AuditSkeleton";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
+import { PrincipalEmptyState } from "../components/PrincipalEmptyCard";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth/useSession";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -17,22 +18,18 @@ import {
 import type {
   AuditActionType,
   AuditEntry,
+  AuditResponse,
   AuditRole,
 } from "@/services/principal/audit.types";
 import styles from "./page.module.css";
 import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import assign from "../academics/assign/components/section-assignments.module.css";
-
-const PAGE_SIZE = 25;
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export default function PrincipalAuditPage() {
   const session = useSession();
   const currentUserId = session?.sub ?? "";
-
-  const [entries, setEntries] = React.useState<AuditEntry[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
 
   const [actionType, setActionType] = React.useState<AuditActionType | "all">("all");
   const [actorRole, setActorRole] = React.useState<AuditRole | "all">("all");
@@ -43,13 +40,20 @@ export default function PrincipalAuditPage() {
   const debouncedQuery = useDebouncedValue(query, 300);
   const [exporting, setExporting] = React.useState(false);
   const [page, setPage] = React.useState(1);
+  const queryClient = useQueryClient();
 
-  const [knownTables, setKnownTables] = React.useState<string[]>([]);
-
-  const load = React.useCallback(
-    (abort?: AbortSignal) => {
-      setLoading(true);
-      setError(null);
+  const auditQuery = useQuery({
+    queryKey: [
+      "principal-audit",
+      actionType,
+      actorRole,
+      actorScope,
+      sourceTable,
+      debouncedQuery,
+      page,
+      currentUserId,
+    ],
+    queryFn: ({ signal }) =>
       fetchAuditEntries(
         {
           actionType,
@@ -60,47 +64,42 @@ export default function PrincipalAuditPage() {
           page,
           pageSize: PAGE_SIZE,
         },
-        abort,
-      )
-        .then((res) => {
-          setEntries(res.entries);
-          setTotal(res.total);
-          setKnownTables((prev) => {
-            const next = new Set(prev);
-            for (const e of res.entries) {
-              const t = e.sourceTable?.trim();
-              if (t) next.add(t);
-            }
-            return next.size === prev.length &&
-              prev.every((t) => next.has(t))
-              ? prev
-              : Array.from(next).sort((a, b) => a.localeCompare(b));
-          });
-        })
-        .catch((err: unknown) => {
-          if ((err as { name?: string })?.name === "CanceledError") return;
-          const status = (err as { response?: { status?: number } })?.response?.status;
-          setError(
-            status
-              ? `Failed to load audit log (HTTP ${status})`
-              : "Failed to load audit log",
-          );
-          console.error("[/api/audit] fetch failed:", err);
-        })
-        .finally(() => setLoading(false));
-    },
-    [actionType, actorRole, sourceTable, actorScope, currentUserId, debouncedQuery, page],
-  );
+        signal,
+      ),
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+    retry: 1,
+  });
 
-  React.useEffect(() => {
-    const ctrl = new AbortController();
+  const entries: AuditEntry[] = auditQuery.data?.entries ?? [];
+  const total = auditQuery.data?.total ?? 0;
+  const loading = auditQuery.isPending;
+  const error = auditQuery.isError
+    ? (() => {
+        const status = (auditQuery.error as { response?: { status?: number } })?.response?.status;
+        return status ? `Failed to load audit log (HTTP ${status})` : "Failed to load audit log";
+      })()
+    : null;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(ctrl.signal);
-    return () => ctrl.abort();
-  }, [load]);
+  const knownTables = React.useMemo(() => {
+    const tables = new Set<string>();
+    const cached = queryClient.getQueriesData<AuditResponse>({
+      queryKey: ["principal-audit"],
+    });
+    for (const [, data] of cached) {
+      for (const entry of data?.entries ?? []) {
+        const name = entry.sourceTable?.trim();
+        if (name) tables.add(name);
+      }
+    }
+    return Array.from(tables).sort((a, b) => a.localeCompare(b));
+  }, [queryClient, auditQuery.dataUpdatedAt]);
 
-  const handleRetry = () => load();
+  const handleRetry = () => {
+    void auditQuery.refetch();
+  };
   const handleExport = () => {
     if (exporting) return;
     setExporting(true);
@@ -132,12 +131,18 @@ export default function PrincipalAuditPage() {
   const start = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, totalCount);
 
+  const isEmpty = !loading && !error && totalCount === 0 && !hasActiveFilters && query.trim() === "";
+  const headerLoading = loading;
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={headerLoading || undefined}>
+      {headerLoading ? (
+        <PageHeaderSkeleton />
+      ) : isEmpty ? null : (
       <PrincipalPageHeader
         title="Audit Log"
         description="School-wide record of sensitive actions. Immutable — entries cannot be edited or deleted."
       />
+      )}
 
       <section aria-label="Audit entries" className="flex min-w-0 flex-col gap-3">
         <div className={assign.card}>
@@ -204,50 +209,47 @@ export default function PrincipalAuditPage() {
               <AuditSkeleton rows={PAGE_SIZE} />
             </div>
           ) : entries.length === 0 ? (
-            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-                aria-hidden="true"
-              >
-                <ShieldCheck size={24} className="text-muted-foreground" />
-              </span>
-              <p className="font-medium">No audit entries</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {query.trim()
+            <PrincipalEmptyState
+              icon={ShieldCheck}
+              title="No audit entries"
+              hint={
+                query.trim()
                   ? `No audit entries match "${query}".`
                   : hasActiveFilters
                     ? "No audit entries match the selected filters."
-                    : "Sensitive actions will appear here once recorded."}
-              </p>
-            </div>
+                    : "Sensitive actions will appear here once recorded."
+              }
+            />
           ) : (
             <>
               <div className="relative">
                 <AuditTable entries={entries} />
               </div>
-              <div className="relative flex items-center justify-end space-x-2">
-                <div className="text-muted-foreground flex-1 text-sm">
-                  {`${start}–${end} of ${totalCount}`}
+              {pageCount > 1 && (
+                <div className="relative flex items-center justify-end space-x-2">
+                  <div className="text-muted-foreground flex-1 text-sm">
+                    {`${start}–${end} of ${totalCount}`}
+                  </div>
+                  <div className="space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={safePage <= 1 || totalCount === 0}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={safePage >= pageCount || totalCount === 0}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={safePage <= 1 || totalCount === 0}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={safePage >= pageCount || totalCount === 0}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              )}
             </>
           )}
         </div>

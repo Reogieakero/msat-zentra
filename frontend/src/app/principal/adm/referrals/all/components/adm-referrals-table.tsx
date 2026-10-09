@@ -28,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import type { AdmReferralRow } from "@/services/principal/adm.types";
 import {
   stageLabel,
@@ -80,6 +81,7 @@ export function AdmReferralsTable({
   rows,
   totalCount,
   loading,
+  isFetching = false,
   error,
   search,
   actionId,
@@ -96,6 +98,7 @@ export function AdmReferralsTable({
   rows: AdmReferralRow[];
   totalCount: number;
   loading: boolean;
+  isFetching?: boolean;
   error: string | null;
   search: string;
   actionId: string | null;
@@ -341,25 +344,20 @@ export function AdmReferralsTable({
   }
   if (totalCount === 0) {
     return (
-      <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-        <span
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-          aria-hidden="true"
-        >
-          <ShieldCheck size={24} className="text-muted-foreground" />
-        </span>
-        <p className="font-medium">No referrals found</p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          {search.trim()
+      <PrincipalEmptyState
+        icon={ShieldCheck}
+        title="No referrals found"
+        hint={
+          search.trim()
             ? `No referrals match "${search}".`
-            : "Endorsed cases will appear here once filed."}
-        </p>
-      </div>
+            : "Endorsed cases will appear here once filed."
+        }
+      />
     );
   }
   return (
     <>
-      <div className="relative overflow-x-auto rounded-md border">
+      <div className="relative overflow-x-auto rounded-md border" aria-busy={isFetching || undefined}>
         <Table className="w-full table-fixed" aria-label="ADM referral cases">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -410,29 +408,31 @@ export function AdmReferralsTable({
           </TableBody>
         </Table>
       </div>
-      <div className="relative flex items-center justify-end space-x-2">
-        <div className="text-muted-foreground flex-1 text-sm">
-          {totalCount > 0 ? `${start}–${end} of ${totalCount}` : "0 of 0"}
+      {totalPages > 1 && (
+        <div className="relative flex items-center justify-end space-x-2">
+          <div className="text-muted-foreground flex-1 text-sm">
+            {totalCount > 0 ? `${start}–${end} of ${totalCount}` : "0 of 0"}
+          </div>
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || totalCount === 0}
+              onClick={onPrev}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || totalCount === 0}
+              onClick={onNext}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1 || totalCount === 0}
-            onClick={onPrev}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages || totalCount === 0}
-            onClick={onNext}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
     </>
   );
 }

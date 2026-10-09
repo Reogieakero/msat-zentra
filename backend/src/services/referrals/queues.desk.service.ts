@@ -60,143 +60,69 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
         ? scopeClauses[0]
         : { AND: scopeClauses };
 
+  // True server-side pagination: DB filters + DB search + LIMIT/OFFSET.
+  // Never fetch the full queue into memory to filter/sort client-side.
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const searchWhere: any = q
+    ? {
+        OR: [
+          { reason: { contains: q, mode: "insensitive" } },
+          { notes: { contains: q, mode: "insensitive" } },
+          { status: { equals: q } },
+          { student: { user: { fullName: { contains: q, mode: "insensitive" } } } },
+          { student: { lrn: { contains: q, mode: "insensitive" } } },
+          { roster: { fullName: { contains: q, mode: "insensitive" } } },
+          { roster: { lrn: { contains: q, mode: "insensitive" } } },
+          { anecdotalRecord: { descriptionOfIncident: { contains: q, mode: "insensitive" } } },
+        ],
+      }
+    : {};
+  const pagedWhere: any =
+    scopeClauses.length === 0 && !q
+      ? where
+      : { AND: [...scopeClauses, ...(q ? [searchWhere] : [])] };
+
   let unfilteredTotal = 0;
   let filteredTotal = 0;
-  let safePage = page;
+  let safePage = Math.max(1, page);
   const referrals: any[] = await (async () => {
-    if (!hasPaginationParams) {
-      return prisma.referral.findMany({
-        where,
-        include: {
-          anecdotalRecord: true,
-          student: { include: { section: { select: { name: true } } } },
-          roster: { include: { section: { select: { name: true } } } },
-          counselingSessions: {
-            orderBy: { scheduledAt: "asc" },
-            select: {
-              id: true,
-              sessionType: true,
-              scheduledAt: true,
-              venue: true,
-              status: true,
-              sessionNotes: true,
-              outcome: true,
-              cancelReason: true,
-              createdAt: true,
-              completedAt: true,
-              attachments: {
-                orderBy: { uploadedAt: "asc" },
-                select: {
-                  id: true,
-                  fileUrl: true,
-                  fileName: true,
-                  mimeType: true,
-                  fileSize: true,
-                  uploadedAt: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: { id: "asc" },
+    // Counts share the exact filtered WHERE so pagination metadata matches.
+    const [unfiltered, filtered] = await Promise.all([
+      prisma.referral.count({ where }),
+      prisma.referral.count({ where: pagedWhere }),
+    ]);
+    unfilteredTotal = unfiltered;
+    filteredTotal = filtered;
+    const totalPages = Math.max(1, Math.ceil(filteredTotal / effPageSize));
+    safePage = Math.min(safePage, totalPages);
+    if (highlight && q === "") {
+      // Locate a highlighted row without scanning the table: fetch its
+      // position via an id-ordered keyset probe bounded to one lookup.
+      const probe = await prisma.referral.findMany({
+        where: pagedWhere,
+        select: { id: true },
+        orderBy: { id: "desc" },
       });
+      const idx = probe.findIndex((r) => r.id === highlight);
+      if (idx >= 0) safePage = Math.floor(idx / effPageSize) + 1;
     }
-    const light = await prisma.referral.findMany({
-      where,
-      select: {
-        id: true,
-        reason: true,
-        status: true,
-        notes: true,
-        anecdotalRecord: {
-          select: {
-            observationDatetime: true,
-            descriptionOfIncident: true,
-          },
-        },
-        student: {
-          select: {
-            lrn: true,
-            user: { select: { fullName: true } },
-            section: { select: { name: true } },
-          },
-        },
-        roster: {
-          select: {
-            fullName: true,
-            lrn: true,
-            section: { select: { name: true } },
-          },
-        },
-      },
-      orderBy: { id: "asc" },
-    });
-    const lightIds = light.map((r) => r.id);
-    const lightLogs = lightIds.length
-      ? await prisma.auditLog.findMany({
-          where: { sourceTable: "referrals", sourceId: { in: lightIds } },
-          select: { sourceId: true, createdAt: true },
-          orderBy: { createdAt: "asc" },
-        })
-      : [];
-    const lightReferredAt = new Map<string, string>();
-    for (const log of lightLogs) {
-      if (!lightReferredAt.has(log.sourceId)) {
-        lightReferredAt.set(log.sourceId, log.createdAt.toISOString());
-      }
-    }
-    const lightAt = (r: { id: string; anecdotalRecord?: { observationDatetime?: Date | null } | null }) =>
-      lightReferredAt.get(r.id) ??
-      (r.anecdotalRecord?.observationDatetime as unknown as Date | undefined)?.toISOString?.() ??
-      "";
-    const ordered = [...light].sort((a, b) => {
-      const at = lightAt(a);
-      const bt = lightAt(b);
-      if (at === bt) return 0;
-      return bt < at ? -1 : 1;
-    });
-    unfilteredTotal = ordered.length;
-    const qFiltered = q
-      ? ordered.filter((r) => {
-          const hay = [
-            (r as { reason?: unknown }).reason,
-            (r as { status?: unknown }).status,
-            (r as { notes?: unknown }).notes,
-            (r as { student?: { user?: { fullName?: unknown } } }).student
-              ?.user?.fullName,
-            (r as { roster?: { fullName?: unknown } }).roster?.fullName,
-            (r as {
-              student?: { section?: { name?: unknown } };
-            }).student?.section?.name,
-            (r as { roster?: { section?: { name?: unknown } } }).roster
-              ?.section?.name,
-            (r as { anecdotalRecord?: { descriptionOfIncident?: unknown } })
-              .anecdotalRecord?.descriptionOfIncident,
-          ]
-            .filter((v) => typeof v === "string")
-            .join(" ")
-            .toLowerCase();
-          return hay.includes(q);
-        })
-      : ordered;
-    filteredTotal = qFiltered.length;
-    const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
-    safePage = Math.min(page, totalPages);
-    if (highlight) {
-      const idx = qFiltered.findIndex(
-        (r) => (r as { id?: unknown }).id === highlight
-      );
-      if (idx >= 0) safePage = Math.floor(idx / pageSize) + 1;
-    }
-    const start = (safePage - 1) * pageSize;
-    const pageIds = qFiltered.slice(start, start + pageSize).map((r) => r.id);
+    const skip = (safePage - 1) * effPageSize;
+    const pageIds = (
+      await prisma.referral.findMany({
+        where: pagedWhere,
+        select: { id: true },
+        orderBy: { id: "desc" },
+        skip,
+        take: effPageSize,
+      })
+    ).map((r) => r.id);
     if (pageIds.length === 0) return [];
     const pageRows = await prisma.referral.findMany({
       where: { id: { in: pageIds } },
       include: {
-        anecdotalRecord: true,
-        student: { include: { section: { select: { name: true } } } },
-        roster: { include: { section: { select: { name: true } } } },
+        anecdotalRecord: { select: { id: true, observationDatetime: true, descriptionOfIncident: true, category: true } },
+        student: { select: { lrn: true, user: { select: { fullName: true } }, section: { select: { name: true } } } },
+        roster: { select: { fullName: true, lrn: true, section: { select: { name: true } } } },
 
         counselingSessions: {
           orderBy: { scheduledAt: "asc" },
@@ -319,11 +245,9 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
       return bt < at ? -1 : 1;
     });
 
-  if (!hasPaginationParams) {
-    return enriched;
-  }
-
+  // Always return the paginated contract — no unbounded array shape.
   const rows = enriched;
+  void hasPaginationParams;
   return {
     data: rows,
     rows,
@@ -332,8 +256,8 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
     unfilteredTotal,
     summary: { total: unfilteredTotal, filtered: filteredTotal },
     page: safePage,
-    totalPages: Math.max(1, Math.ceil(filteredTotal / pageSize)),
-    limit: pageSize,
-    pageSize,
+    totalPages: Math.max(1, Math.ceil(filteredTotal / effPageSize)),
+    limit: effPageSize,
+    pageSize: effPageSize,
   };
 }

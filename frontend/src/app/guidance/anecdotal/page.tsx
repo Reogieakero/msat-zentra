@@ -6,6 +6,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { FolderLegendCard } from "@/app/teacher/anecdotal/components/AnecdotalSideRail";
 import { TopReferredCard } from "./components/guidance-anecdotal-siderail";
 import { GuidanceAnecdotalFolders } from "./components/guidance-anecdotal-folders";
@@ -14,13 +17,12 @@ import { fetchGuidanceAnecdotal } from "@/services/guidance/anecdotal.service";
 import type { GuidanceAnecdotalData } from "@/services/guidance/anecdotal.types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useTerm } from "@/lib/term/TermContext";
-import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/guidance-anecdotal.module.css";
 
 const GUIDANCE_ANECDOTAL_PAGE_SIZE = 15;
 
 export default function GuidanceAnecdotalPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [queryInput, setQueryInput] = React.useState("");
   const [type, setType] = React.useState<TypeFilter>("");
@@ -43,6 +45,7 @@ export default function GuidanceAnecdotalPage() {
         ),
       staleTime: 60_000,
       placeholderData: keepPreviousData,
+      enabled: termReady,
     });
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
@@ -51,6 +54,7 @@ export default function GuidanceAnecdotalPage() {
   if (isPending) {
     return (
       <section className={styles.page} aria-busy="true" aria-label="Loading referred records">
+        <ZentraPageHeaderSkeleton />
         <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div className={`${styles.main} flex min-w-0 flex-col`}>
             <div className={styles.skelPanel}>
@@ -142,33 +146,29 @@ export default function GuidanceAnecdotalPage() {
   const hasActiveFilters = query !== "" || type !== "";
   if (data.total === 0 && !hasActiveFilters) {
     return (
-      <section className={`${styles.page} flex min-h-[60vh] flex-1 flex-col justify-center`}>
-        <div className={`${assign.card} mx-auto w-full max-w-md`}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative flex flex-col items-center gap-2 py-8 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <FolderOpen size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">No referred files yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Every ADM and counseling case advisers refer to you will appear here as its own folder.
-            </p>
+      <section className={styles.page} aria-label="Anecdotal records">
+        <GuidanceEmptyCard
+          icon={FolderOpen}
+          title="No referred files yet"
+          hint="Every ADM and counseling case advisers refer to you will appear here as its own folder."
+          label="Anecdotal records"
+          action={
             <Button asChild size="sm" className="mt-2">
               <Link href="/guidance/referrals">View referrals</Link>
             </Button>
-          </div>
-        </div>
+          }
+          centered
+        />
       </section>
     );
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-label="Anecdotal records">
+      <GuidancePageHeader
+        title="Anecdotal Records"
+        description="Every ADM and counseling case referred to you, filed as its own folder."
+      />
       <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <GuidanceAnecdotalFolders

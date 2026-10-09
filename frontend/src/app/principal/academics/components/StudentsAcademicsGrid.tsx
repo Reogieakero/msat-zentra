@@ -5,30 +5,34 @@ import { useQuery } from "@tanstack/react-query";
 import { MousePointerClick } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
-import { useGradeMode } from "../../grade-mode-context";
 import { SectionCardGrid } from "./SectionCardGrid";
 import { SectionStudentsTable } from "./SectionStudentsTable";
 import type { AcademicsMock } from "@/services/principal/academics";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import styles from "./StudentsAcademicsGrid.module.css";
 
 export function StudentsAcademicsGrid() {
-  const { gradeMode } = useGradeMode();
   const [selectedSectionId, setSelectedSectionId] = React.useState<string | null>(null);
   const tableRef = React.useRef<HTMLDivElement | null>(null);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
   const {
     data,
     isPending,
     error: queryError,
   } = useQuery({
-
-    queryKey: ["academics", termId, gradeMode],
-    queryFn: async () =>
-      (await apiClient.get<AcademicsMock>("/api/academics", { params: { mode: gradeMode } })).data,
-    staleTime: 60_000,
+    queryKey: ["academics", termId, schoolYearId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<AcademicsMock>("/api/academics");
+      return {
+        ...data,
+        sections: (data.sections ?? []).map((s) => ({ ...s, students: s.students ?? [] })),
+      };
+    },
+    staleTime: 15_000,
     refetchOnWindowFocus: false,
   });
 
@@ -71,26 +75,18 @@ export function StudentsAcademicsGrid() {
           />
           {selectedSection ? (
             <div ref={tableRef} className={styles.tableAnchor}>
-              <SectionStudentsTable
-                section={selectedSection}
-                gradeMode={gradeMode}
-              />
+              <SectionStudentsTable section={selectedSection} />
             </div>
           ) : !loading && sections.length > 0 ? (
             <div className={assign.card} aria-label="No section selected">
               <span className={assign.glowClip} aria-hidden="true">
                 <span className={assign.cardGlow} />
               </span>
-              <div className={styles.hintBody}>
-                <span className={styles.hintIconWrap} aria-hidden="true">
-                  <MousePointerClick className={styles.hintIcon} />
-                </span>
-                <p className={styles.hintTitle}>No section selected</p>
-                <p className={styles.hintText}>
-                  Select a section card above to view its students — averages
-                  compute live across all subjects.
-                </p>
-              </div>
+              <PrincipalEmptyState
+                icon={MousePointerClick}
+                title="No section selected"
+                hint="Select a section card above to view its students — averages compute live across all subjects."
+              />
             </div>
           ) : null}
         </>

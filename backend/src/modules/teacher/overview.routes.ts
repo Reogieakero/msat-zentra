@@ -21,6 +21,19 @@ router.get(
           ? scopeParam
           : "full";
       const termId = await resolveActiveTermId(req);
+      const atRiskOnly = req.query.atRiskOnly === "1" || req.query.atRiskOnly === "true";
+      const clampPage = (v: unknown) => {
+        const n = Math.floor(Number(v));
+        return Number.isFinite(n) && n > 0 ? n : 0;
+      };
+      const clampLimit = (v: unknown) => {
+        const n = Math.floor(Number(v));
+        return Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0;
+      };
+      const classPage = clampPage(req.query.classPage);
+      const classLimit = clampLimit(req.query.classLimit);
+      const advisoryPage = clampPage(req.query.advisoryPage);
+      const advisoryLimit = clampLimit(req.query.advisoryLimit);
       res.json(
         await getOverview(
           {
@@ -30,6 +43,11 @@ router.get(
             schoolYearId: req.termScope?.schoolYearId ?? null,
           },
           scope,
+          {
+            atRiskOnly,
+            ...(classPage && classLimit ? { classPage, classLimit } : {}),
+            ...(advisoryPage && advisoryLimit ? { advisoryPage, advisoryLimit } : {}),
+          },
         ),
       );
     } catch (e) {

@@ -8,16 +8,39 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShieldCheck } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import type { AttentionItem } from "./types";
 import styles from "./academics.module.css";
 
 export function NeedsAttentionList({
   items,
   isPending,
+  isNoData,
 }: {
   items: AttentionItem[];
   isPending: boolean;
+  isNoData?: boolean;
 }) {
+  const isEmpty = !isPending && items.length === 0;
+  // Nothing needs attention: render nothing (no "All clear" card).
+  if (isEmpty && !isNoData) return null;
+  if (isEmpty) {
+    return (
+      <Card className={styles.glowCard}>
+        <span className={styles.glowClip} aria-hidden="true">
+          <span className={styles.cardGlow} />
+        </span>
+        <CardContent>
+          <PrincipalEmptyState
+            icon={ShieldCheck}
+            title="No graded records"
+            hint="No graded records for the active term. Grades will appear here once finalized."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <Card className={styles.glowCard}>
       <span className={styles.glowClip} aria-hidden="true">
@@ -34,10 +57,6 @@ export function NeedsAttentionList({
       <CardContent>
         {isPending ? (
           <Skeleton className={styles.kpiSkel} aria-hidden />
-        ) : items.length === 0 ? (
-          <p className={styles.clearNote}>
-            All sections are at or above 75 — clear.
-          </p>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>

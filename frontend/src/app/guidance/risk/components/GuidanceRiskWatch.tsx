@@ -51,11 +51,12 @@ function normalizeName(value: string): string {
 export async function fetchAllGuidanceAlertFactors(): Promise<
   Record<string, GuidanceRiskFactorFlags>
 > {
-  const first = await fetchGuidanceAlerts({ page: 1, pageSize: 100 });
+  // Bounded preview (15×10=150 max). Full-dataset traversal is not allowed.
+  const first = await fetchGuidanceAlerts({ page: 1, pageSize: 15 });
   const pages = Math.min(first.totalPages, 10);
   const all = [...first.alerts];
   for (let p = 2; p <= pages; p++) {
-    const res = await fetchGuidanceAlerts({ page: p, pageSize: 100 });
+    const res = await fetchGuidanceAlerts({ page: p, pageSize: 15 });
     all.push(...res.alerts);
   }
   const map: Record<string, GuidanceRiskFactorFlags> = {};

@@ -13,6 +13,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { SearchIcon, Trophy } from "lucide-react";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
@@ -27,6 +28,7 @@ import {
 import type { HonorRollCandidate } from "@/services/principal/honorRoll.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./CandidateTable.module.css";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 interface Props {
   candidates: HonorRollCandidate[];
@@ -35,8 +37,6 @@ interface Props {
   onGradeChange: (grade: string) => void;
   loading?: boolean;
 }
-
-const PAGE_SIZE = 10;
 
 const BAND_VARIANT: Record<string, "green" | "blue" | "amber" | "red"> = {
   Advancing: "green",
@@ -207,19 +207,11 @@ export function CandidateTable({
             </Table>
           </div>
         ) : candidates.length === 0 ? (
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <Trophy size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">No awardees this term</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Students with a live general average of 90+ and no subject below 80
-              will appear here as scores are recorded.
-            </p>
-          </div>
+          <PrincipalEmptyState
+            icon={Trophy}
+            title="No awardees this term"
+            hint="Students with a live general average of 90+ and no subject below 80 will appear here as scores are recorded."
+          />
         ) : (
           <>
             <div className="relative overflow-x-auto rounded-md border">
@@ -272,24 +264,26 @@ export function CandidateTable({
                 {table.getFilteredRowModel().rows.length} awardee
                 {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
               </div>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                </Button>
-              </div>
+              {table.getPageCount() > 1 && (
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}

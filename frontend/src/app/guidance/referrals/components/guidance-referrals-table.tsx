@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Inbox, Loader2, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { GuidanceReferralsToolbar } from "./guidance-referrals-toolbar";
 import { GuidanceReferralsDialogsHost } from "./guidance-referrals-dialogs-host";
 import { useGuidanceReferralsFilter } from "./use-guidance-referrals-filter";
@@ -184,22 +185,23 @@ export function GuidanceReferralsTable({
         </div>
       )}
       {referrals.length === 0 ? (
-        <div className={styles.empty}>
-          <p className={styles.emptyTitle}>
-            {hasActiveFilters
+        <GuidanceEmptyState
+          icon={hasActiveFilters ? SearchX : Inbox}
+          title={
+            hasActiveFilters
               ? lockType
                 ? "No cases match the selected filter"
                 : "No cases match your search"
-              : "You're all caught up"}
-          </p>
-          <p className={styles.emptyHint}>
-            {hasActiveFilters
+              : "You're all caught up"
+          }
+          hint={
+            hasActiveFilters
               ? lockType
                 ? "Pick a different action in the sidebar, or show every case."
                 : "Try a different name or keyword, or clear the filter to see every case."
-              : "New cases sent to you by advisers will appear here."}
-          </p>
-        </div>
+              : "New cases sent to you by advisers will appear here."
+          }
+        />
       ) : (
         <ol className={styles.timeline}>
           {referrals.map((row) => (
@@ -225,7 +227,7 @@ export function GuidanceReferralsTable({
         </ol>
       )}
 
-      {paginate ? (
+      {paginate && totalPages > 1 ? (
         <nav className={styles.pager} aria-label="Cases pages">
           <p className={styles.range}>
             Showing cases {start}–{end} of {total}

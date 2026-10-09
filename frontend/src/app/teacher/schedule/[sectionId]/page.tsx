@@ -9,13 +9,14 @@ import { useTerm } from "@/lib/term/TermContext";
 import { useCachedMasterTeacher } from "@/services/teacher/flagCache";
 import { useTeacherOverview } from "@/services/teacher/overview.service";
 import { ScheduleWeekSetup } from "../components/ScheduleWeekSetup";
+import { ZentraPageHeaderSkeleton, ZentraTableSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import type { ScheduleSection } from "../page";
 
 function LoadingShell() {
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-5" aria-busy="true" aria-label="Loading schedule">
-      <div className="h-8 w-56 rounded bg-muted" />
-      <div className="h-72 rounded-lg border bg-muted/40" />
+      <ZentraPageHeaderSkeleton />
+      <ZentraTableSkeleton rows={8} columns={5} />
     </section>
   );
 }
@@ -35,10 +36,10 @@ export default function TeacherSectionSchedulePage() {
     isLoading: schedIsLoading,
     isError: schedIsError,
   } = useQuery<{ sections: ScheduleSection[] }>({
-    queryKey: ["teacher-schedule", termKey],
+    queryKey: ["teacher-schedule-section", sectionId, termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{ sections: ScheduleSection[] }>(
-        "/api/teacher/schedule",
+        `/api/teacher/schedule?sectionId=${encodeURIComponent(sectionId)}`,
       );
       return data;
     },

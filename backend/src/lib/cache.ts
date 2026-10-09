@@ -10,10 +10,15 @@ function buildKey(req: Request): string {
   const qs = req.originalUrl.includes("?")
     ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
     : "";
+  // NOTE: req.path is relative to the mounted router, so every router root
+  // ("/api/overview", "/api/academics", …) would collapse to "/". Include the
+  // mount point (baseUrl) so keys are unique per endpoint. The "v2" prefix
+  // orphans entries cached under the old colliding scheme (they expire by TTL).
+  const fullPath = `${req.baseUrl ?? ""}${req.path ?? ""}` || req.originalUrl.split("?")[0];
 
   const scope = (req as Request & { termScope?: { schoolYearId?: string; termId?: string } }).termScope;
   const scopeKey = scope ? `:${scope.schoolYearId ?? ""}:${scope.termId ?? ""}` : "";
-  return `cache:${req.method}:${req.path}${qs}:${role}:${uid}${scopeKey}`;
+  return `cache:v2:${req.method}:${fullPath}${qs}:${role}:${uid}${scopeKey}`;
 }
 
 function tagKey(tag: string): string {

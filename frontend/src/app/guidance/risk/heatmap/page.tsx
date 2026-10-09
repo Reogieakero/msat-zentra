@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { Grid3X3, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,32 +14,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../../components/GuidanceEmptyCard";
 import { fetchGuidanceRiskHeatmap } from "@/services/guidance/risk.service";
 import { GuidanceHeatmapVisual } from "./components/guidance-heatmap-visual";
 import { GuidanceSectionCards } from "./components/guidance-section-cards";
 import styles from "../../pages.module.css";
 
 export default function GuidanceHeatmapPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } = useQuery({
     queryKey: ["guidance-risk-heatmap", termKey],
     queryFn: () => fetchGuidanceRiskHeatmap(),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled: termReady,
   });
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · Risk heatmap</p>
-            <h1 className={styles.title}>Attendance × academic heatmap</h1>
-            <p className={styles.lede}>Loading the live section matrix…</p>
-          </div>
-          <Skeleton style={{ width: "8rem", height: "1.5rem" }} />
-        </div>
+      <section className={styles.page} aria-busy="true" aria-label="Loading risk heatmap">
+        <ZentraPageHeaderSkeleton withActions actionCount={3} />
         <div className={styles.actions}>
           <Skeleton style={{ width: "11rem", height: "2rem" }} />
           <Skeleton style={{ width: "7rem", height: "2rem" }} />
@@ -103,13 +100,8 @@ export default function GuidanceHeatmapPage() {
 
   if (isError || !data) {
     return (
-      <section className={styles.page}>
-        <div className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Insights · Risk heatmap</p>
-            <h1 className={styles.title}>Attendance × academic heatmap</h1>
-          </div>
-        </div>
+      <section className={styles.page} aria-label="Risk heatmap">
+        <GuidancePageHeader title="Attendance × Academic Heatmap" />
         <Card className={styles.card}>
           <CardHeader>
             <CardTitle className={styles.sectionTitle}>
@@ -138,28 +130,34 @@ export default function GuidanceHeatmapPage() {
   }
 
   return (
-    <section className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Insights · Risk heatmap</p>
-          <h1 className={styles.title}>Attendance × academic heatmap</h1>
-          <p className={styles.lede}>
-            Live section × risk-factor matrix for {data.termLabel}. Factor
-            columns count flagged students; level columns cover the full
-            enrolled cohort.
-          </p>
-        </div>
-        <Badge variant="outline">Live · {data.termLabel}</Badge>
-      </div>
-
-      <div className={styles.actions}>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/guidance/risk">Back to risk dashboard</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/guidance/alerts">At-risk queue</Link>
-        </Button>
-      </div>
+    <section className={styles.page} aria-label="Risk heatmap">
+      {data.rows.length === 0 ? null : (
+        <GuidancePageHeader
+          title="Attendance × Academic Heatmap"
+          description={`Live section × risk-factor matrix for ${data.termLabel}. Factor columns count flagged students; level columns cover the full enrolled cohort.`}
+          actions={
+            <>
+              <Badge variant="outline">Live · {data.termLabel}</Badge>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/guidance/risk">Back to risk dashboard</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/guidance/alerts">At-risk queue</Link>
+              </Button>
+            </>
+          }
+        />
+      )}
+      {data.rows.length === 0 ? (
+        <GuidanceEmptyCard
+          icon={Grid3X3}
+          title="No sections this term"
+          hint="No sections enrolled for the active school year yet."
+          label="Risk heatmap"
+          centered
+        />
+      ) : (
+        <>
 
       <Card className={styles.card}>
         <CardHeader>
@@ -204,6 +202,8 @@ export default function GuidanceHeatmapPage() {
         Term-scoped, snapshot-backed aggregates; the flagged caseload itself
         lives in the at-risk queue.
       </p>
+        </>
+      )}
     </section>
   );
 }

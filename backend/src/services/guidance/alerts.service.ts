@@ -1,10 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { sectionHeadcounts } from "../enrollment.js";
-import {
-  computeRiskFactors,
-  isAtRisk,
-  levelFromFlags,
-} from "../risk.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import {
   ADM_LABEL,
   GRADE_LABELS,
@@ -19,6 +14,12 @@ export interface AlertsQuery {
   page: number;
   pageSize: number;
 }
+
+const FLAG_COLUMN: Record<string, string> = {
+  academic: "academicFlag",
+  attendance: "attendanceFlag",
+  behavioral: "behavioralFlag",
+};
 
 export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
   const { levelFilter, factorFilter, q, page, pageSize } = {
@@ -40,86 +41,207 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
     ? `${term.schoolYear.name.split(" ")[0]} · Term ${term.termNumber}`
     : "No active term";
 
-  const [students, rosterCohort, sectionPopulations, guidanceReferrals, interventions, admProfiles, admReferrals] =
-    await Promise.all([
-      prisma.studentProfile.findMany({
-        where: schoolYearId ? { section: { schoolYearId } } : undefined,
-        select: {
-          userId: true,
-          lrn: true,
-          gradeLevel: true,
-          section: { select: { id: true, name: true, _count: { select: { students: true } } } },
-          user: { select: { fullName: true } },
-          finalGrades: {
-            where: termId ? { termId } : undefined,
-            select: { computedAverage: true, transmutedGrade: true },
-          },
-          attendanceRecords: {
-            where: termId ? { termId } : undefined,
-            select: { status: true },
-          },
-          anecdotalRecords: {
-            where: termId ? { termId } : undefined,
-            select: { id: true },
-          },
-        },
-      }),
-      prisma.studentRoster.findMany({
-        where: schoolYearId ? { schoolYearId } : undefined,
-        select: {
-          id: true,
-          lrn: true,
-          fullName: true,
-          gradeLevel: true,
-          sectionId: true,
-          section: { select: { name: true } },
-          finalGrades: {
-            where: termId ? { termId } : undefined,
-            select: { computedAverage: true, transmutedGrade: true },
-          },
-          attendanceRecords: {
-            where: termId ? { termId } : undefined,
-            select: { status: true },
-          },
-          anecdotalRecords: {
-            where: termId ? { termId } : undefined,
-            select: { id: true },
-          },
-        },
-      }),
-      prisma.section.findMany({
-        where: schoolYearId ? { schoolYearId } : undefined,
-        select: { id: true },
-      }),
-      prisma.referral.findMany({
-        where: {
-          referredToRole: "guidance_counselor",
-          ...(termId ? { termId } : {}),
-        },
-        select: { studentId: true, rosterId: true, status: true },
-      }),
-      prisma.intervention.findMany({
-        where: termId ? { termId } : undefined,
-        orderBy: { id: "desc" },
-        take: 2000,
-        select: { studentId: true, rosterId: true, outcomeStatus: true },
-      }),
+  const effPageSize = Math.min(Math.max(1, Math.floor(pageSize) || 15), 15);
+  const needle = q.trim();
+  const atRiskLevels = levelFilter ? [levelFilter] : ["High", "Moderate"];
 
-      prisma.admLearnerProfile.findMany({
-        where: termId ? { termId } : undefined,
-        select: { studentId: true, stage: true },
+  const profileSearch: any = needle
+    ? {
+        OR: [
+          { user: { fullName: { contains: needle, mode: "insensitive" } } },
+          { lrn: { contains: needle, mode: "insensitive" } },
+          { section: { name: { contains: needle, mode: "insensitive" } } },
+        ],
+      }
+    : null;
+  const profileScope: any = {
+    AND: [
+      ...(schoolYearId ? [{ section: { schoolYearId } }] : []),
+      ...(profileSearch ? [profileSearch] : []),
+    ],
+  };
+  const profileFilteredWhere: any = {
+    AND: [
+      profileScope,
+      { riskLevel: { in: atRiskLevels } },
+      ...(factorFilter ? [{ [FLAG_COLUMN[factorFilter]]: true }] : []),
+    ],
+  };
+
+  const rosterConds = (filtered: boolean): Prisma.Sql[] => {
+    const conds: Prisma.Sql[] = [
+      Prisma.sql`r."riskLevel" IN (${levelFilter ? levelFilter : Prisma.raw("'High', 'Moderate'")})`,
+    ];
+    if (schoolYearId) conds.push(Prisma.sql`r."schoolYearId" = ${schoolYearId}`);
+    if (filtered && factorFilter)
+      conds.push(Prisma.sql`${Prisma.raw(`r."${FLAG_COLUMN[factorFilter]}"`)} = TRUE`);
+    if (needle)
+      conds.push(
+        Prisma.sql`(r."fullName" ILIKE ${`%${needle}%`} OR r."lrn" ILIKE ${`%${needle}%`} OR s."name" ILIKE ${`%${needle}%`})`,
+      );
+    return conds;
+  };
+  const rosterDedup = Prisma.sql`NOT EXISTS (SELECT 1 FROM "StudentProfile" p WHERE p."lrn" = r."lrn")`;
+
+  const [profileTotal, rosterTotalRows, profileGroups, rosterLevelRows, rosterFlagRows, profileFlagCounts] =
+    await Promise.all([
+      prisma.studentProfile.count({ where: profileFilteredWhere }),
+      prisma.$queryRaw<{ count: bigint }[]>(
+        Prisma.sql`SELECT COUNT(*) AS count FROM "StudentRoster" r LEFT JOIN "Section" s ON s."id" = r."sectionId" WHERE ${Prisma.join(rosterConds(true), " AND ")} AND ${rosterDedup}`,
+      ),
+      prisma.studentProfile.groupBy({
+        by: ["riskLevel"],
+        where: { AND: [profileScope, { riskLevel: { in: ["High", "Moderate"] } }] },
+        _count: { _all: true },
       }),
-      prisma.referral.findMany({
-        where: {
-          referredToRole: "adm_coordinator",
-          ...(termId ? { termId } : {}),
-        },
-        select: { studentId: true, rosterId: true },
-      }),
+      prisma.$queryRaw<{ level: string; count: bigint }[]>(
+        Prisma.sql`SELECT r."riskLevel" AS level, COUNT(*) AS count FROM "StudentRoster" r LEFT JOIN "Section" s ON s."id" = r."sectionId" WHERE ${Prisma.join(rosterConds(false), " AND ")} AND ${rosterDedup} GROUP BY r."riskLevel"`,
+      ),
+      prisma.$queryRaw<{ academic: bigint; attendance: bigint; behavioral: bigint }[]>(
+        Prisma.sql`SELECT COUNT(*) FILTER (WHERE r."academicFlag") AS academic, COUNT(*) FILTER (WHERE r."attendanceFlag") AS attendance, COUNT(*) FILTER (WHERE r."behavioralFlag") AS behavioral FROM "StudentRoster" r LEFT JOIN "Section" s ON s."id" = r."sectionId" WHERE ${Prisma.join(rosterConds(false), " AND ")} AND ${rosterDedup}`,
+      ),
+      Promise.all(
+        ["academicFlag", "attendanceFlag", "behavioralFlag"].map((f) =>
+          prisma.studentProfile.count({ where: { AND: [profileScope, { [f]: true }] } }),
+        ),
+      ),
     ]);
 
-  const headcounts = await sectionHeadcounts(sectionPopulations.map((s) => s.id));
+  const rosterTotal = Number(rosterTotalRows[0]?.count ?? 0);
+  const total = profileTotal + rosterTotal;
+  const totalPages = Math.max(1, Math.ceil(total / effPageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const windowTake = safePage * effPageSize;
 
+  const [profileWindow, rosterWindow] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: profileFilteredWhere,
+      select: {
+        userId: true,
+        lrn: true,
+        gradeLevel: true,
+        riskLevel: true,
+        riskCount: true,
+        academicFlag: true,
+        attendanceFlag: true,
+        behavioralFlag: true,
+        user: { select: { fullName: true } },
+        section: { select: { name: true } },
+      },
+      orderBy: [{ riskCount: "desc" }, { user: { fullName: "asc" } }],
+      take: windowTake,
+    }),
+    prisma.$queryRaw<
+      {
+        id: string;
+        lrn: string;
+        fullName: string;
+        gradeLevel: string;
+        sectionName: string | null;
+        riskLevel: string;
+        riskCount: number;
+        academicFlag: boolean;
+        attendanceFlag: boolean;
+        behavioralFlag: boolean;
+      }[]
+    >(
+      Prisma.sql`SELECT r."id", r."lrn", r."fullName", r."gradeLevel", s."name" AS "sectionName", r."riskLevel", r."riskCount", r."academicFlag", r."attendanceFlag", r."behavioralFlag" FROM "StudentRoster" r LEFT JOIN "Section" s ON s."id" = r."sectionId" WHERE ${Prisma.join(rosterConds(true), " AND ")} AND ${rosterDedup} ORDER BY r."riskCount" DESC, r."fullName" ASC LIMIT ${windowTake} OFFSET 0`,
+    ),
+  ]);
+
+  const mergedWindow = [
+    ...profileWindow.map((p) => ({
+      kind: "profile" as const,
+      id: p.userId,
+      student: p.user.fullName,
+      lrn: p.lrn,
+      section: p.section?.name ?? "—",
+      grade: GRADE_LABELS[p.gradeLevel] ?? p.gradeLevel,
+      level: p.riskLevel,
+      riskCount: p.riskCount,
+      academicFlag: p.academicFlag,
+      attendanceFlag: p.attendanceFlag,
+      behavioralFlag: p.behavioralFlag,
+    })),
+    ...rosterWindow.map((r) => ({
+      kind: "roster" as const,
+      id: `roster:${r.id}`,
+      student: r.fullName,
+      lrn: r.lrn,
+      section: r.sectionName ?? "—",
+      grade: GRADE_LABELS[r.gradeLevel as keyof typeof GRADE_LABELS] ?? r.gradeLevel,
+      level: r.riskLevel,
+      riskCount: r.riskCount,
+      academicFlag: r.academicFlag,
+      attendanceFlag: r.attendanceFlag,
+      behavioralFlag: r.behavioralFlag,
+    })),
+  ]
+    .sort((a, b) => b.riskCount - a.riskCount || a.student.localeCompare(b.student))
+    .slice((safePage - 1) * effPageSize, safePage * effPageSize);
+
+  const windowProfileIds = mergedWindow.filter((w) => w.kind === "profile").map((w) => w.id);
+  const windowRosterIds = mergedWindow
+    .filter((w) => w.kind === "roster")
+    .map((w) => w.id.slice(7));
+  const keyOr: any[] = [
+    ...(windowProfileIds.length ? [{ studentId: { in: windowProfileIds } }] : []),
+    ...(windowRosterIds.length ? [{ rosterId: { in: windowRosterIds } }] : []),
+  ];
+
+  const [anecdProfileGroups, anecdRosterGroups, guidanceReferrals, interventions, admProfiles, admReferrals] =
+    await Promise.all([
+      windowProfileIds.length
+        ? prisma.anecdotalRecord.groupBy({
+            by: ["studentId"],
+            where: { ...(termId ? { termId } : {}), studentId: { in: windowProfileIds } },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as { studentId: string | null; _count: { _all: number } }[]),
+      windowRosterIds.length
+        ? prisma.anecdotalRecord.groupBy({
+            by: ["rosterId"],
+            where: { ...(termId ? { termId } : {}), rosterId: { in: windowRosterIds } },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as { rosterId: string | null; _count: { _all: number } }[]),
+      keyOr.length
+        ? prisma.referral.findMany({
+            where: {
+              referredToRole: "guidance_counselor",
+              ...(termId ? { termId } : {}),
+              OR: keyOr,
+            },
+            select: { studentId: true, rosterId: true, status: true },
+          })
+        : Promise.resolve([]),
+      keyOr.length
+        ? prisma.intervention.findMany({
+            where: { ...(termId ? { termId } : {}), OR: keyOr },
+            select: { studentId: true, rosterId: true, outcomeStatus: true },
+          })
+        : Promise.resolve([]),
+      windowProfileIds.length
+        ? prisma.admLearnerProfile.findMany({
+            where: { ...(termId ? { termId } : {}), studentId: { in: windowProfileIds } },
+            select: { studentId: true, stage: true },
+          })
+        : Promise.resolve([]),
+      keyOr.length
+        ? prisma.referral.findMany({
+            where: {
+              referredToRole: "adm_coordinator",
+              ...(termId ? { termId } : {}),
+              OR: keyOr,
+            },
+            select: { studentId: true, rosterId: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+  const anecdByKey = new Map<string, number>();
+  for (const g of anecdProfileGroups) if (g.studentId) anecdByKey.set(g.studentId, g._count._all);
+  for (const g of anecdRosterGroups) if (g.rosterId) anecdByKey.set(`roster:${g.rosterId}`, g._count._all);
   const referralByKey = new Map<string, string>();
   for (const r of guidanceReferrals) {
     const key = r.studentId ?? (r.rosterId ? `roster:${r.rosterId}` : null);
@@ -130,7 +252,6 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
     const key = iv.studentId ?? (iv.rosterId ? `roster:${iv.rosterId}` : null);
     if (key && !interventionByKey.has(key)) interventionByKey.set(key, iv.outcomeStatus);
   }
-
   const admStageByKey = new Map<string, string>();
   for (const p of admProfiles) {
     if (!admStageByKey.has(p.studentId)) admStageByKey.set(p.studentId, p.stage);
@@ -140,140 +261,63 @@ export async function getAlerts(ctx: GuidanceContext, query: AlertsQuery) {
     if (key && !admStageByKey.has(key)) admStageByKey.set(key, "consultation");
   }
 
-  const registeredLrns = new Set(students.map((s) => s.lrn));
-  const cohort: {
-    key: string;
-    student: string;
-    lrn: string;
-    gradeLevel: string;
-    sectionId: string;
-    section: string;
-    enrolledFallback: number;
-    finalGrades: { computedAverage: number | null; transmutedGrade: number | null }[];
-    attendanceRecords: { status: string }[];
-    anecdotalCount: number;
-  }[] = [
-    ...students.map((s) => ({
-      key: s.userId,
-      student: s.user.fullName,
-      lrn: s.lrn,
-      gradeLevel: s.gradeLevel,
-      sectionId: s.section?.id ?? "",
-      section: s.section?.name ?? "—",
-      enrolledFallback: s.section?._count.students ?? 0,
-      finalGrades: s.finalGrades,
-      attendanceRecords: s.attendanceRecords,
-      anecdotalCount: s.anecdotalRecords.length,
-    })),
-    ...rosterCohort
-      .filter((r) => !registeredLrns.has(r.lrn))
-      .map((r) => ({
-        key: `roster:${r.id}`,
-        student: r.fullName,
-        lrn: r.lrn,
-        gradeLevel: r.gradeLevel,
-        sectionId: r.sectionId,
-        section: r.section?.name ?? "—",
-        enrolledFallback: 0,
-        finalGrades: r.finalGrades,
-        attendanceRecords: r.attendanceRecords,
-        anecdotalCount: r.anecdotalRecords.length,
-      })),
-  ];
-
-  const flagged = [];
-  let academicTotal = 0;
-  let attendanceTotal = 0;
-  let behavioralTotal = 0;
-  let referredTotal = 0;
-  for (const s of cohort) {
-    const flags = computeRiskFactors({
-      finalGrades: s.finalGrades,
-      attendance: s.attendanceRecords,
-      anecdotalCount: s.anecdotalCount,
-      enrolled: headcounts.get(s.sectionId) ?? s.enrolledFallback,
-    });
-    const level = levelFromFlags(flags);
-    if (!isAtRisk(level)) continue;
-    if (flags.academicFlag) academicTotal++;
-    if (flags.attendanceFlag) attendanceTotal++;
-    if (flags.behavioralFlag) behavioralTotal++;
-    const referralStatus = referralByKey.get(s.key) ?? null;
-    if (referralStatus) referredTotal++;
-    const admStage = admStageByKey.get(s.key) ?? null;
+  const alerts = mergedWindow.map((w) => {
+    const anecdotalCount = anecdByKey.get(w.id) ?? 0;
+    const flagCount =
+      (w.academicFlag ? 1 : 0) + (w.attendanceFlag ? 1 : 0) + (w.behavioralFlag ? 1 : 0);
     const triggers: string[] = [];
-    if (flags.academicFlag) triggers.push("Academic average below 75");
-    if (flags.attendanceFlag) triggers.push("Attendance below 80%");
-    if (flags.behavioralFlag)
-      triggers.push(
-        `${s.anecdotalCount} behavioral report${s.anecdotalCount === 1 ? "" : "s"} filed`
-      );
-    flagged.push({
-      id: s.key,
-      student: s.student,
-      lrn: s.lrn,
-      section: s.section,
-      grade: GRADE_LABELS[s.gradeLevel] ?? s.gradeLevel,
-      level,
-      flagCount:
-        (flags.academicFlag ? 1 : 0) +
-        (flags.attendanceFlag ? 1 : 0) +
-        (flags.behavioralFlag ? 1 : 0),
+    if (w.academicFlag) triggers.push("Academic average below 75");
+    if (w.attendanceFlag) triggers.push("Attendance below 80%");
+    if (w.behavioralFlag)
+      triggers.push(`${anecdotalCount} behavioral report${anecdotalCount === 1 ? "" : "s"} filed`);
+    const admStage = admStageByKey.get(w.id) ?? null;
+    return {
+      id: w.id,
+      student: w.student,
+      lrn: w.lrn,
+      section: w.section,
+      grade: w.grade,
+      level: w.level,
+      flagCount,
       factors: {
-        academic: flags.academicFlag,
-        attendance: flags.attendanceFlag,
-        behavioral: flags.behavioralFlag,
+        academic: w.academicFlag,
+        attendance: w.attendanceFlag,
+        behavioral: w.behavioralFlag,
       },
       triggers,
-      anecdotalCount: s.anecdotalCount,
-      referralStatus,
-      interventionOutcome: interventionByKey.get(s.key) ?? null,
+      anecdotalCount,
+      referralStatus: referralByKey.get(w.id) ?? null,
+      interventionOutcome: interventionByKey.get(w.id) ?? null,
       track: admStage ? "adm" : "general",
       admStageLabel: admStage ? (ADM_LABEL.get(admStage as AdmStage) ?? admStage) : null,
-    });
-  }
-
-  flagged.sort(
-    (a, b) =>
-      (a.level === "High" ? 0 : 1) - (b.level === "High" ? 0 : 1) ||
-      b.flagCount - a.flagCount ||
-      a.student.localeCompare(b.student)
-  );
-
-  const filtered = flagged.filter((a) => {
-    if (levelFilter && a.level !== levelFilter) return false;
-    if (factorFilter && !a.factors[factorFilter]) return false;
-    if (
-      q &&
-      !`${a.student} ${a.lrn} ${a.section}`.toLowerCase().includes(q)
-    )
-      return false;
-    return true;
+    };
   });
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const alerts = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const levelCount = (groups: any[], level: string) =>
+    groups.find((g) => g.riskLevel === level)?._count._all ?? 0;
+  const rosterLevelCount = (level: string) =>
+    Number(rosterLevelRows.find((r) => r.level === level)?.count ?? 0);
+  const high = levelCount(profileGroups, "High") + rosterLevelCount("High");
+  const moderate =
+    levelCount(profileGroups, "Moderate") + rosterLevelCount("Moderate");
 
-  const unfilteredTotal = flagged.length;
   return {
     termLabel,
     summary: {
-      high: flagged.filter((a) => a.level === "High").length,
-      moderate: flagged.filter((a) => a.level === "Moderate").length,
-      total: unfilteredTotal,
-      academic: academicTotal,
-      attendance: attendanceTotal,
-      behavioral: behavioralTotal,
-      referred: referredTotal,
-      unreferred: unfilteredTotal - referredTotal,
+      high,
+      moderate,
+      total: high + moderate,
+      academic:
+        profileFlagCounts[0] +
+        Number(rosterFlagRows[0]?.academic ?? 0),
+      attendance: profileFlagCounts[1] + Number(rosterFlagRows[0]?.attendance ?? 0),
+      behavioral: profileFlagCounts[2] + Number(rosterFlagRows[0]?.behavioral ?? 0),
     },
     alerts,
     page: safePage,
-    pageSize,
+    pageSize: effPageSize,
     total,
     totalPages,
-    unfilteredTotal,
+    unfilteredTotal: high + moderate,
   };
 }

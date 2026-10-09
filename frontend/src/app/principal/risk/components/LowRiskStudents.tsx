@@ -43,7 +43,7 @@ export function LowRiskStudents() {
           </ul>
         )}
 
-        {!loading && total > 0 && (
+        {!loading && totalPages > 1 && (
           <div className={styles.pager}>
             <span className={styles.pageInfo}>
               {from}–{to} of {total}

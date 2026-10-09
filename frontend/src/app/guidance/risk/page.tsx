@@ -3,10 +3,13 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { HeartPulse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { useTheme } from "@/components/providers";
 import { RefreshBadge } from "@/components/ui/refresh-badge";
 import {
@@ -30,13 +33,14 @@ import {
 } from "./components/GuidanceRiskWatch";
 import { useGuidanceProfileSettings } from "@/services/settings/profile-settings";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
+import pageStyles from "../pages.module.css";
 
 export default function GuidanceRiskPage() {
 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const riskQuery = useQuery({
@@ -44,6 +48,7 @@ export default function GuidanceRiskPage() {
     queryFn: () => fetchGuidanceRisk(),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled: termReady,
   });
 
   const profile = useGuidanceProfileSettings();
@@ -59,7 +64,7 @@ export default function GuidanceRiskPage() {
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
   const dashboard = React.useMemo(
@@ -80,6 +85,7 @@ export default function GuidanceRiskPage() {
     queryFn: fetchAllGuidanceAlertFactors,
     placeholderData: keepPreviousData,
     staleTime: 300_000,
+    enabled: termReady,
   });
 
   const watch = React.useMemo(
@@ -122,7 +128,8 @@ export default function GuidanceRiskPage() {
   if (riskQuery.isPending || levelsPending) {
 
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading risk dashboard">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.mainGridFlipped}>
           <div className={styles.chartsCol}>
             <Card>
@@ -220,10 +227,31 @@ export default function GuidanceRiskPage() {
   const fetching = riskQuery.isFetching || levelsQuery.isFetching;
 
   const refreshing = !riskQuery.isPending && fetching;
+  const isTrueEmpty = (dashboard?.totalCases ?? 0) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Risk dashboard"
+    >
+      {isTrueEmpty ? null : (
+        <GuidancePageHeader
+          title="Risk Dashboard"
+          description="At-risk mix, category trends, and watchlist across the guidance desk."
+        />
+      )}
       {refreshing ? <RefreshBadge label="Refreshing risk dashboard…" /> : null}
+      {isTrueEmpty ? (
+        <GuidanceEmptyCard
+          icon={HeartPulse}
+          title="No risk data this term"
+          hint="Risk levels and trends will appear here once cases are filed."
+          label="Risk dashboard"
+          centered
+          layout="fit"
+        />
+      ) : (
       <div className={styles.mainGridFlipped}>
         <div className={styles.chartsCol}>
           {trend ? (
@@ -258,6 +286,7 @@ export default function GuidanceRiskPage() {
           <RiskHotspot hotspot={hotspot} />
         </div>
       </div>
+      )}
     </section>
   );
 }

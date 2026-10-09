@@ -29,7 +29,7 @@ interface Props {
 
 function useTotals(sections: SectionSummary[]) {
   return React.useMemo(() => {
-    const students = sections.flatMap((s) => s.students);
+    const students = sections.flatMap((s) => s.students ?? []);
     const totalStudents = students.length;
     const atRisk = students.filter(
       (s) => s.riskLevel === "High" || s.riskLevel === "Moderate"

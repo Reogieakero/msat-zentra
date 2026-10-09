@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import styles from "./reports-toolbar.module.css";
 
 export function ReportsToolbar({
@@ -14,8 +15,8 @@ export function ReportsToolbar({
     <div className={styles.toolbar}>
       <div className={styles.toolbarSpacer} />
       <div className={styles.toolbarActions}>
-        <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
-          <RefreshIcon />
+        <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading} aria-busy={loading || undefined}>
+          {loading ? <Spinner className="size-4" aria-hidden /> : <RefreshIcon />}
           Refresh
         </Button>
         <Button size="sm" variant="outline" onClick={onExport} disabled={loading}>

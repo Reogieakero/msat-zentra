@@ -3,13 +3,10 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   flexRender,
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -17,10 +14,12 @@ import {
   ShieldCheck,
   Bell,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
 } from "lucide-react";
 import { useTerm } from "@/lib/term/TermContext";
-import { useGradeMode } from "../../../grade-mode-context";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
@@ -28,8 +27,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -45,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import { StatusBadge } from "@/app/teacher/overview/components/teacher-overview-advisory";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyCard, PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
 import type { RiskSnapshotStudent, RiskLevelKey } from "../types";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { alertGuidance, fetchInterventionStudents } from "@/services/principal/riskInterventions.service";
@@ -56,31 +54,51 @@ import styles from "./InterventionsListTable.module.css";
 const PAGE_SIZE = 15;
 export function InterventionsListTable() {
   const queryClient = useQueryClient();
-  const { gradeMode } = useGradeMode();
   const [alertTarget, setAlertTarget] = React.useState<RiskSnapshotStudent | null>(null);
   const [note, setNote] = React.useState("");
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [page, setPage] = React.useState(1);
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
-  const { data, isPending } = useQuery({
-    queryKey: ["interventions-list", termId, gradeMode],
-    queryFn: () => fetchInterventionStudents({ gradeMode }, 1, 50),
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
-  const students = React.useMemo(() => data?.students ?? [], [data]);
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
   const {
     query,
     setQuery,
     riskFilter,
     setRiskFilter,
-    sectionFilter,
-    setSectionFilter,
-    gradeGroups,
-    filtered,
     hasActiveFilters,
-  } = useInterventionFilters(students);
+  } = useInterventionFilters();
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const { data, isPending, isFetching, isError, refetch } = useQuery({
+    queryKey: ["interventions-list", termId, schoolYearId, page, debouncedQuery, riskFilter],
+    queryFn: ({ signal }) =>
+      fetchInterventionStudents(
+        {
+          riskLevel: riskFilter === "all" ? undefined : riskFilter,
+          q: debouncedQuery.trim() || undefined,
+        },
+        page,
+        PAGE_SIZE,
+        signal,
+      ),
+    // Visited pages stay cached: back/forward navigation within the stale
+    // window serves instantly with skeleton only on genuine first loads.
+    staleTime: 120_000,
+    gcTime: 600_000,
+    refetchOnWindowFocus: false,
+  });
+  const students = React.useMemo(() => data?.students ?? [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+
+  // If filters shrink the result set under the current page, step back to
+  // the last valid page so footer label, requested page, and rows agree.
+  React.useEffect(() => {
+    if (!isPending && totalPages >= 1 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [isPending, totalPages, page]);
   const columns = React.useMemo<ColumnDef<RiskSnapshotStudent>[]>(
     () => [
       {
@@ -140,7 +158,7 @@ export function InterventionsListTable() {
               <p className={styles.actionLabel}>
                 <ActionGlyph label={action.label} className={styles.actionIcon} />
                 <span className="truncate">{action.label}</span>
-                {canAlert(s) ? (
+                {canAlert(s) && s.intervention ? (
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -195,18 +213,16 @@ export function InterventionsListTable() {
     []
   );
   const table = useReactTable({
-    data: filtered,
+    data: students,
     columns,
     getRowId: (row) => row.studentId,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, columnFilters },
+    state: { sorting },
   });
+  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, total);
   const alertMutation = useMutation({
     mutationFn: ({ id, note }: { id: string; note: string }) =>
       alertGuidance(id, note),
@@ -236,6 +252,21 @@ export function InterventionsListTable() {
     setAlertTarget(null);
     setNote("");
   };
+  const isEmpty = !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters;
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, riskFilter]);
+  if (isEmpty) {
+    return (
+      <PrincipalEmptyCard
+        icon={ShieldCheck}
+        title="No at-risk students yet"
+        hint="Students flagged by the system will appear here once detected."
+        label="Intervention cases"
+        centered
+      />
+    );
+  }
   return (
     <section aria-label="Intervention cases" className="flex min-w-0 flex-col gap-3">
       <div className={assign.card}>
@@ -262,48 +293,6 @@ export function InterventionsListTable() {
                 <SearchIcon />
               </InputGroupAddon>
             </InputGroup>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`${styles.filterBtn} ${
-                    sectionFilter !== "all" ? styles.filterActive : ""
-                  }`}
-                >
-                  Section
-                  {sectionFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                  <ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.filterMenu}>
-                <DropdownMenuCheckboxItem
-                  checked={sectionFilter === "all"}
-                  onCheckedChange={() => setSectionFilter("all")}
-                >
-                  All sections
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {gradeGroups.length === 0 ? (
-                  <DropdownMenuItem disabled>No sections</DropdownMenuItem>
-                ) : (
-                  gradeGroups.map(([grade, secs]) => (
-                    <React.Fragment key={grade}>
-                      <DropdownMenuLabel>Grade {grade}</DropdownMenuLabel>
-                      {secs.map((s) => (
-                        <DropdownMenuCheckboxItem
-                          key={s}
-                          checked={sectionFilter === s}
-                          onCheckedChange={() => setSectionFilter(s)}
-                        >
-                          {s}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </React.Fragment>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -343,7 +332,6 @@ export function InterventionsListTable() {
                 size="sm"
                 className={styles.clearBtn}
                 onClick={() => {
-                  setSectionFilter("all");
                   setRiskFilter("all");
                 }}
               >
@@ -382,27 +370,29 @@ export function InterventionsListTable() {
               </TableBody>
             </Table>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <ShieldCheck size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">
-              {query.trim() || hasActiveFilters
+        ) : isError && students.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-10" role="alert">
+            <p className="text-sm text-muted-foreground">Couldn&apos;t load intervention cases.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : students.length === 0 ? (
+          <PrincipalEmptyState
+            icon={ShieldCheck}
+            title={
+              debouncedQuery.trim() || hasActiveFilters
                 ? "No matches"
-                : "No at-risk students yet"}
-            </p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {query.trim()
-                ? `No interventions match "${query}".`
+                : "No at-risk students yet"
+            }
+            hint={
+              debouncedQuery.trim()
+                ? `No interventions match "${debouncedQuery}".`
                 : hasActiveFilters
                   ? "No interventions match the selected filters."
-                  : "Students flagged by the system will appear here once detected."}
-            </p>
-          </div>
+                  : "Students flagged by the system will appear here once detected."
+            }
+          />
         ) : (
           <>
             <div className="relative overflow-x-auto rounded-md border">
@@ -450,29 +440,32 @@ export function InterventionsListTable() {
                 </TableBody>
               </Table>
             </div>
-            <div className="relative flex items-center justify-end space-x-2">
-              <div className="text-muted-foreground flex-1 text-sm">
-                {table.getFilteredRowModel().rows.length} student
-                {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
-              </div>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                </Button>
-              </div>
+            <div className="relative flex items-center justify-between gap-2">
+              <p className="text-muted-foreground text-[0.8125rem] tabular-nums" aria-live="polite">
+                {total > 0 ? `${start}–${end} of ${total} · Page ${safePage} of ${totalPages}` : "0 of 0"}
+              </p>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1 || isFetching}
+                  >
+                    <ChevronLeft aria-hidden />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={safePage >= totalPages || isFetching}
+                  >
+                    Next
+                    <ChevronRight aria-hidden />
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}

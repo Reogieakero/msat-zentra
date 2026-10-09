@@ -1,17 +1,15 @@
 import { ADM_STAGE_FLOW, type AdmStage } from "../../services/adm.js";
 import { GRADE_LABELS, GRADE_ORDER } from "../../lib/grades.js";
+import { MAX_PAGE_SIZE, PAGE_SIZE, resolvePaging } from "../../lib/pagination.js";
 
 export { GRADE_LABELS, GRADE_ORDER };
+export { MAX_PAGE_SIZE, PAGE_SIZE };
 
-export const GUIDANCE_QUEUE_PAGE_SIZE = 15;
-export const GUIDANCE_QUEUE_MAX_PAGE_SIZE = 100;
+export const GUIDANCE_QUEUE_PAGE_SIZE = PAGE_SIZE;
+export const GUIDANCE_QUEUE_MAX_PAGE_SIZE = MAX_PAGE_SIZE;
 
 export function resolveGuidancePageSize(req: { query: unknown }): number {
-  const q = req.query as Record<string, unknown>;
-  const raw =
-    typeof q.pageSize !== "undefined" ? Number(q.pageSize) : Number(q.limit);
-  if (!Number.isFinite(raw) || raw <= 0) return GUIDANCE_QUEUE_PAGE_SIZE;
-  return Math.min(Math.floor(raw), GUIDANCE_QUEUE_MAX_PAGE_SIZE);
+  return resolvePaging(req.query, { maxPageSize: GUIDANCE_QUEUE_MAX_PAGE_SIZE }).pageSize;
 }
 
 export const ADM_LABEL = new Map(ADM_STAGE_FLOW.map((s) => [s.stage, s.label]));

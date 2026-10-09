@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Search, UserPlus } from "lucide-react";
+import { Search, SearchX, UserPlus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PendingStudent } from "./types";
 import { formatGrade } from "@/lib/utils";
+import { RegistrarEmptyState } from "../../components/RegistrarEmptyCard";
 import styles from "./pending-students-table.module.css";
 
 type Props = {
@@ -79,9 +80,17 @@ export function PendingStudentsTable({ students, selectedId, onSelect, loading }
           </Table>
         </div>
       ) : students.length === 0 ? (
-        <p className={styles.empty}>No pending students for grades 11–12.</p>
+        <RegistrarEmptyState
+          icon={UserPlus}
+          title="No pending students"
+          hint="No pending students for grades 11–12."
+        />
       ) : filtered.length === 0 ? (
-        <p className={styles.empty}>No students match your search.</p>
+        <RegistrarEmptyState
+          icon={SearchX}
+          title="No matching students"
+          hint="No students match your search."
+        />
       ) : (
         <div className={styles.tableWrap}>
           <Table>

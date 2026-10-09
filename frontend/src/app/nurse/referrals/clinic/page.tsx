@@ -4,7 +4,10 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Inbox, Loader2 } from "lucide-react";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NursePageHeader } from "../../components/NursePageHeader";
+import { NurseEmptyCard } from "../../components/NurseEmptyCard";
 import { NurseAlertsTable } from "../components/NurseAlertsTable";
 import { NurseReferralsSkeleton } from "../components/NurseReferralsSkeleton";
 import { NurseRefreshBadge } from "../../components/nurse-refresh-badge";
@@ -13,6 +16,7 @@ import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "../nurse-referrals-page.module.css";
+import pageStyles from "../../pages.module.css";
 
 const NURSE_CLINIC_PAGE_SIZE = 15;
 
@@ -20,7 +24,7 @@ function NurseClinicReferralsView() {
   const params = useSearchParams();
   const highlightId = params.get("highlight");
   const invalidateNurse = useNurseInvalidate();
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [page, setPage] = React.useState(1);
   const [takeover, setTakeover] = React.useState(false);
@@ -45,6 +49,7 @@ function NurseClinicReferralsView() {
         }),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
@@ -56,7 +61,8 @@ function NurseClinicReferralsView() {
 
   if (isPending) {
     return (
-      <section className={styles.page}>
+      <section className={styles.page} aria-busy="true" aria-label="Loading clinic matters">
+        <ZentraPageHeaderSkeleton />
         <NurseReferralsSkeleton sideRows={5} />
       </section>
     );
@@ -87,10 +93,31 @@ function NurseClinicReferralsView() {
   }
 
   const refreshing = isRefetching && !isPending;
+  const isTrueEmpty = (data.unfilteredTotal ?? data.total) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Clinic matters"
+    >
+      {isTrueEmpty ? null : (
+        <NursePageHeader
+          title="Clinic Matters"
+          description="Clinic cases on your desk — accept a case to start care, resolve it when follow-through is done."
+        />
+      )}
       {refreshing ? <NurseRefreshBadge label="Refreshing clinic matters…" /> : null}
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={Inbox}
+          title="No clinic matters"
+          hint="New clinic cases sent to you will appear here."
+          label="Clinic matters"
+          centered
+          layout="fit"
+        />
+      ) : (
       <NurseAlertsTable
         alerts={Array.isArray(data.alerts) ? data.alerts : []}
         onChanged={refresh}
@@ -107,6 +134,7 @@ function NurseClinicReferralsView() {
           setPage(p);
         }}
       />
+      )}
     </section>
   );
 }

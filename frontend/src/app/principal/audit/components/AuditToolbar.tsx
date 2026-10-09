@@ -6,6 +6,7 @@ import {
   Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -211,7 +212,7 @@ export function AuditToolbar({
       ) : null}
 
       <Button size="sm" variant="outline" onClick={onExport} disabled={exporting} aria-busy={exporting}>
-        <Download aria-hidden />
+        {exporting ? <Spinner className="size-4" aria-hidden /> : <Download aria-hidden />}
         {exporting ? "Exporting…" : "Export CSV"}
       </Button>
     </div>

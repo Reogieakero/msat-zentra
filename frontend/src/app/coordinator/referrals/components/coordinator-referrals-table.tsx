@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { Inbox, Loader2, MoreHorizontal, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +41,7 @@ import type {
 } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
+import { CoordinatorEmptyCard, CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
 import styles from "./coordinator-referrals-table.module.css";
 
 interface CoordinatorReferralsTableProps {
@@ -117,6 +118,17 @@ export function CoordinatorReferralsTable({
   }
 
   if (rows.length === 0) {
+    if (!hasActiveFilters) {
+      return (
+        <CoordinatorEmptyCard
+          icon={Inbox}
+          title="No referrals found"
+          hint="New referrals will appear here once filed."
+          label="ADM referrals"
+          centered
+        />
+      );
+    }
     return (
       <Card className={styles.card}>
         <span className={styles.glowClip} aria-hidden="true">
@@ -134,16 +146,16 @@ export function CoordinatorReferralsTable({
           onClear={onClear}
         />
         <CardContent>
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>
-              {hasActiveFilters ? "No cases match your filters" : "No referrals found"}
-            </p>
-            <p className={styles.emptyHint}>
-              {hasActiveFilters
-                ? "Try a different search or clear the eligibility filter."
-                : "New referrals will appear here once filed."}
-            </p>
-          </div>
+          <CoordinatorEmptyState
+            icon={SearchX}
+            title="No cases match your filters"
+            hint="Try a different search or clear the eligibility filter."
+            action={
+              <Button size="sm" variant="outline" onClick={onClear}>
+                Show all
+              </Button>
+            }
+          />
         </CardContent>
       </Card>
     );

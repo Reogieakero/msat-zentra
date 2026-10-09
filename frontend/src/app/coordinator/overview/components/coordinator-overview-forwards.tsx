@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { History, Loader2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import { formatElapsedShort, msSinceDate } from "@/lib/clock";
 import type { AdmCaseRow } from "@/services/coordinator/coordinator.types";
 import type { HistoryTarget } from "../../components/CaseHistoryDialog";
 import { historyTargetFor } from "../../components/CaseHistoryDialog";
+import { CoordinatorEmptyState } from "../../components/CoordinatorEmptyCard";
 import styles from "./coordinator-overview-forwards.module.css";
 
 interface CoordinatorOverviewForwardsProps {
@@ -85,26 +86,29 @@ export function CoordinatorOverviewForwards({
   const start = (safePage - 1) * PAGE_SIZE;
   const pageRows = rows.slice(start, start + PAGE_SIZE);
   const end = Math.min(start + PAGE_SIZE, rows.length);
+  const isEmpty = !isPending && !isError && rows.length === 0;
   return (
     <Card className={styles.card}>
       <span className={styles.glowClip} aria-hidden="true">
         <span className={styles.cardGlow} />
       </span>
-      <CardHeader>
-        <div className={styles.headerRow}>
-          <div>
-            <CardTitle className={styles.sectionTitle}>
-              Recent forwards from Nurse / Guidance
-            </CardTitle>
-            <CardDescription className={styles.sectionDesc}>
-              The freshest consultation hand-offs waiting for your learner profile.
-            </CardDescription>
+      {!isEmpty && (
+        <CardHeader>
+          <div className={styles.headerRow}>
+            <div>
+              <CardTitle className={styles.sectionTitle}>
+                Recent forwards from Nurse / Guidance
+              </CardTitle>
+              <CardDescription className={styles.sectionDesc}>
+                The freshest consultation hand-offs waiting for your learner profile.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/coordinator/referrals">See all</Link>
+            </Button>
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/coordinator/referrals">See all</Link>
-          </Button>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      )}
       <CardContent className={styles.body}>
         {isPending ? (
           <div className={styles.tableWrap} aria-busy="true">
@@ -139,12 +143,11 @@ export function CoordinatorOverviewForwards({
             </Button>
           </div>
         ) : rows.length === 0 ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>No pending forwards</p>
-            <p className={styles.emptyHint}>
-              New consultation hand-offs will appear here once filed.
-            </p>
-          </div>
+          <CoordinatorEmptyState
+            icon={History}
+            title="No pending forwards"
+            hint="New consultation hand-offs will appear here once filed."
+          />
         ) : (
           <>
             <div className={styles.tableWrap}>
@@ -300,7 +303,7 @@ export function CoordinatorOverviewForwards({
             ) : null}
           </>
         )}
-        {!isPending && !isError ? (
+        {!isPending && !isError && !isEmpty ? (
           <p className={styles.interpretation}>
             <span className={styles.interpretationLabel}>What it means · </span>
             {buildInterpretation(rows, now)}

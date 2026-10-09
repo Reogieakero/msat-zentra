@@ -3,10 +3,13 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { HeartPulse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NursePageHeader } from "../components/NursePageHeader";
+import { NurseEmptyCard } from "../components/NurseEmptyCard";
 import { useTheme } from "@/components/providers";
 import { NurseRefreshBadge } from "../components/nurse-refresh-badge";
 import {
@@ -32,13 +35,14 @@ import { findHotspot, RiskHotspot } from "@/components/risk-dashboard/RiskHotspo
 import { buildRiskWatch, RiskWatchCard } from "./components/RiskWatch";
 import { useNurseProfileSettings } from "@/services/settings/profile-settings";
 import styles from "@/components/risk-dashboard/risk-dashboard-page.module.css";
+import pageStyles from "../pages.module.css";
 
 export default function NurseRiskPage() {
 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const riskQuery = useQuery({
@@ -46,6 +50,7 @@ export default function NurseRiskPage() {
     queryFn: ({ signal }) => fetchNurseRisk(signal),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled: termReady,
   });
 
   const profile = useNurseProfileSettings();
@@ -61,7 +66,7 @@ export default function NurseRiskPage() {
     queryFn: () => fetchNurseRiskLevels(studentIds),
     placeholderData: keepPreviousData,
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
   const dashboard = React.useMemo(
@@ -82,7 +87,7 @@ export default function NurseRiskPage() {
     queryFn: () => fetchNurseRiskFactors(studentIds),
     placeholderData: keepPreviousData,
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
   const watch = React.useMemo(
@@ -124,7 +129,8 @@ export default function NurseRiskPage() {
   if (riskQuery.isPending || levelsPending) {
 
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading risk dashboard">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.mainGridFlipped}>
           <div className={styles.chartsCol}>
             <Card>
@@ -222,10 +228,31 @@ export default function NurseRiskPage() {
   const fetching = riskQuery.isFetching || levelsQuery.isFetching;
 
   const refreshing = !riskQuery.isPending && fetching;
+  const isTrueEmpty = (dashboard?.totalCases ?? 0) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="Risk dashboard"
+    >
+      {isTrueEmpty ? null : (
+        <NursePageHeader
+          title="Risk Dashboard"
+          description="At-risk mix, category trends, and watchlist across the clinic desk."
+        />
+      )}
       {refreshing ? <NurseRefreshBadge label="Refreshing risk dashboard…" /> : null}
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={HeartPulse}
+          title="No risk data this term"
+          hint="Risk levels and trends will appear here once cases are filed."
+          label="Risk dashboard"
+          centered
+          layout="fit"
+        />
+      ) : (
       <div className={styles.mainGridFlipped}>
         <div className={styles.chartsCol}>
         {trend ? (
@@ -256,6 +283,7 @@ export default function NurseRiskPage() {
           <RiskHotspot hotspot={hotspot} />
         </div>
       </div>
+      )}
     </section>
   );
 }

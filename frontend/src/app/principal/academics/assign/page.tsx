@@ -15,6 +15,7 @@ import type { AdvisoryEntryInput, GradeLevel } from "@/services/principal/assign
 import { useAssignAdvisers, useAssignSectionsData } from "./hooks/useAssignSections";
 import { usePrincipalAssignRealtime } from "@/lib/realtime/principalAssignChannel";
 import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
+import { PrincipalEmptyCard, PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import assign from "./components/section-assignments.module.css";
 import page from "./assign.module.css";
 
@@ -35,7 +36,7 @@ function initialsOf(name: string): string {
 
 export default function PrincipalAssignPage() {
 
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const schoolYearId = activeTerm?.schoolYearId ?? "";
   const schoolYearName = activeTerm?.schoolYearName ?? "";
 
@@ -80,8 +81,8 @@ export default function PrincipalAssignPage() {
     [gradeSections],
   );
 
-  const hasNoScope = !schoolYearId;
-  const isLoading = !!schoolYearId && sectionsQuery.isPending;
+  const hasNoScope = termReady && !schoolYearId;
+  const isLoading = !termReady || (!!schoolYearId && sectionsQuery.isPending);
   const isError = !!schoolYearId && sectionsQuery.isError;
   const hasNoData = !isLoading && !isError && !!schoolYearId && sections.length === 0;
 
@@ -105,13 +106,12 @@ export default function PrincipalAssignPage() {
       {isLoading ? (
         <AssignSkeleton />
       ) : hasNoScope ? (
-        <div className={page.emptyState}>
-          <Inbox className={page.emptyIcon} aria-hidden />
-          <p className={page.emptyTitle}>No data to display</p>
-          <p className={page.emptyText}>
-            No active school year selected. Pick one from the top-bar badge first.
-          </p>
-        </div>
+        <PrincipalEmptyCard
+          icon={Inbox}
+          title="No active school year"
+          hint="No active school year selected. Pick one from the top-bar badge first."
+          centered
+        />
       ) : isError ? (
         <div className={page.emptyState} role="alert">
           <TriangleAlert className={page.emptyIcon} aria-hidden />
@@ -122,19 +122,17 @@ export default function PrincipalAssignPage() {
           <Button onClick={retry}>Retry</Button>
         </div>
       ) : hasNoData ? (
-        <div className={page.emptyState}>
-          <Inbox className={page.emptyIcon} aria-hidden />
-          <p className={page.emptyTitle}>No data to display</p>
-          <p className={page.emptyText}>
-            No sections found{schoolYearName ? ` for ${schoolYearName}` : ""}. Sections you create
-            will appear here for advisory assignment.
-          </p>
-          <div className={page.emptyActions}>
+        <PrincipalEmptyCard
+          icon={Inbox}
+          title="No sections found"
+          hint={`No sections found${schoolYearName ? ` for ${schoolYearName}` : ""}. Sections you create will appear here for advisory assignment.`}
+          action={
             <Button onClick={() => setDialog({ grade: null, sectionId: "" })}>
               Assign Advisory
             </Button>
-          </div>
-        </div>
+          }
+          centered
+        />
       ) : (
         <>
           <PrincipalPageHeader
@@ -179,15 +177,15 @@ export default function PrincipalAssignPage() {
               </div>
             </div>
             {gradeSections.length === 0 ? (
-              <div className={assign.emptyCenter}>
-                <Inbox className={assign.emptyIcon} aria-hidden />
-                <p className={assign.emptyCenterTitle}>No data to display</p>
-                <p className={assign.emptyCenterText}>
-                  {grade == null
+              <PrincipalEmptyState
+                icon={Inbox}
+                title="No sections in this scope"
+                hint={
+                  grade == null
                     ? "No sections in this scope yet."
-                    : `No Grade ${grade} sections this scope.`}
-                </p>
-              </div>
+                    : `No Grade ${grade} sections in this scope.`
+                }
+              />
             ) : (
               <div className={assign.grid}>
                 {gradeSections.map((s) => {

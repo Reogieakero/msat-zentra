@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { usePrimaryScale } from "@/components/risk-dashboard/use-primary-scale";
 import { usePrincipalProfileSettings } from "@/services/settings/profile-settings";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import type { RecordStudent } from "../types";
 import {
   CATEGORY_KEYS,
@@ -198,7 +199,11 @@ export function RecordsBreakdown() {
         ) : isError ? (
           <p className={styles.empty}>Could not load student records.</p>
         ) : categoryRows.length === 0 ? (
-          <p className={styles.empty}>No records this term.</p>
+          <PrincipalEmptyState
+            icon={FileText}
+            title="No records this term"
+            hint="No behavioral records filed for the active term. New records will appear here once filed."
+          />
         ) : (
           <>
             <div className={styles.statRow}>

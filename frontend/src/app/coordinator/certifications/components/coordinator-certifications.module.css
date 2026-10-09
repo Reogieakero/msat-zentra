@@ -40,6 +40,50 @@
   flex: 1 1 auto;
 }
 
+/* True-empty state (no certifications, no query/filter): the folders
+   component renders a single centered empty card. Collapse the 2-column
+   grid to one centered column so the card sits center + center of the
+   page instead of inside the left grid track. Doubled selectors beat
+   .page/.layout regardless of stylesheet order. Must stay after them.
+   Math mirrors coordinator.module.css shell offsets: 3rem topbar + 2rem
+   main padding on desktop ≥1024px, 6rem + 2rem below that, 6rem + 1.5rem
+   on mobile (main padding shrinks). overflow: clip (not hidden) trims any
+   residual sub-pixel/glow overflow without creating a scroll container,
+   so the empty page never scrolls. */
+.pageEmpty.pageEmpty {
+  justify-content: center;
+  min-height: calc(100vh - 3rem - 2rem);
+  min-height: calc(100dvh - 3rem - 2rem);
+  padding: 0;
+  overflow: clip;
+}
+
+@media (max-width: 1023px) {
+  .pageEmpty.pageEmpty {
+    min-height: calc(100vh - 6rem - 2rem);
+    min-height: calc(100dvh - 6rem - 2rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .pageEmpty.pageEmpty {
+    min-height: calc(100vh - 6rem - 1.5rem);
+    min-height: calc(100dvh - 6rem - 1.5rem);
+  }
+}
+
+.layoutEmpty.layoutEmpty {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  align-items: center;
+  flex: 1;
+}
+
+.layoutEmpty.layoutEmpty .main {
+  width: 100%;
+  max-width: 28rem;
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;

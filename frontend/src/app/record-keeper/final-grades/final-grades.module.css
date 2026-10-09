@@ -17,6 +17,29 @@
   min-width: 0;
 }
 
+/* True-empty state: hide the page header, pipeline, tiles, and table card
+   entirely and center a single card (center + center) with no page scroll.
+   Math mirrors record-keeper.module.css shell offsets (main keeps 1rem
+   gutters on mobile): 3rem topbar + 2rem main padding on desktop,
+   6rem + 2rem below 1024px. Doubled selector beats .page regardless of
+   stylesheet order. overflow: clip (not hidden) trims residual
+   sub-pixel/glow overflow without creating a scroll container.
+   Must stay after .page. */
+.pageEmpty.pageEmpty {
+  justify-content: center;
+  min-height: calc(100vh - 3rem - 2rem);
+  min-height: calc(100dvh - 3rem - 2rem);
+  padding: 0;
+  overflow: clip;
+}
+
+@media (max-width: 1023px) {
+  .pageEmpty.pageEmpty {
+    min-height: calc(100vh - 6rem - 2rem);
+    min-height: calc(100dvh - 6rem - 2rem);
+  }
+}
+
 /* KPI tiles inside the summary glow card. */
 .tiles {
   display: grid;

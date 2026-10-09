@@ -12,6 +12,7 @@ import { formatSection, formatGrade } from "@/lib/utils";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./accounts-audit.module.css";
 import pageStyles from "../accounts.module.css";
+import { RegistrarEmptyState } from "../../components/RegistrarEmptyCard";
 
 const PAGE_SIZE = 15;
 
@@ -102,16 +103,11 @@ export function AccountsAudit() {
         {isPending ? (
           <AuditSkeleton />
         ) : entries.length === 0 ? (
-          <div className={pageStyles.emptyBlock}>
-            <span className={pageStyles.emptyIcon} aria-hidden>
-              <History />
-            </span>
-            <p className={pageStyles.emptyTitle}>No audit entries yet</p>
-            <p className={pageStyles.emptyHint}>
-              Approve or reject a pending account above and the action will
-              appear here as an immutable audit entry.
-            </p>
-          </div>
+          <RegistrarEmptyState
+            icon={History}
+            title="No audit entries yet"
+            hint="Approve or reject a pending account above and the action will appear here as an immutable audit entry."
+          />
         ) : (
           <div className={styles.wrap}>
             <Table>

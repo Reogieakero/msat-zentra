@@ -26,6 +26,7 @@ export function Pager({
   end: number;
   setPage: (p: number | ((p: number) => number)) => void;
 }) {
+  if (totalPages <= 1) return null;
   return (
     <div className={`${styles.footer} relative`}>
       <span className={styles.footerInfo}>

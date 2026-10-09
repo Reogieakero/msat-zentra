@@ -20,6 +20,9 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { markSelfNotified } from "@/lib/realtime/registrarChannel";
 import type { AdviserAccessRequest } from "./components/types";
+import { RegistrarEmptyCard } from "../components/RegistrarEmptyCard";
+import { RegistrarPageHeader } from "../components/RegistrarPageHeader";
+import { PageHeaderSkeleton } from "@/app/principal/components/skeletons/PageHeaderSkeleton";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./adviser-access.module.css";
 
@@ -123,6 +126,7 @@ export default function AdviserAccessPage() {
     return (
       <section className={styles.page}>
         <div className={styles.stack}>
+          <PageHeaderSkeleton />
           <section className={assign.card} aria-label="Access requests loading">
             <span className={assign.glowClip} aria-hidden="true">
               <span className={assign.cardGlow} />
@@ -167,22 +171,13 @@ export default function AdviserAccessPage() {
   if (requests.length === 0) {
     return (
       <section className={styles.page}>
-        <div className={styles.emptyWrap}>
-          <section className={`${assign.card} ${styles.emptyCard}`} aria-label="No access requests">
-            <span className={assign.glowClip} aria-hidden="true">
-              <span className={assign.cardGlow} />
-            </span>
-            <div className={`${styles.empty} relative`}>
-              <span className={styles.emptyIcon} aria-hidden="true">
-                <ShieldQuestion />
-              </span>
-              <p className={styles.emptyTitle}>No adviser access requests</p>
-              <p className={styles.emptyHint}>
-                No adviser access requests for grades 11–12.
-              </p>
-            </div>
-          </section>
-        </div>
+        <RegistrarEmptyCard
+          icon={ShieldQuestion}
+          title="No adviser access requests"
+          hint="No adviser access requests for grades 11–12."
+          label="No access requests"
+          centered
+        />
       </section>
     );
   }
@@ -190,6 +185,10 @@ export default function AdviserAccessPage() {
   return (
     <section className={styles.page}>
       <div className={styles.stack}>
+        <RegistrarPageHeader
+          title="Adviser Access Requests"
+          description="Grant or deny adviser SF10 read access for grades 11–12."
+        />
         <section className={assign.card} aria-label="Access requests summary">
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />

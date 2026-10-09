@@ -368,10 +368,12 @@ export async function nurseAdmReview(ctx: ReferralContext, referralId: string, i
           ? {
               status: "in_progress",
               notes: notesWithForm,
+              consultReviewedAt: new Date(),
             }
           : {
               status: "dismissed",
               notes: notesWithReview,
+              consultReviewedAt: new Date(),
             },
     });
     let sessionRow = null;

@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, CircleDot } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, CircleDot, FileText } from "lucide-react";
+import { PrincipalEmptyState } from "../../../../components/PrincipalEmptyCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import styles from "./RecordsHeatblocks.module.css";
 import { CATEGORY_META, fetchRecords } from "@/services/principal/records.service";
 import type { BehavioralRecord } from "../types";
 
-const PAGE_SIZE = 21;
+const PAGE_SIZE = 15;
 
 function severityTone(severity: BehavioralRecord["severity"]): 2 | 3 | 5 {
   if (severity === "High") return 5;
@@ -60,6 +61,9 @@ export function RecordsHeatblocks() {
     <section className={styles.panel} aria-label="Anecdotal records heatblocks">
       <div className={styles.header}>
         <div className={styles.headerActions}>
+          <span className={styles.headCount} aria-live="polite">
+            {shownReports.length} report{shownReports.length === 1 ? "" : "s"}
+          </span>
           <div className={styles.search}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
@@ -93,17 +97,17 @@ export function RecordsHeatblocks() {
             <p>Could not load student records.</p>
           </div>
         ) : shownReports.length === 0 ? (
-          <div className={styles.empty}>
-            <CircleDot className={styles.emptyIcon} aria-hidden />
-            <p>No reports match the current filters.</p>
-          </div>
+          <PrincipalEmptyState
+            icon={FileText}
+            title="No reports found"
+            hint={
+              query.trim()
+                ? `No reports match “${query.trim()}”.`
+                : "No reports match the current filters."
+            }
+          />
         ) : (
           <>
-            <div className={styles.head}>
-              <span className={styles.headCount}>
-                {shownReports.length} reports
-              </span>
-            </div>
             <div className={styles.grid}>
               {pagedReports.map(({ student: s, rec }, i) => {
                 return (
@@ -145,7 +149,7 @@ export function RecordsHeatblocks() {
             {totalPages > 1 ? (
               <div className={styles.pager}>
                 <p className={styles.range} aria-live="polite">
-                  Showing {rangeStart}–{rangeEnd} of {shownReports.length}
+                  {shownReports.length > 0 ? `${rangeStart}–${rangeEnd} of ${shownReports.length} · Page ${safePage} of ${totalPages}` : "0 of 0"}
                 </p>
                 <div className={styles.pagerButtons}>
                   <Button
@@ -154,6 +158,7 @@ export function RecordsHeatblocks() {
                     disabled={safePage <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                   >
+                    <ChevronLeft aria-hidden />
                     Previous
                   </Button>
                   <Button
@@ -163,6 +168,7 @@ export function RecordsHeatblocks() {
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   >
                     Next
+                    <ChevronRight aria-hidden />
                   </Button>
                 </div>
               </div>

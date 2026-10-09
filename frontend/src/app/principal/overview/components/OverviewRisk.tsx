@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ShieldCheck } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Cell, Pie, PieChart } from "recharts";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import {
   Card,
   CardHeader,
@@ -76,7 +78,7 @@ export function OverviewRisk() {
 
   const interpretation = React.useMemo(
     () =>
-      data
+      data?.atRisk
         ? interpretRisk(
             data.atRisk.attendance,
             data.atRisk.grades,
@@ -88,7 +90,7 @@ export function OverviewRisk() {
     [data]
   );
 
-  const noFlags = rows.length > 0 && rows.every((r) => r.value === 0);
+  const riskEmpty = !data || rows.length === 0 || rows.every((r) => r.value === 0) || (data.atRisk?.students ?? 0) === 0;
 
   const levelRows: LevelRow[] = React.useMemo(() => {
     const levels = data?.riskByLevel;
@@ -105,17 +107,18 @@ export function OverviewRisk() {
 
   const levelInterpretation = React.useMemo(
     () =>
-      data
+      data?.riskByLevel
         ? interpretLevels(data.riskByLevel.high, data.riskByLevel.moderate, data.riskByLevel.low)
         : "",
     [data]
   );
 
   const gradeRows = React.useMemo(() => data?.riskByGrade ?? [], [data]);
-  const noGradeRisk = gradeRows.length > 0 && gradeRows.every((r) => r.count === 0);
+  const gradeEmpty = !data || gradeRows.length === 0 || gradeRows.every((r) => r.count === 0);
+  const levelEmpty = !data || levelRows.length === 0 || levelsTotal === 0;
 
   const gradeInterpretation = React.useMemo(
-    () => (data ? interpretGradeRisk(data.riskByGrade) : ""),
+    () => (data ? interpretGradeRisk(data.riskByGrade ?? []) : ""),
     [data]
   );
 
@@ -126,6 +129,16 @@ export function OverviewRisk() {
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {!isPending && !isError && riskEmpty ? (
+          <CardContent className={styles.content}>
+            <PrincipalEmptyState
+              icon={ShieldCheck}
+              title="No at-risk students this term"
+              hint="No students flagged at risk this term. New flags will appear here once detected."
+            />
+          </CardContent>
+        ) : (
+          <>
         <CardHeader className={styles.header}>
           <div className={styles.headerText}>
             <CardTitle>Risk at a glance</CardTitle>
@@ -133,11 +146,11 @@ export function OverviewRisk() {
           <CardAction>
             {isPending ? (
               <Skeleton className={styles.headerBadgeSkel} />
-            ) : (
+            ) : !riskEmpty ? (
               <Badge variant="secondary" className={styles.riskBadge}>
                 {data?.atRisk.students ?? 0} at risk
               </Badge>
-            )}
+            ) : null}
           </CardAction>
         </CardHeader>
         <CardContent className={styles.content}>
@@ -145,8 +158,6 @@ export function OverviewRisk() {
             <Skeleton className={styles.chartSkel} />
           ) : isError ? (
             <p className={styles.empty}>Could not load risk figures.</p>
-          ) : noFlags ? (
-            <p className={styles.empty}>No students flagged at risk this term.</p>
           ) : (
             <>
               <div className={styles.chartWrap}>
@@ -190,12 +201,24 @@ export function OverviewRisk() {
             </>
           )}
         </CardContent>
+          </>
+        )}
       </Card>
 
       <Card className={`${assign.card} ${styles.card}`}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {!isPending && !isError && levelEmpty ? (
+          <CardContent className={styles.content}>
+            <PrincipalEmptyState
+              icon={ShieldCheck}
+              title="No level data"
+              hint="No risk level breakdown available for the active term."
+            />
+          </CardContent>
+        ) : (
+          <>
         <CardHeader className={styles.header}>
           <div className={styles.headerText}>
             <CardTitle>Students by risk level</CardTitle>
@@ -203,11 +226,11 @@ export function OverviewRisk() {
           <CardAction>
             {isPending ? (
               <Skeleton className={styles.headerBadgeSkel} />
-            ) : (
+            ) : !levelEmpty ? (
               <Badge variant="secondary" className={styles.riskBadge}>
                 {levelsTotal} tracked
               </Badge>
-            )}
+            ) : null}
           </CardAction>
         </CardHeader>
         <CardContent className={styles.content}>
@@ -215,8 +238,6 @@ export function OverviewRisk() {
             <Skeleton className={styles.donutSkel} />
           ) : isError ? (
             <p className={styles.empty}>Could not load risk figures.</p>
-          ) : levelRows.length === 0 ? (
-            <p className={styles.chartEmpty}>No level data.</p>
           ) : (
             <>
               <div className={styles.donutWrap}>
@@ -272,12 +293,24 @@ export function OverviewRisk() {
             </>
           )}
         </CardContent>
+          </>
+        )}
       </Card>
 
       <Card className={`${assign.card} ${styles.card}`}>
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {!isPending && !isError && gradeEmpty ? (
+          <CardContent className={styles.content}>
+            <PrincipalEmptyState
+              icon={ShieldCheck}
+              title="No at-risk students by grade"
+              hint="No at-risk students by grade this term. Grade breakdowns will appear here once detected."
+            />
+          </CardContent>
+        ) : (
+          <>
         <CardHeader className={styles.header}>
           <div className={styles.headerText}>
             <CardTitle>At-risk students by grade</CardTitle>
@@ -288,8 +321,6 @@ export function OverviewRisk() {
             <Skeleton className={styles.barSkel} />
           ) : isError ? (
             <p className={styles.empty}>Could not load risk figures.</p>
-          ) : noGradeRisk ? (
-            <p className={styles.chartEmpty}>No at-risk students by grade this term.</p>
           ) : (
             <>
               <ChartContainer config={chartConfig} className={styles.gradeChart}>
@@ -331,6 +362,8 @@ export function OverviewRisk() {
             </>
           )}
         </CardContent>
+          </>
+        )}
       </Card>
     </div>
   );

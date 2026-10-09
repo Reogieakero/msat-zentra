@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { ShieldCheck } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
-import { useGradeMode } from "../../grade-mode-context";
 import type { RiskBoardData, RiskLevelKey } from "@/services/principal/risk.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./RiskLevelDonutCard.module.css";
 
 const LEVEL_FILL: Record<RiskLevelKey, string> = {
@@ -22,27 +24,63 @@ const FALLBACK: { level: RiskLevelKey; count: number }[] = [
 ];
 
 export function RiskLevelDonutCard() {
-  const { gradeMode } = useGradeMode();
-
   const { activeTerm } = useTerm();
   const { data, isPending } = useQuery({
-    queryKey: ["risk-board", activeTerm?.termId ?? null, gradeMode],
+    queryKey: ["risk-board", activeTerm?.termId ?? null, activeTerm?.schoolYearId ?? null],
     queryFn: async () => {
-      const res = await apiClient.get<RiskBoardData>("/api/risk/board", {
-        params: { gradeMode },
-      });
+      const res = await apiClient.get<RiskBoardData>("/api/risk/board");
       return res.data;
     },
-    staleTime: 60_000,
+    staleTime: 15_000,
     refetchOnWindowFocus: false,
   });
 
   const series = (data?.levelDistribution ?? FALLBACK).map((d) => ({
     level: d.level,
-    count: isPending ? 0 : d.count,
+    count: d.count,
   }));
   const total = series.reduce((sum, d) => sum + d.count, 0);
 
+  if (isPending) {
+    return (
+      <div className={assign.card} aria-busy="true" aria-label="Loading risk levels">
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <div aria-hidden="true" className="flex flex-col items-center gap-3">
+          <Skeleton className="h-4 w-40 self-start" />
+          <Skeleton className="size-36 rounded-full" />
+          <div className="flex flex-col gap-1.5 self-stretch">
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <ul className={styles.legend}>
+            {FALLBACK.map((d) => (
+              <li key={d.level} className={styles.legendItem}>
+                <Skeleton className="size-2.5 shrink-0" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="ml-auto h-4 w-10 shrink-0" />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  if (total === 0) {
+    return (
+      <div className={assign.card}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <PrincipalEmptyState
+          icon={ShieldCheck}
+          title="No risk data this term"
+          hint="No students flagged for risk in the active term. Risk levels will appear here once detected."
+        />
+      </div>
+    );
+  }
   return (
     <div className={assign.card}>
       <span className={assign.glowClip} aria-hidden="true">
@@ -72,7 +110,7 @@ export function RiskLevelDonutCard() {
         </ResponsiveContainer>
         <div className={styles.center}>
           <span className={styles.centerValue}>
-            {isPending ? "—" : total.toLocaleString()}
+            {total.toLocaleString()}
           </span>
           <span className={styles.centerLabel}>students</span>
         </div>
@@ -87,7 +125,7 @@ export function RiskLevelDonutCard() {
             />
             <span className={styles.legendLabel}>{d.level}</span>
             <span className={styles.legendValue}>
-              {isPending ? "—" : d.count}
+              {d.count}
             </span>
           </li>
         ))}

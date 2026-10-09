@@ -9,16 +9,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { TrendingUp } from "lucide-react";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import {
   ChartContainer,
   ChartTooltip,
@@ -33,14 +25,6 @@ import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import type { RiskTrendData } from "@/services/principal/risk.types";
 import styles from "./RiskTrend.module.css";
-
-type SchoolYearOption = {
-  id: string;
-  name: string;
-  isActive: boolean;
-  isCurrent: boolean;
-  terms: { id: string; termNumber: number }[];
-};
 
 const LEVEL_FILL = {
   high: "var(--primary)",
@@ -68,95 +52,34 @@ const RANGES = [
 
 type RangeKey = (typeof RANGES)[number]["value"];
 
-async function fetchSchools(): Promise<SchoolYearOption[]> {
-  const res = await apiClient.get<SchoolYearOption[]>("/api/risk/school-years");
-  return res.data;
-}
-
 export function RiskTrend() {
   const gradId = React.useId().replace(/:/g, "");
 
+  // The trend always follows the workspace term — no local SY/term filter.
   const { activeTerm } = useTerm();
 
-  const [yearChoice, setYearChoice] = usePersistentState<string>(
-    "zentra.risk.trend.year",
-    "auto"
-  );
-  const [termChoice, setTermChoice] = usePersistentState<string>(
-    "zentra.risk.trend.term",
-    "auto"
-  );
   const [range, setRange] = usePersistentState<RangeKey>(
     "zentra.risk.trend.range",
     "all"
   );
 
-  const scopeKey = activeTerm ? `${activeTerm.schoolYearId}:${activeTerm.termId}` : "none";
-  const [prevScopeKey, setPrevScopeKey] = React.useState(scopeKey);
-  if (prevScopeKey !== scopeKey) {
-    setPrevScopeKey(scopeKey);
-    setYearChoice("auto");
-    setTermChoice("auto");
-  }
-
-  const { data: schoolYears = [] } = useQuery({
-    queryKey: ["risk-school-years"],
-    queryFn: fetchSchools,
-  });
-
-  const scopeYear = activeTerm
-    ? (schoolYears.find((y) => y.id === activeTerm.schoolYearId) ?? null)
-    : null;
-  const activeYear =
-    scopeYear ??
-    schoolYears.find((y) => y.isCurrent) ??
-    schoolYears.find((y) => y.isActive) ??
-    schoolYears[0] ??
-    null;
-
-  const chosenYear =
-    yearChoice === "auto"
-      ? activeYear
-      : (schoolYears.find((y) => y.id === yearChoice) ?? activeYear);
-
-  const terms = chosenYear?.terms ?? [];
-  const scopeTerm =
-    activeTerm && chosenYear?.id === activeTerm.schoolYearId
-      ? (terms.find((t) => t.id === activeTerm.termId) ?? null)
-      : null;
-  const chosenTerm =
-    termChoice === "all"
-      ? null
-      : termChoice === "auto"
-        ? (scopeTerm ?? chosenYear?.terms[0] ?? null)
-        : (terms.find((t) => t.id === termChoice) ?? chosenYear?.terms[0] ?? null);
-
-  const effectiveTermId = chosenTerm?.id;
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
+  const termId = activeTerm?.termId ?? null;
 
   const { data, isPending } = useQuery({
 
-    queryKey: ["risk-trend", chosenYear?.id, effectiveTermId ?? "none"],
+    queryKey: ["risk-trend", schoolYearId, termId ?? "none"],
     queryFn: async () => {
       const params: Record<string, string> = {};
-      if (chosenYear) params.schoolYearId = chosenYear.id;
-      if (effectiveTermId) params.termId = effectiveTermId;
+      if (schoolYearId) params.schoolYearId = schoolYearId;
+      if (termId) params.termId = termId;
       const res = await apiClient.get<RiskTrendData>("/api/risk/trend", { params });
       return res.data;
     },
-    enabled: chosenYear !== null,
+    enabled: schoolYearId !== null && termId !== null,
   });
 
-  const isDaily = effectiveTermId !== undefined;
-
-  const onYearChange = (value: string) => {
-    setYearChoice(value);
-    const year =
-      value === "auto"
-        ? activeYear
-        : (schoolYears.find((y) => y.id === value) ?? activeYear);
-    const first = year?.terms[0];
-    setTermChoice(first ? first.id : value === "auto" ? "auto" : "all");
-  };
+  const isDaily = termId !== null;
 
   const trend = data?.trend ?? [];
   let chartData = trend.map((t) => ({
@@ -196,85 +119,11 @@ export function RiskTrend() {
           </p>
         </div>
         <div className={styles.filters}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  yearChoice !== "auto" ? styles.filterActive : ""
-                }`}
-              >
-                School Year
-                {yearChoice !== "auto" && (
-                  <span className={styles.filterDot} aria-hidden />
-                )}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={yearChoice === "auto"}
-                onCheckedChange={() => onYearChange("auto")}
-              >
-                All (active scope)
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {schoolYears.length === 0 ? (
-                <DropdownMenuItem disabled>No school years</DropdownMenuItem>
-              ) : (
-                schoolYears.map((y) => (
-                  <DropdownMenuCheckboxItem
-                    key={y.id}
-                    checked={yearChoice === y.id}
-                    onCheckedChange={() => onYearChange(y.id)}
-                  >
-                    {y.name}
-                    {y.isActive ? " • Active" : ""}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={styles.filterBtn}
-                disabled={terms.length === 0}
-              >
-                Term
-                {effectiveTermId !== undefined && (
-                  <span className={styles.filterDot} aria-hidden />
-                )}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={termChoice === "all"}
-                onCheckedChange={() => setTermChoice("all")}
-              >
-                All terms
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {terms.length === 0 ? (
-                <DropdownMenuItem disabled>No terms</DropdownMenuItem>
-              ) : (
-                terms.map((t) => (
-                  <DropdownMenuCheckboxItem
-                    key={t.id}
-                    checked={chosenTerm?.id === t.id}
-                    onCheckedChange={() => setTermChoice(t.id)}
-                  >
-                    Term {t.termNumber}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <p className={styles.scopeNote} aria-live="polite">
+            {activeTerm
+              ? `Showing ${activeTerm.schoolYearName} · Term ${activeTerm.termNumber}`
+              : "No workspace term selected"}
+          </p>
         </div>
       </div>
 
@@ -282,6 +131,16 @@ export function RiskTrend() {
         <span className={assign.glowClip} aria-hidden="true">
           <span className={assign.cardGlow} />
         </span>
+        {!isPending && !hasData ? (
+        <div className="relative">
+            <PrincipalEmptyState
+              icon={TrendingUp}
+              title="No trend data yet"
+              hint="No risk trend data available for the selected school year and term."
+            />
+        </div>
+        ) : (
+        <>
         <div className={`${styles.cardHeader} relative`}>
           <p className={styles.cardDesc}>
             {isDaily
@@ -310,11 +169,6 @@ export function RiskTrend() {
         <div className="relative">
           {isPending ? (
             <div className={styles.skeleton} />
-          ) : !hasData ? (
-            <p className={styles.empty}>
-              No risk trend data available for the selected school year and
-              term.
-            </p>
           ) : (
             <div className={styles.chartBox}>
               <ChartContainer
@@ -390,6 +244,8 @@ export function RiskTrend() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </section>
   );

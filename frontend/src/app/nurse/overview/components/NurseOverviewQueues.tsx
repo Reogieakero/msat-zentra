@@ -13,6 +13,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { Inbox, SearchIcon } from "lucide-react";
+import { NurseEmptyState } from "../../components/NurseEmptyCard";
 import { useNurseInvalidate } from "./use-nurse-mutation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -189,7 +190,7 @@ export function NurseNeedsReviewPanel({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
@@ -200,22 +201,11 @@ export function NurseNeedsReviewPanel({
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
           </span>
-          <div className="relative">
-            <h2 className={styles.sectionTitle}>{title}</h2>
-            <p className={styles.sectionDesc}>{description}</p>
-          </div>
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <Inbox size={24} className="text-muted-foreground" />
-            </span>
-            <p className="font-medium">You&apos;re all caught up</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {emptyText}
-            </p>
-          </div>
+          <NurseEmptyState
+            icon={Inbox}
+            title="You're all caught up"
+            hint={emptyText}
+          />
         </div>
         {formSheet && (
           <NurseAdmReferralFormSheet
@@ -317,22 +307,26 @@ export function NurseNeedsReviewPanel({
             {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
           </div>
           <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
+            {table.getPageCount() > 1 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </>
+            )}
             <Button variant="ghost" size="sm" asChild>
               <a href="/nurse/alerts">View all</a>
             </Button>

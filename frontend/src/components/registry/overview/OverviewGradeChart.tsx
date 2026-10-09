@@ -99,21 +99,24 @@ export function OverviewGradeChart({ desk }: { desk: RegistryDesk }) {
   }, [data]);
 
   const population = rows.reduce((s, r) => s + r.total, 0);
+  const isEmpty = !isPending && !isError && rows.length === 0;
 
   return (
-    <section className={assign.card} aria-labelledby="overview-students-grade">
+    <section className={assign.card} aria-labelledby={isEmpty ? undefined : "overview-students-grade"}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
-      <div className={`${styles.header} relative`}>
-        <div className={styles.headerText}>
-          <h2 id="overview-students-grade" className="text-base font-semibold">Students per Grade Level</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Current advisory population per grade — class lists accumulated, not
-            account status.
-          </p>
+      {!isEmpty && (
+        <div className={`${styles.header} relative`}>
+          <div className={styles.headerText}>
+            <h2 id="overview-students-grade" className="text-base font-semibold">Students per Grade Level</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Current advisory population per grade — class lists accumulated, not
+              account status.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       <div className={`${styles.content} relative`}>
         {isPending ? (
           <Skeleton className={styles.skel} />

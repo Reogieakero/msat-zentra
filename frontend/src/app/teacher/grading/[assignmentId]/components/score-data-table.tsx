@@ -68,7 +68,7 @@ export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { a
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
   if (students.length === 0) {
@@ -114,12 +114,16 @@ export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { a
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} student{table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
         </div>
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-          Previous
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-          Next
-        </Button>
+        {table.getPageCount() > 1 && (
+          <>
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+              Next
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

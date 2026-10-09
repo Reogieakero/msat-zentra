@@ -460,10 +460,6 @@ export type StaffProfileCreatehandledGradeLevelsInput = {
   set: $Enums.GradeLevel[]
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type StaffProfileUpdatehandledGradeLevelsInput = {
   set?: $Enums.GradeLevel[]
   push?: $Enums.GradeLevel | $Enums.GradeLevel[]

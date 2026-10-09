@@ -10,12 +10,13 @@ import { ReportsToolbar } from "./components/ReportsToolbar";
 import { ReportsKpis } from "./components/ReportsKpis";
 import { ReportPanel } from "./components/ReportsPanels";
 import { PrincipalPageHeader } from "../components/PrincipalPageHeader";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import styles from "./page.module.css";
 
 export default function PrincipalReportsPage() {
   const scope: ReportScope = "school";
   const queryClient = useQueryClient();
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termId = activeTerm?.termId ?? null;
 
   const { data, isPending, isFetching, isError, error, refetch } = useQuery({
@@ -25,9 +26,10 @@ export default function PrincipalReportsPage() {
     staleTime: 300_000,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
+    enabled: termReady,
   });
 
-  const loading = isPending || isFetching;
+  const loading = isPending || isFetching || !termReady;
   const errorMsg = isError
     ? (() => {
         const status = (error as { response?: { status?: number } })?.response?.status;
@@ -90,8 +92,18 @@ export default function PrincipalReportsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const totalRecords =
+    (data?.trends ?? []).length +
+    (data?.honorRollByGrade ?? []).reduce((s, r) => s + r.candidates, 0) +
+    (data?.admStages ?? []).reduce((s, r) => s + r.count, 0) +
+    (data?.riskDistribution ?? []).reduce((s, r) => s + r.count, 0) +
+    (data?.kpis.honorRoll ?? 0);
+  const isEmpty = !loading && !errorMsg && !!data && totalRecords === 0;
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-busy={isPending || undefined}>
+      {isPending || !termReady ? (
+        <PageHeaderSkeleton withActions actionCount={2} />
+      ) : isEmpty ? null : (
       <PrincipalPageHeader
         title="Reports & Analytics"
         description="Every transaction and data stream across the school, visualized."
@@ -99,6 +111,7 @@ export default function PrincipalReportsPage() {
           <ReportsToolbar onRefresh={handleRefresh} onExport={handleExport} loading={loading} />
         }
       />
+      )}
 
       {errorMsg ? (
         <div className={styles.error}>{errorMsg}</div>

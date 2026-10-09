@@ -12,9 +12,18 @@ import {
 import { isMasterTeacherEligible } from "./settings.service.js";
 import type { TeacherContext } from "./teacher.types.js";
 
+export interface OverviewListOpts {
+  atRiskOnly?: boolean;
+  classPage?: number;
+  classLimit?: number;
+  advisoryPage?: number;
+  advisoryLimit?: number;
+}
+
 export async function getOverview(
   ctx: TeacherContext,
   scopeParam: "critical" | "secondary" | "gradebook" | "full",
+  opts?: OverviewListOpts,
 ) {
   const teacherId = ctx.userId;
 
@@ -642,6 +651,27 @@ export async function getOverview(
 
   const atRiskStudents = advisoryStudents.filter((s) => s.flag !== "none").length;
 
+  const classStudentsTotal = classStudents.length;
+  const advisoryTotal = advisoryStudents.length;
+  const classAtRiskFactors = {
+    academic: classStudents.filter((s) => s.flags.includes("academic")).length,
+    attendance: classStudents.filter((s) => s.flags.includes("attendance")).length,
+  };
+  let classStudentsOut = opts?.atRiskOnly
+    ? classStudents.filter((s) => s.riskLevel !== "Low")
+    : classStudents;
+  let advisoryStudentsOut = opts?.atRiskOnly
+    ? advisoryStudents.filter((s) => s.flag !== "none")
+    : advisoryStudents;
+  if (opts?.classPage && opts?.classLimit) {
+    const start = (opts.classPage - 1) * opts.classLimit;
+    classStudentsOut = classStudentsOut.slice(start, start + opts.classLimit);
+  }
+  if (opts?.advisoryPage && opts?.advisoryLimit) {
+    const start = (opts.advisoryPage - 1) * opts.advisoryLimit;
+    advisoryStudentsOut = advisoryStudentsOut.slice(start, start + opts.advisoryLimit);
+  }
+
   if (isGradebookOnly) {
     return {
       classes,
@@ -685,8 +715,11 @@ export async function getOverview(
     atRiskFactors,
     atRiskStudents,
     classes,
-    classStudents,
-    advisory: { students: advisoryStudents },
+    classStudents: classStudentsOut,
+    classStudentsTotal,
+    classAtRiskFactors,
+    advisory: { students: advisoryStudentsOut },
+    advisoryTotal,
 
     ...(isCriticalOnly
       ? {}

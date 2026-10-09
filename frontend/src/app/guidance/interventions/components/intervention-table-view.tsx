@@ -1,6 +1,7 @@
 "use client";
-import { Search } from "lucide-react";
+import { HeartHandshake, Search, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -136,11 +137,19 @@ export function InterventionTableView({
       )}
       <div className={styles.tableBody}>
         {students.length === 0 ? (
-          <p className={styles.empty}>
-            {hasActiveSearch
-              ? "No cases match your search."
-              : "No intervention cases — nothing needs your attention right now."}
-          </p>
+          <GuidanceEmptyState
+            icon={hasActiveSearch ? SearchX : HeartHandshake}
+            title={
+              hasActiveSearch
+                ? "No cases match your search"
+                : "No intervention cases"
+            }
+            hint={
+              hasActiveSearch
+                ? "Try a different name or keyword, or clear the search to see every case."
+                : "No intervention cases — nothing needs your attention right now."
+            }
+          />
         ) : (
           <div className={styles.tableWrap}>
             <Table aria-label="Intervention cases on the guidance desk">
@@ -186,42 +195,44 @@ export function InterventionTableView({
             </Table>
           </div>
         )}
-        <div className={styles.pager}>
-          <p className={styles.range}>
-            Showing {start}–{end} of {total}
-            {unfilteredTotal !== undefined && unfilteredTotal !== total
-              ? ` (of ${unfilteredTotal} in cohort)`
-              : ""}
-          </p>
-          <div className={styles.pagerButtons}>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={page <= 1 || isNavigating}
-              onClick={() => onPageChange(page - 1)}
-            >
-              Previous
-            </Button>
-            <span className={styles.pageLabel} aria-live="polite">
-              {isNavigating ? (
-                <span className={styles.loadingLabel}>
-                  <Busy busy />
-                  Loading…
-                </span>
-              ) : (
-                `Page ${page} of ${totalPages}`
-              )}
-            </span>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={page >= totalPages || isNavigating}
-              onClick={() => onPageChange(page + 1)}
-            >
-              Next
-            </Button>
+        {totalPages > 1 && (
+          <div className={styles.pager}>
+            <p className={styles.range}>
+              Showing {start}–{end} of {total}
+              {unfilteredTotal !== undefined && unfilteredTotal !== total
+                ? ` (of ${unfilteredTotal} in cohort)`
+                : ""}
+            </p>
+            <div className={styles.pagerButtons}>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={page <= 1 || isNavigating}
+                onClick={() => onPageChange(page - 1)}
+              >
+                Previous
+              </Button>
+              <span className={styles.pageLabel} aria-live="polite">
+                {isNavigating ? (
+                  <span className={styles.loadingLabel}>
+                    <Busy busy />
+                    Loading…
+                  </span>
+                ) : (
+                  `Page ${page} of ${totalPages}`
+                )}
+              </span>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={page >= totalPages || isNavigating}
+                onClick={() => onPageChange(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

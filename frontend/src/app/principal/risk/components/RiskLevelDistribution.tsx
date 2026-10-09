@@ -3,10 +3,12 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { ShieldCheck } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
-import { useGradeMode } from "../../grade-mode-context";
-import type { BackendStudent } from "@/services/principal/riskStudents.types";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./RiskLevelDistribution.module.css";
 
 const LEVEL_FILL: Record<"High" | "Moderate" | "Low", string> = {
@@ -29,19 +31,17 @@ const gradeNum = (name: string) => {
 };
 
 export function RiskLevelDistribution() {
-  const { gradeMode } = useGradeMode();
+  const { activeTerm } = useTerm();
 
   const { data, isPending } = useQuery({
-    queryKey: ["risk-students", gradeMode],
+    queryKey: ["risk-board", activeTerm?.termId ?? null, activeTerm?.schoolYearId ?? null],
     queryFn: async () => {
       const res = await apiClient.get<{
-        students: BackendStudent[];
-        total: number;
-      }>("/api/risk/students", {
-        params: { pageSize: 1000, gradeMode },
-      });
+        byGrade: { grade: string; High: number; Moderate: number; Low: number; total: number }[];
+      }>("/api/risk/board");
       return res.data;
     },
+    staleTime: 15_000,
   });
 
   const byGrade = React.useMemo(() => {
@@ -49,29 +49,54 @@ export function RiskLevelDistribution() {
       number,
       { High: number; Moderate: number; Low: number; total: number }
     >();
-    for (const s of data?.students ?? []) {
-      const g = gradeNum(s.section);
-      if (g < 7 || g > 12) continue;
-      if (!map.has(g)) map.set(g, { High: 0, Moderate: 0, Low: 0, total: 0 });
-      const e = map.get(g)!;
-      e[s.riskLevel]++;
-      e.total++;
+    for (const g of data?.byGrade ?? []) {
+      const n = gradeNum(g.grade);
+      if (n < 7 || n > 12) continue;
+      map.set(n, { High: g.High, Moderate: g.Moderate, Low: g.Low, total: g.total });
     }
     return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
   }, [data]);
 
+  const isEmpty = !isPending && byGrade.length === 0;
   return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Risk Level Distribution</h2>
-
+    <section className={styles.section} aria-busy={isPending || undefined}>
       {isPending ? (
-        <div className={styles.grid}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={styles.skeletonCard} />
-          ))}
-        </div>
-      ) : byGrade.length === 0 ? (
-        <p className={styles.empty}>No students found across grade levels.</p>
+        <>
+          <Skeleton className="h-6 w-56" aria-hidden="true" />
+          <div className={styles.grid} aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className={assign.card}>
+                <span className={assign.glowClip} aria-hidden="true">
+                  <span className={assign.cardGlow} />
+                </span>
+                <div className={`${styles.cardHead} relative`}>
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <Skeleton className="h-[104px] w-full rounded-full" />
+                <ul className={`${styles.legend} relative`}>
+                  {ORDERS.map((o) => (
+                    <li key={o.level} className={styles.legendItem}>
+                      <Skeleton className="size-2.5 shrink-0" />
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="ml-auto h-4 w-16 shrink-0" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+      <>
+      {isEmpty ? null : <h2 className={styles.sectionTitle}>Risk Level Distribution</h2>}
+
+      {byGrade.length === 0 ? (
+        <PrincipalEmptyCard
+          icon={ShieldCheck}
+          title="No students across grade levels"
+          hint="No students found across grade levels for the active term."
+        />
       ) : (
         <div className={styles.grid}>
           {byGrade.map(([grade, e]) => {
@@ -140,6 +165,8 @@ export function RiskLevelDistribution() {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </section>
   );

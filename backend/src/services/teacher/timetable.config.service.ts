@@ -91,8 +91,12 @@ export async function assignSubject(ctx: TeacherContext, subjectId: string, sect
   }
   const assignment = await prisma.teacherSubjectAssignment.create({
     data: { teacherId, subjectId, sectionId, termId },
-    include: { subject: true, section: true },
-  }) as { id: string; subject: { name: string }; section: { name: string } };
+    select: {
+      id: true,
+      subject: { select: { name: true } },
+      section: { select: { name: true } },
+    },
+  });
   await writeAudit({
     userId: teacherId,
     actionType: "create",
@@ -164,15 +168,23 @@ export async function clearTeacherNames(ctx: TeacherContext) {
     distinct: ["subjectId", "sectionId"],
   });
   const removed = await prisma.teacherName.deleteMany({});
-  for (const p of pairs) {
-    const remaining = await prisma.sectionTimetableEntry.count({
-      where: { sectionId: p.sectionId, termId, subjectId: p.subjectId },
+  // Batched: one grouped count instead of N count+delete round trips.
+  const remaining = pairs.length
+    ? await prisma.sectionTimetableEntry.groupBy({
+        by: ["sectionId", "subjectId"],
+        where: {
+          termId,
+          OR: pairs.map((p) => ({ sectionId: p.sectionId, subjectId: p.subjectId })),
+        },
+        _count: { _all: true },
+      })
+    : [];
+  const stillUsed = new Set(remaining.map((r) => `${r.sectionId}::${r.subjectId}`));
+  const orphaned = pairs.filter((p) => !stillUsed.has(`${p.sectionId}::${p.subjectId}`));
+  if (orphaned.length > 0) {
+    await prisma.teacherSubjectAssignment.deleteMany({
+      where: { termId, OR: orphaned.map((p) => ({ sectionId: p.sectionId, subjectId: p.subjectId })) },
     });
-    if (remaining === 0) {
-      await prisma.teacherSubjectAssignment.deleteMany({
-        where: { subjectId: p.subjectId, sectionId: p.sectionId, termId },
-      });
-    }
   }
   await writeAudit({
     userId: teacherId,
@@ -233,7 +245,15 @@ export async function deleteAssignment(ctx: TeacherContext, assignmentId: string
   const teacherId = ctx.userId;
   const assignment = await prisma.teacherSubjectAssignment.findUnique({
     where: { id: assignmentId },
-    include: { subject: true, section: true },
+    select: {
+      id: true,
+      teacherId: true,
+      subjectId: true,
+      sectionId: true,
+      termId: true,
+      subject: { select: { name: true } },
+      section: { select: { name: true } },
+    },
   }) as {
     id: string;
     teacherId: string;

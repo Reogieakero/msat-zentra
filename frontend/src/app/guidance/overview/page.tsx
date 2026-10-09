@@ -5,6 +5,8 @@ import { useTerm } from "@/lib/term/TermContext";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
 import { GuidanceOverviewKpis } from "./components/guidance-overview-kpis";
 import { GuidanceOverviewRiskCharts } from "./components/guidance-overview-risk-charts";
 import { GuidanceOverviewCaseloadCharts } from "./components/guidance-overview-caseload-charts";
@@ -15,7 +17,7 @@ import { useGuidanceProfileSettings } from "@/services/settings/profile-settings
 import styles from "./components/guidance-overview.module.css";
 
 export default function GuidanceOverviewPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isRefetching } =
     useQuery<GuidanceOverviewData>({
@@ -23,6 +25,7 @@ export default function GuidanceOverviewPage() {
       queryFn: ({ signal }) => fetchGuidanceOverview(signal),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const profile = useGuidanceProfileSettings();
@@ -30,7 +33,8 @@ export default function GuidanceOverviewPage() {
 
   if (isPending) {
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading guidance overview">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.skelTopRow}>
           <div className={styles.skelTopKpis}>
             {[0, 1, 2, 3].map((i) => (
@@ -130,7 +134,11 @@ export default function GuidanceOverviewPage() {
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} aria-label="Guidance overview">
+      <GuidancePageHeader
+        title="Overview"
+        description="Caseload, risk mix, and follow-through across the guidance desk this term."
+      />
       <div className={styles.topRow}>
         <div className={styles.topKpis}>
           <GuidanceOverviewKpis kpis={data.kpis} />

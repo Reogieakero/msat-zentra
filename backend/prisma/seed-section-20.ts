@@ -13,9 +13,10 @@ const FIRST = [
 ];
 const LAST = [
   "Santos", "Reyes", "Cruz", "Garcia", "Mendoza", "Torres", "Flores",
-  "Ramos", "Diaz", "Castillo", "Manalo", "Bautista", "Villanueva",
-  "Ocampo", "Aquino", "Gonzales", "Ferrer", "Salazar", "Mercado", "Aguilar",
-];
+   "Ramos", "Diaz", "Castillo", "Manalo", "Bautista", "Villanueva",
+   "Ocampo", "Aquino", "Gonzales", "Ferrer", "Salazar", "Mercado", "Aguilar",
+ ];
+const MI20 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const isGradeSection = (name: string) => /^G(7|8|9|10|11|12)-/i.test(name.trim());
 
 async function main() {
@@ -54,7 +55,7 @@ async function main() {
         rows.push({
           id: `topup20_${s.id.slice(0, 8)}_${have + rows.length + 1}`,
           lrn,
-          fullName: `${fn} ${ln}`,
+          fullName: `${fn} ${MI20[(have + rows.length * 3) % MI20.length]}. ${ln}`,
           gradeLevel: s.gradeLevel,
           sectionId: s.id,
           schoolYearId: s.schoolYearId,

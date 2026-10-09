@@ -1,10 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, ClipboardCheck, Clock, Inbox, Info } from "lucide-react";
+import { Check, CalendarDays, Clock, Inbox, Info } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useTerm } from "@/lib/term/TermContext";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { PrincipalPageHeader } from "../../components/PrincipalPageHeader";
+import { PageHeaderSkeleton } from "../../components/skeletons/PageHeaderSkeleton";
+import { PrincipalEmptyCard } from "../../components/PrincipalEmptyCard";
 import { AuroraBanner } from "../../overview/components/AuroraBanner";
 import {
   sectionCardStatus,
@@ -42,6 +45,7 @@ function statusHint(s: Submission): string {
 }
 
 export default function PrincipalSchedulePage() {
+  const { termReady } = useTerm();
   const sectionsQuery = useQuery<{ sections: Submission[] }>({
     queryKey: ["principal-schedule-sections"],
     queryFn: async () => {
@@ -50,6 +54,9 @@ export default function PrincipalSchedulePage() {
       );
       return data;
     },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    enabled: termReady,
   });
 
   const sections = sectionsQuery.data?.sections ?? [];
@@ -94,12 +101,18 @@ export default function PrincipalSchedulePage() {
   }[railVariant];
   const RailIcon = railMeta.Icon;
 
+  const isEmpty = !sectionsQuery.isPending && !sectionsQuery.isError && sections.length === 0;
+  const headerLoading = sectionsQuery.isPending || !termReady;
   return (
-    <section className="flex w-full flex-col gap-5">
+    <section className="flex w-full flex-col gap-5" aria-busy={headerLoading || undefined}>
+      {headerLoading ? (
+        <PageHeaderSkeleton />
+      ) : isEmpty ? null : (
       <PrincipalPageHeader
         title="Schedule Approval"
         description="Timetables sent by the master teacher appear here for review."
       />
+      )}
 
       {sectionsQuery.isPending ? (
         <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading sections">
@@ -115,17 +128,23 @@ export default function PrincipalSchedulePage() {
         <p role="alert" className="text-sm text-destructive">
           Could not load sections.
         </p>
+      ) : isEmpty ? (
+        <PrincipalEmptyCard
+          icon={CalendarDays}
+          title="No sections yet"
+          hint="Sections for grades 7–10 will appear here."
+          centered
+        />
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="min-w-0">
             {sections.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-input bg-card p-12 text-center">
-                <ClipboardCheck size={40} className="mb-4 text-muted-foreground" aria-hidden />
-                <h3 className="text-lg font-semibold">No sections yet</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Sections for grades 7–10 will appear here.
-                </p>
-              </div>
+              <PrincipalEmptyCard
+                icon={CalendarDays}
+                title="No sections yet"
+                hint="Sections for grades 7–10 will appear here."
+                centered
+              />
             ) : (
               <div className={assign.grid} role="group" aria-label="Sections">
                 {orderedSections.map((s) => {

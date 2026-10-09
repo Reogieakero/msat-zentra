@@ -26,8 +26,6 @@ export interface GuidanceAlertsSummary {
   academic: number;
   attendance: number;
   behavioral: number;
-  referred: number;
-  unreferred: number;
 }
 
 export interface GuidanceAlertsData {

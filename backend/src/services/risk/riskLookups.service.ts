@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import {
   computeRiskFactors,
+  evaluateRisk,
   evaluateRosterRisk,
   levelFromFlags,
   resolveActiveTermId,
@@ -60,9 +61,7 @@ export async function getBatchLevels(
         p.section?.adviserId !== userId
       ),
   );
-  for (const p of visibleProfiles) {
-    if (p.riskLevel) levels[p.userId] = String(p.riskLevel);
-  }
+  // Real-time: levels filled from live compute below (not stored riskLevel).
   for (const r of rosters) {
     if (role === "adviser" && r.section?.adviserId !== userId) continue;
     rosterIds.push(r.id);
@@ -111,6 +110,7 @@ export async function getBatchLevels(
           Attendance: flags.attendanceFlag,
           Behavioral: flags.behavioralFlag,
         };
+        levels[pr.userId] = levelFromFlags(flags);
       }
     }
   }
@@ -180,7 +180,7 @@ export async function getSingleStudentLevel(
 ) {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: id },
-    select: { riskLevel: true, riskCount: true, lrn: true },
+    select: { lrn: true },
   });
   if (!profile) {
 
@@ -232,7 +232,14 @@ export async function getSingleStudentLevel(
       throw err;
     }
   }
-  return { lrn: profile.lrn, riskLevel: profile.riskLevel };
+  // Real-time unified: compute live instead of returning stored riskLevel.
+  const termId = await resolveActiveTermId(req);
+  if (!termId) {
+    const err = { status: 404, code: "NO_ACTIVE_TERM", message: "No active term" };
+    throw err;
+  }
+  const { result } = await evaluateRisk(id, termId);
+  return { lrn: profile.lrn, riskLevel: result.riskLevel };
 }
 
 export async function getSectionFactorCounts(sectionId: string, termId: string) {
@@ -243,14 +250,22 @@ export async function getSectionFactorCounts(sectionId: string, termId: string) 
   const ids = students.map((s) => s.userId);
   const [anecdotals, finals, attendance] = await Promise.all([
     prisma.anecdotalRecord.groupBy({ by: ["studentId"], where: { sectionId, termId }, _count: true }),
-    prisma.finalGrade.findMany({ where: { studentId: { in: ids }, termId }, select: { studentId: true, transmutedGrade: true } }),
+    prisma.finalGrade.findMany({
+      where: { studentId: { in: ids }, termId },
+      select: { studentId: true, computedAverage: true, transmutedGrade: true },
+    }),
     prisma.attendanceRecord.findMany({ where: { sectionId, termId }, select: { studentId: true, status: true } }),
   ]);
   const factors = { attendance: 0, grades: 0, behavior: 0, wellbeing: 0 };
 
   factors.behavior = anecdotals.length;
 
-  const lowGradeStudents = new Set(finals.filter((f) => (f.transmutedGrade ?? 100) < 75).map((f) => f.studentId));
+  // Unified EITHER rule.
+  const lowGradeStudents = new Set(
+    finals
+      .filter((f) => (f.transmutedGrade ?? 100) < 75 || (f.computedAverage ?? 100) < 75)
+      .map((f) => f.studentId),
+  );
   factors.grades = lowGradeStudents.size;
 
   const enrolled = students.length;

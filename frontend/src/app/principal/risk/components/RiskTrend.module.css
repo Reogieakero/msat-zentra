@@ -24,27 +24,13 @@
   flex-wrap: wrap;
 }
 
-.filterBtn {
-  position: relative;
-  height: 2rem;
-}
-
-.filterActive {
-  border-color: color-mix(in oklch, var(--primary), transparent 60%);
-  color: var(--primary);
-  background-color: color-mix(in oklch, var(--primary), transparent 92%);
-}
-
-.filterDot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background-color: var(--primary);
-  flex-shrink: 0;
-}
-
-.filterMenu {
-  min-width: 12rem;
+.scopeNote {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .title {
@@ -140,6 +126,12 @@
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
   }
 }
 

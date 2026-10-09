@@ -71,7 +71,8 @@ export function FinalGradeDetail({ desk }: { desk: RegistryDesk }) {
     queryFn: () =>
       apiClient
         .get<GradesResponse>(`/api/${desk}/final-grades`, {
-          params: { pageSize: 100 },
+          // Strict 15-record ceiling; detail lookup uses server filtering.
+          params: { pageSize: 15 },
         })
         .then((res) => res.data),
     staleTime: 30_000,

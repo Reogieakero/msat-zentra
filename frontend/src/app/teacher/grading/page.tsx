@@ -1,6 +1,8 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { ClipboardList } from "lucide-react";
+import { TeacherEmptyCard } from "../components/TeacherEmptyCard";
 import { useTeacherOverviewGradebook } from "@/services/teacher/overview.service";
 import { GradebookCards } from "./components/GradebookCards";
 import styles from "./components/gradebook.module.css";
@@ -41,6 +43,20 @@ export default function TeacherGradebookPage() {
     return (
       <section className={styles.page}>
         <p className={styles.error}>Could not load your gradebook. Check your connection and try again.</p>
+      </section>
+    );
+  }
+
+  if (gradebook.data.classes.length === 0) {
+    return (
+      <section className={styles.page} aria-label="Gradebook">
+        <TeacherEmptyCard
+          centered
+          icon={ClipboardList}
+          title="No classes assigned yet"
+          hint="Ask your registrar to assign your subjects and sections first — your gradebook workspaces will appear here."
+          label="Gradebook"
+        />
       </section>
     );
   }

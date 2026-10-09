@@ -1,13 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../components/skeletons/PageHeaderSkeleton";
 import styles from "./page.module.css";
 
 export default function PrincipalAuditLoading() {
   return (
     <section className={styles.page} aria-label="Loading audit log" aria-busy="true">
-      <div aria-hidden="true">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="mt-2 h-4 w-96" />
-      </div>
+      <PageHeaderSkeleton />
       <section aria-label="Audit entries" className="flex min-w-0 flex-col gap-3">
         <div className="rounded-md border p-4" aria-hidden="true">
           <div className="flex flex-wrap items-start justify-between gap-3">

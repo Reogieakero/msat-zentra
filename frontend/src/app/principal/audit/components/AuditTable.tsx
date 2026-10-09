@@ -187,7 +187,7 @@ export function AuditTable({ entries }: { entries: AuditEntry[] }) {
 
   return (
     <div className="relative overflow-x-auto rounded-md border">
-      <Table className="w-full table-fixed" aria-label="Audit entries">
+      <Table className="w-full table-fixed text-xs" aria-label="Audit entries">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="bg-muted/50 [&>th]:border-t-0">

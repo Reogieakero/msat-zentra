@@ -50,9 +50,10 @@ function FactorBadges({ flags }: { flags?: ClassStudentRow["flags"] }) {
 
 interface TeacherOverviewClassStudentsProps {
   students: ClassStudentRow[];
+  totalCount?: number;
 }
 
-export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassStudentsProps) {
+export function TeacherOverviewClassStudents({ students, totalCount }: TeacherOverviewClassStudentsProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
@@ -60,6 +61,7 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
     () => students.filter((s) => s.riskLevel !== "Low"),
     [students],
   );
+  const total = totalCount ?? students.length;
 
   const columns = React.useMemo<ColumnDef<ClassStudentRow>[]>(
     () => [
@@ -140,7 +142,7 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 15 } },
     state: { sorting, columnFilters },
   });
 
@@ -151,13 +153,15 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
           <span className={assign.glowClip} aria-hidden="true">
             <span className={assign.cardGlow} />
           </span>
-          <div className="relative">
-            <h2 className={styles.sectionTitle}>My Class Students</h2>
-            <p className={styles.sectionDesc}>
-              At-risk in your class subject assignments — 0 students. Academic +
-              attendance only.
-            </p>
-          </div>
+          {total > 0 ? (
+            <div className="relative">
+              <h2 className={styles.sectionTitle}>My Class Students</h2>
+              <p className={styles.sectionDesc}>
+                At-risk in your class subject assignments — 0 students. Academic +
+                attendance only.
+              </p>
+            </div>
+          ) : null}
           <div className="relative flex flex-col items-center gap-2 py-6 text-center">
             <span
               className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
@@ -166,10 +170,10 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
               <Users size={24} className="text-muted-foreground" />
             </span>
             <p className="font-medium">
-              {students.length === 0 ? "No class students yet" : "No at-risk students"}
+              {total === 0 ? "No class students yet" : "No at-risk students"}
             </p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {students.length === 0
+              {total === 0
                 ? "Your students will appear here once subjects are assigned to your classes."
                 : "Every student in your classes is currently Low — only Moderate and High statuses are listed here."}
             </p>
@@ -252,24 +256,26 @@ export function TeacherOverviewClassStudents({ students }: TeacherOverviewClassS
               {table.getFilteredRowModel().rows.length} student
               {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
             </div>
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+            {table.getPageCount() > 1 && (
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

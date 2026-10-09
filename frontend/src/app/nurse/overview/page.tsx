@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NursePageHeader } from "../components/NursePageHeader";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import { NurseOverviewKpis } from "./components/NurseOverviewKpis";
 import { NurseNeedsReviewPanel } from "./components/NurseOverviewQueues";
@@ -16,7 +18,7 @@ import { useTerm } from "@/lib/term/TermContext";
 import styles from "./components/nurse-overview.module.css";
 
 export default function NurseOverviewPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const { data, isPending, isError, refetch, isFetching } =
     useQuery<NurseOverviewData>({
@@ -24,12 +26,14 @@ export default function NurseOverviewPage() {
       queryFn: ({ signal }) => fetchNurseOverview(signal),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   if (isPending) {
 
     return (
-      <section className={styles.page} aria-busy="true">
+      <section className={styles.page} aria-busy="true" aria-label="Loading clinic overview">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.body}>
           <div className={styles.mainCol}>
             <div className={assign.card}>
@@ -144,9 +148,17 @@ export default function NurseOverviewPage() {
   }
 
   const refreshing = isFetching && !isPending;
+  const isTrueEmpty =
+    data.needsReview.length === 0 && data.kpis.total === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section className={styles.page} aria-busy={refreshing} aria-label="Clinic overview">
+      {isTrueEmpty ? null : (
+        <NursePageHeader
+          title="Overview"
+          description="Clinic queue, caseload, and health trends across the nurse desk this term."
+        />
+      )}
 
       {refreshing ? <NurseRefreshBadge label="Refreshing overview…" /> : null}
 

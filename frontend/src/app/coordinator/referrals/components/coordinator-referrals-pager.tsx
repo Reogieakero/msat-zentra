@@ -20,6 +20,7 @@ export function CoordinatorReferralsPager({
   totalPages,
   onPageChange,
 }: CoordinatorReferralsPagerProps) {
+  if (totalPages <= 1) return null;
   return (
     <div className={styles.pager}>
       <p className={styles.range}>

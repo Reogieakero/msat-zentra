@@ -75,15 +75,18 @@ export function interpretLevels(high: number, moderate: number, low: number): st
   return phrases.join(" ");
 }
 
-export function interpretGradeRisk(rows: { grade: string; count: number }[]): string {
-  const atRisk = rows.reduce((sum, r) => sum + r.count, 0);
+export function interpretGradeRisk(rows: { grade: string; count: number }[] | null | undefined): string {
+  const atRisk = (rows ?? []).reduce((sum, r) => sum + r.count, 0);
   if (atRisk === 0) {
     return "No at-risk students across grade levels this term.";
   }
-  const ranked = [...rows].sort((a, b) => b.count - a.count);
+  const ranked = [...(rows ?? [])].sort((a, b) => b.count - a.count);
   const top = ranked[0];
+  if (!top || atRisk === 0) {
+    return "No at-risk students across grade levels this term.";
+  }
   const pct = Math.round((top.count / atRisk) * 100);
-  const present = rows.filter((r) => r.count > 0).length;
+  const present = (rows ?? []).filter((r) => r.count > 0).length;
   const phrases: string[] = [
     `${atRisk} at-risk students spread across ${present} grade level(s).`,
   ];

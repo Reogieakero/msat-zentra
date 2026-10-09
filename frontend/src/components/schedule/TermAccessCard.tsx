@@ -81,8 +81,8 @@ export function TermAccessCard({
         <span className={assign.cardGlow} />
       </span>
       <div className="relative flex flex-col items-center text-center">
-        <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
-          <KeyRound size={32} className="text-primary" />
+        <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10" aria-hidden="true">
+          <KeyRound size={24} className="text-primary" />
         </span>
         <h3 className="text-lg font-semibold">Enter {termLabel} with your code</h3>
         <p className="mt-1 max-w-md text-sm text-muted-foreground">

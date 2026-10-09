@@ -25,9 +25,11 @@ export async function listFlags(ctx: TeacherContext, query: FlagListQuery) {
   const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
   const rawSize = pageSize ?? limit;
-  const effPageSize = rawSize && rawSize > 0 ? Math.min(Math.floor(rawSize), 100) : 15;
+  // Strict 15-record ceiling for normal lists.
+  const effPageSize = rawSize && rawSize > 0 ? Math.min(Math.floor(rawSize), 15) : 15;
   const effPage = Math.max(1, page ?? 1);
-  const hasPaginationParams = page !== undefined || pageSize !== undefined || limit !== undefined;
+  // Always paginate: unbounded full-dataset fetch is never allowed for flags.
+  const hasPaginationParams = true;
 
   const needle = q?.trim() ? q.trim() : null;
   const queryFilter = needle

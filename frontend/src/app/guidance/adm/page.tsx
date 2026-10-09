@@ -3,11 +3,14 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTerm } from "@/lib/term/TermContext";
-import { Loader2 } from "lucide-react";
+import { FileBarChart2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshBadge } from "@/components/ui/refresh-badge";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { GuidancePageHeader } from "../components/GuidancePageHeader";
+import { GuidanceEmptyCard } from "../components/GuidanceEmptyCard";
 import { fetchAllGuidanceReferrals } from "@/services/guidance/referrals.service";
 import { fetchGuidanceRiskLevels } from "@/services/guidance/risk.service";
 import type {
@@ -24,7 +27,7 @@ import pageStyles from "../pages.module.css";
 import styles from "./components/guidance-adm.module.css";
 
 export default function GuidanceAdmPage() {
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
 
   const { data: referrals, isPending, isError, refetch, isFetching } =
@@ -33,6 +36,7 @@ export default function GuidanceAdmPage() {
       queryFn: () => fetchAllGuidanceReferrals(),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const data = React.useMemo(
@@ -62,7 +66,7 @@ export default function GuidanceAdmPage() {
     queryFn: () => fetchGuidanceRiskLevels(studentIds),
     placeholderData: keepPreviousData,
     staleTime: 300_000,
-    enabled: studentIds.length > 0,
+    enabled: termReady && studentIds.length > 0,
   });
 
   const insights = React.useMemo(
@@ -73,6 +77,7 @@ export default function GuidanceAdmPage() {
   if (isPending) {
     return (
       <section className={pageStyles.page} aria-busy="true" aria-label="Loading referrals report">
+        <ZentraPageHeaderSkeleton />
         <div className={styles.skelFindings} aria-hidden="true">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className={styles.skelFinding} />
@@ -137,9 +142,20 @@ export default function GuidanceAdmPage() {
   }
 
   const refreshing = isFetching && !isPending;
+  const isTrueEmpty = (data?.desk.length ?? 0) === 0;
 
   return (
-    <section className={pageStyles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${pageStyles.page} ${pageStyles.pageFit}` : pageStyles.page}
+      aria-busy={refreshing}
+      aria-label="Referrals report"
+    >
+      {isTrueEmpty ? null : (
+        <GuidancePageHeader
+          title="Referrals Report"
+          description="ADM and counseling referral trends, outcomes, and desk load."
+        />
+      )}
       {refreshing ? <RefreshBadge label="Refreshing referrals report…" /> : null}
       {riskError && studentIds.length > 0 ? (
         <p role="alert" style={{ margin: 0, fontSize: "0.8125rem", color: "var(--destructive)" }}>
@@ -154,8 +170,21 @@ export default function GuidanceAdmPage() {
           </button>
         </p>
       ) : null}
-      {insights ? <GuidanceAdmInsights data={insights} /> : null}
-      <GuidanceAdmReports data={data} />
+      {isTrueEmpty ? (
+        <GuidanceEmptyCard
+          icon={FileBarChart2}
+          title="No referrals this term"
+          hint="Referral trends and outcomes will appear here once cases are filed."
+          label="Referrals report"
+          centered
+          layout="fit"
+        />
+      ) : (
+        <>
+          {insights ? <GuidanceAdmInsights data={insights} /> : null}
+          <GuidanceAdmReports data={data} />
+        </>
+      )}
     </section>
   );
 }

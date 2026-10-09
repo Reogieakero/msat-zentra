@@ -58,7 +58,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
-      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 50, 1), 100);
+      const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 15, 1), 100);
       const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
       res.json(await listFinalGrades(ctxOf(req), { page, pageSize, q }));
     } catch (e) {
@@ -90,7 +90,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
-      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "10"), 10) || 10, 1), 50);
+      const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "15"), 10) || 15, 1), 50);
       res.json(await getAccountsAudit({ band: GRADE_BAND_7_10, page, pageSize }));
     } catch (e) {
       next(e);

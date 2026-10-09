@@ -4,7 +4,6 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   flexRender,
@@ -16,12 +15,13 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ShieldCheck,
   X,
 } from "lucide-react";
+import { PrincipalEmptyState } from "../../components/PrincipalEmptyCard";
 import { apiClient } from "@/lib/api/client";
 import { useTerm } from "@/lib/term/TermContext";
 import { usePersistentState } from "@/lib/hooks/usePersistentState";
-import { useGradeMode } from "../../grade-mode-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -29,8 +29,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -43,9 +41,9 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { BackendStudent, RiskFactor } from "@/services/principal/riskStudents.types";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./HighRiskStudentsTable.module.css";
-import { gradeNum, groupSectionsByGrade } from "./risk-section-utils";
 
 const FACTOR_LABEL: Record<RiskFactor, string> = {
   Academic: "Academic",
@@ -53,91 +51,92 @@ const FACTOR_LABEL: Record<RiskFactor, string> = {
   Behavioral: "Behavioral",
 };
 
+const FACTOR_ACTIVE_CLASS: Record<RiskFactor, string> = {
+  Academic: "factorAcademic",
+  Attendance: "factorAttendance",
+  Behavioral: "factorBehavioral",
+} as const;
+
+// Same palette as the teacher overview At-Risk Factors card
+// (teacher-overview-risk.tsx RISK_COLORS): Academic amber, Attendance green,
+// Behavioral blue.
+const FACTOR_DOT: Record<RiskFactor, string> = {
+  Academic: "#f59e0b",
+  Attendance: "#22c55e",
+  Behavioral: "#3b82f6",
+};
+
 const PAGE_SIZE = 15;
 
 export function HighRiskStudentsTable() {
-  const { gradeMode } = useGradeMode();
   const [query, setQuery] = usePersistentState<string>(
     "zentra.risk.highRisk.search",
     ""
-  );
-  const [sectionFilter, setSectionFilter] = usePersistentState<string>(
-    "zentra.risk.highRisk.section",
-    "all"
   );
   const [factorFilter, setFactorFilter] = usePersistentState<"all" | RiskFactor>(
     "zentra.risk.highRisk.factor",
     "all"
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pageIndex, setPageIndex] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const debouncedQuery = useDebouncedValue(query, 300);
 
   const { activeTerm } = useTerm();
   const termId = activeTerm?.termId ?? null;
-  const { data, isPending } = useQuery({
-    queryKey: ["risk-students", termId, gradeMode],
-    queryFn: async () => {
+  const schoolYearId = activeTerm?.schoolYearId ?? null;
+  const { data, isPending, isFetching, isError, refetch } = useQuery({
+    queryKey: ["risk-students", "high", termId, schoolYearId, page, debouncedQuery, factorFilter],
+    queryFn: async ({ signal }) => {
+      const params: Record<string, string | number> = {
+        page,
+        pageSize: PAGE_SIZE,
+        riskLevel: "High",
+      };
+      if (debouncedQuery.trim()) params.q = debouncedQuery.trim();
+      if (factorFilter !== "all") params.factor = factorFilter;
       const res = await apiClient.get<{
         students: BackendStudent[];
         total: number;
-      }>("/api/risk/students", {
-        params: { pageSize: 50, gradeMode },
-      });
+        page: number;
+      }>("/api/risk/students", { params, signal });
       return res.data;
     },
-    staleTime: 60_000,
+    // Keep visited pages cached: back/forward navigation within the
+    // stale window serves instantly with no skeleton or refetch.
+    staleTime: 120_000,
+    gcTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
-  const highRisk = React.useMemo(
-    () => (data?.students ?? []).filter((s) => s.riskLevel === "High"),
-    [data]
-  );
+  const rows = React.useMemo(() => data?.students ?? [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
 
-  const sections = React.useMemo(
-    () =>
-      Array.from(new Set(highRisk.map((s) => s.section)))
-        .filter((s) => s !== "—")
-        .sort((a, b) => gradeNum(a) - gradeNum(b) || a.localeCompare(b)),
-    [highRisk]
-  );
+  // If filters shrink the result set under the current page (e.g. on page 3
+  // of 45, then filter to 10), step back to the last valid page so the
+  // requested page, the footer label, and the rows always agree.
+  React.useEffect(() => {
+    if (!isPending && totalPages >= 1 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [isPending, totalPages, page]);
 
-  const gradeGroups = React.useMemo(() => groupSectionsByGrade(sections), [sections]);
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return highRisk.filter((s) => {
-      const matchesQuery =
-        !q ||
-        s.name.toLowerCase().includes(q) ||
-        s.lrn.toLowerCase().includes(q);
-      const matchesSection = sectionFilter === "all" || s.section === sectionFilter;
-      const matchesFactor = factorFilter === "all" || s.factors[factorFilter];
-      return matchesQuery && matchesSection && matchesFactor;
-    });
-  }, [highRisk, query, sectionFilter, factorFilter]);
-
-  const hasActiveFilters = sectionFilter !== "all" || factorFilter !== "all";
+  const hasActiveFilters = factorFilter !== "all";
 
   const applySearch = (value: string) => {
     setQuery(value);
-    setPageIndex(0);
-  };
-
-  const applySection = (value: string) => {
-    setSectionFilter(value);
-    setPageIndex(0);
+    setPage(1);
   };
 
   const applyFactor = (value: "all" | RiskFactor) => {
     setFactorFilter(value);
-    setPageIndex(0);
+    setPage(1);
   };
 
   const clearFilters = () => {
-    setSectionFilter("all");
     setFactorFilter("all");
-    setPageIndex(0);
+    setPage(1);
   };
 
   const columns = React.useMemo<ColumnDef<BackendStudent>[]>(
@@ -195,9 +194,18 @@ export function HighRiskStudentsTable() {
               <span
                 key={f}
                 className={`${styles.factorChip} ${
-                  row.original.factors[f] ? styles.factorOn : styles.factorOff
+                  row.original.factors[f]
+                    ? styles[FACTOR_ACTIVE_CLASS[f]]
+                    : styles.factorOff
                 }`}
               >
+                {row.original.factors[f] ? (
+                  <span
+                    className={styles.factorDot}
+                    style={{ background: FACTOR_DOT[f] }}
+                    aria-hidden
+                  />
+                ) : null}
                 {FACTOR_LABEL[f]}
               </span>
             ))}
@@ -209,30 +217,34 @@ export function HighRiskStudentsTable() {
   );
 
   const table = useReactTable({
-    data: filtered,
+    data: rows,
     columns,
     getRowId: (row) => row.studentId,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
-    state: { sorting, pagination: { pageIndex, pageSize: PAGE_SIZE } },
-    onPaginationChange: (updater) => {
-      const next =
-        typeof updater === "function"
-          ? updater({ pageIndex, pageSize: PAGE_SIZE })
-          : updater;
-      setPageIndex(next.pageIndex);
-    },
+    state: { sorting },
   });
 
-  const pageCount = table.getPageCount();
-  const safePageIndex = Math.min(pageIndex, Math.max(0, pageCount - 1));
-  const rows = table.getRowModel().rows;
-  const start = filtered.length === 0 ? 0 : safePageIndex * PAGE_SIZE + 1;
-  const end = Math.min((safePageIndex + 1) * PAGE_SIZE, filtered.length);
+  const tableRows = table.getRowModel().rows;
+  const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(safePage * PAGE_SIZE, total);
 
+  const isEmpty = !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters;
+  if (isEmpty) {
+    return (
+      <div className={`${assign.card} ${styles.card}`}>
+        <span className={assign.glowClip} aria-hidden="true">
+          <span className={assign.cardGlow} />
+        </span>
+        <PrincipalEmptyState
+          icon={ShieldCheck}
+          title="No high-risk students"
+          hint="No high-risk students in the active term. Flagged students will appear here once detected."
+        />
+      </div>
+    );
+  }
   return (
     <div className={`${assign.card} ${styles.card}`}>
       <span className={assign.glowClip} aria-hidden="true">
@@ -243,7 +255,7 @@ export function HighRiskStudentsTable() {
           <h3 className="text-sm font-semibold">High Risk Students</h3>
           <p className="text-sm text-muted-foreground">
             Students flagged as high risk that need priority review —{" "}
-            {filtered.length} student{filtered.length === 1 ? "" : "s"}.
+            {total} student{total === 1 ? "" : "s"}.
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -257,49 +269,6 @@ export function HighRiskStudentsTable() {
               aria-label="Search high-risk students"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`${styles.filterBtn} ${
-                  sectionFilter !== "all" ? styles.filterActive : ""
-                }`}
-              >
-                Section
-                {sectionFilter !== "all" && <span className={styles.filterDot} aria-hidden />}
-                <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={styles.filterMenu}>
-              <DropdownMenuCheckboxItem
-                checked={sectionFilter === "all"}
-                onCheckedChange={() => applySection("all")}
-              >
-                All sections
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              {gradeGroups.length === 0 ? (
-                <DropdownMenuItem disabled>No sections</DropdownMenuItem>
-              ) : (
-                gradeGroups.map(([grade, secs]) => (
-                  <React.Fragment key={grade}>
-                    <DropdownMenuLabel>Grade {grade}</DropdownMenuLabel>
-                    {secs.map((s) => (
-                      <DropdownMenuCheckboxItem
-                        key={s}
-                        checked={sectionFilter === s}
-                        onCheckedChange={() => applySection(s)}
-                      >
-                        {s}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </React.Fragment>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -349,6 +318,20 @@ export function HighRiskStudentsTable() {
       </div>
 
       <div className={`${styles.content} relative`}>
+        {isError && !isPending && rows.length === 0 ? (
+          <div className={styles.empty} role="alert">
+            <p>Couldn&apos;t load this page of high-risk students.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : !isPending && total === 0 && !debouncedQuery.trim() && !hasActiveFilters ? (
+          <PrincipalEmptyState
+            icon={ShieldCheck}
+            title="No high-risk students"
+            hint="No high-risk students in the active term. Flagged students will appear here once detected."
+          />
+        ) : (
         <div className="overflow-x-auto rounded-md border">
           <Table className="w-full table-fixed">
             <TableHeader>
@@ -372,18 +355,18 @@ export function HighRiskStudentsTable() {
             <TableBody>
               {isPending ? (
                 <SkeletonRows />
-              ) : rows.length === 0 ? (
+              ) : tableRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className={styles.empty}>
-                    {query.trim()
-                      ? `No high-risk students match “${query}”.`
+                    {debouncedQuery.trim()
+                      ? `No high-risk students match “${debouncedQuery}”.`
                       : hasActiveFilters
                         ? "No high-risk students match the selected filters."
                         : "No high-risk students."}
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => (
+                tableRows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
@@ -400,33 +383,36 @@ export function HighRiskStudentsTable() {
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
 
-      <div className={`${styles.footer} relative`}>
-        <span className={styles.footerInfo}>
-          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!table.getCanPreviousPage() || filtered.length === 0}
-            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!table.getCanNextPage() || filtered.length === 0}
-            onClick={() => setPageIndex((p) => p + 1)}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
+      {total > PAGE_SIZE && (
+        <div className={`${styles.footer} relative`}>
+          <span className={styles.footerInfo} aria-live="polite">
+            {total > 0 ? `${start}–${end} of ${total} · Page ${safePage} of ${totalPages}` : "0 of 0"}
+          </span>
+          <div className={styles.footerActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || total === 0 || isFetching}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft aria-hidden />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || total === 0 || isFetching}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+              <ChevronRight aria-hidden />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderSkeleton } from "../../../components/skeletons/PageHeaderSkeleton";
 
 export default function PrincipalAdmReferralsLoading() {
   return (
     <section aria-label="Loading referrals" aria-busy="true" className="flex min-w-0 flex-col gap-3">
+      <PageHeaderSkeleton />
       <div className="rounded-md border p-4" aria-hidden="true">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

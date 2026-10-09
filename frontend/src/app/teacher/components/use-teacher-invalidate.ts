@@ -50,6 +50,10 @@ export const TEACHER_SCOPE_KEYS = {
   ],
   schedule: [
     ["teacher-schedule"],
+    ["teacher-schedule-summary"],
+    ["teacher-schedule-section"],
+  ["teacher-schedule-summary"],
+  ["teacher-schedule-section"],
     ["teacher-schedule-subjects"],
     ["teacher-schedule-teachers"],
     ["teacher-schedule-config"],

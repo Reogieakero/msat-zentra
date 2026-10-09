@@ -45,6 +45,8 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
   } = useReferralCancel();
   const [newReferralOpen, setNewReferralOpen] = React.useState(false);
   const [admResubmitSignal, setAdmResubmitSignal] = React.useState(0);
+  const isEmpty =
+    !referralsQuery.isPending && !referralsQuery.isError && unfilteredTotal === 0;
   const handleAdmReferAgain = React.useCallback(() => {
     setNewReferralOpen(true);
     setAdmResubmitSignal((s) => s + 1);
@@ -94,7 +96,10 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
   }, [handleAdmReferAgain, reopenReferral]);
   return (
     <section className={refStyles.page}>
-      <div className={refStyles.layout}>
+      <div
+        className={refStyles.layout}
+        style={isEmpty && !newReferralOpen ? { gridTemplateColumns: "minmax(0, 1fr)" } : undefined}
+      >
         <div className={refStyles.body}>
           <ReferralsTable
             referrals={referrals}
@@ -121,15 +126,18 @@ function TeacherAdvisoryReferralsView({ highlightId }: { highlightId: string | n
             reopenPending={reopenPending}
             reopenRowId={reopenRowId}
             onReferAgain={handleReferAgain}
+            onNewReferral={() => setNewReferralOpen(true)}
           />
         </div>
-        <aside className={refStyles.sideList} aria-label="Refer a student">
-          <ReferStudentCard
-            open={newReferralOpen}
-            onOpenChange={setNewReferralOpen}
-            resubmitHintSignal={admResubmitSignal}
-          />
-        </aside>
+        {isEmpty && !newReferralOpen ? null : (
+          <aside className={refStyles.sideList} aria-label="Refer a student">
+            <ReferStudentCard
+              open={newReferralOpen}
+              onOpenChange={setNewReferralOpen}
+              resubmitHintSignal={admResubmitSignal}
+            />
+          </aside>
+        )}
       </div>
       <ReferralTrackDialog referral={trackTarget} onClose={() => setTrackTarget(null)} />
       <ReferralCancelDialog

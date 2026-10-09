@@ -73,19 +73,19 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
 
   const mineQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "mine", termKey],
-    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: 100, signal }),
+    queryFn: ({ signal }) => fetchFlags("mine", { pageSize: 15, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "raised-by-me",
   });
   const againstQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "against-me", termKey],
-    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: 100, signal }),
+    queryFn: ({ signal }) => fetchFlags("against-me", { pageSize: 15, signal }),
     placeholderData: keepPreviousData,
     enabled: mode === "against-me",
   });
 
   const sectionsQuery = useQuery<{ sections: { advisedByMe: boolean }[] }>({
-    queryKey: ["teacher-settings-adviser-sections"],
+    queryKey: ["teacher-settings-adviser-sections", termKey],
     queryFn: async () => {
       const { data } = await apiClient.get<{
         sections: { advisedByMe: boolean }[];
@@ -97,7 +97,7 @@ export function FlagHistory({ onBack }: FlagHistoryProps) {
   });
   const adviseeQuery = useQuery<GradeFlagRow[]>({
     queryKey: ["grade-flags", "advisees", termKey],
-    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: 100, signal }),
+    queryFn: ({ signal }) => fetchFlags("advisees", { pageSize: 15, signal }),
     placeholderData: keepPreviousData,
     retry: false,
     enabled: mode === "advisees",

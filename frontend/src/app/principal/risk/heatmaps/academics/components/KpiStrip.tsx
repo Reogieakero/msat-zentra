@@ -28,6 +28,8 @@ export function KpiStrip({
   const belowPct =
     gradedTotal > 0 ? Math.round((below / gradedTotal) * 100) : 0;
 
+  if (!isPending && sectionCount === 0 && gradedTotal === 0) return null;
+
   return (
     <div className={styles.kpiGrid}>
       <div className={styles.kpiCard}>

@@ -45,13 +45,21 @@ export async function fetchGuidanceReferrals(
   return { ...(data as GuidanceReferralsData), referrals };
 }
 
+// Bounded preview fan-out: strict 15/page, max 10 pages (150 rows).
+// Full-dataset traversal is never allowed from list UI; server pagination +
+// search must be used instead. Callers needing complete data must use a
+// dedicated aggregate/export endpoint.
+const FETCH_ALL_PAGE_SIZE = 15;
+const FETCH_ALL_MAX_PAGES = 10;
+
 export async function fetchAllGuidanceReferrals(
   params: GuidanceReferralsParams = {}
 ): Promise<GuidanceReferralItem[]> {
-  const first = await fetchGuidanceReferrals({ ...params, page: 1, pageSize: 100 });
+  const first = await fetchGuidanceReferrals({ ...params, page: 1, pageSize: FETCH_ALL_PAGE_SIZE });
   const all = [...first.referrals];
-  for (let p = 2; p <= first.totalPages; p++) {
-    const res = await fetchGuidanceReferrals({ ...params, page: p, pageSize: 100 });
+  const pages = Math.min(first.totalPages, FETCH_ALL_MAX_PAGES);
+  for (let p = 2; p <= pages; p++) {
+    const res = await fetchGuidanceReferrals({ ...params, page: p, pageSize: FETCH_ALL_PAGE_SIZE });
     all.push(...res.referrals);
   }
   return all;

@@ -252,31 +252,33 @@ export function AnecdotalList({ records, onSelect }: AnecdotalListProps) {
         </Table>
       </CardContent>
 
-      <CardFooter className={styles.footer}>
-        <span className={styles.footerInfo}>
-          {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
-        </span>
-        <div className={styles.footerActions}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1 || filtered.length === 0}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft aria-hidden />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages || filtered.length === 0}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-            <ChevronRight aria-hidden />
-          </Button>
-        </div>
-      </CardFooter>
+      {totalPages > 1 && (
+        <CardFooter className={styles.footer}>
+          <span className={styles.footerInfo}>
+            {filtered.length > 0 ? `${start}–${end} of ${filtered.length}` : "0 of 0"}
+          </span>
+          <div className={styles.footerActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1 || filtered.length === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft aria-hidden />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages || filtered.length === 0}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+              <ChevronRight aria-hidden />
+            </Button>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }

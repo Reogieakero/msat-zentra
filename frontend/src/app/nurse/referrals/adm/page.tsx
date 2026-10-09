@@ -4,7 +4,10 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Inbox, Loader2 } from "lucide-react";
+import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
+import { NursePageHeader } from "../../components/NursePageHeader";
+import { NurseEmptyCard } from "../../components/NurseEmptyCard";
 import { NurseAlertsTable } from "../components/NurseAlertsTable";
 import { NurseReferralsSkeleton } from "../components/NurseReferralsSkeleton";
 import { NurseRefreshBadge } from "../../components/nurse-refresh-badge";
@@ -13,6 +16,7 @@ import type { NurseAlertsPage } from "@/services/nurse/nurse.types";
 import { useNurseInvalidate } from "../../overview/components/use-nurse-mutation";
 import { useTerm } from "@/lib/term/TermContext";
 import styles from "../nurse-referrals-page.module.css";
+import pageStyles from "../../pages.module.css";
 
 const NURSE_ADM_PAGE_SIZE = 15;
 
@@ -21,7 +25,7 @@ function NurseAdmReferralsView() {
   const highlightId = params.get("highlight");
   const autoViewFormId = params.get("form") === "1" ? params.get("highlight") : null;
   const invalidateNurse = useNurseInvalidate();
-  const { activeTerm } = useTerm();
+  const { activeTerm, termReady } = useTerm();
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const [page, setPage] = React.useState(1);
   const [takeover, setTakeover] = React.useState(false);
@@ -46,6 +50,7 @@ function NurseAdmReferralsView() {
         }),
       placeholderData: keepPreviousData,
       staleTime: 60_000,
+      enabled: termReady,
     });
 
   const totalPages = Math.max(1, data?.totalPages ?? 1);
@@ -57,7 +62,8 @@ function NurseAdmReferralsView() {
 
   if (isPending) {
     return (
-      <section className={styles.page}>
+      <section className={styles.page} aria-busy="true" aria-label="Loading ADM cases">
+        <ZentraPageHeaderSkeleton />
         <NurseReferralsSkeleton sideRows={6} />
       </section>
     );
@@ -88,10 +94,31 @@ function NurseAdmReferralsView() {
   }
 
   const refreshing = isRefetching && !isPending;
+  const isTrueEmpty = (data.unfilteredTotal ?? data.total) === 0;
 
   return (
-    <section className={styles.page} aria-busy={refreshing}>
+    <section
+      className={isTrueEmpty ? `${styles.page} ${pageStyles.pageFit}` : styles.page}
+      aria-busy={refreshing}
+      aria-label="ADM cases"
+    >
+      {isTrueEmpty ? null : (
+        <NursePageHeader
+          title="ADM Cases"
+          description="ADM cases endorsed to the clinic — review, accept, or forward for action."
+        />
+      )}
       {refreshing ? <NurseRefreshBadge label="Refreshing ADM cases…" /> : null}
+      {isTrueEmpty ? (
+        <NurseEmptyCard
+          icon={Inbox}
+          title="No ADM cases"
+          hint="New ADM cases sent to you will appear here."
+          label="ADM cases"
+          centered
+          layout="fit"
+        />
+      ) : (
       <NurseAlertsTable
         alerts={Array.isArray(data.alerts) ? data.alerts : []}
         onChanged={refresh}
@@ -109,6 +136,7 @@ function NurseAdmReferralsView() {
           setPage(p);
         }}
       />
+      )}
     </section>
   );
 }

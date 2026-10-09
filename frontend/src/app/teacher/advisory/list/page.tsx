@@ -286,30 +286,26 @@ export default function TeacherAdvisoryListPage() {
   return (
     <section aria-label="Advisory list" className="flex min-w-0 flex-col gap-3">
       {students.length === 0 ? (
-        <div className={assign.card}>
-          <span className={assign.glowClip} aria-hidden="true">
-            <span className={assign.cardGlow} />
-          </span>
-          <div className="relative">
-            <h2 className={styles.sectionTitle}>Advisory List</h2>
-            <p className={styles.sectionDesc}>
-              {`Your advisees — 0 students${sectionLabel ? ` · ${sectionLabel}` : ""}.`}
-            </p>
-          </div>
-          <div className="relative flex flex-col items-center gap-2 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
-              aria-hidden="true"
-            >
-              <Users size={24} className="text-muted-foreground" />
+        <div className="flex min-h-[calc(100dvh-8rem)] w-full items-center justify-center">
+          <div className={`${assign.card} w-full max-w-md`}>
+            <span className={assign.glowClip} aria-hidden="true">
+              <span className={assign.cardGlow} />
             </span>
-            <p className="font-medium">No advisory students yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Students enlisted in your advisory section will appear here.
-            </p>
-            <Button size="sm" className="mt-2" onClick={openAdd}>
-              Add student
-            </Button>
+            <div className="relative flex flex-col items-center gap-2 py-6 text-center">
+              <span
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+                aria-hidden="true"
+              >
+                <Users size={24} className="text-muted-foreground" />
+              </span>
+              <p className="font-medium">No advisory students yet</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Students enlisted in your advisory section will appear here.
+              </p>
+              <Button size="sm" className="mt-2" onClick={openAdd}>
+                Add student
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
@@ -390,24 +386,26 @@ export default function TeacherAdvisoryListPage() {
               {table.getFilteredRowModel().rows.length} student
               {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
             </div>
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
-            </div>
+            {table.getPageCount() > 1 && (
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </div>
           </div>

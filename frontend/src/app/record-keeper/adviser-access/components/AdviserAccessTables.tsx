@@ -6,6 +6,7 @@ import {
   TableSkeleton,
 } from "@/components/shared/adviser-access/AdviserAccessTables";
 import type { AdviserAccessRequest } from "./types";
+import { PAGE_SIZE } from "@/components/shared/pagination";
 
 export { TableSkeleton };
 
@@ -17,9 +18,9 @@ export function PendingDecisionTable(props: {
   actingApprove?: boolean | null;
   onActed: ActFn;
 }) {
-  return <SharedPendingDecisionTable {...props} pageSize={8} />;
+  return <SharedPendingDecisionTable {...props} pageSize={PAGE_SIZE} />;
 }
 
 export function HistoryTable(props: { requests: AdviserAccessRequest[] }) {
-  return <SharedHistoryTable {...props} pageSize={8} />;
+  return <SharedHistoryTable {...props} pageSize={PAGE_SIZE} />;
 }

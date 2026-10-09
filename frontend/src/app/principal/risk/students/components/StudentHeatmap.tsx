@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Users } from "lucide-react";
 import { FACTOR_CHIP, type BackendHeatmap, type RiskFactor } from "@/services/principal/riskStudents.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import { PrincipalEmptyState } from "../../../components/PrincipalEmptyCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./StudentHeatmap.module.css";
 
 const FACTORS: RiskFactor[] = ["Academic", "Attendance", "Behavioral"];
@@ -40,6 +42,23 @@ export function StudentHeatmap({
 
   const sections = heat?.sections ?? [];
 
+  const isEmpty = !loading && sections.length === 0;
+  if (isEmpty) {
+    return (
+      <section aria-label="Section heatmap">
+        <div className={assign.card}>
+          <span className={assign.glowClip} aria-hidden="true">
+            <span className={assign.cardGlow} />
+          </span>
+          <PrincipalEmptyState
+            icon={Users}
+            title="No sections to display"
+            hint="No sections with risk data for the active term. Sections will appear here once detected."
+          />
+        </div>
+      </section>
+    );
+  }
   return (
     <section aria-label="Section heatmap">
       <div className={assign.card}>
@@ -57,12 +76,37 @@ export function StudentHeatmap({
         </div>
         <div className={`${styles.tableBody} relative`}>
         {loading ? (
-          <div className={styles.state}>
-            <Loader2 className={styles.spinner} aria-hidden />
-            Loading heatmap…
+          <div className={styles.grid} aria-hidden="true" aria-label="Loading section heatmap">
+            <div className={`${styles.row} ${styles.headRow}`}>
+              <div className={styles.sectionHead}>
+                <Skeleton className="h-4 w-20" />
+              </div>
+              {FACTORS.map((f) => (
+                <div key={f} className={styles.factorHead}>
+                  <Skeleton className="size-2 shrink-0 rounded-full" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className={`${styles.row} ${styles.dataRow}`}>
+                <div className={styles.sectionName}>
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                {FACTORS.map((f) => (
+                  <div key={f} className={styles.cell}>
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         ) : sections.length === 0 ? (
-          <div className={styles.state}>No sections to display.</div>
+          <PrincipalEmptyState
+            icon={Users}
+            title="No sections to display"
+            hint="No sections with risk data for the active term. Sections will appear here once detected."
+          />
         ) : (
           <div className={styles.grid} role="grid" aria-label="Section risk heatmap">
             <div className={`${styles.row} ${styles.headRow}`}>

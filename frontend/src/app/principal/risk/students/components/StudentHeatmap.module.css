@@ -26,28 +26,6 @@
   margin-top: 0.75rem;
 }
 
-.state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 2rem;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
-.spinner {
-  width: 1rem;
-  height: 1rem;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .grid {
   display: flex;
   flex-direction: column;
