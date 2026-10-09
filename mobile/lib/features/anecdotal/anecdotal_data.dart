@@ -245,3 +245,18 @@ Future<List<int>> downloadRecordExport(WidgetRef ref, String id) async {
     api.throwApi(e);
   }
 }
+
+/// Single-page A4 PDF twin of the .xlsx export (GET /api/anecdotal/:id/pdf),
+/// backing the in-app preview. Generated on demand server-side, so the
+/// signature state is always fresh — cache keys must include it.
+Future<List<int>> downloadRecordPdf(WidgetRef ref, String id) async {
+  final api = ref.read(apiClientProvider);
+  try {
+    final res = await api.dio.get('/api/anecdotal/$id/pdf', options: Options(responseType: ResponseType.bytes));
+    final data = res.data;
+    if (data is List<int>) return data;
+    return List<int>.from(data as List);
+  } on DioException catch (e) {
+    api.throwApi(e);
+  }
+}

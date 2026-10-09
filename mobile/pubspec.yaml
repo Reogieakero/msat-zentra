@@ -23,6 +23,7 @@ dependencies:
   share_plus: ^11.0.0
   signature: ^6.1.0
   path_provider: ^2.1.4
+  pdfrx: ^2.4.8
 
 dev_dependencies:
   flutter_test:
