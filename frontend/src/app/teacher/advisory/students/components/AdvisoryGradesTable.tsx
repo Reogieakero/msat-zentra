@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -13,9 +13,10 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Info, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, SearchIcon, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import {
   Table,
   TableBody,
@@ -138,12 +139,9 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
         maxSize: 220,
         cell: ({ row }) => (
           <div className="min-w-0">
-            <Link
-              href={`/teacher/advisory/students/${row.original.studentId}/academic`}
-              className="block truncate font-medium text-primary underline-offset-4 hover:underline"
-            >
+            <span className="block truncate text-[13px] font-semibold text-primary">
               {row.original.name}
-            </Link>
+            </span>
             <p className="truncate text-xs text-muted-foreground">{row.original.lrn}</p>
           </div>
         ),
@@ -215,6 +213,25 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
     state: { sorting, columnFilters },
   });
 
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+
+  // Jump to the page containing the highlighted student (from advisory list).
+  React.useEffect(() => {
+    if (!highlightId) return;
+    const idx = filteredStudents.findIndex((s) => s.studentId === highlightId);
+    if (idx < 0) return;
+    const pageSize = table.getState().pagination.pageSize;
+    table.setPageIndex(Math.floor(idx / pageSize));
+  }, [highlightId, filteredStudents, table]);
+
+  // Scroll the highlighted row into view after pagination settles.
+  React.useEffect(() => {
+    if (!highlightId) return;
+    const el = document.getElementById(`student-row-${CSS.escape(highlightId)}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, table.getState().pagination.pageIndex, filteredStudents]);
+
   return (
     <>
     <div className={assign.card}>
@@ -230,6 +247,19 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <InputGroup className="max-w-40 shrink-0">
+            <InputGroupInput
+              placeholder="Filter students..."
+              value={(table.getColumn("student")?.getFilterValue() as string) ?? ""}
+              onChange={(event) =>
+                table.getColumn("student")?.setFilterValue(event.target.value)
+              }
+              aria-label="Filter students"
+            />
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+          </InputGroup>
           {sections.length > 1 ? (
             <div className="flex items-center gap-1" role="group" aria-label="Filter by section">
               <Button
@@ -287,7 +317,15 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow
+                    key={row.id}
+                    id={`student-row-${row.original.studentId}`}
+                    className={
+                      highlightId === row.original.studentId
+                        ? "bg-primary/10 shadow-[inset_3px_0_0_var(--primary)]"
+                        : undefined
+                    }
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
@@ -325,6 +363,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
+              <ChevronLeft aria-hidden />
               Previous
             </Button>
             <Button
@@ -334,6 +373,7 @@ export function AdvisoryGradesTable({ students, sections, offeredSubjects }: Adv
               disabled={!table.getCanNextPage()}
             >
               Next
+              <ChevronRight aria-hidden />
             </Button>
           </>
         )}

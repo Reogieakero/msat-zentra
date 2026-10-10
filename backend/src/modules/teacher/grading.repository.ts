@@ -41,10 +41,21 @@ export async function assertSubjectAccess(teacherId: string, subjectId: string, 
     where: { teacherId, subjectId, termId },
     select: { id: true },
   });
-  if (!assignment) {
+  if (assignment) return assignment;
+  // Timetable-linked fallback: same link used by class/attendance pages.
+  const linked = await prisma.sectionTimetableEntry.findFirst({
+    where: {
+      termId,
+      subjectId,
+      status: { in: ["APPROVED", "SUBMITTED"] },
+      teacherName: { userId: teacherId },
+    },
+    select: { id: true },
+  });
+  if (!linked) {
     throw new AppError(404, "CLASS_NOT_FOUND", "Class not found");
   }
-  return assignment;
+  return linked;
 }
 
 export async function assertAssignment(teacherId: string, assignmentId: string, termId: string) {

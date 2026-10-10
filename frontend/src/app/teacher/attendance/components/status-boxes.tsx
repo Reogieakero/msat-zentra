@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import type { SheetStatus } from "@/services/teacher/attendance.types";
+import sheetStyles from "./attendance-sheet.module.css";
 export const STATUS_BOXES: { value: SheetStatus; letter: string; activeClass: string; label: string }[] = [
   { value: "present", letter: "P", activeClass: "bg-green-500/70 border-green-500/70 text-white", label: "Present" },
   { value: "absent", letter: "A", activeClass: "bg-red-500/70 border-red-500/70 text-white", label: "Absent" },
@@ -11,15 +12,18 @@ export const StatusBoxes = React.memo(function StatusBoxes({
   value,
   onPick,
   disabled,
+  impliedAbsent,
 }: {
-  value: SheetStatus;
+  value: SheetStatus | null;
   onPick: (s: SheetStatus) => void;
   disabled?: boolean;
+  impliedAbsent?: boolean;
 }) {
   return (
     <div className="flex items-center gap-1">
       {STATUS_BOXES.map((b) => {
         const isActive = b.value === value;
+        const isImplied = isActive && impliedAbsent && b.value === "absent";
         return (
           <button
             key={b.value}
@@ -27,11 +31,13 @@ export const StatusBoxes = React.memo(function StatusBoxes({
             onClick={() => onPick(b.value)}
             disabled={disabled}
             aria-pressed={isActive}
-            aria-label={`Mark ${b.label}`}
-            title={disabled ? `${b.label} — locked` : b.label}
+            aria-label={isImplied ? "Absent (not logged) — tap to confirm" : `Mark ${b.label}`}
+            title={disabled ? `${b.label} — locked` : isImplied ? "Absent — not logged (tap A to confirm)" : b.label}
             className={`flex h-7 w-7 items-center justify-center rounded-md border text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               isActive
-                ? b.activeClass
+                ? isImplied
+                  ? `${b.activeClass} border-dashed opacity-70`
+                  : b.activeClass
                 : "border-input bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground"
             }`}
           >
@@ -54,7 +60,6 @@ export const BLOCK_LABEL: Record<SheetStatus, string> = {
   late: "Late",
   excused: "Excused",
 };
-const MAX_VISIBLE_DOTS = 30;
 export const MeetupBlocksCell = React.memo(function MeetupBlocksCell({
   dates,
   statusOf,
@@ -76,24 +81,15 @@ export const MeetupBlocksCell = React.memo(function MeetupBlocksCell({
   if (!hasTerm || dates.length === 0) {
     return <span className="text-xs text-muted-foreground">No meetup dates.</span>;
   }
-  const hiddenCount = dates.length > MAX_VISIBLE_DOTS ? dates.length - MAX_VISIBLE_DOTS : 0;
-  const visible = hiddenCount > 0 ? dates.slice(dates.length - MAX_VISIBLE_DOTS) : dates;
+  // All meetup dots from term start to the latest meetup are displayed —
+  // no "+N" collapsing. The row scrolls horizontally when there are many.
   return (
     <div
-      className="flex items-center gap-[3px] overflow-x-auto py-0.5"
-      style={{ scrollbarWidth: "none" }}
+      className={`flex items-center gap-[3px] overflow-x-auto py-0.5 ${sheetStyles.blocksScroll}`}
       role="img"
       aria-label={`${dates.length} meetup days`}
     >
-      {hiddenCount > 0 ? (
-        <span
-          title={`${hiddenCount} earlier meetup${hiddenCount === 1 ? "" : "s"}`}
-          className="flex h-[17px] shrink-0 items-center rounded-[4px] border border-border/60 bg-muted px-1 text-[10px] font-semibold text-muted-foreground"
-        >
-          +{hiddenCount}
-        </span>
-      ) : null}
-      {visible.map((d) => {
+      {dates.map((d) => {
         const s = statusOf(studentId, d);
         const autoAbsent = !s && pastDue(d);
         return (

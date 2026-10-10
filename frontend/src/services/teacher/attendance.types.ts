@@ -9,6 +9,11 @@ export interface OfferedSubject {
   teacherId: string;
   teacherName: string;
   canMark: boolean;
+  ownerTeacherId?: string;
+  ownerTeacherName?: string;
+  isMine?: boolean;
+  myAssignmentId?: string | null;
+  takenByOther?: boolean;
 }
 
 export interface SheetStudent {

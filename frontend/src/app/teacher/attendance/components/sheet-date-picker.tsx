@@ -65,9 +65,12 @@ export function SheetDatePicker({
             {selected ? format(selected, "MMM d, yyyy") : "Pick a date"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0">
+        <PopoverContent align="start" className="w-[280px] p-0">
+          <div className="p-4">
           <Calendar
             mode="single"
+            className="[--cell-size:--spacing(8)] w-full p-0"
+            classNames={{ month: "flex w-full flex-col items-center gap-4" }}
             selected={selected}
             defaultMonth={selected ?? today}
             disabled={(day) => !isMarkable(day)}
@@ -89,15 +92,7 @@ export function SheetDatePicker({
               setOpen(false);
             }}
           />
-          {meetupSet ? (
-            <div className="flex items-center gap-1.5 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-              <span
-                className="h-3 w-3 shrink-0 rounded-[4px] bg-red-500/30"
-                aria-hidden="true"
-              />
-              Non-meetup day — no class for this subject
-            </div>
-          ) : null}
+          </div>
         </PopoverContent>
       </Popover>
       {!isToday ? (

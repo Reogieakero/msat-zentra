@@ -19,11 +19,22 @@ export interface OcForm01Detail {
   signature: { by: string; at: string; imageUrl: string } | null;
 }
 
+const detailCache = new Map<string, { data: OcForm01Detail; at: number }>();
+const DETAIL_TTL_MS = 30_000;
+
 export async function fetchOcForm01Detail(recordId: string): Promise<OcForm01Detail> {
+  const cached = detailCache.get(recordId);
+  if (cached && Date.now() - cached.at < DETAIL_TTL_MS) return cached.data;
   const { data } = await apiClient.get<OcForm01Detail>(
     `/api/anecdotal/${recordId}/detail`
   );
+  detailCache.set(recordId, { data, at: Date.now() });
   return data;
+}
+
+export function invalidateOcForm01Detail(recordId?: string) {
+  if (recordId) detailCache.delete(recordId);
+  else detailCache.clear();
 }
 
 export async function downloadOcForm01(recordId: string): Promise<void> {
@@ -68,4 +79,5 @@ export async function saveMySignature(signatureImage: string): Promise<void> {
 
 export async function applyMySignature(recordId: string): Promise<void> {
   await apiClient.post(`/api/anecdotal/${recordId}/apply-signature`);
+  detailCache.delete(recordId);
 }

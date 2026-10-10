@@ -97,6 +97,7 @@ export function useMyReferrals(highlightId: string | null) {
     },
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
+    gcTime: 5 * 60_000,
   });
   const totalPages = Math.max(1, referralsQuery.data?.totalPages ?? 1);
   const safePage = Math.min(referralsQuery.data?.page ?? page, totalPages);

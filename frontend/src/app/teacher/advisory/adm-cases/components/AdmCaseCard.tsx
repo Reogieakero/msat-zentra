@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { initialsOf } from "@/services/teacher/admCases.labels";
 import type { AdmCase } from "@/services/teacher/admCases.types";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
+import cardStyles from "./AdmCaseCard.module.css";
 
 interface AdmCaseCardProps {
   caseData: AdmCase;
@@ -35,8 +36,11 @@ export function AdmCaseCard({ caseData, onDetails }: AdmCaseCardProps) {
         </span>
       </span>
       <span className={assign.teacherBlock}>
-        <span className={assign.fieldLabel}>{caseData.studentName}</span>
-        <span className={assign.itemTeacher} title={`LRN ${caseData.lrn}`}>
+        <span className={`${assign.fieldLabel} ${cardStyles.studentName}`}>{caseData.studentName}</span>
+        <span
+          className={`${assign.itemTeacher} ${cardStyles.lrn}`}
+          title={`LRN ${caseData.lrn}`}
+        >
           LRN {caseData.lrn}
         </span>
       </span>

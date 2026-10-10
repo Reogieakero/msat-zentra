@@ -95,7 +95,9 @@ export async function getOverview(
         : assignments.map((a) => a.section.id)),
     ),
   );
-  const sectionIds = Array.from(new Set(assignments.map((a) => a.section.id)));
+  const sectionIds = Array.from(
+    new Set([...assignments.map((a) => a.section.id), ...linkedPairs.map((s) => s.sectionId)]),
+  );
   const [sectionCounts, sectionStudents, openFlags, classRoster] = await Promise.all([
     prisma.studentProfile.groupBy({
       by: ["sectionId"],
@@ -325,7 +327,11 @@ export async function getOverview(
     }))
     .sort((a, b) => a.section.localeCompare(b.section) || a.name.localeCompare(b.name));
 
-  const subjectIds = Array.from(new Set(assignments.map((a) => a.subject.id)));
+  // Scoped to the teacher's linked subjects only (assignments + timetable-linked
+  // pairs) — never the whole school catalog.
+  const subjectIds = Array.from(
+    new Set([...assignments.map((a) => a.subject.id), ...linkedPairs.map((s) => s.subjectId)]),
+  );
 
   let assessmentsPayload: {
     id: string;
@@ -429,6 +435,20 @@ export async function getOverview(
       students: countBySection.get(secId) ?? 0,
     };
     aggMap.set(`${a.subjectId}::${secId}`, { sum: 0, count: 0, meta: entryMeta });
+  }
+  for (const s of linkedPairs) {
+    const key = `${s.subjectId}::${s.sectionId}`;
+    if (aggMap.has(key)) continue;
+    aggMap.set(key, {
+      sum: 0,
+      count: 0,
+      meta: {
+        subject: s.subject.name,
+        gradeLevel: GRADE_LABELS[s.section.gradeLevel] ?? s.section.gradeLevel,
+        section: s.section.name,
+        students: countBySection.get(s.sectionId) ?? 0,
+      },
+    });
   }
   for (const f of finals) {
     const stSec = f.studentId

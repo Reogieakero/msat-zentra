@@ -22,6 +22,8 @@ export interface SlotCard {
   live: boolean;
   rank: number;
   haystack: string;
+  /** How many weekly sessions this subject+section pair holds (shown as one row). */
+  sessionCount: number;
 }
 export function useSlotCards(pairs: AttendancePair[], config: DayConfig | undefined, now: Date) {
   const [slotQuery, setSlotQuery] = useState("");
@@ -75,11 +77,26 @@ export function useSlotCards(pairs: AttendancePair[], config: DayConfig | undefi
           live,
           rank,
           haystack: `${p.subject.name} ${p.subject.code} ${p.section.name} ${timeLabel}`.toLowerCase(),
+          sessionCount: 1,
         });
       }
     }
+    // Dedupe: same subject in the same section/grade counts as ONE row, no
+    // matter how many times it appears in the week. Keep the most relevant
+    // session (live > soonest) as the representative; the sheet itself still
+    // resolves the live slot from the pair, so collapsing rows is display-only.
+    const byPair = new Map<string, SlotCard[]>();
+    for (const c of cards) {
+      const arr = byPair.get(c.pairKey) ?? [];
+      arr.push(c);
+      byPair.set(c.pairKey, arr);
+    }
+    const deduped = [...byPair.values()].map((group) => {
+      const rep = [...group].sort((a, b) => a.rank - b.rank)[0]!;
+      return { ...rep, sessionCount: group.length };
+    });
     const q = debouncedSlotQuery.trim().toLowerCase();
-    return cards
+    return deduped
       .filter((c) => q === "" || c.haystack.includes(q))
       .sort((a, b) => a.rank - b.rank);
   }, [pairs, config, nowMin, todayDow, debouncedSlotQuery]);

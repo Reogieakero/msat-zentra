@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { NotebookPen } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useSession } from "@/lib/auth/useSession";
 import { useTerm } from "@/lib/term/TermContext";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
@@ -50,15 +51,23 @@ function recordDate(iso: string): string {
 
 export function TeacherOverviewAnecdotes() {
   const { activeTerm } = useTerm();
+  const session = useSession();
+  const teacherId = session?.sub ?? null;
   const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const anecdotesQuery = useQuery({
     // Term-scoped: never show Term A anecdotes for Term B.
-    queryKey: ["teacher-anecdotes", termKey],
+    // Cached 30s / GC 5m like the rest of teacher overview.
+    queryKey: ["teacher-anecdotes", teacherId ?? "anon", termKey],
     queryFn: async () => {
-      const { data } = await apiClient.get<AnecdoteRow[]>("/api/anecdotal/referable");
+      const { data } = await apiClient.get<AnecdoteRow[]>("/api/anecdotal/referable?view=overview");
       return Array.isArray(data) ? data : [];
     },
+    enabled: !!teacherId,
     retry: false,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
   });
 
   const rows = (anecdotesQuery.data ?? []).slice(0, 5);

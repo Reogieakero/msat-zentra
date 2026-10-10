@@ -48,6 +48,25 @@
   min-width: 0;
 }
 
+/* Right-side tool cards stay pinned while the score panel scrolls.
+   4rem clears the fixed 3rem desk topbar + 1rem gap. The max-height cap
+   only matters on short viewports — then the rail scrolls internally
+   instead of pushing the page. */
+.rail {
+  position: sticky;
+  top: 4rem;
+  align-self: start;
+  min-width: 0;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
 .viewHidden {
   display: none;
 }
@@ -73,6 +92,11 @@
 @media (max-width: 64rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .rail {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 

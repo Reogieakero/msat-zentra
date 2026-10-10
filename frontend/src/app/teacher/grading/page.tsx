@@ -54,7 +54,7 @@ export default function TeacherGradebookPage() {
           centered
           icon={ClipboardList}
           title="No classes assigned yet"
-          hint="Ask your registrar to assign your subjects and sections first — your gradebook workspaces will appear here."
+          hint="Link your teacher code on the classes page or ask your registrar to assign your subjects and sections first — only your linked subjects will appear here."
           label="Gradebook"
         />
       </section>

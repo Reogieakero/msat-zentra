@@ -12,7 +12,7 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SearchIcon, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, SearchIcon, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { Badge } from "@/components/ui/badge";
@@ -296,6 +296,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
+                  <ChevronLeft aria-hidden />
                   Previous
                 </Button>
                 <Button
@@ -305,6 +306,7 @@ export function TeacherOverviewAttendanceTable({ sectionId }: { sectionId: strin
                   disabled={!table.getCanNextPage()}
                 >
                   Next
+                  <ChevronRight aria-hidden />
                 </Button>
               </div>
             )}

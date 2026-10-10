@@ -21,7 +21,11 @@ import { toast } from "@/components/ui/sonner";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "@/app/teacher/overview/components/teacher-overview-advisory.module.css";
 import sheetStyles from "./attendance-sheet.module.css";
-import { phTodayKey, submitSheet, useMeetupDates, useSheetMarks } from "@/services/teacher/attendance.service";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSession } from "@/lib/auth/useSession";
+import { useTerm } from "@/lib/term/TermContext";
+import { MARKS_STALE_MS, fetchSheetMarks, phTodayKey, sheetMarksKey, submitSheet, useMeetupDates, useSheetMarks } from "@/services/teacher/attendance.service";
+import { apiErrorMessage } from "@/lib/api/errors";
 import type { SheetContext, SheetStatus } from "@/services/teacher/attendance.types";
 import { MeetupBlocksCell, StatusBoxes, rateClass } from "./status-boxes";
 import { useRosterMarks } from "./use-roster-marks";
@@ -31,7 +35,8 @@ interface RosterRow {
   name: string;
   lrn: string;
   rate: number | null;
-  status: SheetStatus;
+  status: SheetStatus | null;
+  impliedAbsent?: boolean;
 }
 export interface AttendanceLive {
   locked: boolean;
@@ -82,7 +87,7 @@ function makeBaseColumns(pick: (id: string, status: SheetStatus) => void, blocks
       size: 180,
       minSize: 160,
       cell: ({ row }) => (
-        <StatusBoxes value={row.getValue("status") as SheetStatus} onPick={(s) => pick(row.original.id, s)} disabled={locked} />
+        <StatusBoxes value={row.getValue("status") as SheetStatus | null} onPick={(s) => pick(row.original.id, s)} disabled={locked} impliedAbsent={row.original.impliedAbsent} />
       ),
     },
     {
@@ -110,18 +115,27 @@ interface AttendanceRosterTableProps {
 }
 export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, roster, meetupDays = [1, 2, 3, 4, 5], live }: AttendanceRosterTableProps) {
   const invalidateTeacher = useTeacherInvalidate();
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const { activeTerm } = useTerm();
+  const teacherId = session?.sub ?? null;
+  const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
   const effectiveCtx = roster?.ctx ?? null;
   const hasSection = !!effectiveCtx?.sectionId;
   const marksQuery = useSheetMarks(date, subjectId, slot, effectiveCtx?.sectionId ?? null);
   const students = React.useMemo(() => effectiveCtx?.students ?? [], [effectiveCtx]);
   const serverMarks = React.useMemo(() => marksQuery.data ?? {}, [marksQuery.data]);
   const switchingSection = !!roster?.requestedSectionId && effectiveCtx?.sectionId !== roster.requestedSectionId;
-  const marksLoading = marksQuery.fetchStatus !== "idle" && marksQuery.isPending;
+  // With keepPreviousData, switching subject/slot/date serves the previous
+  // sheet as placeholder — treat that as loading so the skeleton shows
+  // instead of flashing the wrong sheet's marks. Same-key background
+  // revalidates (real data present, not placeholder) render normally.
+  const marksLoading =
+    (marksQuery.fetchStatus !== "idle" && marksQuery.isPending) || marksQuery.isPlaceholderData;
   const loading = switchingSection || (roster?.pending ?? false) || marksLoading;
   const loadError = (roster?.error ?? false) || (hasSection && marksQuery.isError);
   const sheetKey = `${date}|${effectiveCtx?.sectionId ?? "none"}|${subjectId ?? "none"}|${slot}`;
   const { marks, setMarks, pick, merged } = useRosterMarks(sheetKey, serverMarks);
-  void marks;
   const [saveOpen, setSaveOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
@@ -132,6 +146,26 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
   };
   const { days: subjectDays, dateKeys, isPending: meetupPending, hasTerm: hasMeetupTerm } = useMeetupDates(effectiveCtx?.sectionId ?? undefined, subjectId, meetupDays);
   const meetupDates = dateKeys ?? [];
+  // Prefetch prev/next meetup dates so picker hops render instantly from
+  // cache. Skips entries that are already fresh; save-path invalidation
+  // (attendance-sheet-marks prefix) clears these on submit.
+  React.useEffect(() => {
+    const sectionId = effectiveCtx?.sectionId ?? null;
+    if (!teacherId || !subjectId || !sectionId || meetupDates.length === 0) return;
+    const idx = meetupDates.indexOf(date);
+    if (idx < 0) return;
+    for (const neighbor of [meetupDates[idx - 1], meetupDates[idx + 1]]) {
+      if (!neighbor) continue;
+      const key = sheetMarksKey(teacherId, neighbor, subjectId, slot, sectionId, termKey);
+      const state = queryClient.getQueryState(key);
+      if (state && Date.now() - state.dataUpdatedAt < MARKS_STALE_MS) continue;
+      void queryClient.prefetchQuery({
+        queryKey: key,
+        queryFn: () => fetchSheetMarks(`${neighbor}T00:00:00Z`, subjectId, slot, sectionId),
+        staleTime: MARKS_STALE_MS,
+      });
+    }
+  }, [queryClient, teacherId, termKey, date, meetupDates, subjectId, slot, effectiveCtx?.sectionId]);
   const dayStatusByStudent = React.useMemo(() => {
     const map = new Map<string, Map<string, SheetStatus>>();
     for (const r of subjectDays?.records ?? []) {
@@ -156,40 +190,63 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
   const baseColumns = React.useMemo(() => makeBaseColumns(pick, blocksInfo, live.locked), [pick, blocksInfo, live.locked]);
   const data = React.useMemo<RosterRow[]>(() => {
     const elapsed = meetupDates.filter((d) => d <= live.todayKey);
+    // Missing record means absent once the subject time is done: any past
+    // meetup date, or today once today's class has ended.
+    const sheetPastDue =
+      date < live.todayKey ||
+      (date === live.todayKey && live.todayEnd !== null && live.nowMin >= live.todayEnd);
     return students.map((s) => {
       const days = dayStatusByStudent.get(s.studentId);
       let present = 0;
       for (const d of elapsed) {
         if (days?.get(d) === "present") present += 1;
       }
-      return { id: s.studentId, name: s.name, lrn: s.lrn, rate: elapsed.length === 0 ? null : present / elapsed.length, status: merged[s.studentId] ?? "present" };
+      // Real saved status first; when nothing was ever recorded and the
+      // meetup time has passed, display absent (implied, not saved).
+      const saved = merged[s.studentId] ?? null;
+      const impliedAbsent = saved === null && sheetPastDue;
+      return { id: s.studentId, name: s.name, lrn: s.lrn, rate: elapsed.length === 0 ? null : present / elapsed.length, status: saved ?? (sheetPastDue ? "absent" : null), impliedAbsent };
     });
-  }, [students, merged, meetupDates, dayStatusByStudent, live.todayKey]);
+  }, [students, merged, meetupDates, dayStatusByStudent, live.todayKey, live.todayEnd, live.nowMin, date]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [blocksMode, setBlocksMode] = React.useState(false);
   const columns = React.useMemo<ColumnDef<RosterRow>[]>(() => baseColumns, [baseColumns]);
   const effectiveVisibility: VisibilityState = blocksMode ? { name: true, rate: false, status: false, blocks: true } : { blocks: false };
   const table = useReactTable({ data, columns, getRowId: (row) => row.id, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel(), state: { sorting, columnFilters, columnVisibility: effectiveVisibility } });
-  const saveCounts = React.useMemo(() => {
+  // Dirty-only: send just the rows the teacher actually changed since the last
+  // save (local pick differs from the server mark). Unmarked rows are never
+  // submitted.
+  const delta = React.useMemo(
+    () =>
+      data.filter(
+        (d): d is RosterRow & { status: SheetStatus } =>
+          d.status !== null && marks[d.id] !== undefined && marks[d.id] !== serverMarks[d.id],
+      ),
+    [data, marks, serverMarks],
+  );
+  const deltaBreakdown = React.useMemo(() => {
     const c: Record<SheetStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };
-    for (const d of data) c[d.status] += 1;
-    return c;
-  }, [data]);
-  const saveBreakdown = (Object.keys(saveCounts) as SheetStatus[]).filter((s) => saveCounts[s] > 0).map((s) => `${saveCounts[s]} ${s}`).join(", ");
+    for (const d of delta) c[d.status] += 1;
+    return (Object.keys(c) as SheetStatus[]).filter((s) => c[s] > 0).map((s) => `${c[s]} ${s}`).join(", ");
+  }, [delta]);
   async function handleSaveConfirm() {
     const ctx = effectiveCtx;
     if (!ctx || !subjectId || saving) return;
+    if (delta.length === 0) {
+      setSaveError("No changes to save — update at least one status first.");
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
-      const result = await submitSheet({ sectionId: ctx.sectionId, termId: ctx.termId, date: `${date}T00:00:00Z`, subjectId, assignmentId, slot, records: data.map((d) => ({ studentId: d.id, status: d.status })) });
+      const result = await submitSheet({ sectionId: ctx.sectionId, termId: ctx.termId, date: `${date}T00:00:00Z`, subjectId, assignmentId, slot, records: delta.map((d) => ({ studentId: d.id, status: d.status })) });
       setMarks({});
       setSaveOpen(false);
       invalidateTeacher.marks();
       toast.success({ title: "Attendance saved", description: `${result.count} record${result.count === 1 ? "" : "s"} submitted.` });
-    } catch {
-      setSaveError("Could not save attendance. Try again.");
+    } catch (err) {
+      setSaveError(apiErrorMessage(err, "Could not save attendance. Try again."));
     } finally {
       setSaving(false);
     }
@@ -242,7 +299,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
             <div className="flex shrink-0 items-center gap-2">
               <InputGroup className="max-w-40 shrink-0"><InputGroupInput placeholder="Filter students..." value={(table.getColumn("name")?.getFilterValue() as string) ?? ""} onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)} aria-label="Filter students" /><InputGroupAddon><SearchIcon /></InputGroupAddon></InputGroup>
               <Button variant={blocksMode ? "default" : "outline"} onClick={() => setBlocksMode((v) => !v)} aria-pressed={blocksMode} title="Toggle meetup blocks view" className={blocksMode ? "opacity-70" : undefined}>Blocks</Button>
-              <Button onClick={openSave} disabled={live.locked}>Save</Button>
+              <Button onClick={openSave} disabled={live.locked || delta.length === 0} title={delta.length === 0 ? "Update at least one status to enable saving" : undefined}>Save</Button>
             </div>
           </div>
           <div className="relative overflow-x-auto rounded-md border">
@@ -263,7 +320,7 @@ export function AttendanceRosterTable({ date, subjectId, assignmentId, slot, ros
           </div>
         </div>
       ) : null}
-      <SaveAttendanceDialog open={saveOpen} saving={saving} saveError={saveError} count={data.length} breakdown={saveBreakdown} onClose={() => setSaveOpen(false)} onConfirm={() => void handleSaveConfirm()} />
+      <SaveAttendanceDialog open={saveOpen} saving={saving} saveError={saveError} count={delta.length} breakdown={deltaBreakdown} onClose={() => setSaveOpen(false)} onConfirm={() => void handleSaveConfirm()} />
     </section>
   );
 }

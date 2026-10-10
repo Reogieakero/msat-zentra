@@ -8,8 +8,11 @@ import assign from "@/app/principal/academics/assign/components/section-assignme
 import { CardAction, CardContent, CardHeader } from "@/components/ui/card";
 import { CardModal } from "@/components/ui/CardModal";
 import { COMPONENT_NAMES } from "@/services/teacher/grading.compute";
-import { submitScore, updateAssessment, useRefreshAcademic } from "@/services/teacher/grading.service";
-import type { ClassStudent, ClassComponent, ComponentType } from "@/services/teacher/grading.types";
+import { useQueryClient } from "@tanstack/react-query";
+import { submitScore, submitScores, updateAssessment, classDetailKey } from "@/services/teacher/grading.service";
+import { useTerm } from "@/lib/term/TermContext";
+import { apiErrorMessage } from "@/lib/api/errors";
+import type { ClassDetail, ClassStudent, ClassComponent, ComponentType } from "@/services/teacher/grading.types";
 import { sileo } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/teacherChannel";
 import styles from "./ScoreGrid.module.css";
@@ -18,7 +21,7 @@ import { clearStoredDrafts, typedCache } from "./score-storage";
 import { PlainEncodeTable } from "./encode-table";
 import { ScoreDataTable } from "./score-data-table";
 type Props = {
-  assignmentId: string;
+  queryKeyId: string;
   sectionName: string;
   students: ClassStudent[];
   components: ClassComponent[];
@@ -26,8 +29,9 @@ type Props = {
   selectedId: string;
   onChanged: () => void;
 }
-export function ScoreGrid({ sectionName, students, components, category, selectedId, onChanged }: Props) {
-  const refreshAcademic = useRefreshAcademic();
+export function ScoreGrid({ queryKeyId, sectionName, students, components, category, selectedId, onChanged }: Props) {
+  const queryClient = useQueryClient();
+  const { activeTerm } = useTerm();
   const session = useSession();
   const teacherId = session?.sub ?? "anon";
   const [editing, setEditing] = React.useState(false);
@@ -87,27 +91,110 @@ export function ScoreGrid({ sectionName, students, components, category, selecte
       setEmptyOpen(true);
       return;
     }
+    // Dirty-only: skip rows whose value already matches the saved score, so
+    // re-saving or touching a cell without changing it sends nothing.
+    // Cleared cells keep existing skip semantics (never delete).
+    const maxChanged = effectiveMax !== selected.maxScore;
+    const dirty = maxChanged
+      ? jobs
+      : jobs.filter((j) => {
+          const saved = selected.scores[j.studentId];
+          return saved === undefined || saved === null ? true : j.raw !== saved;
+        });
+    if (dirty.length === 0 && !maxChanged) {
+      setEmptyOpen(true);
+      return;
+    }
     setError(null);
     setSaving(true);
+    // Optimistic paint: patch the cached class detail so the read view shows
+    // the new scores instantly, then reconcile against the server response.
+    // No full-page refetch flash; the grid stays interactive.
+    // NOTE: the query key uses the route-level composite id (subject|section),
+    // NOT assignment.id — the backend may return the raw assignment UUID in
+    // `detail.assignment.id`, which would patch a cache entry nobody renders.
+    const termKey = `${activeTerm?.schoolYearId ?? ""}:${activeTerm?.termId ?? ""}`;
+    const detailKey = classDetailKey(teacherId, queryKeyId, termKey);
+    const scoreByStudent = new Map(dirty.map((j) => [j.studentId, j.raw]));
+    const previous = queryClient.getQueryData<ClassDetail>(detailKey);
+    const applyOptimistic = () => {
+      queryClient.setQueryData<ClassDetail>(detailKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          components: old.components.map((c) => ({
+            ...c,
+            assessments: c.assessments.map((a) =>
+              a.id === selected.id
+                ? { ...a, maxScore: effectiveMax, scores: { ...a.scores, ...Object.fromEntries(scoreByStudent) } }
+                : a,
+            ),
+          })),
+        };
+      });
+    };
+    const rollbackOptimistic = () => {
+      if (previous) queryClient.setQueryData(detailKey, previous);
+      else queryClient.invalidateQueries({ queryKey: detailKey });
+    };
+    // Show the saved values immediately and leave edit mode at once.
+    // Paint even for max-score-only edits so the header updates instantly.
+    if (dirty.length > 0 || maxChanged) applyOptimistic();
+    setEditing(false);
     try {
       if (effectiveMax !== selected.maxScore) {
         try {
           await updateAssessment(selected.id, { maxScore: effectiveMax });
         } catch {
+          rollbackOptimistic();
+          setEditing(true);
           throw new Error("max");
         }
       }
-      const results = await Promise.allSettled(jobs.map((j) => submitScore(selected.id, { studentId: j.studentId, rawScore: j.raw })));
-      const failed = results.filter((r) => r.status === "rejected").length;
-      if (failed > 0) throw new Error(`${failed} score${failed === 1 ? "" : "s"} failed to save`);
+      let failures: string[] = [];
+      try {
+        if (dirty.length > 0) {
+          const bulk = await submitScores(
+            selected.id,
+            dirty.map((j) => ({ studentId: j.studentId, rawScore: j.raw }))
+          );
+          failures = (bulk.results ?? [])
+            .filter((r) => !r.ok)
+            .map((r) => {
+              const name = students.find((s) => s.id === r.studentId)?.name ?? r.studentId;
+              return `${name}: ${r.error ?? "save failed"}`;
+            });
+        }
+      } catch (e) {
+        // Fallback for transport-level errors: retry per-item so a single
+        // bad row can't sink the whole batch without a per-student reason.
+        const results = await Promise.allSettled(dirty.map((j) => submitScore(selected.id, { studentId: j.studentId, rawScore: j.raw })));
+        failures = results
+          .map((r, i) => ({ result: r, job: dirty[i] as { studentId: string; raw: number } }))
+          .filter((x): x is { result: PromiseRejectedResult; job: { studentId: string; raw: number } } => x.result.status === "rejected")
+          .map(({ result, job }) => {
+            const name = students.find((s) => s.id === job.studentId)?.name ?? job.studentId;
+            return `${name}: ${apiErrorMessage(result.reason, "save failed")}`;
+          });
+      }
+      if (failures.length > 0) {
+        // Partial failure: revalidate from the server so bad rows revert.
+        queryClient.invalidateQueries({ queryKey: detailKey });
+        onChanged();
+        setEditing(true);
+        const shown = failures.slice(0, 5).join("; ");
+        const more = failures.length > 5 ? ` (+${failures.length - 5} more)` : "";
+        throw new Error(`${failures.length} score${failures.length === 1 ? "" : "s"} failed to save (${shown}${more})`);
+      }
       markSelfNotified(selected.id);
-      sileo.success({ title: "Scores saved", description: jobs.length > 0 ? `${jobs.length} score${jobs.length === 1 ? "" : "s"} saved for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` : `Max score updated for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` });
-      setEditing(false);
       typedCache.clear();
       clearStoredDrafts(teacherId, selected.id);
       clear();
+      // Background reconcile only — the UI already shows the saved values.
+      // Single targeted invalidation, not the whole academic overview.
       onChanged();
-      refreshAcademic();
+      // Toast fires only after the server confirms, never before.
+      sileo.success({ title: "Scores saved", description: dirty.length > 0 ? `${dirty.length} score${dirty.length === 1 ? "" : "s"} saved for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` : `Max score updated for ${selected.title} (${COMPONENT_NAMES[category]}) in ${sectionName}.` });
     } catch (e) {
       const message = e instanceof Error && e.message === "max" ? "Failed to update max score." : e instanceof Error ? `${e.message} — the rest were saved.` : "Could not save scores.";
       setError(message);

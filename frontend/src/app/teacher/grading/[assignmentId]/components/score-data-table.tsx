@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, flexRender, type ColumnDef, type SortingState } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -117,10 +118,12 @@ export function ScoreDataTable({ assessment, students, drafts, nameFilter }: { a
         {table.getPageCount() > 1 && (
           <>
             <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+              <ChevronLeft aria-hidden />
               Previous
             </Button>
             <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
               Next
+              <ChevronRight aria-hidden />
             </Button>
           </>
         )}

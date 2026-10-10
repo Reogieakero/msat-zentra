@@ -102,6 +102,37 @@ export async function submitScore(
   return data;
 }
 
+export interface BulkScoreItem {
+  studentId: string;
+  rawScore: number;
+}
+
+export interface BulkScoreResult {
+  studentId: string;
+  ok: boolean;
+  error?: string;
+  rawScore?: number;
+  percentageScore?: number;
+  unchanged?: boolean;
+}
+
+export interface BulkScoreResponse {
+  saved: number;
+  total: number;
+  results: BulkScoreResult[];
+}
+
+export async function submitScores(
+  assessmentId: string,
+  scores: BulkScoreItem[]
+): Promise<BulkScoreResponse> {
+  const { data } = await apiClient.post<BulkScoreResponse>(
+    `/api/grades/assessments/${assessmentId}/scores`,
+    { scores }
+  );
+  return data;
+}
+
 export async function lockFinalGrade(id: string): Promise<void> {
   await apiClient.post(`/api/grades/final-grades/${id}/lock`, {});
 }

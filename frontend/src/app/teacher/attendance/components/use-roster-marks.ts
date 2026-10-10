@@ -15,8 +15,18 @@ export function useRosterMarks(sheetKey: string, serverMarks: Record<string, She
     persistStoredMarks(sheetKey, marks);
   }, [sheetKey, marks]);
   const pick = React.useCallback((id: string, status: SheetStatus) => {
-    setMarks((prev) => ({ ...prev, [id]: status }));
-  }, []);
+    // Toggle: tapping the currently shown status clears the local pick and
+    // falls back to the saved server mark (or unmarked when never saved).
+    setMarks((prev) => {
+      const current = prev[id] ?? serverMarks[id] ?? null;
+      if (current === status) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: status };
+    });
+  }, [serverMarks]);
   const merged = React.useMemo(() => ({ ...serverMarks, ...marks }), [serverMarks, marks]);
   return { marks, setMarks, pick, merged };
 }

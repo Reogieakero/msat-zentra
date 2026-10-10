@@ -274,12 +274,21 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
 
   const offerings = await prisma.teacherSubjectAssignment.findMany({
     where: { subjectId, sectionId, termId },
-    include: { subject: { select: { name: true, code: true } } },
+    include: { subject: { select: { name: true, code: true } }, teacher: { select: { fullName: true } } },
   });
-  if (offerings.length === 0) {
+  // A subject counts as offered via an assignment row OR a live timetable
+  // placement — link-code teachers often have only the latter (assignments
+  // require a login user, catalog teachers have none).
+  const scheduled = offerings.length > 0
+    ? null
+    : await prisma.sectionTimetableEntry.findFirst({
+        where: { subjectId, sectionId, termId, status: { in: ["APPROVED", "SUBMITTED"] } },
+        select: { id: true, subject: { select: { name: true, code: true } } },
+      });
+  if (offerings.length === 0 && !scheduled) {
     throw new AppError(422, "SUBJECT_NOT_OFFERED", "Subject is not offered in this section for this term");
   }
-  const subjectLabel = offerings[0]?.subject.name ?? "the subject";
+  const subjectLabel = offerings[0]?.subject.name ?? scheduled?.subject.name ?? "the subject";
 
   let effectiveAssignmentId: string | null = null;
   if (callerRole === "adviser") {
@@ -293,7 +302,7 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
       }
       effectiveAssignmentId = assignmentId;
     } else {
-      effectiveAssignmentId = offerings[0]!.id;
+      effectiveAssignmentId = offerings[0]?.id ?? null;
     }
   } else {
 
@@ -312,17 +321,37 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
       });
       linked = !!linkedSlot;
       if (!linked) {
-        throw new AppError(403, "FORBIDDEN", "You are not assigned to teach this subject in this section");
+        const occupant = offerings[0]?.teacher?.fullName ?? "another teacher";
+        throw new AppError(
+          403,
+          "SUBJECT_TAKEN",
+          `This subject (${subjectLabel}) is linked to ${occupant} — only their linked students can be marked here`
+        );
       }
     }
     if (assignmentId) {
-      const pool = own.length > 0 ? own : offerings;
-      if (!pool.some((o) => o.id === assignmentId)) {
-        throw new AppError(403, "FORBIDDEN", "Assignment belongs to another teacher");
+      if (own.length > 0) {
+        if (!own.some((o) => o.id === assignmentId)) {
+          const occupant =
+            offerings.find((o) => o.id === assignmentId)?.teacher?.fullName ??
+            offerings[0]?.teacher?.fullName ??
+            "another teacher";
+          throw new AppError(
+            403,
+            "SUBJECT_TAKEN",
+            `This subject (${subjectLabel}) is linked to ${occupant} — only their linked students can be marked here`
+          );
+        }
+        effectiveAssignmentId = assignmentId;
+      } else {
+        // Timetable-linked only: accept any valid assignment for this subject/section/term.
+        if (!offerings.some((o) => o.id === assignmentId)) {
+          throw new AppError(422, "BAD_ASSIGNMENT", "Assignment does not match subject/section/term");
+        }
+        effectiveAssignmentId = assignmentId;
       }
-      effectiveAssignmentId = assignmentId;
     } else {
-      effectiveAssignmentId = own[0]?.id ?? offerings[0]!.id;
+      effectiveAssignmentId = own[0]?.id ?? offerings[0]?.id ?? null;
     }
   }
 
@@ -340,6 +369,18 @@ export async function submitSubjectBulk(ctx: AttendanceContext, input: SubjectBu
   const normalizedDate = new Date(`${recordDay}T00:00:00Z`);
   const dayStart = new Date(`${recordDay}T00:00:00Z`);
   const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+
+  // Teacher marks always win: drop this sheet's auto-absent rows first so a
+  // later explicit save never double-counts against a different slot.
+  await prisma.attendanceRecord.deleteMany({
+    where: {
+      sectionId,
+      subjectId,
+      termId,
+      date: { gte: dayStart, lt: dayEnd },
+      recordedBy: "system:auto-absent",
+    },
+  });
 
   const studentIds = Array.from(new Set(records.map((r) => r.studentId)));
   const rosterIds = studentIds

@@ -8,9 +8,10 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { Loader2, MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RotateCcw, Route, SearchIcon, Send, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,6 +204,19 @@ export function ReferralsTable({
     getSortedRowModel: getSortedRowModel(),
     state: { sorting },
   });
+  // Page turns fetch a fresh list: swap the rows for skeletons while loading
+  // so the old page never stacks under the new one. Cached pages (staleTime)
+  // resolve without fetching, so they render instantly with no skeleton.
+  const isPageLoading = referralsQuery.isFetching && !referralsQuery.isPending;
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const firstRender = React.useRef(true);
+  React.useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [safePage]);
   if (referralsQuery.isPending) {
     return (
       <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading referrals">
@@ -274,7 +288,7 @@ export function ReferralsTable({
     );
   }
   return (
-    <div className={assign.card}>
+    <div ref={cardRef} className={assign.card} aria-busy={isPageLoading || undefined}>
       <span className={assign.glowClip} aria-hidden="true">
         <span className={assign.cardGlow} />
       </span>
@@ -320,7 +334,21 @@ export function ReferralsTable({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isPageLoading ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`} aria-hidden>
+                  {columns.map((c) => (
+                    <TableCell
+                      key={String(c.id)}
+                      style={{ width: c.size }}
+                      className="truncate"
+                    >
+                      <Skeleton className="h-4 w-3/4" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const highlighted =
                   highlightId !== null && highlightId === row.original.id;
@@ -359,22 +387,24 @@ export function ReferralsTable({
             Page {safePage} of {totalPages} — {total} referral
             {total === 1 ? "" : "s"}
           </div>
-          <div className="space-x-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => goToPage(Math.max(1, safePage - 1))}
-              disabled={safePage <= 1}
+              disabled={safePage <= 1 || isPageLoading}
             >
+              <ChevronLeft aria-hidden />
               Previous
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
-              disabled={safePage >= totalPages}
+              disabled={safePage >= totalPages || isPageLoading}
             >
               Next
+              <ChevronRight aria-hidden />
             </Button>
           </div>
         </div>

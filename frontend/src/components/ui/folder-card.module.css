@@ -367,7 +367,7 @@
 .captionName {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

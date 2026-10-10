@@ -72,10 +72,11 @@ export interface ReferableQuery {
   isAdviser: boolean;
   userId: string;
   termId: string | null;
+  overview?: boolean;
 }
 
 export async function getReferable(query: ReferableQuery) {
-  const { isAdviser, userId, termId: scopeTermId } = query;
+  const { isAdviser, userId, termId: scopeTermId, overview } = query;
   let sectionIds: string[] = [];
   if (isAdviser) {
     const sections = await prisma.section.findMany({
@@ -107,7 +108,24 @@ export async function getReferable(query: ReferableQuery) {
   const records = await prisma.anecdotalRecord.findMany({
     where: where as never,
     orderBy: { observationDatetime: "desc" },
-    select: {
+    take: overview ? 10 : undefined,
+    select: overview
+      ? {
+          id: true,
+          observationDatetime: true,
+          category: true,
+          student: {
+            select: {
+              user: { select: { fullName: true } },
+              section: { select: { name: true } },
+            },
+          },
+          roster: {
+            select: { fullName: true, section: { select: { name: true } } },
+          },
+          section: { select: { name: true } },
+        }
+      : {
       id: true,
       observationDatetime: true,
       category: true,
@@ -134,6 +152,15 @@ export async function getReferable(query: ReferableQuery) {
       section: { select: { name: true } },
     },
   });
+  if (overview) {
+    return records.map((r) => ({
+      id: r.id,
+      observationDate: r.observationDatetime.toISOString().slice(0, 10),
+      category: r.category,
+      studentName: r.student?.user.fullName ?? r.roster?.fullName ?? "",
+      section: r.student?.section?.name ?? r.roster?.section?.name ?? r.section.name,
+    }));
+  }
   return (
 
     records.map((r) => ({

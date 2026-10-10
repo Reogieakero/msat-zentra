@@ -127,7 +127,7 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
   const scopeTermId = query.termId;
   const termFilter = scopeTermId ? { termId: scopeTermId } : {};
 
-  const [profiles, rosterEntries, assignments, sectionClasses] = await Promise.all([
+  const [profiles, rosterEntries, assignments, sectionClasses, timetableEntries] = await Promise.all([
     prisma.studentProfile.findMany({
       where: { sectionId: { in: sectionIds } },
       select: {
@@ -163,9 +163,47 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
       },
       orderBy: [{ sectionId: "asc" }, { subject: { name: "asc" } }],
     }),
+
+    // Timetable fallback: sections whose subjects live only as approved
+    // timetable entries (no assignment rows) still need class options, or
+    // pickers like Bama chat block every student in that section with
+    // "No classes found". Same union pattern as attendance offerings.
+    prisma.sectionTimetableEntry.findMany({
+      where: { sectionId: { in: sectionIds }, status: { in: ["APPROVED", "SUBMITTED"] }, ...termFilter },
+      select: {
+        subjectId: true,
+        sectionId: true,
+        subject: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true } },
+        term: { select: { id: true, termNumber: true } },
+        teacherName: { select: { name: true } },
+      },
+      orderBy: [{ sectionId: "asc" }, { subject: { name: "asc" } }],
+    }),
   ]);
 
   const registeredLrns = new Set(profiles.map((s) => s.lrn));
+  // Assignment rows keep priority: timetable entries only fill sections
+  // with zero assignment rows, so existing data never dupes or changes.
+  const sectionsWithAssignments = new Set(sectionClasses.map((a) => a.section.id));
+  const seenPairs = new Set(sectionClasses.map((a) => `${a.section.id}|${a.subject.id}`));
+  const timetableFallback = [];
+  for (const t of timetableEntries) {
+    if (!t.subject || !t.section || !t.term) continue;
+    if (sectionsWithAssignments.has(t.sectionId)) continue;
+    const pair = `${t.sectionId}|${t.subjectId}`;
+    if (seenPairs.has(pair)) continue;
+    seenPairs.add(pair);
+    timetableFallback.push({
+      subjectId: t.subject.id,
+      subjectName: t.subject.name,
+      sectionId: t.section.id,
+      sectionName: t.section.name,
+      termId: t.term.id,
+      termNumber: t.term.termNumber,
+      ownerName: t.teacherName?.name ?? "Timetable",
+    });
+  }
   return {
     students: [
       ...profiles.map((s) => ({
@@ -193,15 +231,18 @@ export async function getFlagOptions(ctx: TeacherContext, query: FlagOptionsQuer
       termId: a.term.id,
       termNumber: a.term.termNumber,
     })),
-    sectionClasses: sectionClasses.map((a) => ({
-      subjectId: a.subject.id,
-      subjectName: a.subject.name,
-      sectionId: a.section.id,
-      sectionName: a.section.name,
-      termId: a.term.id,
-      termNumber: a.term.termNumber,
-      ownerName: a.teacher.fullName,
-    })),
+    sectionClasses: [
+      ...sectionClasses.map((a) => ({
+        subjectId: a.subject.id,
+        subjectName: a.subject.name,
+        sectionId: a.section.id,
+        sectionName: a.section.name,
+        termId: a.term.id,
+        termNumber: a.term.termNumber,
+        ownerName: a.teacher.fullName,
+      })),
+      ...timetableFallback,
+    ],
   };
 }
 

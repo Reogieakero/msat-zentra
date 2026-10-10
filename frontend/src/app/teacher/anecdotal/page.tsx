@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fetchMyRecords, type MyAnecdotalRecord } from "@/components/ocform01/folders";
 import { useTerm } from "@/lib/term/TermContext";
 import { AnecdotalRepoFolders } from "./components/AnecdotalRepoFolders";
+import { TeacherPageHeader } from "../components/TeacherPageHeader";
 import { FolderLegendCard, TopAttentionCard } from "./components/AnecdotalSideRail";
 import assign from "@/app/principal/academics/assign/components/section-assignments.module.css";
 import styles from "./components/anecdotal-repo.module.css";
@@ -137,6 +138,10 @@ export default function TeacherAnecdotalPage() {
 
   return (
     <section className={styles.page}>
+      <TeacherPageHeader
+        title="Anecdotal Records"
+        description="Every anecdotal record filed for your advisory — with category folders, GCForm-01 previews, and follow-ups."
+      />
       <div className="grid flex-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <div className={`${styles.main} flex min-w-0 flex-col`}>
           <AnecdotalRepoFolders records={records} />

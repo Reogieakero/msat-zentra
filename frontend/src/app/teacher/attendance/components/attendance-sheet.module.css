@@ -87,6 +87,30 @@
   display: none;
 }
 
+/* Meetup Blocks strip: horizontal scroll tinted with the teacher's saved
+   palette (--primary is set site-wide from Settings; theme default otherwise). */
+.blocksScroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.blocksScroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.blocksScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.blocksScroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--primary), transparent 30%);
+  border-radius: 999px;
+}
+
+.blocksScroll::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
 .main {
   display: flex;
   flex-direction: column;

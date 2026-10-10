@@ -56,28 +56,92 @@ export async function getOfferedSubjects(query: OfferedSubjectsQuery) {
           ).map((e) => e.subjectId)
         )
       : new Set<string>();
+  // Live timetable placements also count as offered (link-code teachers often
+  // have no assignment row). Union them so the sheet never looks empty.
+  const scheduledSubjects =
+    offerings.length > 0
+      ? []
+      : await prisma.sectionTimetableEntry.findMany({
+          where: { sectionId, termId, status: { in: ["APPROVED", "SUBMITTED"] } },
+          select: {
+            subjectId: true,
+            subject: { select: { id: true, name: true, code: true, gradeLevel: true } },
+          },
+          distinct: ["subjectId"],
+          orderBy: { subject: { name: "asc" } },
+        });
   const seen = new Map<string, (typeof offerings)[number]>();
+  const ownBySubject = new Map<string, (typeof offerings)[number]>();
   for (const o of offerings) {
+    if (o.teacherId === teacherId && !ownBySubject.has(o.subjectId)) ownBySubject.set(o.subjectId, o);
     if (!seen.has(o.subjectId)) seen.set(o.subjectId, o);
   }
-  return {
-    sectionId,
-    termId,
-    subjects: [...seen.values()].map((o) => ({
-      assignmentId: o.id,
+  type Row = {
+    assignmentId: string;
+    subjectId: string;
+    code: string;
+    name: string;
+    gradeLevel: string;
+    teacherId: string;
+    teacherName: string;
+    ownerTeacherId: string;
+    ownerTeacherName: string;
+    isMine: boolean;
+    myAssignmentId: string | null;
+    canMark: boolean;
+    takenByOther: boolean;
+  };
+  const rows: Row[] = [...seen.values()].map((o) => {
+    const mine = ownBySubject.get(o.subjectId) ?? null;
+    const canMark =
+      callerRole === "principal"
+        ? false
+        : callerRole === "adviser"
+          ? advisoryOk
+          : mine !== null || linkedSubjectIds.has(o.subjectId);
+    return {
+      // Prefer the caller's own assignment so the frontend never submits another teacher's id.
+      assignmentId: mine?.id ?? o.id,
       subjectId: o.subject.id,
       code: o.subject.code,
       name: o.subject.name,
       gradeLevel: o.subject.gradeLevel,
-      teacherId: o.teacherId,
-      teacherName: o.teacher.fullName,
-      canMark:
-        callerRole === "principal"
-          ? false
-          : callerRole === "adviser"
-            ? advisoryOk
-            : o.teacherId === teacherId || linkedSubjectIds.has(o.subjectId),
-    })),
+      teacherId: mine?.teacherId ?? o.teacherId,
+      teacherName: mine?.teacher.fullName ?? o.teacher.fullName,
+      ownerTeacherId: o.teacherId,
+      ownerTeacherName: o.teacher.fullName,
+      isMine: mine !== null || linkedSubjectIds.has(o.subjectId),
+      myAssignmentId: mine?.id ?? null,
+      canMark,
+      takenByOther: mine === null && !linkedSubjectIds.has(o.subjectId) && callerRole !== "adviser" && callerRole !== "principal",
+    };
+  });
+  for (const s of scheduledSubjects) {
+    if (rows.some((r) => r.subjectId === s.subjectId)) continue;
+    const isMine =
+      callerRole === "adviser" || callerRole === "principal" || linkedSubjectIds.has(s.subjectId);
+    const canMark =
+      callerRole === "principal" ? false : callerRole === "adviser" ? advisoryOk : isMine;
+    rows.push({
+      assignmentId: "",
+      subjectId: s.subject.id,
+      code: s.subject.code,
+      name: s.subject.name,
+      gradeLevel: s.subject.gradeLevel,
+      teacherId,
+      teacherName: "",
+      ownerTeacherId: "",
+      ownerTeacherName: "",
+      isMine,
+      myAssignmentId: null,
+      canMark,
+      takenByOther: !isMine && callerRole !== "adviser" && callerRole !== "principal",
+    });
+  }
+  return {
+    sectionId,
+    termId,
+    subjects: rows,
   };
 }
 

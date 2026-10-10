@@ -6,7 +6,7 @@ import { requireAuth, requireRole, requireOwnershipOrRole } from "../../middlewa
 import { invalidateTags } from "../../lib/cache.js";
 import { gradeBandGuard } from "../../middleware/gradeBand.js";
 import { validate } from "../../middleware/validate.js";
-import { recomputeSubjectFinal } from "../../services/grading.js";
+import { computeSubjectGrade, recomputeSubjectFinal } from "../../services/grading.js";
 import { recomputeRisk, recomputeRosterRisk } from "../../services/risk.js";
 import { writeAudit } from "../../lib/audit.js";
 import { fanoutNotification, fanoutToRole } from "../../lib/notify.js";
@@ -63,7 +63,22 @@ router.post(
           select: { id: true },
         });
         if (!coverage) {
-          throw new AppError(403, "FORBIDDEN", "Student is not in your class for this subject");
+          // Fall back to the timetable link: a teacher placed on the
+          // submitted/approved timetable for this subject × section × term
+          // owns the class even without an assignment row.
+          const linked = await prisma.sectionTimetableEntry.findFirst({
+            where: {
+              subjectId: gc.subjectId,
+              sectionId: rosterEntry!.sectionId,
+              termId: gc.termId,
+              status: { in: ["SUBMITTED", "APPROVED"] },
+              teacherName: { userId: req.user!.id },
+            },
+            select: { id: true },
+          });
+          if (!linked) {
+            throw new AppError(403, "FORBIDDEN", "Student is not in your class for this subject");
+          }
         }
       }
 
@@ -114,6 +129,268 @@ router.post(
         sourceId: assessment.id,
         message: `You saved scores for ${assessment.title} (${categoryName}) in ${sectionName}.`,
       });
+    } catch (e) { next(e); }
+  }
+);
+
+const bulkScoresSchema = z.object({
+  scores: z.array(scoreSchema).min(1).max(300),
+});
+
+// Bulk save: one request + shared reads + batched writes + single
+// invalidate/fanout. Per-item results with 207 semantics on partial success.
+router.post(
+  "/assessments/:id/scores",
+  requireAuth,
+  requireRole("subject_teacher", "adviser"),
+  validate("body", bulkScoresSchema),
+  async (req, res, next) => {
+    try {
+      const assessment = await prisma.assessment.findUnique({
+        where: { id: String(req.params.id) },
+        include: { gradeComponent: true },
+      });
+      if (!assessment) throw new AppError(404, "ASSESSMENT_NOT_FOUND", "Assessment not found");
+      const gc = assessment.gradeComponent;
+
+      // Dedupe: last write wins per studentId.
+      const seen = new Map<string, number>();
+      for (const s of req.body.scores as { studentId: string; rawScore: number }[]) {
+        seen.set(String(s.studentId), s.rawScore);
+      }
+      type Item = { studentId: string; rawScore: number; rosterId: string | null; ok: boolean; error?: string };
+      const items: Item[] = [...seen].map(([studentId, rawScore]) => ({
+        studentId,
+        rawScore,
+        rosterId: studentId.startsWith("roster:") ? studentId.slice("roster:".length) : null,
+        ok: true,
+      }));
+      // Range validation becomes per-item errors, not a whole-batch 400.
+      for (const it of items) {
+        if (!Number.isFinite(it.rawScore) || it.rawScore < 0 || it.rawScore > assessment.maxScore) {
+          it.ok = false;
+          it.error = `Score must be a number from 0 to ${assessment.maxScore}`;
+        }
+      }
+      const candidates = items.filter((i) => i.ok);
+      const rosterIds = [...new Set(candidates.filter((i) => i.rosterId).map((i) => i.rosterId as string))];
+      const profileIds = [...new Set(candidates.filter((i) => !i.rosterId).map((i) => i.studentId))];
+
+      // Shared existence reads (2 queries, not N).
+      const [rosterEntries, profiles] = await Promise.all([
+        rosterIds.length > 0
+          ? prisma.studentRoster.findMany({
+              where: { id: { in: rosterIds } },
+              select: { id: true, sectionId: true, section: { select: { name: true } } },
+            })
+          : Promise.resolve([]),
+        profileIds.length > 0
+          ? prisma.studentProfile.findMany({
+              where: { userId: { in: profileIds } },
+              select: { userId: true, section: { select: { name: true } } },
+            })
+          : Promise.resolve([]),
+      ]);
+      const rosterById = new Map(rosterEntries.map((r) => [r.id, r]));
+      const profileSet = new Set(profiles.map((p) => p.userId));
+      for (const it of candidates) {
+        if (it.rosterId) {
+          if (!rosterById.has(it.rosterId)) { it.ok = false; it.error = "Student not found"; }
+        } else if (!profileSet.has(it.studentId)) {
+          it.ok = false; it.error = "Student not found";
+        }
+      }
+
+      // Coverage check batched per distinct section (parallel, not N sequential).
+      const validAfterExist = candidates.filter((i) => i.ok);
+      const sectionIds = [...new Set(validAfterExist.filter((i) => i.rosterId).map((i) => rosterById.get(i.rosterId as string)!.sectionId))];
+      const coverageResults = await Promise.all(
+        sectionIds.map(async (sectionId) => {
+          const coverage = await prisma.teacherSubjectAssignment.findFirst({
+            where: { teacherId: req.user!.id, subjectId: gc.subjectId, termId: gc.termId, sectionId },
+            select: { id: true },
+          });
+          if (coverage) return { sectionId, ok: true };
+          const linked = await prisma.sectionTimetableEntry.findFirst({
+            where: {
+              subjectId: gc.subjectId, sectionId, termId: gc.termId,
+              status: { in: ["SUBMITTED", "APPROVED"] },
+              teacherName: { userId: req.user!.id },
+            },
+            select: { id: true },
+          });
+          return { sectionId, ok: !!linked };
+        }),
+      );
+      const unauthorizedSections = new Set(
+        coverageResults.filter((c) => !c.ok).map((c) => c.sectionId),
+      );
+      if (unauthorizedSections.size > 0) {
+        for (const it of validAfterExist) {
+          if (it.rosterId && unauthorizedSections.has(rosterById.get(it.rosterId)!.sectionId)) {
+            it.ok = false;
+            it.error = "Student is not in your class for this subject";
+          }
+        }
+      }
+
+      const valid = items.filter((i) => i.ok);
+      // No-op guard: one shared read of existing grades for this assessment;
+      // rows identical to what's stored skip upsert, finals, and risk.
+      // Additive `unchanged` flag in the response; clients ignore if unknown.
+      const unchangedKeys = new Set<string>();
+      if (valid.length > 0) {
+        const vRosterPre = valid.filter((i) => i.rosterId).map((i) => i.rosterId as string);
+        const vProfilePre = valid.filter((i) => !i.rosterId).map((i) => i.studentId);
+        const existing = await prisma.studentGrade.findMany({
+          where: {
+            assessmentId: assessment.id,
+            OR: [
+              ...(vProfilePre.length > 0 ? [{ studentId: { in: vProfilePre } }] : []),
+              ...(vRosterPre.length > 0 ? [{ rosterId: { in: vRosterPre } }] : []),
+            ],
+          },
+          select: { studentId: true, rosterId: true, rawScore: true },
+        });
+        const existingByKey = new Map(
+          existing.map((g) => [g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string), g.rawScore]),
+        );
+        for (const it of valid) {
+          if (existingByKey.get(it.studentId) === it.rawScore) unchangedKeys.add(it.studentId);
+        }
+      }
+      const changed = valid.filter((i) => !unchangedKeys.has(i.studentId));
+      if (changed.length > 0) {
+        // Single transaction for all grade upserts.
+        await prisma.$transaction(
+          changed.map((it) => {
+            const percentage = (it.rawScore / assessment.maxScore) * 100;
+            return it.rosterId
+              ? prisma.studentGrade.upsert({
+                  where: { assessmentId_rosterId: { assessmentId: assessment.id, rosterId: it.rosterId } },
+                  create: { assessmentId: assessment.id, studentId: null, rosterId: it.rosterId, rawScore: it.rawScore, percentageScore: percentage },
+                  update: { rawScore: it.rawScore, percentageScore: percentage },
+                })
+              : prisma.studentGrade.upsert({
+                  where: { assessmentId_studentId: { assessmentId: assessment.id, studentId: it.studentId } },
+                  create: { assessmentId: assessment.id, studentId: it.studentId, rawScore: it.rawScore, percentageScore: percentage },
+                  update: { rawScore: it.rawScore, percentageScore: percentage },
+                });
+          }) as never[],
+        );
+
+        // Shared recompute read: all components + grades for changed students, once.
+        const vRosterIds = changed.filter((i) => i.rosterId).map((i) => i.rosterId as string);
+        const vProfileIds = changed.filter((i) => !i.rosterId).map((i) => i.studentId);
+        const components = await prisma.gradeComponent.findMany({
+          where: { subjectId: gc.subjectId, termId: gc.termId },
+          include: {
+            assessments: {
+              include: {
+                studentGrades: {
+                  where: {
+                    OR: [
+                      ...(vProfileIds.length > 0 ? [{ studentId: { in: vProfileIds } }] : []),
+                      ...(vRosterIds.length > 0 ? [{ rosterId: { in: vRosterIds } }] : []),
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        });
+        const gradeKey = (g: { studentId: string | null; rosterId: string | null }) =>
+          g.rosterId ? `roster:${g.rosterId}` : (g.studentId as string);
+        const finalsOps = [];
+        for (const it of changed) {
+          const key = it.studentId;
+          const evidence = components.map((c) => {
+            const encoded = c.assessments.filter((a) => a.studentGrades.some((g) => gradeKey(g) === key));
+            return {
+              componentType: c.componentType,
+              weightPercentage: c.weightPercentage,
+              earned: encoded.reduce((s, a) => s + a.studentGrades.filter((g) => gradeKey(g) === key).reduce((x, g) => x + g.rawScore, 0), 0),
+              possible: encoded.reduce((s, a) => s + a.maxScore, 0),
+              assessmentCount: c.assessments.length,
+              encodedCount: encoded.length,
+            };
+          });
+          const result = computeSubjectGrade(evidence);
+          if (result.computedAverage === null || result.rawGrade === null) {
+            finalsOps.push(
+              it.rosterId
+                ? prisma.finalGrade.deleteMany({ where: { rosterId: it.rosterId, subjectId: gc.subjectId, termId: gc.termId } })
+                : prisma.finalGrade.deleteMany({ where: { studentId: it.studentId, subjectId: gc.subjectId, termId: gc.termId } }),
+            );
+          } else {
+            const { computedAverage, transmutedGrade, remarks } = result;
+            finalsOps.push(
+              it.rosterId
+                ? prisma.finalGrade.upsert({
+                    where: { rosterId_subjectId_termId: { rosterId: it.rosterId, subjectId: gc.subjectId, termId: gc.termId } },
+                    create: { studentId: null, rosterId: it.rosterId, subjectId: gc.subjectId, termId: gc.termId, computedAverage, transmutedGrade, remarks },
+                    update: { computedAverage, transmutedGrade, remarks },
+                  })
+                : prisma.finalGrade.upsert({
+                    where: { studentId_subjectId_termId: { studentId: it.studentId, subjectId: gc.subjectId, termId: gc.termId } },
+                    create: { studentId: it.studentId, subjectId: gc.subjectId, termId: gc.termId, computedAverage, transmutedGrade, remarks },
+                    update: { computedAverage, transmutedGrade, remarks },
+                  }),
+            );
+          }
+        }
+        if (finalsOps.length > 0) await prisma.$transaction(finalsOps as never[]);
+      }
+
+      const sectionName =
+        rosterEntries[0]?.section?.name ?? profiles[0]?.section?.name ?? "";
+      const categoryName =
+        gc.componentType === "WRITTEN_WORK" ? "Written Work"
+        : gc.componentType === "PERFORMANCE_TASK" ? "Performance Task" : "Exam";
+
+      const results = items.map((it) => ({
+        studentId: it.studentId,
+        ok: it.ok,
+        ...(it.error ? { error: it.error } : {}),
+        ...(it.ok ? { rawScore: it.rawScore, percentageScore: (it.rawScore / assessment.maxScore) * 100 } : {}),
+        ...(unchangedKeys.has(it.studentId) ? { unchanged: true } : {}),
+      }));
+      const savedCount = valid.length;
+      const failedCount = items.length - savedCount;
+
+      // Fast write path: respond as soon as grades + finals are committed.
+      // Risk recompute, cache invalidation, and fanout run after-commit in
+      // the background so derived analytics never block the save response.
+      res.status(failedCount > 0 ? 207 : 200).json({ saved: savedCount, total: items.length, results });
+
+      void (async () => {
+        try {
+          // Bounded parallelism so 40 risk recomputes don't thunder the pool.
+          // Unchanged rows already match the DB: no risk work for them.
+          const CONCURRENCY = 8;
+          const queue = [...changed];
+          const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+            while (queue.length > 0) {
+              const it = queue.shift()!;
+              try {
+                if (it.rosterId) await recomputeRosterRisk(it.rosterId, gc.termId);
+                else await recomputeRisk(it.studentId, gc.termId);
+              } catch { /* background: next recompute heals */ }
+            }
+          });
+          await Promise.all(workers);
+        } catch { /* background risk must never fail the save */ }
+        try {
+          await invalidateTags(["teacher", "registrar", "academics", "overview", "principal", "risk", "guidance"]);
+        } catch { /* cache failures are non-fatal */ }
+        void fanoutNotification({
+          userId: req.user!.id,
+          sourceTable: "student_grades",
+          action: "score_self",
+          sourceId: assessment.id,
+          message: `You saved scores for ${assessment.title} (${categoryName}) in ${sectionName}.`,
+        });
+      })();
     } catch (e) { next(e); }
   }
 );

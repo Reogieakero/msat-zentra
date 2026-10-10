@@ -40,7 +40,7 @@ export default function ClassWorkspacePage() {
 
   return (
     <>
-      <ClassWorkspace detail={detailQuery.data} onMutated={refresh} />
+      <ClassWorkspace detail={detailQuery.data} queryKeyId={assignmentId} onMutated={refresh} />
     </>
   );
 }

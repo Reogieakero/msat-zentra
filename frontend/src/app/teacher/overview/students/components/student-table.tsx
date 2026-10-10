@@ -11,7 +11,7 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SearchIcon, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, SearchIcon, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
@@ -250,6 +250,7 @@ export function StudentTable({
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
+                  <ChevronLeft aria-hidden />
                   Previous
                 </Button>
                 <Button
@@ -259,6 +260,7 @@ export function StudentTable({
                   disabled={!table.getCanNextPage()}
                 >
                   Next
+                  <ChevronRight aria-hidden />
                 </Button>
               </div>
             )}

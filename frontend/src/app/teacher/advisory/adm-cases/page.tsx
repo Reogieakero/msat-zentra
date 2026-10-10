@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { FolderOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { writeLastViewedReferralId } from "../referrals/last-viewed";
@@ -27,6 +27,33 @@ const GRID_STYLE: React.CSSProperties = {
   minWidth: 0,
 };
 
+function AdmCasesSkeletonGrid({ count }: { count: number }) {
+  return (
+    <div style={GRID_STYLE} aria-busy="true" aria-label="Loading ADM cases">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className={styles.skelCard} aria-hidden>
+          <div className={styles.skelTop}>
+            <Skeleton className={styles.skelMini} />
+            <div className={styles.skelLines}>
+              <Skeleton className={styles.skelLine} />
+              <Skeleton className={styles.skelLineShort} />
+            </div>
+            <Skeleton className={styles.skelDot} />
+          </div>
+          <Skeleton className={styles.skelAvatar} />
+          <Skeleton className={styles.skelName} />
+          <Skeleton className={styles.skelSub} />
+          <Skeleton className={styles.skelBar} />
+          <div className={styles.skelActions}>
+            <Skeleton className={styles.skelBtn} />
+            <Skeleton className={styles.skelBtn} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | null }) {
   const router = useRouter();
   const { activeTerm } = useTerm();
@@ -49,6 +76,10 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
 
     placeholderData: keepPreviousData,
     retry: false,
+    // Cache pages so back/forward pagination is instant and deduped.
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   const goToPage = (next: number) => {
     setTakeover(true);
@@ -76,6 +107,11 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
   const safePage = Math.min(casesQuery.data?.page ?? page, totalPages);
   const pageRows = cases;
   const isEmpty = !casesQuery.isPending && !casesQuery.isError && total === 0;
+  // Pagination fetch: show skeleton cards (same grid shape) instead of
+  // stacking/keeping stale rows, while cached pages resolve instantly.
+  const isPageFetching =
+    !casesQuery.isPending && !casesQuery.isError && casesQuery.isFetching;
+  const paginationBusy = isPageFetching;
 
   function handleTrack(caseData: AdmCase) {
 
@@ -98,28 +134,7 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
         )}
 
         {casesQuery.isPending ? (
-          <div style={GRID_STYLE} aria-busy="true" aria-label="Loading ADM cases">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={styles.skelCard} aria-hidden>
-                <div className={styles.skelTop}>
-                  <Skeleton className={styles.skelMini} />
-                  <div className={styles.skelLines}>
-                    <Skeleton className={styles.skelLine} />
-                    <Skeleton className={styles.skelLineShort} />
-                  </div>
-                  <Skeleton className={styles.skelDot} />
-                </div>
-                <Skeleton className={styles.skelAvatar} />
-                <Skeleton className={styles.skelName} />
-                <Skeleton className={styles.skelSub} />
-                <Skeleton className={styles.skelBar} />
-                <div className={styles.skelActions}>
-                  <Skeleton className={styles.skelBtn} />
-                  <Skeleton className={styles.skelBtn} />
-                </div>
-              </div>
-            ))}
-          </div>
+          <AdmCasesSkeletonGrid count={TEACHER_ADM_CASES_PAGE_SIZE} />
         ) : casesQuery.isError ? (
           <p className={styles.pageError}>
             No advisory section assigned, or the cases could not be loaded. Contact the
@@ -156,6 +171,9 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
             }`}
           >
             <div className="flex min-w-0 flex-col gap-4">
+              {isPageFetching ? (
+                <AdmCasesSkeletonGrid count={Math.max(pageRows.length, 6)} />
+              ) : (
               <div style={GRID_STYLE} role="group" aria-label="ADM cases">
                 {pageRows.map((c) => {
                   const highlighted =
@@ -176,27 +194,32 @@ function TeacherAdvisoryAdmCasesView({ highlightId }: { highlightId: string | nu
                   );
                 })}
               </div>
+              )}
               {total > TEACHER_ADM_CASES_PAGE_SIZE ? (
                 <div className="relative flex items-center justify-end space-x-2">
                   <div className="text-muted-foreground flex-1 text-sm">
                     {total} case{total === 1 ? "" : "s"}
                   </div>
-                  <div className="space-x-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={safePage <= 1 || total === 0}
+                      disabled={safePage <= 1 || total === 0 || paginationBusy}
+                      aria-busy={paginationBusy || undefined}
                       onClick={() => goToPage(Math.max(1, safePage - 1))}
                     >
+                      <ChevronLeft aria-hidden />
                       Previous
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={safePage >= totalPages || total === 0}
+                      disabled={safePage >= totalPages || total === 0 || paginationBusy}
+                      aria-busy={paginationBusy || undefined}
                       onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
                     >
                       Next
+                      <ChevronRight aria-hidden />
                     </Button>
                   </div>
                 </div>

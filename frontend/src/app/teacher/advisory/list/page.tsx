@@ -13,7 +13,7 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Loader2, SearchIcon, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, SearchIcon, Users } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useTeacherInvalidate } from "../../components/use-teacher-invalidate";
@@ -106,8 +106,8 @@ export default function TeacherAdvisoryListPage() {
         cell: ({ row }) => (
           <div className="min-w-0">
             <Link
-              href={`/teacher/advisory/students/${row.original.studentId}/academic`}
-              className="block truncate font-medium text-primary underline-offset-4 hover:underline"
+              href={`/teacher/advisory/students?highlight=${row.original.studentId}`}
+              className="block truncate text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
             >
               {row.original.name}
             </Link>
@@ -394,6 +394,7 @@ export default function TeacherAdvisoryListPage() {
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
+                  <ChevronLeft aria-hidden />
                   Previous
                 </Button>
                 <Button
@@ -403,6 +404,7 @@ export default function TeacherAdvisoryListPage() {
                   disabled={!table.getCanNextPage()}
                 >
                   Next
+                  <ChevronRight aria-hidden />
                 </Button>
               </div>
             )}

@@ -149,12 +149,23 @@
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--foreground);
+  color: var(--primary);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+}
+
+/* Student name on the ADM case card — always the user's primary color. */
+.studentName {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* LRN line — fixed 13px per design. */
+.lrn {
+  font-size: 13px;
 }
 
 .sub {

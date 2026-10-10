@@ -41,6 +41,16 @@ function toSheetContext(roster: AdvisoryRoster): SheetContext {
 const SHEET_STALE_MS = 30_000;
 const SHEET_GC_MS = 5 * 60_000;
 
+// Sheet marks get longer windows so hopping between dates in the picker
+// renders instantly from memory cache within a session.
+export const MARKS_STALE_MS = 5 * 60_000;
+export const MARKS_GC_MS = 30 * 60_000;
+
+// Section rosters change rarely mid-session — cache them so switching
+// subjects within the same section never refetches the student list.
+export const ROSTER_STALE_MS = 5 * 60_000;
+export const ROSTER_GC_MS = 30 * 60_000;
+
 export function sheetMarksKey(
   teacherId: string | null | undefined,
   date: string,
@@ -111,8 +121,8 @@ export function useSheetMarks(
     queryFn: () =>
       fetchSheetMarks(`${date}T00:00:00Z`, subjectId as string, slot, sectionId ?? null),
     enabled: !!teacherId && !!subjectId && !!sectionId,
-    staleTime: SHEET_STALE_MS,
-    gcTime: SHEET_GC_MS,
+    staleTime: MARKS_STALE_MS,
+    gcTime: MARKS_GC_MS,
     placeholderData: keepPreviousData,
   });
 }
@@ -223,8 +233,8 @@ export function useSectionRoster(sectionId: string | undefined) {
     },
     enabled: !!sectionId,
     retry: false,
-    staleTime: SHEET_STALE_MS,
-    gcTime: SHEET_GC_MS,
+    staleTime: ROSTER_STALE_MS,
+    gcTime: ROSTER_GC_MS,
 
     placeholderData: keepPreviousData,
   });
@@ -247,7 +257,11 @@ export async function fetchSheetMarks(
 }
 
 export async function submitSheet(payload: SubmitSheetPayload): Promise<{ count: number }> {
-  const { data } = await apiClient.post<{ count: number }>("/api/attendance/bulk", payload);
+  // Never send an empty assignmentId — timetable-only subjects have none and
+  // the API coerces missing to a null link. Sending "" would 400 validation.
+  const { assignmentId, ...rest } = payload;
+  const body = assignmentId ? { ...rest, assignmentId } : rest;
+  const { data } = await apiClient.post<{ count: number }>("/api/attendance/bulk", body);
   return data;
 }
 

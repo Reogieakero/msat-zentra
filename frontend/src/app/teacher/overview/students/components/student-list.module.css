@@ -50,6 +50,21 @@
   color: var(--muted-foreground);
 }
 
+.cellMain {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.cellSub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
 .skeleton {
   border-radius: 10px;
   border: 1px solid var(--border, #e5e5e5);

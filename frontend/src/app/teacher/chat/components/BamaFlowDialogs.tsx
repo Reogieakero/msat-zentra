@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CardModal } from "@/components/ui/CardModal";
 import { FolderCard } from "@/components/ui/FolderCard";
+import ThoughtLine from "@/components/ui/thought-line/ThoughtLine";
 import { CATEGORY_COLORS } from "../../anecdotal/components/AnecdotalSideRail";
 import type { BamaConversation } from "./bama-conversations";
 import { CATEGORY_TONES } from "./bama-flow";
@@ -14,8 +16,41 @@ interface BamaFlowDialogsProps {
   active: BamaConversation | null;
 }
 
+// Filing trace for the ThoughtLine — thresholds mirror filingStageFor in
+// useAnecdotalFlow so steps tick in sync with the hook's progress.
+const FILING_STEPS = ["Validating answers", "Filing anecdotal record", "Autofilling GCForm-01"];
+const FILING_STEP_AT = [4, 30, 65];
+
 export function BamaFlowDialogs({ flow, active }: BamaFlowDialogsProps) {
   const reviewPreview = active?.messages.find((m) => m.preview)?.preview ?? null;
+
+  // Filing stages mirror the hook's progress thresholds — earlier steps tick,
+  // the last one pulses until the record is filed.
+  const filingSteps = FILING_STEPS.filter((_, i) => flow.fileProgress >= (FILING_STEP_AT[i] ?? 0));
+
+  // Let the settle chord ("Record filed") play on success: the overlay stays
+  // mounted briefly after filing flips false. Failures unmount at once.
+  const [settleVisible, setSettleVisible] = useState(false);
+  const settleTimer = useRef<number | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- settle-chord hold after filing flips false */
+  useEffect(() => {
+    if (flow.filing) {
+      setSettleVisible(false);
+      return;
+    }
+    if (active?.filed) {
+      setSettleVisible(true);
+      if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
+      settleTimer.current = window.setTimeout(() => setSettleVisible(false), 650);
+    }
+    return () => {
+      if (settleTimer.current !== null) {
+        window.clearTimeout(settleTimer.current);
+        settleTimer.current = null;
+      }
+    };
+  }, [flow.filing, active?.filed]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <>
@@ -62,16 +97,21 @@ export function BamaFlowDialogs({ flow, active }: BamaFlowDialogsProps) {
         </div>
       </CardModal>
 
-      {flow.filing ? (
+      {flow.filing || settleVisible ? (
         <div className={styles.filingOverlay} role="alertdialog" aria-modal="true" aria-label="Filing record">
           <div className={styles.filingCard}>
-            <p className={styles.filingTitle}>Filing your record…</p>
-            <div className={styles.progressTrack}>
-              <div className={styles.progressFill} style={{ width: `${flow.fileProgress}%` }} />
+            <div className={styles.filingThought}>
+              <ThoughtLine
+                working={flow.filing}
+                steps={filingSteps}
+                label="Filing your record…"
+                doneLabel="Record filed"
+                fontSize={14}
+                collapsible
+                collapseOnSettle
+                showTimer
+              />
             </div>
-            <p className={styles.progressLabel}>
-              {flow.fileStage} {flow.fileProgress}%
-            </p>
             <p className={styles.filingHint}>Please wait — don&apos;t close this page.</p>
           </div>
         </div>

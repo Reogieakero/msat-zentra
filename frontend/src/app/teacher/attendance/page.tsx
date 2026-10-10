@@ -148,10 +148,17 @@ export default function TeacherAdvisoryAttendancePage() {
   };
   const offeredQuery = useOfferedSubjects(resolvedSectionId, rosterQuery.data?.termId);
   const offered = offeredQuery.data ?? [];
+  const myOffered = offered.filter((s) => s.canMark && (s.isMine ?? true));
   const resolvedSubjectId =
     selectedPair?.subject?.id ??
+    myOffered.find((s) => s.canMark)?.subjectId ??
+    myOffered[0]?.subjectId ??
     offered.find((s) => s.canMark)?.subjectId ??
     offered[0]?.subjectId;
+  const resolvedOffered = offered.find((s) => s.subjectId === resolvedSubjectId);
+  const resolvedAssignmentId = resolvedOffered?.myAssignmentId ?? resolvedOffered?.assignmentId;
+  const takenByOther =
+    !!resolvedOffered && (resolvedOffered.takenByOther || ((resolvedOffered.isMine === false) && !resolvedOffered.myAssignmentId));
   /* eslint-disable react-hooks/preserve-manual-memoization -- load-bearing manual memo */
   const resolvedMeetupDays = useMemo(() => {
     const daySet = new Set(
@@ -242,7 +249,8 @@ export default function TeacherAdvisoryAttendancePage() {
           tone: "info",
           message: `${selectedPair.subject.name} is live now · ends ${formatClock(liveSlot.end)}.`,
         },
-        slot: liveSlot.period,
+        // Slots are 1-based on the wire (timetable periods are 0-based).
+        slot: liveSlot.period + 1,
       };
     }
     const done = [...timed]
@@ -256,7 +264,7 @@ export default function TeacherAdvisoryAttendancePage() {
           tone: "info",
           message: `${selectedPair.subject.name} ended at ${formatClock(done.end)} — you can still edit these marks.`,
         },
-        slot: done.period,
+        slot: done.period + 1,
       };
     }
     const next = [...timed].filter((t) => nowMin < t.start).sort((a, b) => a.start - b.start)[0]!;
@@ -267,7 +275,7 @@ export default function TeacherAdvisoryAttendancePage() {
         tone: "lock",
         message: `Locked — ${selectedPair.subject.name} starts at ${formatClock(next.start)}. Attendance opens when class is live.`,
       },
-      slot: next.period,
+      slot: next.period + 1,
     };
   })();
   const slot = gate.slot;
@@ -395,14 +403,19 @@ export default function TeacherAdvisoryAttendancePage() {
                   onVerify={handleVerify}
                 />
               ) : null}
+              {takenByOther && resolvedOffered ? (
+                <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+                  This subject ({resolvedOffered.name}) is linked to {resolvedOffered.ownerTeacherName ?? resolvedOffered.teacherName} — only their linked students can be marked here. Select your own linked subject.
+                </div>
+              ) : null}
               <AttendanceRosterTable
                 date={date}
                 subjectId={resolvedSubjectId}
-                assignmentId={offered.find((s) => s.subjectId === resolvedSubjectId)?.assignmentId}
+                assignmentId={resolvedAssignmentId}
                 slot={slot}
                 roster={resolvedSectionId ? rosterOverride : undefined}
                 meetupDays={resolvedMeetupDays}
-                live={{ ...gate.live, locked: gate.live.locked || needsVerifyForPair }}
+                live={{ ...gate.live, locked: gate.live.locked || needsVerifyForPair || takenByOther }}
                 stretchClassName={styles.tableStretchRail}
               />
             </div>

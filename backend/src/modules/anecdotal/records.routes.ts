@@ -182,6 +182,7 @@ router.get(
           isAdviser: req.user!.role === "adviser",
           userId: req.user!.id,
           termId: req.termScope?.termId ?? null,
+          overview: req.query.view === "overview",
         }),
       );
     } catch (e) {

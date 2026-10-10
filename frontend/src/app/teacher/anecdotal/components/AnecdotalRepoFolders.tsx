@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { FolderCard } from "@/components/ui/FolderCard";
 import { OcForm01PreviewDialog } from "@/components/ocform01/OcForm01PreviewDialog";
 import { Button } from "@/components/ui/button";
@@ -147,13 +147,14 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
               <div className="text-muted-foreground flex-1 text-sm">
                 {visible.length} record{visible.length === 1 ? "" : "s"}
               </div>
-              <div className="space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={safePage <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
+                  <ChevronLeft aria-hidden />
                   Previous
                 </Button>
                 <Button
@@ -163,6 +164,7 @@ export function AnecdotalRepoFolders({ records }: { records: MyAnecdotalRecord[]
                   onClick={() => setPage((p) => p + 1)}
                 >
                   Next
+                  <ChevronRight aria-hidden />
                 </Button>
               </div>
             </div>

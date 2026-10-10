@@ -199,13 +199,13 @@ export default function TeacherSchedulePage() {
   const totalSlots = sections.reduce((n, s) => n + s.timetableEntries.length, 0);
 
   return (
-    <section className="flex w-full flex-col gap-5">
-      <TeacherPageHeader
-        title="Schedule"
-        description="Master scheduling workspace for grades 7–10 sections, subjects, and timetable slots."
-      />
+    <section className="flex w-full flex-col">
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-5">
+          <TeacherPageHeader
+            title="Schedule"
+            description="Master scheduling workspace for grades 7–10 sections, subjects, and timetable slots."
+          />
           {orderedSections.length === 0 ? (
             <TeacherEmptyCard
               centered

@@ -83,7 +83,9 @@ export default function TeacherAdvisoryStudentsPage() {
             title="Advisory Students"
             description={sections.length > 0 ? sections.map((s) => s.name).join(" · ") : "Academic overview for your advisory section."}
           />
-          <AdvisoryGradesTable students={students} sections={sections} offeredSubjects={offeredSubjects} />
+          <React.Suspense fallback={<ZentraTableSkeleton rows={8} columns={5} />}>
+            <AdvisoryGradesTable students={students} sections={sections} offeredSubjects={offeredSubjects} />
+          </React.Suspense>
         </div>
       )}
     </section>

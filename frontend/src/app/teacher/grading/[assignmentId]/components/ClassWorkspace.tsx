@@ -29,10 +29,11 @@ import styles from "./ClassWorkspace.module.css";
 
 type Props = {
   detail: ClassDetail;
+  queryKeyId: string;
   onMutated: () => void;
 };
 
-export function ClassWorkspace({ detail, onMutated }: Props) {
+export function ClassWorkspace({ detail, queryKeyId, onMutated }: Props) {
   const { assignment, students } = detail;
   const refreshAcademic = useRefreshAcademic();
   const [weightsOpen, setWeightsOpen] = React.useState(false);
@@ -143,7 +144,7 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
           </div>
           <div className={view === "scores" ? undefined : styles.viewHidden}>
             <ScoreGrid
-              assignmentId={assignment.id}
+              queryKeyId={queryKeyId}
               sectionName={assignment.sectionName}
               students={students}
               components={detail.components}
@@ -164,14 +165,16 @@ export function ClassWorkspace({ detail, onMutated }: Props) {
           )}
         </div>
 
-        <WorkspaceRail
-          assignment={assignment}
-          studentCount={students.length}
-          assignmentId={assignment.id}
-          components={detail.components}
-          onOpenWeights={() => setWeightsOpen(true)}
-          onAddAssessment={() => setAddOpen(true)}
-        />
+        <aside className={styles.rail} aria-label="Class tools">
+          <WorkspaceRail
+            assignment={assignment}
+            studentCount={students.length}
+            assignmentId={assignment.id}
+            components={detail.components}
+            onOpenWeights={() => setWeightsOpen(true)}
+            onAddAssessment={() => setAddOpen(true)}
+          />
+        </aside>
       </div>
 
       {weightsOpen ? (

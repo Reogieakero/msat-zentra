@@ -4,7 +4,6 @@ import { BookOpen, Search } from "lucide-react";
 import BranchedMenu from "@/components/nav/BranchedMenu";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
 import { ScrollDownHint } from "@/components/ui/scroll-down-hint";
-import { WEEK_LABELS_SHORT } from "@/services/teacher/schedule";
 import styles from "./attendance-sheet.module.css";
 import type { SlotCard } from "./use-slot-cards";
 export function AttendanceSidebar({
@@ -25,20 +24,6 @@ export function AttendanceSidebar({
   const railScrollRef = useRef<HTMLDivElement | null>(null);
   const slotByKey = useMemo(() => new Map(slotCards.map((c) => [c.key, c])), [slotCards]);
   const railGroups = useMemo(() => {
-    const shortClock = (min: number): string => {
-      const h24 = ((Math.floor(min / 60) % 24) + 24) % 24;
-      const m = ((min % 60) + 60) % 60;
-      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-      return `${h12}:${m.toString().padStart(2, "0")}`;
-    };
-    const meridiem = (min: number): string =>
-      ((Math.floor(min / 60) % 24) + 24) % 24 >= 12 ? "PM" : "AM";
-    const compactRange = (start: number | null, end: number | null, fallback: string | null): string => {
-      if (start === null || end === null) return fallback ?? "";
-      const endMeridiem = meridiem(end);
-      const startMeridiem = meridiem(start) === endMeridiem ? "" : ` ${meridiem(start)}`;
-      return `${shortClock(start)}${startMeridiem}–${shortClock(end)} ${endMeridiem}`;
-    };
     const bySection = new Map<string, SlotCard[]>();
     for (const c of slotCards) {
       const arr = bySection.get(c.section.id) ?? [];
@@ -49,7 +34,7 @@ export function AttendanceSidebar({
       label: items[0].section.name,
       children: items.map((c) => ({
         value: c.key,
-        label: `${c.subject.code} · ${WEEK_LABELS_SHORT[c.day - 1]} ${compactRange(c.start, c.end, c.time)}${c.live ? " · Live" : ""}`,
+        label: `${c.subject.code}${c.live ? " · Live" : ""}`,
         icon: <BookOpen size={16} strokeWidth={1.8} aria-hidden="true" />,
       })),
     }));
