@@ -118,11 +118,19 @@ export function CoordinatorReferralsBookDialog({
       description={
         selected
           ? isReschedule
-            ? `Reschedule the booked parent meeting for ${selected.student} — pick a new date, time, or venue.`
-            : `Book a parent meeting for ${selected.student} — in school or as a home visitation.`
+            ? "Pick a new date, time, or venue for the booked parent meeting."
+            : "Book a parent meeting — in school or as a home visitation."
           : isReschedule
             ? "Reschedule the booked parent meeting — pick a new date, time, or venue."
             : "Book a parent meeting."
+      }
+      studentCard={
+        selected
+          ? {
+              name: selected.student,
+              sub: [selected.grade, selected.lrn].filter(Boolean).join(" · "),
+            }
+          : null
       }
       venueLabel="Attendance logbook ref (optional)"
       venuePlaceholder="e.g. Logbook p. 42"

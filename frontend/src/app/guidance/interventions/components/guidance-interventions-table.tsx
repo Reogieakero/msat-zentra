@@ -1,10 +1,12 @@
 "use client";
+import * as React from "react";
 import { useNowTick } from "@/lib/clock";
 import { combineDateTime } from "../../referrals/components/guidance-referrals-table";
 import type {
   AtRiskStudentItem,
   CounselingSessionType,
   GuidanceInterventionsSummary,
+  RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
 import {
   InterventionDialogs,
@@ -23,9 +25,12 @@ export function GuidanceInterventionsTable({
   onPageChange,
   query,
   onQueryChange,
+  level,
+  onLevelChange,
   onRetry,
   isRetrying,
   isNavigating,
+  highlightId = null,
 }: GuidanceInterventionsTableProps) {
   const dialogState = useInterventionDialogState(students);
   const {
@@ -51,6 +56,8 @@ export function GuidanceInterventionsTable({
     setSessType,
     sessVenue,
     setSessVenue,
+    bookFirst,
+    setBookFirst,
     outcomeStatus,
     setOutcomeStatus,
     outcomeNotes,
@@ -62,6 +69,7 @@ export function GuidanceInterventionsTable({
     openStart,
     openChange,
     openOutcome,
+    openOutcomeResolved,
     openSchedule,
     openSessionDialog,
     clearActive,
@@ -72,8 +80,17 @@ export function GuidanceInterventionsTable({
       closeAllDialogs();
       clearActive();
     });
-  const followUpWhen = combineDateTime(sessDate, sessTime);
+  const followUpWhen = bookFirst ? combineDateTime(sessDate, sessTime) : null;
   const now = useNowTick();
+  React.useEffect(() => {
+    if (!highlightId) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`intervention-row-${highlightId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [highlightId, students, page]);
   return (
     <>
       <InterventionTableView
@@ -87,9 +104,12 @@ export function GuidanceInterventionsTable({
         onPageChange={onPageChange}
         query={query}
         onQueryChange={onQueryChange}
+        level={level}
+        onLevelChange={onLevelChange}
         onRetry={onRetry}
         isRetrying={isRetrying}
         isNavigating={isNavigating}
+        highlightId={highlightId}
         actionIsError={actionMutation.isError}
         collapsedPlans={collapsedPlans}
         onTogglePlan={(key) =>
@@ -109,6 +129,7 @@ export function GuidanceInterventionsTable({
         onStart={openStart}
         onChange={openChange}
         onOutcome={openOutcome}
+        onMarkDone={openOutcomeResolved}
         onSchedule={openSchedule}
         onSession={openSessionDialog}
         onReview={(row, decision) =>
@@ -141,6 +162,8 @@ export function GuidanceInterventionsTable({
         onSessType={setSessType}
         sessVenue={sessVenue}
         onSessVenue={setSessVenue}
+        bookFirst={bookFirst}
+        onBookFirst={setBookFirst}
         outcomeStatus={outcomeStatus}
         onOutcomeStatus={setOutcomeStatus}
         outcomeNotes={outcomeNotes}
@@ -228,7 +251,10 @@ export function GuidanceInterventionsTable({
           });
         }}
         canSubmitStart={
-          !isActionPending && !!activeKey && actionText.trim() !== ""
+          !isActionPending &&
+          !!activeKey &&
+          actionText.trim() !== "" &&
+          (!bookFirst || !!followUpWhen)
         }
         canSubmitChange={
           !isActionPending &&
@@ -266,7 +292,10 @@ interface GuidanceInterventionsTableProps {
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
+  level: RiskLevelFilter;
+  onLevelChange: (value: RiskLevelFilter) => void;
   onRetry: () => void;
   isRetrying: boolean;
   isNavigating: boolean;
+  highlightId?: string | null;
 }

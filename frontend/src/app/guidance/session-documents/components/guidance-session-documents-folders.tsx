@@ -44,10 +44,6 @@ function isImageMime(mimeType: string): boolean {
   return mimeType.toLowerCase().startsWith("image/");
 }
 
-function isClosedStatus(status: string): boolean {
-  return status === "resolved" || status === "dismissed";
-}
-
 function isEndorsedCase(type: string | undefined, status: string): boolean {
   return type === "ADM" && status === "in_progress";
 }
@@ -97,6 +93,16 @@ export interface DocEntry {
   image: { id: string; fileUrl: string; fileName: string };
 }
 
+/** Folder color by pipeline type: amber for counseling, theme primary for
+ * folders holding any intervention docs, anecdotal-category color for ADM. */
+const COUNSELING_FOLDER_COLOR = "#f59e0b";
+
+function folderColorFor(record: GuidanceAnecdotalRecord): string | undefined {
+  if (record.referralType === "ADM") return CATEGORY_COLORS[record.category];
+  if (record.hasInterventionDocs) return "var(--primary)";
+  return COUNSELING_FOLDER_COLOR;
+}
+
 export function docSlipsFor(record: GuidanceAnecdotalRecord, cap = 5): DocEntry[] {
   const docs: DocEntry[] = [];
   for (const s of record.sessionDocs ?? []) {
@@ -109,6 +115,7 @@ export function docSlipsFor(record: GuidanceAnecdotalRecord, cap = 5): DocEntry[
           tag: `${SESSION_KIND_LABEL[kind]} • ${s.date}`,
           tone: ((docs.length % 5) + 1) as FolderFile["tone"],
           icon: "image",
+          thumbUrl: f.fileUrl,
           sessionKind: kind,
         },
         image: { id: f.id, fileUrl: f.fileUrl, fileName: f.fileName },
@@ -149,7 +156,6 @@ export function GuidanceSessionDocumentsFolders({
   onTypeChange,
   isNavigating = false,
 }: GuidanceSessionDocumentsFoldersProps) {
-  const [privacyFor, setPrivacyFor] = React.useState<string | null>(null);
   const [endorsedFor, setEndorsedFor] = React.useState<string | null>(null);
   const [helpOpen, setHelpOpen] = React.useState(false);
   const [gallery, setGallery] = React.useState<{
@@ -162,10 +168,9 @@ export function GuidanceSessionDocumentsFolders({
   const end = Math.min(page * pageSize, total);
 
   const openGallery = (record: GuidanceAnecdotalRecord, index: number) => {
-    if (isClosedStatus(record.referralStatus)) {
-      setPrivacyFor(record.student);
-      return;
-    }
+    // Filed session photos stay viewable even when the case is finished —
+    // the counselor filed them, so resolved/closed folders open normally.
+    // Only ADM-endorsed folders stay blocked (they live in the ADM queue).
     if (isEndorsedCase(record.referralType, record.referralStatus)) {
       setEndorsedFor(record.student);
       return;
@@ -192,7 +197,7 @@ export function GuidanceSessionDocumentsFolders({
               </button>
             </div>
             <p className={styles.sectionDesc}>
-              Filed images from done counseling sessions — {totalFiles} in all across {total}{" "}
+              Filed images from counseling sessions — {totalFiles} in all across {total}{" "}
               {total === 1 ? "case" : "cases"}. Open a folder to browse its images.
             </p>
           </div>
@@ -248,7 +253,7 @@ export function GuidanceSessionDocumentsFolders({
                           <FolderCard
                             label={record.student}
                             sublabel={`${record.lrn} · ${record.section}`}
-                            folderColor={CATEGORY_COLORS[record.category]}
+                            folderColor={folderColorFor(record)}
                             files={docs.map((d) => d.file)}
                             onFileClick={(index) => openGallery(record, index)}
                           />
@@ -300,20 +305,18 @@ export function GuidanceSessionDocumentsFolders({
 
       {gallery ? (
         <ImageViewer
-          files={docSlipsFor(gallery.record, 50).map((d) => d.image)}
+          files={docSlipsFor(gallery.record, 50).map((d) => ({
+            ...d.image,
+            fileName: `${d.file.tag.split(" • ")[0]} — ${d.image.fileName}`,
+          }))}
           index={galleryIndex}
-          title={`${gallery.record.student} — session documentation`}
-          subtitle={`${gallery.record.lrn} · ${gallery.record.section}`}
+          title={gallery.record.student}
+          subtitle={`${gallery.record.lrn} · ${gallery.record.section} · ${gallery.record.grade}`}
           onIndexChange={setGalleryIndex}
           onClose={() => setGallery(null)}
         />
       ) : null}
 
-      <PrivacyNoticeDialog
-        open={privacyFor !== null}
-        onClose={() => setPrivacyFor(null)}
-        studentName={privacyFor ?? undefined}
-      />
       <PrivacyNoticeDialog
         open={endorsedFor !== null}
         onClose={() => setEndorsedFor(null)}
@@ -326,16 +329,17 @@ export function GuidanceSessionDocumentsFolders({
           <DialogHeader>
             <DialogTitle>About session documents</DialogTitle>
             <DialogDescription>
-              Images counselors filed from done sessions. The official GCForm-01 write-up for
+              Images counselors filed on sessions, from referrals and interventions. The official GCForm-01 write-up for
               each case lives on the Anecdotal Records page.
             </DialogDescription>
           </DialogHeader>
           <ul className={styles.helpList}>
             <li>
-              <p className={styles.helpItemTitle}>Finished cases — kept private</p>
+              <p className={styles.helpItemTitle}>Finished cases — photos stay viewable</p>
               <p className={styles.helpItemText}>
-                Folders marked Resolved or Closed can&apos;t be opened because the case is finished.
-                The filed images stay hidden to protect the student&apos;s privacy.
+                Folders marked Resolved or Closed still open because the photos are
+                the case&apos;s filed evidence. Only the full GCForm-01 write-up stays
+                private on the Anecdotal Records page.
               </p>
             </li>
             <li>

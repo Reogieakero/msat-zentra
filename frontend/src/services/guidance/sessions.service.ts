@@ -111,3 +111,21 @@ export async function deleteSessionAttachment(
     `/api/referrals/${referralId}/sessions/${sessionId}/attachments/${attachmentId}`
   );
 }
+
+export interface DaySchedule {
+  date: string;
+  taken: string[];
+}
+
+/** Booked `HH:MM` slots for the current counselor on one UTC day. */
+export async function fetchDaySchedule(
+  dateKey: string,
+  opts: { signal?: AbortSignal } = {}
+): Promise<string[]> {
+  const { data } = await apiClient.get<DaySchedule>(
+    `/api/guidance/schedule?date=${encodeURIComponent(dateKey)}`,
+    { signal: opts.signal }
+  );
+  const taken = (data as DaySchedule | null)?.taken;
+  return Array.isArray(taken) ? taken.filter((t): t is string => typeof t === "string") : [];
+}

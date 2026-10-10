@@ -3,6 +3,8 @@ import * as React from "react";
 import {
   BellRing,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Search,
   SearchX,
   X,
@@ -182,7 +184,7 @@ export function GuidanceAlertsTable({
             <Table aria-label="Cases on the guidance desk">
               <TableHeader>
                 <TableRow>
-                  <TableHead>LRN</TableHead>
+                  <TableHead>Student</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Case status</TableHead>
                   <TableHead>Risk</TableHead>
@@ -216,16 +218,23 @@ export function GuidanceAlertsTable({
                 variant="outline"
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
+                aria-label="Go to previous page"
               >
+                <ChevronLeft aria-hidden="true" />
                 Previous
               </Button>
+              <span className={styles.pageLabel} aria-live="polite">
+                Page {safePage} of {totalPages}
+              </span>
               <Button
                 size="xs"
                 variant="outline"
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
+                aria-label="Go to next page"
               >
                 Next
+                <ChevronRight aria-hidden="true" />
               </Button>
             </div>
           </div>

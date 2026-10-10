@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { CalendarDays, Loader2, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardModal } from "@/components/ui/CardModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FormDropdown } from "@/app/guidance/referrals/components/form-dropdown";
 import {
   ClinicDatePicker,
   ClinicTimePicker,
@@ -28,6 +28,13 @@ export interface InviteStaffOption {
   role: string;
 }
 
+export interface BookSessionStudentCard {
+  name: string;
+  sub?: string;
+  badgeText?: string;
+  badgeVariant?: "red" | "amber" | "outline";
+}
+
 const INVITE_ROLE_LABELS: Record<string, string> = {
   guidance_counselor: "Guidance Counselor",
   nurse: "School Nurse",
@@ -38,12 +45,97 @@ function inviteRoleLabel(role: string): string {
   return INVITE_ROLE_LABELS[role] ?? role.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
 
-interface BookSessionDialogProps {
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "–";
+  const first = parts[0].replace(/[^A-Za-z]/g, "").charAt(0) || parts[0].charAt(0);
+  const last =
+    parts.length > 1
+      ? parts[parts.length - 1].replace(/[^A-Za-z]/g, "").charAt(0) || parts[parts.length - 1].charAt(0)
+      : "";
+  return `${first}${last}`.toUpperCase();
+}
+
+interface TimeSlot {
+  key: string;
+  label: string;
+}
+
+const TIME_SLOTS: TimeSlot[] = [
+  { key: "08:00", label: "8:00 AM" },
+  { key: "09:00", label: "9:00 AM" },
+  { key: "10:30", label: "10:30 AM" },
+  { key: "11:00", label: "11:00 AM" },
+  { key: "13:00", label: "1:00 PM" },
+  { key: "14:00", label: "2:00 PM" },
+  { key: "15:00", label: "3:00 PM" },
+  { key: "16:00", label: "4:00 PM" },
+];
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+interface DayCard {
+  key: string;
+  dow: string;
+  label: string;
+}
+
+function toDateKey(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseDateKey(key: string): Date | null {
+  const d = new Date(`${key}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Next `count` school days (skips Sundays), starting tomorrow. */
+function nextDayCards(count: number, todayKey: string): DayCard[] {
+  const out: DayCard[] = [];
+  const cursor = parseDateKey(todayKey) ?? new Date();
+  cursor.setUTCDate(cursor.getUTCDate() + 1);
+  while (out.length < count) {
+    if (cursor.getUTCDay() !== 0) {
+      out.push({
+        key: toDateKey(cursor),
+        dow: DAY_NAMES[cursor.getUTCDay()],
+        label: `${MONTH_NAMES[cursor.getUTCMonth()]} ${cursor.getUTCDate()}`,
+      });
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
+}
+
+function formatSummaryDate(key: string): string {
+  const d = parseDateKey(key);
+  if (!d) return key;
+  return `${DAY_NAMES[d.getUTCDay()]}, ${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
+function nowTimeKey(): string {
+  const n = new Date();
+  return `${String(n.getUTCHours()).padStart(2, "0")}:${String(n.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+export interface BookSessionDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (fields: BookSessionFields) => void;
 
-  description: string;
+  description?: string;
+
+  studentCard?: BookSessionStudentCard | null;
+
+  /** Async lookup of taken `HH:MM` slots for a date key. Omit = no taken state. */
+  fetchTakenTimes?: (dateKey: string, signal: AbortSignal) => Promise<string[]>;
 
   venueHint?: string;
 
@@ -92,7 +184,9 @@ export function BookSessionDialog({
   open,
   onClose,
   onSubmit,
-  description,
+  description = "Schedule a counseling session",
+  studentCard = null,
+  fetchTakenTimes,
   venueHint,
   venueLabel = "Venue (optional)",
   venuePlaceholder = "e.g. School clinic",
@@ -119,12 +213,16 @@ export function BookSessionDialog({
 }: BookSessionDialogProps) {
   const [date, setDate] = React.useState(initialDate);
   const [time, setTime] = React.useState(initialTime);
+  const [customTime, setCustomTime] = React.useState("");
+  const [useCustomDate, setUseCustomDate] = React.useState(false);
   const [venue, setVenue] = React.useState(initialVenue);
   const [sessionType, setSessionType] = React.useState(
     initialSessionType ?? defaultSessionType,
   );
   const [invites, setInvites] = React.useState<string[]>(initialInviteIds);
   const [error, setError] = React.useState<string | null>(null);
+  const [taken, setTaken] = React.useState<string[]>([]);
+  const [takenLoading, setTakenLoading] = React.useState(false);
 
   const [step, setStep] = React.useState(1);
 
@@ -136,13 +234,42 @@ export function BookSessionDialog({
   if (openKey !== prevOpenKey) {
     setPrevOpenKey(openKey);
     setDate(initialDate);
-    setTime(initialTime);
+    const slotMatch = TIME_SLOTS.some((s) => s.key === initialTime);
+    setTime(slotMatch ? initialTime : "");
+    setCustomTime(slotMatch ? "" : initialTime);
+    setUseCustomDate(
+      initialDate !== "" && !nextDayCards(3, todayKey()).some((d) => d.key === initialDate),
+    );
     setVenue(initialVenue);
     setSessionType(initialSessionType ?? defaultSessionType);
     setInvites(initialInviteIds);
     setError(null);
+    setTaken([]);
+    setTakenLoading(!!fetchTakenTimes && !!initialDate);
     setStep(1);
   }
+
+  const dayCards = nextDayCards(3, todayKey());
+  const today = todayKey();
+  const isToday = date === today;
+  const nowKey = nowTimeKey();
+  const timeIsCustom = time !== "" && !TIME_SLOTS.some((s) => s.key === time);
+
+  React.useEffect(() => {
+    if (!open || !fetchTakenTimes || !date || !takenLoading) return;
+    const controller = new AbortController();
+    fetchTakenTimes(date, controller.signal)
+      .then((rows) => {
+        if (!controller.signal.aborted) setTaken(rows);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTaken([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTakenLoading(false);
+      });
+    return () => controller.abort();
+  }, [open, date, fetchTakenTimes, takenLoading]);
 
   const showInvites = inviteStaff !== undefined;
   const inviteGroups = React.useMemo(() => {
@@ -170,9 +297,33 @@ export function BookSessionDialog({
   if (!open) return null;
 
   const isStepped = showInvites;
+  const effectiveTime = timeIsCustom ? customTime : time;
+  const selectedSlot = TIME_SLOTS.find((s) => s.key === time);
+  const kindLabel =
+    sessionTypeOptions.find((o) => o.value === sessionType)?.label ?? sessionType;
+
+  function pickDay(key: string) {
+    setDate(key);
+    setUseCustomDate(false);
+    setError(null);
+    setTaken([]);
+    setTakenLoading(true);
+  }
+
+  function pickTime(key: string) {
+    setTime(key);
+    setCustomTime("");
+    setError(null);
+  }
+
+  function slotDisabled(slot: TimeSlot): string | null {
+    if (taken.includes(slot.key)) return "Already taken";
+    if (isToday && slot.key <= nowKey) return "Already passed";
+    return null;
+  }
 
   function goToInvites() {
-    const scheduledAt = toScheduledAt(date, time);
+    const scheduledAt = toScheduledAt(date, effectiveTime);
     if (!scheduledAt) {
       setError("Pick both a date and a time for the session.");
       return;
@@ -186,7 +337,7 @@ export function BookSessionDialog({
   }
 
   function save() {
-    const scheduledAt = toScheduledAt(date, time);
+    const scheduledAt = toScheduledAt(date, effectiveTime);
     if (!scheduledAt) {
       setError("Pick both a date and a time for the session.");
       return;
@@ -208,6 +359,13 @@ export function BookSessionDialog({
     });
   }
 
+  const summaryDateTime =
+    date && effectiveTime && selectedSlot
+      ? `${formatSummaryDate(date)} · ${selectedSlot.label}`
+      : date && effectiveTime
+        ? `${formatSummaryDate(date)} · ${effectiveTime}`
+        : "Pick a date and time";
+
   return (
     <CardModal
       open
@@ -219,7 +377,7 @@ export function BookSessionDialog({
         }
       }}
       dismissable={!busy}
-      size="lg"
+      size="md"
       title={title}
       description={description}
       watchKey={step}
@@ -249,64 +407,175 @@ export function BookSessionDialog({
         <div className={styles.sections}>
           {!isStepped || step === 1 ? (
             <>
-              <Card className={styles.card}>
-                <span className={styles.glowClip} aria-hidden="true">
-                  <span className={styles.cardGlow} />
+              {studentCard ? (
+                <div className={styles.studentCard}>
+                  <span className={styles.avatar} aria-hidden="true">
+                    {initialsOf(studentCard.name)}
+                  </span>
+                  <span className={styles.studentText}>
+                    <span className={styles.studentName}>{studentCard.name}</span>
+                    {studentCard.sub ? (
+                      <span className={styles.studentSub}>{studentCard.sub}</span>
+                    ) : null}
+                  </span>
+                  {studentCard.badgeText ? (
+                    <Badge variant={studentCard.badgeVariant ?? "outline"}>
+                      {studentCard.badgeText}
+                    </Badge>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className={styles.field}>
+                <span id={`${idPrefix}-date-label`} className={styles.fieldLabel}>
+                  Date
                 </span>
-                <CardHeader>
-                  <CardTitle className={styles.sectionTitle}>Schedule</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={styles.formGrid}>
+                <div
+                  className={styles.dayGrid}
+                  role="group"
+                  aria-labelledby={`${idPrefix}-date-label`}
+                >
+                  {dayCards.map((d) => {
+                    const selected = date === d.key;
+                    return (
+                      <button
+                        key={d.key}
+                        type="button"
+                        className={`${styles.dayCard}${selected ? ` ${styles.daySelected}` : ""}`}
+                        aria-pressed={selected}
+                        onClick={() => pickDay(d.key)}
+                      >
+                        <span className={styles.dayDow}>{d.dow}</span>
+                        <span className={styles.dayLabel}>{d.label}</span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className={`${styles.dayCard}${useCustomDate ? ` ${styles.daySelected}` : ""}`}
+                    aria-pressed={useCustomDate}
+                    onClick={() => setUseCustomDate(true)}
+                  >
+                    <CalendarDays className={styles.dayIcon} aria-hidden="true" />
+                    <span className={styles.dayLabel}>Other date</span>
+                  </button>
+                </div>
+                {useCustomDate ? (
+                  <div className={styles.customDate}>
                     <ClinicDatePicker
                       id={`${idPrefix}-date`}
-                      label="Date"
+                      label="Custom date"
                       value={date}
-                      onChange={setDate}
-                      min={todayKey()}
+                      onChange={(v) => {
+                        setDate(v);
+                        setError(null);
+                        setTaken([]);
+                        setTakenLoading(true);
+                      }}
+                      min={today}
                     />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className={styles.field}>
+                <div className={styles.fieldRow}>
+                  <span id={`${idPrefix}-time-label`} className={styles.fieldLabel}>
+                    Time
+                  </span>
+                  <span className={styles.fieldHint}>
+                    {takenLoading
+                      ? "Checking availability…"
+                      : taken.length > 0
+                        ? "Crossed-out times are already taken"
+                        : null}
+                  </span>
+                </div>
+                <div
+                  className={styles.timeGrid}
+                  role="group"
+                  aria-labelledby={`${idPrefix}-time-label`}
+                >
+                  {TIME_SLOTS.map((slot) => {
+                    const selected = time === slot.key && !timeIsCustom;
+                    const reason = slotDisabled(slot);
+                    return (
+                      <button
+                        key={slot.key}
+                        type="button"
+                        className={`${styles.timePill}${selected ? ` ${styles.timeSelected}` : ""}${reason ? ` ${styles.timeTaken}` : ""}`}
+                        aria-pressed={selected}
+                        disabled={reason !== null || busy}
+                        title={reason ?? slot.label}
+                        onClick={() => pickTime(slot.key)}
+                      >
+                        {slot.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {timeIsCustom || customTime !== "" ? (
+                  <div className={styles.customDate}>
                     <ClinicTimePicker
                       id={`${idPrefix}-time`}
-                      label="Time"
-                      value={time}
-                      onChange={setTime}
+                      label="Custom time"
+                      value={timeIsCustom ? time : customTime}
+                      onChange={(v) => {
+                        setTime(v);
+                        setCustomTime("");
+                        setError(null);
+                      }}
                     />
                   </div>
-                </CardContent>
-              </Card>
-              <Card className={styles.card}>
-                <span className={styles.glowClip} aria-hidden="true">
-                  <span className={styles.cardGlow} />
-                </span>
-                <CardHeader>
-                  <CardTitle className={styles.sectionTitle}>Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={styles.formGrid}>
-                    {showSessionType && sessionTypeOptions.length > 0 && (
-                      <FormDropdown
-                        id={`${idPrefix}-type`}
-                        label={sessionTypeLabel}
-                        value={sessionType}
-                        onChange={setSessionType}
-                        placeholder="Pick a kind"
-                        options={sessionTypeOptions}
-                      />
-                    )}
-                    <div className={styles.formFull}>
-                      <Label htmlFor={`${idPrefix}-venue`}>{venueLabel}</Label>
-                      <Input
-                        id={`${idPrefix}-venue`}
-                        value={venue}
-                        onChange={(e) => setVenue(e.target.value)}
-                        placeholder={venuePlaceholder}
-                        maxLength={200}
-                      />
-                      {venueHint ? <p className={styles.hint}>{venueHint}</p> : null}
-                    </div>
+                ) : null}
+              </div>
+
+              {showSessionType && sessionTypeOptions.length > 0 && (
+                <div className={styles.field}>
+                  <span id={`${idPrefix}-type-label`} className={styles.fieldLabel}>
+                    {sessionTypeLabel}
+                  </span>
+                  <div
+                    className={styles.kindTrack}
+                    role="group"
+                    aria-labelledby={`${idPrefix}-type-label`}
+                  >
+                    {sessionTypeOptions.map((o) => {
+                      const selected = sessionType === o.value;
+                      return (
+                        <button
+                          key={o.value}
+                          type="button"
+                          className={`${styles.kindBtn}${selected ? ` ${styles.kindSelected}` : ""}`}
+                          aria-pressed={selected}
+                          onClick={() => {
+                            setSessionType(o.value);
+                            setError(null);
+                          }}
+                        >
+                          {o.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              )}
+
+              <div className={styles.field}>
+                <Label htmlFor={`${idPrefix}-venue`}>{venueLabel}</Label>
+                <div className={styles.venueWrap}>
+                  <MapPin className={styles.venueIcon} aria-hidden="true" />
+                  <Input
+                    id={`${idPrefix}-venue`}
+                    value={venue}
+                    onChange={(e) => setVenue(e.target.value)}
+                    placeholder={venuePlaceholder}
+                    maxLength={200}
+                    className={styles.venueInput}
+                  />
+                </div>
+                {venueHint ? <p className={styles.hint}>{venueHint}</p> : null}
+              </div>
             </>
           ) : null}
           {showInvites && (!isStepped || step === 2) ? (
@@ -365,33 +634,41 @@ export function BookSessionDialog({
             <p className={styles.errorText}>{error ?? serverError}</p>
           </div>
         ) : null}
-        <div className={styles.modalActions}>
-          {isStepped && step === 2 ? (
-            <Button variant="outline" onClick={() => setStep(1)} disabled={busy}>
-              Back
-            </Button>
-          ) : (
-            <Button
-              variant="destructive"
-              className={styles.btnRed}
-              onClick={onClose}
-              disabled={busy}
-            >
-              Cancel
-            </Button>
-          )}
-          {isStepped && step === 1 ? (
-            <Button onClick={goToInvites}>Continue</Button>
-          ) : (
-            <Button
-              onClick={save}
-              disabled={busy}
-              aria-busy={busy || undefined}
-            >
-              {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              {busy ? (busyLabel ?? "Booking…") : submitLabel}
-            </Button>
-          )}
+        <div className={styles.footer}>
+          <div className={styles.summary}>
+            <p className={styles.summaryMain}>{summaryDateTime}</p>
+            <p className={styles.summarySub}>
+              {showSessionType ? `${kindLabel} · ` : ""}
+              {venue.trim() || "No venue set"}
+            </p>
+          </div>
+          <div className={styles.modalActions}>
+            {isStepped && step === 2 ? (
+              <Button variant="outline" onClick={() => setStep(1)} disabled={busy}>
+                Back
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={busy}
+              >
+                Cancel
+              </Button>
+            )}
+            {isStepped && step === 1 ? (
+              <Button onClick={goToInvites}>Continue</Button>
+            ) : (
+              <Button
+                onClick={save}
+                disabled={busy}
+                aria-busy={busy || undefined}
+              >
+                {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {busy ? (busyLabel ?? "Booking…") : submitLabel}
+              </Button>
+            )}
+          </div>
         </div>
         </div>
     </CardModal>

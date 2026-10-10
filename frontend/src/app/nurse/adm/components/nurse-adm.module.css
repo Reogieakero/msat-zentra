@@ -351,6 +351,7 @@
   gap: 0.375rem;
   font-size: 0.8125rem;
   font-weight: 600;
+  color: var(--primary);
 }
 
 .bottleneckType {

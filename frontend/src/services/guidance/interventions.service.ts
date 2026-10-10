@@ -38,9 +38,11 @@ export async function fetchGuidanceInterventions(
   return { ...(data as GuidanceInterventionsData), students };
 }
 
-// Bounded preview fan-out: strict 15/page, max 10 pages (150 rows).
-const FETCH_ALL_PAGE_SIZE = 15;
-const FETCH_ALL_MAX_PAGES = 10;
+// Bounded preview fan-out: larger pages (server allows up to 100) so the full
+// live cohort is covered in at most 2 requests instead of 10 sequential
+// full-cohort recomputes. Cap stays at 150 rows.
+const FETCH_ALL_PAGE_SIZE = 75;
+const FETCH_ALL_MAX_PAGES = 2;
 
 export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem[]> {
   const first = await fetchGuidanceInterventions({
@@ -51,14 +53,19 @@ export async function fetchAllGuidanceInterventions(): Promise<AtRiskStudentItem
   });
   const all = [...first.students];
   const pages = Math.min(first.totalPages, FETCH_ALL_MAX_PAGES);
-  for (let p = 2; p <= pages; p++) {
-    const res = await fetchGuidanceInterventions({
-      page: p,
-      pageSize: FETCH_ALL_PAGE_SIZE,
-      level: "All",
-      outcome: "all",
-    });
-    all.push(...res.students);
+  if (pages > 1) {
+    // Pages are independent — fetch in parallel instead of sequentially.
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, i) =>
+        fetchGuidanceInterventions({
+          page: i + 2,
+          pageSize: FETCH_ALL_PAGE_SIZE,
+          level: "All",
+          outcome: "all",
+        })
+      )
+    );
+    for (const res of rest) all.push(...res.students);
   }
   return all;
 }

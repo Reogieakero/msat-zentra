@@ -7,6 +7,8 @@ export interface FolderFile {
   tag: string;
   tone?: 1 | 2 | 3 | 4 | 5;
   icon?: "image" | "video" | "code" | "doc" | "chart";
+  /** Actual image preview shown inside the folder slip (falls back to the icon). */
+  thumbUrl?: string;
 
   sessionKind?: "individual" | "parent_conference" | "group" | "home_visit";
 }
@@ -71,7 +73,18 @@ export function FolderCard({ label, sublabel, files, cornerTag, folderColor, onF
             const inner = (
               <>
                 <div className={styles.shine} aria-hidden />
-                <Icon className={styles.fileIcon} aria-hidden />
+                {file.thumbUrl ? (
+                  <img
+                    src={file.thumbUrl}
+                    alt=""
+                    aria-hidden
+                    loading="lazy"
+                    draggable={false}
+                    className={styles.fileThumb}
+                  />
+                ) : (
+                  <Icon className={styles.fileIcon} aria-hidden />
+                )}
                 <div className={styles.fileText}>{file.name}</div>
                 <div className={styles.fileTag}>{file.tag}</div>
               </>

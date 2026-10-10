@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import {
+  CheckCircle2,
+  Eye,
+  FileText,
+  Info,
+  Loader2,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Play,
+  Route,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -192,12 +202,16 @@ export function NurseQueueRowActions({
                   className={styles.menuItem}
                   onSelect={() => setTrackOpen(true)}
                 >
+                  <Route aria-hidden />
                   Track ADM referral
                 </DropdownMenuItem>
               )}
               {viewFormHref && (
                 <DropdownMenuItem asChild className={styles.menuItem}>
-                  <Link href={viewFormHref}>View referral form</Link>
+                  <Link href={viewFormHref}>
+                    <FileText aria-hidden />
+                    View referral form
+                  </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -205,11 +219,15 @@ export function NurseQueueRowActions({
                 disabled={!row.anecdotalId && !isEndorsedRow}
                 onSelect={openReport}
               >
+                <FileText aria-hidden />
                 View anecdotal report
               </DropdownMenuItem>
               {seeMoreHref && (
                 <DropdownMenuItem asChild className={styles.menuItem}>
-                  <Link href={seeMoreHref}>See more</Link>
+                  <Link href={seeMoreHref}>
+                    <Eye aria-hidden />
+                    See more
+                  </Link>
                 </DropdownMenuItem>
               )}
             </>
@@ -219,12 +237,18 @@ export function NurseQueueRowActions({
             <>
               {seeMoreHref && (
                 <DropdownMenuItem asChild>
-                  <Link href={seeMoreHref}>See more…</Link>
+                  <Link href={seeMoreHref}>
+                    <Eye aria-hidden />
+                    See more…
+                  </Link>
                 </DropdownMenuItem>
               )}
               {viewFormHref && (
                 <DropdownMenuItem asChild>
-                  <Link href={viewFormHref}>View referral form…</Link>
+                  <Link href={viewFormHref}>
+                    <FileText aria-hidden />
+                    View referral form…
+                  </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -236,6 +260,7 @@ export function NurseQueueRowActions({
               disabled={notePending}
               onSelect={() => setTrackOpen(true)}
             >
+              <Route aria-hidden />
               Track ADM referral
             </DropdownMenuItem>
           )}
@@ -243,6 +268,7 @@ export function NurseQueueRowActions({
             <>
               {(row.status === "pending" || row.status === "escalated") && !hiddenItems.includes("start") && (
                 <DropdownMenuItem disabled={statusPending} onSelect={() => setStartOpen(true)}>
+                  <Play aria-hidden />
                   Start handling…
                 </DropdownMenuItem>
               )}
@@ -252,21 +278,25 @@ export function NurseQueueRowActions({
                   disabled={statusPending}
                   onSelect={() => runStatus(action.status)}
                 >
+                  <Info aria-hidden />
                   {statusPending ? "Updating…" : action.label}
                 </DropdownMenuItem>
               ))}
             </>
           )}
           <DropdownMenuItem disabled={notePending || !row.anecdotalId} onSelect={openReport}>
+            <FileText aria-hidden />
             View anecdotal report…
           </DropdownMenuItem>
           <DropdownMenuItem disabled={notePending || !row.anecdotalId} onSelect={() => setNoteOpen(true)}>
+            <MessageSquarePlus aria-hidden />
             Add follow-up note…
           </DropdownMenuItem>
           {!isAdm && !hiddenItems.includes("resolve") && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={statusPending} onSelect={() => setResolveOpen(true)}>
+                <CheckCircle2 aria-hidden />
                 Resolve case…
               </DropdownMenuItem>
             </>

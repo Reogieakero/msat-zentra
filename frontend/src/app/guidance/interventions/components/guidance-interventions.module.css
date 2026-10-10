@@ -166,11 +166,34 @@
   border-bottom: none;
 }
 
+/* Deep-link highlight — the alerts table jumps here via ?highlight=,
+   so the row glows until the reader moves on. */
+.tableWrap tbody tr {
+  scroll-margin-top: 7rem;
+}
+
+.rowHighlight td {
+  background-color: color-mix(in oklch, var(--primary) 9%, var(--card));
+}
+
+.rowHighlight td:first-child {
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
 .cellMain {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);
+  white-space: nowrap;
+}
+
+/* Student name — 13px in the theme primary color, LRN sits below it. */
+.studentName {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
   white-space: nowrap;
 }
 

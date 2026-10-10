@@ -181,7 +181,7 @@ export default function GuidanceSessionDocumentsPage() {
         <GuidanceEmptyCard
           icon={FolderOpen}
           title="No session files yet"
-          hint="Filed session images will appear here once counseling sessions complete."
+          hint="Images attached to counseling sessions — on referrals or interventions — will appear here."
           label="Session documents"
           action={
             <Button asChild size="sm" className="mt-2">
@@ -223,13 +223,13 @@ export default function GuidanceSessionDocumentsPage() {
         <div className="hidden min-w-0 flex-col gap-4 lg:flex">
           <TopReferredCard items={data.summary.topStudents ?? []} />
           <SessionFilesLegendCard />
-          <FolderLegendCard />
+          <FolderLegendCard variant="docs" />
         </div>
       </div>
       <div className="flex min-w-0 flex-col gap-4 lg:hidden">
         <TopReferredCard items={data.summary.topStudents ?? []} />
         <SessionFilesLegendCard />
-        <FolderLegendCard />
+        <FolderLegendCard variant="docs" />
       </div>
     </section>
   );

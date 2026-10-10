@@ -209,7 +209,7 @@ export function AdmQueueTable({
                           <span className={styles.lrn}>{row.lrn}</span>
                         </p>
                         <p className={styles.cellSub}>
-                          {row.student} · {row.section}
+                          <span className={styles.cellName}>{row.student}</span> · {row.section}
                         </p>
                       </TableCell>
                       {typeBadgeLabel !== null ? (

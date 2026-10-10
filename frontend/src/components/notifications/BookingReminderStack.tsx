@@ -219,10 +219,10 @@ let activeDesk: ReminderDesk | null = null;
 let lastRefreshAt = 0;
 const REFRESH_THROTTLE_MS = 10_000;
 
-export function refreshBookingReminders(): void {
+export function refreshBookingReminders(force = false): void {
   if (!activeDesk) return;
   const now = Date.now();
-  if (now - lastRefreshAt < REFRESH_THROTTLE_MS) return;
+  if (!force && now - lastRefreshAt < REFRESH_THROTTLE_MS) return;
   lastRefreshAt = now;
   evaluateSessions(activeDesk);
 }

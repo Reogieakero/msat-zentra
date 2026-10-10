@@ -58,9 +58,14 @@ export async function fetchAllGuidanceReferrals(
   const first = await fetchGuidanceReferrals({ ...params, page: 1, pageSize: FETCH_ALL_PAGE_SIZE });
   const all = [...first.referrals];
   const pages = Math.min(first.totalPages, FETCH_ALL_MAX_PAGES);
-  for (let p = 2; p <= pages; p++) {
-    const res = await fetchGuidanceReferrals({ ...params, page: p, pageSize: FETCH_ALL_PAGE_SIZE });
-    all.push(...res.referrals);
+  if (pages > 1) {
+    // Pages are independent — fetch in parallel instead of sequentially.
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, i) =>
+        fetchGuidanceReferrals({ ...params, page: i + 2, pageSize: FETCH_ALL_PAGE_SIZE })
+      )
+    );
+    for (const res of rest) all.push(...res.referrals);
   }
   return all;
 }

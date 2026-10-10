@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { type QueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
 import { refreshBookingReminders } from "@/components/notifications/BookingReminderStack";
 import type {
@@ -133,11 +134,187 @@ const CLOSED_DIALOGS: ActionDialogs = {
   resolve: false,
 };
 
+type ReferralActionVariables = { id: string; action: string; payload: unknown };
+type ResolveVariables = {
+  id: string;
+  next: Parameters<typeof updateReferralStatus>[1];
+  summary?: string;
+};
+
+function isReferralsData(v: unknown): v is { referrals: GuidanceReferralItem[] } {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    Array.isArray((v as { referrals?: unknown }).referrals)
+  );
+}
+
+/** Instantly patch every cached referrals/alerts list; returns a rollback. */
+function patchReferralCaches(
+  qc: QueryClient,
+  id: string,
+  patch: (r: GuidanceReferralItem) => GuidanceReferralItem
+): () => void {
+  const snapshots: { key: readonly unknown[]; data: unknown }[] = [];
+  const targets: { queryKey: readonly string[]; updater: (old: unknown) => unknown }[] = [
+    {
+      queryKey: ["guidance-referrals"],
+      updater: (old: unknown) =>
+        isReferralsData(old)
+          ? { ...old, referrals: old.referrals.map((r) => (r.id === id ? patch(r) : r)) }
+          : old,
+    },
+    {
+      queryKey: ["guidance-alerts"],
+      updater: (old: unknown) =>
+        Array.isArray(old)
+          ? (old as GuidanceReferralItem[]).map((r) =>
+              (r as GuidanceReferralItem)?.id === id ? patch(r as GuidanceReferralItem) : r
+            )
+          : old,
+    },
+  ];
+  for (const t of targets) {
+    const entries = qc.getQueriesData({ queryKey: [...t.queryKey] });
+    for (const [key, data] of entries) {
+      snapshots.push({ key, data });
+      qc.setQueryData(key, t.updater(data));
+    }
+  }
+  return () => {
+    for (const s of snapshots) qc.setQueryData(s.key, s.data);
+  };
+}
+
+const nowIso = () => new Date().toISOString();
+
+function applyReferralAction(
+  r: GuidanceReferralItem,
+  action: string,
+  payload: unknown
+): GuidanceReferralItem {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const base = { ...r, lastActionAt: nowIso(), lastActionType: action };
+  switch (action) {
+    case "accept":
+      return {
+        ...base,
+        status: "in_progress",
+        priority: (p.priority as string) ?? r.priority,
+        intakeNotes: (p.intakeNotes as string) ?? r.intakeNotes,
+        acceptedAt: nowIso(),
+        sessions:
+          p.firstSession && typeof (p.firstSession as { scheduledAt?: unknown }).scheduledAt === "string"
+            ? [
+                ...r.sessions,
+                {
+                  id: `temp-${Date.now()}`,
+                  sessionType: (p.firstSession as { sessionType: GuidanceReferralItem["sessions"][number]["sessionType"] }).sessionType,
+                  scheduledAt: (p.firstSession as { scheduledAt: string }).scheduledAt,
+                  date: (p.firstSession as { scheduledAt: string }).scheduledAt,
+                  venue: ((p.firstSession as { venue?: string }).venue ?? "") as string,
+                  status: "scheduled",
+                  sessionNotes: "",
+                  outcome: "",
+                  cancelReason: "",
+                  createdAt: nowIso(),
+                  completedAt: "",
+                  attachments: [],
+                },
+              ]
+            : r.sessions,
+      };
+    case "escalate":
+      return {
+        ...base,
+        status: "escalated",
+        escalationReason: (p.escalationReason as string) ?? r.escalationReason,
+        escalatedTo: (p.escalatedTo as string) ?? r.escalatedTo,
+      };
+    case "dismiss":
+      return { ...base, status: "dismissed" };
+    case "followUp":
+      return {
+        ...base,
+        status: "follow_up",
+        followUpDate: (p.followUpDate as string) ?? r.followUpDate,
+      };
+    case "note":
+      return { ...base, notes: (p.notes as string) ?? r.notes };
+    case "schedule": {
+      const s = p as { scheduledAt?: string; sessionType?: GuidanceReferralItem["sessions"][number]["sessionType"]; venue?: string };
+      if (!s.scheduledAt) return base;
+      return {
+        ...base,
+        sessions: [
+          ...r.sessions,
+          {
+            id: `temp-${Date.now()}`,
+            sessionType: s.sessionType ?? "individual",
+            scheduledAt: s.scheduledAt,
+            date: s.scheduledAt,
+            venue: s.venue ?? "",
+            status: "scheduled",
+            sessionNotes: "",
+            outcome: "",
+            cancelReason: "",
+            createdAt: nowIso(),
+            completedAt: "",
+            attachments: [],
+          },
+        ],
+      };
+    }
+    case "finish": {
+      const s = p as { sessionId?: string; sessionNotes?: string; outcome?: string };
+      return {
+        ...base,
+        sessions: r.sessions.map((sess) =>
+          sess.id === s.sessionId
+            ? { ...sess, status: "completed", sessionNotes: (s.sessionNotes as string) ?? sess.sessionNotes, outcome: (s.outcome as string) ?? sess.outcome, completedAt: nowIso() }
+            : sess
+        ),
+      };
+    }
+    case "move": {
+      const s = p as { sessionId?: string; scheduledAt?: string };
+      return {
+        ...base,
+        sessions: r.sessions.map((sess) =>
+          sess.id === s.sessionId
+            ? { ...sess, scheduledAt: (s.scheduledAt as string) ?? sess.scheduledAt, date: (s.scheduledAt as string) ?? sess.date }
+            : sess
+        ),
+      };
+    }
+    case "cancelSess": {
+      const s = p as { sessionId?: string; cancelReason?: string };
+      return {
+        ...base,
+        sessions: r.sessions.map((sess) =>
+          sess.id === s.sessionId
+            ? { ...sess, status: "cancelled", cancelReason: (s.cancelReason as string) ?? sess.cancelReason }
+            : sess
+        ),
+      };
+    }
+    case "deleteSess": {
+      const s = p as { sessionId?: string };
+      return { ...base, sessions: r.sessions.filter((sess) => sess.id !== s.sessionId) };
+    }
+    default:
+      return base;
+  }
+}
+
 export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
   const [dialogs, setDialogs] = useState<ActionDialogs>({ ...CLOSED_DIALOGS });
   const [form, setForm] = useState<ActionFormState>(INITIAL_GUIDANCE_FORM);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  // Short double-submit guard — released when the mutation settles
+  // (not after refetch). UI/toast no longer wait for refetch.
+  const [settling, setSettling] = useState(false);
 
   const openDialog = (id: string, dialog: keyof ActionDialogs) => {
     setActiveId(id);
@@ -170,17 +347,19 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
   };
 
   const invalidateGuidance = useGuidanceInvalidate();
-  const mutation = useGuidanceMutation({
-    mutationFn: ({
-      id,
-      next,
-      summary,
-    }: {
-      id: string;
-      next: Parameters<typeof updateReferralStatus>[1];
-      summary?: string;
-    }) => updateReferralStatus(id, next, summary),
+  const mutation = useGuidanceMutation<unknown, ResolveVariables>({
+    mutationFn: ({ id, next, summary }: ResolveVariables) =>
+      updateReferralStatus(id, next, summary),
     sourceId: (variables) => variables.id,
+    scopes: ["referrals", "alerts", "notifications"],
+    optimisticUpdate: (qc, variables) =>
+      patchReferralCaches(qc, variables.id, (r) => ({
+        ...r,
+        status: "resolved",
+        resolutionSummary: variables.summary ?? r.resolutionSummary,
+        lastActionAt: nowIso(),
+        lastActionType: "resolve",
+      })),
     successTitle: "Case closed",
     successDescription: () =>
       "The closing summary was saved and the case left your active list.",
@@ -192,14 +371,20 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
     { id: string; action: string; payload: unknown }
   >({
     sourceId: (variables) => variables.id,
+    scopes: ["referrals", "alerts", "notifications"],
+    optimisticUpdate: (qc, variables: ReferralActionVariables) =>
+      patchReferralCaches(qc, variables.id, (r) =>
+        applyReferralAction(r, variables.action, variables.payload)
+      ),
     silentSuccess: true,
     successTitle: "Saved",
     errorFallback: "The action did not go through. Check your connection and try again.",
     onSuccessExtra: (_data, variables) => {
       const message = referralActionMessage(variables.action);
+      // UI is already updated optimistically — recompute reminders then pop
+      // the sileo toast instantly on server success.
+      refreshBookingReminders(true);
       if (message) toast.success(message);
-
-      refreshBookingReminders();
     },
     mutationFn: async ({
       id,
@@ -300,21 +485,29 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
 
   const handleAction = (action: string, payload: unknown) => {
     if (!activeId) return;
-    if (actionMutation.isPending) return;
+    if (actionMutation.isPending || settling) return;
 
+    // Close instantly — the row itself is already patched optimistically.
+    const id = activeId;
+    setDialogs({ ...CLOSED_DIALOGS });
+    setActiveId(null);
+    setActiveSessionId(null);
+    setSettling(true);
     actionMutation.mutate(
-      { id: activeId, action, payload },
+      { id, action, payload },
       {
-        onSuccess: () => {
-          setDialogs({ ...CLOSED_DIALOGS });
-          setActiveId(null);
-          setActiveSessionId(null);
+        onError: () => {
+          // Rollback already applied; restore dialog so user can retry.
+          setActiveId(id);
+        },
+        onSettled: () => {
+          setSettling(false);
         },
       }
     );
   };
 
-  const isActionPending = actionMutation.isPending;
+  const isActionPending = actionMutation.isPending || settling;
 
   const busyRowId = actionMutation.isPending
     ? ((actionMutation.variables as { id?: string } | undefined)?.id ?? null)
@@ -325,13 +518,18 @@ export function useGuidanceReferralActions(referrals: GuidanceReferralItem[]) {
     activeRow?.sessions.find((s) => s.id === activeSessionId) ?? null;
 
   const resolveCase = (id: string, summary: string) => {
-    if (mutation.isPending) return;
+    if (mutation.isPending || settling) return;
+    setDialogs((prev) => ({ ...prev, resolve: false }));
+    setActiveId(null);
+    setSettling(true);
     mutation.mutate(
       { id, next: "resolved", summary },
       {
-        onSuccess: () => {
-          setDialogs((prev) => ({ ...prev, resolve: false }));
-          setActiveId(null);
+        onError: () => {
+          setActiveId(id);
+        },
+        onSettled: () => {
+          setSettling(false);
         },
       }
     );

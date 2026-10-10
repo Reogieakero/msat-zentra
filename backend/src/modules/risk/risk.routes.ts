@@ -152,6 +152,7 @@ router.get(
 router.get(
   "/students/batch",
   requireAuth,
+  cache({ tags: ["risk"], ttl: 60 }),
   (req: Request, res: Response, next: (e: unknown) => void) => {
     sendLookupResult(res, next, () =>
       getBatchLevels(req.query.ids, req.user!.role, req.user!.id, req),

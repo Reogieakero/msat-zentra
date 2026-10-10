@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import { CalendarDays, CalendarCheck, Clock, Eye, FileText, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,23 +88,34 @@ export function GuidanceAlertsRowActions({
         <DropdownMenuContent align="end" className="min-w-56">
           {viewFormHref && (
             <DropdownMenuItem asChild>
-              <Link href={viewFormHref}>View referral form</Link>
+              <Link href={viewFormHref}>
+                <FileText aria-hidden />
+                View referral form
+              </Link>
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
             disabled={!row.anecdotalId && !isEndorsedRow}
             onSelect={openReport}
           >
+            <FileText aria-hidden />
             View anecdotal report
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={seeMoreHref}>See more</Link>
+            <Link href={seeMoreHref}>
+              <Eye aria-hidden />
+              See more
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled>
+            <Clock aria-hidden />
             Time elapsed · {elapsedText}
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>Date referred · {referredText}</DropdownMenuItem>
+          <DropdownMenuItem disabled>
+            <CalendarDays aria-hidden />
+            Date referred · {referredText}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -139,6 +150,7 @@ export function GuidanceInterventionRowActions({
 }) {
   const [sessionsOpen, setSessionsOpen] = React.useState(false);
   const sessions = item.intervention?.sessions ?? [];
+  const seeMoreHref = `/guidance/interventions?highlight=${encodeURIComponent(item.studentKey)}`;
 
   return (
     <>
@@ -154,16 +166,24 @@ export function GuidanceInterventionRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-56">
           <DropdownMenuItem onSelect={() => setSessionsOpen(true)}>
+            <CalendarCheck aria-hidden />
             Booked session
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/guidance/interventions">See more</Link>
+            <Link href={seeMoreHref}>
+              <Eye aria-hidden />
+              See more
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled>
+            <Clock aria-hidden />
             Time elapsed · {elapsedText}
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>{referredLabel} · {referredText}</DropdownMenuItem>
+          <DropdownMenuItem disabled>
+            <CalendarDays aria-hidden />
+            {referredLabel} · {referredText}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

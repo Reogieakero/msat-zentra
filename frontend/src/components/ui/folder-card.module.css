@@ -275,6 +275,18 @@
   transition: color 0.3s ease;
 }
 
+/* Real image preview inside the folder slip — covers the slip face so the
+   folder holds the actual photos, not just paper slips. */
+.fileThumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
 .fileText {
   font-size: 8px;
   color: #fff;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Image as ImageIcon, MoreHorizontal } from "lucide-react";
+import { Eye, Image as ImageIcon, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,7 +132,10 @@ export function DocumentaryTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className={styles.moreMenu}>
-                          <DropdownMenuItem onSelect={() => onOpenDetails(entry)}>View details</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => onOpenDetails(entry)}>
+                            <Eye aria-hidden />
+                            View details
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

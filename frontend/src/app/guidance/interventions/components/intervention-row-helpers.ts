@@ -61,11 +61,11 @@ export function pipelineStatus(
   doneCount: number
 ): {
   label: string;
-  variant: "default" | "success" | "secondary" | "destructive" | "outline" | "warning";
+  variant: "default" | "success" | "secondary" | "destructive" | "outline" | "warning" | "green";
   sub: string | null;
 } {
   if (followUp?.outcomeStatus === "resolved")
-    return { label: "Done", variant: "success", sub: null };
+    return { label: "Done", variant: "green", sub: null };
   if (followUp?.outcomeStatus === "unresolved")
     return { label: "Discontinued", variant: "secondary", sub: null };
   if (followUp && row.riskLevel === "Low")
@@ -82,7 +82,7 @@ export function pipelineStatus(
   if (doneCount > 0)
     return {
       label: "Session done",
-      variant: "success",
+      variant: "green",
       sub: `${doneCount} session${doneCount === 1 ? "" : "s"} done`,
     };
   return { label: "No action yet", variant: "outline", sub: null };

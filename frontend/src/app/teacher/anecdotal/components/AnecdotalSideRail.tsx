@@ -78,7 +78,12 @@ export function TopAttentionCard({ records }: { records: MyAnecdotalRecord[] }) 
   );
 }
 
-export function FolderLegendCard() {
+export function FolderLegendCard({ variant = "category" }: { variant?: "category" | "docs" } = {}) {
+  const docsEntries: { label: string; hint: string; color: string }[] = [
+    { label: "Counseling", hint: "Referral cases", color: "#f59e0b" },
+    { label: "Intervention", hint: "Follow-up docs", color: "var(--primary)" },
+    { label: "ADM", hint: "By category", color: "var(--muted-foreground)" },
+  ];
   return (
     <div className={assign.card} aria-label="Folder color legend">
       <span className={assign.glowClip} aria-hidden="true">
@@ -99,16 +104,28 @@ export function FolderLegendCard() {
         </div>
       </div>
       <div className="relative flex flex-col gap-1.5 text-sm">
-        {Object.keys(CATEGORY_LABELS).map((key) => (
-          <span key={key} className="flex items-center gap-2">
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: CATEGORY_COLORS[key] }}
-              aria-hidden="true"
-            />
-            {CATEGORY_LABELS[key] ?? humanize(key)}
-          </span>
-        ))}
+        {variant === "docs"
+          ? docsEntries.map((e) => (
+              <span key={e.label} className="flex items-center gap-2">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: e.color }}
+                  aria-hidden="true"
+                />
+                {e.label}
+                <span className="text-xs text-muted-foreground">· {e.hint}</span>
+              </span>
+            ))
+          : Object.keys(CATEGORY_LABELS).map((key) => (
+              <span key={key} className="flex items-center gap-2">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: CATEGORY_COLORS[key] }}
+                  aria-hidden="true"
+                />
+                {CATEGORY_LABELS[key] ?? humanize(key)}
+              </span>
+            ))}
       </div>
     </div>
   );

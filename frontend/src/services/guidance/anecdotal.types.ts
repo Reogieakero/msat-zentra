@@ -38,6 +38,9 @@ export interface GuidanceAnecdotalRecord {
   sessionDocs?: GuidanceSessionDocs[];
 
   referralType?: string;
+
+  /** Session-documents page only: true when the folder holds any intervention follow-up docs. */
+  hasInterventionDocs?: boolean;
 }
 
 export interface GuidanceAnecdotalGradeCount {

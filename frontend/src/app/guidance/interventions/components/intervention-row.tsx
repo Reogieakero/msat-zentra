@@ -1,6 +1,8 @@
 "use client";
 import * as React from "react";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatElapsedShort, msSinceDate as msSinceAction } from "@/lib/clock";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type {
@@ -19,6 +21,7 @@ import styles from "./guidance-interventions.module.css";
 export { interventionLatestAction } from "./intervention-row-helpers";
 interface InterventionTableRowProps {
   row: AtRiskStudentItem;
+  highlighted?: boolean;
   locked: boolean;
   isActionPending: boolean;
   isBusy: (action: string) => boolean;
@@ -30,6 +33,7 @@ interface InterventionTableRowProps {
   onStart: () => void;
   onChange: () => void;
   onOutcome: () => void;
+  onMarkDone: () => void;
   onSchedule: () => void;
   onSession: (
     session: CounselingSessionItem,
@@ -40,6 +44,7 @@ interface InterventionTableRowProps {
 }
 export function InterventionTableRow({
   row,
+  highlighted = false,
   locked,
   isActionPending,
   isBusy,
@@ -51,6 +56,7 @@ export function InterventionTableRow({
   onStart,
   onChange,
   onOutcome,
+  onMarkDone,
   onSchedule,
   onSession,
   onReview,
@@ -89,6 +95,30 @@ export function InterventionTableRow({
     !!followUp && !closed && followUp.sessions.length === 0;
   const hasUpcoming = scheduledCount > 0;
   const upcomingHint = "Finish or cancel the upcoming session first";
+  // Mark-as-done is enabled for ongoing plans except when there is
+  // nothing actionable yet: no sessions booked ("No action yet") or a
+  // booked session that hasn't started. The outcome dialog + backend
+  // enforce the remaining rules (reviewed, closing note) with clear errors.
+  const hasFutureBooking = (followUp?.sessions ?? []).some(
+    (s) =>
+      s.status === "scheduled" &&
+      (() => {
+        const t = new Date(s.scheduledAt).getTime();
+        return !Number.isFinite(t) || t > now;
+      })()
+  );
+  const markDoneHint = !followUp
+    ? "Start a follow-up first"
+    : followUp.outcomeStatus === "resolved"
+      ? "Already done"
+      : followUp.outcomeStatus !== "ongoing"
+        ? "Already closed"
+        : followUp.sessions.length === 0
+          ? "Book a session first"
+          : hasFutureBooking
+            ? "The booked session hasn't started yet"
+            : null;
+  const canMarkDone = markDoneHint === null && !locked && !isActionPending;
   const detectedAt = row.detectedAt ?? followUp?.createdAt ?? null;
   const detectedDate = (() => {
     if (!detectedAt) return null;
@@ -110,9 +140,13 @@ export function InterventionTableRow({
     : null;
   return (
     <>
-      <TableRow>
+      <TableRow
+        id={`intervention-row-${row.studentKey}`}
+        data-highlighted={highlighted || undefined}
+        className={highlighted ? styles.rowHighlight : undefined}
+      >
         <TableCell>
-          <p className={styles.cellMain}>{row.student}</p>
+          <p className={styles.studentName}>{row.student}</p>
           <p className={styles.cellSub}>
             <span className={styles.lrn}>{row.lrn || "—"}</span>
           </p>
@@ -154,6 +188,30 @@ export function InterventionTableRow({
         <TableCell>
           <Badge variant={status.variant}>{status.label}</Badge>
           {status.sub ? <p className={styles.cellSub}>{status.sub}</p> : null}
+        </TableCell>
+        <TableCell>
+          {closed ? (
+            <Badge variant="green">
+              <Check aria-hidden className={styles.actionIcon} />
+              Done
+            </Badge>
+          ) : (
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              disabled={!canMarkDone || isBusy("outcome")}
+              title={markDoneHint ?? "Record the outcome as resolved"}
+              aria-label={
+                canMarkDone
+                  ? `Mark ${row.student}'s intervention as done`
+                  : `Cannot mark ${row.student}'s intervention as done: ${markDoneHint}`
+              }
+              onClick={onMarkDone}
+            >
+              {isBusy("outcome") ? "Saving…" : "Mark as done"}
+            </Button>
+          )}
         </TableCell>
         <TableCell>
           <InterventionRowMenu

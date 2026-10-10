@@ -1,30 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, Check, ChevronDown, Clock, ImageIcon, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  formatTime,
-  sessionTypeLabel,
-} from "../../referrals/components/guidance-referrals-table";
+import { cn } from "@/lib/utils";
+import { formatDate, formatTime } from "@/lib/labels/datetime";
+import { sessionTypeLabel } from "@/lib/labels/sessions";
 import type {
   CounselingSessionItem,
   StudentFollowUp,
 } from "@/services/guidance/interventions.types";
 import { Busy } from "./busy";
 import { InterventionSessionDocsDialog } from "./InterventionSessionDocsDialog";
-import styles from "./counseling-plan.module.css";
-
-function formatDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return value;
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const month = months[Number(match[2]) - 1] ?? match[2];
-  return `${month} ${Number(match[3])}, ${match[1]}`;
-}
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -65,6 +52,38 @@ export function liveSessionLabel(state: LiveSessionState): string {
     default:
       return "Upcoming";
   }
+}
+
+function StatusPill({ live }: { live: LiveSessionState }) {
+  if (live === "completed") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-green-100 py-[3px] pl-2 pr-2.5 text-xs font-medium text-green-800 dark:bg-green-500/20 dark:text-green-200">
+        <Check className="size-3" strokeWidth={3} aria-hidden />
+        Done
+      </span>
+    );
+  }
+  if (live === "ongoing") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-100 py-[3px] pl-2 pr-2.5 text-xs font-medium text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+        <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400" aria-hidden />
+        Ongoing
+      </span>
+    );
+  }
+  if (live === "cancelled") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 py-[3px] pl-2 pr-2.5 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-slate-300">
+        Cancelled
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-blue-100 py-[3px] pl-2 pr-2.5 text-xs font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-200">
+      <span className="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden />
+      Upcoming
+    </span>
+  );
 }
 
 interface CounselingPlanProps {
@@ -115,149 +134,160 @@ export function CounselingPlan({
   }, [hasUpcoming]);
 
   return (
-    <div className={styles.plan}>
-      <span className={styles.glowClip} aria-hidden="true">
-        <span className={styles.cardGlow} />
-      </span>
-      <div className={styles.planBody}>
-      <div className={styles.planHead}>
-        <p className={styles.blockLabel}>Counseling plan</p>
+    <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[15px] font-semibold leading-5 dark:text-slate-100">Counseling plan</h3>
+          {closed || rejected ? (
+            <p className="mt-0.5 text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
+              {closed
+                ? "This follow-up is closed — the sessions below are kept as history."
+                : "This plan was rejected — record the outcome to close it."}
+            </p>
+          ) : null}
+        </div>
+        {followUp.sessions.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={expanded}
+            aria-controls="case-sessions"
+            onClick={onToggle}
+            className="h-8 shrink-0 gap-1.5 rounded-lg border-slate-200 px-3 text-[13px] font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
+          >
+            {expanded ? "Hide sessions" : `Show sessions (${followUp.sessions.length})`}
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
+              aria-hidden
+            />
+          </Button>
+        )}
       </div>
-      {closed || rejected ? (
-        <p className={styles.planEmpty}>
-          {closed
-            ? "This follow-up is closed — the sessions below are kept as history."
-            : "This plan was rejected — record the outcome to close it."}
-        </p>
-      ) : null}
-      {followUp.sessions.length === 0 ? (
-        <p className={styles.planEmpty}>
-          No sessions yet — schedule the first talk with {studentFirstName}.
-        </p>
-      ) : !expanded ? (
-        <p className={styles.planEmpty}>
-          {followUp.completedSessions} of {followUp.sessions.length} finished —
-          show the sessions to see details.
-        </p>
-      ) : (
-        <ul className={styles.sessionList}>
-          {followUp.sessions.map((s) => {
+
+      <div id="case-sessions" className="mt-3 space-y-3">
+        {followUp.sessions.length === 0 ? (
+          <p className="rounded-[14px] border border-slate-200 px-4 py-3.5 text-[13px] text-slate-500 dark:border-white/10 dark:text-slate-400">
+            No sessions yet — schedule the first talk with {studentFirstName}.
+          </p>
+        ) : !expanded ? (
+          <div className="rounded-[14px] border border-dashed border-slate-300 px-4 py-3.5 text-[13px] text-slate-500 dark:border-white/20 dark:text-slate-400">
+            {followUp.sessions.length} session
+            {followUp.sessions.length === 1 ? "" : "s"} hidden
+          </div>
+        ) : (
+          followUp.sessions.map((s) => {
             const target = new Date(s.scheduledAt).getTime();
             const live = liveSessionState(s.status, s.scheduledAt, now);
             const started =
               s.status === "completed" ||
               (Number.isFinite(target) && target <= now);
-
             const docsUnlocked =
               s.status === "completed" ||
               (workable && s.status === "scheduled" && started);
             return (
-              <li key={s.id} className={styles.session}>
-                <div className={styles.sessionTop}>
-                  <span className={styles.srOnly}>
-                    Status: {liveSessionLabel(live)}
-                  </span>
-                  <p className={styles.topCountdown} aria-live="off">
-                    {s.status === "scheduled" && Number.isFinite(target)
-                      ? target > now
-                        ? `Starts in ${formatCountdown(target - now)}`
-                        : "Ongoing now"
-                      : null}
-                  </p>
-                </div>
-                <div className={styles.sessionFacts}>
-                  <p
-                    className={`${styles.watermark} ${
-                      s.status === "completed"
-                        ? styles.watermarkDone
-                        : s.status === "cancelled"
-                          ? styles.watermarkCancelled
-                          : live === "ongoing"
-                            ? styles.watermarkOngoing
-                            : styles.watermarkUpcoming
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {liveSessionLabel(live)}
-                  </p>
-                  <p className={styles.sessionTitle}>
-                    <span className={styles.titleLabel}>Session kind:</span>
-                    {sessionTypeLabel(s.sessionType)}
-                  </p>
-                  <p className={styles.factRow}>
-                    <Calendar className={styles.factIcon} aria-hidden />
-                    <time dateTime={s.scheduledAt}>{formatDate(s.date)}</time>
-                  </p>
-                  <p className={styles.factRow}>
-                    <Clock className={styles.factIcon} aria-hidden />
-                    {formatTime(s.scheduledAt)}
-                  </p>
-                  {s.venue ? (
-                    <p className={styles.factRow}>
-                      <MapPin className={styles.factIcon} aria-hidden />
-                      {s.venue}
+              <article
+                key={s.id}
+                className="overflow-hidden rounded-[14px] border border-slate-200 dark:border-white/10"
+              >
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                    <User className="size-[18px]" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[15px] font-semibold leading-5 dark:text-slate-100">
+                      {sessionTypeLabel(s.sessionType)}
+                    </h4>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[13px] leading-[18px] text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="size-3.5" aria-hidden />
+                        <time dateTime={s.scheduledAt}>{formatDate(s.date)}</time>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="size-3.5" aria-hidden />
+                        {formatTime(s.scheduledAt)}
+                      </span>
+                      {s.venue ? (
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="size-3.5" aria-hidden />
+                          {s.venue}
+                        </span>
+                      ) : null}
                     </p>
-                  ) : null}
+                    {s.status === "scheduled" && Number.isFinite(target) ? (
+                      <p className="mt-0.5 text-[13px] leading-[18px] text-slate-500 dark:text-slate-400" aria-live="off">
+                        {target > now
+                          ? `Starts in ${formatCountdown(target - now)}`
+                          : "Ongoing now"}
+                      </p>
+                    ) : null}
+                  </div>
+                  <StatusPill live={live} />
                 </div>
-                {s.status === "completed" && s.sessionNotes ? (
-                  <p className={styles.sessionNotes}>{s.sessionNotes}</p>
+
+                {(s.status === "completed" && (s.sessionNotes || s.outcome)) ||
+                (s.status === "cancelled" && s.cancelReason) ? (
+                  <dl className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-5 dark:border-white/10 dark:bg-white/5">
+                    {s.status === "completed" && s.sessionNotes ? (
+                      <>
+                        <dt className="text-slate-500 dark:text-slate-400">Notes</dt>
+                        <dd className="text-slate-900 dark:text-slate-100">{s.sessionNotes}</dd>
+                      </>
+                    ) : null}
+                    {s.status === "completed" && s.outcome ? (
+                      <>
+                        <dt className="text-slate-500 dark:text-slate-400">Outcome</dt>
+                        <dd className="text-slate-900 dark:text-slate-100">{s.outcome}</dd>
+                      </>
+                    ) : null}
+                    {s.status === "cancelled" && s.cancelReason ? (
+                      <>
+                        <dt className="text-slate-500 dark:text-slate-400">Reason</dt>
+                        <dd className="text-slate-900 dark:text-slate-100">{s.cancelReason}</dd>
+                      </>
+                    ) : null}
+                  </dl>
                 ) : null}
-                {s.status === "completed" && s.outcome ? (
-                  <p className={styles.sessionOutcome}>
-                    <span className={styles.calloutPrefix}>Outcome: </span>
-                    {s.outcome}
-                  </p>
-                ) : null}
-                {s.status === "cancelled" && s.cancelReason ? (
-                  <p className={styles.sessionOutcome}>{s.cancelReason}</p>
-                ) : null}
-                {docsUnlocked && (
-                  <div className={styles.sessionActions}>
+
+                {docsUnlocked ? (
+                  <div className="flex items-center border-t border-slate-200 px-4 py-2.5 dark:border-white/10">
                     <Button
                       type="button"
-                      size="xs"
                       variant="outline"
+                      size="sm"
                       disabled={locked || isActionPending}
                       onClick={() => setDocsFor(s)}
+                      className="h-8 gap-1.5 rounded-lg border-slate-200 px-3 text-[13px] font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
                     >
+                      <ImageIcon className="size-3.5" aria-hidden />
                       {(s.attachmentsCount ?? 0) > 0 ? "See attached images" : "Add docs"}
                     </Button>
                   </div>
-                )}
-              </li>
+                ) : null}
+              </article>
             );
-          })}
-        </ul>
-      )}
-      {followUp.sessions.length > 0 && (
-        <div className={styles.planFooter}>
-          <Button
-            type="button"
-            size="xs"
-            variant="ghost"
-            onClick={onToggle}
-            aria-expanded={expanded}
-          >
-            {expanded
-              ? "Hide sessions"
-              : `Show sessions (${followUp.sessions.length})`}
-          </Button>
+          })
+        )}
+      </div>
 
+      {expanded && (upcoming || (!upcoming && workable && followUp.sessions.length > 0)) ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {!upcoming && workable && (
             <Button
               type="button"
-              size="xs"
+              size="sm"
               disabled={locked || isActionPending}
               onClick={onSchedule}
+              className="h-8 rounded-lg bg-blue-600 px-3 text-[13px] font-semibold text-white hover:bg-blue-700"
             >
               Book session
             </Button>
           )}
           {upcoming && workable && (
-            <div className={styles.sessionActions}>
+            <>
               <Button
                 type="button"
-                size="xs"
+                size="sm"
                 disabled={
                   locked ||
                   isActionPending ||
@@ -269,34 +299,36 @@ export function CounselingPlan({
                     : undefined
                 }
                 onClick={() => onSession(upcoming, "finish")}
+                className="h-8 rounded-lg bg-blue-600 px-3 text-[13px] font-semibold text-white hover:bg-blue-700"
               >
                 <Busy busy={isBusy("finish")} />
                 Mark done
               </Button>
               <Button
                 type="button"
-                size="xs"
+                size="sm"
                 variant="outline"
                 disabled={locked || isActionPending}
                 onClick={() => onSession(upcoming, "move")}
+                className="h-8 rounded-lg border-slate-300 px-3 text-[13px] font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
               >
                 Reschedule session
               </Button>
               <Button
                 type="button"
-                size="xs"
-                variant="destructive"
-                className={styles.btnRed}
+                size="sm"
+                variant="outline"
                 disabled={locked || isActionPending}
                 onClick={() => onSession(upcoming, "cancelSess")}
+                className="h-8 rounded-lg border-slate-300 px-3 text-[13px] font-medium text-slate-700 dark:border-white/15 dark:text-slate-200"
               >
                 Cancel
               </Button>
-            </div>
+            </>
           )}
         </div>
-      )}
-      </div>
+      ) : null}
+
       {docsFor && (
         <InterventionSessionDocsDialog
           followUpId={followUp.id}

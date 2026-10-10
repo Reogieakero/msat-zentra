@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -113,9 +111,6 @@ export function GuidanceOverviewGradeTable({ rows }: GuidanceOverviewGradeTableP
                   <TableHead>Sections</TableHead>
                   <TableHead>At-risk students</TableHead>
                   <TableHead>Most level risk</TableHead>
-                  <TableHead>
-                    <span className={styles.srOnly}>Row actions</span>
-                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -124,8 +119,7 @@ export function GuidanceOverviewGradeTable({ rows }: GuidanceOverviewGradeTableP
                     key={row.short}
                     className={styles.clickableRow}
                     tabIndex={0}
-                    onClick={(e) => {
-                      if ((e.target as HTMLElement).closest("button,a")) return;
+                    onClick={() => {
                       router.push("/guidance/interventions");
                     }}
                     onKeyDown={(e) => {
@@ -155,11 +149,6 @@ export function GuidanceOverviewGradeTable({ rows }: GuidanceOverviewGradeTableP
                       <span className={styles.atRiskCount}>{row.atRisk}</span>
                     </TableCell>
                     <TableCell>{mostLevelBadge(row.mostLevel)}</TableCell>
-                    <TableCell>
-                      <Button asChild size="xs" variant="outline" aria-label={`See ${row.grade} in Interventions`}>
-                        <Link href="/guidance/interventions">See more</Link>
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -141,6 +141,11 @@
   white-space: nowrap;
 }
 
+.cellName {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .cellTime {
   margin: 0.125rem 0 0;
   font-size: 0.8125rem;

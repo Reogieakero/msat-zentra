@@ -155,12 +155,6 @@ export default function GuidanceAlertsPage() {
       aria-busy={isFetching || undefined}
       aria-label="Alerts"
     >
-      {isTrueEmpty ? null : (
-        <GuidancePageHeader
-          title="Alerts"
-          description="Every ADM, counseling, and intervention case needing your attention."
-        />
-      )}
       {isTrueEmpty ? (
         <GuidanceEmptyCard
           icon={BellRing}
@@ -173,7 +167,11 @@ export default function GuidanceAlertsPage() {
       ) : (
         <>
       <div className={styles.repoGrid}>
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-col gap-4">
+          <GuidancePageHeader
+            title="Alerts"
+            description="Every ADM, counseling, and intervention case needing your attention."
+          />
           <GuidanceAlertsTable
             referrals={referrals}
             interventions={interventions}

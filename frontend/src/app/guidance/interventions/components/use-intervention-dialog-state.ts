@@ -27,6 +27,7 @@ export function useInterventionDialogState(students: AtRiskStudentItem[]) {
   const [sessTime, setSessTime] = useState("");
   const [sessType, setSessType] = useState("individual");
   const [sessVenue, setSessVenue] = useState("");
+  const [bookFirst, setBookFirst] = useState(false);
   const [outcomeStatus, setOutcomeStatus] =
     useState<InterventionOutcome>("ongoing");
   const [outcomeNotes, setOutcomeNotes] = useState("");
@@ -39,6 +40,7 @@ export function useInterventionDialogState(students: AtRiskStudentItem[]) {
     setSessTime("");
     setSessType("individual");
     setSessVenue("");
+    setBookFirst(false);
   };
   const closeDialog = (dialog: InterventionDialogKey) => {
     setDialogs((p) => ({ ...p, [dialog]: false }));
@@ -65,6 +67,16 @@ export function useInterventionDialogState(students: AtRiskStudentItem[]) {
     setActiveFollowUpId(row.intervention.id);
     setOutcomeStatus(row.intervention.outcomeStatus);
     setOutcomeNotes(row.intervention.outcomeNotes);
+    setDialogs((p) => ({ ...p, outcome: true }));
+  };
+  /** Mark-as-done fast path: opens the outcome dialog pre-set to Resolved
+   * with a fresh closing note for the counselor to write. */
+  const openOutcomeResolved = (row: AtRiskStudentItem) => {
+    if (!row.intervention) return;
+    setActiveKey(row.studentKey);
+    setActiveFollowUpId(row.intervention.id);
+    setOutcomeStatus("resolved");
+    setOutcomeNotes("");
     setDialogs((p) => ({ ...p, outcome: true }));
   };
   const openSchedule = (row: AtRiskStudentItem) => {
@@ -125,6 +137,8 @@ export function useInterventionDialogState(students: AtRiskStudentItem[]) {
     setSessType,
     sessVenue,
     setSessVenue,
+    bookFirst,
+    setBookFirst,
     outcomeStatus,
     setOutcomeStatus,
     outcomeNotes,
@@ -137,6 +151,7 @@ export function useInterventionDialogState(students: AtRiskStudentItem[]) {
     openStart,
     openChange,
     openOutcome,
+    openOutcomeResolved,
     openSchedule,
     openSessionDialog,
     clearActive,

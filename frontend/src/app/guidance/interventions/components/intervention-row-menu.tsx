@@ -1,5 +1,14 @@
 "use client";
-import { MoreHorizontal } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarClock,
+  CalendarPlus,
+  Eye,
+  History,
+  MoreHorizontal,
+  Paperclip,
+  Repeat,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -69,9 +78,11 @@ export function InterventionRowMenu({
         {closed ? (
           <>
             <DropdownMenuItem onSelect={onToggleDetails}>
+              <Eye aria-hidden />
               See details
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onHistoryOpen}>
+              <History aria-hidden />
               View session history
             </DropdownMenuItem>
             {filesTotal > 0 && (
@@ -79,6 +90,7 @@ export function InterventionRowMenu({
                 disabled={viewerLoading}
                 onSelect={() => onOpenViewer()}
               >
+                <Paperclip aria-hidden />
                 {viewerLoading ? "Loading files…" : "See attached files"}
               </DropdownMenuItem>
             )}
@@ -87,6 +99,7 @@ export function InterventionRowMenu({
               disabled={locked || isActionPending}
               onSelect={onStart}
             >
+              <Repeat aria-hidden />
               Schedule for follow up
             </DropdownMenuItem>
           </>
@@ -96,18 +109,22 @@ export function InterventionRowMenu({
               disabled={locked || isActionPending}
               onSelect={onSchedule}
             >
+              <CalendarPlus aria-hidden />
               Book session
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onToggleDetails}>
+              <Eye aria-hidden />
               See details
             </DropdownMenuItem>
           </>
         ) : (
           <>
             <DropdownMenuItem onSelect={onSessionsOpen}>
+              <CalendarCheck aria-hidden />
               Booked session
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onToggleDetails}>
+              <Eye aria-hidden />
               See details
             </DropdownMenuItem>
             {filesTotal > 0 && (
@@ -115,6 +132,7 @@ export function InterventionRowMenu({
                 disabled={viewerLoading}
                 onSelect={() => onOpenViewer()}
               >
+                <Paperclip aria-hidden />
                 {viewerLoading
                   ? "Loading files…"
                   : `See attached files (×${filesTotal})`}
@@ -125,6 +143,7 @@ export function InterventionRowMenu({
                 disabled={locked || isActionPending}
                 onSelect={onSchedule}
               >
+                <CalendarPlus aria-hidden />
                 Book session
               </DropdownMenuItem>
             )}
@@ -135,6 +154,7 @@ export function InterventionRowMenu({
                   disabled={locked || isActionPending}
                   onSelect={() => onSession(scheduledSession, "move")}
                 >
+                  <CalendarClock aria-hidden />
                   Reschedule
                 </DropdownMenuItem>
               </>
@@ -146,6 +166,7 @@ export function InterventionRowMenu({
                   disabled={locked || isActionPending}
                   onSelect={onSchedule}
                 >
+                  <Repeat aria-hidden />
                   Schedule for follow up
                 </DropdownMenuItem>
               </>

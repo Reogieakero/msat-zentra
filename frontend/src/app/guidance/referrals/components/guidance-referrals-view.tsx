@@ -4,7 +4,6 @@ import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Inbox, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RefreshBadge } from "@/components/ui/refresh-badge";
 import { ZentraPageHeaderSkeleton } from "@/components/shared/zentra-skeletons/ZentraSkeletons";
 import { GuidancePageHeader } from "../../components/GuidancePageHeader";
 import { GuidanceEmptyCard } from "../../components/GuidanceEmptyCard";
@@ -215,7 +214,6 @@ export function GuidanceReferralsView({
           description={headerCopy.description}
         />
       )}
-      {refreshing ? <RefreshBadge label="Refreshing cases…" /> : null}
       {isTrueEmpty ? (
         <GuidanceEmptyCard
           icon={Inbox}

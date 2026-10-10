@@ -73,8 +73,13 @@ export function ScheduleSessionDialog({
         bookMutation.reset();
       }}
       onSubmit={(fields) => bookMutation.mutate(fields)}
-      description={`Book a clinic session${row.student ? ` for ${row.student}` : ""}. Held at the school clinic unless another venue is given.`}
-      venuePlaceholder="e.g. School clinic"
+      description="Schedule a clinic session"
+      studentCard={{
+        name: row.student,
+        sub: [row.grade, row.section].filter(Boolean).join(" · "),
+      }}
+      venueHint="Held at the school clinic unless another venue is given."
+      venuePlaceholder="School clinic"
       hasActiveSession={row.sessions.some((s) => s.status === "scheduled")}
       busy={acting}
       serverError={serverError}

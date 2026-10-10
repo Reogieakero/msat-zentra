@@ -83,7 +83,7 @@ function LatestDetectedCard({ interventions }: { interventions: AtRiskStudentIte
             const at = detectionMs(s.detectedAt);
             return (
               <li key={s.studentKey}>
-                <Link className={styles.rowLink} href="/guidance/interventions">
+                <Link className={styles.rowLink} href={`/guidance/interventions?highlight=${encodeURIComponent(s.studentKey)}`}>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{s.student}</span>
                     <span className="block truncate text-xs text-muted-foreground">
@@ -121,7 +121,7 @@ function RiskWatchCard({
       if (item.riskLevel !== "High") continue;
       const key = `${item.student.trim().toLowerCase()}|${item.lrn.trim().toLowerCase()}`;
       if (!seen.has(key)) {
-        seen.set(key, { name: item.student, href: "/guidance/interventions" });
+        seen.set(key, { name: item.student, href: `/guidance/interventions?highlight=${encodeURIComponent(item.studentKey)}` });
       }
     }
     const list = [...seen.values()].slice(0, 5);

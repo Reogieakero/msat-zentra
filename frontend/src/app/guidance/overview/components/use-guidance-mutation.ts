@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
 import { markSelfNotified } from "@/lib/realtime/guidanceChannel";
 import { apiErrorMessage } from "@/lib/api/errors";
@@ -55,15 +55,15 @@ const GUIDANCE_SCOPE_KEYS: Record<GuidanceScope, readonly (readonly string[])[]>
 };
 
 export function invalidateGuidanceQueries(
-  queryClient: { invalidateQueries: (filters: { queryKey: string[] }) => void },
+  queryClient: { invalidateQueries: (filters: { queryKey: string[] }) => Promise<void> },
   scopes?: GuidanceScope | GuidanceScope[],
-) {
+): Promise<void[]> {
   const keys = !scopes
     ? GUIDANCE_QUERY_KEYS
     : (Array.isArray(scopes) ? scopes : [scopes]).flatMap((s) => GUIDANCE_SCOPE_KEYS[s]);
-  for (const key of keys) {
-    void queryClient.invalidateQueries({ queryKey: [...key] });
-  }
+  return Promise.all(
+    keys.map((key) => queryClient.invalidateQueries({ queryKey: [...key] })),
+  );
 }
 
 export function useGuidanceInvalidate(scopes?: GuidanceScope | GuidanceScope[]) {
@@ -86,6 +86,8 @@ interface GuidanceMutationOptions<TData, TVariables> {
   sourceId?: string | ((variables: TVariables) => string);
 
   scopes?: GuidanceScope | GuidanceScope[];
+  /** Apply an instant optimistic cache patch. Return a rollback to run on error. */
+  optimisticUpdate?: (queryClient: QueryClient, variables: TVariables) => (() => void) | void;
 }
 
 export function useGuidanceMutation<TData = unknown, TVariables = void>(
@@ -93,10 +95,15 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
 ) {
   const queryClient = useQueryClient();
   const invalidate = () => invalidateGuidanceQueries(queryClient, options.scopes);
-  return useMutation<TData, Error, TVariables>({
+  return useMutation<TData, Error, TVariables, { rollback?: () => void }>({
     mutationFn: async (variables) => options.mutationFn(variables),
+    onMutate: async (variables) => {
+      // Instant UI update — runs before the network request resolves.
+      await queryClient.cancelQueries();
+      const rollback = options.optimisticUpdate?.(queryClient, variables);
+      return { rollback: typeof rollback === "function" ? rollback : undefined };
+    },
     onSuccess: (data, variables) => {
-
       const fromData =
         typeof data === "string"
           ? data
@@ -112,7 +119,8 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
             ? fromData
             : null;
       if (sourceId) markSelfNotified(sourceId);
-      invalidate();
+      // Instant toast: notify on server success first, then refetch in the
+      // background so the UI never waits for lists to reload.
       if (!options.silentSuccess) {
         toast.success({
           title: options.successTitle,
@@ -122,9 +130,13 @@ export function useGuidanceMutation<TData = unknown, TVariables = void>(
         });
       }
       options.onSuccessExtra?.(data, variables);
+      void invalidate().catch(() => {
+        // Stale lists retry on focus; success must not be swallowed.
+      });
     },
 
-    onError: (err) => {
+    onError: (err, _variables, context) => {
+      context?.rollback?.();
       if (!options.silentError) {
         toast.error({
           title: options.errorTitle ?? "Update failed",

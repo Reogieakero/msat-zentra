@@ -1,8 +1,14 @@
 "use client";
-import { HeartHandshake, Search, SearchX } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, HeartHandshake, Search, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuidanceEmptyState } from "../../components/GuidanceEmptyCard";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -14,10 +20,18 @@ import type {
   AtRiskStudentItem,
   CounselingSessionItem,
   GuidanceInterventionsSummary,
+  RiskLevelFilter,
 } from "@/services/guidance/interventions.types";
 import { InterventionTableRow } from "./intervention-row";
 import { Busy } from "./busy";
+import { Skeleton } from "@/components/ui/skeleton";
 import styles from "./guidance-interventions.module.css";
+
+const LEVEL_OPTIONS: { value: RiskLevelFilter; label: string }[] = [
+  { value: "High", label: "High risk" },
+  { value: "Moderate", label: "Moderate risk" },
+  { value: "All", label: "All at-risk" },
+];
 export interface InterventionTableViewProps {
   summary: GuidanceInterventionsSummary;
   students: AtRiskStudentItem[];
@@ -29,6 +43,8 @@ export interface InterventionTableViewProps {
   onPageChange: (page: number) => void;
   query: string;
   onQueryChange: (value: string) => void;
+  level: RiskLevelFilter;
+  onLevelChange: (value: RiskLevelFilter) => void;
   onRetry: () => void;
   isRetrying: boolean;
   isNavigating: boolean;
@@ -44,6 +60,7 @@ export interface InterventionTableViewProps {
   onStart: (row: AtRiskStudentItem) => void;
   onChange: (row: AtRiskStudentItem) => void;
   onOutcome: (row: AtRiskStudentItem) => void;
+  onMarkDone: (row: AtRiskStudentItem) => void;
   onSchedule: (row: AtRiskStudentItem) => void;
   onSession: (
     row: AtRiskStudentItem,
@@ -52,6 +69,7 @@ export interface InterventionTableViewProps {
   ) => void;
   onReview: (row: AtRiskStudentItem, decision: "approved" | "rejected") => void;
   onDocsChanged: () => void;
+  highlightId?: string | null;
 }
 export function InterventionTableView({
   summary,
@@ -64,6 +82,8 @@ export function InterventionTableView({
   onPageChange,
   query,
   onQueryChange,
+  level,
+  onLevelChange,
   onRetry,
   isRetrying,
   isNavigating,
@@ -79,14 +99,24 @@ export function InterventionTableView({
   onStart,
   onChange,
   onOutcome,
+  onMarkDone,
   onSchedule,
   onSession,
   onReview,
   onDocsChanged,
+  highlightId = null,
 }: InterventionTableViewProps) {
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
   const hasActiveSearch = query.trim() !== "";
+  const levelLabel =
+    LEVEL_OPTIONS.find((o) => o.value === level)?.label ?? "High risk";
+  const levelNoun =
+    level === "High"
+      ? "high-risk student"
+      : level === "Moderate"
+        ? "moderate-risk student"
+        : "at-risk student";
   return (
     <section aria-label="Intervention cases" className={`${styles.feed} ${styles.panel}`}>
       <span className={styles.glowClip} aria-hidden="true">
@@ -97,8 +127,8 @@ export function InterventionTableView({
           <h2 className={styles.sectionTitle}>Intervention cases</h2>
           <p className={styles.sectionDesc} aria-live="polite">
             {total === 0
-              ? "No at-risk students right now"
-              : `${total} at-risk student${total === 1 ? "" : "s"}${
+              ? `No ${levelNoun}s right now`
+              : `${total} ${levelNoun}${total === 1 ? "" : "s"}${
                   summary.waitingReview > 0
                     ? ` · ${summary.waitingReview} follow-up${summary.waitingReview === 1 ? "" : "s"} waiting for review`
                     : ""
@@ -106,6 +136,30 @@ export function InterventionTableView({
           </p>
         </div>
         <div className={styles.headerActions}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                style={{ height: "2rem" }}
+                aria-label={`Filter by risk level, currently showing: ${levelLabel}`}
+              >
+                {levelLabel}
+                <ChevronDown aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {LEVEL_OPTIONS.map((option) => (
+                <DropdownMenuCheckboxItem
+                  key={option.value}
+                  checked={level === option.value}
+                  onCheckedChange={() => onLevelChange(option.value)}
+                >
+                  {option.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className={styles.searchWrap}>
             <Search className={styles.searchIcon} aria-hidden />
             <Input
@@ -135,8 +189,45 @@ export function InterventionTableView({
           </Button>
         </div>
       )}
-      <div className={styles.tableBody}>
-        {students.length === 0 ? (
+      <div className={styles.tableBody} aria-busy={isNavigating || undefined}>
+        {isNavigating ? (
+          <>
+            <div className={styles.skelTableWrap}>
+              <div className={styles.skelTable}>
+                <div className={styles.skelHeadRow}>
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <div key={i} className={styles.skelCell}>
+                      <Skeleton
+                        className={styles.skelBar}
+                        style={{ width: i % 3 === 0 ? "70%" : "45%" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {[0, 1, 2, 3, 4].map((row) => (
+                  <div key={row} className={styles.skelRow}>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cell) => (
+                      <div key={cell} className={styles.skelCell}>
+                        <Skeleton
+                          className={styles.skelBar}
+                          style={{ width: cell % 3 === 0 ? "70%" : "45%" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className={styles.skelPager}>
+              <Skeleton className={styles.skelRange} />
+              <div className={styles.skelPagerBtns}>
+                <Skeleton className={styles.skelPageBtn} />
+                <Skeleton className={styles.skelPageLabel} />
+                <Skeleton className={styles.skelPageBtn} />
+              </div>
+            </div>
+          </>
+        ) : students.length === 0 ? (
           <GuidanceEmptyState
             icon={hasActiveSearch ? SearchX : HeartHandshake}
             title={
@@ -162,6 +253,7 @@ export function InterventionTableView({
                   <TableHead>Detected</TableHead>
                   <TableHead>Latest action</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Done</TableHead>
                   <TableHead>
                     <span className={styles.srOnly}>Row actions</span>
                   </TableHead>
@@ -172,6 +264,7 @@ export function InterventionTableView({
                   <InterventionTableRow
                     key={row.studentKey}
                     row={row}
+                    highlighted={highlightId !== null && highlightId === row.studentKey}
                     locked={locked(row.studentKey)}
                     isActionPending={isActionPending}
                     isBusy={(action) => isBusy(row.studentKey, action)}
@@ -183,6 +276,7 @@ export function InterventionTableView({
                     onStart={() => onStart(row)}
                     onChange={() => onChange(row)}
                     onOutcome={() => onOutcome(row)}
+                    onMarkDone={() => onMarkDone(row)}
                     onSchedule={() => onSchedule(row)}
                     onSession={(session, dialog) =>
                       onSession(row, session, dialog)
@@ -209,7 +303,9 @@ export function InterventionTableView({
                 variant="outline"
                 disabled={page <= 1 || isNavigating}
                 onClick={() => onPageChange(page - 1)}
+                aria-label="Go to previous page"
               >
+                <ChevronLeft aria-hidden="true" />
                 Previous
               </Button>
               <span className={styles.pageLabel} aria-live="polite">
@@ -227,8 +323,10 @@ export function InterventionTableView({
                 variant="outline"
                 disabled={page >= totalPages || isNavigating}
                 onClick={() => onPageChange(page + 1)}
+                aria-label="Go to next page"
               >
                 Next
+                <ChevronRight aria-hidden="true" />
               </Button>
             </div>
           </div>

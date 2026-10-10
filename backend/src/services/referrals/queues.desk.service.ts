@@ -121,8 +121,8 @@ export async function listQueue(ctx: ReferralContext, query: QueueListQuery) {
       where: { id: { in: pageIds } },
       include: {
         anecdotalRecord: { select: { id: true, observationDatetime: true, descriptionOfIncident: true, category: true } },
-        student: { select: { lrn: true, user: { select: { fullName: true } }, section: { select: { name: true } } } },
-        roster: { select: { fullName: true, lrn: true, section: { select: { name: true } } } },
+        student: { select: { userId: true, lrn: true, user: { select: { fullName: true } }, section: { select: { name: true } } } },
+        roster: { select: { id: true, fullName: true, lrn: true, section: { select: { name: true } } } },
 
         counselingSessions: {
           orderBy: { scheduledAt: "asc" },

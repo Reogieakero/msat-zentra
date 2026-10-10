@@ -40,6 +40,8 @@ interface InterventionDialogsProps {
   onSessType: (value: string) => void;
   sessVenue: string;
   onSessVenue: (value: string) => void;
+  bookFirst: boolean;
+  onBookFirst: (value: boolean) => void;
   outcomeStatus: InterventionOutcome;
   onOutcomeStatus: (value: InterventionOutcome) => void;
   outcomeNotes: string;
@@ -76,6 +78,8 @@ export function InterventionDialogs({
   onSessType,
   sessVenue,
   onSessVenue,
+  bookFirst,
+  onBookFirst,
   outcomeStatus,
   onOutcomeStatus,
   outcomeNotes,
@@ -114,6 +118,8 @@ export function InterventionDialogs({
         onSessType={onSessType}
         sessVenue={sessVenue}
         onSessVenue={onSessVenue}
+        bookFirst={bookFirst}
+        onBookFirst={onBookFirst}
         isActionPending={isActionPending}
         onSubmit={onSubmitStart}
         canSubmit={canSubmitStart}
@@ -144,7 +150,19 @@ export function InterventionDialogs({
       <InterventionScheduleDialog
         open={open.schedule}
         onClose={() => onClose("schedule")}
-        activeStudent={activeRow?.student ?? null}
+        studentCard={
+          activeRow
+            ? {
+                name: activeRow.student,
+                sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
+                ...(activeRow.riskLevel === "High"
+                  ? { badgeText: "High risk", badgeVariant: "red" as const }
+                  : activeRow.riskLevel === "Moderate"
+                    ? { badgeText: "Moderate risk", badgeVariant: "amber" as const }
+                    : { badgeText: `${activeRow.riskLevel} risk`, badgeVariant: "outline" as const }),
+              }
+            : null
+        }
         hasActiveSession={
           !!activeRow?.intervention?.sessions.some((s) => s.status === "scheduled")
         }
@@ -169,6 +187,7 @@ export function InterventionDialogs({
       <InterventionCancelDialog
         open={open.cancelSess}
         onClose={() => onClose("cancelSess")}
+        activeSession={activeSession}
         isActionPending={isActionPending}
         onSubmit={onSubmitCancelSess}
       />

@@ -1,8 +1,8 @@
 "use client";
 
 import { BookSessionDialog } from "@/components/session-booking/BookSessionDialog";
+import { fetchDaySchedule } from "@/services/guidance/sessions.service";
 import { FinishSessionDialog as SharedFinishSessionDialog } from "@/components/session-booking/FinishSessionDialog";
-import { RescheduleSessionDialog as SharedRescheduleSessionDialog } from "@/components/session-booking/RescheduleSessionDialog";
 import { CancelSessionDialog as SharedCancelSessionDialog } from "@/components/session-booking/CancelSessionDialog";
 import { DeleteSessionDialog as SharedDeleteSessionDialog } from "@/components/session-booking/DeleteSessionDialog";
 import type {
@@ -12,8 +12,11 @@ import type {
 } from "@/services/guidance/guidance.types";
 import {
   SESSION_KIND_OPTIONS,
+  formatActionTime,
   formatDateTime,
   sessionTypeLabel,
+  toDateInputValue,
+  toTimeInputValue,
 } from "./guidance-referrals-format";
 import type {
   GuidanceActionDialogs,
@@ -49,9 +52,18 @@ export function GuidanceSessionDialogs({
               ...(fields.venue ? { venue: fields.venue } : {}),
             })
           }
-          description={`Book a counseling session${activeRow ? ` for ${activeRow.student}` : ""}.`}
+          description="Schedule a counseling session"
+          studentCard={
+            activeRow
+              ? {
+                  name: activeRow.student,
+                  sub: [activeRow.grade, activeRow.section].filter(Boolean).join(" · "),
+                }
+              : null
+          }
+          fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
           venueHint="Held at the guidance office unless another venue is given."
-          venuePlaceholder="e.g. Guidance office"
+          venuePlaceholder="Guidance office"
           showSessionType
           sessionTypeOptions={SESSION_KIND_OPTIONS}
           hasActiveSession={
@@ -104,20 +116,36 @@ export function GuidanceSessionDialogs({
       )}
 
       {dialogs.move && (
-        <SharedRescheduleSessionDialog
+        <BookSessionDialog
           open
           onClose={() => closeDialog("move")}
-          onSubmit={(scheduledAt) => {
+          onSubmit={(fields) => {
             if (!activeSession?.id) return;
-            handleAction("move", { sessionId: activeSession.id, scheduledAt });
+            handleAction("move", {
+              sessionId: activeSession.id,
+              scheduledAt: fields.scheduledAt,
+            });
           }}
           description={
             activeSession
-              ? `Currently ${formatDateTime(activeSession.scheduledAt)}. Pick the new date and time.`
+              ? `Currently ${formatActionTime(activeSession.scheduledAt)}. Pick the new date and time.`
               : "Pick the new date and time."
           }
+          fetchTakenTimes={(dateKey, signal) => fetchDaySchedule(dateKey, { signal })}
+          venueHint="Held at the guidance office unless another venue is given."
+          venuePlaceholder="Guidance office"
+          showSessionType
+          sessionTypeOptions={SESSION_KIND_OPTIONS}
+          hasActiveSession={false}
           busy={isActionPending}
           idPrefix="ref-move"
+          title="Move session"
+          submitLabel="Move session"
+          busyLabel="Moving…"
+          initialDate={activeSession ? toDateInputValue(activeSession.scheduledAt) : ""}
+          initialTime={activeSession ? toTimeInputValue(activeSession.scheduledAt) : ""}
+          initialVenue={activeSession?.venue ?? ""}
+          initialSessionType={activeSession?.sessionType}
         />
       )}
 

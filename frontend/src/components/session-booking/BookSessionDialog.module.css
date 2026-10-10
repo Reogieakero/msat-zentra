@@ -211,3 +211,315 @@
   gap: 0.5rem;
   margin-top: 0.875rem;
 }
+
+/* ---- Picker redesign (day cards, time pills, kind segments) ----
+   Every color is a theme token so light and dark modes adapt. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.fieldLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.fieldRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.fieldHint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  text-align: right;
+}
+
+/* Student identity card */
+.studentCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 45%);
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--primary), transparent 88%);
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.studentText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.studentName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studentSub {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Date day-cards */
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.dayCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.625rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.dayCard:hover {
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+}
+
+.dayCard:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.daySelected {
+  border-color: var(--primary);
+  border-width: 2px;
+  padding: calc(0.625rem - 1px) calc(0.25rem - 1px);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.dayDow {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.daySelected .dayDow {
+  color: var(--primary);
+}
+
+.dayLabel {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dayIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--muted-foreground);
+}
+
+.daySelected .dayIcon {
+  color: var(--primary);
+}
+
+.customDate {
+  margin-top: 0.25rem;
+}
+
+/* Time pills */
+.timeGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.timePill {
+  padding: 0.5625rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+  white-space: nowrap;
+}
+
+.timePill:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--primary), transparent 40%);
+}
+
+.timePill:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.timeSelected {
+  border-color: var(--primary);
+  border-width: 2px;
+  padding: calc(0.5625rem - 1px) calc(0.25rem - 1px);
+  background-color: color-mix(in oklch, var(--primary), transparent 92%);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.timeTaken {
+  background-color: color-mix(in oklch, var(--muted), transparent 45%);
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* Session-kind segmented control */
+.kindTrack {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  background-color: color-mix(in oklch, var(--muted), transparent 45%);
+}
+
+.kindBtn {
+  padding: 0.5625rem 0.25rem;
+  border: none;
+  border-radius: calc(var(--radius-md) - 0.25rem);
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.kindBtn:hover {
+  color: var(--foreground);
+}
+
+.kindBtn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kindSelected {
+  background-color: var(--card);
+  color: var(--foreground);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+}
+
+/* Venue with pin icon */
+.venueWrap {
+  position: relative;
+}
+
+.venueIcon {
+  position: absolute;
+  top: 50%;
+  left: 0.625rem;
+  width: 1rem;
+  height: 1rem;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.venueInput {
+  padding-left: 2rem;
+}
+
+/* Footer summary + actions */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.summary {
+  min-width: 0;
+}
+
+.summaryMain {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.summarySub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 16rem;
+}
+
+@media (max-width: 560px) {
+  .dayGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .timeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kindTrack {
+    grid-auto-flow: row;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dayCard,
+  .timePill,
+  .kindBtn {
+    transition: none;
+  }
+}

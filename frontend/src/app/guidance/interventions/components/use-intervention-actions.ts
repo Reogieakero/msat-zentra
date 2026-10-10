@@ -1,5 +1,7 @@
 "use client";
-import type { CounselingSessionType, InterventionOutcome, ReviewDecision } from "@/services/guidance/interventions.types";
+import * as React from "react";
+import { type QueryClient } from "@tanstack/react-query";
+import type { AtRiskStudentItem, CounselingSessionItem, CounselingSessionType, InterventionOutcome, ReviewDecision } from "@/services/guidance/interventions.types";
 import {
   cancelFollowUpSession,
   completeFollowUpSession,
@@ -53,6 +55,189 @@ function interventionSuccessMessage(action: string): { title: string; descriptio
       return { title: "Saved", description: "Your change was recorded." };
   }
 }
+function isInterventionsData(v: unknown): v is { students: AtRiskStudentItem[] } {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    Array.isArray((v as { students?: unknown }).students)
+  );
+}
+
+const nowIso = () => new Date().toISOString();
+
+function tempSession(
+  scheduledAt: string,
+  sessionType: CounselingSessionType,
+  venue?: string
+): CounselingSessionItem {
+  return {
+    id: `temp-${Date.now()}`,
+    sessionType,
+    scheduledAt,
+    date: scheduledAt,
+    venue: venue ?? "",
+    status: "scheduled",
+    sessionNotes: "",
+    outcome: "",
+    cancelReason: "",
+    createdAt: nowIso(),
+    completedAt: "",
+    attachmentsCount: 0,
+  };
+}
+
+function applyInterventionAction(
+  item: AtRiskStudentItem,
+  action: string,
+  payload: unknown
+): AtRiskStudentItem {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const followUpId = p.followUpId as string | undefined;
+  if (action === "start") {
+    const sp = p as {
+      recommendedAction?: string;
+      priority?: string;
+      intakeNotes?: string;
+      firstSession?: { scheduledAt: string; sessionType: CounselingSessionType; venue?: string };
+    };
+    return {
+      ...item,
+      intervention: {
+        id: item.intervention?.id ?? `temp-${Date.now()}`,
+        recommendedAction: sp.recommendedAction ?? item.intervention?.recommendedAction ?? "",
+        assigneeId: item.intervention?.assigneeId ?? "",
+        assignee: item.intervention?.assignee ?? "",
+        approvalStatus: item.intervention?.approvalStatus ?? "pending",
+        outcomeStatus: item.intervention?.outcomeStatus ?? "ongoing",
+        outcomeNotes: item.intervention?.outcomeNotes ?? "",
+        priority: sp.priority ?? item.intervention?.priority ?? "normal",
+        intakeNotes: sp.intakeNotes ?? item.intervention?.intakeNotes ?? "",
+        sessions: sp.firstSession
+          ? [...(item.intervention?.sessions ?? []), tempSession(sp.firstSession.scheduledAt, sp.firstSession.sessionType, sp.firstSession.venue)]
+          : (item.intervention?.sessions ?? []),
+        completedSessions: item.intervention?.completedSessions ?? 0,
+        createdAt: item.intervention?.createdAt ?? nowIso(),
+      },
+    };
+  }
+  if (!item.intervention) return item;
+  if (followUpId && item.intervention.id !== followUpId) return item;
+  const iv = item.intervention;
+  switch (action) {
+    case "review": {
+      const decision = (p.decision as ReviewDecision | undefined) ?? "approved";
+      return {
+        ...item,
+        intervention: {
+          ...iv,
+          approvalStatus: decision,
+          recommendedAction: (p.recommendedAction as string | undefined) ?? iv.recommendedAction,
+        },
+      };
+    }
+    case "outcome":
+      return {
+        ...item,
+        intervention: {
+          ...iv,
+          outcomeStatus: (p.outcomeStatus as InterventionOutcome | undefined) ?? iv.outcomeStatus,
+          outcomeNotes: (p.outcomeNotes as string | undefined) ?? iv.outcomeNotes,
+        },
+      };
+    case "schedule": {
+      const sp = p as { scheduledAt?: string; sessionType?: CounselingSessionType; venue?: string };
+      if (!sp.scheduledAt) return item;
+      return {
+        ...item,
+        intervention: {
+          ...iv,
+          sessions: [...iv.sessions, tempSession(sp.scheduledAt, sp.sessionType ?? "individual", sp.venue)],
+        },
+      };
+    }
+    case "finish": {
+      const sp = p as { sessionId?: string; sessionNotes?: string; outcome?: string };
+      return {
+        ...item,
+        intervention: {
+          ...iv,
+          sessions: iv.sessions.map((s) =>
+            s.id === sp.sessionId
+              ? { ...s, status: "completed", sessionNotes: (sp.sessionNotes as string) ?? s.sessionNotes, outcome: (sp.outcome as string) ?? s.outcome, completedAt: nowIso() }
+              : s
+          ),
+        },
+      };
+    }
+    case "move": {
+      const sp = p as { sessionId?: string; scheduledAt?: string };
+      return {
+        ...item,
+        intervention: {
+          ...iv,
+          sessions: iv.sessions.map((s) =>
+            s.id === sp.sessionId
+              ? { ...s, scheduledAt: (sp.scheduledAt as string) ?? s.scheduledAt, date: (sp.scheduledAt as string) ?? s.date }
+              : s
+          ),
+        },
+      };
+    }
+    case "cancelSess": {
+      const sp = p as { sessionId?: string; cancelReason?: string };
+      return {
+        ...item,
+        intervention: {
+          ...iv,
+          sessions: iv.sessions.map((s) =>
+            s.id === sp.sessionId
+              ? { ...s, status: "cancelled", cancelReason: (sp.cancelReason as string) ?? s.cancelReason }
+              : s
+          ),
+        },
+      };
+    }
+    default:
+      return item;
+  }
+}
+
+/** Instantly patch every cached interventions/alerts list; returns a rollback. */
+function patchInterventionCaches(
+  qc: QueryClient,
+  key: string,
+  action: string,
+  payload: unknown
+): () => void {
+  const snapshots: { key: readonly unknown[]; data: unknown }[] = [];
+  const followUpId = (payload as { followUpId?: string } | null)?.followUpId;
+  const match = (item: AtRiskStudentItem) =>
+    item.studentKey === key || (!!followUpId && item.intervention?.id === followUpId);
+  const patch = (item: AtRiskStudentItem) =>
+    match(item) ? applyInterventionAction(item, action, payload) : item;
+  const targets: { queryKey: readonly string[]; updater: (old: unknown) => unknown }[] = [
+    {
+      queryKey: ["guidance-interventions"],
+      updater: (old: unknown) =>
+        isInterventionsData(old) ? { ...old, students: old.students.map(patch) } : old,
+    },
+    {
+      queryKey: ["guidance-alerts"],
+      updater: (old: unknown) =>
+        Array.isArray(old) ? (old as AtRiskStudentItem[]).map((i) => patch(i as AtRiskStudentItem)) : old,
+    },
+  ];
+  for (const t of targets) {
+    for (const [qk, data] of qc.getQueriesData({ queryKey: [...t.queryKey] })) {
+      snapshots.push({ key: qk, data });
+      qc.setQueryData(qk, t.updater(data));
+    }
+  }
+  return () => {
+    for (const s of snapshots) qc.setQueryData(s.key, s.data);
+  };
+}
+
 export function useInterventionActions(onMutateSuccess: () => void) {
   const invalidateGuidance = useGuidanceInvalidate();
   const actionMutation = useGuidanceMutation<
@@ -61,12 +246,17 @@ export function useInterventionActions(onMutateSuccess: () => void) {
   >({
     sourceId: (variables) =>
       (variables.payload as { followUpId?: string } | undefined)?.followUpId ?? "",
+    scopes: ["interventions", "alerts", "notifications"],
+    optimisticUpdate: (qc, variables) =>
+      patchInterventionCaches(qc, variables.key, variables.action, variables.payload),
     silentSuccess: true,
     successTitle: "Saved",
     errorFallback: "The change did not go through. Check your connection and try again.",
     onSuccessExtra: (_data, variables) => {
+      // UI already patched optimistically — recompute reminders then pop the
+      // sileo toast instantly on server success.
+      refreshBookingReminders(true);
       toast.success(interventionSuccessMessage(variables.action));
-      refreshBookingReminders();
     },
     mutationFn: async ({
       key,
@@ -169,14 +359,20 @@ export function useInterventionActions(onMutateSuccess: () => void) {
   const isBusy = (key: string, action: string) =>
     !!busyVars && busyVars.key === key && busyVars.action === action;
   const rowLocked = (key: string) => !!busyVars && busyVars.key === key;
-  const isActionPending = actionMutation.isPending;
+  // Short double-submit guard — released when the mutation settles
+  // (not after refetch). UI/toast no longer wait for refetch.
+  const [settling, setSettling] = React.useState(false);
+  const isActionPending = actionMutation.isPending || settling;
   const runAction = (key: string, action: string, payload: unknown) => {
-    if (actionMutation.isPending) return;
+    if (actionMutation.isPending || settling) return;
+    // Close dialogs instantly; the row is already patched optimistically.
+    onMutateSuccess();
+    setSettling(true);
     actionMutation.mutate(
       { key, action, payload },
       {
-        onSuccess: () => {
-          onMutateSuccess();
+        onSettled: () => {
+          setSettling(false);
         },
       }
     );

@@ -156,8 +156,12 @@ export async function getInterventionStudents(
   scope?: TermScopeInput,
 ): Promise<InterventionStudentsResult> {
   const page = Math.max(1, filters.page ?? 1);
-  // Strict 15-record ceiling for normal lists.
-  const pageSize = Math.min(15, Math.max(1, filters.pageSize ?? 15));
+  // Strict 15-record ceiling for normal lists. Full-cohort callers (e.g. the
+  // guidance queue, which filters/paginates in memory) need the whole live
+  // cohort, so honor their requested size up to a safety cap.
+  const pageSize = filters.fullCohort
+    ? Math.min(2000, Math.max(1, filters.pageSize ?? 1000))
+    : Math.min(15, Math.max(1, filters.pageSize ?? 15));
 
   const termId = scope?.termId ?? (await resolveActiveTermId());
   const schoolYearId =

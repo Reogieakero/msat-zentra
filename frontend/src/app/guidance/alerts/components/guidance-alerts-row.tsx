@@ -94,11 +94,9 @@ export function CaseTableRow({
     return (
       <TableRow>
         <TableCell>
-          <p className={styles.cellMain}>
-            <span className={styles.lrn}>{item.lrn}</span>
-          </p>
+          <p className={styles.studentName}>{item.student}</p>
           <p className={styles.cellSub}>
-            {item.student} · {item.section}
+            <span className={styles.lrn}>{item.lrn}</span> · {item.section}
           </p>
         </TableCell>
         <TableCell>
@@ -142,11 +140,9 @@ export function CaseTableRow({
   return (
     <TableRow>
       <TableCell>
-        <p className={styles.cellMain}>
-          <span className={styles.lrn}>{r.lrn}</span>
-        </p>
+        <p className={styles.studentName}>{r.student}</p>
         <p className={styles.cellSub}>
-          {r.student} · {r.section}
+          <span className={styles.lrn}>{r.lrn}</span> · {r.section}
         </p>
       </TableCell>
       <TableCell>
